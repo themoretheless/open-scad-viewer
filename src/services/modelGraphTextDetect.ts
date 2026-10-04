@@ -1,10 +1,11 @@
 /** Dependency-light probe; the compiler itself stays behind a lazy import. */
-export const isModelGraphText = (source: string) => /^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)
+export const isRush = (source: string) => /^\s*\/\/\s*@rush(?:\/1)?(?=\s|$)/.test(source)
+export const isModelGraphText = (source: string) => isRush(source) || /^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)
 
-/** ModelGraph Text documents are .mg files; everything else the editor holds is OpenSCAD. */
-export const sourceFileExtension = (source: string) => (isModelGraphText(source) ? '.mg' : '.scad')
-export const SOURCE_FILE_EXTENSION = /\.(scad|mg)$/i
-export const SOURCE_FILE_ACCEPT = '.scad,.mg,text/plain'
-/** Keeps a .scad or .mg name as given; anything else gets the extension the source calls for. */
+/** Rush uses .r; legacy ModelGraph Text keeps .mg. */
+export const sourceFileExtension = (source: string) => (isRush(source) ? '.r' : isModelGraphText(source) ? '.mg' : '.scad')
+export const SOURCE_FILE_EXTENSION = /\.(scad|mg|r)$/i
+export const SOURCE_FILE_ACCEPT = '.scad,.r,.mg,text/plain'
+/** Preserve recognized source filenames; infer the extension for unnamed documents. */
 export const withSourceExtension = (name: string, source: string) =>
   SOURCE_FILE_EXTENSION.test(name) ? name : `${name}${sourceFileExtension(source)}`

@@ -1,0 +1,129 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (231 tests | 2 failed | 229 skipped) 345ms
+   × discards native bridge success after changing the destination group 327ms
+   × discards native bridge failure after changing the destination group 17ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > discards native bridge success after changing the destination group
+AssertionError: expected { version: 1, sketches: [], …(4) } to deeply equal { version: 1, sketches: [], …(4) }
+
+- Expected
++ Received
+
+@@ -90,10 +90,80 @@
+          ],
+        },
+        "id": "b",
+        "name": "Second",
+      },
++     {
++       "bridge": {
++         "endA": "end",
++         "endB": "start",
++         "sourceA": "a",
++         "sourceB": "b",
++         "tension": 1,
++       },
++       "curve": {
++         "controlPoints": [
++           [
++             20,
++             0,
++             0,
++           ],
++           [
++             22.218800784900917,
++             3.3282011773513744,
++             0,
++           ],
++           [
++             24.323641455841724,
++             8.194863893164287,
++             0,
++           ],
++           [
++             35.67635854415829,
++             -8.194863893164287,
++             0,
++           ],
++           [
++             37.781199215099086,
++             -3.3282011773513744,
++             0,
++           ],
++           [
++             40,
++             0,
++             0,
++           ],
++         ],
++         "degree": 5,
++         "knots": [
++           0,
++           0,
++           0,
++           0,
++           0,
++           0,
++           1,
++           1,
++           1,
++           1,
++           1,
++           1,
++         ],
++         "periodic": false,
++         "weights": [
++           1,
++           1,
++           1,
++           1,
++           1,
++           1,
++         ],
++       },
++       "group": "Destination",
++       "id": "039c3013-fe0e-46c9-af74-022f1673b90b",
++       "name": "G2 bridge",
++     },
+    ],
+    "groups": [
+      {
+        "name": "Destination",
+        "source": "",
+
+ ❯ tests/directModelerUi.test.ts:2279:42
+    2277|  if(outcome==='success')requests[0].resolve(applySolidNurbsEdit(reques…
+    2278|  else requests[0].reject(Error('obsolete group bridge error'))
+    2279|  await flushClearance();expect(ui.doc()).toEqual(before)
+       |                                          ^
+    2280|  expect(ui.text(ui.all()[0])).not.toContain('obsolete group bridge err…
+    2281|  await ui.click('Create G2 bridge');expect(requests).toHaveLength(2)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > discards native bridge failure after changing the destination group
+AssertionError: expected 'SolidPlasticity-like CAD↶↷MouseTools?…' not to contain 'obsolete group bridge error'
+
+Expected: "obsolete group bridge error"
+Received: "SolidPlasticity-like CAD↶↷MouseTools?Command…Ctrl KFileDownload JSON projectOpen Solid / ModelGraph NURBSImport STL / OBJ / PLY / OFF / AMF / 3MF as bodyImport SVG as profilesImport STEPSelected body SVG · XY projectionExport for BlenderExport current body STEPExport bodies and groups STEPExport AP242 originalExport SCAD (bake)Bake into Code (append)Open in MeshFlat shapesRectangle · RCircle · CContour · LOn face→Extrude · EDraw on a plane → set height → EnterPrimitivesRound solid optionsFrustum top radius, mm Tube inner radius, mm Sphere / cylinder / cone Exact surfacesFaceted · planar BooleanSize, mm Import meshSolid keeps its own document; bake to .scad is explicit.Create in UngroupedDestinationMove selection to groupNew empty groupRepeat · Shift RSnapping: onPlane: XYIsolate bodiesSelected: 2Hover Selection PreviewXYDimensionsCell mmcmminSnaps⋯GridGeometry snappingCenters, midpoints, quadrantsIntersections, tangents, perpendicularsCapture radius, pxAxis alignment+−Start with a contourChoose a tool above and draw with the mouseVRISODrag to orbit · Shift to panSTLSTL (ASCII)STL (binary)3MFOBJPLYOFFAMFCell mmcmminSnaps⋯GridGeometry snappingCenters, midpoints, quadrantsIntersections, tangents, perpendicularsCapture radius, pxAxis alignment+−0 FPS · 0 msNURBS curve · CVDrag yellow CVs directly in the 3D view. Dragging follows the screen plane; exact XYZ and weight are below.G1: match second to firstG2 bridge curvesFirst endpointStartEndSecond endpointStartEndTensionCould not create the G2 bridge. Check the selected curve endpoints and tension, then retry creation.Technical detailsobsolete group bridge errorCreate G2 bridgeU / CV 0123X Y Z Weight Apply CVKnot / iso parameter Insert knotDegree +1Extrude NURBS 10 mmCopy sampled curve to sketchScene 2● Destination◎✎×NURBSFirst●◇Second●◇Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom"
+
+ ❯ tests/directModelerUi.test.ts:2280:35
+    2278|  else requests[0].reject(Error('obsolete group bridge error'))
+    2279|  await flushClearance();expect(ui.doc()).toEqual(before)
+    2280|  expect(ui.text(ui.all()[0])).not.toContain('obsolete group bridge err…
+       |                                   ^
+    2281|  await ui.click('Create G2 bridge');expect(requests).toHaveLength(2)
+    2282|  requests[1].resolve(applySolidNurbsEdit(requests[1].job.document,requ…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 229 skipped (231)
+   Start at  12:25:49
+   Duration  2.03s (transform 1.37s, setup 0ms, import 1.58s, tests 345ms, environment 11ms)
+

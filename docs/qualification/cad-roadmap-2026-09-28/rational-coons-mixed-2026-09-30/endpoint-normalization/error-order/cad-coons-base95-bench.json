@@ -1,0 +1,68 @@
+{
+  "scope": "Node ASCII decode only; excludes Brotli, compile and browser",
+  "b94Bytes": 3253460,
+  "b95Bytes": 3247812,
+  "packedSha256": "4d11b7fa42379dbb62d3b80d819a8d3cb319cc907b2dafccea65f63334d622a0",
+  "rows": [
+    {
+      "format": "b94",
+      "iteration": 0,
+      "elapsedMs": 11.197625000000016
+    },
+    {
+      "format": "b95",
+      "iteration": 0,
+      "elapsedMs": 12.839792000000017
+    },
+    {
+      "format": "b95",
+      "iteration": 1,
+      "elapsedMs": 12.037457999999987
+    },
+    {
+      "format": "b94",
+      "iteration": 1,
+      "elapsedMs": 9.124375000000015
+    },
+    {
+      "format": "b94",
+      "iteration": 2,
+      "elapsedMs": 8.942916999999966
+    },
+    {
+      "format": "b95",
+      "iteration": 2,
+      "elapsedMs": 10.536791999999991
+    },
+    {
+      "format": "b95",
+      "iteration": 3,
+      "elapsedMs": 12.126916999999992
+    },
+    {
+      "format": "b94",
+      "iteration": 3,
+      "elapsedMs": 9.588166999999999
+    },
+    {
+      "format": "b94",
+      "iteration": 4,
+      "elapsedMs": 8.920500000000004
+    },
+    {
+      "format": "b95",
+      "iteration": 4,
+      "elapsedMs": 11.110041999999964
+    },
+    {
+      "format": "b95",
+      "iteration": 5,
+      "elapsedMs": 11.253541999999982
+    },
+    {
+      "format": "b94",
+      "iteration": 5,
+      "elapsedMs": 8.78837500000003
+    }
+  ]
+}

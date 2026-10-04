@@ -47,6 +47,8 @@
 //! (parallel/oblique cases) the cap chord is not a component — coverage is
 //! NumericallyResolved, never certified complete, and nothing here
 //! authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::cylinder_cylinder::{arc_parameter, lift_line};
 use super::plane_sphere::{
     CanonicalPlane, EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d,
@@ -611,65 +613,11 @@ pub fn intersect_plane_cylinder(
     Ok(report)
 }
 
-impl value_codec::Serialize for PlaneCylinderComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                full,
-                plane_uv,
-                cylinder_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"full":full,"planeUv":plane_uv,"cylinderUv":cylinder_uv,
-                "maxSampleResidual":max_sample_residual}),
-            Self::Line {
-                curve,
-                start,
-                end,
-                direction,
-                contact,
-                plane_uv,
-                cylinder_uv,
-                max_sample_residual,
-            } => {
-                let contact = match contact {
-                    Contact::Transverse => "transverse",
-                    Contact::Boundary => "boundary",
-                };
-                value_codec::json!({"kind":"line","curve":curve,"start":start,"end":end,
-                    "direction":direction,"contact":contact,"planeUv":plane_uv,
-                    "cylinderUv":cylinder_uv,"maxSampleResidual":max_sample_residual})
-            }
-            Self::Ellipse {
-                curve,
-                center,
-                semi_major,
-                semi_minor,
-                major,
-                minor,
-                normal,
-                full,
-                plane_uv,
-                cylinder_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"ellipse","curve":curve,"center":center,
-                "semiMajor":semi_major,"semiMinor":semi_minor,"major":major,"minor":minor,
-                "normal":normal,"full":full,"planeUv":plane_uv,"cylinderUv":cylinder_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::plane_sphere::plane_patch;
     use super::super::test_utils::rotated_translated;
     use super::*;
-
 
     fn point_of(jet: &[f64]) -> [f64; 3] {
         [jet[0], jet[1], jet[2]]

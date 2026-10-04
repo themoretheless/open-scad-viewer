@@ -1,0 +1,1 @@
+Verified 120 dist artifacts (7163767 asset bytes + 11413168 raw WASM bytes = 18576935 total bytes)

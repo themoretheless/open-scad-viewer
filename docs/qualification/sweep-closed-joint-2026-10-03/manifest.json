@@ -1,0 +1,38 @@
+{
+  "tests/nurbsClosedCombinedMiter.test.ts": {
+    "bytes": 4176,
+    "sha256": "bdb0be30caeb28ada561f6618f4af7637126c7b5f887a39ec28bf41d2e2e6719"
+  },
+  "scripts/export-sweep-step-oracle.mts": {
+    "bytes": 20461,
+    "sha256": "2e30a94a31e3700a993aa6984192de1b081e62eb300a2da7453e914df4891a44"
+  },
+  "scripts/check-sweep-miter-matrix-browser.mjs": {
+    "bytes": 16276,
+    "sha256": "ceb46c4591df24b1afbfb4ec3243c9c66ce0bfea0fa61a49f93037d57d4321a5"
+  },
+  "examples/rush/closed-miter-frame-guide-affine-hollow.r": {
+    "bytes": 1247,
+    "sha256": "1417d3a1e1666f5fe91d6fed1c9f9cfeca4635329a565118bae27d1e056de4db"
+  },
+  "public/wasm/geometry-kernel.wasm": {
+    "bytes": 10679988,
+    "sha256": "c4d758cd47949671afa078a7cae2574e3189b01b148d41f1b8acedb7c1467161"
+  },
+  "src/services/geometry/brep.ts": {
+    "bytes": 55423,
+    "sha256": "3aa201c9128ea48260eed71394549f9489abe25d6514e1647a5816c6f579084a"
+  },
+  "src/services/nurbsConstructors.ts": {
+    "bytes": 50508,
+    "sha256": "263d85227aab3a3db655c36a91c5ced42854f7f72bb5976e23a77a35621a3388"
+  },
+  "src/services/modelGraphNurbsKernel.ts": {
+    "bytes": 64771,
+    "sha256": "e25776700e149057b21c8e6eee23feea1147279e2785525366976902bc93e37a"
+  },
+  "src/services/sweepViewportEvidence.ts": {
+    "bytes": 2034,
+    "sha256": "f8a8e4dcf19a8127a058906c110d80a2c8349446c298715b9b19706d42e9970a"
+  }
+}

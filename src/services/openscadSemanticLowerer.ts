@@ -1,3 +1,4 @@
+import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from './openScadLegacySegments'
 import type { GeometryQuality } from '../core/build'
 import {
   deriveSemanticAmbiguityGroupId,
@@ -100,7 +101,6 @@ export {
 } from './semanticProgramTrust'
 
 const MAX_SHAPES = 1_000
-const MAX_FN = 256
 const MAX_EXTRUDE_SLICES = 512
 
 type RGBA = [number, number, number, number]
@@ -1599,7 +1599,7 @@ function requestedSegments(node: CallNode, ctx: EvalContext): number | null {
   const raw = local === undefined || local === 0 ? global : local
   return raw === undefined || raw === 0
     ? null
-    : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
+    : roundLegacyOpenScadSegments(finiteNumber(raw, ctx, node.p, '$fn'))
 }
 
 function semanticSegments(
@@ -1625,10 +1625,9 @@ function semanticSegmentsFromRequested(
     ctx.builder.addTessellationIntent(occurrence, requested, ctx.env)
     return null
   }
-  const maximum = ctx.quality === 'preview' ? 48 : MAX_FN
-  const previewFallback = ctx.quality === 'preview' ? Math.min(fallback, 24) : fallback
-  let segments = requested ?? previewFallback
-  if (segments > maximum) {
+  const selection=resolveLegacyOpenScadSegments(requested,fallback,minimum,ctx.quality)
+  const maximum=selection.maximum,segments=selection.beforeCap
+  if (selection.clamped) {
     const operation = ctx.builder.registered.byStatement.get(node) ?? null
     ctx.builder.warn(
       operation,
@@ -1640,14 +1639,9 @@ function semanticSegmentsFromRequested(
       `$fn=${segments} was clamped to ${maximum} for ${ctx.quality} rendering`,
       { start: node.p, end: node.end },
     )
-    segments = maximum
   }
-  segments = Math.max(minimum, segments)
-  if (ctx.quality === 'preview') {
-    const fullSegments = Math.max(minimum, Math.min(requested ?? fallback, MAX_FN))
-    if (segments !== fullSegments) ctx.reduced.value = true
-  }
-  return segments
+  if(selection.reduced)ctx.reduced.value=true
+  return selection.segments
 }
 
 function primitiveColor(ctx: EvalContext): RGBA { return ctx.builder.nextColor() }
@@ -1861,7 +1855,7 @@ function compatibilityRequestedSegments(
   const raw = local === undefined || local === 0 ? global : local
   return raw === undefined || raw === 0
     ? null
-    : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
+    : roundLegacyOpenScadSegments(finiteNumber(raw, ctx, node.p, '$fn'))
 }
 
 function compatibilityPlanarChildren(

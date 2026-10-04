@@ -1,0 +1,31 @@
+{
+  "verifiedAt": "2026-10-01T19:42:04.544396+00:00",
+  "nativeRationalBodyTests": 7,
+  "nativeAnalyticRegressionTests": 95,
+  "nativeTrimRegressionTests": 21,
+  "nativeProgressiveRegressionTests": 11,
+  "packagedWasmTests": 447,
+  "packagedWasmFiles": 16,
+  "typecheck": "passed",
+  "newVisualVerification": false,
+  "contract": "retained rational walls and interval-audited planar caps; shared manifold incidence; sampled approximation acceptance",
+  "globalEmbeddingCertified": false,
+  "remaining": [
+    "Rush/Solid UI body integration",
+    "periodic body topology",
+    "authored orientation and anisotropic laws",
+    "continuous sweep deviation certificate",
+    "side regularity/global self-intersection audit",
+    "external STEP conformance matrix"
+  ],
+  "sha256": {
+    "crates/brep-core/src/analytic/rational_loft.rs": "e1ec7fe29704147fb9eb16c410a8d0a1932f3c0080b83f738008846771f71736",
+    "crates/brep-core/tests/rational_section_loft.rs": "aa88a29da4db16781a21d95693b9d0fbc317abf474705a8f573325c65a9ec214",
+    "crates/nurbs-core/src/trim_simplicity.rs": "a0fc7471ccc1af1b0a196b3ba0de793d49755b7df0e9d2f8c8bd1a3789e8545a",
+    "crates/nurbs-core/src/progressive_sweep.rs": "3c8cff90d24e5f7b12e6007f32f168fcbbf94a948499bd9907545491b7d98a85",
+    "crates/geometry-bridge/src/lib.rs": "ad189d35d2748e01c2af9cc7b453f1e791df681ce1f6e97832b57f7aa0004f30",
+    "src/services/geometry/brep.ts": "c5c10a8cc81656557d3af610c1e1e629986e342be1ab4e5d381dee1fa399e5bb",
+    "tests/brepRationalSweep.test.ts": "e7f6004dc6013d0cc8708acda89e3b7349ec5c5da9df7c2f76f7ad8832e93e7e",
+    "public/wasm/geometry-kernel.wasm": "816a546cc1dfc63e081c1182b0def604b2495563ce518083fe00e3d3370bfafa"
+  }
+}

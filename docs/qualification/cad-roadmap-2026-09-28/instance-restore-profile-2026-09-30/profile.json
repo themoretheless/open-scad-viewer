@@ -1,0 +1,56 @@
+[
+  {
+    "mode": "cold",
+    "iteration": 0,
+    "restoreMs": 1106.3223750000002,
+    "serializeMs": 1.2784999999998945,
+    "resolveMs": 1092.6972910000004,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "mode": "cold",
+    "iteration": 1,
+    "restoreMs": 1106.7758330000006,
+    "serializeMs": 1.170458999999937,
+    "resolveMs": 1178.5980829999999,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "mode": "cold",
+    "iteration": 2,
+    "restoreMs": 1106.4088330000004,
+    "serializeMs": 1.2276249999995343,
+    "resolveMs": 1077.4077910000005,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "mode": "warm",
+    "iteration": 0,
+    "restoreMs": 86.0413750000007,
+    "serializeMs": 1.2118750000008731,
+    "resolveMs": 60.07499999999891,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "mode": "warm",
+    "iteration": 1,
+    "restoreMs": 90.49091699999917,
+    "serializeMs": 1.1928330000009737,
+    "resolveMs": 60.87495800000033,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "mode": "warm",
+    "iteration": 2,
+    "restoreMs": 92.484457999999,
+    "serializeMs": 1.1745000000009895,
+    "resolveMs": 62.82591700000012,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  }
+]

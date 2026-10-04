@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-ready
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:26:30
+   Duration  187ms (transform 36ms, setup 0ms, import 48ms, tests 3ms, environment 0ms)

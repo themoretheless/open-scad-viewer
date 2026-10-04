@@ -1,5 +1,6 @@
 import type { MeshData } from '../core/mesh'
 import {isNativeGeometryArtifact} from '../core/nativeGeometry'
+import {inspectProgressiveSweepSolidAdmission} from './sweepSolidAdmission'
 import type { DirectBody, DirectDocument } from './directModeling'
 import { emptyDirectDocument, parseDirectDocument } from './directModeling'
 import {inspectNurbsBrep, transformNurbsBrep, type NurbsBrep} from './geometry/brep'
@@ -8,6 +9,7 @@ import type { MeshObject, MeshWorkspaceDocument } from './meshEditing'
 import { emptyMeshDocument } from './meshEditing'
 import { tessellateSolidNurbsSurface } from './solidNurbs'
 import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
+import {flattenGroupGeometry} from './meshFlatten'
 import { createSelectionTransferService } from './geometry/selectionTransfer'
 import { isTopoId, type TopoId } from '../core/topologyLineage'
 
@@ -57,10 +59,22 @@ export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string):
     const identity = mesh.transform.every((v, i) => v === (i % 5 === 0 ? 1 : 0))
     const brep = identity ? model : transformNurbsBrep(model,
       Array.from({length:4}, (_, row) => Array.from(mesh.transform.slice(row*4,row*4+4))))
+    inspectProgressiveSweepSolidAdmission(mesh.nativeGeometry,brep)
     return {id, name, mesh:polygon, brep}
   }
   if (!polygon) return null
   return { id, name, mesh: polygon }
+}
+
+/** Editable Mesh drops rendering normals; weld exact coincident BRep display
+ * vertices so shared authored boundaries remain connected in indexed topology. */
+export function meshDataToEditablePolygon(mesh: MeshData): PolygonMesh | null {
+  if (mesh.nativeGeometry?.kind === 'brep') {
+    if (!isNativeGeometryArtifact(mesh.nativeGeometry)) throw new Error('Invalid native B-rep snapshot.')
+    const polygon=flattenGroupGeometry([mesh])
+    return polygon.indices.length ? polygon : null
+  }
+  return meshDataToPolygon(mesh)
 }
 
 /** MeshData uses interleaved position+normal (stride 6). */

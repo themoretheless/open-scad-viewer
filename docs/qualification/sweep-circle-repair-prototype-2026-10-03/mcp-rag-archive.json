@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 19,
+  "wikiHash": "40b949d6a67def8d668097465e973dcb8b4ae980ccd1f48dcf57464c79960cc7",
+  "raw": {
+    "document_id": "dcb217bd-4345-4e6b-80cf-239f805375c2",
+    "chunk_count": 3,
+    "node_id": "813f840b-abea-4b73-ad1b-c0e35ea738b5",
+    "edge_count": 1,
+    "content_hash": "2cf8b8e9bdaa16184fef4977fdd3bc92b5e7efea39f883a5bd2441e88e0c540e",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-circle-repair-prototype-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81972,
+    "chunk_count": 720355,
+    "node_count": 107742,
+    "edge_count": 238827,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 7854252,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

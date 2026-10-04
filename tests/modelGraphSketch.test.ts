@@ -85,3 +85,19 @@ describe('bounded sketch constraint solver', () => {
     expect(() => compileModelGraph(document({ boundary: ['a', 'b', 'a'] }))).toThrow('Boundary')
   })
 })
+
+it('preserves named reports against the independent TypeScript solver', async () => {
+  const {solveModelGraphSketch: reference} = await import('../benchmarks/modelgraph/modelGraphSketch-reference')
+  const cases: SketchConstraint[][] = [constraints, [], [{id:'far',kind:'distance',a:'a',b:'a',value:2e6}], [{id:'one',kind:'fix',point:'a',at:[0,0]},{id:'two',kind:'fix',point:'a',at:[10,0]}]]
+  for (const cs of cases) {
+    const before = JSON.stringify({points, cs})
+    const actual = solveModelGraphSketch(points, cs), expected = reference(points, cs)
+    expect(actual.status).toBe(expected.status)
+    expect(actual.degrees_of_freedom).toBe(expected.degrees_of_freedom)
+    expect(actual.redundant_equations).toBe(expected.redundant_equations)
+    expect(actual.degenerate_constraints).toEqual(expected.degenerate_constraints)
+    expect(actual.constraints.map(c => [c.id,c.satisfied])).toEqual(expected.constraints.map(c => [c.id,c.satisfied]))
+    actual.points.forEach((p,i) => {expect(p.id).toBe(expected.points[i]!.id); p.position.forEach((v,j)=>expect(v).toBeCloseTo(expected.points[i]!.position[j]!,5))})
+    expect(JSON.stringify({points,cs})).toBe(before)
+  }
+})

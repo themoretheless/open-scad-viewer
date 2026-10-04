@@ -1,0 +1,16 @@
+{
+  "steps": 30,
+  "elapsedMs": 510.40191700000105,
+  "rafSamples": 61,
+  "rafMs": {
+    "p50": 8.300000000000182,
+    "p95": 10,
+    "max": 10.300000000000182
+  },
+  "polygonCounts": {
+    "min": 36,
+    "max": 59
+  },
+  "documentUnchanged": true,
+  "scope": "Single mixed-shell CPU scene; includes browser automation and RAF pacing; not a large-scene FPS acceptance."
+}

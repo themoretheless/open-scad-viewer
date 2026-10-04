@@ -2296,6 +2296,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn heal_transaction_cancel_rollback_and_idempotence() {
         let (model, context, proof) = heal_fixture();
         let vertex = model.edges[0].vertices[0];
@@ -2344,6 +2345,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn heal_positive_endpoint_snap_returns_complete_native_certificate() {
         let (model, context, proof) = heal_fixture();
         let vertex = model.edges[0].vertices[0];

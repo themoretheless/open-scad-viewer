@@ -2,6 +2,15 @@ use modelgraph_text::compile;
 use value_codec::json;
 
 #[test]
+fn authored_nurbs_curve_preserves_explicit_periodicity() {
+    let source = "c=nurbs_curve(degree:2,knots:[0,1,2,3,4,5,6,7,8],control_points:[[1mm,0mm,0mm],[0mm,1mm,0mm],[-1mm,0mm,0mm],[0mm,-1mm,0mm],[1mm,0mm,0mm],[0mm,1mm,0mm]],weights:[1,1,1,1,1,1],periodic:true)\nshow c.surface_extrude([0,0,10mm])";
+    let graph = compile(source).unwrap();
+    assert_eq!(graph["nodes"][0]["periodic"], true);
+    assert_eq!(compile(&source.replace("periodic:true", "periodic:false")).unwrap()["nodes"][0]["periodic"], false);
+    assert!(compile(&source.replace("periodic:true", "periodic:[1]")).is_err());
+}
+
+#[test]
 fn builds_graph_without_a_javascript_host() {
     let result = compile("param radius: 2 range 1..8\nshow circle(radius).extrude(4)").unwrap();
     assert_eq!(result["root"], "n2");
@@ -93,4 +102,24 @@ fn curve_extrusion_keeps_nested_geometry_references_and_units() {
     ] {
         assert!(compile(bad).is_err(), "Unexpected accepted input: {bad}");
     }
+}
+
+
+#[test]
+fn rush_release_keeps_cad_units_ranges_fluent_calls_and_offsets() {
+    let legacy = "// @modelgraph-text/1\n// 🧱\nparam radius: 2mm range 1mm..8mm\nfn make x: length -> length\n  ret x\nshow circle(make(radius)).extrude(4mm)";
+    let rush = legacy.replace("@modelgraph-text/1", "@rush/1").replace("ret x", "return x");
+    let old = compile(legacy).unwrap();
+    let new = compile(&rush).unwrap();
+    assert_eq!(old["nodes"], new["nodes"]);
+    assert_eq!(old["root"], new["root"]);
+    let start = rush.find("2mm").unwrap();
+    assert_eq!(new["customizer"][0]["valueStart"], rush[..start].encode_utf16().count());
+}
+
+#[test]
+fn rush_comments_and_malformed_strings_are_handled_by_release_lexer() {
+    assert!(compile("/* 🧱 */ show sphere(2mm) // end").is_ok());
+    assert!(compile("show sphere(2mm) /* unclosed").is_err());
+    assert!(compile("name = \"unclosed\nshow sphere(2mm)").is_err());
 }

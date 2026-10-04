@@ -2,6 +2,15 @@ import { expect, it } from 'vitest'
 import { deepStrictEqual } from 'node:assert'
 import { parseDirectDocument, parseDirectDocumentAsync } from '../src/services/directModeling'
 import { sampleCurve } from '../src/services/directSketchGeometry'
+import { MAX_BODY_MESH_COMPONENTS } from '../src/services/directDocumentLimits'
+
+it.each(['positions', 'indices'] as const)('rejects a body exceeding the bounded %s display cache in both parsers', async field => {
+  const mesh = { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }
+  mesh[field] = Array(MAX_BODY_MESH_COMPONENTS + 3).fill(0)
+  const text = JSON.stringify({ version: 1, sketches: [], bodies: [{ id: 'over-budget', name: 'Over budget', mesh }] })
+  expect(() => parseDirectDocument(text)).toThrow('Invalid body mesh.')
+  await expect(parseDirectDocumentAsync(text)).rejects.toThrow('Invalid body mesh.')
+})
 
 const wrap = (metadata: string) => `{"version":1,"sketches":[],"bodies":[],"metadata":${metadata}}`
 const legacy = (text: string) => JSON.parse(JSON.stringify({ ...JSON.parse(text), curves: [], surfaces: [] }))

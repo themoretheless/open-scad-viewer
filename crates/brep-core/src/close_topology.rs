@@ -582,12 +582,7 @@ fn face_surface_key(model: &Model, face: usize) -> Result<String> {
         .faces
         .get(face)
         .ok_or_else(|| refuse("BREP_COMPLEX_INCIDENCE_REFUSED", "Unknown shared face"))?;
-    value_codec::to_string(&face.surface).map_err(|_| {
-        refuse(
-            "BREP_COMPLEX_INCIDENCE_REFUSED",
-            "Cannot encode shared face carrier",
-        )
-    })
+    Ok(crate::rational_identity::surface_signature(&face.surface))
 }
 
 fn edge_curve_key(model: &Model, edge: usize) -> Result<String> {
@@ -595,12 +590,7 @@ fn edge_curve_key(model: &Model, edge: usize) -> Result<String> {
         .edges
         .get(edge)
         .ok_or_else(|| refuse("BREP_COMPLEX_INCIDENCE_REFUSED", "Unknown radial edge"))?;
-    value_codec::to_string(&edge.curve).map_err(|_| {
-        refuse(
-            "BREP_COMPLEX_INCIDENCE_REFUSED",
-            "Cannot encode radial edge carrier",
-        )
-    })
+    Ok(crate::rational_identity::curve_signature(&edge.curve))
 }
 
 fn audit_complex(complex: MixedDimensionalBrep) -> Result<AuditedTopologyComplex> {

@@ -6,5 +6,6 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-value-codec = { path = "../value-codec" }
+math-core = { workspace = true }
+value-codec = { workspace = true }
+themoretheless-tokenizer-rush = { git = "https://github.com/themoretheless/tokenizer.git", branch = "release" }

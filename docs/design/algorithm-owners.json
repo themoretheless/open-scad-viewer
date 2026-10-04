@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-03",
+  "decisions": [
+    {
+      "id": "sketch-relations",
+      "owner": "planar-geometry",
+      "action": "migrate",
+      "files": [
+        "src/services/modelingSnaps.ts",
+        "src/services/solidPointEdit.ts",
+        "src/services/mainModeling.ts"
+      ],
+      "reason": "Arc sampling, intersections, tangent candidates, centroids, analytic handles and authored profiles belong to planar-geometry. Keep CSS-pixel ranking and document transactions in TS; sketch-core owns constraints only."
+    },
+    {
+      "id": "direct-tools",
+      "owner": "planar-geometry + geometry-ops",
+      "action": "split",
+      "files": [
+        "src/services/directModelingTools.ts",
+        "src/services/directSketchGeometry.ts",
+        "src/services/directModeling.ts"
+      ],
+      "reason": "Move circular-copy coordinates and model vector operations to bounded native APIs. Keep camera projection, pixel snapping, IDs/history and operation orchestration in TS."
+    },
+    {
+      "id": "specialized-solids",
+      "owner": "polygon-core",
+      "action": "migrate",
+      "files": [
+        "src/services/mainSolidExtensions.ts"
+      ],
+      "reason": "Prism recognition, profile matching, shell/bevel construction and sphere recognition affect model geometry; preserve current admitted domains and errors."
+    },
+    {
+      "id": "mesh-display",
+      "owner": "polygon-core",
+      "action": "migrate",
+      "files": [
+        "src/services/solidGpuView.ts",
+        "src/services/photogrammetry/preview.ts",
+        "src/services/modelGraphTextScene.ts"
+      ],
+      "reason": "Batch normals and triangle expansion in native display preparation; retain camera, colors, preview scaling and GPU resource ownership. Different smoothing policies require separate options."
+    },
+    {
+      "id": "asset-import",
+      "owner": "mesh-io + planar-geometry + openscad-core",
+      "action": "split",
+      "files": [
+        "src/services/openScadImport.ts"
+      ],
+      "reason": "mesh-io owns decoding/mesh validation; planar-geometry owns face triangulation and DXF curve geometry; openscad-core owns dxf_dim/dxf_cross semantics. Host retains asset access and browser ZIP/XML integration until native bounded formats exist."
+    },
+    {
+      "id": "svg-projection",
+      "owner": "mesh-section",
+      "action": "migrate",
+      "files": [
+        "src/services/svgGeometry.ts"
+      ],
+      "reason": "Project mesh/selected planar face in one native batch, compose plane basis through osv-math and planar union through planar-geometry. Keep SVG formatting and session lifetime in host."
+    },
+    {
+      "id": "language-builtins",
+      "owner": "openscad-core",
+      "action": "migrate",
+      "files": [
+        "src/services/openScadBuiltinFunctions.ts",
+        "src/services/openscadSemanticLowerer.ts"
+      ],
+      "reason": "Remaining norm, round, value operations and transform lowering duplicate native language semantics. Preserve profile differences, warning order and nonfinite/signed-zero behavior."
+    },
+    {
+      "id": "degree-adapter",
+      "owner": "openscad-core",
+      "action": "adapter",
+      "files": [
+        "src/services/openScadDegreeMath.ts"
+      ],
+      "reason": "Pure-value cache, batching, ABI encoding and decoding; degree math is native. Evaluation-wide batching is still pending."
+    },
+    {
+      "id": "selection-geometry",
+      "owner": "geometry-ops",
+      "action": "split",
+      "files": [
+        "src/services/nativeFaceSelection.ts"
+      ],
+      "reason": "Native batched geometry owns anchor centroid/normal; TS keeps revision/identity admission and selection state. This is retessellation anchoring, not persistent topology naming."
+    },
+    {
+      "id": "ray-reference",
+      "owner": "mesh-query + osv-math",
+      "action": "split",
+      "files": [
+        "src/services/math3d.ts"
+      ],
+      "reason": "rayIndexedMeshDistance has no src callers; remove or move to a frozen test reference after checking tests. Use mesh-query for rays and osv-math for transforms; camera matrices may stay in viewport host."
+    },
+    {
+      "id": "nurbs-certificates",
+      "owner": "nurbs-core",
+      "action": "migrate",
+      "files": [
+        "src/services/nurbsErrorComposition.ts",
+        "src/services/solidNurbs.ts",
+        "src/services/modelGraphNurbsKernel.ts"
+      ],
+      "reason": "Certified bound composition and geometric closure tests belong to native NURBS owner. Keep orchestration and decoding; preserve outward rounding, refusals and retained-profile contracts."
+    },
+    {
+      "id": "threshold-compatibility",
+      "owner": "mesh-topology + mesh-query",
+      "action": "adapter",
+      "files": [
+        "src/services/meshTopology.ts",
+        "src/services/geometry/meshAnalysis.ts"
+      ],
+      "reason": "Math.cos is an explicit legacy binary64 threshold contract. Geometry already native; move only with bit-level classification parity qualification."
+    },
+    {
+      "id": "viewport-host",
+      "owner": "application-viewport",
+      "action": "retain",
+      "files": [
+        "src/services/orbitCameraProjection.ts",
+        "src/services/viewportModel.ts",
+        "src/services/cameraGestures.ts",
+        "src/services/geometryTransformTransition.ts",
+        "src/services/viewFrustum.ts",
+        "src/services/geometry/viewport.ts",
+        "src/services/uniformFill.ts",
+        "src/services/transparentOrdering.ts",
+        "src/services/transparentBsp.ts",
+        "src/components/ViewCube.vue",
+        "src/components/ModelingFloorGrid.vue",
+        "src/dev/vrEmulator.ts"
+      ],
+      "reason": "Camera matrices, animation, frustum, lighting and per-frame transparent traversal consume display data and do not author geometry. Retain in host; centralize duplicated projection formulas within viewport modules. BSP construction/clipping remain geometry-ops."
+    },
+    {
+      "id": "mixed-renderer",
+      "owner": "application-viewport + mesh-query",
+      "action": "split",
+      "files": [
+        "src/services/webgpuRenderer.ts",
+        "src/services/viewportController.ts",
+        "src/services/cpuOrbitPaint.ts"
+      ],
+      "reason": "Keep WebGPU resources, gestures, camera and overlay deduplication in TS. Geometry picking already native; model measurement distance belongs to native query result rather than renderer calculation."
+    },
+    {
+      "id": "mixed-modeling-ui",
+      "owner": "application-ui + planar-geometry + geometry-ops",
+      "action": "split",
+      "files": [
+        "src/features/DirectModeler.vue",
+        "src/features/MainModelingOverlay.vue",
+        "src/features/MainSketchTools.vue",
+        "src/features/MeshModeler.vue",
+        "src/features/MainModelingTools.vue"
+      ],
+      "reason": "Keep interaction/projection/draft display in Vue. Extract committed curve construction, arc snap tessellation, trim candidate geometry and face normals to domain adapters. Avoid persistent model calculations inside components."
+    },
+    {
+      "id": "photo-input",
+      "owner": "application-assets",
+      "action": "retain",
+      "files": [
+        "src/services/photogrammetry/input.ts"
+      ],
+      "reason": "Browser image input/preprocessing orchestration remains host; reconstruction and calibration kernels belong to photogrammetry-core."
+    },
+    {
+      "id": "host-state",
+      "owner": "application-host",
+      "action": "retain",
+      "files": [
+        "src/services/selectionCycling.ts",
+        "src/services/commandSearch.ts",
+        "src/services/openScadProject.ts",
+        "src/services/virtualFileSystem.ts",
+        "src/services/openScadText.ts",
+        "src/mcp/officialOpenScadRuntimeProtocol.ts",
+        "src/data/functionReference.ts",
+        "src/components/SceneOutliner.vue",
+        "src/components/InspectPanel.vue",
+        "src/App.vue"
+      ],
+      "reason": "Gesture thresholds, search/Unicode normalization, text runtime loading, timeout budgets and presentation calculations are host responsibilities. No per-scalar ABI migration."
+    },
+    {
+      "id": "mcp-preview",
+      "owner": "application-viewport",
+      "action": "retain",
+      "files": [
+        "src/mcp/modelGraphPreview.ts"
+      ],
+      "reason": "Display preview framing/raster orchestration belongs to host; geometric operations use existing native adapters."
+    },
+    {
+      "id": "wasm-loader",
+      "owner": "application-transport",
+      "action": "retain",
+      "files": [
+        "src/services/geometry/module.ts"
+      ],
+      "reason": "Binary decoding, allocation and WASM lifecycle are host transport."
+    }
+  ],
+  "families": [
+    {
+      "id": "language",
+      "owner": "openscad-core",
+      "patterns": [
+        "src/services/openScad",
+        "src/services/openscad"
+      ]
+    },
+    {
+      "id": "nurbs",
+      "owner": "nurbs-core",
+      "patterns": [
+        "src/services/nurbs",
+        "src/services/solidNurbs",
+        "src/services/curveOffset",
+        "src/services/solidCurve",
+        "src/services/solidSurface",
+        "src/services/solidTrimmed",
+        "src/services/sweep",
+        "src/services/modelGraphNurbs",
+        "src/services/geometry/nurbs",
+        "src/services/geometry/intersections"
+      ]
+    },
+    {
+      "id": "brep",
+      "owner": "brep-core + brep-topology",
+      "patterns": [
+        "src/services/brep",
+        "src/services/solid/brep",
+        "src/services/solid/exactSolid",
+        "src/services/cad",
+        "src/services/geometry/brep",
+        "src/services/solidStep"
+      ]
+    },
+    {
+      "id": "planar",
+      "owner": "planar-geometry + sketch-core",
+      "patterns": [
+        "src/services/directProfile",
+        "src/services/directSketch",
+        "src/services/solidSketch",
+        "src/services/solidProfile",
+        "src/services/retainedSketch",
+        "src/services/modelGraphSketch",
+        "src/services/svg",
+        "src/services/geometry/sketch",
+        "src/services/geometry/path2d"
+      ]
+    },
+    {
+      "id": "mesh",
+      "owner": "polygon-core + mesh-query + mesh-topology + mesh-io",
+      "patterns": [
+        "src/services/mesh",
+        "src/services/stl",
+        "src/services/generalMesh",
+        "src/services/lattice",
+        "src/services/surfaceTexture",
+        "src/services/geometry/polygon",
+        "src/services/geometry/mesh"
+      ]
+    },
+    {
+      "id": "solid",
+      "owner": "geometry-ops + polygon-core",
+      "patterns": [
+        "src/services/solid",
+        "src/services/directSolid",
+        "src/services/directExtrusion",
+        "src/services/mainSolid",
+        "src/services/geometryEditing",
+        "src/services/geometryCompute",
+        "src/services/transparentTriangle"
+      ]
+    },
+    {
+      "id": "photo",
+      "owner": "photogrammetry-core",
+      "patterns": [
+        "src/services/photogrammetry"
+      ]
+    },
+    {
+      "id": "mechanics",
+      "owner": "mechanics-core + mechanical-core",
+      "patterns": [
+        "src/services/truss",
+        "src/services/structuralSections",
+        "src/services/mechanical",
+        "src/services/bondedSolid"
+      ]
+    },
+    {
+      "id": "sdf",
+      "owner": "sdf-core",
+      "patterns": [
+        "src/services/sdf",
+        "src/services/geometry/sdf"
+      ]
+    },
+    {
+      "id": "subdivision",
+      "owner": "subdivision-core",
+      "patterns": [
+        "src/services/geometry/subdivision"
+      ]
+    },
+    {
+      "id": "vr",
+      "owner": "vr-core + application-vr",
+      "patterns": [
+        "src/services/vr"
+      ]
+    },
+    {
+      "id": "gcode",
+      "owner": "gcode-core + gcode-optimize + printer-core",
+      "patterns": [
+        "src/services/gcode",
+        "src/services/printer"
+      ]
+    },
+    {
+      "id": "runtime",
+      "owner": "modelgraph-runtime + application-runtime",
+      "patterns": [
+        "src/services/modelGraph",
+        "src/services/semanticProgram",
+        "src/services/manifoldPlan",
+        "src/core/"
+      ]
+    },
+    {
+      "id": "gpu",
+      "owner": "application-gpu + raster-core",
+      "patterns": [
+        "src/services/shaders/",
+        "src/services/webgpu",
+        "src/services/textureResources"
+      ]
+    }
+  ]
+}

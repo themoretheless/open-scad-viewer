@@ -1,0 +1,168 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "L R0.5",
+      "file": "L-base.step",
+      "sha256": "beed48c537e06d4e7c3db6ef9df11071aa93a53001c454d1431b1ccb82b5e746",
+      "expected": {
+        "volumeMm3": 6498.926990816987,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "L base STEP roundtrip",
+      "file": "L-base-roundtrip.step",
+      "sha256": "3007ed3cb519614ff3fd3066b683244109ec13d77827e8de1423ba6f25a7461a",
+      "expected": {
+        "volumeMm3": 6498.926990816987,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "L R0.5 rotated",
+      "file": "L-placed.step",
+      "sha256": "9202bb77199940f769b029b758b4122803b4b4e8ab03554f4c8336dd07f79f65",
+      "expected": {
+        "volumeMm3": 6498.926990816987,
+        "boundsMm": [
+          [
+            11,
+            -7,
+            3
+          ],
+          [
+            31,
+            33,
+            33
+          ]
+        ]
+      }
+    },
+    {
+      "name": "L placed STEP roundtrip",
+      "file": "L-placed-roundtrip.step",
+      "sha256": "d8b075b33878b7e910b7d11c0b76f5002afeb2d48692b5a85b60f3591c325835",
+      "expected": {
+        "volumeMm3": 6498.926990816987,
+        "boundsMm": [
+          [
+            11,
+            -7,
+            3
+          ],
+          [
+            31,
+            33,
+            33
+          ]
+        ]
+      }
+    },
+    {
+      "name": "C R0.5",
+      "file": "C-base.step",
+      "sha256": "614a15aba1af01b784cbbacc89fb4bce7238c7cb1dd02799ff8ebfdbe21f8be9",
+      "expected": {
+        "volumeMm3": 259.7317477042468,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            10,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "C base STEP roundtrip",
+      "file": "C-base-roundtrip.step",
+      "sha256": "b1aaea3d89be2b988fdd94b84e01e2a26728713d219f21946f4645acde966978",
+      "expected": {
+        "volumeMm3": 259.7317477042468,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            10,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "C R0.5 rotated",
+      "file": "C-placed.step",
+      "sha256": "370312e5cb70741417ea6046fbed163ed5e920cc91e430764136244afd062ee7",
+      "expected": {
+        "volumeMm3": 259.7317477042468,
+        "boundsMm": [
+          [
+            11,
+            -7,
+            3
+          ],
+          [
+            16,
+            3,
+            13
+          ]
+        ]
+      }
+    },
+    {
+      "name": "C placed STEP roundtrip",
+      "file": "C-placed-roundtrip.step",
+      "sha256": "39de0554675d0981c1ab019e92e6c5b1028acf42be96823d4fb05bc1f603f5c1",
+      "expected": {
+        "volumeMm3": 259.7317477042468,
+        "boundsMm": [
+          [
+            11,
+            -7,
+            3
+          ],
+          [
+            16,
+            3,
+            13
+          ]
+        ]
+      }
+    }
+  ]
+}

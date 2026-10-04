@@ -1,0 +1,22 @@
+{
+  "descriptor": {
+    "version": 1,
+    "input": "d6eb9f1010f41ce7cd97cd3a9a0aacfea89da573ca84b3c97e6eeba40eeedfab",
+    "tool": "fb71cf7b43513d8debdb8380408df561abc49614720a692c4f91f8b897add78e",
+    "flags": [
+      "-Oz",
+      "--enable-bulk-memory",
+      "--enable-sign-ext",
+      "--enable-nontrapping-float-to-int",
+      "--enable-mutable-globals",
+      "--enable-reference-types",
+      "--enable-multivalue"
+    ],
+    "node": "v22.23.3",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "key": "f216407887e099ed4074e07b069558b230c330704047119797de7cdf9cead0a7",
+  "geometryWasmSha256": "e32109100a5157819cffb29ff164fba3b109ec2d73a84754a138122937f57edf",
+  "bytes": 10724480
+}

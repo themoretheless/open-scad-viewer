@@ -1,0 +1,200 @@
+{
+  "candidate": {
+    "upper": 0.4000000000000013,
+    "work": 405
+  },
+  "charts": {
+    "allChartsCertified": true,
+    "cells": 292,
+    "charts": [
+      {
+        "face": 0,
+        "audit": {
+          "cells": 31,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 1,
+        "audit": {
+          "cells": 33,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              -1,
+              -1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 2,
+        "audit": {
+          "cells": 43,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              1,
+              -1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 3,
+        "audit": {
+          "cells": 35,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 4,
+        "audit": {
+          "cells": 45,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              -1,
+              1,
+              0
+            ],
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 5,
+        "audit": {
+          "cells": 35,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 6,
+        "audit": {
+          "cells": 33,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      },
+      {
+        "face": 7,
+        "audit": {
+          "cells": 37,
+          "certified": true,
+          "globalEmbeddingCertified": false,
+          "projection": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          "reason": null
+        }
+      }
+    ],
+    "unresolvedFaces": [],
+    "globalEmbeddingCertified": false
+  },
+  "volume": {
+    "allFacesInjective": true,
+    "allPairsClassified": false,
+    "boundaryEmbeddingCertified": false,
+    "nesting": null,
+    "nextPair": null,
+    "orientationCells": 0,
+    "orientationDomainCells": 0,
+    "orientations": [
+      {
+        "attempts": 0,
+        "expectedOutward": true,
+        "outward": null,
+        "shell": 0
+      }
+    ],
+    "solidGeometryCertified": false
+  }
+}

@@ -1,0 +1,57 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (235 tests | 4 failed | 231 skipped) 358ms
+   × refreshes Extrude · E after destination group change with late failure=false 320ms
+   × refreshes Extrude · E after destination group change with late failure=true 17ms
+   × refreshes Revolve after destination group change with late failure=false 12ms
+   × refreshes Revolve after destination group change with late failure=true 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes Extrude · E after destination group change with late failure=false
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes Extrude · E after destination group change with late failure=true
+AssertionError: expected [ { job: { …(3) }, …(2) } ] to have a length of 2 but got 1
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ tests/directModelerUi.test.ts:3264:20
+    3262|   await ui.click(command);await vi.advanceTimersByTimeAsync(100);expec…
+    3263|   await ui.click('Active group: Destination');await vi.advanceTimersBy…
+    3264|   expect(requests).toHaveLength(2)
+       |                    ^
+    3265|   if(lateFailure)requests[0].reject(Error('obsolete destination previe…
+    3266|   await flushClearance();expect(ui.doc()).toEqual(before)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes Revolve after destination group change with late failure=false
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes Revolve after destination group change with late failure=true
+AssertionError: expected [ { …(3) } ] to have a length of 2 but got 1
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ tests/directModelerUi.test.ts:3264:20
+    3262|   await ui.click(command);await vi.advanceTimersByTimeAsync(100);expec…
+    3263|   await ui.click('Active group: Destination');await vi.advanceTimersBy…
+    3264|   expect(requests).toHaveLength(2)
+       |                    ^
+    3265|   if(lateFailure)requests[0].reject(Error('obsolete destination previe…
+    3266|   await flushClearance();expect(ui.doc()).toEqual(before)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 231 skipped (235)
+   Start at  12:32:35
+   Duration  2.04s (transform 1.38s, setup 0ms, import 1.58s, tests 358ms, environment 10ms)
+

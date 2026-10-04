@@ -1,6 +1,7 @@
 //! Geometric section properties of the supplied final mesh, never its bounding-box graph.
 use crate::{Result, Value, field, input, json, require_exact_fields};
-use polygon_core::{Mesh, solid::section::MeshSectionIndex};
+use mesh_section::MeshSectionIndex;
+use polygon_core::Mesh;
 
 pub fn inspect(v: Value) -> Result<Value> {
     require_exact_fields(
@@ -67,10 +68,10 @@ pub fn inspect(v: Value) -> Result<Value> {
             p[k] = original[permutation[k]];
         }
     }
-    let index = MeshSectionIndex::new(&mesh)?;
+    let index = MeshSectionIndex::new(&mesh.view()).map_err(crate::legacy_mesh_error)?;
     let mut sections = Vec::with_capacity(stations.len());
     for station in stations {
-        let section = index.section(station)?;
+        let section = index.section(station).map_err(crate::legacy_mesh_error)?;
         let contours: Vec<_> = section.contours.iter().map(|c| c.points.clone()).collect();
         let sources: Vec<_> = section
             .contours

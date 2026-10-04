@@ -1,0 +1,12 @@
+{
+  "crates/cad-predicates/src/projective_strip_jets.rs": "a1c4abc04b216df46676692d414bae0a4b58a7abbad782d580824dca3a419f85",
+  "src/services/geometry/brep.ts": "7b3a12c6292d694609e8ac92a139f58f29dc6f964f6b28ed39ba323c936fe6d6",
+  "src/services/nurbsSweepAudit.ts": "361d8ad109b5b4e26e3421e80612fb09f6368db30c24ba9c316dd609bc7d50de",
+  "tests/miterStationGraph.test.ts": "6c16c2b0bf863ce30917a8fc5fe735ee886e457f451c8c914f4a73eaa924a1ff",
+  "tests/miterStationSmoothness.test.ts": "0ddd0994e31271f0a835a01cb6830e394ad1d56d628700eeee5faf846ee081e8",
+  "scripts/export-smooth-station-step-oracle.mts": "2d196235f2cc680cecbd7f3a50b4f5ea2c31dc21882237dab36ea75e2fe341a6",
+  "scripts/check-sweep-miter-matrix-browser.mjs": "3b056677d1d4079e89d1bd09a3bbe4099d9c0b0a25218e7fe0afeb30b54f9a1b",
+  "examples/rush/closed-miter-frame-guide-affine-hollow-corrected.r": "957d76eb67e60ee9fad35d742eec530f7755f49fdd756ede6ad4c9255f5ebdeb",
+  "examples/rush/closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r": "d73fe38a77bc3e54dd16ddd55decfbd67bede87229b6ef62cd1b032eed929996",
+  "public/wasm/geometry-kernel.wasm": "2a23e26339d0dd84e4f7da9415996a6e4dbbfa8ea752ec3f1428fd903ce7b97d"
+}

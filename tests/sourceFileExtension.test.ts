@@ -9,3 +9,13 @@ it('names ModelGraph Text documents .mg and OpenSCAD documents .scad', () => {
   expect(withSourceExtension('part.MG', 'cube(1);')).toBe('part.MG')
   expect(withSourceExtension('part', 'cube(1);')).toBe('part.scad')
 })
+
+
+it('recognizes Rush headers and preserves .r filenames', () => {
+  expect(sourceFileExtension('// @rush/1\nshow sphere(10mm)')).toBe('.r')
+  expect(sourceFileExtension('// @rush\nshow sphere(10mm)')).toBe('.r')
+  expect(sourceFileExtension('// @rush/2\n')).toBe('.scad')
+  expect(sourceFileExtension('// @rush-other\n')).toBe('.scad')
+  expect(withSourceExtension('part', '// @rush/1\n')).toBe('part.r')
+  expect(withSourceExtension('part.R', '// @rush/1\n')).toBe('part.R')
+})

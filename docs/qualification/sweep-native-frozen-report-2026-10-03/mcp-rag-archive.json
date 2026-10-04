@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 14,
+  "wikiHash": "e0ea7b2996c9d723c73050ea7f570371d2eec2c7b742fcd47da78b4c19e0eca4",
+  "raw": {
+    "document_id": "62d054ce-544f-4f25-9700-caf04515712d",
+    "chunk_count": 4,
+    "node_id": "58750be5-1484-4b74-83a2-532294b74205",
+    "edge_count": 1,
+    "content_hash": "b55fdb92373c2c38045237f400d44bf0cee080da58c81ceb04ddd54b8170caaa",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-native-frozen-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81967,
+    "chunk_count": 720325,
+    "node_count": 107737,
+    "edge_count": 238822,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 3239495,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "sweep-seams-observed-source-artifact/1",
+  "scope": "Observed source hashes and delivered WASM bytes for finite seam fixtures; not a clean-tree all-source reproducibility claim.",
+  "sha256": {
+    "crates/nurbs-core/src/continuity/exact_strip.rs": "a6a49b96ab56051885e6bf759f26978e341dc17c9e3df716d6659443ea39f92f",
+    "crates/nurbs-core/src/continuity/regularity.rs": "619e918242c0497975a11d4c61b1f482e7a40d44d1b606ff03c66842171a9cb1",
+    "crates/cad-predicates/src/bezier_strip_jets.rs": "c8fe442af50fdb72eba23cc7945bee0a7a6c924c61382f2ffecfe304f933e063",
+    "src/services/nurbsSweepAudit.ts": "555b0c6da8061b9070999594b6ffa7c7cc7ccdf8a9d2436871e61df43c4dfba8",
+    "tests/nurbsSweepExactStripJets.test.ts": "fd22281d0a36aedde3125d5c973d2e2a94963f82dfc435cdf1a2554dbc1d881b",
+    "scripts/check-sweep-seams-browser.mjs": "e59a17d9949fa529df4150ff63d0ff739689da187951379d7474fa844e827d07",
+    "src/generated/geometry-kernels/identity.ts": "8b984656624b05395370b6e8e2299029056327671436ebf090e2a801f00e3773",
+    "src/generated/geometry-kernels/bytes.ts": "a716d119d28da22d3c3848e4ef0c88f98dfcf400c252b84ff44b6a86c46726d3",
+    "public/wasm/geometry-kernel.wasm": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602"
+  }
+}

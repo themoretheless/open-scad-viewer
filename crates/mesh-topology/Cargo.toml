@@ -1,0 +1,17 @@
+[package]
+name = "mesh-topology"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = true
+description = "Borrowed triangle meshes, indexed incidence and boundary inspection"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
+documentation = "https://docs.rs/mesh-topology"
+keywords = ["mesh", "geometry", "bvh", "cad"]
+categories = ["mathematics", "science"]
+include = ["src/**", "tests/**", "examples/**", "benches/**", "Cargo.toml", "README.md", "LICENSE"]
+
+[dependencies]
+geometry-ops = { workspace = true }
+math-core = { workspace = true }

@@ -1,0 +1,44 @@
+{
+  "operation": "curve_prepare_coons_weights",
+  "status": "qualified-within-documented-scope",
+  "preserves": [
+    "source definition",
+    "active parameter domain",
+    "rational curve image within accepted bound"
+  ],
+  "preparation": "positive affine homogeneous multiplier on each Bezier span; degree increases by one",
+  "acceptance": {
+    "method": "outward-homogeneous-Bernstein-difference",
+    "wholeCurve": true,
+    "errorUpperAtMostBudget": true,
+    "refusalReturnsOriginal": true
+  },
+  "limits": [
+    "nonperiodic 3D curve",
+    "source degree below25",
+    "result <=256 control points",
+    "existing kernel weight and coordinate limits"
+  ],
+  "notProven": [
+    "general G1/G2 of resulting patch",
+    "all parameter conditioning",
+    "whole-patch continuous acceptance",
+    "general signed-control-weight Coons patches"
+  ],
+  "evidence": "final/",
+  "verification": {
+    "nativeTests": 154,
+    "doctests": 1,
+    "cadTests": 730,
+    "cadFiles": 62,
+    "runtimeTests": 46,
+    "browserDownloads": 12,
+    "mouseAndKeyboard": true,
+    "exactSourceHistoryReload": true,
+    "assetBytes": 7162990,
+    "assetBudget": 7167000,
+    "rawWasmSha256": "a89bc94540c6173b62d776011d3388f29c5753c9828f8f6038c027d4a655edc7",
+    "visibleErrorAndNextAction": true,
+    "roleOrderIndependentError": true
+  }
+}

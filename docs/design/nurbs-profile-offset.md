@@ -1,0 +1,11 @@
+# Смещённые профили целиком
+
+`curve_offset_wire::bevel_wire(source,distance,tolerance,max_cells)` строит связный offset profile из исходной 2D NURBS: source-normal segments с continuous error bounds и явные straight bevel joins в C0 corners. В отличие от N186 (локальный smooth curve offset) и N187 (отдельное построение join), N74 возвращает целиком соединённый открытый/замкнутый профиль, его station parameters, provenance каждого участка и итоговую continuous error upper.
+
+Positive distance — left normal относительно обхода. Исходные параметры Source roles сохраняются отдельно от station parameters wire. Periodic input и clamped-equal-endpoints input закрываются с каноническим общим endpoint; C0 seam получает явный bevel. Smooth seams и внутренние smooth joins используют endpoint displacement bounds через outward arithmetic. Bevel target определяется прямым соединением точных one-sided offset endpoints, его ошибка ограничена максимумом ошибок обоих концов. Общий bound — максимум всех сегментов после endpoint adjustments. Источник не изменяется, periodic flag не подделывается.
+
+Вход требует валидную planar positive-weight NURBS, определённую ненулевую one-sided нормаль, finite nonzero distance, finite positive tolerance, bounded offset work 1..100000 cells и непрерывные knot joins (multiplicity<=degree). Output edges, включая bevels, должны помещаться в max_cells; curves разбиваются на chunks <=255 edges для ограничения CP count. Переполнение, неопределённые нормали/бюджеты и превышение допустимой ошибки дают ошибку, а не неквалифицированный профиль. Error относится к source-normal curve и объявленной bevel corner policy; он не утверждает global region topology или clearance инструмента.
+
+Самопересечения inward offset возможны и не скрываются: очистка/выбор областей — отдельный N188. Offset profile — самостоятельная geometric curve/wire операция, а не Boolean solid.
+
+5 существующих tests curve_offset_wire и 3 новых независимых tests profile_offset прошли: аналитический прямоугольный угол для distance ±2; connected endpoints и source preservation; periodic square и smooth seam; closed clamped triangle/rectangle; rational straight normal offset с неединичными weights/domain; invalid distance/tolerance/work limits. Bounds и closure проверены.

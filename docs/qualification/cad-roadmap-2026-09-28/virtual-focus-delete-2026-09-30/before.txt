@@ -1,0 +1,11 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 3000ms exceeded.
+    at /Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/benchmark-solid-instances-browser.mjs:139:14 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.3

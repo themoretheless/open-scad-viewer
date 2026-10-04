@@ -1,0 +1,36 @@
+{
+  "status": "native-candidate",
+  "sourceClass": "positive-weight XY curve, basis-guaranteed C1 interior knots; periodic seam bounded",
+  "closed": true,
+  "nativeTests": 166,
+  "doctests": 1,
+  "sampledOracle": {
+    "oracle": "Decimal(70) Cox-de Boor and rational first derivative",
+    "samples": 2295,
+    "curves": 1,
+    "cells": 255,
+    "maxSampledErrorMm": 0.00020231713288175945,
+    "errorUpperMm": 0.0004970256354838692,
+    "continuousCertificateFromIndependentOracle": false,
+    "regionTopologyCertified": false
+  },
+  "chainDiagnostics": {
+    "checks": 32385,
+    "complete": true,
+    "contacts": [],
+    "crossings": [],
+    "degenerate": [],
+    "enumerationComplete": true,
+    "method": "outward-line-pair-interval/1",
+    "originalOffsetTopologyCertified": false,
+    "predicatesComplete": true,
+    "scope": "represented-offset-chain",
+    "simple": true,
+    "totalPairs": 32385,
+    "uncertain": []
+  },
+  "sourceOffsetRegularityCertified": false,
+  "regionTopologyCertified": false,
+  "wasmWorkerUiIntegrated": false,
+  "fullP0P3Complete": false
+}

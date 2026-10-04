@@ -1,0 +1,8 @@
+{
+  "src/services/solidDraftHeadStore.ts": "25dfef6f84a4ae1414119cce586e9bb7bf98d420807bc34a19e856d6ba7d94cf",
+  "src/features/DirectModeler.vue": "027127403c7e320df1cc1e32aa1ce922cc689bbb29010181186bea982e14176e",
+  "tests/solidDraftHeadStore.test.ts": "5dabb05e4432e01e85e6ffea02f35b957c8bc1a09608ee1bb5960677aac21496",
+  "scripts/check-solid-draft-concurrency-browser.mjs": "9013d5989523ece865aa08dea65fbc988fc2c4287afd159de75bb03e279062a8",
+  "vite.config.ts": "53672c8a86b960cc2ffa11b1d2905873d83a5aa323ed465fc8f45e67f2cdec66",
+  "dist/index.html": "5eef54c32057af3d710d032cb7f7e25219ae1749605b45d37f730ac4acbf80a3"
+}

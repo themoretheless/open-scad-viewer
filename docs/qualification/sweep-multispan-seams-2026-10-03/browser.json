@@ -1,0 +1,165 @@
+{
+  "schema": "sweep-multispan-browser-seams/1",
+  "recordedAt": "2026-10-03T11:34:09.617Z",
+  "browser": "151.0.7922.34",
+  "scope": "Finite exact represented seam fixtures through TypeScript, binary transport and native WASM. Common clamped along-seam basis, Bezier cross direction, at most 33 controls; not arbitrary moving-frame G1/G2 qualification.",
+  "geometryWasmSha256": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602",
+  "cases": [
+    {
+      "name": "common-rational-multispan-C2",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 2819
+      }
+    },
+    {
+      "name": "common-rational-multispan-C2-transposed",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 2819
+      }
+    },
+    {
+      "name": "one-ULP-jet-mismatch",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "homogeneous-jets-different",
+        "regularityCertified": false,
+        "work": 2697
+      }
+    },
+    {
+      "name": "different-along-basis",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "exact-work-exhaustion",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "exact-jet-work-unresolved",
+        "regularityCertified": false,
+        "work": 2818
+      }
+    },
+    {
+      "name": "common-multispan-C1",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 1574
+      }
+    },
+    {
+      "name": "C1-basis-cannot-claim-C2",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "unsupported-unclamped-basis",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "singular-exact-jets",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": true,
+        "reason": "seam-regularity-unproved",
+        "regularityCertified": false,
+        "work": 1963
+      }
+    },
+    {
+      "name": "whole-multispan-seam-set-C2",
+      "expected": true,
+      "report": {
+        "exactG1G2Certified": true,
+        "certifiedOrder": 2,
+        "exactWork": 5913,
+        "unresolvedSeams": [],
+        "seams": [
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 2819
+          },
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 3094
+          }
+        ],
+        "certified": true
+      }
+    },
+    {
+      "name": "shared-seam-work-exhaustion",
+      "expected": false,
+      "report": {
+        "exactG1G2Certified": false,
+        "certifiedOrder": null,
+        "exactWork": 2819,
+        "unresolvedSeams": [
+          1
+        ],
+        "seams": [
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 2819
+          },
+          {
+            "certified": false,
+            "exactIdentity": false,
+            "reason": "exact-jet-work-unresolved",
+            "regularityCertified": false,
+            "work": 0
+          }
+        ],
+        "certified": false
+      }
+    }
+  ],
+  "passed": true
+}

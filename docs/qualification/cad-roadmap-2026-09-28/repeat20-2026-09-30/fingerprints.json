@@ -1,0 +1,5 @@
+{
+  "scripts/check-solid-cap-push-browser.mjs": "60820a55588c481a66444d521b459d6b0bc57c1864fb37c76ba5662e8db75b71",
+  "src/features/DirectModeler.vue": "ce668dab69a19d25fa666f7b1d70b3b7d77a84e573c0cd2e45bcba3fcf61485d",
+  "dist/index.html": "075d25bf82644073b6bae0e26f295c6522462370ff126c6c6222d8f24b5291f7"
+}

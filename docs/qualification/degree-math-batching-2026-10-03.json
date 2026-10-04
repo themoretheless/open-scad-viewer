@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-03",
+  "scope": "Warm Node WASM microbenchmark; median of seven runs; excludes initialization; not whole-model or browser latency",
+  "command": "node --import tsx benchmarks/degree-math.mts",
+  "measurements": [
+    {
+      "batch": 1,
+      "values": 4096,
+      "medianMs": 16.653332999999975,
+      "nsPerValue": 4065.755126953119
+    },
+    {
+      "batch": 2,
+      "values": 4096,
+      "medianMs": 9.970542000000023,
+      "nsPerValue": 2434.2143554687555
+    },
+    {
+      "batch": 32,
+      "values": 4096,
+      "medianMs": 3.420500000000004,
+      "nsPerValue": 835.083007812501
+    },
+    {
+      "batch": 256,
+      "values": 4096,
+      "medianMs": 2.932208000000003,
+      "nsPerValue": 715.8710937500007
+    },
+    {
+      "batch": 1024,
+      "values": 4096,
+      "medianMs": 2.932624999999973,
+      "nsPerValue": 715.9729003906184
+    },
+    {
+      "mode": "production-pairs",
+      "values": 4096,
+      "medianMs": 10.76279199999999,
+      "nsPerValue": 2627.6347656249977
+    },
+    {
+      "mode": "adapter-batch",
+      "values": 4096,
+      "medianMs": 2.6367910000000165,
+      "nsPerValue": 643.7478027343791
+    },
+    {
+      "mode": "single-sin-abi",
+      "values": 4096,
+      "medianMs": 16.447832999999946
+    },
+    {
+      "mode": "single-sin-adapter",
+      "values": 4096,
+      "medianMs": 18.509624999999915
+    }
+  ]
+}

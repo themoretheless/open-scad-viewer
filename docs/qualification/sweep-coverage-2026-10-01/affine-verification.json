@@ -1,0 +1,37 @@
+{
+  "verifiedAt": "2026-10-01T20:15:11.988856+00:00",
+  "nativeSweepTests": 14,
+  "nativeBrepRegressionTests": 10,
+  "nativeRushLowering": "passed",
+  "packagedWasmTests": 435,
+  "packagedWasmFiles": 6,
+  "typecheck": "passed",
+  "catalogAudit": "passed",
+  "newVisualVerification": false,
+  "contract": "positive local-axis rational scale plus local center offset; independent normalized law domains; common sampled budget; retained B-rep caps/holes",
+  "continuousBound": false,
+  "globalEmbeddingCertified": false,
+  "remaining": [
+    "authored orientation",
+    "periodic body topology",
+    "streaming editor preview and cancellation",
+    "visual matrix",
+    "continuous sweep deviation",
+    "side regularity and self-intersections",
+    "external STEP conformance"
+  ],
+  "sha256": {
+    "crates/nurbs-core/src/progressive_sweep.rs": "6cbf962a622b90a2a0f8cb4c61a6543322689c2ece9ce6ffc56ca69c4c270afb",
+    "crates/nurbs-core/src/progressive_sweep/tests.rs": "9e8e111178c84e465723431dad48b8b7493b83a374a53709f05c05ab898c3e3e",
+    "crates/brep-core/src/analytic/rational_loft.rs": "38fb3a7d228f09fbbef84bf88d637ee29b362f4b810e74d724723c197f478826",
+    "src/services/nurbsConstructors.ts": "faa375e085c70d1f963fcc1644c1200b4b12d79a8f9014706cf394522f789825",
+    "src/services/modelGraphNurbs.ts": "376b85d700251515ffcb525522bfe917705bb71124546fc76641faa39eb40821",
+    "src/services/modelGraphNurbsKernel.ts": "b6578e64942b920f4eb5232feb6090fbe9bb972d5cee2e28e396fc3363ba717a",
+    "src/services/geometry/brep.ts": "0be0199df694c5a7f744955c4bf54b6530d6f6908ee0efb8d4b12d1a607762b2",
+    "examples/rush/affine-progressive-sweep.r": "c3cdb545ec65fb0e038a5bbcdbb3b8b4d493b3e8f1cd317ee335e6630ea1c17a",
+    "examples/rush/affine-hollow-body.r": "ce4c7cf03dc6fdfbeb0416a3e265963a54b8d28b88cec100f26999d8c4f34a84",
+    "docs/languages/modelgraph-nurbs-1.schema.json": "e202dc776de73111c09ff48edf5fd3dacce7d5819931fabc75c4c6511dbc4b77",
+    "public/wasm/geometry-kernel.wasm": "6914b86d0f4ed8ce5263ac7392265aab03f6f8ddc54b347a236e34441de2e64c",
+    "public/wasm/language-kernel.wasm": "d02e98809306f38fb41e0069fcffcf6127847a6d44233fe2d5e04099d05b0657"
+  }
+}

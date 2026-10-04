@@ -1,0 +1,17 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 3,
+  "wikiHash": "a8fdc91ce6bdd364b572d71e9530440052c05fc3c5365df0e8ccbf6c5d79d8e0",
+  "raw": {
+    "document_id": "ac9e4d69-7bfb-4c29-96c4-cabcb921da73",
+    "chunk_count": 3,
+    "node_id": "ca6a03f8-f85a-4170-ba8b-18fb746ab66f",
+    "edge_count": 1,
+    "content_hash": "23f39d7fd22d5abf344d8fa247dddf7805f517be5b4ee403363a6d6b9f1a7ca4",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-stream-source-ownership-2026-10-03-v1"
+}

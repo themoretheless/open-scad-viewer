@@ -2388,7 +2388,12 @@ impl<'a> DirectBuilder<'a> {
                 "EDGE_CURVE same_sense does not orient geometry from edge_start to edge_end",
             ));
         }
-        let degenerate = va == vb;
+        // A closed edge may share its endpoint vertex while tracing a full
+        // nonconstant curve. Only a constant control hull is a pole edge.
+        let pole = self.vertices[va].point;
+        let degenerate = va == vb && c3.control_points.iter().all(|point| {
+            point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b)
+        });
         verify_correspondence(
             &c3,
             &pc,

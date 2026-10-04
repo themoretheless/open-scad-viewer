@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 23,
+  "wikiHash": "7f7477b8152386ab865b4d531897eb313cb6c7cd0aeae1a6a43a6ce1ea0d07e0",
+  "raw": {
+    "document_id": "e7eb71fa-03a0-4a3b-aba5-57eea40f2c66",
+    "chunk_count": 4,
+    "node_id": "095ab8e8-0a06-4263-879b-c3fc07657fbf",
+    "edge_count": 1,
+    "content_hash": "0b661add2e84b8c12e9100adf85e64b832149dda1786c569e4c0939d1009861d",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-circle-spatial-affine-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81976,
+    "chunk_count": 720381,
+    "node_count": 107746,
+    "edge_count": 238831,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 12239439,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

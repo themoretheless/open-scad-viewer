@@ -1,0 +1,5 @@
+{
+  "scripts/export-sweep-step-oracle.mts": "a5535773518106b12c8676148cc7b347e5ecfe23c1e7b60cf42331c27cb4a1d9",
+  "scripts/verify-sweep-step-occt.py": "dd4f6f30fa3fae7c0fd982884ff8bf8292ac6d5a92967e8d2c7726af73bd8286",
+  "scripts/verify-sweep-global-matrix.mjs": "a34a50979a1479ed1e20dd82b7b7195eac9da909aa114efd58a051671389f984"
+}

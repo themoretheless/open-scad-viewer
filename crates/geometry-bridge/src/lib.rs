@@ -1,9 +1,9 @@
-//! Application adapter between two independent Rust geometry libraries.
-//! Owns the NURBS-to-polygon sampler and the WASM/JSON transport, not a third
-//! geometry representation. Native clients can use the same typed adapters.
+//! Application adapters for the native geometry libraries.
+//! Owns cross-kernel sampling and the WASM/JSON transport. Geometry algorithms
+//! remain in their domain libraries; native clients can use these typed adapters.
 //!
-//! Default feature `languages` pulls OpenSCAD and ModelGraph. Kernel-only
-//! builds: `--no-default-features`.
+//! Language compilation lives in `languages-bridge`; this crate executes
+//! typed geometry and has no language frontend dependency.
 #![feature(
     try_blocks,
     gen_blocks,
@@ -15,6 +15,7 @@
 #![allow(unused_features)]
 pub mod brep;
 pub use math_core::Acceleration;
+mod bonded_solid;
 pub mod brep_attestation;
 mod brep_display;
 pub mod brep_envelope;
@@ -32,59 +33,63 @@ mod brep_semantic;
 pub mod brep_session;
 mod brep_session_abi;
 mod cad_body_affine;
+mod cad_body_keypoints;
+mod transparent_bsp;
 mod cad_boolean;
+mod cad_boundary_agreement;
+mod cad_bridge_curve;
 mod cad_centered_lattice;
 mod cad_clearance;
-mod cad_draft;
+mod cad_diagnostics;
+mod cad_dimensions;
 mod cad_display;
+mod cad_draft;
 mod cad_edge_edit;
+mod cad_face_contacts;
+mod cad_face_distance;
 mod cad_face_selection;
 mod cad_hole;
 mod cad_lattice;
+mod cad_local_mesh_tools;
 mod cad_mesh_planes;
 mod cad_mesh_topology;
 mod cad_path;
 mod cad_pattern;
 mod cad_planar_edit;
+mod cad_profile_prepare;
+mod cad_profile_tools;
+mod cad_quantity;
 mod cad_sections;
 mod cad_selection;
-mod cad_sketch;
-mod cad_profile_prepare;
-mod cad_dimensions;
-mod cad_quantity;
-mod cad_diagnostics;
-mod cad_face_distance;
 mod cad_shell_distance;
-mod cad_solid_distance;
-mod cad_boundary_agreement;
-mod cad_face_contacts;
-mod cad_surface_diagnostics;
-mod cad_bridge_curve;
+mod cad_sketch;
 mod cad_sketch_offset;
 mod cad_sketch_trim;
+mod cad_solid_distance;
 mod cad_split;
+mod cad_surface_diagnostics;
 mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
 mod gcode;
 pub mod intersections;
-#[cfg(feature = "cuda")]
-mod lattice_cuda;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 mod mesh;
 pub mod mesh_analysis;
+mod mesh_display;
+mod mesh_editor;
 mod mesh_export_file;
+mod mesh_import;
 pub mod mesh_picking;
 mod mesh_render;
 pub mod mesh_shell;
 pub mod mesh_surface_groups;
 pub mod print_geometry;
 mod print_strength;
-mod structural_sections;
 mod scene_picking;
+mod structural_sections;
 mod truss;
-mod bonded_solid;
 mod viewport;
 
 #[cfg(feature = "gpu")]
@@ -117,15 +122,18 @@ pub use math_core::{Error, Result};
 fn input(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
+/// Preserve the existing application wire contract for extracted mesh libraries.
+fn legacy_mesh_error(error: Error) -> Error {
+    match error.code {
+        "MESH_INVALID_INPUT" | "MESH_QUERY_INVALID_INPUT" | "MESH_SECTION_INVALID_INPUT" | "MESH_IO_INVALID_INPUT" => Error::new("POLYGON_INVALID_INPUT", error.message.replace("the mesh resource budget", "the polygon resource budget")),
+        _ => error,
+    }
+}
 fn error_json(error: &Error) -> Value {
     json!({"code": error.code, "message": error.message})
 }
 pub(crate) fn mesh_from_triangles(t: geometry_ops::Triangles) -> Mesh {
-    Mesh {
-        positions: t.positions,
-        indices: t.indices,
-        uv: None,
-    }
+    t.into()
 }
 pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
     geometry_ops::Triangles {
@@ -135,6 +143,9 @@ pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
 }
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
+}
+fn optional_field<T: for<'a> Deserialize<'a>>(v:&Value,k:&str)->Result<Option<T>> {
+    match v.get(k) {Some(value) if !value.is_null()=>field(v,k).map(Some), _=>Ok(None)}
 }
 /// Consume a single-use field from an owned request; preserve `field`'s missing-value errors.
 fn take_field<T: for<'a> Deserialize<'a>>(v: &mut Value, k: &str) -> Result<T> {
@@ -517,10 +528,7 @@ impl ParametricSurface for NurbsSurfaceAdapter {
 /// NURBS definitions remain owned by the caller. The result is a derived mesh
 /// with sampled UV correspondence; no exact/global error certificate is implied.
 pub fn tessellate_nurbs(surface: &Surface, options: &Options) -> Result<BuiltMesh> {
-    tessellation::tessellate(
-        &NurbsSurfaceAdapter::new(surface)?,
-        options,
-    )
+    tessellation::tessellate(&NurbsSurfaceAdapter::new(surface)?, options)
 }
 /// Exact piecewise-linear NURBS curves from ordered mesh boundary vertices.
 /// This transfers polygon data into the spline library; it does not infer the
@@ -605,6 +613,21 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "segments")?,
         )?),
+        "sketch_solve_diagnostics" => {
+            let (solution, diagnostics) = sketch_core::solve_with_diagnostics_options(
+                &field(&v, "sketch")?,
+                sketch_core::SolverOptions {
+                    tolerance: field(&v, "tolerance")?,
+                    max_iterations: 64,
+                },
+            )?;
+            encode(json!({"solution": solution, "diagnostics": {
+                "redundantEquations": diagnostics.redundant_equations,
+                "degenerateConstraints": diagnostics.degenerate_constraints,
+                "constraintResiduals": diagnostics.constraint_residuals,
+                "inconsistent": diagnostics.inconsistent,
+            }}))
+        }
         "sketch_solve" => encode(sketch_core::solve(
             &field(&v, "sketch")?,
             field(&v, "tolerance")?,
@@ -670,7 +693,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         )?),
         "mesh_to_nurbs_brep" => encode(reconstruction::nurbs_brep_from_mesh(&field(&v, "mesh")?)?),
         "mesh_to_sdf" => encode(sdf_core::Field::from_triangles(
-            triangles_from_mesh(&polygon_core::solid::proximity::valid_source(
+            triangles_from_mesh(&reconstruction::valid_source(
                 &field(&v, "mesh")?,
                 4096,
             )?),
@@ -685,10 +708,14 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             field(&v, "mode")?,
             field(&v, "maxDeviationMm")?,
         )?),
-        "nurbs_patches_tessellate" => encode(reconstruction::tessellate_patches(
-            &field(&v, "patches")?,
-            field(&v, "segments")?,
-        )?),
+        "nurbs_patches_tessellate" => {
+            let set: Value = field(&v, "patches")?;
+            encode(reconstruction::tessellate_surfaces(
+                &field::<Vec<Surface>>(&set, "patches")?,
+                &field::<Vec<usize>>(&set, "faceIds")?,
+                field(&v, "segments")?,
+            )?)
+        }
         "subdivision_refine" => {
             encode(field::<subdivision_core::Cage>(&v, "cage")?.subdivide(field(&v, "levels")?)?)
         }
@@ -774,7 +801,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
             let section =
-                polygon_core::solid::section::MeshSectionIndex::new(&mesh)?.section(z_mm)?;
+                mesh_section::MeshSectionIndex::new(&mesh.view()).map_err(legacy_mesh_error)?.section(z_mm).map_err(legacy_mesh_error)?;
             Ok(json!({
                 "z_mm": section.z_mm,
                 "candidateTriangles": section.candidate_triangles,
@@ -817,6 +844,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "baseZ")?,
                 plane,
             )?)
+        }
+        "brep_nurbs_affine_lattice" => {
+            let report=brep_core::affine_lattice::place(&field(&v,"model")?,field(&v,"matrix")?,field(&v,"quantum")?,field(&v,"maxWork")?)?;
+            Ok(json!({"model":report.model,"operatorNormUpper":report.operator_norm_upper,"arithmeticErrorUpper":report.arithmetic_error_upper,"work":report.work,"reason":report.reason}))
         }
         "brep_nurbs_transform" => encode(brep_core::transform::affine(
             &field(&v, "model")?,
@@ -986,6 +1017,75 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "zMax")?,
             )?)
         }
+        "brep_sweep_cap_contacts_audit" => {
+            let report=brep_core::sweep_cap_contacts::inspect(&field::<brep_core::Model>(&v,"model")?,field(&v,"capFace")?,
+                &field::<Vec<usize>>(&v,"capFaces")?,brep_core::sweep_cap_contacts::Budgets {
+                    max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,
+                    max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,
+                    max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+                })?;
+            Ok(json!({"capCertified":report.cap_certified,"planarControlHullCertified":report.planar_control_hull_certified,"allCapWallContactsCertified":report.all_cap_wall_contacts_certified,
+                "separatedWalls":report.separated_walls,"allowedBoundaries":report.allowed_boundaries,
+                "unresolvedWalls":report.unresolved_walls,"exactWork":report.exact_work,"reason":report.reason,
+                "globalEmbeddingCertified":false}))
+        }
+        "brep_sweep_embedding_audit" => cad_face_contacts::diagnose_sweep_embedding(v),
+        "brep_sweep_volume_audit" => cad_face_contacts::diagnose_sweep_volume(v),
+        "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?, &field::<Vec<f64>>(&v,"parameters")?)?),
+        "brep_nurbs_section_loft_surfaces" => encode(brep_core::analytic::section_loft_surfaces(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,&field::<Vec<Vec<Surface>>>(&v,"sides")?,field(&v,"closed")?)?),
+        "brep_nurbs_smooth_station_walls" => {
+            let report = brep_core::analytic::smooth_station_walls(
+                &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
+                &field::<Vec<usize>>(&v, "sharp")?,
+                field(&v, "closed")?, field(&v, "quantum")?,
+                field(&v, "tolerance")?, field(&v, "maxWork")?,
+            )?;
+            encode(json!({"sides": report.sides,
+                "wallDisplacementUpper": report.wall_displacement_upper,
+                "work": report.work, "reason": report.reason}))
+        },
+        "brep_nurbs_capped_loft_surfaces" => encode(brep_core::capped_loft_surfaces(&field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?, &field::<Vec<Vec<Surface>>>(&v,"sides")?)?),
+        "brep_nurbs_periodic_section_loft" => encode(brep_core::periodic_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
+        "brep_nurbs_rational_section_loft" => encode(brep_core::rational_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
+        "brep_nurbs_progressive_profile_body" => {
+            use nurbs_core::progressive_sweep::{Options,Orientation,Spacing};
+            let orientation=match field::<String>(&v,"orientation")?.as_str() {
+                "rmf"=>Orientation::RotationMinimizing,"fixed"|"authored"=>Orientation::Fixed,
+                "fixed_normal"=>Orientation::FixedNormal,"frenet"=>Orientation::Frenet,"corrected_frenet"=>Orientation::CorrectedFrenet,
+                _=>return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED","Unknown orientation")),
+            };
+            let spacing=match field::<String>(&v,"spacing")?.as_str() {
+                "parameter"=>Spacing::Parameter,
+                "arc_length"=>Spacing::ArcLength {tolerance:field(&v,"length_tolerance")?,max_cells:field(&v,"length_max_cells")?},
+                _=>return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED","Unknown spacing")),
+            };
+            let options=Options {normal:field(&v,"normal")?,orientation,spacing,
+                initial_sections:field(&v,"initial_sections")?,max_sections:field(&v,"max_sections")?,max_deviation:field(&v,"max_deviation")?};
+            let loops=field::<Vec<Vec<Curve>>>(&v,"loops")?;
+            let path=field::<Curve>(&v,"path")?;let scale=field::<Curve>(&v,"scale")?;let twist=field::<Curve>(&v,"twist")?;
+            let axes=optional_field::<Curve>(&v,"axis_scale")?;let center=optional_field::<Curve>(&v,"center_law")?;
+            let guide=optional_field::<Curve>(&v,"orientation_guide")?;
+            let contact=optional_field::<f64>(&v,"contact_parameter")?;
+            let contact_profile=optional_field::<usize>(&v,"contact_profile")?;
+            if contact.is_some() && guide.is_none() || contact_profile.is_some() && contact.is_none() {
+                return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED","Contact anchor requires orientation guide and parameter"));
+            }
+            let (model,approximation)=if let Some(guide)=guide {
+                if field::<String>(&v,"orientation")?=="authored" {return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED","Orientation guide cannot be combined with authored frames"));}
+                let axes=axes.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([1.;3])?);
+                let center=center.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([0.;3])?);
+                brep_core::progressive_guided_profile_body(&loops,&path,&scale,&twist,&guide,contact.map(|p|(contact_profile.unwrap_or(0),p)),&axes,&center,options)?
+            } else if field::<String>(&v,"orientation")?=="authored" {
+                let axes=axes.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([1.;3])?);
+                let center=center.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([0.;3])?);
+                brep_core::progressive_authored_profile_body(&loops,&path,&scale,&twist,&field::<Curve>(&v,"frame_axis")?,&field::<Curve>(&v,"frame_normal")?,&axes,&center,options)?
+            } else if axes.is_some() || center.is_some() {
+                let axes=axes.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([1.;3])?);
+                let center=center.unwrap_or(nurbs_core::progressive_sweep::constant_vector_law([0.;3])?);
+                brep_core::progressive_affine_profile_body(&loops,&path,&scale,&twist,&axes,&center,options)?
+            } else {brep_core::progressive_profile_body(&loops,&path,&scale,&twist,options)?};
+            encode(json!({"model":model,"approximation":approximation,"globalEmbeddingCertified":false}))
+        }
         "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(&field::<Vec<Vec<[f64; 3]>>>(
             &v, "sections",
         )?)?),
@@ -1152,16 +1252,30 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "distance")?,
             )?)
         }
-        "brep_nurbs_exact_convex_prism_fillet" | "brep_nurbs_exact_simple_prism_fillet" | "brep_nurbs_exact_annular_fillet" | "brep_nurbs_exact_layered_prism_fillet" => {
+        "brep_nurbs_constant_fillet_family" => encode(
+            brep_core::feature_family::constant_fillet_family(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "edges")?,
+            )?
+            .name(),
+        ),
+        "brep_nurbs_exact_convex_prism_fillet"
+        | "brep_nurbs_exact_simple_prism_fillet"
+        | "brep_nurbs_exact_annular_fillet"
+        | "brep_nurbs_exact_layered_prism_fillet" => {
             require_exact_fields(
                 &v,
                 &["op", "model", "edges", "radius"],
                 "exact fillet request",
             )?;
             let author = match v["op"].as_str() {
-                Some("brep_nurbs_exact_simple_prism_fillet") => brep_core::exact_simple_prism_fillet,
+                Some("brep_nurbs_exact_simple_prism_fillet") => {
+                    brep_core::exact_simple_prism_fillet
+                }
                 Some("brep_nurbs_exact_annular_fillet") => brep_core::exact_annular_fillet,
-                Some("brep_nurbs_exact_layered_prism_fillet") => brep_core::exact_layered_prism_fillet,
+                Some("brep_nurbs_exact_layered_prism_fillet") => {
+                    brep_core::exact_layered_prism_fillet
+                }
                 _ => brep_core::exact_convex_prism_fillet,
             };
             encode(author(
@@ -1708,6 +1822,50 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             encode(json!({"topologyValid":true,"solidGeometryStatus":"not_certified"}))
         }
         "brep_polygon_tessellate" => encode(brep::polygons(&field(&v, "model")?)?),
+        "stl_decode_binary" | "mesh_soup_render" | "mesh_import" | "mesh_import_finalize" => {
+            mesh_import::dispatch(v)
+        }
+        "cad_sampled_corner" | "cad_profile_revolve" => cad_profile_tools::dispatch(v),
+        "cad_sampled_shell" => cad_local_mesh_tools::shell(v),
+        "cad_local_mesh_blend" => cad_local_mesh_tools::blend(v),
+        "mesh_display_inspect" | "mesh_hit_point" | "mesh_hit_normal" | "mesh_measure" => {
+            mesh_display::dispatch(v)
+        }
+        "truss_force_markers" => encode(geometry_ops::force_markers::build(
+            &field::<Vec<[f64; 3]>>(&v, "nodes")?,
+            &field::<Vec<[usize; 2]>>(&v, "members")?,
+            &field::<Vec<f64>>(&v, "forces")?,
+            field(&v, "marker")?,
+        )?),
+        "mesh_editor" => mesh_editor::dispatch(v),
+        "affine_matrix" => {
+            let operation: String = field(&v, "operation")?;
+            let vector = field(&v, "vector")?;
+            let matrix = match operation.as_str() {
+                "translate" => Some(math_core::affine::translation(vector)),
+                "scale" => Some(math_core::affine::scaling(vector)),
+                "rotate" => Some(math_core::affine::euler_degrees(vector)),
+                "mirror" => math_core::affine::reflection(vector),
+                _ => return Err(input("Unknown affine operation")),
+            };
+            encode(matrix)
+        }
+        "planar_rectangle_corners" => encode(planar_geometry::primitives::rectangle_corners(
+            field(&v, "size")?,
+            field(&v, "center")?,
+        )?),
+        "nurbs_circle_quadrants" => encode(nurbs_core::primitives::circle_quadrants(field(
+            &v, "radius",
+        )?)?),
+        "mesh_world_area" => {
+            let state: [f64; 2] = field(&v, "state")?;
+            let mut area = mesh_topology::measure::SurfaceArea {
+                sum: state[0],
+                correction: state[1],
+            };
+            area.add_triangles(&field::<Vec<f64>>(&v, "points")?, field(&v, "matrix")?)?;
+            encode([area.sum, area.correction])
+        }
         "mesh_inspect" => encode(field::<Mesh>(&v, "mesh")?.inspect()?),
         "mesh_build_surfaces" => print_geometry::dispatch(v),
         "scene_flatten" => {
@@ -1765,6 +1923,27 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_edge_edit" => cad_edge_edit::edit(v),
         "cad_planar_edit" => cad_planar_edit::edit(v),
         "cad_face_plane" => cad_mesh_topology::face_plane(v),
+        "solid_program_execute_report" => {
+            let program: geometry_ops::solid_program::Program=field(&v,"program")?;
+            let report=polygon_core::solid::program::execute_report(&program,200_000)?;
+            let mut warnings=report.slice_reductions.iter().map(|reduction|format!("linear_extrude slices were clamped to the engine limit {}",reduction.maximum)).collect::<Vec<_>>();
+            warnings.extend(report.profile_diagnostics.iter().map(|diagnostic|match diagnostic.issue {
+                polygon_core::solid::profile_program::Issue::EmptyContours=>"polygon() outlines produced an empty cross-section".to_string(),
+                polygon_core::solid::profile_program::Issue::InvalidContours=>"polygon() outlines did not produce a valid cross-section".to_string(),
+            }));
+            warnings.extend(report.mesh_failures.iter().map(|_| "polyhedron() topology did not produce a manifold solid".to_string()));
+            warnings.extend(report.resize_diagnostics.iter().map(|event| event.message()));
+            warnings.extend(report.sweep_warnings.iter().map(|event| event.warning.message(event.maximum)));
+            let reduced = !report.slice_reductions.is_empty() || report.sweep_warnings.iter().any(|event| matches!(event.warning.kind, geometry_ops::fragment_resolution::WarningKind::Clamped));
+            Ok(json!({"meshes":report.meshes,"warnings":warnings,"reduced":reduced}))
+        },
+        "solid_program_execute" => {
+            let program: geometry_ops::solid_program::Program=field(&v,"program")?;
+            encode(polygon_core::solid::program::execute(&program,200_000)?)
+        },
+        "transparent_bsp_build" => transparent_bsp::build(v),
+        "transparent_triangle_split" => transparent_bsp::split(v),
+        "cad_body_keypoints" => cad_body_keypoints::geometry(v),
         "cad_mesh_topology" => cad_mesh_topology::topology(v),
         "cad_select_brep_edge" => cad_face_selection::edge(v),
         "cad_select_brep_support" => cad_face_selection::select(v),

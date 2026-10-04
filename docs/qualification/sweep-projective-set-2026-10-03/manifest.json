@@ -1,0 +1,38 @@
+{
+  "crates/cad-predicates/src/projective_strip_jets.rs": {
+    "bytes": 10448,
+    "sha256": "c17268442577808c31eb25163dcbeb3fae18adafb07146b840f7a1176e7ee1ad"
+  },
+  "crates/nurbs-core/src/continuity/exact_strip.rs": {
+    "bytes": 15192,
+    "sha256": "111caa31d0beaf85a6bb17c12a70239fdadf0072c5d4bf8479db83d98d2849cc"
+  },
+  "crates/nurbs-core/src/continuity/regularity.rs": {
+    "bytes": 8836,
+    "sha256": "e41e69008831fdf10733c65323d517345838de39c3eedbe16983a72923bc2045"
+  },
+  "src/services/nurbsSweepAudit.ts": {
+    "bytes": 12059,
+    "sha256": "f4007319d1651676cb2fca20df5fc35cffdfebad30db7bc4a83f8350db141422"
+  },
+  "tests/nurbsSweepProjectiveStripJets.test.ts": {
+    "bytes": 6532,
+    "sha256": "84f878e25333c3aa06f1e2b077b1f48d035b01b46f08bafd829b05e347824642"
+  },
+  "scripts/check-sweep-seams-browser.mjs": {
+    "bytes": 7898,
+    "sha256": "b304ce1b0e38cff43c240a135e12669687fcde4f76928773f47a31fed600423a"
+  },
+  "public/wasm/geometry-kernel.wasm": {
+    "bytes": 10679988,
+    "sha256": "c4d758cd47949671afa078a7cae2574e3189b01b148d41f1b8acedb7c1467161"
+  },
+  "src/generated/geometry-kernels/identity.ts": {
+    "bytes": 195,
+    "sha256": "2e41a92b13dec45aec36c4a1c5c310dbc985039a032b7d5ead3b0f00591e8e26"
+  },
+  "src/generated/geometry-kernels/bytes.ts": {
+    "bytes": 3565521,
+    "sha256": "73db973b42c648c076dbfe20948c73cfb0c4a5b325ef9d348f5eaf3e1ace3506"
+  }
+}

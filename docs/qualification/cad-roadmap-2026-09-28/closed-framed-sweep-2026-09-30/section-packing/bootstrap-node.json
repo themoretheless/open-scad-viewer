@@ -1,0 +1,113 @@
+{
+  "scope": "Node binary package decode; excludes ASCII decoding/browser/module compilation. RSS snapshots are not peak memory. First iteration includes decoder compilation.",
+  "samples": [
+    {
+      "iteration": 0,
+      "elapsedMs": 75.03441699999999,
+      "before": {
+        "rss": 52073728,
+        "heapTotal": 16842752,
+        "heapUsed": 6999248,
+        "external": 14588960,
+        "arrayBuffers": 12144191
+      },
+      "after": {
+        "rss": 90674672,
+        "heapTotal": 16842752,
+        "heapUsed": 7280520,
+        "external": 52674836,
+        "arrayBuffers": 22137708
+      }
+    },
+    {
+      "iteration": 1,
+      "elapsedMs": 50.637125,
+      "before": {
+        "rss": 74225112,
+        "heapTotal": 16842752,
+        "heapUsed": 7014312,
+        "external": 23879336,
+        "arrayBuffers": 21588224
+      },
+      "after": {
+        "rss": 100177416,
+        "heapTotal": 16842752,
+        "heapUsed": 7031976,
+        "external": 61569393,
+        "arrayBuffers": 31032265
+      }
+    },
+    {
+      "iteration": 2,
+      "elapsedMs": 50.21770799999996,
+      "before": {
+        "rss": 83744216,
+        "heapTotal": 16842752,
+        "heapUsed": 7014680,
+        "external": 23879336,
+        "arrayBuffers": 21588224
+      },
+      "after": {
+        "rss": 109680136,
+        "heapTotal": 16842752,
+        "heapUsed": 7032416,
+        "external": 61569393,
+        "arrayBuffers": 31032265
+      }
+    },
+    {
+      "iteration": 3,
+      "elapsedMs": 50.825334,
+      "before": {
+        "rss": 83744216,
+        "heapTotal": 16842752,
+        "heapUsed": 7015168,
+        "external": 23879336,
+        "arrayBuffers": 21588224
+      },
+      "after": {
+        "rss": 109680136,
+        "heapTotal": 16842752,
+        "heapUsed": 7042216,
+        "external": 61569393,
+        "arrayBuffers": 31032265
+      }
+    },
+    {
+      "iteration": 4,
+      "elapsedMs": 51.71866699999998,
+      "before": {
+        "rss": 83744216,
+        "heapTotal": 10551296,
+        "heapUsed": 7024968,
+        "external": 23879336,
+        "arrayBuffers": 21588224
+      },
+      "after": {
+        "rss": 109696520,
+        "heapTotal": 10551296,
+        "heapUsed": 7044400,
+        "external": 61569393,
+        "arrayBuffers": 31032265
+      }
+    },
+    {
+      "iteration": 5,
+      "elapsedMs": 51.46437500000002,
+      "before": {
+        "rss": 83760600,
+        "heapTotal": 9502720,
+        "heapUsed": 7026992,
+        "external": 23879336,
+        "arrayBuffers": 21588224
+      },
+      "after": {
+        "rss": 111318536,
+        "heapTotal": 9502720,
+        "heapUsed": 7044608,
+        "external": 61569393,
+        "arrayBuffers": 31032265
+      }
+    }
+  ]
+}

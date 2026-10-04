@@ -1,0 +1,990 @@
+[
+  {
+    "file": "progressive-scale-twist-hollow-miter.step",
+    "displacementUpper": 6.581303577548516e-13,
+    "audit": {
+      "method": "constant-projective-strip-jets",
+      "exactG1G2Certified": true,
+      "certifiedOrder": 2,
+      "exactWork": 441670,
+      "unresolvedSeams": [],
+      "seams": [
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7719
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7775
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7719
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7775
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 11476
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 11588
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 11476
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 11588
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15673
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14542
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15673
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14542
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15437
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14751
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15437
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14751
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15490
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15147
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15490
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15147
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15862
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15149
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15862
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15149
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14707
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14498
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14707
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14498
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15820
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15201
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15820
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15201
+        }
+      ]
+    }
+  },
+  {
+    "file": "open-spatial-hollow-miter.step",
+    "displacementUpper": 6.929545034814853e-13,
+    "audit": {
+      "method": "constant-projective-strip-jets",
+      "exactG1G2Certified": true,
+      "certifiedOrder": 2,
+      "exactWork": 266777,
+      "unresolvedSeams": [],
+      "seams": [
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10948
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10738
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10940
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10713
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8154
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8121
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7924
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13832
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13279
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13808
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13196
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13445
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13883
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13438
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15592
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14472
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15429
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14725
+        }
+      ]
+    }
+  },
+  {
+    "file": "open-spatial-bounded-correction.step",
+    "displacementUpper": 9.094947017729284e-13,
+    "audit": {
+      "method": "constant-projective-strip-jets",
+      "exactG1G2Certified": true,
+      "certifiedOrder": 2,
+      "exactWork": 266777,
+      "unresolvedSeams": [],
+      "seams": [
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10948
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10738
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10940
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10713
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8154
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8121
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7924
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13832
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13279
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13808
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13196
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13445
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13883
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13438
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15592
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14472
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15429
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14725
+        }
+      ]
+    }
+  },
+  {
+    "file": "open-spatial-constructor-correction.step",
+    "displacementUpper": 9.094947017729284e-13,
+    "audit": {
+      "method": "constant-projective-strip-jets",
+      "exactG1G2Certified": true,
+      "certifiedOrder": 2,
+      "exactWork": 266777,
+      "unresolvedSeams": [],
+      "seams": [
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5609
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 5570
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10948
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10738
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10940
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 10713
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8154
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 8121
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 7924
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13832
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13279
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13808
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13196
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13891
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13445
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13883
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 13438
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15592
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14472
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 15429
+        },
+        {
+          "certified": true,
+          "certifiedOrder": 2,
+          "exactIdentity": true,
+          "method": "constant-projective-strip-jets",
+          "reason": "exact-regular-projective-strip-jets",
+          "regularityCertified": true,
+          "work": 14725
+        }
+      ]
+    }
+  }
+]

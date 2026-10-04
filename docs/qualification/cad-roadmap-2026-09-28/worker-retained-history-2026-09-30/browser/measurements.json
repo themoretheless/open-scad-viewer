@@ -1,0 +1,2767 @@
+{
+  "retainedMemory": {
+    "scope": "Main-page heap after explicit GC after each operation, outside its elapsed timer. GC changes subsequent operation conditions; these timings are not comparable with ordinary runs. Native/process allocations are excluded. Optional worker records report each worker isolate separately after GC; ended workers are marked explicitly.",
+    "samples": [
+      {
+        "action": "import",
+        "Nodes": 21264,
+        "JSHeapUsedSize": 109024556,
+        "JSHeapTotalSize": 112885760,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4206636,
+            "totalSize": 5259264,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5051244,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990258
+          },
+          {
+            "targetId": "1AEFCA01D927E8FDD10E9F81E3C2F934",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "a1474191b05e91bd",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 3968368,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625750
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3909664,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2243,
+        "JSHeapUsedSize": 32371384,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4203220,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007248,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "1AEFCA01D927E8FDD10E9F81E3C2F934",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "a1474191b05e91bd",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 3951188,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625750
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898048,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74515324,
+        "JSHeapTotalSize": 79593472,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4207044,
+            "totalSize": 5521408,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "1AEFCA01D927E8FDD10E9F81E3C2F934",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "a1474191b05e91bd",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4045252,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 577840,
+            "backingStorageSize": 3627831
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32491536,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4202900,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74146320,
+        "JSHeapTotalSize": 78020608,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4207936,
+            "totalSize": 5259264,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "907F2C02BEAB9F22480C9811E7F790B0",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "9ca782904756c94f",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4038416,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 538168,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32583224,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4204800,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74262900,
+        "JSHeapTotalSize": 78807040,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4207588,
+            "totalSize": 5259264,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "F990C57F666AA99EF8AF0C9B67116A4F",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "1b19a5bda032d736",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4036724,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 538168,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32693032,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4223388,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74306540,
+        "JSHeapTotalSize": 78020608,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228044,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "AFF02EA825FBD96F623E4662DB169BE6",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "80929dd1ada1f658",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4010760,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 599256,
+            "backingStorageSize": 3627791
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32711504,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4224796,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74315172,
+        "JSHeapTotalSize": 79069184,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4227496,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "482DD6E8512F96508D6A08CA30772480",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "1a771b44eca69fa5",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009580,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 601280,
+            "backingStorageSize": 3627777
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32727696,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4223740,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74334488,
+        "JSHeapTotalSize": 77758464,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228068,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "D8B26A41FEE09CF1FC2D7BE0D095908C",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "2caad9ff1b81c4bc",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009568,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 578648,
+            "backingStorageSize": 3627777
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32730000,
+        "JSHeapTotalSize": 34750464,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4224796,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74303280,
+        "JSHeapTotalSize": 78807040,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4227592,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "05359DDD11EB0D41B4444A20056D2BDD",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "af8535ac5a64c62",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009032,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 555688,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32743528,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4223740,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74332072,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228668,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "0AEF51EFB22DBDB8281B99E8C4048B03",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "9b4b585eb52181aa",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4042896,
+            "totalSize": 5357568,
+            "embedderHeapUsedSize": 602176,
+            "backingStorageSize": 3628147
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32742196,
+        "JSHeapTotalSize": 34226176,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4225300,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74293232,
+        "JSHeapTotalSize": 78282752,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228092,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "6375B381455F6B8A9977DBB808CD23A8",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "2d9168296ef6312",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4039396,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 601824,
+            "backingStorageSize": 3628128
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32759204,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4224244,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74379052,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228832,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "A18201C43D0E222AB9F65AD4BB56DB9E",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "68898635be1d080a",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009488,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 519072,
+            "backingStorageSize": 3628865
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32819384,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4225372,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74450732,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228260,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "FED297F3C6990AC8191D6FE95120F4A9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "c4bd0f2342d2d26e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4034304,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 538024,
+            "backingStorageSize": 3628917
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32837468,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4224316,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74462936,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4232400,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "C77F2759E43EAAC2B6C68DF83B4AE005",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "47452eb56a8d4520",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009032,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 519992,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32864680,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228940,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74482876,
+        "JSHeapTotalSize": 78807040,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4231828,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "A90164AEC10683DF36EE4616A81FD509",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "300732f8304200e9",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009032,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 568592,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32869988,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228532,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74445592,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4232400,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "27D24F6CBD83684D2E831EF15EC968B6",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "a284339e1972ceb1",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4106584,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 601824,
+            "backingStorageSize": 3637434
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32871764,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228940,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74493880,
+        "JSHeapTotalSize": 79069184,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4232532,
+            "totalSize": 4997120,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "92CFBFCDE7DE6AB46696BA3D387F913B",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "ed36fb5b58670197",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009032,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 569488,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32895028,
+        "JSHeapTotalSize": 34750464,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228588,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74463848,
+        "JSHeapTotalSize": 78282752,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4231776,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "4D418EAE6364442E4C2B3B60002B9328",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "a66b08ba9aba07cb",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009012,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 554768,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32899192,
+        "JSHeapTotalSize": 34750464,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228288,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74528552,
+        "JSHeapTotalSize": 78020608,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4231740,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "02E36229610102BC1DED27A4F89206E5",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "c9c33c88a9ad870b",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4044340,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 602176,
+            "backingStorageSize": 3628147
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32891508,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4227780,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74423944,
+        "JSHeapTotalSize": 78807040,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4233024,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "0DE40855F4F9EAE972B6D2F82AFC151F",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "5b7cf66249d4ae9b",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4039324,
+            "totalSize": 5095424,
+            "embedderHeapUsedSize": 601824,
+            "backingStorageSize": 3628128
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32908828,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4229644,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74524032,
+        "JSHeapTotalSize": 78544896,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4232532,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "E49561B20C1A634493413A77DAE2EFF0",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "dfa9f404d2b9701b",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4006536,
+            "totalSize": 4833280,
+            "embedderHeapUsedSize": 541248,
+            "backingStorageSize": 3627777
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "undo",
+        "Nodes": 2245,
+        "JSHeapUsedSize": 32913404,
+        "JSHeapTotalSize": 34488320,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4228588,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      },
+      {
+        "action": "redo",
+        "Nodes": 21271,
+        "JSHeapUsedSize": 74428300,
+        "JSHeapTotalSize": 78020608,
+        "workers": [
+          {
+            "targetId": "41FF8AB3158CAFDF5CA090C84EF679B9",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "74d767762cbf3f6c",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              12910592
+            ],
+            "usedSize": 4233104,
+            "totalSize": 4734976,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625862
+          },
+          {
+            "targetId": "7BAD54C1C3E0E97354484DC8FC43D8D2",
+            "url": "http://127.0.0.1:49196/assets/geometry.worker-D_251Dsk.js",
+            "isolateId": "14618ca7f0a1f7e3",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2555904
+            ],
+            "usedSize": 5007260,
+            "totalSize": 5455872,
+            "embedderHeapUsedSize": 25232,
+            "backingStorageSize": 3990270
+          },
+          {
+            "targetId": "97D6CAC9A37C4E7284005C2863BB07DE",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "23a203e3b6e56f39",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2359296
+            ],
+            "usedSize": 4009000,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 560472,
+            "backingStorageSize": 3628863
+          },
+          {
+            "targetId": "64606F8861C8EDDBB938DF406DF5FB63",
+            "url": "http://127.0.0.1:49196/assets/mainSolid.worker-DVI5KL4l.js",
+            "isolateId": "fc904c436fb7f25e",
+            "status": "measured",
+            "wasmMemoryBytes": [
+              2752512
+            ],
+            "usedSize": 3898060,
+            "totalSize": 4571136,
+            "embedderHeapUsedSize": 23224,
+            "backingStorageSize": 3625787
+          }
+        ]
+      }
+    ]
+  },
+  "memory": null,
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled with separate forced-GC diagnostics.",
+  "importCancellationChecked": false,
+  "cpuProfile": null,
+  "cancellationChecked": false,
+  "browser": "151.0.7922.34",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpus": 16,
+    "ramBytes": 137438953472
+  },
+  "iterations": 20,
+  "timingSummary": {
+    "import": {
+      "count": 1,
+      "p50Ms": 3047.3084579999995,
+      "p95Ms": 3047.3084579999995,
+      "maxFrameGapMs": 616.7
+    },
+    "undo": {
+      "count": 20,
+      "p50Ms": 67.28041699999994,
+      "p95Ms": 70.45508299999892,
+      "maxFrameGapMs": 18
+    },
+    "redo": {
+      "count": 20,
+      "p50Ms": 1350.478833000001,
+      "p95Ms": 1366.2293329999993,
+      "maxFrameGapMs": 316.8000000000029
+    }
+  },
+  "orbit": null,
+  "maxObservedHeapBytes": 195990088,
+  "heapScope": "Samples after each operation only; not peak process memory.",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2284,
+    "JSHeapUsedSize": 12878072,
+    "JSHeapTotalSize": 17072128
+  },
+  "after": {
+    "Nodes": 21273,
+    "JSHeapUsedSize": 76711076,
+    "JSHeapTotalSize": 84541440
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 3047.3084579999995,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 195990088,
+        "JSHeapTotalSize": 273940480
+      },
+      "frameCount": 290,
+      "maxFrameGapMs": 616.7
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 66.56004200000052,
+      "heap": {
+        "Nodes": 21290,
+        "JSHeapUsedSize": 120805044,
+        "JSHeapTotalSize": 134103040
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.59999999999991
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1367.5306250000003,
+      "heap": {
+        "Nodes": 21271,
+        "JSHeapUsedSize": 97632144,
+        "JSHeapTotalSize": 152158208
+      },
+      "frameCount": 128,
+      "maxFrameGapMs": 300.09999999999945
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 64.55224999999973,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81825092,
+        "JSHeapTotalSize": 100958208
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 18
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1349.1473750000005,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 101955768,
+        "JSHeapTotalSize": 170950656
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.2999999999993
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 65.35891699999956,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86082868,
+        "JSHeapTotalSize": 98336768
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 17.800000000000182
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1355.562332999999,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 101877320,
+        "JSHeapTotalSize": 168771584
+      },
+      "frameCount": 127,
+      "maxFrameGapMs": 308.3000000000011
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 71.535249999999,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81847728,
+        "JSHeapTotalSize": 99909632
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 16.299999999999272
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1351.0637079999997,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97373012,
+        "JSHeapTotalSize": 165183488
+      },
+      "frameCount": 125,
+      "maxFrameGapMs": 308.2999999999993
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 70.45508299999892,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81603092,
+        "JSHeapTotalSize": 99647488
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 10.200000000000728
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1345.5224159999998,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97373668,
+        "JSHeapTotalSize": 166494208
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.1999999999989
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 68.3520840000001,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81661632,
+        "JSHeapTotalSize": 99123200
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.69999999999891
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1348.3955000000005,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 101770252,
+        "JSHeapTotalSize": 168820736
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.1999999999989
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 67.28041699999994,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81614312,
+        "JSHeapTotalSize": 99385344
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.400000000001455
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1355.8321250000008,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 98376532,
+        "JSHeapTotalSize": 166756352
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.39999999999964
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 68.48391699999956,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81598816,
+        "JSHeapTotalSize": 99385344
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.599999999998545
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1345.545,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97280724,
+        "JSHeapTotalSize": 165445632
+      },
+      "frameCount": 124,
+      "maxFrameGapMs": 316.6999999999989
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 68.00749999999971,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81641000,
+        "JSHeapTotalSize": 99385344
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 16.400000000001455
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1366.2293329999993,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97289256,
+        "JSHeapTotalSize": 165707776
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 316.59999999999854
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 67.96129199999996,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81756480,
+        "JSHeapTotalSize": 99647488
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.400000000001455
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1346.6000420000018,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 100630008,
+        "JSHeapTotalSize": 167280640
+      },
+      "frameCount": 125,
+      "maxFrameGapMs": 316.59999999999854
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 66.43245799999931,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81706472,
+        "JSHeapTotalSize": 99909632
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.5
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1346.5288340000006,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 102091372,
+        "JSHeapTotalSize": 166379520
+      },
+      "frameCount": 125,
+      "maxFrameGapMs": 308.40000000000146
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 67.04091700000208,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86350040,
+        "JSHeapTotalSize": 98336768
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.299999999999272
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1355.0583750000005,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97514704,
+        "JSHeapTotalSize": 165445632
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.2999999999993
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 68.36099999999715,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86260056,
+        "JSHeapTotalSize": 98074624
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.299999999999272
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1354.4354999999996,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 101890944,
+        "JSHeapTotalSize": 166641664
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.40000000000146
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 69.21712499999921,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86449772,
+        "JSHeapTotalSize": 98074624
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.700000000000728
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1348.541583000002,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97374568,
+        "JSHeapTotalSize": 165445632
+      },
+      "frameCount": 125,
+      "maxFrameGapMs": 307
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 65.6294170000001,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86252968,
+        "JSHeapTotalSize": 97288192
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 8.400000000001455
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1354.4226670000025,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 103153700,
+        "JSHeapTotalSize": 167952384
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 316.8000000000029
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 68.25387499999852,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 81804120,
+        "JSHeapTotalSize": 100433920
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.400000000001455
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1345.1031659999971,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97610536,
+        "JSHeapTotalSize": 165969920
+      },
+      "frameCount": 124,
+      "maxFrameGapMs": 308.40000000000146
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 64.1082499999975,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86220464,
+        "JSHeapTotalSize": 98074624
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 9.399999999997817
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1353.0429999999978,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 102075004,
+        "JSHeapTotalSize": 167919616
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 307.6000000000022
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 65.85749999999825,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 82027440,
+        "JSHeapTotalSize": 99385344
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.600000000002183
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1350.478833000001,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 100626820,
+        "JSHeapTotalSize": 166494208
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.2999999999993
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 64.46766600000046,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86193508,
+        "JSHeapTotalSize": 97026048
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.799999999999272
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1347.3627500000002,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 101875592,
+        "JSHeapTotalSize": 166379520
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 308.2999999999993
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 69.3809590000019,
+      "heap": {
+        "Nodes": 21299,
+        "JSHeapUsedSize": 86463320,
+        "JSHeapTotalSize": 97812480
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.700000000004366
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1354.5322499999966,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 97893816,
+        "JSHeapTotalSize": 166494208
+      },
+      "frameCount": 126,
+      "maxFrameGapMs": 316.70000000000437
+    }
+  ]
+}

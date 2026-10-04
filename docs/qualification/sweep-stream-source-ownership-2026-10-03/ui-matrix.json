@@ -1,0 +1,2125 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-03T11:54:02.787Z",
+  "scope": "Finite retained-miter UI scenarios; held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602",
+  "appSourceSha256": "6ada7b69d5469a65c57275be207759eecd2a3bb9b690dad12d0c8fc555eb171a",
+  "distIndexSha256": "2437c41d5ed3ffac9b28a95b1194fdaeef1d2a9dc454de1003698fec6aa37ca0",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-affine-hollow.r",
+      "sourceSha256": "67cf8c9937ec945557d115b0d17dacecacc276d144ee0ccc45410004f978223a",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.61380e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "7f29d9e973c51a5f5d443f33e6a78244d909925a733fa1d57ef29b65bb271071"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-affine-hollow.r",
+      "sourceSha256": "407693185451f1106cc2152e3dc94b7c3e8fd21fd5dd2ecd7780ad2c6f231369",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.58291e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "2c99aa910bbb44551a684421d370f5453b4bb0fcfe1a8b71c7270b46fc1e7538"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-authored-frame-hollow.r",
+      "sourceSha256": "f325d1a94570c9c22dfeeb880efe986d65573b7736f2ed947179a47c042baf00",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.14532e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "622b894a62aa4b341d51712b26e4f55627b10318de419b3422d5f8d73296b515"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-guide-hollow.r",
+      "sourceSha256": "e4471804d6045cdaaf8668174fbde21379c9ff855a787d91ff676bc9859734ef",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.49729e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "622b894a62aa4b341d51712b26e4f55627b10318de419b3422d5f8d73296b515"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-guide-affine-hollow.r",
+      "sourceSha256": "f82fcb0101984ba3c22d7c28fe5b7fbceaa1aa9ba07ce23d1f009e8eee0b149e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.23155e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "7f29d9e973c51a5f5d443f33e6a78244d909925a733fa1d57ef29b65bb271071"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-affine-hollow-corrected.r",
+      "sourceSha256": "fe33467bf0e70e6f5cbd4a757dfb4aeb1750fe0d0929951944a1bd3c1094c795",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4c98f75e7f3f14015cd5c5c3edb643466becb744065798c9c2a983a58c10ac03"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-authored-frame-hollow-corrected.r",
+      "sourceSha256": "6dbf6a657592b1172453e580fd0926028f434da5a8d3107adf16b5de7d954a45",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.68693e-13 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8e17c58ce5801379b7e32473e10deceb65082344cf5e6d47800d1547998fb941"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-guide-hollow-corrected.r",
+      "sourceSha256": "9ce4315377a8b2c1eea2586df2917ce98e30f24201feeb40577506af2410095b",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.72213e-13 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8e17c58ce5801379b7e32473e10deceb65082344cf5e6d47800d1547998fb941"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-guide-affine-hollow-corrected.r",
+      "sourceSha256": "4d86b959975d98130320eb6a0f725ed2780e72f50f2248d8aaea1cb3e7d6cc53",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4c98f75e7f3f14015cd5c5c3edb643466becb744065798c9c2a983a58c10ac03"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-plain-hollow.r",
+      "sourceSha256": "a3cf195b982fc0c10f245a913298289ce07fd8b69f9ff79225b1b0de25bc612e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.12663e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4b90b89ecb2980962d3a49e0e04467db7d8629ed211601994d04da2e93b20b9d"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-affine-hollow.r",
+      "sourceSha256": "25d5085ae585cab58bdb0db8b19e09b21c0f70e99bb98e36a6f61691a80817c8",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈3.35708e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "6b7b9de96f7a9588c0ee837d55a46cee3aa86c8f942ae59629fa6f6bca260e6e"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-frame-affine-hollow.r",
+      "sourceSha256": "92f0d4128291ea6b874c726dda7eaf7656eb1572a8f0968cd509e40b7beae76f",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈3.97552e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "bfdb45937b3592255cee7adaa1895008c15989712dbfdfd4571b212b14528aa6"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-guide-affine-hollow.r",
+      "sourceSha256": "f19e3ad0a1e7ea0788236c8d1c406a193e2c6d264dc9ef3438237e9110457125",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈5.20625e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "bfdb45937b3592255cee7adaa1895008c15989712dbfdfd4571b212b14528aa6"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-hollow-body.r",
+      "sourceSha256": "c7081a61eafebad6a9de2c9648ef1c4ac2063c29c1e5238e4f00629be75ad68c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "unproved-spatial-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: не доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-hollow-corrected.r",
+      "sourceSha256": "91d05e9fdc866bcba98ede7824bb9e0cc6ca015bdb7f64aea770c79fb158a80e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ],
+      "solid": {
+        "faces": 26,
+        "shells": 1,
+        "geometrySha256": "4ab0eff61a5c1c40247d3797ab06b303790f69090b37e79022f3778a7863c5dd"
+      },
+      "refusalMessage": "Node n4: Node n3: Miter direction must be finite and nonzero",
+      "resourceRefusalMessage": "Node n4: Node n3: Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-miter-hollow-body.r",
+      "sourceSha256": "19ff349480d6c967bd523a5b5f4d94b425c3e6db1baa6755ac08b36eb49b7756",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ],
+      "solid": {
+        "faces": 32,
+        "shells": 2,
+        "geometrySha256": "a40f59555f20b6874ef38abfb92925795356c53835b3c66b55c5c5b052c970d3"
+      },
+      "refusalMessage": "Node n4: Node n3: Miter direction must be finite and nonzero"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-miter-certified-hollow.r",
+      "sourceSha256": "9ce1a5be2e92e9578a7f93fcb8a179f481ffae09ff027d064c3beb49cf04ea9a",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ?  · Оценка ошибки границы: ≈0.00516427 mm  / 0.0200000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 34,
+        "shells": 1,
+        "geometrySha256": "5570dca6002c6c5f6b584e4614b19d9f3ffe1faff183da48129ee6d8833ee6c1"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-affine-hollow.r",
+      "sourceSha256": "67cf8c9937ec945557d115b0d17dacecacc276d144ee0ccc45410004f978223a",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.61380e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "7f29d9e973c51a5f5d443f33e6a78244d909925a733fa1d57ef29b65bb271071"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-affine-hollow.r",
+      "sourceSha256": "407693185451f1106cc2152e3dc94b7c3e8fd21fd5dd2ecd7780ad2c6f231369",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.58291e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "2c99aa910bbb44551a684421d370f5453b4bb0fcfe1a8b71c7270b46fc1e7538"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-authored-frame-hollow.r",
+      "sourceSha256": "f325d1a94570c9c22dfeeb880efe986d65573b7736f2ed947179a47c042baf00",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.14532e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "622b894a62aa4b341d51712b26e4f55627b10318de419b3422d5f8d73296b515"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-guide-hollow.r",
+      "sourceSha256": "e4471804d6045cdaaf8668174fbde21379c9ff855a787d91ff676bc9859734ef",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈1.49729e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "622b894a62aa4b341d51712b26e4f55627b10318de419b3422d5f8d73296b515"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-guide-affine-hollow.r",
+      "sourceSha256": "f82fcb0101984ba3c22d7c28fe5b7fbceaa1aa9ba07ce23d1f009e8eee0b149e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.23155e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "7f29d9e973c51a5f5d443f33e6a78244d909925a733fa1d57ef29b65bb271071"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-affine-hollow-corrected.r",
+      "sourceSha256": "fe33467bf0e70e6f5cbd4a757dfb4aeb1750fe0d0929951944a1bd3c1094c795",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4c98f75e7f3f14015cd5c5c3edb643466becb744065798c9c2a983a58c10ac03"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-authored-frame-hollow-corrected.r",
+      "sourceSha256": "6dbf6a657592b1172453e580fd0926028f434da5a8d3107adf16b5de7d954a45",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.68693e-13 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8e17c58ce5801379b7e32473e10deceb65082344cf5e6d47800d1547998fb941"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-guide-hollow-corrected.r",
+      "sourceSha256": "9ce4315377a8b2c1eea2586df2917ce98e30f24201feeb40577506af2410095b",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.72213e-13 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8e17c58ce5801379b7e32473e10deceb65082344cf5e6d47800d1547998fb941"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-guide-affine-hollow-corrected.r",
+      "sourceSha256": "4d86b959975d98130320eb6a0f725ed2780e72f50f2248d8aaea1cb3e7d6cc53",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4c98f75e7f3f14015cd5c5c3edb643466becb744065798c9c2a983a58c10ac03"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-plain-hollow.r",
+      "sourceSha256": "a3cf195b982fc0c10f245a913298289ce07fd8b69f9ff79225b1b0de25bc612e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈2.12663e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "4b90b89ecb2980962d3a49e0e04467db7d8629ed211601994d04da2e93b20b9d"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-affine-hollow.r",
+      "sourceSha256": "25d5085ae585cab58bdb0db8b19e09b21c0f70e99bb98e36a6f61691a80817c8",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈3.35708e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "6b7b9de96f7a9588c0ee837d55a46cee3aa86c8f942ae59629fa6f6bca260e6e"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-frame-affine-hollow.r",
+      "sourceSha256": "92f0d4128291ea6b874c726dda7eaf7656eb1572a8f0968cd509e40b7beae76f",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈3.97552e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "bfdb45937b3592255cee7adaa1895008c15989712dbfdfd4571b212b14528aa6"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-unsegmented-guide-affine-hollow.r",
+      "sourceSha256": "f19e3ad0a1e7ea0788236c8d1c406a193e2c6d264dc9ef3438237e9110457125",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓  · Оценка ошибки границы: ≈5.20625e-14 mm  / 0.00100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "bfdb45937b3592255cee7adaa1895008c15989712dbfdfd4571b212b14528aa6"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-hollow-body.r",
+      "sourceSha256": "c7081a61eafebad6a9de2c9648ef1c4ac2063c29c1e5238e4f00629be75ad68c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "unproved-spatial-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: не доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ]
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-hollow-corrected.r",
+      "sourceSha256": "91d05e9fdc866bcba98ede7824bb9e0cc6ca015bdb7f64aea770c79fb158a80e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ],
+      "solid": {
+        "faces": 26,
+        "shells": 1,
+        "geometrySha256": "4ab0eff61a5c1c40247d3797ab06b303790f69090b37e79022f3778a7863c5dd"
+      },
+      "refusalMessage": "Node n4: Node n3: Miter direction must be finite and nonzero",
+      "resourceRefusalMessage": "Node n4: Node n3: Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "closed-miter-hollow-body.r",
+      "sourceSha256": "19ff349480d6c967bd523a5b5f4d94b425c3e6db1baa6755ac08b36eb49b7756",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ],
+      "solid": {
+        "faces": 32,
+        "shells": 2,
+        "geometrySha256": "a40f59555f20b6874ef38abfb92925795356c53835b3c66b55c5c5b052c970d3"
+      },
+      "refusalMessage": "Node n4: Node n3: Miter direction must be finite and nonzero"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-miter-certified-hollow.r",
+      "sourceSha256": "9ce1a5be2e92e9578a7f93fcb8a179f481ffae09ff027d064c3beb49cf04ea9a",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ?  · Оценка ошибки границы: ≈0.00516427 mm  / 0.0200000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 34,
+        "shells": 1,
+        "geometrySha256": "5570dca6002c6c5f6b584e4614b19d9f3ffe1faff183da48129ee6d8833ee6c1"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "6ada7b69d5469a65c57275be207759eecd2a3bb9b690dad12d0c8fc555eb171a",
+    "src/services/sweepRetainedCorrespondence.ts": "faba489c0578751129420c70e48a9e582eebbb907beaf94e8a3be250ed09683e",
+    "src/services/geometry/brep.ts": "d1e273bdc6db5b760934377f4f7a91e957e9fa1acb5d3da4c2fe18eeb5ec6a1f",
+    "src/features/DirectModeler.vue": "f131336b688ed8b2f27b202f8859ff5ef016b8d4bef2c84c57ef8a15203f5eff",
+    "src/generated/geometry-kernels/bytes.ts": "a716d119d28da22d3c3848e4ef0c88f98dfcf400c252b84ff44b6a86c46726d3"
+  },
+  "browser": "151.0.7922.34",
+  "passed": true
+}

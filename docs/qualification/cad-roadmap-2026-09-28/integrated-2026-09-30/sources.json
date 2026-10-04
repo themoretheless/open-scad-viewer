@@ -1,0 +1,31 @@
+{
+  "baseCommit": "5f40d3458d956ae9a0e2cfe21b3d261bfc3b91bb",
+  "scope": "Working copy validation; includes concurrent changes, not a clean-commit qualification.",
+  "command": "npm run test:cad-roadmap",
+  "files": [
+    {
+      "path": "src/features/DirectModeler.vue",
+      "sha256": "74f245e7997456e70fbfd56cb4474f21627578008021e59a3e3882a71cb72af6"
+    },
+    {
+      "path": "tests/directModelerUi.test.ts",
+      "sha256": "69ca7f0618b519cd8aa3f4b398a88fad6b48bb2b51c05526db5d0a7f90a82e63"
+    },
+    {
+      "path": "scripts/check-solid-cap-push-browser.mjs",
+      "sha256": "b56615cb1089338e7ab7b94262c7af43eeb449fa7b1b5f5dca96fa0764b6a734"
+    },
+    {
+      "path": "scripts/benchmark-solid-instances-browser.mjs",
+      "sha256": "307d9ea904137b4f789d932edf4762d914624f5e56af3ed08627b53284c912ea"
+    },
+    {
+      "path": "scripts/verify-dist.mjs",
+      "sha256": "4f765a4ac71682e424fce8f768a1c4fac09423df060aa427f1d6fa64b8a3396c"
+    },
+    {
+      "path": "package.json",
+      "sha256": "b73bc45dba43a850bca4873e94fa19cefcf2d26f7745ca71461a92a7008b0310"
+    }
+  ]
+}

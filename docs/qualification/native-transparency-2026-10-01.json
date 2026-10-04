@@ -1,0 +1,281 @@
+{
+  "artifactSha256": "461b0366d448c689e39670515dd2fba270f6f82ff4f5f620d83b2e9d5138e91c",
+  "node": "v22.23.3",
+  "samples": 15,
+  "warmups": 3,
+  "note": "Generic Rust stage includes request decoding and response encoding. Raw stages pack, upload, build and copy detached buffers; raw stage totals exclude TS node materialization. Measurements are local warmed Node WASM, excluding startup and GPU upload.",
+  "results": [
+    {
+      "name": "layers",
+      "inputTriangles": 1000,
+      "outputFragments": 1000,
+      "referenceFragments": 1000,
+      "operationLimit": 500000,
+      "operations": 9113,
+      "requestBytes": 371131,
+      "responseBytes": 512119,
+      "nativeConstructor": {
+        "p50Ms": 2.17266699999999,
+        "p95Ms": 2.3240839999999707
+      },
+      "referenceConstructor": {
+        "p50Ms": 5.7939589999999725,
+        "p95Ms": 8.996042000000045
+      },
+      "localTraversal": {
+        "p50Ms": 0.1027080000000069,
+        "p95Ms": 0.27212499999996
+      },
+      "genericStages": {
+        "encodeMs": {
+          "p50Ms": 1.0734170000000631,
+          "p95Ms": 3.803333000000009
+        },
+        "copyMs": {
+          "p50Ms": 0.010625000000004547,
+          "p95Ms": 0.015958000000011907
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 6.172500000000014,
+          "p95Ms": 7.494833000000028
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 1.857249999999965,
+          "p95Ms": 2.562583000000018
+        },
+        "totalMs": {
+          "p50Ms": 9.476042000000007,
+          "p95Ms": 12.683582999999999
+        }
+      },
+      "rawRequestBytes": 312000,
+      "rawResponseBytes": 364000,
+      "rawStages": {
+        "encodeMs": {
+          "p50Ms": 0.2137920000000122,
+          "p95Ms": 0.23508300000003146
+        },
+        "copyMs": {
+          "p50Ms": 0.008624999999938154,
+          "p95Ms": 0.021624999999971806
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 1.9708340000000817,
+          "p95Ms": 2.2040420000000154
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 0.043541000000004715,
+          "p95Ms": 0.05429100000003473
+        },
+        "totalMs": {
+          "p50Ms": 2.2065419999998994,
+          "p95Ms": 2.503916000000004
+        }
+      }
+    },
+    {
+      "name": "layers",
+      "inputTriangles": 10000,
+      "outputFragments": 10000,
+      "referenceFragments": 10000,
+      "operationLimit": 500000,
+      "operations": 124653,
+      "requestBytes": 3710131,
+      "responseBytes": 5120119,
+      "nativeConstructor": {
+        "p50Ms": 26.877124999999978,
+        "p95Ms": 27.470749999999953
+      },
+      "referenceConstructor": {
+        "p50Ms": 79.22800000000007,
+        "p95Ms": 91.57725000000005
+      },
+      "localTraversal": {
+        "p50Ms": 0.9737920000002305,
+        "p95Ms": 1.379250000000411
+      },
+      "genericStages": {
+        "encodeMs": {
+          "p50Ms": 13.840291999999863,
+          "p95Ms": 14.633874999999989
+        },
+        "copyMs": {
+          "p50Ms": 0.07004099999994651,
+          "p95Ms": 0.0729999999998654
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 68.36391700000013,
+          "p95Ms": 69.57550000000015
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 20.528666000000158,
+          "p95Ms": 22.044083
+        },
+        "totalMs": {
+          "p50Ms": 103.76158299999997,
+          "p95Ms": 105.532375
+        }
+      },
+      "rawRequestBytes": 3120000,
+      "rawResponseBytes": 3640000,
+      "rawStages": {
+        "encodeMs": {
+          "p50Ms": 0.608167000000094,
+          "p95Ms": 0.7649999999998727
+        },
+        "copyMs": {
+          "p50Ms": 0.05766600000060862,
+          "p95Ms": 0.0593340000000353
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 25.728624999999738,
+          "p95Ms": 25.95712500000036
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 0.11349999999993088,
+          "p95Ms": 0.2729170000002341
+        },
+        "totalMs": {
+          "p50Ms": 26.53975000000014,
+          "p95Ms": 26.862375000000156
+        }
+      }
+    },
+    {
+      "name": "coplanar",
+      "inputTriangles": 10000,
+      "outputFragments": 10000,
+      "referenceFragments": 10000,
+      "operationLimit": 500000,
+      "operations": 20000,
+      "requestBytes": 3710131,
+      "responseBytes": 4080223,
+      "nativeConstructor": {
+        "p50Ms": 5.246750000000247,
+        "p95Ms": 5.613082999999278
+      },
+      "referenceConstructor": {
+        "p50Ms": 9.191291000000092,
+        "p95Ms": 14.74487499999941
+      },
+      "localTraversal": {
+        "p50Ms": 1.438708000000588,
+        "p95Ms": 1.6425419999995938
+      },
+      "genericStages": {
+        "encodeMs": {
+          "p50Ms": 9.530291000000034,
+          "p95Ms": 14.94024999999965
+        },
+        "copyMs": {
+          "p50Ms": 0.07020900000043184,
+          "p95Ms": 0.07487500000024738
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 33.72729099999924,
+          "p95Ms": 34.082000000000335
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 8.83495799999946,
+          "p95Ms": 11.383707999999388
+        },
+        "totalMs": {
+          "p50Ms": 52.258207999999286,
+          "p95Ms": 60.47479099999964
+        }
+      },
+      "rawRequestBytes": 3120000,
+      "rawResponseBytes": 3160048,
+      "rawStages": {
+        "encodeMs": {
+          "p50Ms": 0.5689159999992626,
+          "p95Ms": 0.6077919999997903
+        },
+        "copyMs": {
+          "p50Ms": 0.05575000000044383,
+          "p95Ms": 0.058458000000428
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 4.079499999999825,
+          "p95Ms": 4.1530839999995806
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 0.08104099999945902,
+          "p95Ms": 0.20929100000012113
+        },
+        "totalMs": {
+          "p50Ms": 4.805459000000155,
+          "p95Ms": 4.921832999999424
+        }
+      }
+    },
+    {
+      "name": "crossing",
+      "inputTriangles": 24,
+      "outputFragments": 15869,
+      "referenceFragments": 15988,
+      "operationLimit": 500000,
+      "operations": 58906,
+      "requestBytes": 9035,
+      "responseBytes": 6732591,
+      "nativeConstructor": {
+        "p50Ms": 27.088207999999213,
+        "p95Ms": 29.054458000000523
+      },
+      "referenceConstructor": {
+        "p50Ms": 82.34300000000076,
+        "p95Ms": 116.5452920000007
+      },
+      "localTraversal": {
+        "p50Ms": 1.4116659999999683,
+        "p95Ms": 1.7768329999998969
+      },
+      "genericStages": {
+        "encodeMs": {
+          "p50Ms": 0.13950000000113505,
+          "p95Ms": 0.1904579999991256
+        },
+        "copyMs": {
+          "p50Ms": 0.004750000000058208,
+          "p95Ms": 0.007083999999849766
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 63.974457999999686,
+          "p95Ms": 72.55616699999882
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 19.017667000000074,
+          "p95Ms": 27.712666999999783
+        },
+        "totalMs": {
+          "p50Ms": 83.10900000000038,
+          "p95Ms": 92.85404200000085
+        }
+      },
+      "rawRequestBytes": 7488,
+      "rawResponseBytes": 5133644,
+      "rawStages": {
+        "encodeMs": {
+          "p50Ms": 0.025125000000116415,
+          "p95Ms": 0.029874999998355634
+        },
+        "copyMs": {
+          "p50Ms": 0.004249999999956344,
+          "p95Ms": 0.0057500000002619345
+        },
+        "rustAndSerializeMs": {
+          "p50Ms": 26.85004200000003,
+          "p95Ms": 28.436625000000276
+        },
+        "decodeAndFreeMs": {
+          "p50Ms": 0.14354199999979755,
+          "p95Ms": 0.40645800000038435
+        },
+        "totalMs": {
+          "p50Ms": 27.04674999999952,
+          "p95Ms": 28.62316699999974
+        }
+      }
+    }
+  ]
+}

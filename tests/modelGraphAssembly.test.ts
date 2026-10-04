@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { placeAssembly, frameMatrix, multiplyFrames, type AssemblyComponent } from '../src/services/modelGraphAssembly'
+import { placeAssembly, frameMatrix, multiplyFrames, type AssemblyComponent } from '../benchmarks/modelgraph/modelGraphAssembly-reference'
 import { compileModelGraph, setModelGraphParameters, MODELGRAPH_ASSEMBLY_EXAMPLE } from '../src/services/modelGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'

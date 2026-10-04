@@ -10,9 +10,9 @@ gpu = ["dep:gpu-compute", "dep:compute-core", "math-core/gpu"]
 cuda = ["gpu", "math-core/cuda"]
 
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-compute-core = { path = "../compute-core", optional = true }
-gpu-compute = { path = "../gpu-compute", optional = true }
+math-core = { workspace = true }
+compute-core = { workspace = true, optional = true }
+gpu-compute = { workspace = true, optional = true }
 
 [dev-dependencies]
 rbench = { workspace = true }

@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 16,
+  "wikiHash": "2e73f14d86ca2dbf300609dfaf72c2384a8f8ee6f80bc4bc9b224d3f5d700f78",
+  "raw": {
+    "document_id": "9af098d1-e7aa-4950-987a-5556c873f526",
+    "chunk_count": 3,
+    "node_id": "4f4098ef-d672-43fa-ad72-13cdf87670de",
+    "edge_count": 1,
+    "content_hash": "ea1de0a29111f2e9cfb51ae727c5aa6d2f9eff41e96f31416b2af956283774c3",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-closed-g2-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81969,
+    "chunk_count": 720338,
+    "node_count": 107739,
+    "edge_count": 238824,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 4985412,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

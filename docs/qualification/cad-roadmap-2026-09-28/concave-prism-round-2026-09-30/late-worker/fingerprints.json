@@ -1,0 +1,5 @@
+{
+  "scripts/check-solid-edge-error-browser.mjs": "2c6534f53ad68fe5e0e6ced98253fad646d8e082fb6003f585eef7ea42b68b85",
+  "src/services/solidExactEdgeFeature.ts": "9a8f4561441fd0f43a7f9b72d2a4ed6e17bc15c85ca5a3a8a75b15511ef675a6",
+  "src/features/DirectModeler.vue": "00cc18fdc108f1c4738633edcfdb6f4ce954132c5c3a28035a4839ee59819b43"
+}

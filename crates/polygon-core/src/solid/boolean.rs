@@ -2,6 +2,9 @@
 //! Implemented here in Rust; no external geometry engine. Binary64 predicates
 //! use a common normalized frame. Results are stitched and topology-checked;
 //! this is not an exact-arithmetic or globally certified geometry algorithm.
+#[cfg(feature = "codec")]
+#[path = "boolean/serialization.rs"]
+mod serialization;
 use crate::{
     BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, dot, norm, scale, sub,
 };
@@ -17,25 +20,8 @@ pub enum Operation {
     Intersection,
     Difference,
 }
-impl value_codec::Serialize for Operation {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Union => value_codec::Value::String("union".into()),
-            Self::Intersection => value_codec::Value::String("intersection".into()),
-            Self::Difference => value_codec::Value::String("difference".into()),
-        }
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Operation {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value.as_str().unwrap_or("") {
-            "union" => Ok(Self::Union),
-            "intersection" => Ok(Self::Intersection),
-            "difference" => Ok(Self::Difference),
-            _ => Err(value_codec::error("Unknown enum variant")),
-        }
-    }
-}
+
+
 #[derive(Clone, Debug)]
 pub struct Options {
     /// Relative to the longest side of the combined input bounds.
@@ -47,65 +33,8 @@ pub struct Options {
     /// and by `Mesh::validate` instead.
     pub max_output_triangles: usize,
 }
-impl value_codec::Serialize for Options {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "relativeTolerance".into(),
-            value_codec::Serialize::to_value(&self.relative_tolerance),
-        );
-        object.insert(
-            "maxWork".into(),
-            value_codec::Serialize::to_value(&self.max_work),
-        );
-        object.insert(
-            "maxFragments".into(),
-            value_codec::Serialize::to_value(&self.max_fragments),
-        );
-        object.insert(
-            "maxOutputTriangles".into(),
-            value_codec::Serialize::to_value(&self.max_output_triangles),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Options {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let relative_tolerance: f64 = if let Some(v) = object.remove("relativeTolerance") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_tolerance()
-        };
-        let max_work: usize = if let Some(v) = object.remove("maxWork") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_work()
-        };
-        let max_fragments: usize = if let Some(v) = object.remove("maxFragments") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_fragments()
-        };
-        let max_output_triangles: usize = if let Some(v) = object.remove("maxOutputTriangles") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            default_output()
-        };
-        if let Some(key) = object.keys().next() {
-            return Err(value_codec::error(format!("Unknown field {key}")));
-        }
-        Ok(Self {
-            relative_tolerance,
-            max_work,
-            max_fragments,
-            max_output_triangles,
-        })
-    }
-}
+
+
 /// Largest combined input the BSP clipping path admits. Exact fast paths for
 /// separated, nested, identical or empty operands are not limited by it.
 pub const BSP_INPUT_TRIANGLES: usize = 10_000;
@@ -139,69 +68,8 @@ pub struct BooleanReport {
     pub fragments: usize,
     pub input_triangles: [usize; 2],
 }
-impl value_codec::Serialize for BooleanReport {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "operation".into(),
-            value_codec::Serialize::to_value(&self.operation),
-        );
-        object.insert(
-            "toleranceMm".into(),
-            value_codec::Serialize::to_value(&self.tolerance_mm),
-        );
-        object.insert("work".into(), value_codec::Serialize::to_value(&self.work));
-        object.insert(
-            "fragments".into(),
-            value_codec::Serialize::to_value(&self.fragments),
-        );
-        object.insert(
-            "inputTriangles".into(),
-            value_codec::Serialize::to_value(&self.input_triangles),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for BooleanReport {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let operation: Operation = value_codec::Deserialize::from_value(
-            object
-                .remove("operation")
-                .ok_or_else(|| value_codec::error("Missing field operation"))?,
-        )?;
-        let tolerance_mm: f64 = value_codec::Deserialize::from_value(
-            object
-                .remove("toleranceMm")
-                .ok_or_else(|| value_codec::error("Missing field toleranceMm"))?,
-        )?;
-        let work: usize = value_codec::Deserialize::from_value(
-            object
-                .remove("work")
-                .ok_or_else(|| value_codec::error("Missing field work"))?,
-        )?;
-        let fragments: usize = value_codec::Deserialize::from_value(
-            object
-                .remove("fragments")
-                .ok_or_else(|| value_codec::error("Missing field fragments"))?,
-        )?;
-        let input_triangles: [usize; 2] = value_codec::Deserialize::from_value(
-            object
-                .remove("inputTriangles")
-                .ok_or_else(|| value_codec::error("Missing field inputTriangles"))?,
-        )?;
-        Ok(Self {
-            operation,
-            tolerance_mm,
-            work,
-            fragments,
-            input_triangles,
-        })
-    }
-}
+
+
 fn error(code: &'static str, message: impl Into<String>) -> Error {
     Error {
         code,
@@ -518,99 +386,18 @@ impl Bsp {
     }
 }
 /// Reject disconnected vertex fans (edge counts alone miss pinched vertices).
+/// Canonical implementation lives in manifold-core (`validate_vertex_links`).
 fn vertex_manifold(mesh: &Mesh) -> Result<()> {
-    let vertex_count = mesh.positions.len() / 3;
-    let triangles = mesh.indices.as_chunks::<3>().0;
-    // CSR fan edges: fan[offsets[v]..offsets[v + 1]] holds the link edges
-    // (next, previous) of every triangle corner at v, in triangle order
-    // (same layout style as `build_face_adjacency` in mesh_render).
-    let mut offsets = vec![0usize; vertex_count + 1];
-    for t in triangles {
-        for &id in t {
-            offsets[id + 1] += 1;
-        }
-    }
-    for v in 0..vertex_count {
-        offsets[v + 1] += offsets[v];
-    }
-    let mut fan = vec![(0usize, 0usize); offsets[vertex_count]];
-    let mut cursors = offsets[..vertex_count].to_vec();
-    for t in triangles {
-        for i in 0..3 {
-            let cursor = &mut cursors[t[i]];
-            fan[*cursor] = (t[(i + 1) % 3], t[(i + 2) % 3]);
-            *cursor += 1;
-        }
-    }
-    // Reused scratch buffers: generation-stamped membership, degree/cursor per
-    // link node and a DFS stack, so dense meshes do not allocate per vertex.
-    // The result is only Ok/Err with fixed messages, so traversal order
-    // cannot affect the output.
-    let mut link_mark = vec![usize::MAX; vertex_count];
-    let mut seen_mark = vec![usize::MAX; vertex_count];
-    let mut degree = vec![0usize; vertex_count];
-    let mut slot = vec![0usize; vertex_count];
-    let mut members: Vec<usize> = Vec::new();
-    let mut link_offsets: Vec<usize> = Vec::new();
-    let mut adjacent: Vec<usize> = Vec::new();
-    let mut stack: Vec<usize> = Vec::new();
-    for v in 0..vertex_count {
-        let range = offsets[v]..offsets[v + 1];
-        if range.is_empty() {
-            continue;
-        }
-        let edges = &fan[range];
-        members.clear();
-        for &(a, b) in edges {
-            for id in [a, b] {
-                if link_mark[id] != v {
-                    link_mark[id] = v;
-                    degree[id] = 0;
-                    slot[id] = members.len();
-                    members.push(id);
-                }
-                degree[id] += 1;
+    manifold_core::validate_vertex_links(mesh.positions.len() / 3, &mesh.indices).map_err(|defect| {
+        invalid(match defect {
+            manifold_core::VertexLinkDefect::NonManifoldLink(_) => {
+                "Boolean solid has a nonmanifold vertex link"
             }
-        }
-        // Repeated incidences count, as in the previous map-based version.
-        if members.iter().any(|&id| degree[id] != 2) {
-            return Err(invalid("Boolean solid has a nonmanifold vertex link"));
-        }
-        // Flat per-link adjacency (CSR over `members`) for the DFS below.
-        link_offsets.clear();
-        link_offsets.push(0);
-        for &id in &members {
-            link_offsets.push(link_offsets.last().unwrap() + degree[id]);
-        }
-        adjacent.clear();
-        adjacent.resize(*link_offsets.last().unwrap(), 0);
-        for &id in &members {
-            degree[id] = link_offsets[slot[id]];
-        }
-        for &(a, b) in edges {
-            adjacent[degree[a]] = b;
-            degree[a] += 1;
-            adjacent[degree[b]] = a;
-            degree[b] += 1;
-        }
-        stack.clear();
-        stack.push(members[0]);
-        seen_mark[members[0]] = v;
-        let mut seen = 1usize;
-        while let Some(w) = stack.pop() {
-            for &n in &adjacent[link_offsets[slot[w]]..link_offsets[slot[w] + 1]] {
-                if seen_mark[n] != v {
-                    seen_mark[n] = v;
-                    seen += 1;
-                    stack.push(n);
-                }
+            manifold_core::VertexLinkDefect::DisconnectedFan(_) => {
+                "Boolean solid has a disconnected vertex fan"
             }
-        }
-        if seen != members.len() {
-            return Err(invalid("Boolean solid has a disconnected vertex fan"));
-        }
-    }
-    Ok(())
+        })
+    })
 }
 fn validate_solid(mesh: &Mesh) -> Result<()> {
     if mesh.indices.is_empty() {
@@ -1469,10 +1256,10 @@ fn intersection_mesh(mesh:&Mesh,relative_tolerance:f64,max_work:usize)->Result<(
     if !extent.is_finite() || extent<=0. {return Err(invalid("Degenerate mesh bounds"));}
     let origin:Point=std::array::from_fn(|i|lo[i]/2.+hi[i]/2.);
     let mut normalized=mesh.clone();
-    for p in normalized.positions.chunks_exact_mut(3) {
+    for p in normalized.positions.as_chunks_mut::<3>().0 {
         for i in 0..3 {p[i]=(p[i]-origin[i])/extent;}
     }
-    for t in normalized.indices.chunks_exact(3) {
+    for t in normalized.indices.as_chunks::<3>().0 {
         let a=normalized.point(t[0])?;let b=normalized.point(t[1])?;let c=normalized.point(t[2])?;
         if norm(cross(sub(b,a),sub(c,a)))<=relative_tolerance*relative_tolerance {
             return Err(invalid("Degenerate triangle: repair it before intersection inspection"));

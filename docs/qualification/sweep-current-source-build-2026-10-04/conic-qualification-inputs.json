@@ -1,0 +1,11 @@
+{
+  "scope": "qualification additions after compiler-source freeze",
+  "files": {
+    "tests/miterStationGraph.test.ts": "c8d9a76c1dabb0810a0ad36f68a8dbb35bdb54d80999295741205a97f18790fe",
+    "scripts/export-smooth-station-step-oracle.mts": "7a4807e7c4d0a87f8c397f7d6a3eb88682d18f772ff3bab83d57cc04128fbab1",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "4d12b6450e96bba9b6c8aa259c0b300b73fb4e8fb268414f0b616cdcad4d4694",
+    "examples/rush/progressive-miter-reconstructed-conic-half.r": "00f1fbc3cef4c313ca83a3eb45ae8f82e63a4c3a9b2b993e067f0fa2b1b62f8e",
+    "examples/rush/progressive-miter-reconstructed-conic-one.r": "87629594d7b60a77aa9b5be85cbadbb40a7aeec6ce708ff0f12075cb05370dbe",
+    "examples/rush/progressive-miter-reconstructed-conic-two.r": "9ef6d8c782475b6e98eb8bff083a518adf987b5197e8f4aab7439d29cfdc00e5"
+  }
+}

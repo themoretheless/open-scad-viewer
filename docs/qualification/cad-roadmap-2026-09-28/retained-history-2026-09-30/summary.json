@@ -1,0 +1,36 @@
+{
+  "undo": {
+    "count": 20,
+    "first": {
+      "action": "undo",
+      "Nodes": 2243,
+      "JSHeapUsedSize": 32394028,
+      "JSHeapTotalSize": 34488320
+    },
+    "last": {
+      "action": "undo",
+      "Nodes": 2245,
+      "JSHeapUsedSize": 32910148,
+      "JSHeapTotalSize": 34750464
+    },
+    "minJsHeapBytes": 32394028,
+    "maxJsHeapBytes": 32915296
+  },
+  "redo": {
+    "count": 20,
+    "first": {
+      "action": "redo",
+      "Nodes": 21271,
+      "JSHeapUsedSize": 74365564,
+      "JSHeapTotalSize": 78282752
+    },
+    "last": {
+      "action": "redo",
+      "Nodes": 21271,
+      "JSHeapUsedSize": 74406224,
+      "JSHeapTotalSize": 79069184
+    },
+    "minJsHeapBytes": 74058236,
+    "maxJsHeapBytes": 75067148
+  }
+}

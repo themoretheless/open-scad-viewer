@@ -1,0 +1,6 @@
+{
+  "scripts/export-cad-step-unit-cycles.mts": "dea6030f98a2d63d7f880d778c8e1b439a93c7176771be99819d8a77727c0b65",
+  "scripts/verify-cad-step-occt.py": "61be590b311f0bfc87e9d1f19f1caccbc22ded37378d2c0e7e990e65b6df7294",
+  "src/services/solidStepExchange.ts": "cec63d1c9a838fd968cd097a184aab73e3c43e56fb5690656cd546e52885b7e0",
+  "src/generated/geometry-kernels/identity.ts": "86e18ec8cdeb9f8d0173101b6cd122a12c798d984dd46385ac5f1ca2dcc83875"
+}

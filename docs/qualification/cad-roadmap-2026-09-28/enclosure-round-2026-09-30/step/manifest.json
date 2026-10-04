@@ -1,0 +1,168 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "enclosure-r1-base-0",
+      "file": "enclosure-r1-base-0.step",
+      "sha256": "6bd53d3e4605761f92f14a7e52c82bd68ccb31c923687339dd1755a604cdce24",
+      "expected": {
+        "volumeMm3": 7147.707963267949,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r1-base-1",
+      "file": "enclosure-r1-base-1.step",
+      "sha256": "b87bb84cdec62ddfddc0fae37688a7b2bd2e048a186b4dab324ffe949833f4a1",
+      "expected": {
+        "volumeMm3": 7147.707963267949,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r4-base-0",
+      "file": "enclosure-r4-base-0.step",
+      "sha256": "db7a1637c7deab0ddf3a2d34ebc23a0e4556718c5dcfcd5d54c65bfc529632c9",
+      "expected": {
+        "volumeMm3": 7083.3274122871835,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r4-base-1",
+      "file": "enclosure-r4-base-1.step",
+      "sha256": "156f513248ad4aae55a06c7ab3d2148111305dbee9739d77f647b18699f95983",
+      "expected": {
+        "volumeMm3": 7083.3274122871835,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r1-placed-0",
+      "file": "enclosure-r1-placed-0.step",
+      "sha256": "da5b02aad720fc4e365cfa6a00a4750d81686e0e96f1736109381bbe994f5f4f",
+      "expected": {
+        "volumeMm3": 7147.707963267949,
+        "boundsMm": [
+          [
+            7,
+            -3,
+            11
+          ],
+          [
+            27,
+            37,
+            41
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r1-placed-1",
+      "file": "enclosure-r1-placed-1.step",
+      "sha256": "684c8a879f24b3a4d63fad5310dc0033f0e85e75cfd57f46ee8169ce0cdfadba",
+      "expected": {
+        "volumeMm3": 7147.707963267949,
+        "boundsMm": [
+          [
+            7,
+            -3,
+            11
+          ],
+          [
+            27,
+            37,
+            41
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r4-placed-0",
+      "file": "enclosure-r4-placed-0.step",
+      "sha256": "16853614b59a388a96c00a45dcc08a819c82cc3ee858e0a7007b32a4adf27fa3",
+      "expected": {
+        "volumeMm3": 7083.3274122871835,
+        "boundsMm": [
+          [
+            7,
+            -3,
+            11
+          ],
+          [
+            27,
+            37,
+            41
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-r4-placed-1",
+      "file": "enclosure-r4-placed-1.step",
+      "sha256": "c410745ea29dd45cddc6004bbb7fd0a4c6b3fe21427ff601317d659cec39506a",
+      "expected": {
+        "volumeMm3": 7083.3274122871835,
+        "boundsMm": [
+          [
+            7,
+            -3,
+            11
+          ],
+          [
+            27,
+            37,
+            41
+          ]
+        ]
+      }
+    }
+  ]
+}

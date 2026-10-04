@@ -8,6 +8,8 @@
  * having all names here is not by itself a full-language conformance claim.
  */
 
+import {evaluateDegreeScalar as nativeDegreeMath} from './openScadDegreeMath'
+
 import {
   TT,
   type Expr,
@@ -184,105 +186,13 @@ function binaryNumber(name: string, operation: (left: number, right: number) => 
   }
 }
 
-// OpenSCAD's public 2021.01 behavior requires exact results at common degree
-// angles. Normalize once, solve a first-quadrant pair, and restore the signs
-// by quadrant so those values also remain exact after full rotations.
-const DEG_TO_RAD = 0.017453292519943295769
-const RAD_TO_DEG = 57.2957795130823208767
-const SQRT_THREE_QUARTERS = 0.86602540378443859659
-const SQRT_ONE_THIRD = 0.57735026918962573106
-const TRIG_HUGE_VALUE = 360 * 2 ** 52
-
-interface ReducedDegrees {
-  readonly angle: number
-  readonly cycles: number
-}
-
-function reduceDegrees(value: number, period: number): ReducedDegrees | undefined {
-  if (!(value < TRIG_HUGE_VALUE && value > -TRIG_HUGE_VALUE)) return undefined
-  if (value >= 0 && value < period) return { angle: value, cycles: 0 }
-  const cycles = Math.floor(value / period)
-  return { angle: value - cycles * period, cycles }
-}
-
-function firstQuadrantComponents(angle: number): readonly [sin: number, cos: number] {
-  if (angle === 30) return [0.5, SQRT_THREE_QUARTERS]
-  if (angle === 45) return [Math.SQRT1_2, Math.SQRT1_2]
-  if (angle === 60) return [SQRT_THREE_QUARTERS, 0.5]
-  if (angle < 45) {
-    const radians = angle * DEG_TO_RAD
-    return [Math.sin(radians), Math.cos(radians)]
-  }
-  const complement = (90 - angle) * DEG_TO_RAD
-  return [Math.cos(complement), Math.sin(complement)]
-}
-
-function unitCircleComponents(value: number): readonly [sin: number, cos: number] | undefined {
-  const reduced = reduceDegrees(value, 360)
-  if (reduced === undefined) return undefined
-  const { angle } = reduced
-  if (angle === 0) return [angle, 1]
-  if (angle === 90) return [1, 0]
-  if (angle === 180) return [-0, -1]
-  if (angle === 270) return [-1, -0]
-
-  const quadrant = Math.floor(angle / 90)
-  const [sin, cos] = firstQuadrantComponents(angle - quadrant * 90)
-  if (quadrant === 0) return [sin, cos]
-  if (quadrant === 1) return [cos, -sin]
-  if (quadrant === 2) return [-sin, -cos]
-  return [-cos, sin]
-}
-
-function sinDegrees(value: number): number {
-  return unitCircleComponents(value)?.[0] ?? Number.NaN
-}
-
-function cosDegrees(value: number): number {
-  return unitCircleComponents(value)?.[1] ?? Number.NaN
-}
-
-function tanDegrees(value: number): number {
-  const reduced = reduceDegrees(value, 180)
-  if (reduced === undefined) return Number.NaN
-  if (reduced.angle === 0) return reduced.cycles % 2 === 0 ? 0 : -0
-  if (reduced.angle === 90) return reduced.cycles % 2 === 0 ? Infinity : -Infinity
-
-  const oppose = reduced.angle > 90
-  const acute = oppose ? 180 - reduced.angle : reduced.angle
-  const magnitude = acute === 30
-    ? SQRT_ONE_THIRD
-    : acute === 45
-      ? 1
-      : acute === 60
-        ? Math.sqrt(3)
-        : Math.tan(acute * DEG_TO_RAD)
-  return oppose ? -magnitude : magnitude
-}
-
-function asinDegrees(value: number): number {
-  const degrees = Math.asin(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return sinDegrees(whole) === value ? whole : degrees
-}
-
-function acosDegrees(value: number): number {
-  const degrees = Math.acos(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return cosDegrees(whole) === value ? whole : degrees
-}
-
-function atanDegrees(value: number): number {
-  const degrees = Math.atan(value) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return tanDegrees(whole) === value ? whole : degrees
-}
-
-function atan2Degrees(y: number, x: number): number {
-  const degrees = Math.atan2(y, x) * RAD_TO_DEG
-  const whole = roundAwayFromZero(degrees)
-  return Math.abs(degrees - whole) < 3e-14 ? whole : degrees
-}
+const sinDegrees=(value:number)=>nativeDegreeMath('sin',[value])
+const cosDegrees=(value:number)=>nativeDegreeMath('cos',[value])
+const tanDegrees=(value:number)=>nativeDegreeMath('tan',[value])
+const asinDegrees=(value:number)=>nativeDegreeMath('asin',[value])
+const acosDegrees=(value:number)=>nativeDegreeMath('acos',[value])
+const atanDegrees=(value:number)=>nativeDegreeMath('atan',[value])
+const atan2Degrees=(y:number,x:number)=>nativeDegreeMath('atan2',[y,x])
 
 /** C++ std::round semantics: halfway cases round away from zero. */
 function roundAwayFromZero(value: number): number {

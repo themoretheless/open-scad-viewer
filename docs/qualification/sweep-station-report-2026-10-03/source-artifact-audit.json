@@ -1,0 +1,41 @@
+{
+  "scope": "selected production source/artifact agreement, not the entire concurrent workspace",
+  "files": [
+    {
+      "path": "src/services/miterStationSmoothness.ts",
+      "primarySha256": "006150a7204aa88dd6c767af1366cdb7777d53624c1a02512995b219407de681",
+      "qualifiedSha256": "006150a7204aa88dd6c767af1366cdb7777d53624c1a02512995b219407de681",
+      "matches": true
+    },
+    {
+      "path": "src/services/miterProfileSmoothness.ts",
+      "primarySha256": "fd785c07b6b97072014817c9bce457a466c95e2688fdf1abac0492217c27c1e9",
+      "qualifiedSha256": "fd785c07b6b97072014817c9bce457a466c95e2688fdf1abac0492217c27c1e9",
+      "matches": true
+    },
+    {
+      "path": "src/services/sweepViewportEvidence.ts",
+      "primarySha256": "d94053240c990fbd8cbc688e5a668147485f647ac7cafca09507e9861dddd217",
+      "qualifiedSha256": "d94053240c990fbd8cbc688e5a668147485f647ac7cafca09507e9861dddd217",
+      "matches": true
+    },
+    {
+      "path": "src/App.vue",
+      "primarySha256": "3b31a6f4bf8a7a527a36c6f4b845e2979be6b7f331560b2f278c7af3e2f89b6d",
+      "qualifiedSha256": "3b31a6f4bf8a7a527a36c6f4b845e2979be6b7f331560b2f278c7af3e2f89b6d",
+      "matches": true
+    },
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "primarySha256": "851ff22f2ed5c3f60ca4bb4008c249ffd54149c7b82133de42ee1dcb41e019cc",
+      "qualifiedSha256": "851ff22f2ed5c3f60ca4bb4008c249ffd54149c7b82133de42ee1dcb41e019cc",
+      "matches": true
+    },
+    {
+      "path": "src/generated/language-kernel/kernel_bg.wasm",
+      "primarySha256": "a19a753d547682f87aa742a412db8cb29106d6bd7ae9ebb85f316c1c376c2892",
+      "qualifiedSha256": "a19a753d547682f87aa742a412db8cb29106d6bd7ae9ebb85f316c1c376c2892",
+      "matches": true
+    }
+  ]
+}

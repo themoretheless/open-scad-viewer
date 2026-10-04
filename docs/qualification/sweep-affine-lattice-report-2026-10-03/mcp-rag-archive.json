@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 24,
+  "wikiHash": "8d0424564ae0b37f511434e8a68224053f3ee4dba0a41f9ac393c71ea257910d",
+  "raw": {
+    "document_id": "c46666e7-d069-4a03-87ca-3d555c7424af",
+    "chunk_count": 6,
+    "node_id": "f3f7b496-9f64-4dc1-b529-f2112bed8d87",
+    "edge_count": 1,
+    "content_hash": "5defe2fd9133eab47b2ba921e62fdf471e5d09c191a8f7377508d55ff5797a7f",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-affine-lattice-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81977,
+    "chunk_count": 720394,
+    "node_count": 107747,
+    "edge_count": 238832,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 13515169,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "tag": "BUTTON",
+  "html": "<button data-v-fd0a4b77=\"\" class=\"command-search\" title=\"Поиск команд · Ctrl/⌘ K\"><svg data-v-fd0a4b77=\"\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle data-v-fd0a4b77=\"\" cx=\"11\" cy=\"11\" r=\"7\"></circle><path data-v-fd0a4b77=\"\" d=\"m20 20-3.5-3.5\"></path></svg><span data-v-fd0a4b77=\"\">Команда…</span><kbd data-v-fd0a4b77=\"\">Ctrl K</kbd></button>",
+  "pending": true
+}

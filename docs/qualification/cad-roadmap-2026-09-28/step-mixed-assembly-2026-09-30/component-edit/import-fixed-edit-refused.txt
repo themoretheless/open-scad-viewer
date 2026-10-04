@@ -1,0 +1,13 @@
+/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:126
+ if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURBS_')?NurbsCurveError:GeometryKernelError;throw new ErrorType(envelope.error.code,envelope.error.message)}
+                                                                                                                     ^
+
+GeometryKernelError: Cap editing requires one connected shell
+    at decodeNurbsResult (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:126:118)
+    at callGeometryRust (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:133:10)
+    at pushPullFace (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/directSolidTools.ts:41:19)
+    at <anonymous> (/Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/export-cad-step-mixed-assembly.mts:28:14) {
+  code: 'BREP_UNSUPPORTED_OPERATION'
+}
+
+Node.js v22.23.3

@@ -1,0 +1,46 @@
+{
+  "crates/nurbs-core/src/primitives.rs": {
+    "bytes": 42121,
+    "sha256": "988f140eb6f8f081d195ceb3d1ec3f178ee81aff8561f7ecee520751583722f4"
+  },
+  "crates/nurbs-core/src/interval_newton.rs": {
+    "bytes": 27077,
+    "sha256": "1f0c92ae315ec80d57d04f965e5632e582704112fdde5f82e5375e73c9d0a469"
+  },
+  "src/services/miterProfileSmoothness.ts": {
+    "bytes": 3212,
+    "sha256": "af28c86c34f2b9c075f49cc1a7fb139a5b9e102f2c6bdc612993fdf076c78294"
+  },
+  "src/services/geometry/brep.ts": {
+    "bytes": 55967,
+    "sha256": "b1d86413fd78981b381af50d396eb728725133d979a240f1c117b5f00392fefd"
+  },
+  "src/services/modelGraphNurbsKernel.ts": {
+    "bytes": 64991,
+    "sha256": "41467165c3d5b7ed8f82f3a21063f47352ac8b8bbfeb536044d4cbd7b890fa09"
+  },
+  "src/services/nurbsSweepAudit.ts": {
+    "bytes": 12133,
+    "sha256": "48f560942184c62c46f51ee7b21ae254bdb87bc567bd7255b7a68dd25f15f26a"
+  },
+  "src/services/sweepViewportEvidence.ts": {
+    "bytes": 3603,
+    "sha256": "b8898b26387d043287e38ca02d572fcffeb91b3dab5103abaceab07e75de5c8f"
+  },
+  "src/App.vue": {
+    "bytes": 206193,
+    "sha256": "d294b93c64a31fe59d0f2585e4557dcd737d2854d6f2b9a3e27550de16975a98"
+  },
+  "tests/miterProfileSmoothness.test.ts": {
+    "bytes": 2490,
+    "sha256": "13869222759400c377c98d8d17b8af5c703c8b492df3c1abd40854680f03b3d3"
+  },
+  "tests/sweepViewportEvidence.test.ts": {
+    "bytes": 4703,
+    "sha256": "d072a3cbda2054644a171a6c5d693399b6f867936efc8a3ffcc53c1dccb3cd44"
+  },
+  "public/wasm/geometry-kernel.wasm": {
+    "bytes": 10680455,
+    "sha256": "47e6d7c9bd822449f4d845e59ba669a45dbcab1a48c9059285422a51815802e3"
+  }
+}

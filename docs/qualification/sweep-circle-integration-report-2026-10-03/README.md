@@ -1,0 +1,11 @@
+# Integrated bounded circle correction — 2026-10-03
+
+Native WASM operation curve_repair_circle_section is built, packaged and installed in the primary workspace. New geometry artifact SHA256 c2fcb258eb53fc66edba14aa7d47ad0376799259cf0fabb2d5c6d3cc03fc7094, 10,684,319 optimized bytes. Frozen build snapshot /private/tmp/open-scad-viewer-sweep-circle-native-2026-10-03. Installation required the primary old artifact hash to match the known baseline before replacing the complete generated package.
+
+ProgressiveMiterOptions now exposes explicit circleCorrection {quantum,tolerance,maxWork}. Synchronous and streaming B-rep construction invoke the same correction stage before wall/edge/cap construction. Optional cap projection precedes circle reconstruction; previous exact-planar-section claims are cleared, and actual rebuilt cap audits must establish their own evidence. The combined displacement is added outward to retained-wall and filled-cap/complete-boundary estimates. No unsupported or exhausted correction publishes partial sections. Actual retained-wall regularity, boundary embedding, nesting and material orientation remain independent gates.
+
+The formerly nonsmooth straight scale/twist hollow fixture now passes exact G2 on every profile join, complete continuousBound within 0.02 mm, retained-wall regularity and native Solid admission. Its explicit retained-wall budget is 100,000 cells; the default smaller budget correctly refused. Synchronous and streaming corrected models, displacement reports, profile smoothness and complete-boundary certificates are identical.
+
+Typecheck passed. Frozen runtime: 16 tests across four suites passed. Primary runtime after package installation: 17 tests across four suites passed, including the updated closed G2 regression. Native correction/JSON tests were qualified separately. Existing source changes are concurrent; this is targeted runtime qualification, not full current workspace/CI evidence.
+
+Remaining: Rush schema/lowering and examples for the new explicit correction, the three spatial repaired bodies and two affine cases, new STEP/UI coverage, full final source/artifact checks and publication/CI. The full goal remains active and unpublished.

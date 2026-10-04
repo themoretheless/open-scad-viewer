@@ -1,0 +1,1 @@
+{"version":1,"sketches":[],"bodies":[],"curves":[{"id":"replacement","name":"Replacement source","curve":{"degree":1,"knots":[0,1,2,3,4,5,6],"controlPoints":[[0,0,7],[10,5,7],[10,10,7],[0,10,7],[0,0,7]],"weights":[1,1,1,1,1],"periodic":true}}],"blenderProjectId":"d820ab37-5017-4c9d-9f6e-050d34cc0109","surfaces":[]}

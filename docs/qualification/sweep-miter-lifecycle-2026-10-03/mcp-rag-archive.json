@@ -1,0 +1,19 @@
+{
+  "loft": {
+    "wikiId": "9058bc19-86ae-4d41-8290-0b34b6a1c19b",
+    "wikiRevision": 2,
+    "wikiContentHash": "50f6eafdc3829df0be7d8ecf5eb667db02cf804383e57a8bf22bb16704d9d739",
+    "rawId": "f511252a-61a8-4fa2-957c-c2c44405efca",
+    "rawContentHash": "e94f2c050f7569222de6900f9bdbb9ea59c9e4929a6592474c9f4acde5a4dd57",
+    "rawChunks": 9
+  },
+  "sweep": {
+    "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+    "wikiRevision": 2,
+    "wikiContentHash": "a1ab1c8168904a2c50e03cc7b83e85cb0ded14454e9aa34d2793b1360c08b703",
+    "rawId": "27bf2cae-c07a-4cef-b462-2b45a0829d39",
+    "rawContentHash": "153d5aa4a827bf70761500d6ab6392060e653a20e3fd02d2980c3060161f6d4b",
+    "rawChunks": 8
+  },
+  "verified": true
+}

@@ -1,0 +1,8 @@
+{
+  "src/services/miterProfileSmoothness.ts": "b478e8f76f5e57b1b01ecf42cc7237a3491b783e85fd2a1dca72d6bd0f532b9e",
+  "src/services/sweepViewportEvidence.ts": "0c10b969e3542ab58e58fc7943f89c518b1159ff9225350a6c7b52d434a24b82",
+  "src/App.vue": "1d5ef7b555891919ac4bd076e7b84815ca7e5ac5843a0fd1d0f80dc8a1e23de4",
+  "scripts/export-sweep-step-oracle.mts": "2081609486d8d3e346e655104982123ff7d6fab61275b77564c574dfeee38a26",
+  "scripts/verify-sweep-step-occt.py": "801d9d450bff70476a9a3a8d82095662a435a0ff3d9c394de7164e1e4f71ac09",
+  "examples/rush/miter-g1-profile-frame-guide-affine.r": "0323d2e94bdd7e260a79a0bf1a33e2019ef0a5023e2e23b675c0b4479c32307c"
+}

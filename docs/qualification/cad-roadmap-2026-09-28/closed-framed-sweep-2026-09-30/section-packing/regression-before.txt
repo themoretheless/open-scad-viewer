@@ -1,0 +1,31 @@
+
+> open-scad-viewer@0.1.0 test:cad-roadmap
+> vitest run tests/wasmBrotliPacking.test.ts tests/cpuOrbitPaint.test.ts tests/directProjectionBasis.test.ts tests/sceneListWindow.test.ts tests/transparentBsp.test.ts tests/transparentTriangleSplit.test.ts tests/directModelerUi.test.ts tests/directModeling.test.ts tests/directHistory.test.ts tests/directDocumentAsync.test.ts tests/directDocumentNormalization.test.ts tests/directDimensions.test.ts tests/directAdvancedTools.test.ts tests/directProfileTools.test.ts tests/directExtrusion.test.ts tests/cadRoadmapAcceptance.test.ts tests/solidStepExchange.test.ts tests/solidNurbs.test.ts tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsSurfaceDistance.test.ts tests/faceDistance.test.ts tests/shellDistance.test.ts tests/solidBoundaryAgreement.test.ts tests/solidFaceContacts.test.ts tests/solidSelfIntersection.test.ts tests/solidDistance.test.ts tests/solidVolumeDistanceUi.test.ts tests/wasmBase91.test.ts tests/brepRuledLoft.test.ts tests/brepSteppedEnclosureExample.test.ts tests/meshInstances.test.ts tests/modelGraphAssembly.test.ts tests/svgDocumentAsync.test.ts tests/svgGeometry.test.ts tests/svgWorker.test.ts tests/commandSearch.test.ts tests/cadRoadmapHistory.test.ts tests/solidStepAssembly.test.ts tests/solidMaterial.test.ts tests/solidExactEdgeFeature.test.ts tests/solidBodyEdges.test.ts tests/solidPlaneSection.test.ts tests/solidMeasurements.test.ts tests/nativeCadClearance.test.ts tests/solidInstances.test.ts tests/solidDraftStore.test.ts tests/solidDraftHeadStore.test.ts tests/solidBlenderExchange.test.ts tests/solidGpuFallback.test.ts tests/solidDisplayCache.test.ts tests/solidPrimitive.test.ts tests/solidSurfaceDisplayQueue.test.ts tests/solidSnapPreparation.test.ts tests/solidSketchSnapPreparation.test.ts tests/solidSnapGeometry.test.ts tests/modelingSnaps.test.ts tests/solidDisplayQueue.test.ts tests/solidDisplayPreparation.test.ts tests/mainSolidWorkerRuntime.test.ts tests/mainSolidWorkerTransport.test.ts
+
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |node| tests/wasmBrotliPacking.test.ts (9 tests | 1 failed) 48627ms
+     × decodes section streams exactly and refuses malformed tables 47509ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/wasmBrotliPacking.test.ts > synchronous Brotli WASM packages > decodes section streams exactly and refuses malformed tables
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/wasmBrotliPacking.test.ts:20:3
+     18|
+     19| describe('synchronous Brotli WASM packages', () => {
+     20|   it('decodes section streams exactly and refuses malformed tables', (…
+       |   ^
+     21|     const original = readFileSync('public/wasm/geometry-kernel.wasm')
+     22|     const split = Math.floor(original.length / 2)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 61 passed (62)
+      Tests  1 failed | 715 passed (716)
+   Start at  20:15:26
+   Duration  98.66s (transform 7.26s, setup 0ms, import 17.02s, tests 240.29s, environment 46ms)
+

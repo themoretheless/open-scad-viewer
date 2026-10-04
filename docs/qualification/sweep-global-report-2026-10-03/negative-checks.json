@@ -1,0 +1,30 @@
+[
+  {
+    "case": "orientation",
+    "rejected": true
+  },
+  {
+    "case": "nesting-cycle",
+    "rejected": true
+  },
+  {
+    "case": "missing-cap",
+    "rejected": true
+  },
+  {
+    "case": "unexpected-refusal",
+    "rejected": true
+  },
+  {
+    "case": "missing-wall-chart",
+    "rejected": true
+  },
+  {
+    "case": "chart-budget",
+    "rejected": true
+  },
+  {
+    "case": "external-hash",
+    "rejected": true
+  }
+]

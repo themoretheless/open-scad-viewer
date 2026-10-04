@@ -51,3 +51,13 @@ it("accepts rect as the rectangle primitive",()=>{
  const source="// @modelgraph-text/1\nshow rect([12,8]).move([2,3,0]).extrude(4)"
  expect(compileModelGraphText(source).source).toBe(compileModelGraphText(source.replace("rect(","rectangle(")).source)
 })
+
+it('preserves explicit authored cap correction mode from Rush',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
+ const node=compileModelGraphText(source).document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ expect(node).toHaveProperty('cap_correction_authored_frame',true)
+ expect(node).toHaveProperty('cap_correction_tolerance',1e-9)
+ expect(compileModelGraphText(source.replace('cap_correction_authored_frame: true','cap_correction_authored_frame: false')).document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')).toHaveProperty('cap_correction_authored_frame',false)
+ expect(()=>compileModelGraphText(source.replace('cap_correction_authored_frame: true','cap_correction_authored_frame: 2'))).toThrow('expects true or false')
+})

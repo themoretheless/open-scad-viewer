@@ -1,0 +1,41 @@
+{
+  "browser": "151.0.7922.34",
+  "artifact": {
+    "byteLength": 10647397,
+    "sha256": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602"
+  },
+  "scope": "Real browser verified network compilation and refusal smoke; not a latency benchmark or qualification",
+  "results": [
+    {
+      "mode": "valid",
+      "accepted": true,
+      "elapsedMs": 24.30000001192093,
+      "hasAbi": true
+    },
+    {
+      "mode": "damaged",
+      "accepted": false,
+      "elapsedMs": 17.900000005960464,
+      "hasAbi": false
+    },
+    {
+      "mode": "truncated",
+      "accepted": false,
+      "elapsedMs": 13,
+      "hasAbi": false
+    },
+    {
+      "mode": "oversized",
+      "accepted": false,
+      "elapsedMs": 9.099999994039536,
+      "hasAbi": false
+    },
+    {
+      "mode": "stalled",
+      "accepted": false,
+      "elapsedMs": 2001.199999988079,
+      "hasAbi": false
+    }
+  ],
+  "unverifiedCode": "WASM_ARTIFACT_MISMATCH"
+}

@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "scope": "Push/Pull lock/hide with delayed worker success, retry, Undo/Redo and reload",
+  "cases": 12,
+  "runs": [
+    {
+      "action": "lock",
+      "keyboard": false,
+      "evidence": "lock-input-2026-09-30/result.json",
+      "cases": [
+        "bracket",
+        "enclosure",
+        "flange"
+      ],
+      "tabs": 3
+    },
+    {
+      "action": "lock",
+      "keyboard": true,
+      "evidence": "lock-input-keyboard-2026-09-30/result.json",
+      "cases": [
+        "bracket",
+        "enclosure",
+        "flange"
+      ],
+      "tabs": 4310
+    },
+    {
+      "action": "hide",
+      "keyboard": false,
+      "evidence": "hide-input-mouse-2026-09-30/result.json",
+      "cases": [
+        "bracket",
+        "enclosure",
+        "flange"
+      ],
+      "tabs": 3
+    },
+    {
+      "action": "hide",
+      "keyboard": true,
+      "evidence": "hide-input-keyboard-2026-09-30/result.json",
+      "cases": [
+        "bracket",
+        "enclosure",
+        "flange"
+      ],
+      "tabs": 4316
+    }
+  ]
+}

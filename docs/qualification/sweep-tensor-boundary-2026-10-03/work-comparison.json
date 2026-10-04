@@ -1,0 +1,649 @@
+{
+  "previous": {
+    "budget": 1000000,
+    "work": 1000000,
+    "uses": 272,
+    "equal": 167,
+    "allEqual": false,
+    "refused": [
+      {
+        "face": 41,
+        "wire": 41,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 42,
+        "wire": 42,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 42,
+        "wire": 42,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 42,
+        "wire": 42,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 42,
+        "wire": 42,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 43,
+        "wire": 43,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 43,
+        "wire": 43,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 43,
+        "wire": 43,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 43,
+        "wire": 43,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 44,
+        "wire": 44,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 44,
+        "wire": 44,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 44,
+        "wire": 44,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 44,
+        "wire": 44,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 45,
+        "wire": 45,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 45,
+        "wire": 45,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 45,
+        "wire": 45,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 45,
+        "wire": 45,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 46,
+        "wire": 46,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 46,
+        "wire": 46,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 46,
+        "wire": 46,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 46,
+        "wire": 46,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 47,
+        "wire": 47,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 47,
+        "wire": 47,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 47,
+        "wire": 47,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 47,
+        "wire": 47,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 48,
+        "wire": 48,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 48,
+        "wire": 48,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 48,
+        "wire": 48,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 48,
+        "wire": 48,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 49,
+        "wire": 49,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 49,
+        "wire": 49,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 49,
+        "wire": 49,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 49,
+        "wire": 49,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 50,
+        "wire": 50,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 50,
+        "wire": 50,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 50,
+        "wire": 50,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 50,
+        "wire": 50,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 51,
+        "wire": 51,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 51,
+        "wire": 51,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 51,
+        "wire": 51,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 51,
+        "wire": 51,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 52,
+        "wire": 52,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 52,
+        "wire": 52,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 52,
+        "wire": 52,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 52,
+        "wire": 52,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 53,
+        "wire": 53,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 53,
+        "wire": 53,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 53,
+        "wire": 53,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 53,
+        "wire": 53,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 54,
+        "wire": 54,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 54,
+        "wire": 54,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 54,
+        "wire": 54,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 54,
+        "wire": 54,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 55,
+        "wire": 55,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 55,
+        "wire": 55,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 55,
+        "wire": 55,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 55,
+        "wire": 55,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 56,
+        "wire": 56,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 56,
+        "wire": 56,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 56,
+        "wire": 56,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 56,
+        "wire": 56,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 57,
+        "wire": 57,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 57,
+        "wire": 57,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 57,
+        "wire": 57,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 57,
+        "wire": 57,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 58,
+        "wire": 58,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 58,
+        "wire": 58,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 58,
+        "wire": 58,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 58,
+        "wire": 58,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 59,
+        "wire": 59,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 59,
+        "wire": 59,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 59,
+        "wire": 59,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 59,
+        "wire": 59,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 60,
+        "wire": 60,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 60,
+        "wire": 60,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 60,
+        "wire": 60,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 60,
+        "wire": 60,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 61,
+        "wire": 61,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 61,
+        "wire": 61,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 61,
+        "wire": 61,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 61,
+        "wire": 61,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 62,
+        "wire": 62,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 62,
+        "wire": 62,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 62,
+        "wire": 62,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 62,
+        "wire": 62,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 63,
+        "wire": 63,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 63,
+        "wire": 63,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 63,
+        "wire": 63,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 63,
+        "wire": 63,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 64,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 64,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 64,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 64,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 65,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 65,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 65,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 64,
+        "wire": 65,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 66,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 66,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 66,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 66,
+        "coedge": 3,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 67,
+        "coedge": 0,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 67,
+        "coedge": 1,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 67,
+        "coedge": 2,
+        "status": "unresolved"
+      },
+      {
+        "face": 65,
+        "wire": 67,
+        "coedge": 3,
+        "status": "unresolved"
+      }
+    ]
+  },
+  "current": {
+    "budget": 1000000,
+    "work": 34708,
+    "uses": 272,
+    "equal": 272,
+    "allEqual": true,
+    "refused": []
+  }
+}

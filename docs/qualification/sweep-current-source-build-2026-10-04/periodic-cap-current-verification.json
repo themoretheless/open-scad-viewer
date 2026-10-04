@@ -1,0 +1,46 @@
+{
+  "snapshotRoot": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791108338",
+  "wasmSha256": "6cfe87add9229b03991147ada749311bd52c74ce94f4a4ceab47619d31f8764e",
+  "wasmByteLength": 10743643,
+  "recordedInputs": 3083,
+  "productionRustAndBuildInputsUnchanged": true,
+  "qualificationOnlyOverlays": [
+    "scripts/check-sweep-miter-matrix-browser.mjs"
+  ],
+  "integration": {
+    "suites": 10,
+    "tests": 50,
+    "passed": true,
+    "log": "/tmp/sweep-periodic-cap-current-integration.log"
+  },
+  "native": {
+    "nurbs": 910,
+    "brep": 694,
+    "predicates": 23,
+    "ignoredBrepMeasurements": 2
+  },
+  "periodicUi": {
+    "cases": 2,
+    "assertions": 22,
+    "passed": true
+  },
+  "unclampedUi": {
+    "cases": 2,
+    "assertions": 22,
+    "passed": true
+  },
+  "stepBaselineCases": 36,
+  "fullUiStatus": "passed",
+  "fullUi": {
+    "cases": 78,
+    "assertions": 896,
+    "log": "/tmp/sweep-periodic-cap-6cfe-full-ui.log"
+  },
+  "independentStep": {
+    "baselineCases": 36,
+    "smoothCases": 10,
+    "passed": true,
+    "baselineLog": "/tmp/sweep-periodic-cap-6cfe-occt.log",
+    "smoothLog": "/tmp/sweep-periodic-cap-6cfe-smooth-occt.log"
+  }
+}

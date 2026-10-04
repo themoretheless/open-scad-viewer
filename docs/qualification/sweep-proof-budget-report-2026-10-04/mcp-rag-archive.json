@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 29,
+  "wikiHash": "8b5881eb67fcb0c4f069b94dd09f882f35fc47fe90183a387f721feeadbdf4d4",
+  "raw": {
+    "document_id": "3a72a6fa-2be0-43f9-be9e-2da1762b0d39",
+    "chunk_count": 7,
+    "node_id": "c98f3331-e304-4224-9bf2-6a49b489ab66",
+    "edge_count": 1,
+    "content_hash": "bb9ff149422485e0164eda5429553d0b0afee4e42e3ba29d71c3c9d969a26e26",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-proof-budget-report-2026-10-04-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81982,
+    "chunk_count": 720451,
+    "node_count": 107752,
+    "edge_count": 238837,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 6053396,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

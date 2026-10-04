@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 7,
+  "wikiHash": "7cdeec267b65e56664074c373dd822eab69735bebb24982bc75468eb4ab11bd5",
+  "raw": {
+    "document_id": "1aeefe87-9940-4547-bba3-0351ee2a083c",
+    "chunk_count": 4,
+    "node_id": "e1544663-4b57-40fd-8ef9-1d3957af0d97",
+    "edge_count": 1,
+    "content_hash": "f3225178ce4f12fe73c854246b49ab27ef186a258488ca138233c471bc4a6944",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-projective-seams-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81960,
+    "chunk_count": 720264,
+    "node_count": 107730,
+    "edge_count": 238815,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 425057,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

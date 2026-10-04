@@ -1,0 +1,15 @@
+{
+  "installedSha256": "b5b1293aa06d0301bb69bdc8896ba15360379030dcbe7291ad59963f052a8cf1",
+  "previousSha256": "9a3a20c60a86f63f5148687ad54e118624fe61cde304827c11fc334c56ddaef6",
+  "sourceGraph": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791102401",
+  "scope": "Previously installed qualified frozen source plus native retained-wall coefficient API, not whole dirty-primary source equivalence",
+  "integrationTestsPassed": 17,
+  "files": [
+    "src/generated/geometry-kernels/kernel_bg.wasm",
+    "src/generated/geometry-kernels/identity.ts",
+    "src/generated/geometry-kernels/bytes.ts",
+    "public/wasm/geometry-kernel.wasm",
+    "src/services/sweepRetainedCorrespondence.ts",
+    "tests/sweepRetainedDecomposition.test.ts"
+  ]
+}

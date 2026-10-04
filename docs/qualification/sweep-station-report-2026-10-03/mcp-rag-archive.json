@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 25,
+  "wikiHash": "51828e7e91c78b5b12a7de39a20d6e7374423ff4b6894646b62db1b05700ba2f",
+  "raw": {
+    "document_id": "cf3cd782-fc9b-415a-90af-7869ff7027f2",
+    "chunk_count": 6,
+    "node_id": "8bb73eda-99e5-46c7-b4d4-779897e99d8a",
+    "edge_count": 1,
+    "content_hash": "281e93e81b88cf9b0945769884589dcc9d4f2e90ab0346c8a2032b20e7f7d3b7",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-station-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81978,
+    "chunk_count": 720405,
+    "node_count": 107748,
+    "edge_count": 238833,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 0,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

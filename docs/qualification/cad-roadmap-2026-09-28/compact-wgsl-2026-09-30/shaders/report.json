@@ -1,0 +1,92 @@
+{
+  "savedSourceBytes": 8333,
+  "modules": 21,
+  "tokenAndVariantParity": true,
+  "results": [
+    {
+      "name": "MESH_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "MESH_PBR_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_PBR_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "MESH_MATCAP_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_MATCAP_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "MESH_TOON_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_TOON_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "MESH_UNLIT_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_UNLIT_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "MESH_SECTION_CAP_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_SECTION_CAP_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "DEEP_MESH_WGSL",
+      "errors": []
+    },
+    {
+      "name": "DEEP_MESH_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "EDGE_WGSL",
+      "errors": []
+    },
+    {
+      "name": "EDGE_WGSL-instanced",
+      "errors": []
+    },
+    {
+      "name": "LINE_WGSL",
+      "errors": []
+    },
+    {
+      "name": "GRID_WGSL",
+      "errors": []
+    },
+    {
+      "name": "SELECTION_OVERLAY_WGSL",
+      "errors": []
+    },
+    {
+      "name": "MESH_SHADOW_WGSL",
+      "errors": []
+    },
+    {
+      "name": "SHADER",
+      "errors": []
+    }
+  ],
+  "browser": "151.0.7922.34"
+}

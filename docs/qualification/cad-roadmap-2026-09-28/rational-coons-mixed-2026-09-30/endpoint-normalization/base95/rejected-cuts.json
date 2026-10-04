@@ -1,0 +1,22 @@
+[
+  {
+    "wasmBytes": 9450283,
+    "offset": -512,
+    "encodedBytes": 3253448
+  },
+  {
+    "wasmBytes": 9450283,
+    "offset": -2048,
+    "encodedBytes": 3253204
+  },
+  {
+    "wasmBytes": 9450283,
+    "offset": 512,
+    "encodedBytes": 3253768
+  },
+  {
+    "wasmBytes": 9450283,
+    "offset": 2048,
+    "encodedBytes": 3254482
+  }
+]

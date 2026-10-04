@@ -1,0 +1,34 @@
+[
+  {
+    "block": 16,
+    "compressed": [
+      2245236,
+      411719
+    ],
+    "encoded": 3256306
+  },
+  {
+    "block": 18,
+    "compressed": [
+      2245394,
+      412444
+    ],
+    "encoded": 3257590
+  },
+  {
+    "block": 19,
+    "compressed": [
+      2245876,
+      412021
+    ],
+    "encoded": 3257454
+  },
+  {
+    "block": 20,
+    "compressed": [
+      2247624,
+      411989
+    ],
+    "encoded": 3259582
+  }
+]

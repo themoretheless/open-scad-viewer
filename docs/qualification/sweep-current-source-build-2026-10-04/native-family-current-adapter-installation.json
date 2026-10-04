@@ -1,0 +1,19 @@
+{
+  "wasmSha256": "2dd56e829d8853d6b373d0df7482e544a68bb3495d83cc5d3094da6cedb24972",
+  "artifactReplaced": false,
+  "nativeOperationsProbed": [
+    "curve_segmented_bezier_controls",
+    "sweep_retained_wall_family_audit"
+  ],
+  "adapterInstalled": true,
+  "qualificationStatus": "targeted-integration-passed",
+  "integration": {
+    "suites": 10,
+    "tests": 49,
+    "log": "/tmp/sweep-installed-family-tests.log"
+  },
+  "types": {
+    "passed": true,
+    "log": "/tmp/sweep-installed-family-types.log"
+  }
+}

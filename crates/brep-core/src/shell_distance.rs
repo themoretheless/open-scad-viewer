@@ -117,7 +117,9 @@ pub fn distance(
         // Reserve subdivision work for every remaining pair. Otherwise one
         // near pair can consume the entire budget while overlapping AABBs of
         // all later (actually separated) pairs retain a zero lower bound.
-        let remaining = ((max_cells - cells) / (queue.len() - pair_index)).max(1).min(100000);
+        let remaining = ((max_cells - cells) / (queue.len() - pair_index))
+            .max(1)
+            .min(100000);
         // Initial knot pairs must fit before entering the face solver.
         let spans = |s: &nurbs_core::surface::Surface| {
             let count = |knots: &[f64], degree: usize, n: usize| {
@@ -152,7 +154,7 @@ pub fn distance(
             )?;
             cells += r.cells;
             domain_cells += r.domain_cells;
-            if r.reason == "empty-domain" {
+            if r.reason == nurbs_core::DistanceStopReason::EmptyDomain {
                 empty_pair = true;
                 break;
             }

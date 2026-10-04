@@ -1,0 +1,85 @@
+{
+  "scope": "Observed same-request boundary certificate files in a concurrent dirty checkout; not a clean-tree all-source reproducibility claim.",
+  "files": {
+    "src/services/sweepBoundaryCertificate.ts": {
+      "bytes": 1811,
+      "sha256": "8c40db66c010fc73567702e69b3a19fcf92b727a589ab0bbdf96f4f449f6f68c"
+    },
+    "src/services/nurbsFilledCapError.ts": {
+      "bytes": 2624,
+      "sha256": "6e1c431e56ff7287858d2a81d4c6e2235c9978f5f210be77992504d727bc9536"
+    },
+    "src/services/nurbsErrorComposition.ts": {
+      "bytes": 1409,
+      "sha256": "617f9e4f4aafd8ff50de52309b3488c2ca366b12bef059e8a489170109008b0c"
+    },
+    "src/services/geometry/brep.ts": {
+      "bytes": 55423,
+      "sha256": "3aa201c9128ea48260eed71394549f9489abe25d6514e1647a5816c6f579084a"
+    },
+    "src/services/modelGraphNurbsKernel.ts": {
+      "bytes": 64771,
+      "sha256": "e25776700e149057b21c8e6eee23feea1147279e2785525366976902bc93e37a"
+    },
+    "src/services/modelGraphNurbs.ts": {
+      "bytes": 65915,
+      "sha256": "11a26501222df1686062ac767239ac77dd895fbcd17ca107f371f4204f3e6b5e"
+    },
+    "src/services/sweepViewportEvidence.ts": {
+      "bytes": 2034,
+      "sha256": "f8a8e4dcf19a8127a058906c110d80a2c8349446c298715b9b19706d42e9970a"
+    },
+    "src/App.vue": {
+      "bytes": 205664,
+      "sha256": "05252e1b96da9d0d4bf21508379c954150af2992514fec1c9b93ac8a2aa508ee"
+    },
+    "crates/modelgraph-text/src/lib.rs": {
+      "bytes": 2702,
+      "sha256": "93df05943852c7e096e38382cb20c3b3d1aefcc052f4b032985f43546714c054"
+    },
+    "crates/modelgraph-text/src/lower.rs": {
+      "bytes": 109795,
+      "sha256": "44a1be5fbcd097f438b689c1a8b05917634e3504d03786f21f002d1ef4a3085e"
+    },
+    "docs/languages/modelgraph-nurbs-1.schema.json": {
+      "bytes": 853644,
+      "sha256": "50657f6c36d466f3d22dd6cf81bf0a0361333a8f81800ca263ade52b9c7b839b"
+    },
+    "src/generated/language-kernel/bytes.ts": {
+      "bytes": 517968,
+      "sha256": "ccac8fd1d1e6efc4a09155fddfc058da2a9cb8e89f7f25cd6cf0df2f7a94d8c6"
+    },
+    "public/wasm/language-kernel.wasm": {
+      "bytes": 2273344,
+      "sha256": "49845d432a7f3fd76dd551830a8b3bfcc215ef046a454d2358196c76d3805115"
+    },
+    "public/wasm/geometry-kernel.wasm": {
+      "bytes": 10652955,
+      "sha256": "3efb5ccd52a325ba6aa600203b5403728744ba81a4cd9183c968e47476790eab"
+    },
+    "examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r": {
+      "bytes": 1208,
+      "sha256": "7ddb742da258ce8a208ea199c150a111cf8c12e0489b7931a32773a2d89e14d3"
+    },
+    "tests/sweepBoundaryCertificate.test.ts": {
+      "bytes": 7627,
+      "sha256": "93d83e7e2b894b01edcf89ec1450ab0dc89ed11e8cdcc5d33256e11d9a8c75f1"
+    },
+    "tests/nurbsProgressiveMiter.test.ts": {
+      "bytes": 41828,
+      "sha256": "822897ada6d3eeaba1f4d67761e3b592c95cd80d30f73db476325b0784a0aa0a"
+    },
+    "tests/sweepViewportEvidence.test.ts": {
+      "bytes": 3242,
+      "sha256": "ff45af1896406fd8caae94cbee597388ce0172ecdd1021a97302fdc1010d6e59"
+    },
+    "scripts/check-sweep-miter-matrix-browser.mjs": {
+      "bytes": 16202,
+      "sha256": "cbff66cf1a7b9669e9473b8d7f70b35ca110a56012ae83c3eb762870f8eb59aa"
+    },
+    "scripts/export-sweep-step-oracle.mts": {
+      "bytes": 18457,
+      "sha256": "a535c1bf1c5433fd828cdcc029d94f618c204d5911603f9f1c94af2183dbbe53"
+    }
+  }
+}

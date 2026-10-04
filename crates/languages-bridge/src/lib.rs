@@ -10,7 +10,7 @@ use value_codec::{Value, json};
 
 /// Source-to-graph frontend shared by browser workers and native callers.
 pub fn compile_modelgraph_text(source: &str) -> String {
-    match modelgraph_text::compile(source) {
+    match modelgraph_text::compile_document(source) {
         Ok(value) => json!({"ok":true,"value":value}).to_string(),
         Err(error) => json!({"ok":false,"message":error.message}).to_string(),
     }
@@ -60,7 +60,7 @@ pub fn execute_modelgraph_text(source: &str) -> String {
     execute_text_value(source).to_string()
 }
 pub(crate) fn execute_text_value(source: &str) -> Value {
-    let mut graph = match modelgraph_text::compile(source) {
+    let mut graph = match modelgraph_text::compile_document(source) {
         Ok(graph) => graph,
         Err(error) => {
             return runtime_value(
@@ -93,6 +93,20 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 "brep_tube",
                 "brep_gear",
                 "brep_extrude_curves",
+                "parabola_curve",
+                "hyperbola_curve",
+                "elliptic_cylinder_surface",
+                "cone_frustum_surface",
+                "quadratic_patch",
+                "ribbon_surface", "variable_pipe_surface", "pipe_surface", "screw_surface", "clothoid_curve", "spherical_spiral_curve", "toroidal_spiral_curve", "torus_knot_curve", "helicoid_patches", "circle_rectangle_transition", "ellipse_transition_surface", "circle_transition_surface", "helicoid_surface", "catenoid_patches", "catenoid_surface", "catenary_curve", "archimedean_spiral_curve", "epicycloid_curve", "hypocycloid_curve", "trochoid_curve", "cycloid_curve", "lissajous_curve", "logarithmic_spiral_curve", "involute_curve", "elliptic_helix_curve", "variable_pitch_helix_curve", "conical_helix_curve", "helix_curve", "twist_sweep", "two_guide_sweep", "scaled_sweep", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "framed_sweep", "formula_curve", "formula_surface", "coons_patch", "ruled_surface", "sphere_surface", "cylinder_surface", "cone_surface",
+            "plane_patch", "bilinear_patch", "bezier_surface",
+                "bezier_curve", "curve_compose", "round_polyline_curve", "transition_polyline_curve", "brep_miter_sweep","brep_progressive_miter_sweep",
+                "line_curve", "polyline_curve", "circle_curve", "circle_arc",
+                "hyperboloid_one_sheet", "hyperboloid_two_sheet", "polynomial_graph",
+                "polynomial_curve", "polynomial_surface", "rational_polynomial_curve", "rational_polynomial_surface",
+                "ellipse_arc",
+                "ellipsoid_surface",
+                "torus_surface",
                 "nurbs_surface",
                 "nurbs_curve",
                 "mesh_boolean",
@@ -187,7 +201,7 @@ pub fn compile_modelgraph_text_nurbs(input: &str) -> String {
 pub fn abi_language(op: u32, value: Value) -> Value {
     match op {
         1 => match value.as_str() {
-            Some(s) => match modelgraph_text::compile(s) {
+            Some(s) => match modelgraph_text::compile_document(s) {
                 Ok(value) => json!({"ok":true,"value":value}),
                 Err(error) => json!({"ok":false,"message":error.message}),
             },
@@ -227,6 +241,30 @@ pub fn abi_language(op: u32, value: Value) -> Value {
         ),
         10 => openscad::scad_compile(&value),
         11 => openscad::scad_eval(&value),
+        12 => openscad::extrude_slices(&value),
+        13 => openscad::resize(&value),
+        14 => openscad::fragments(&value),
+        15 => openscad::legacy_segments(&value),
+        16 => openscad::scad_geometry_plan(&value),
+        17 => openscad::stable_box_plan(&value),
+        18 => openscad::stable_radial_plan(&value),
+        19 => openscad::stable_transform_analysis(&value),
+        20 => openscad::stable_euler_matrix(&value),
+        21 => openscad::stable_mirror_matrix(&value),
+        22 => openscad::stable_axis_angle_matrix(&value),
+        23 => openscad::stable_vector_conversion(&value),
+        24 => openscad::stable_euler_arguments(&value),
+        25 => openscad::stable_authored_matrix(&value),
+        26 => openscad::stable_vector_transform(&value),
+        27 => openscad::stable_scalar_rotation(&value),
+        28 => openscad::stable_polyhedron_faces(&value),
+        29 => openscad::stable_polygon_paths(&value),
+        30 => openscad::stable_indexed_policy(&value),
+        31 => openscad::stable_extrusion_parameters(&value),
+        32 => openscad::stable_revolution_parameters(&value),
+        33 => openscad::stable_offset_parameters(&value),
+        34 => openscad::stable_child_indices(&value),
+        35 => openscad::degree_math(&value),
         _ => {
             json!({"ok":false,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Unknown ABI operation"}})
         }

@@ -1,0 +1,6 @@
+{
+  "crates/geometry-bridge/src/cad_display.rs": "961554571718c373be984b98e509028d6a5a17f8a8e2e27dc59051e99c00e3b5",
+  "tests/solidDisplayPreparation.test.ts": "b3c2b47036fe67a16c9fa256a6ad2ab002bc313694262a7ed6efd7925dcfb403",
+  "dist/index.html": "bc368ff2329a957b690b84831ba3fe1f8601f1ffa23efd01d4ff30f549a96e50",
+  "public/wasm/geometry-kernel.wasm": "2ad0b4789d135949ece8bf37b15900a8550f53d1f04e289c3820cf52960c79aa"
+}

@@ -1,0 +1,283 @@
+{
+  "artifact": {
+    "geometryWasmSha256": "49102a5347d83f2beabbd16185c7ea7d447e9aeb6e5eabafad2f3f83d64cd7b4",
+    "indexSha256": "3116149384f14cfa8f94c1c5228cc21fe04e346bc4fc2a9a66c6257f8f1ce739"
+  },
+  "browser": "151.0.7922.34",
+  "keyboard": false,
+  "tabs": 72,
+  "results": [
+    {
+      "cells": 40,
+      "contact": null,
+      "contactPairsVisited": 0,
+      "converged": true,
+      "distanceIntervalMm": [
+        0,
+        0
+      ],
+      "domainCells": 232,
+      "limits": {
+        "maxCells": 100000,
+        "maxContactPairs": 10000,
+        "maxDomainCells": 1000000,
+        "maxPairs": 10000,
+        "validity": {
+          "exactWork": 1000000,
+          "faceCells": 100000,
+          "faceCellsPerPair": 1000,
+          "faceDomainCells": 1000000,
+          "faceDomainCellsPerPair": 10000,
+          "facePairs": 10000,
+          "nestingCells": 100000,
+          "nestingDomainCells": 1000000,
+          "nestingPairs": 1000,
+          "orientationCells": 100000,
+          "orientationDomainCells": 1000000,
+          "orientationSpans": 10000,
+          "spans": 10000,
+          "trimCells": 100000,
+          "trimDomainCells": 1000000,
+          "trimPairs": 10000
+        }
+      },
+      "materialOverlap": true,
+      "method": "certified-volume-distance",
+      "reason": "material-containment",
+      "scope": "closed-material-sets",
+      "toleranceMm": 0.001,
+      "toleranceUv": 1e-7,
+      "totalShellPairs": 1,
+      "validity": [
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": true,
+              "shell": 0
+            }
+          ],
+          "proven": true,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        },
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": true,
+              "shell": 0
+            }
+          ],
+          "proven": true,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        }
+      ],
+      "visitedShellPairs": 1
+    },
+    {
+      "cells": 0,
+      "contact": null,
+      "contactPairsVisited": 0,
+      "converged": false,
+      "distanceIntervalMm": null,
+      "domainCells": 0,
+      "limits": {
+        "maxCells": 100000,
+        "maxContactPairs": 10000,
+        "maxDomainCells": 1000000,
+        "maxPairs": 10000,
+        "validity": {
+          "exactWork": 1000000,
+          "faceCells": 100000,
+          "faceCellsPerPair": 1000,
+          "faceDomainCells": 1000000,
+          "faceDomainCellsPerPair": 10000,
+          "facePairs": 10000,
+          "nestingCells": 100000,
+          "nestingDomainCells": 1000000,
+          "nestingPairs": 1000,
+          "orientationCells": 100000,
+          "orientationDomainCells": 1000000,
+          "orientationSpans": 10000,
+          "spans": 10000,
+          "trimCells": 100000,
+          "trimDomainCells": 1000000,
+          "trimPairs": 10000
+        }
+      },
+      "materialOverlap": null,
+      "method": "certified-volume-distance",
+      "reason": "volume-validity-unproven",
+      "scope": "closed-material-sets",
+      "toleranceMm": 0.001,
+      "toleranceUv": 1e-7,
+      "totalShellPairs": 1,
+      "validity": [
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": true,
+              "shell": 0
+            }
+          ],
+          "proven": true,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        },
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": false,
+              "shell": 0
+            }
+          ],
+          "proven": false,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        }
+      ],
+      "visitedShellPairs": 0
+    },
+    {
+      "cells": 2795,
+      "contact": {
+        "contractionUpper": 8.770761894538754e-15,
+        "faces": [
+          3,
+          0
+        ],
+        "firstUv": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.24999999999999678,
+            0.250000000000003
+          ]
+        ],
+        "pointIntervalMm": [
+          [
+            2,
+            2
+          ],
+          [
+            0.9999999999999987,
+            1.0000000000000024
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "secondUv": [
+          [
+            0.4999999999999926,
+            0.5000000000000083
+          ],
+          [
+            0.4999999999999951,
+            0.5000000000000047
+          ]
+        ]
+      },
+      "contactPairsVisited": 19,
+      "converged": true,
+      "distanceIntervalMm": [
+        0,
+        0
+      ],
+      "domainCells": 5487,
+      "limits": {
+        "maxCells": 100000,
+        "maxContactPairs": 10000,
+        "maxDomainCells": 1000000,
+        "maxPairs": 10000,
+        "validity": {
+          "exactWork": 1000000,
+          "faceCells": 100000,
+          "faceCellsPerPair": 1000,
+          "faceDomainCells": 1000000,
+          "faceDomainCellsPerPair": 10000,
+          "facePairs": 10000,
+          "nestingCells": 100000,
+          "nestingDomainCells": 1000000,
+          "nestingPairs": 1000,
+          "orientationCells": 100000,
+          "orientationDomainCells": 1000000,
+          "orientationSpans": 10000,
+          "spans": 10000,
+          "trimCells": 100000,
+          "trimDomainCells": 1000000,
+          "trimPairs": 10000
+        }
+      },
+      "materialOverlap": true,
+      "method": "certified-volume-distance",
+      "reason": "certified-boundary-contact",
+      "scope": "closed-material-sets",
+      "toleranceMm": 0.001,
+      "toleranceUv": 1e-7,
+      "totalShellPairs": 1,
+      "validity": [
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": true,
+              "shell": 0
+            }
+          ],
+          "proven": true,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        },
+        {
+          "boundaryProven": true,
+          "exactAgreement": true,
+          "exactJoins": true,
+          "nestingRolesConsistent": true,
+          "orientations": [
+            {
+              "expectedOutward": true,
+              "outward": true,
+              "shell": 0
+            }
+          ],
+          "proven": true,
+          "selfIntersectionAbsent": true,
+          "trimValid": true
+        }
+      ],
+      "visitedShellPairs": 1
+    }
+  ],
+  "requests": 4,
+  "cancelledWorkerTerminated": true,
+  "invalidTargetLocalized": true,
+  "documentUnchanged": true
+}

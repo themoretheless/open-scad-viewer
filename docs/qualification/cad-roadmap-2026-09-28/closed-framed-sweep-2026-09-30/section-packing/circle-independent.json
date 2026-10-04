@@ -1,0 +1,11 @@
+{
+  "closedPath": true,
+  "seamContinuity": "C0",
+  "seamTangentAngleDegrees": 21.59816098369245,
+  "sha256": "e2754264ad018868f54f550c5d4dc06ac37d99cdf2caec2fce7b2e451fbda458",
+  "samples": 8449,
+  "maxSampledRadialErrorMm": 0.02491030914500869,
+  "circularFixtureSagittaBoundMm": 0.024936532710056223,
+  "generalSweepCertificate": false,
+  "oracle": "Independent Python Cox-de Boor evaluation and circular chord sagitta"
+}

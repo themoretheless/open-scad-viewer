@@ -1,0 +1,62 @@
+[
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "cold",
+    "iteration": 0,
+    "restoreMs": 878.667958,
+    "serializeMs": 1.2689159999999902,
+    "resolveMs": 811.9913329999999,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "cold",
+    "iteration": 1,
+    "restoreMs": 845.9052080000001,
+    "serializeMs": 1.2535420000003796,
+    "resolveMs": 820.7019999999993,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "cold",
+    "iteration": 2,
+    "restoreMs": 926.7260839999999,
+    "serializeMs": 1.2642920000007507,
+    "resolveMs": 806.793291,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "warm",
+    "iteration": 0,
+    "restoreMs": 83.925792,
+    "serializeMs": 1.1997919999994338,
+    "resolveMs": 58.02904099999978,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "warm",
+    "iteration": 1,
+    "restoreMs": 85.55825000000004,
+    "serializeMs": 1.137125000001106,
+    "resolveMs": 61.04908400000022,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  },
+  {
+    "geometrySha256": "22c72ca7db2cc5635f2853d854d2db9188e202a8bd73d43cc80f09c6eb7340f3",
+    "mode": "warm",
+    "iteration": 2,
+    "restoreMs": 87.4212920000009,
+    "serializeMs": 1.211749999998574,
+    "resolveMs": 62.81187499999942,
+    "instances": 1000,
+    "cacheBytes": 39050340
+  }
+]

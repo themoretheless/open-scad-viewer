@@ -1,0 +1,14 @@
+{
+  "schema": "sweep-step-delivered-source/1",
+  "recordedAt": "2026-10-03T11:35:06.361272+00:00",
+  "snapshot": "/private/tmp/open-scad-viewer-sweep-step-2026-10-03",
+  "geometryWasmSha256": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602",
+  "sourceSha256": {
+    "scripts/export-sweep-step-oracle.mts": "fdad7ced12e38414066ab101d60531a36a3e63bba214a392dd5ac5ab354fc188",
+    "src/services/sweepRetainedCorrespondence.ts": "faba489c0578751129420c70e48a9e582eebbb907beaf94e8a3be250ed09683e",
+    "src/services/geometry/brep.ts": "9ca508e2d3bbe8d8e2afd3386476f6c4ead18250c1287072dbf7ba32948a8edd",
+    "src/generated/geometry-kernels/bytes.ts": "a716d119d28da22d3c3848e4ef0c88f98dfcf400c252b84ff44b6a86c46726d3"
+  },
+  "opencascadePassed": true,
+  "fixtures": 22
+}

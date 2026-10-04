@@ -1,0 +1,146 @@
+{
+  "outlinerContainmentDisabled": false,
+  "outlinerChecked": true,
+  "outlinerControlsChecked": true,
+  "outlinerDeletionChecked": true,
+  "retainedMemory": null,
+  "memory": null,
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "importCancellationChecked": false,
+  "cpuProfile": null,
+  "cancellationChecked": false,
+  "browser": "151.0.7922.34",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpus": 16,
+    "ramBytes": 137438953472
+  },
+  "iterations": 3,
+  "timingSummary": {
+    "import": {
+      "count": 1,
+      "p50Ms": 3378.221334,
+      "p95Ms": 3378.221334,
+      "maxFrameGapMs": 583.4000000000001
+    },
+    "undo": {
+      "count": 3,
+      "p50Ms": 57.85845800000061,
+      "p95Ms": 60.80395899999985,
+      "maxFrameGapMs": 9.300000000000182
+    },
+    "redo": {
+      "count": 3,
+      "p50Ms": 518.5087920000005,
+      "p95Ms": 522.0434589999995,
+      "maxFrameGapMs": 216.60000000000036
+    }
+  },
+  "orbit": null,
+  "maxObservedHeapBytes": 223961496,
+  "heapScope": "Samples after each operation only; not peak process memory.",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2282,
+    "JSHeapUsedSize": 13309184,
+    "JSHeapTotalSize": 17596416
+  },
+  "after": {
+    "Nodes": 21498,
+    "JSHeapUsedSize": 482899244,
+    "JSHeapTotalSize": 528842752
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 3378.221334,
+      "heap": {
+        "Nodes": 20864,
+        "JSHeapUsedSize": 198971460,
+        "JSHeapTotalSize": 252608512
+      },
+      "frameCount": 333,
+      "maxFrameGapMs": 583.4000000000001
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 53.68483300000025,
+      "heap": {
+        "Nodes": 20894,
+        "JSHeapUsedSize": 189549940,
+        "JSHeapTotalSize": 258490368
+      },
+      "frameCount": 6,
+      "maxFrameGapMs": 9.300000000000182
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 518.5087920000005,
+      "heap": {
+        "Nodes": 20869,
+        "JSHeapUsedSize": 73837280,
+        "JSHeapTotalSize": 196558848
+      },
+      "frameCount": 35,
+      "maxFrameGapMs": 216.60000000000036
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 60.80395899999985,
+      "heap": {
+        "Nodes": 20901,
+        "JSHeapUsedSize": 79087396,
+        "JSHeapTotalSize": 196739072
+      },
+      "frameCount": 8,
+      "maxFrameGapMs": 9.300000000000182
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 522.0434589999995,
+      "heap": {
+        "Nodes": 39526,
+        "JSHeapUsedSize": 159288860,
+        "JSHeapTotalSize": 209928192
+      },
+      "frameCount": 32,
+      "maxFrameGapMs": 215.69999999999982
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 57.85845800000061,
+      "heap": {
+        "Nodes": 39558,
+        "JSHeapUsedSize": 154128272,
+        "JSHeapTotalSize": 216662016
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 9.100000000000364
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 492.95520899999974,
+      "heap": {
+        "Nodes": 58183,
+        "JSHeapUsedSize": 223961496,
+        "JSHeapTotalSize": 284639232
+      },
+      "frameCount": 33,
+      "maxFrameGapMs": 200
+    }
+  ]
+}

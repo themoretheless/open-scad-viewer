@@ -1,0 +1,344 @@
+{
+  "scope": "Exclusive sampled CPU time over the supplied capture window; capture boundaries define scope. A main-thread profile excludes workers.",
+  "sampleCount": 14691,
+  "sampledMs": 21268.445,
+  "categories": [
+    {
+      "key": "other",
+      "sampledMs": 19725.13,
+      "percent": 92.74363969721341
+    },
+    {
+      "key": "garbageCollection",
+      "sampledMs": 1500.222,
+      "percent": 7.053745584127095
+    },
+    {
+      "key": "idle",
+      "sampledMs": 43.093,
+      "percent": 0.20261471865949768
+    }
+  ],
+  "topFrames": [
+    {
+      "name": "e",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 11,
+      "sampledMs": 8727.291,
+      "percent": 41.03398720498842
+    },
+    {
+      "name": "(program)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 2026.74,
+      "percent": 9.529328542824828
+    },
+    {
+      "name": "partition",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 1632,
+      "sampledMs": 1740.808,
+      "percent": 8.184933125106232
+    },
+    {
+      "name": "insert",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 3313,
+      "sampledMs": 1507.788,
+      "percent": 7.089319411926918
+    },
+    {
+      "name": "(garbage collector)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 1500.222,
+      "percent": 7.053745584127095
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 89897,
+      "sampledMs": 587.682,
+      "percent": 2.7631639266528416
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 89414,
+      "sampledMs": 526.947,
+      "percent": 2.477600031408032
+    },
+    {
+      "name": "wt",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 2,
+      "column": 1834,
+      "sampledMs": 421.078,
+      "percent": 1.9798250412759373
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 431,
+      "sampledMs": 413.844,
+      "percent": 1.9458122114710314
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 2103,
+      "sampledMs": 336.702,
+      "percent": 1.5831058641099525
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 89741,
+      "sampledMs": 310.335,
+      "percent": 1.459133472146177
+    },
+    {
+      "name": "Z",
+      "source": "http://127.0.0.1:60462/assets/direct-modeling-CMGFZKTR.js",
+      "line": 1,
+      "column": 13657,
+      "sampledMs": 308.15,
+      "percent": 1.4488600365471007
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 68,
+      "sampledMs": 263.163,
+      "percent": 1.2373401064346736
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 90995,
+      "sampledMs": 234.984,
+      "percent": 1.1048480507155083
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 2335,
+      "sampledMs": 220.096,
+      "percent": 1.034847634606103
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 2138,
+      "sampledMs": 206.36,
+      "percent": 0.9702636934670118
+    },
+    {
+      "name": "fill",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 175.951,
+      "percent": 0.8272866210952423
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 108,
+      "sampledMs": 158.935,
+      "percent": 0.7472807720545626
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/direct-modeling-CMGFZKTR.js",
+      "line": 1,
+      "column": 13129,
+      "sampledMs": 134.235,
+      "percent": 0.6311462826736981
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 2159,
+      "sampledMs": 130.342,
+      "percent": 0.6128421706429408
+    },
+    {
+      "name": "EC",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 89113,
+      "sampledMs": 114.52,
+      "percent": 0.5384502722225344
+    },
+    {
+      "name": "e",
+      "source": "http://127.0.0.1:60462/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 11,
+      "sampledMs": 114.019,
+      "percent": 0.5360946698265905
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 4526,
+      "sampledMs": 97.099,
+      "percent": 0.4565401937001036
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 90474,
+      "sampledMs": 94.969,
+      "percent": 0.4465253571664501
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 141,
+      "sampledMs": 81.691,
+      "percent": 0.3840948409721538
+    },
+    {
+      "name": "e",
+      "source": "http://127.0.0.1:60462/assets/solidMaterial-zu5mKHCm.js",
+      "line": 1,
+      "column": 7,
+      "sampledMs": 80.703,
+      "percent": 0.37944946139691926
+    },
+    {
+      "name": "closePath",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 74.071,
+      "percent": 0.34826711590809767
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 334,
+      "sampledMs": 73.565,
+      "percent": 0.34588800450620627
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 90871,
+      "sampledMs": 55.722,
+      "percent": 0.26199376588180284
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 2196,
+      "sampledMs": 43.098,
+      "percent": 0.20263822766544523
+    },
+    {
+      "name": "(idle)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 43.093,
+      "percent": 0.20261471865949768
+    },
+    {
+      "name": "Ye",
+      "source": "http://127.0.0.1:60462/assets/vue-5l76ufly.js",
+      "line": 1,
+      "column": 8530,
+      "sampledMs": 37.017,
+      "percent": 0.17404657463204293
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/solidMaterial-zu5mKHCm.js",
+      "line": 1,
+      "column": 22,
+      "sampledMs": 36.423,
+      "percent": 0.17125370472547477
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 90043,
+      "sampledMs": 30.175,
+      "percent": 0.1418768508934245
+    },
+    {
+      "name": "get value",
+      "source": "http://127.0.0.1:60462/assets/vue-5l76ufly.js",
+      "line": 1,
+      "column": 16665,
+      "sampledMs": 26.793,
+      "percent": 0.12597535927050615
+    },
+    {
+      "name": "lineTo",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 22.797,
+      "percent": 0.10718696171722944
+    },
+    {
+      "name": "stroke",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 20.794,
+      "percent": 0.09776925393464356
+    },
+    {
+      "name": "getBoundingClientRect",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 20.784,
+      "percent": 0.09772223592274847
+    },
+    {
+      "name": "t",
+      "source": "http://127.0.0.1:60462/assets/solid-gpu-view-CtE3nftO.js",
+      "line": 1,
+      "column": 1170,
+      "sampledMs": 20.163,
+      "percent": 0.09480241738406357
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60462/assets/DirectModeler-Mrbd1eLe.js",
+      "line": 3,
+      "column": 90438,
+      "sampledMs": 16.279,
+      "percent": 0.07654062156401185
+    }
+  ]
+}

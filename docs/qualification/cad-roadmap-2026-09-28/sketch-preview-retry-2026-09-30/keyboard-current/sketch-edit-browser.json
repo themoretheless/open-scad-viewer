@@ -1,0 +1,15 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 13,
+  "retryFailure": true,
+  "applyWithoutNewWorkerRequest": true,
+  "invalidQuantities": [
+    "fillet",
+    "dogear",
+    "array"
+  ],
+  "undoRedo": true,
+  "keyboard": true,
+  "tabPresses": 1145,
+  "downloads": 8
+}

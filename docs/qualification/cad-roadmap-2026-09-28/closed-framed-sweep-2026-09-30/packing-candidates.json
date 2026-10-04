@@ -1,0 +1,47 @@
+[
+  {
+    "block": 16,
+    "compressed": 2665821,
+    "encoded": 3267164
+  },
+  {
+    "block": 17,
+    "compressed": 2665623,
+    "encoded": 3266806
+  },
+  {
+    "block": 18,
+    "compressed": 2664900,
+    "encoded": 3266106
+  },
+  {
+    "block": 19,
+    "compressed": 2667735,
+    "encoded": 3269604
+  },
+  {
+    "block": 20,
+    "compressed": 2668765,
+    "encoded": 3270744
+  },
+  {
+    "block": 21,
+    "compressed": 2669803,
+    "encoded": 3272142
+  },
+  {
+    "block": 22,
+    "compressed": 2671356,
+    "encoded": 3273898
+  },
+  {
+    "block": 23,
+    "compressed": 2678172,
+    "encoded": 3282212
+  },
+  {
+    "block": 24,
+    "compressed": 2680483,
+    "encoded": 3285160
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "crates/brep-core/src/operations.rs": "a659c9770d7fb2e407d34a8a41bf517c7d7e375bf42d4de62552ac9537c529e3",
+  "tests/cadRoadmapHistory.test.ts": "43f78453252f616c7431d58554c95df91c83c2f6c820f169efddb815803333b8",
+  "scripts/export-cad-feature-chain.mts": "bd9627ac5016476a3af868dcf960476b22409f3a2340de4174aebe58aa74ef48",
+  "src/generated/geometry-kernels/kernel_bg.wasm": "951986931ff419d390ac514652ce3a0cc5cc805ee7d42cdd54a52becf07535f5"
+}

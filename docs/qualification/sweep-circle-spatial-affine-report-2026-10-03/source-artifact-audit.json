@@ -1,0 +1,47 @@
+{
+  "scope": "selected production sources and artifacts, not whole workspace",
+  "files": [
+    {
+      "path": "src/services/geometry/brep.ts",
+      "primarySha256": "3f1f98919d2d59ef9675274da42f943db0c107149532946331cfd4767f276e88",
+      "qualifiedSha256": "3f1f98919d2d59ef9675274da42f943db0c107149532946331cfd4767f276e88",
+      "matches": true
+    },
+    {
+      "path": "src/services/nurbsCircleSectionRepair.ts",
+      "primarySha256": "e6b3623942bedc038b2a82c5da3273d23eadd9a732c9edeb587e633d8738d549",
+      "qualifiedSha256": "e6b3623942bedc038b2a82c5da3273d23eadd9a732c9edeb587e633d8738d549",
+      "matches": true
+    },
+    {
+      "path": "src/services/modelGraphNurbsKernel.ts",
+      "primarySha256": "cffa957923389507e2894d17a07c7ca85fe493334f1b99993e98f18e4293e136",
+      "qualifiedSha256": "cffa957923389507e2894d17a07c7ca85fe493334f1b99993e98f18e4293e136",
+      "matches": true
+    },
+    {
+      "path": "src/services/modelGraphNurbs.ts",
+      "primarySha256": "8a3661f45895dea0f5df263d6e029affb9870116357a28efac0817a3ff6c6407",
+      "qualifiedSha256": "8a3661f45895dea0f5df263d6e029affb9870116357a28efac0817a3ff6c6407",
+      "matches": true
+    },
+    {
+      "path": "src/services/sweepViewportEvidence.ts",
+      "primarySha256": "11b4f75c82e03e839aad36b6bfae6b9108016a34a3ee2b9860353c5661a7d76a",
+      "qualifiedSha256": "11b4f75c82e03e839aad36b6bfae6b9108016a34a3ee2b9860353c5661a7d76a",
+      "matches": true
+    },
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "primarySha256": "c2fcb258eb53fc66edba14aa7d47ad0376799259cf0fabb2d5c6d3cc03fc7094",
+      "qualifiedSha256": "c2fcb258eb53fc66edba14aa7d47ad0376799259cf0fabb2d5c6d3cc03fc7094",
+      "matches": true
+    },
+    {
+      "path": "src/generated/language-kernel/kernel_bg.wasm",
+      "primarySha256": "a19a753d547682f87aa742a412db8cb29106d6bd7ae9ebb85f316c1c376c2892",
+      "qualifiedSha256": "a19a753d547682f87aa742a412db8cb29106d6bd7ae9ebb85f316c1c376c2892",
+      "matches": true
+    }
+  ]
+}

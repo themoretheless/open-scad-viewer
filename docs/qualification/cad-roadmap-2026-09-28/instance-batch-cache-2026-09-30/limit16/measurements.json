@@ -1,0 +1,2882 @@
+{
+  "retainedMemory": null,
+  "memory": {
+    "intervalMs": 200,
+    "samples": [
+      {
+        "atMs": 1087.335542,
+        "pollMs": 7.536749999999984,
+        "Nodes": 2284,
+        "JSHeapUsedSize": 13278184,
+        "JSHeapTotalSize": 18120704,
+        "aggregateRssBytes": 949911552,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 130334720
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 86933504
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 58638336
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 674004992
+          }
+        ]
+      },
+      {
+        "atMs": 1288.979084,
+        "pollMs": 7.5947909999999865,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 12416120,
+        "JSHeapTotalSize": 19251200,
+        "aggregateRssBytes": 939819008,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 132956160
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87441408
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59359232
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 660062208
+          }
+        ]
+      },
+      {
+        "atMs": 1490.57375,
+        "pollMs": 7.0399589999999534,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 13077312,
+        "JSHeapTotalSize": 19251200,
+        "aggregateRssBytes": 1012056064,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133005312
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96583680
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 722976768
+          }
+        ]
+      },
+      {
+        "atMs": 1692.717459,
+        "pollMs": 7.323208000000022,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 13079104,
+        "JSHeapTotalSize": 19251200,
+        "aggregateRssBytes": 1074675712,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133005312
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96583680
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 785596416
+          }
+        ]
+      },
+      {
+        "atMs": 1893.765459,
+        "pollMs": 7.600750000000062,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 13082396,
+        "JSHeapTotalSize": 19251200,
+        "aggregateRssBytes": 1148977152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133070848
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 859815936
+          }
+        ]
+      },
+      {
+        "atMs": 2096.468375,
+        "pollMs": 7.025541999999859,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 13461704,
+        "JSHeapTotalSize": 19251200,
+        "aggregateRssBytes": 1197703168,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133218304
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 908394496
+          }
+        ]
+      },
+      {
+        "atMs": 2298.552042,
+        "pollMs": 53.22291700000005,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 80485972,
+        "JSHeapTotalSize": 116654080,
+        "aggregateRssBytes": 1329922048,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133218304
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1040613376
+          }
+        ]
+      },
+      {
+        "atMs": 2501.098584,
+        "pollMs": 7.6595830000001115,
+        "Nodes": 2246,
+        "JSHeapUsedSize": 118703628,
+        "JSHeapTotalSize": 177913856,
+        "aggregateRssBytes": 1416413184,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133218304
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1127104512
+          }
+        ]
+      },
+      {
+        "atMs": 2702.052084,
+        "pollMs": 7.430541000000176,
+        "Nodes": 21287,
+        "JSHeapUsedSize": 164862608,
+        "JSHeapTotalSize": 238501888,
+        "aggregateRssBytes": 1496186880,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 133251072
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59490304
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1206845440
+          }
+        ]
+      },
+      {
+        "atMs": 2904.31275,
+        "pollMs": 7.418208999999933,
+        "Nodes": 21298,
+        "JSHeapUsedSize": 187855876,
+        "JSHeapTotalSize": 245678080,
+        "aggregateRssBytes": 1604288512,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135806976
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96698368
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1312260096
+          }
+        ]
+      },
+      {
+        "atMs": 3106.169625,
+        "pollMs": 7.267542000000049,
+        "Nodes": 21298,
+        "JSHeapUsedSize": 186185880,
+        "JSHeapTotalSize": 249348096,
+        "aggregateRssBytes": 1673003008,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135806976
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96698368
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1380974592
+          }
+        ]
+      },
+      {
+        "atMs": 3308.334167,
+        "pollMs": 7.038375000000087,
+        "Nodes": 21298,
+        "JSHeapUsedSize": 187863592,
+        "JSHeapTotalSize": 252133376,
+        "aggregateRssBytes": 1707524096,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135806976
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96698368
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1415495680
+          }
+        ]
+      },
+      {
+        "atMs": 3510.391417,
+        "pollMs": 7.050542000000405,
+        "Nodes": 21298,
+        "JSHeapUsedSize": 202467056,
+        "JSHeapTotalSize": 252133376,
+        "aggregateRssBytes": 1734230016,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135823360
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96698368
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1442185216
+          }
+        ]
+      },
+      {
+        "atMs": 3710.410417,
+        "pollMs": 7.189499999999953,
+        "Nodes": 21298,
+        "JSHeapUsedSize": 199944700,
+        "JSHeapTotalSize": 257212416,
+        "aggregateRssBytes": 1742848000,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135823360
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96698368
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1450803200
+          }
+        ]
+      },
+      {
+        "atMs": 3911.977209,
+        "pollMs": 6.7951249999996435,
+        "Nodes": 21299,
+        "JSHeapUsedSize": 207431072,
+        "JSHeapTotalSize": 260784128,
+        "aggregateRssBytes": 1773092864,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135823360
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96731136
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1481015296
+          }
+        ]
+      },
+      {
+        "atMs": 4112.686917,
+        "pollMs": 6.607750000000124,
+        "Nodes": 21300,
+        "JSHeapUsedSize": 213179804,
+        "JSHeapTotalSize": 265502720,
+        "aggregateRssBytes": 1814642688,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135823360
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1522515968
+          }
+        ]
+      },
+      {
+        "atMs": 4315.41475,
+        "pollMs": 6.765792000000147,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 216976756,
+        "JSHeapTotalSize": 273301504,
+        "aggregateRssBytes": 1829076992,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1536933888
+          }
+        ]
+      },
+      {
+        "atMs": 4516.871959,
+        "pollMs": 6.9441249999999854,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 217648388,
+        "JSHeapTotalSize": 273301504,
+        "aggregateRssBytes": 1830649856,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1538506752
+          }
+        ]
+      },
+      {
+        "atMs": 4718.498334,
+        "pollMs": 6.756916000000274,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 217887240,
+        "JSHeapTotalSize": 273301504,
+        "aggregateRssBytes": 1849196544,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1557053440
+          }
+        ]
+      },
+      {
+        "atMs": 4921.31525,
+        "pollMs": 6.815459000000374,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 218001480,
+        "JSHeapTotalSize": 273301504,
+        "aggregateRssBytes": 1869971456,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1577828352
+          }
+        ]
+      },
+      {
+        "atMs": 5123.148167,
+        "pollMs": 6.78741699999955,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 218228004,
+        "JSHeapTotalSize": 273301504,
+        "aggregateRssBytes": 1865662464,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59523072
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1573519360
+          }
+        ]
+      },
+      {
+        "atMs": 5324.998959,
+        "pollMs": 6.809166000000005,
+        "Nodes": 21335,
+        "JSHeapUsedSize": 246043520,
+        "JSHeapTotalSize": 293568512,
+        "aggregateRssBytes": 1896284160,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1604091904
+          }
+        ]
+      },
+      {
+        "atMs": 5526.864209,
+        "pollMs": 34.870750000000044,
+        "Nodes": 40381,
+        "JSHeapUsedSize": 106053668,
+        "JSHeapTotalSize": 234110976,
+        "aggregateRssBytes": 1947893760,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135839744
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1655701504
+          }
+        ]
+      },
+      {
+        "atMs": 5729.030167,
+        "pollMs": 7.041707999999744,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 129431904,
+        "JSHeapTotalSize": 234356736,
+        "aggregateRssBytes": 1849999360,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 136101888
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96763904
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1557577728
+          }
+        ]
+      },
+      {
+        "atMs": 5931.140042,
+        "pollMs": 7.500750000000153,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 130103484,
+        "JSHeapTotalSize": 234356736,
+        "aggregateRssBytes": 1852850176,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 136134656
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96780288
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1560379392
+          }
+        ]
+      },
+      {
+        "atMs": 6133.328,
+        "pollMs": 6.90612499999952,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 130442784,
+        "JSHeapTotalSize": 234356736,
+        "aggregateRssBytes": 1857454080,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 136134656
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1565163520
+          }
+        ]
+      },
+      {
+        "atMs": 6334.710125,
+        "pollMs": 7.008500000000822,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 130444552,
+        "JSHeapTotalSize": 234356736,
+        "aggregateRssBytes": 1859813376,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134201344
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1569456128
+          }
+        ]
+      },
+      {
+        "atMs": 6537.405375,
+        "pollMs": 6.726166999999805,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 130671100,
+        "JSHeapTotalSize": 234356736,
+        "aggregateRssBytes": 1861402624,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134201344
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96600064
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1571045376
+          }
+        ]
+      },
+      {
+        "atMs": 6739.186042,
+        "pollMs": 6.768583000000035,
+        "Nodes": 21352,
+        "JSHeapUsedSize": 161848140,
+        "JSHeapTotalSize": 239353856,
+        "aggregateRssBytes": 1886306304,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134201344
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89915392
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1602633728
+          }
+        ]
+      },
+      {
+        "atMs": 6940.715084,
+        "pollMs": 12.295374999999694,
+        "Nodes": 40398,
+        "JSHeapUsedSize": 210498920,
+        "JSHeapTotalSize": 248152064,
+        "aggregateRssBytes": 1887813632,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134201344
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89915392
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1604141056
+          }
+        ]
+      },
+      {
+        "atMs": 7142.049167,
+        "pollMs": 6.600875000000087,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 208462788,
+        "JSHeapTotalSize": 262815744,
+        "aggregateRssBytes": 1893203968,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1609465856
+          }
+        ]
+      },
+      {
+        "atMs": 7343.707292,
+        "pollMs": 6.699666999999863,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 209146920,
+        "JSHeapTotalSize": 262815744,
+        "aggregateRssBytes": 1904181248,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1620443136
+          }
+        ]
+      },
+      {
+        "atMs": 7545.98475,
+        "pollMs": 7.867792000000009,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 209371948,
+        "JSHeapTotalSize": 262815744,
+        "aggregateRssBytes": 1916370944,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1632632832
+          }
+        ]
+      },
+      {
+        "atMs": 7747.903042,
+        "pollMs": 6.737791999999899,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 209485316,
+        "JSHeapTotalSize": 262815744,
+        "aggregateRssBytes": 1928151040,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1644412928
+          }
+        ]
+      },
+      {
+        "atMs": 7949.566042,
+        "pollMs": 6.695541999999477,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 209716280,
+        "JSHeapTotalSize": 262815744,
+        "aggregateRssBytes": 1939161088,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1655422976
+          }
+        ]
+      },
+      {
+        "atMs": 8151.492584,
+        "pollMs": 6.91425000000072,
+        "Nodes": 40436,
+        "JSHeapUsedSize": 238921944,
+        "JSHeapTotalSize": 283410432,
+        "aggregateRssBytes": 1926103040,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1642364928
+          }
+        ]
+      },
+      {
+        "atMs": 8352.080625,
+        "pollMs": 22.188583999999537,
+        "Nodes": 59482,
+        "JSHeapUsedSize": 290810984,
+        "JSHeapTotalSize": 332660736,
+        "aggregateRssBytes": 1953808384,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134234112
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 89948160
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1670070272
+          }
+        ]
+      },
+      {
+        "atMs": 8553.702417,
+        "pollMs": 6.667999999999665,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 276624192,
+        "JSHeapTotalSize": 343130112,
+        "aggregateRssBytes": 1962180608,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1678114816
+          }
+        ]
+      },
+      {
+        "atMs": 8755.81625,
+        "pollMs": 7.822834000000512,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 277403696,
+        "JSHeapTotalSize": 343130112,
+        "aggregateRssBytes": 1966587904,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1682522112
+          }
+        ]
+      },
+      {
+        "atMs": 8956.701084,
+        "pollMs": 6.826457999999548,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 277628700,
+        "JSHeapTotalSize": 343130112,
+        "aggregateRssBytes": 1970962432,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1686896640
+          }
+        ]
+      },
+      {
+        "atMs": 9158.588,
+        "pollMs": 6.71362500000032,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 277741148,
+        "JSHeapTotalSize": 343130112,
+        "aggregateRssBytes": 1975386112,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1691320320
+          }
+        ]
+      },
+      {
+        "atMs": 9360.942125,
+        "pollMs": 6.619542000000365,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 277966364,
+        "JSHeapTotalSize": 343130112,
+        "aggregateRssBytes": 1980399616,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1696333824
+          }
+        ]
+      },
+      {
+        "atMs": 9561.47225,
+        "pollMs": 6.943041999998968,
+        "Nodes": 59520,
+        "JSHeapUsedSize": 319071248,
+        "JSHeapTotalSize": 372703232,
+        "aggregateRssBytes": 2035400704,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1751334912
+          }
+        ]
+      },
+      {
+        "atMs": 9763.592792,
+        "pollMs": 16.32391699999971,
+        "Nodes": 78566,
+        "JSHeapUsedSize": 348025172,
+        "JSHeapTotalSize": 396787712,
+        "aggregateRssBytes": 2101968896,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 134496256
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59555840
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1817903104
+          }
+        ]
+      },
+      {
+        "atMs": 9965.3735,
+        "pollMs": 6.865625000000364,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 97113012,
+        "JSHeapTotalSize": 221888512,
+        "aggregateRssBytes": 2060517376,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1775353856
+          }
+        ]
+      },
+      {
+        "atMs": 10165.457459,
+        "pollMs": 6.893708000001425,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 97785564,
+        "JSHeapTotalSize": 221888512,
+        "aggregateRssBytes": 2064187392,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1779023872
+          }
+        ]
+      },
+      {
+        "atMs": 10368.009,
+        "pollMs": 6.882874999999331,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 98122956,
+        "JSHeapTotalSize": 221888512,
+        "aggregateRssBytes": 2068529152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1783365632
+          }
+        ]
+      },
+      {
+        "atMs": 10569.950167,
+        "pollMs": 6.7529169999997976,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 98124208,
+        "JSHeapTotalSize": 221888512,
+        "aggregateRssBytes": 2072821760,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1787658240
+          }
+        ]
+      },
+      {
+        "atMs": 10771.4795,
+        "pollMs": 6.806167000000642,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 98461260,
+        "JSHeapTotalSize": 221888512,
+        "aggregateRssBytes": 2077163520,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1792000000
+          }
+        ]
+      },
+      {
+        "atMs": 10974.125042,
+        "pollMs": 6.527250000001004,
+        "Nodes": 21308,
+        "JSHeapUsedSize": 121596788,
+        "JSHeapTotalSize": 226803712,
+        "aggregateRssBytes": 2065989632,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1780826112
+          }
+        ]
+      },
+      {
+        "atMs": 11176.315042,
+        "pollMs": 7.033750000000509,
+        "Nodes": 40354,
+        "JSHeapUsedSize": 177171764,
+        "JSHeapTotalSize": 226803712,
+        "aggregateRssBytes": 2066661376,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135577600
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1781497856
+          }
+        ]
+      },
+      {
+        "atMs": 11377.859292,
+        "pollMs": 6.8848330000000715,
+        "Nodes": 40360,
+        "JSHeapUsedSize": 162189764,
+        "JSHeapTotalSize": 229163008,
+        "aggregateRssBytes": 2089910272,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135659520
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1804664832
+          }
+        ]
+      },
+      {
+        "atMs": 11579.861375,
+        "pollMs": 7.151249999998981,
+        "Nodes": 40360,
+        "JSHeapUsedSize": 179357944,
+        "JSHeapTotalSize": 230146048,
+        "aggregateRssBytes": 2094628864,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1809498112
+          }
+        ]
+      },
+      {
+        "atMs": 11782.117042,
+        "pollMs": 6.99579199999971,
+        "Nodes": 40360,
+        "JSHeapUsedSize": 180779032,
+        "JSHeapTotalSize": 232308736,
+        "aggregateRssBytes": 2097528832,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1812398080
+          }
+        ]
+      },
+      {
+        "atMs": 11983.884667,
+        "pollMs": 7.572207999999591,
+        "Nodes": 40360,
+        "JSHeapUsedSize": 190608452,
+        "JSHeapTotalSize": 232308736,
+        "aggregateRssBytes": 2097627136,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1812496384
+          }
+        ]
+      },
+      {
+        "atMs": 12185.406125,
+        "pollMs": 6.366792000000714,
+        "Nodes": 40361,
+        "JSHeapUsedSize": 173830788,
+        "JSHeapTotalSize": 239910912,
+        "aggregateRssBytes": 2098462720,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1813331968
+          }
+        ]
+      },
+      {
+        "atMs": 12387.365917,
+        "pollMs": 7.016125000000102,
+        "Nodes": 40361,
+        "JSHeapUsedSize": 187041108,
+        "JSHeapTotalSize": 241221632,
+        "aggregateRssBytes": 2098544640,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1813413888
+          }
+        ]
+      },
+      {
+        "atMs": 12589.460042,
+        "pollMs": 13.522417000000132,
+        "Nodes": 40361,
+        "JSHeapUsedSize": 187041712,
+        "JSHeapTotalSize": 241221632,
+        "aggregateRssBytes": 2098544640,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 135544832
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90013696
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1813413888
+          }
+        ]
+      },
+      {
+        "atMs": 12791.581125,
+        "pollMs": 9.459999999999127,
+        "Nodes": 40444,
+        "JSHeapUsedSize": 211643480,
+        "JSHeapTotalSize": 250658816,
+        "aggregateRssBytes": 2105622528,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 138969088
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 90963968
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59572224
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1816117248
+          }
+        ]
+      },
+      {
+        "atMs": 12993.852042,
+        "pollMs": 7.123083000000406,
+        "Nodes": 40445,
+        "JSHeapUsedSize": 248765792,
+        "JSHeapTotalSize": 291815424,
+        "aggregateRssBytes": 2025701376,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1735688192
+          }
+        ]
+      },
+      {
+        "atMs": 13195.71375,
+        "pollMs": 6.6570839999985765,
+        "Nodes": 40445,
+        "JSHeapUsedSize": 270133672,
+        "JSHeapTotalSize": 331399168,
+        "aggregateRssBytes": 2065186816,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1775173632
+          }
+        ]
+      },
+      {
+        "atMs": 13398.163459,
+        "pollMs": 6.745750000000044,
+        "Nodes": 40445,
+        "JSHeapUsedSize": 310473724,
+        "JSHeapTotalSize": 365740032,
+        "aggregateRssBytes": 2100510720,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1810497536
+          }
+        ]
+      },
+      {
+        "atMs": 13599.969584,
+        "pollMs": 6.780915999999706,
+        "Nodes": 40445,
+        "JSHeapUsedSize": 100303072,
+        "JSHeapTotalSize": 222167040,
+        "aggregateRssBytes": 2108866560,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1818853376
+          }
+        ]
+      },
+      {
+        "atMs": 13802.054792,
+        "pollMs": 6.6904169999997976,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 135805312,
+        "JSHeapTotalSize": 222167040,
+        "aggregateRssBytes": 2083962880,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1793949696
+          }
+        ]
+      },
+      {
+        "atMs": 14004.263167,
+        "pollMs": 6.941667000000962,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 169939160,
+        "JSHeapTotalSize": 227672064,
+        "aggregateRssBytes": 2084225024,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1794211840
+          }
+        ]
+      },
+      {
+        "atMs": 14206.231625,
+        "pollMs": 6.594084000000294,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 203171276,
+        "JSHeapTotalSize": 262537216,
+        "aggregateRssBytes": 2084356096,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1794342912
+          }
+        ]
+      },
+      {
+        "atMs": 14408.271417,
+        "pollMs": 7.004542000000583,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 239979908,
+        "JSHeapTotalSize": 297926656,
+        "aggregateRssBytes": 2084356096,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1794342912
+          }
+        ]
+      },
+      {
+        "atMs": 14609.817792,
+        "pollMs": 7.223500000000058,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 270082540,
+        "JSHeapTotalSize": 332267520,
+        "aggregateRssBytes": 2085404672,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1795391488
+          }
+        ]
+      },
+      {
+        "atMs": 14812.313459,
+        "pollMs": 7.06316599999991,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 326271872,
+        "JSHeapTotalSize": 362938368,
+        "aggregateRssBytes": 2105262080,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1815248896
+          }
+        ]
+      },
+      {
+        "atMs": 15014.287542,
+        "pollMs": 7.1929999999993015,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 344563944,
+        "JSHeapTotalSize": 394657792,
+        "aggregateRssBytes": 2145222656,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1855209472
+          }
+        ]
+      },
+      {
+        "atMs": 15215.834917,
+        "pollMs": 18.145457999999053,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 120762108,
+        "JSHeapTotalSize": 237109248,
+        "aggregateRssBytes": 2153988096,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1863974912
+          }
+        ]
+      },
+      {
+        "atMs": 15416.056542,
+        "pollMs": 7.3819170000006125,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 157733752,
+        "JSHeapTotalSize": 237109248,
+        "aggregateRssBytes": 2152038400,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862025216
+          }
+        ]
+      },
+      {
+        "atMs": 15617.655834,
+        "pollMs": 6.590416000000914,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 188915160,
+        "JSHeapTotalSize": 242089984,
+        "aggregateRssBytes": 2152267776,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862254592
+          }
+        ]
+      },
+      {
+        "atMs": 15818.687375,
+        "pollMs": 15.604167000001326,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 220106972,
+        "JSHeapTotalSize": 276430848,
+        "aggregateRssBytes": 2152267776,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862254592
+          }
+        ]
+      },
+      {
+        "atMs": 16019.247042,
+        "pollMs": 19.594874999998865,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 260596244,
+        "JSHeapTotalSize": 311558144,
+        "aggregateRssBytes": 2152267776,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862254592
+          }
+        ]
+      },
+      {
+        "atMs": 16220.678,
+        "pollMs": 7.340249999999287,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 288270360,
+        "JSHeapTotalSize": 346423296,
+        "aggregateRssBytes": 2152284160,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862270976
+          }
+        ]
+      },
+      {
+        "atMs": 16423.06425,
+        "pollMs": 6.793042000001151,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 337420372,
+        "JSHeapTotalSize": 382337024,
+        "aggregateRssBytes": 2152300544,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862287360
+          }
+        ]
+      },
+      {
+        "atMs": 16625.178334,
+        "pollMs": 9.486958000001323,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 106185776,
+        "JSHeapTotalSize": 239206400,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 16826.508125,
+        "pollMs": 7.848249999999098,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 141212532,
+        "JSHeapTotalSize": 239206400,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 17029.275625,
+        "pollMs": 7.049209000000701,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 184880484,
+        "JSHeapTotalSize": 239206400,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 17230.611459,
+        "pollMs": 7.006457999999839,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 227922772,
+        "JSHeapTotalSize": 263585792,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 17433.165375,
+        "pollMs": 6.690624999999272,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 241232112,
+        "JSHeapTotalSize": 304742400,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 17635.031459,
+        "pollMs": 18.797374999998283,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 282578624,
+        "JSHeapTotalSize": 338296832,
+        "aggregateRssBytes": 2152497152,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862483968
+          }
+        ]
+      },
+      {
+        "atMs": 17835.409167,
+        "pollMs": 6.72783299999719,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 314873384,
+        "JSHeapTotalSize": 375259136,
+        "aggregateRssBytes": 2148581376,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 91373568
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858568192
+          }
+        ]
+      },
+      {
+        "atMs": 18035.375334,
+        "pollMs": 18.300500000001193,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 109548552,
+        "JSHeapTotalSize": 232652800,
+        "aggregateRssBytes": 2144829440,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858699264
+          }
+        ]
+      },
+      {
+        "atMs": 18235.301125,
+        "pollMs": 6.753666999997222,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 140050216,
+        "JSHeapTotalSize": 237109248,
+        "aggregateRssBytes": 2144878592,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858748416
+          }
+        ]
+      },
+      {
+        "atMs": 18435.3575,
+        "pollMs": 17.02966700000252,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 170866124,
+        "JSHeapTotalSize": 237109248,
+        "aggregateRssBytes": 2144927744,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858797568
+          }
+        ]
+      },
+      {
+        "atMs": 18634.616209,
+        "pollMs": 18.52533300000141,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 208626928,
+        "JSHeapTotalSize": 251789312,
+        "aggregateRssBytes": 2144944128,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858813952
+          }
+        ]
+      },
+      {
+        "atMs": 18835.413542,
+        "pollMs": 8.676625000000058,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 233396860,
+        "JSHeapTotalSize": 285605888,
+        "aggregateRssBytes": 2144976896,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858846720
+          }
+        ]
+      },
+      {
+        "atMs": 19035.3755,
+        "pollMs": 7.345917000002373,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 275966872,
+        "JSHeapTotalSize": 320995328,
+        "aggregateRssBytes": 2145042432,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858912256
+          }
+        ]
+      },
+      {
+        "atMs": 19235.430167,
+        "pollMs": 7.415417000000161,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 318180132,
+        "JSHeapTotalSize": 356122624,
+        "aggregateRssBytes": 2145124352,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1858994176
+          }
+        ]
+      },
+      {
+        "atMs": 19435.389334,
+        "pollMs": 10.310625000001892,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 356918296,
+        "JSHeapTotalSize": 393609216,
+        "aggregateRssBytes": 2145173504,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1859043328
+          }
+        ]
+      },
+      {
+        "atMs": 19636.518209,
+        "pollMs": 7.245165999996971,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 110692956,
+        "JSHeapTotalSize": 232128512,
+        "aggregateRssBytes": 2145763328,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1859633152
+          }
+        ]
+      },
+      {
+        "atMs": 19839.060959,
+        "pollMs": 6.786000000000058,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 152405496,
+        "JSHeapTotalSize": 232128512,
+        "aggregateRssBytes": 2145845248,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139051008
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1859715072
+          }
+        ]
+      },
+      {
+        "atMs": 20040.769792,
+        "pollMs": 6.604957999999897,
+        "Nodes": 21344,
+        "JSHeapUsedSize": 197161428,
+        "JSHeapTotalSize": 247857152,
+        "aggregateRssBytes": 2145976320,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139083776
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 87490560
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1859813376
+          }
+        ]
+      },
+      {
+        "atMs": 20241.751459,
+        "pollMs": 6.832582999999431,
+        "Nodes": 21395,
+        "JSHeapUsedSize": 211899236,
+        "JSHeapTotalSize": 277741568,
+        "aggregateRssBytes": 2158280704,
+        "processes": [
+          {
+            "pid": 10524,
+            "rssBytes": 139083776
+          },
+          {
+            "pid": 10525,
+            "rssBytes": 96829440
+          },
+          {
+            "pid": 10526,
+            "rssBytes": 59588608
+          },
+          {
+            "pid": 10527,
+            "rssBytes": 1862778880
+          }
+        ]
+      }
+    ],
+    "maxObservedJsHeapBytes": 356918296,
+    "maxObservedAggregateRssBytes": 2158280704,
+    "scope": "Polling during the whole run, including operations and orbit. Main-page JS heap excludes workers; aggregate Chromium RSS includes shared pages more than once. Sampled maxima are not a guaranteed instantaneous peak. CDP and ps instrumentation can affect timings."
+  },
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "importCancellationChecked": false,
+  "cpuProfile": null,
+  "cancellationChecked": false,
+  "browser": "151.0.7922.34",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpus": 16,
+    "ramBytes": 137438953472
+  },
+  "iterations": 5,
+  "timingSummary": {
+    "import": {
+      "count": 1,
+      "p50Ms": 3126.9844999999996,
+      "p95Ms": 3126.9844999999996,
+      "maxFrameGapMs": 625
+    },
+    "undo": {
+      "count": 5,
+      "p50Ms": 62.98229099999935,
+      "p95Ms": 64.93891699999949,
+      "maxFrameGapMs": 17.5
+    },
+    "redo": {
+      "count": 5,
+      "p50Ms": 1353.2110829999992,
+      "p95Ms": 1362.9997079999994,
+      "maxFrameGapMs": 291.6999999999998
+    }
+  },
+  "orbit": {
+    "durationMs": 7214.399999976158,
+    "frameGapsMs": [
+      -6.100000047683352,
+      16.600000000000364,
+      42,
+      41.399999999999636,
+      41.600000000000364,
+      58.399999999999636,
+      33.29999999999927,
+      41.70000000000073,
+      33.399999999999636,
+      41.600000000000364,
+      41.600000000000364,
+      33.399999999999636,
+      41.69999999999891,
+      33.30000000000109,
+      49.899999999999636,
+      33.5,
+      41.600000000000364,
+      41.600000000000364,
+      33.399999999999636,
+      50,
+      41.69999999999891,
+      41.5,
+      41.80000000000109,
+      41.69999999999891,
+      41.70000000000073,
+      32.5,
+      42.5,
+      49.899999999999636,
+      41.70000000000073,
+      33.399999999999636,
+      41.600000000000364,
+      41.79999999999927,
+      41.70000000000073,
+      33.19999999999891,
+      41.70000000000073,
+      41.899999999999636,
+      32.5,
+      42.20000000000073,
+      41.69999999999891,
+      41.600000000000364,
+      41.899999999999636,
+      41.5,
+      41.70000000000073,
+      41.600000000000364,
+      41.600000000000364,
+      41.69999999999891,
+      41.70000000000073,
+      33.399999999999636,
+      41.600000000000364,
+      41.69999999999891,
+      41.70000000000073,
+      41.600000000000364,
+      41.600000000000364,
+      50.099999999998545,
+      41.600000000000364,
+      33.399999999999636,
+      49.900000000001455,
+      41.69999999999891,
+      41.70000000000073,
+      41.600000000000364,
+      41.69999999999891,
+      41.70000000000073,
+      41.69999999999891,
+      41.600000000000364,
+      41.80000000000109,
+      50,
+      41.599999999998545,
+      41.600000000000364,
+      33.30000000000109,
+      41.69999999999891,
+      41.70000000000073,
+      33.29999999999927,
+      41.5,
+      33.600000000000364,
+      41.600000000000364,
+      33.29999999999927,
+      41.70000000000073,
+      41.69999999999891,
+      50,
+      33.30000000000109,
+      41.69999999999891,
+      41.600000000000364,
+      33.399999999999636,
+      41.900000000001455,
+      33.099999999998545,
+      41.70000000000073,
+      33.20000000000073,
+      41.899999999999636,
+      33.5,
+      41.29999999999927,
+      42,
+      49.70000000000073,
+      33.29999999999927,
+      50.100000000000364,
+      41.600000000000364,
+      40.100000000000364,
+      35,
+      49.89999999999782,
+      33.30000000000291,
+      41.69999999999709,
+      41.30000000000291,
+      33.69999999999709,
+      41.70000000000073,
+      33.29999999999927,
+      50,
+      40.400000000001455,
+      34.599999999998545,
+      41.70000000000073,
+      41.70000000000073,
+      33.20000000000073,
+      33.70000000000073,
+      41.39999999999782,
+      42,
+      32.900000000001455,
+      41.70000000000073,
+      33.39999999999782,
+      41.70000000000073,
+      50,
+      33.20000000000073,
+      41.79999999999927,
+      33.29999999999927,
+      41.70000000000073,
+      33.29999999999927,
+      41.70000000000073,
+      33.29999999999927,
+      41.70000000000073,
+      33.29999999999927,
+      41.60000000000218,
+      33.39999999999782,
+      41.60000000000218,
+      41.69999999999709,
+      58.30000000000291,
+      41.69999999999709,
+      41.70000000000073,
+      41.70000000000073,
+      33.29999999999927,
+      41.60000000000218,
+      41.69999999999709,
+      40,
+      34.900000000001455,
+      41.70000000000073,
+      41.70000000000073,
+      33.69999999999709,
+      41.30000000000291,
+      50,
+      33.39999999999782,
+      41.60000000000218,
+      33.5,
+      41.599999999998545,
+      41.599999999998545,
+      33.400000000001455,
+      41.599999999998545,
+      33.30000000000291,
+      41.69999999999709,
+      41.70000000000073,
+      33.5,
+      33.400000000001455,
+      49.70000000000073,
+      42.099999999998545,
+      33,
+      41.900000000001455,
+      33.39999999999782,
+      41.70000000000073,
+      32.900000000001455,
+      41.79999999999927,
+      33.20000000000073,
+      41.69999999999709,
+      33.30000000000291,
+      41.69999999999709,
+      41.70000000000073,
+      50,
+      41.60000000000218,
+      41.69999999999709,
+      41.70000000000073,
+      33.29999999999927,
+      41.70000000000073,
+      33.29999999999927,
+      41.70000000000073,
+      41.70000000000073,
+      33.29999999999927,
+      41.60000000000218
+    ],
+    "rafFps": 25.088711466039886,
+    "pointerMoves": 180,
+    "scope": "RAF cadence during 180 automated right-button orbit moves; includes input automation, headless rendering, not physical display presentation rate.",
+    "pickAfterOrbit": "instance-0"
+  },
+  "maxObservedHeapBytes": 276483912,
+  "heapScope": "Samples after each operation only; not peak process memory.",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2284,
+    "JSHeapUsedSize": 13278184,
+    "JSHeapTotalSize": 18120704
+  },
+  "after": {
+    "Nodes": 21397,
+    "JSHeapUsedSize": 225362612,
+    "JSHeapTotalSize": 278921216
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 3126.9844999999996,
+      "heap": {
+        "Nodes": 21300,
+        "JSHeapUsedSize": 215057868,
+        "JSHeapTotalSize": 272482304
+      },
+      "frameCount": 297,
+      "maxFrameGapMs": 625
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 64.01708400000007,
+      "heap": {
+        "Nodes": 21326,
+        "JSHeapUsedSize": 216203400,
+        "JSHeapTotalSize": 273301504
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 17.5
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1349.543584,
+      "heap": {
+        "Nodes": 21317,
+        "JSHeapUsedSize": 126717972,
+        "JSHeapTotalSize": 240467968
+      },
+      "frameCount": 127,
+      "maxFrameGapMs": 291.6999999999998
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 64.93891699999949,
+      "heap": {
+        "Nodes": 21345,
+        "JSHeapUsedSize": 128787416,
+        "JSHeapTotalSize": 234356736
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 16.699999999999818
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1344.8352079999995,
+      "heap": {
+        "Nodes": 40401,
+        "JSHeapUsedSize": 193996796,
+        "JSHeapTotalSize": 256770048
+      },
+      "frameCount": 130,
+      "maxFrameGapMs": 275.10000000000036
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 62.98229099999935,
+      "heap": {
+        "Nodes": 40429,
+        "JSHeapUsedSize": 207821476,
+        "JSHeapTotalSize": 262815744
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 8.5
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1353.2110829999992,
+      "heap": {
+        "Nodes": 59485,
+        "JSHeapUsedSize": 276483912,
+        "JSHeapTotalSize": 339968000
+      },
+      "frameCount": 130,
+      "maxFrameGapMs": 282.09999999999945
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 58.51375000000007,
+      "heap": {
+        "Nodes": 59513,
+        "JSHeapUsedSize": 275977104,
+        "JSHeapTotalSize": 343130112
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 8.399999999999636
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1356.5985,
+      "heap": {
+        "Nodes": 21273,
+        "JSHeapUsedSize": 100129168,
+        "JSHeapTotalSize": 225492992
+      },
+      "frameCount": 130,
+      "maxFrameGapMs": 274.89999999999964
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 59.380833999999595,
+      "heap": {
+        "Nodes": 21301,
+        "JSHeapUsedSize": 96465308,
+        "JSHeapTotalSize": 221888512
+      },
+      "frameCount": 7,
+      "maxFrameGapMs": 8.399999999999636
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1362.9997079999994,
+      "heap": {
+        "Nodes": 40357,
+        "JSHeapUsedSize": 172771328,
+        "JSHeapTotalSize": 227295232
+      },
+      "frameCount": 130,
+      "maxFrameGapMs": 283.3000000000011
+    }
+  ]
+}

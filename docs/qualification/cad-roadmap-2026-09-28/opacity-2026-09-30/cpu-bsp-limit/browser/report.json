@@ -1,0 +1,10 @@
+{
+  "browser": "151.0.7922.34",
+  "triangles": 601,
+  "realBspLimit": true,
+  "visibleFallback": true,
+  "hideClearsWarning": true,
+  "showRestoresWarning": true,
+  "documentUnchanged": true,
+  "errors": []
+}

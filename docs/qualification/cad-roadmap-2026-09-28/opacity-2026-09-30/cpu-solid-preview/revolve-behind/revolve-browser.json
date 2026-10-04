@@ -1,0 +1,14 @@
+{
+  "occlusion": true,
+  "bodyBehind": true,
+  "operation": "revolve",
+  "browser": "151.0.7922.34",
+  "workerRequests": 3,
+  "retryFailure": true,
+  "applyWithoutRecompute": true,
+  "invalidQuantityClearsPreview": true,
+  "undoRedo": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 6
+}

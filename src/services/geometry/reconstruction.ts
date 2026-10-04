@@ -11,13 +11,14 @@ export interface SubdivisionReconstruction {
  cage:SubdivisionCage;iterations:number;vertexResidualBeforeMm:number;vertexResidualAfterMm:number;
  deviation:SampledDeviation;correspondence:'source_triangle_topology_one_refinement_step'
 }
-export interface NurbsPatchSet {
+export interface NurbsSurfaceSet {patches:NurbsSurface[];faceIds:number[]}
+export interface NurbsPatchSet extends NurbsSurfaceSet {
  patches:NurbsSurface[];faceIds:number[];mode:'faceted'|'point_normal';
  sampledMaxDeviationMm:number;sampleCount:number;errorBoundCertified:false
 }
 export const meshToSdf=(mesh:PolygonMesh,signed=true):SdfField=>callGeometryRust('mesh_to_sdf',{mesh,signed})
 export const meshToSubdivision=(mesh:PolygonMesh,iterations=8):SubdivisionReconstruction=>callGeometryRust('mesh_to_subdivision',{mesh,iterations})
 export const meshToNurbs=(mesh:PolygonMesh,mode:NurbsPatchSet['mode']='faceted',maxDeviationMm=0):NurbsPatchSet=>callGeometryRust('mesh_to_nurbs',{mesh,mode,maxDeviationMm})
-export const tessellateNurbsPatches=(patches:NurbsPatchSet,segments=2):PolygonBuild & {faceIds:number[]}=>normalizePolygonMesh(callGeometryRust('nurbs_patches_tessellate',{patches,segments}))
+export const tessellateNurbsPatches=(patches:NurbsSurfaceSet,segments=2):PolygonBuild & {faceIds:number[]}=>normalizePolygonMesh(callGeometryRust('nurbs_patches_tessellate',{patches,segments}))
 
 export const meshToNurbsBrep=(mesh:PolygonMesh):NurbsBrep=>callGeometryRust('mesh_to_nurbs_brep',{mesh})

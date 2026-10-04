@@ -2571,6 +2571,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn topology_ids_survive_preserved_boolean_entities_and_round_trip() {
         let stock = cuboid([0., 0., 0.], [3., 2., 2.]).unwrap();
         let cutter = cuboid([2., 0., 0.], [4., 2., 2.]).unwrap();

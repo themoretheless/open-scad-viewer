@@ -1,0 +1,18 @@
+{
+  "scope": "Removed host JSON stringify/parse only; excludes postMessage, worker execution and rendering. Node microbenchmark, not browser latency.",
+  "fixture": "docs/qualification/cad-roadmap-2026-09-28/durable-head/process/recovered-after.json",
+  "inputBytes": 4221219,
+  "samplesMs": [
+    13.912374999999997,
+    14.273416999999995,
+    13.971666999999997,
+    13.638832999999977,
+    13.605124999999987,
+    13.855415999999991,
+    13.681916999999999,
+    13.91395799999998,
+    13.99370799999997,
+    13.676290999999992
+  ],
+  "medianMs": 13.912374999999997
+}

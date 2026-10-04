@@ -23,3 +23,16 @@ it('classifies coplanar and one-sided triangles without duplicates',()=>{
  expect(()=>splitTransparentTriangle(triangle,[0,0,0,1])).toThrow()
  expect(()=>splitTransparentTriangle(triangle,[1,0,0,0],NaN)).toThrow()
 })
+
+it('matches the frozen clipper over crossing planes and arbitrary linear attributes',async()=>{
+ const {referenceSplitTransparentTriangle}=await import('../benchmarks/modelgraph/transparentTriangleSplit-reference')
+ for(const scale of [.001,1,1000])for(let i=0;i<20;i++){
+  const t=triangle.map(v=>v.map((x,k)=>k<3?x*scale:x)) as unknown as TransparentTriangle
+  const p=[Math.sin(i+.2),Math.cos(i+.7),.3,(i-10)*scale*.07] as const
+  const actual=splitTransparentTriangle(t,p),expected=referenceSplitTransparentTriangle(t,p)
+  for(const key of ['front','back','coplanar'] as const){
+   expect(actual[key]).toHaveLength(expected[key].length)
+   actual[key].forEach((t,j)=>t.forEach((v,k)=>v.forEach((x,l)=>expect(x).toBeCloseTo(expected[key][j][k][l],10))))
+  }
+ }
+})

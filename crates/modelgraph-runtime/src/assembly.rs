@@ -2,19 +2,9 @@ use crate::{Error, Result};
 use std::collections::{HashMap, HashSet};
 use value_codec::{Value, json};
 pub type Matrix = [f64; 16];
-const IDENTITY: Matrix = [
-    1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
-];
 pub fn multiply(a: Matrix, b: Matrix) -> Matrix {
-    let mut out = [0.; 16];
-    for r in 0..4 {
-        for c in 0..4 {
-            for k in 0..4 {
-                out[r * 4 + c] += a[r * 4 + k] * b[k * 4 + c];
-            }
-        }
-    }
-    out
+    use math_core::affine::{from_row_major, multiply, to_row_major};
+    to_row_major(multiply(from_row_major(a), from_row_major(b)))
 }
 fn vector(v: &Value) -> [f64; 3] {
     [
@@ -24,39 +14,17 @@ fn vector(v: &Value) -> [f64; 3] {
     ]
 }
 pub fn frame(origin: [f64; 3], rotation: [f64; 3]) -> Matrix {
-    let [x, y, z] = rotation.map(|v| v * std::f64::consts::PI / 180.);
-    let (cx, sx, cy, sy, cz, sz) = (x.cos(), x.sin(), y.cos(), y.sin(), z.cos(), z.sin());
-    let mut m = multiply(
-        multiply(
-            [
-                cz, -sz, 0., 0., sz, cz, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
-            ],
-            [
-                cy, 0., sy, 0., 0., 1., 0., 0., -sy, 0., cy, 0., 0., 0., 0., 1.,
-            ],
-        ),
-        [
-            1., 0., 0., 0., 0., cx, -sx, 0., 0., sx, cx, 0., 0., 0., 0., 1.,
-        ],
-    );
-    for i in 0..3 {
-        m[i * 4 + 3] = origin[i];
-    }
-    m
+    math_core::affine::to_row_major(math_core::affine::frame(origin, rotation))
 }
+
 fn frame_value(v: &Value) -> Matrix {
     frame(vector(&v["origin"]), vector(&v["rotation"]))
 }
 fn inverse(m: Matrix) -> Matrix {
-    let mut out = IDENTITY;
-    for r in 0..3 {
-        for c in 0..3 {
-            out[r * 4 + c] = m[c * 4 + r];
-        }
-        out[r * 4 + 3] = -(0..3).map(|k| out[r * 4 + k] * m[k * 4 + 3]).sum::<f64>();
-    }
-    out
+    use math_core::affine::{from_row_major, inverse_rigid, to_row_major};
+    to_row_major(inverse_rigid(from_row_major(m)))
 }
+
 pub fn matrix_json(m: Matrix) -> Value {
     json!([&m[0..4], &m[4..8], &m[8..12], &m[12..16]])
 }

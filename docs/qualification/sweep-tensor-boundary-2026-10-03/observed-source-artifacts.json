@@ -1,0 +1,41 @@
+{
+  "scope": "Observed proof optimization files in a broad concurrent dirty checkout; no clean-tree all-source reproducibility claim.",
+  "files": {
+    "crates/cad-predicates/src/bezier_identity.rs": {
+      "bytes": 7709,
+      "sha256": "f271c0eb4668fe4e3a733c2db5007411b72633cbda671d2e250a0d0a70751e69"
+    },
+    "crates/nurbs-core/src/curve_surface_agreement.rs": {
+      "bytes": 30983,
+      "sha256": "292b1ec0f710424f0fcfcf3b9bb5efc833019f27480609a398f1a9495bebfb6b"
+    },
+    "crates/brep-core/src/boundary_agreement.rs": {
+      "bytes": 12434,
+      "sha256": "aff8a097d112c520bf497cd54f933d1499d809a7e65fc20d4258e24c96af99f4"
+    },
+    "src/generated/geometry-kernels/bytes.ts": {
+      "bytes": 3556183,
+      "sha256": "7fc3ccb00856c6a2a61ebaebdadbfcc201e1f3f8931e62446a6f9c1861e62cda"
+    },
+    "public/wasm/geometry-kernel.wasm": {
+      "bytes": 10654685,
+      "sha256": "dd06b77e8f305372aaee04ee8a7661f96a502e4580fcb457eaaf265f57801305"
+    },
+    "tests/sweepBoundaryCertificate.test.ts": {
+      "bytes": 8448,
+      "sha256": "d9d2ebce1611b872511fb9b5b7457af9e7921a5c172b44a3f4c62650adac4429"
+    },
+    "scripts/export-sweep-step-oracle.mts": {
+      "bytes": 18456,
+      "sha256": "f4bd0027e06dedc462d0adf3fed2ae8a952b9184feed3cfa6c372ece531fe8f0"
+    },
+    "scripts/check-sweep-miter-matrix-browser.mjs": {
+      "bytes": 16233,
+      "sha256": "185c51c5c405c7a2b2dd705a7a858bffa4f40a5f41aafa91ceefc783e25e82f0"
+    },
+    "examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r": {
+      "bytes": 1208,
+      "sha256": "7ddb742da258ce8a208ea199c150a111cf8c12e0489b7931a32773a2d89e14d3"
+    }
+  }
+}

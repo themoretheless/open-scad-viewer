@@ -1,0 +1,24 @@
+{
+  "scope": "One L-bracket; 20 sequential geometry edits through public services, not the full three-part UI acceptance",
+  "passed": true,
+  "operations": {
+    "capPush": 6,
+    "booleanUnion": 6,
+    "translation": 7,
+    "constantFillet": 1
+  },
+  "checks": [
+    "Analytic volume and bounds after every edit",
+    "Body id, unique complete topology ids and topology validity after every edit",
+    "21 distinct exact JSON snapshots and parse roundtrip",
+    "Full undo and redo traversal compares every snapshot",
+    "Final new DirectHistory from restored document matches final snapshot",
+    "Final STEP export/import passes topology and analytic volume check"
+  ],
+  "sourceSha256": "53a9fc4b206d87e93fbe9f57b67cfe371a02bff2e740ff8370f33d866a0b15de",
+  "notProven": [
+    "Flange and enclosure mixed fillet chains",
+    "Independent OCCT for this final mixed-chain file",
+    "All-command mouse/keyboard or late worker-result matrix"
+  ]
+}

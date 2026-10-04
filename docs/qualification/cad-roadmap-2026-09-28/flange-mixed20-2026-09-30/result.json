@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "scope": "20 sequential service-level edits of the roadmap annular flange",
+  "operations": {
+    "pushPull": 6,
+    "holeBooleanDifference": 6,
+    "translation": 7,
+    "annularFillet": 1
+  },
+  "finalDimensions": {
+    "outerRadiusMm": 20,
+    "innerRadiusMm": 6.5,
+    "heightMm": 12,
+    "translationXmm": 7,
+    "outerTopFilletRadiusMm": 1
+  },
+  "checks": [
+    "Analytic volume and bounds after every edit",
+    "Complete unique topology ids and body id",
+    "21 distinct snapshots, exact parse and full undo/redo traversal",
+    "Final restore in new DirectHistory",
+    "Final STEP export/import topology and volume"
+  ],
+  "sourceSha256": "84ac0bfb7ff5fb5b89b7fb8e5d6b52783d3d43185f3ae075de15331793fe4244",
+  "notProven": [
+    "Full UI mouse/keyboard acceptance",
+    "Independent OCCT of this final mixed-chain STEP",
+    "Enclosure mixed20 and arbitrary curved fillets"
+  ]
+}

@@ -1,0 +1,4948 @@
+{
+  "schemaVersion": 1,
+  "targetCount": 1200,
+  "specifiedCount": 200,
+  "unallocatedCount": 1000,
+  "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
+  "figures": [
+    {
+      "id": "NURBS-0001",
+      "name": "отрезок",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::line",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsBasicPaths.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/line-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0002",
+      "name": "ломаная",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::polyline",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsBasicPaths.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/polyline-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0003",
+      "name": "окружность",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::circle",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsBasicPaths.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/circle-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0004",
+      "name": "круговая дуга",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::circle_arc",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsBasicPaths.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/circle-arc-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0005",
+      "name": "эллипс",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::ellipse_arc",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ellipse-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0006",
+      "name": "эллиптическая дуга",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::ellipse_arc",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ellipse-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0007",
+      "name": "парабола",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::parabola",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/parabola-extrusion.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0008",
+      "name": "гипербола",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::hyperbola",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/hyperbola-extrusion.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0009",
+      "name": "кривая Безье",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::paths::bezier",
+      "evidence": [
+        "crates/nurbs-core/src/paths.rs",
+        "tests/nurbsBezierPaths.test.ts",
+        "examples/rush/bezier-extrusion.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0010",
+      "name": "составная NURBS-кривая",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::paths::compose",
+      "evidence": [
+        "crates/nurbs-core/src/paths.rs",
+        "tests/nurbsBezierPaths.test.ts",
+        "examples/rush/composite-curve-extrusion.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0011",
+      "name": "эвольвента",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::involute::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/involute.rs",
+        "docs/design/nurbs-involute-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsInvolute.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/involute-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "62 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0012",
+      "name": "архимедова спираль",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::archimedean_spiral::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/archimedean_spiral.rs",
+        "docs/design/nurbs-archimedean-spiral-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsArchimedeanSpiral.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/archimedean-spiral-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "69 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0013",
+      "name": "логарифмическая спираль",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::logarithmic_spiral::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/logarithmic_spiral.rs",
+        "docs/design/nurbs-logarithmic-spiral-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsLogarithmicSpiral.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/logarithmic-spiral-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "63 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0014",
+      "name": "клотоида",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::clothoid::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/clothoid.rs",
+        "docs/design/nurbs-clothoid-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsClothoid.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/clothoid-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "76 fixed Rush examples, display mesh positions and triangle indices; clothoid retains both quadrature/fit estimates and explicit 0.0001mm budget; not a continuous error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0015",
+      "name": "циклоида",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::trochoid::approximate_cycloid",
+      "evidence": [
+        "crates/nurbs-core/src/trochoid.rs",
+        "docs/design/nurbs-trochoid-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsTrochoid.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/cycloid-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "66 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0016",
+      "name": "эпициклоида",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::circular_rolling::approximate_epicycloid",
+      "evidence": [
+        "crates/nurbs-core/src/circular_rolling.rs",
+        "docs/design/nurbs-circular-rolling-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCircularRolling.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/epicycloid-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "68 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0017",
+      "name": "гипоциклоида",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::circular_rolling::approximate_hypocycloid",
+      "evidence": [
+        "crates/nurbs-core/src/circular_rolling.rs",
+        "docs/design/nurbs-circular-rolling-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCircularRolling.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/hypocycloid-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "68 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0018",
+      "name": "трохоида",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::trochoid::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/trochoid.rs",
+        "docs/design/nurbs-trochoid-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsTrochoid.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/trochoid-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "66 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0019",
+      "name": "цепная линия",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::catenary::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/catenary.rs",
+        "docs/design/nurbs-catenary-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCatenary.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/catenary-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "70 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0020",
+      "name": "Лиссажу",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::lissajous::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/lissajous.rs",
+        "docs/design/nurbs-lissajous-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsLissajous.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/lissajous-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "64 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0021",
+      "name": "цилиндрическая винтовая линия",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::helix::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/helix.rs",
+        "docs/design/nurbs-helix-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsHelix.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/helix-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "58 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0022",
+      "name": "коническая винтовая линия",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::helix::approximate_conical",
+      "evidence": [
+        "crates/nurbs-core/src/helix.rs",
+        "docs/design/nurbs-helix-variants-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsHelixVariants.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/conical-helix-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "60 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0023",
+      "name": "переменный шаг",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::helix::approximate_variable_pitch",
+      "evidence": [
+        "crates/nurbs-core/src/helix.rs",
+        "docs/design/nurbs-variable-pitch-helix-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsVariablePitchHelix.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/variable-pitch-helix-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "61 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0024",
+      "name": "эллиптическая винтовая линия",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::helix::approximate_elliptic",
+      "evidence": [
+        "crates/nurbs-core/src/helix.rs",
+        "docs/design/nurbs-helix-variants-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsHelixVariants.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/elliptic-helix-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "60 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0025",
+      "name": "сферическая спираль",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::spherical_spiral::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/spherical_spiral.rs",
+        "docs/design/nurbs-spherical-spiral-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsSphericalSpiral.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/spherical-spiral-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "75 fixed Rush examples, display mesh positions and triangle indices; spherical curve uses explicit 0.0001mm fit budget and multipatch extrusion; not a continuous error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0026",
+      "name": "торическая спираль",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::toroidal_spiral::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/toroidal_spiral.rs",
+        "docs/design/nurbs-toroidal-trajectories-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsToroidalTrajectories.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/toroidal-spiral-extrusion.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "74 fixed Rush examples, display mesh positions and triangle indices; full-knot fixture retains its explicit 0.0001mm fit budget through multipatch extrusion; not a continuous curve error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0027",
+      "name": "торический узел",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::toroidal_spiral::approximate_knot",
+      "evidence": [
+        "crates/nurbs-core/src/toroidal_spiral.rs",
+        "docs/design/nurbs-toroidal-trajectories-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsToroidalTrajectories.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/torus-knot-extrusion.r",
+        "crates/nurbs-core/src/extrusion_patches.rs",
+        "docs/design/nurbs-extrusion-patches-2026-10-01.md"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "74 fixed Rush examples, display mesh positions and triangle indices; full-knot fixture retains its explicit 0.0001mm fit budget through multipatch extrusion; not a continuous curve error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0028",
+      "name": "пространственная интерполяция",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::hermite::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/hermite.rs",
+        "tests/nurbsHermiteCurve.test.ts",
+        "examples/rush/hermite-extrusion.r",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "docs/design/nurbs-hermite-2026-10-01.md"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0029",
+      "name": "геодезическая",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0030",
+      "name": "пересечение поверхностей",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0031",
+      "name": "плоский патч",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::patches::plane",
+      "evidence": [
+        "crates/nurbs-core/src/patches.rs",
+        "tests/nurbsBezierPatches.test.ts",
+        "examples/rush/plane-patch.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0032",
+      "name": "билинейный патч",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::patches::bilinear",
+      "evidence": [
+        "crates/nurbs-core/src/patches.rs",
+        "tests/nurbsBezierPatches.test.ts",
+        "examples/rush/bilinear-patch.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0033",
+      "name": "поверхность Безье",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::patches::bezier",
+      "evidence": [
+        "crates/nurbs-core/src/patches.rs",
+        "tests/nurbsBezierPatches.test.ts",
+        "examples/rush/bezier-surface.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0034",
+      "name": "цилиндр",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::cylinder",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsCircularSurfaces.test.ts",
+        "examples/rush/cylinder-surface.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0035",
+      "name": "эллиптический цилиндр",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::elliptic_cylinder",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/elliptic-cylinder.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0036",
+      "name": "конус",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::cone",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsCircularSurfaces.test.ts",
+        "examples/rush/cone-surface.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0037",
+      "name": "усечённый конус",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::cone_frustum",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/cone-frustum.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0038",
+      "name": "сфера",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::sphere",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsCircularSurfaces.test.ts",
+        "examples/rush/sphere-surface.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0039",
+      "name": "эллипсоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::ellipsoid",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ellipsoid.r",
+        "tests/meshModelerUi.test.ts",
+        "docs/design/nurbs-editor-review-2026-10-01.md",
+        "docs/design/nurbs-editor-review/ellipsoid-mesh.jpg"
+      ],
+      "remainingQualification": [
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "editorReview": {
+        "status": "tested",
+        "example": "examples/rush/ellipsoid.r",
+        "scope": "ellipsoid display mesh in actual Mesh workspace, 1984 polygons",
+        "screenshot": "docs/design/nurbs-editor-review/ellipsoid-mesh.jpg",
+        "report": "docs/design/nurbs-editor-review-2026-10-01.md"
+      }
+    },
+    {
+      "id": "NURBS-0040",
+      "name": "тор",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::torus",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/elliptic-torus.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0041",
+      "name": "эллиптический тор",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::torus",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/elliptic-torus.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0042",
+      "name": "эллиптический параболоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::quadratic_patch",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/quadratic-paraboloid.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0043",
+      "name": "гиперболический параболоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::quadratic_patch",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPrimitives.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/quadratic-saddle.r"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      },
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ]
+    },
+    {
+      "id": "NURBS-0044",
+      "name": "однополостный гиперболоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::hyperboloid_one_sheet",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/hyperboloid-one-sheet.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0045",
+      "name": "двуполостный гиперболоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::primitives::hyperboloid_two_sheet",
+      "evidence": [
+        "crates/nurbs-core/src/primitives.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/hyperboloid-two-sheet.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0046",
+      "name": "геликоид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::helicoid::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/helicoid.rs",
+        "docs/design/nurbs-helicoid-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsHelicoid.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/helicoid-surface.r",
+        "docs/design/nurbs-helicoid-patches-2026-10-01.md",
+        "examples/rush/helicoid-patches.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "83 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0047",
+      "name": "катеноид",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::catenoid::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/catenoid.rs",
+        "docs/design/nurbs-catenoid-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCatenoid.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/catenoid-surface.r",
+        "docs/design/nurbs-catenoid-patches-2026-10-01.md",
+        "examples/rush/catenoid-patches.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "78 fixed Rush examples, display mesh positions and triangle indices; dense catenoid preserves explicit 0.0001mm fit budget through retained patches; not a continuous error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0048",
+      "name": "вращение профиля",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::surface::revolve",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "tests/nurbsSectionSurfaces.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/profile-revolution.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0049",
+      "name": "винтовая поверхность профиля",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::screw_surface::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/screw_surface.rs",
+        "docs/design/nurbs-screw-surface-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsScrewSurface.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/screw-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "77 fixed Rush examples, display mesh positions and triangle indices; screw retains rational profile and explicit 0.0001mm fit budget; not a continuous error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0050",
+      "name": "суперэллипсоид",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0051",
+      "name": "extrusion",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::surface::extrude",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "tests/nurbsSectionSurfaces.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/bezier-extrusion.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0052",
+      "name": "ruled",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::surface::loft",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "tests/nurbsSectionSurfaces.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ruled-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0053",
+      "name": "loft",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::surface::loft_aligned",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "tests/nurbsSectionSurfaces.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/section-loft.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0054",
+      "name": "guided loft",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::guided_loft::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/guided_loft.rs",
+        "docs/design/progressive-loft-2026-10-01.md",
+        "tests/nurbsGuidedLoft.test.ts",
+        "crates/brep-core/tests/guided_loft_step.rs",
+        "docs/qualification/guided-loft-2026-10-01/opencascade-matrix.json"
+      ],
+      "remainingQualification": [
+        "broader continuous regularity and solid certification outside the loft contract"
+      ]
+    },
+    {
+      "id": "NURBS-0055",
+      "name": "closed loft",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::natural_loft::closed",
+      "evidence": [
+        "crates/nurbs-core/src/natural_loft.rs",
+        "docs/design/nurbs-closed-loft-2026-10-01.md",
+        "tests/nurbsClosedLoft.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/closed-loft-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "50 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0056",
+      "name": "Coons",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::coons::patch",
+      "evidence": [
+        "crates/nurbs-core/src/coons.rs",
+        "tests/nurbsCoonsGraph.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/coons-patch.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0057",
+      "name": "Gordon",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::gordon::patch",
+      "evidence": [
+        "crates/nurbs-core/src/gordon.rs",
+        "docs/design/nurbs-gordon-2026-10-01.md",
+        "tests/nurbsGordon.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/gordon-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "51 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0058",
+      "name": "трёхграничный патч",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::triangular_patch::patch",
+      "evidence": [
+        "crates/nurbs-core/src/triangular_patch.rs",
+        "docs/design/nurbs-triangular-patch-2026-10-01.md",
+        "tests/nurbsTriangularPatch.test.ts",
+        "examples/rush/triangular-patch.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "52 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0059",
+      "name": "многограничное заполнение",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::boundary_fill::fan",
+      "evidence": [
+        "crates/nurbs-core/src/boundary_fill.rs",
+        "docs/design/nurbs-boundary-fill-2026-10-01.md",
+        "tests/nurbsBoundaryFill.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/boundary-fill.r",
+        "crates/geometry-bridge/src/reconstruction.rs"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "53 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0060",
+      "name": "поверхность по облаку",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0061",
+      "name": "труба постоянного радиуса",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::pipe::checked",
+      "evidence": [
+        "crates/nurbs-core/src/pipe.rs",
+        "docs/design/nurbs-pipe-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsPipe.test.ts",
+        "examples/rush/pipe-surface.r",
+        "examples/rush/closed-pipe-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous constant-radius tube and RMF approximation qualification",
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0062",
+      "name": "переменного радиуса",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::pipe::checked_variable",
+      "evidence": [
+        "crates/nurbs-core/src/pipe.rs",
+        "docs/design/nurbs-variable-pipe-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsVariablePipe.test.ts",
+        "examples/rush/variable-pipe-surface.r",
+        "examples/rush/closed-variable-pipe-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous variable-radius tube and RMF approximation qualification",
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0063",
+      "name": "profile sweep",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::profile_sweep::checked",
+      "evidence": [
+        "crates/nurbs-core/src/profile_sweep.rs",
+        "docs/design/nurbs-profile-sweep-2026-10-01.md",
+        "crates/nurbs-core/src/progressive_sweep.rs",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsProfileSweep.test.ts",
+        "tests/nurbsProgressiveSweep.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/profile-sweep.r",
+        "examples/rush/closed-profile-sweep.r",
+        "examples/rush/progressive-sweep.r",
+        "examples/rush/closed-progressive-sweep.r",
+        "examples/rush/arc-length-progressive-sweep.r",
+        "docs/design/sweep-coverage-2026-10-01.md",
+        "docs/qualification/sweep-coverage-2026-10-01/wasm-tests.json"
+      ],
+      "remainingQualification": [
+        "continuous scaled RMF approximation qualification",
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "Profile and progressive sweep examples; derived display mesh positions and triangle indices, not continuous sweep accuracy"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0064",
+      "name": "twisted sweep",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::twist_sweep::sweep",
+      "evidence": [
+        "crates/nurbs-core/src/twist_sweep.rs",
+        "docs/design/nurbs-twist-sweep-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsTwistSweep.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/twist-sweep.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "57 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0065",
+      "name": "рациональный translational sweep с переменным масштабом профиля",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::scaled_sweep::sweep",
+      "evidence": [
+        "crates/nurbs-core/src/scaled_sweep.rs",
+        "docs/design/nurbs-scaled-sweep-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsScaledSweep.test.ts",
+        "tests/nurbsScaledSweepLanguage.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/scaled-sweep.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "54 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0066",
+      "name": "двухнаправляющий sweep",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::two_guide_sweep::sweep",
+      "evidence": [
+        "crates/nurbs-core/src/two_guide_sweep.rs",
+        "docs/design/nurbs-two-guide-sweep-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsTwoGuideSweep.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/two-guide-sweep.r",
+        "examples/rush/two-guide-closed-sweep.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "56 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0067",
+      "name": "closed sweep",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0068",
+      "name": "огибающая сфер",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0069",
+      "name": "лента вдоль пути",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::ribbon::checked",
+      "evidence": [
+        "crates/nurbs-core/src/ribbon.rs",
+        "docs/design/nurbs-ribbon-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsRibbon.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ribbon-surface.r",
+        "examples/rush/closed-ribbon-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous width and RMF approximation qualification",
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "85 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0070",
+      "name": "пружина с профилем",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0071",
+      "name": "переход круг–круг",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::circle_transition::ruled",
+      "evidence": [
+        "crates/nurbs-core/src/circle_transition.rs",
+        "docs/design/nurbs-circle-transition-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCircleTransition.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/circle-transition-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "86 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0072",
+      "name": "круг–прямоугольник",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::circle_rectangle_transition::ruled",
+      "evidence": [
+        "crates/nurbs-core/src/circle_rectangle_transition.rs",
+        "docs/design/nurbs-circle-rectangle-transition-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsCircleRectangleTransition.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/circle-rectangle-transition.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "88 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0073",
+      "name": "эллипс–эллипс",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::ellipse_transition::ruled",
+      "evidence": [
+        "crates/nurbs-core/src/ellipse_transition.rs",
+        "docs/design/nurbs-ellipse-transition-2026-10-01.md",
+        "src/services/nurbsConstructors.ts",
+        "tests/nurbsEllipseTransition.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/ellipse-transition-surface.r"
+      ],
+      "remainingQualification": [
+        "continuous rounding-inclusive error qualification",
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "step": {
+          "status": "unqualified"
+        },
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "87 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0074",
+      "name": "смещённые профили",
+      "status": "native",
+      "nativeApi": "nurbs_core::curve_offset_wire::bevel_wire",
+      "evidence": [
+        "crates/nurbs-core/src/curve_offset_wire.rs",
+        "crates/nurbs-core/tests/profile_offset.rs",
+        "docs/design/nurbs-profile-offset.md"
+      ],
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ]
+    },
+    {
+      "id": "NURBS-0075",
+      "name": "constant fillet",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0076",
+      "name": "variable fillet",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0077",
+      "name": "G1 blend",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0078",
+      "name": "G2 blend",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0079",
+      "name": "offset",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0080",
+      "name": "оболочка заданной толщины",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0081",
+      "name": "прямозубая",
+      "status": "planned",
+      "nativeApi": null,
+      "partialNativeApi": "brep_core::gear::gear_with_report",
+      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
+      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+    },
+    {
+      "id": "NURBS-0082",
+      "name": "косозубая",
+      "status": "planned",
+      "nativeApi": null,
+      "partialNativeApi": "brep_core::gear::gear_with_report",
+      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
+      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+    },
+    {
+      "id": "NURBS-0083",
+      "name": "шевронная",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0084",
+      "name": "внутренняя",
+      "status": "planned",
+      "nativeApi": null,
+      "partialNativeApi": "brep_core::gear::gear_with_report",
+      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
+      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+    },
+    {
+      "id": "NURBS-0085",
+      "name": "рейка",
+      "status": "native",
+      "nativeApi": "nurbs_core::rack::profile",
+      "evidence": ["crates/nurbs-core/src/rack.rs", "crates/nurbs-core/tests/rack.rs", "docs/design/nurbs-rack.md", "crates/brep-core/src/rack.rs", "crates/brep-core/tests/rack.rs"]
+    },
+    {
+      "id": "NURBS-0086",
+      "name": "коническая шестерня",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0087",
+      "name": "червяк",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0088",
+      "name": "червячное колесо",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0089",
+      "name": "наружная резьба",
+      "status": "planned",
+      "nativeApi": null,
+      "partialNativeApi": "nurbs_core::thread::patches",
+      "evidence": ["crates/nurbs-core/src/thread.rs", "crates/nurbs-core/tests/thread.rs", "docs/design/nurbs-thread-patches.md"],
+      "remainingQualification": ["finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain", "closed external core or internal wall and caps", "rounding-inclusive error qualification and independent solid validation"]
+    },
+    {
+      "id": "NURBS-0090",
+      "name": "внутренняя резьба",
+      "status": "planned",
+      "nativeApi": null,
+      "partialNativeApi": "nurbs_core::thread::patches",
+      "evidence": ["crates/nurbs-core/src/thread.rs", "crates/nurbs-core/tests/thread.rs", "docs/design/nurbs-thread-patches.md"],
+      "remainingQualification": ["finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain", "closed external core or internal wall and caps", "rounding-inclusive error qualification and independent solid validation"]
+    },
+    {
+      "id": "NURBS-0091",
+      "name": "кулачок",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0092",
+      "name": "лопатка",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0093",
+      "name": "крыло",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0094",
+      "name": "корпус по сечениям",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0095",
+      "name": "купол",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0096",
+      "name": "линза",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0097",
+      "name": "гофрированная оболочка",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0098",
+      "name": "волновая поверхность",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0099",
+      "name": "S(u,v)",
+      "status": "native",
+      "nativeApi": "nurbs_core::function_surface::approximate",
+      "evidence": [
+        "crates/nurbs-core/src/function_surface.rs",
+        "crates/nurbs-core/tests/function_surface.rs",
+        "docs/design/nurbs-function-surface.md"
+      ],
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ]
+    },
+    {
+      "id": "NURBS-0100",
+      "name": "trimmed multipatch shell",
+      "status": "planned",
+      "nativeApi": null,
+      "evidence": []
+    },
+    {
+      "id": "NURBS-0101",
+      "name": "Полиномиальная пространственная кривая",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::polynomial::parametric_curve",
+      "evidence": [
+        "crates/nurbs-core/src/polynomial.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/polynomial-curve.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0102",
+      "name": "Полиномиальная параметрическая поверхность XYZ",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::polynomial::parametric_surface",
+      "evidence": [
+        "crates/nurbs-core/src/polynomial.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/polynomial-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0103",
+      "name": "Рациональная полиномиальная пространственная кривая",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::polynomial::rational_curve",
+      "evidence": [
+        "crates/nurbs-core/src/polynomial.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/rational-polynomial-curve.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0104",
+      "name": "Рациональная полиномиальная параметрическая поверхность XYZ/W",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::polynomial::rational_surface",
+      "evidence": [
+        "crates/nurbs-core/src/polynomial.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/rational-polynomial-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0105",
+      "name": "Полиномиальный граф поверхности",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::polynomial::graph",
+      "evidence": [
+        "crates/nurbs-core/src/polynomial.rs",
+        "tests/nurbsPolynomialHost.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/polynomial-graph.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0106",
+      "name": "Кубическая седловая поверхность с тремя направлениями",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::formula::surface",
+      "construction": {
+        "op": "formula_surface",
+        "domain": [
+          -1,
+          1,
+          -1,
+          1
+        ],
+        "expressions": [
+          [
+            10,
+            "u",
+            "*"
+          ],
+          [
+            10,
+            "v",
+            "*"
+          ],
+          [
+            4,
+            "u",
+            "u",
+            "*",
+            "u",
+            "*",
+            3,
+            "u",
+            "*",
+            "v",
+            "*",
+            "v",
+            "*",
+            "-",
+            "*"
+          ]
+        ]
+      },
+      "evidence": [
+        "crates/nurbs-core/src/formula.rs",
+        "tests/nurbsFormulaSurface.test.ts",
+        "examples/rush/formula-surface.r",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0107",
+      "name": "натуральный кубический пространственный сплайн по точкам",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::natural_spline::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/natural_spline.rs",
+        "tests/nurbsNaturalSpline.test.ts",
+        "examples/rush/natural-spline-extrusion.r",
+        "docs/design/nurbs-natural-spline-2026-10-01.md",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0108",
+      "name": "кубический пространственный сплайн с заданными касательными на концах",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::natural_spline::clamped",
+      "evidence": [
+        "crates/nurbs-core/src/natural_spline.rs",
+        "tests/nurbsClampedSpline.test.ts",
+        "examples/rush/clamped-spline-extrusion.r",
+        "docs/design/nurbs-clamped-spline-2026-10-01.md",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0109",
+      "name": "замкнутая кубическая интерполяция с согласованием производных на шве",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::closed_spline::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/closed_spline.rs",
+        "tests/nurbsClosedSpline.test.ts",
+        "examples/rush/closed-spline-extrusion.r",
+        "docs/design/nurbs-closed-spline-2026-10-01.md",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0110",
+      "name": "бикубический патч по угловым позициям и производным Hermite",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::hermite_patch::patch",
+      "evidence": [
+        "crates/nurbs-core/src/hermite_patch.rs",
+        "tests/nurbsHermitePatch.test.ts",
+        "examples/rush/hermite-patch.r",
+        "docs/design/nurbs-hermite-patch-2026-10-01.md",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0111",
+      "name": "натуральная бикубическая интерполяция прямоугольной сетки точек",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::grid_spline::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/grid_spline.rs",
+        "tests/nurbsGridSpline.test.ts",
+        "examples/rush/grid-spline-surface.r",
+        "docs/design/nurbs-grid-spline-2026-10-01.md",
+        "tests/nurbsPrimitiveGraph.test.ts"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "47 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0112",
+      "name": "натуральный кубический loft рациональных сечений с неравномерными параметрами",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::natural_loft::interpolate",
+      "evidence": [
+        "crates/nurbs-core/src/natural_loft.rs",
+        "docs/design/nurbs-natural-loft-2026-10-01.md",
+        "tests/nurbsNaturalLoft.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/natural-loft-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "48 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0113",
+      "name": "кубический рациональный loft с заданными постоянными концевыми производными профилей",
+      "status": "integrated",
+      "nativeApi": "nurbs_core::natural_loft::clamped",
+      "evidence": [
+        "crates/nurbs-core/src/natural_loft.rs",
+        "docs/design/nurbs-clamped-loft-2026-10-01.md",
+        "tests/nurbsClampedLoft.test.ts",
+        "tests/nurbsPrimitiveGraph.test.ts",
+        "examples/rush/clamped-loft-surface.r"
+      ],
+      "remainingQualification": [
+        "visual editor review",
+        "STEP qualification if declared supported"
+      ],
+      "exportSupport": {
+        "json": {
+          "status": "tested",
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "preserves": [
+            "document hash",
+            "rational definitions"
+          ]
+        },
+        "step": {
+          "status": "unqualified"
+        },
+        "mesh": {
+          "status": "tested",
+          "formats": [
+            "obj",
+            "ply"
+          ],
+          "evidence": "tests/nurbsPrimitiveGraph.test.ts",
+          "coordinateToleranceMm": 1e-05,
+          "scope": "49 fixed Rush examples, display mesh positions and triangle indices; not a continuous surface error certificate"
+        }
+      }
+    },
+    {
+      "id": "NURBS-0114",
+      "name": "скруглённый прямоугольный профиль",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "binary64 rounding certificate not supplied",
+        "broader production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::rounded_rectangle",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/examples/engineering_profiles.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0115",
+      "name": "капсульный профиль",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "binary64 rounding certificate not supplied",
+        "broader production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::capsule",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/examples/engineering_profiles.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0116",
+      "name": "плоский кольцевой сектор",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "binary64 rounding certificate not supplied",
+        "broader production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::annular_sector",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/examples/engineering_profiles.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0117",
+      "name": "профиль шпоночного паза",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "nominal-dimension binary64 rounding certificate not supplied",
+        "manufacturing standards and fits not claimed"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::keyway",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0118",
+      "name": "профиль Т-образного паза",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "nominal-dimension binary64 rounding certificate not supplied",
+        "manufacturing standards and fits not claimed"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::t_slot",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0119",
+      "name": "профиль ласточкин хвост",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "nominal-dimension binary64 rounding certificate not supplied",
+        "manufacturing standards and fits not claimed"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::dovetail",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0120",
+      "name": "профиль поликлинового ремня",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "belt standards, groove fit and rounded rib roots not supplied",
+        "continuous nominal-dimension binary64 rounding certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::poly_v_belt",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0121",
+      "name": "профиль зубчатого ремня",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "standard-specific belt profile, groove fit and root radii not supplied",
+        "continuous nominal-dimension binary64 rounding certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::toothed_belt",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0122",
+      "name": "профиль O-ring канавки",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "seal compression, fit and manufacturing standards not supplied",
+        "continuous nominal-dimension binary64 rounding certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::o_ring_groove",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "crates/nurbs-core/examples/o_ring_groove.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0123",
+      "name": "профиль стопорного кольца",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "installation lugs, holes, spring sizing and fit standards not supplied",
+        "continuous nominal-dimension binary64 rounding certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::retaining_ring",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0124",
+      "name": "профиль шестигранного крепежа",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "standard-specific tolerances, chamfers and threads not supplied",
+        "continuous binary64 construction-error certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::hex_fastener",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0125",
+      "name": "профиль квадратного крепежа",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Профили деталей",
+      "remainingQualification": [
+        "standard-specific tolerances, chamfers and threads not supplied",
+        "continuous binary64 construction-error certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::engineering_profiles::square_fastener",
+      "evidence": [
+        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/tests/machining_profiles.rs",
+        "docs/design/nurbs-machining-profiles.md"
+      ]
+    },
+    {
+      "id": "NURBS-0126",
+      "name": "вставка узлов кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::insert",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0127",
+      "name": "поднятие степени кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::elevate",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0128",
+      "name": "разбиение кривой по параметру",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::split",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0129",
+      "name": "обрезка кривой по интервалу",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::trim",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0130",
+      "name": "смена направления кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::reverse",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0131",
+      "name": "разложение кривой на рациональные сегменты Безье",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::curve::Curve::decompose",
+      "evidence": [
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0132",
+      "name": "удаление узла кривой с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "periodic storage is not supported by this operation",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::remove_curve_knot_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/knot_removal.rs",
+        "docs/design/nurbs-knot-removal.md"
+      ]
+    },
+    {
+      "id": "NURBS-0133",
+      "name": "понижение степени кривой с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "periodic storage is not supported by this operation",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::reduce_curve_degree_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/degree_reduction.rs",
+        "docs/design/nurbs-degree-reduction.md"
+      ]
+    },
+    {
+      "id": "NURBS-0134",
+      "name": "rebuild кривой с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::rebuild_curve_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/curve_rebuild.rs",
+        "docs/design/nurbs-curve-rebuild.md"
+      ]
+    },
+    {
+      "id": "NURBS-0135",
+      "name": "перенос шва периодической кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "certificate uses explicit normalized phase correspondence; no zero-error identity or topology preservation claim",
+        "existing authored-knot repetition and 256-control limits still apply; conservative bounds can refuse on work/precision limits",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "partialNativeApi": "nurbs_core::periodic_seam::curve_candidate",
+      "evidence": [
+        "crates/nurbs-core/src/periodic_seam.rs",
+        "crates/nurbs-core/tests/periodic_seam.rs",
+        "docs/design/nurbs-periodic-seam.md",
+        "crates/nurbs-core/tests/periodic_seam_candidates.rs",
+        "crates/nurbs-core/src/periodic_seam_verification.rs",
+        "docs/design/nurbs-periodic-seam-verification.md"
+      ],
+      "nativeApi": "nurbs_core::periodic_seam::curve_report"
+    },
+    {
+      "id": "NURBS-0136",
+      "name": "линейная перепараметризация кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "extreme conditioning production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::foundation::exact_edits::reparameterize_curve_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/exact_edits.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0137",
+      "name": "локальное изменение весов кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование кривых",
+      "remainingQualification": [
+        "continuous deviation certificate and regularity/self-intersection preservation not supplied"
+      ],
+      "nativeApi": "nurbs_core::weight_edit::curve",
+      "evidence": [
+        "crates/nurbs-core/src/weight_edit.rs",
+        "crates/nurbs-core/tests/weight_edit.rs",
+        "docs/design/nurbs-weight-edit.md"
+      ]
+    },
+    {
+      "id": "NURBS-0138",
+      "name": "вставка узлов поверхности по U/V",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::insert",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0139",
+      "name": "поднятие степени поверхности по U/V",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::elevate",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0140",
+      "name": "разбиение поверхности по изолинии",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::split",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0141",
+      "name": "обрезка прямоугольного параметрического домена",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface::Surface::trim",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0142",
+      "name": "перестановка U и V поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::transpose",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0143",
+      "name": "смена направления параметров поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::reverse",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0144",
+      "name": "разложение поверхности на рациональные патчи Безье",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface_edit::decompose",
+      "evidence": [
+        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md",
+        "crates/nurbs-core/examples/native_edits.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0145",
+      "name": "удаление узлов поверхности с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "editing a periodic axis requires the separate periodic API",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::remove_surface_knot_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/surface_simplification.rs",
+        "docs/design/nurbs-surface-simplification.md"
+      ]
+    },
+    {
+      "id": "NURBS-0146",
+      "name": "понижение степени поверхности с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "editing a periodic axis requires the separate periodic API",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::reduce_surface_degree_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/surface_simplification.rs",
+        "docs/design/nurbs-surface-simplification.md"
+      ]
+    },
+    {
+      "id": "NURBS-0147",
+      "name": "rebuild поверхности с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::foundation::approximate_edits::rebuild_surface_report",
+      "evidence": [
+        "crates/nurbs-core/src/foundation/approximate_edits.rs",
+        "crates/nurbs-core/tests/surface_rebuild.rs",
+        "docs/design/nurbs-surface-rebuild.md"
+      ]
+    },
+    {
+      "id": "NURBS-0148",
+      "name": "перенос шва периодической поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "full untrimmed domain with normalized phase correspondence; no topology or seam G1/G2 claim",
+        "author periodic-basis and 32x32 control-net restrictions; conservative bounds may refuse on work/precision limits",
+        "UV trim transfer, viewer adapters and export qualification are separate"
+      ],
+      "partialNativeApi": "nurbs_core::periodic_seam::surface_candidate",
+      "evidence": [
+        "crates/nurbs-core/src/periodic_seam.rs",
+        "crates/nurbs-core/tests/periodic_seam.rs",
+        "docs/design/nurbs-periodic-seam.md",
+        "crates/nurbs-core/tests/periodic_seam_candidates.rs",
+        "crates/nurbs-core/src/periodic_surface_verification.rs",
+        "crates/nurbs-core/tests/periodic_surface_verification.rs",
+        "docs/design/nurbs-periodic-surface-verification.md"
+      ],
+      "nativeApi": "nurbs_core::periodic_seam::surface_report"
+    },
+    {
+      "id": "NURBS-0149",
+      "name": "локальное изменение весов поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Редактирование поверхностей",
+      "remainingQualification": [
+        "continuous deviation certificate and regularity/self-intersection preservation not supplied"
+      ],
+      "nativeApi": "nurbs_core::weight_edit::surface",
+      "evidence": [
+        "crates/nurbs-core/src/weight_edit.rs",
+        "crates/nurbs-core/tests/weight_edit.rs",
+        "docs/design/nurbs-weight-edit.md"
+      ]
+    },
+    {
+      "id": "NURBS-0150",
+      "name": "длина кривой с оценкой численной ошибки",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "broader production coverage of extreme conditioning and near-precision-limit inputs pending"
+      ],
+      "nativeApi": "nurbs_core::curve_measure::length",
+      "evidence": [
+        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_measure.rs",
+        "crates/nurbs-core/examples/curve_measure.rs",
+        "docs/design/nurbs-curve-measure.md"
+      ]
+    },
+    {
+      "id": "NURBS-0151",
+      "name": "площадь поверхности с оценкой численной ошибки",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "broader high-conditioning and near-precision-limit production coverage pending"
+      ],
+      "nativeApi": "nurbs_core::surface_measure::area",
+      "evidence": [
+        "crates/nurbs-core/src/surface_measure.rs",
+        "crates/nurbs-core/src/surface_measure/jets.rs",
+        "crates/nurbs-core/tests/surface_measure.rs",
+        "crates/nurbs-core/examples/surface_measure.rs",
+        "docs/design/nurbs-surface-area.md"
+      ]
+    },
+    {
+      "id": "NURBS-0152",
+      "name": "точка кривой на заданной длине",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "broader production coverage of extreme conditioning and near-precision-limit inputs pending"
+      ],
+      "nativeApi": "nurbs_core::curve_measure::point_at_length",
+      "evidence": [
+        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_measure.rs",
+        "crates/nurbs-core/examples/curve_measure.rs",
+        "docs/design/nurbs-curve-measure.md"
+      ]
+    },
+    {
+      "id": "NURBS-0153",
+      "name": "равномерное деление кривой по длине",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "broader production coverage of extreme conditioning and near-precision-limit inputs pending"
+      ],
+      "nativeApi": "nurbs_core::curve_measure::divide_by_length",
+      "evidence": [
+        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_measure.rs",
+        "crates/nurbs-core/examples/curve_measure.rs",
+        "docs/design/nurbs-curve-measure.md"
+      ]
+    },
+    {
+      "id": "NURBS-0154",
+      "name": "ближайшая точка на кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_distance::nearest_point",
+      "evidence": [
+        "crates/nurbs-core/src/curve_distance.rs",
+        "crates/nurbs-core/tests/nearest_point.rs",
+        "docs/design/nurbs-nearest-point.md"
+      ]
+    },
+    {
+      "id": "NURBS-0155",
+      "name": "ближайшая точка на поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_distance::nearest_point",
+      "evidence": [
+        "crates/nurbs-core/src/surface_distance.rs",
+        "crates/nurbs-core/tests/surface_distance_queries.rs",
+        "docs/design/nurbs-surface-distance-queries.md"
+      ]
+    },
+    {
+      "id": "NURBS-0156",
+      "name": "расстояние между двумя кривыми",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_distance::distance",
+      "evidence": [
+        "crates/nurbs-core/src/curve_distance.rs",
+        "crates/nurbs-core/tests/curve_pair_distance.rs",
+        "docs/design/nurbs-curve-distance.md"
+      ]
+    },
+    {
+      "id": "NURBS-0157",
+      "name": "расстояние между кривой и поверхностью",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_surface_distance::distance",
+      "evidence": [
+        "crates/nurbs-core/src/curve_surface_distance.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/design/nurbs-curve-surface-distance.md"
+      ]
+    },
+    {
+      "id": "NURBS-0158",
+      "name": "расстояние между двумя поверхностями",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_distance::distance",
+      "evidence": [
+        "crates/nurbs-core/src/surface_distance.rs",
+        "crates/nurbs-core/tests/surface_distance_queries.rs",
+        "docs/design/nurbs-surface-distance-queries.md"
+      ]
+    },
+    {
+      "id": "NURBS-0159",
+      "name": "кривизна и кручение пространственной кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "broader high-conditioning and near-precision-limit production coverage pending"
+      ],
+      "nativeApi": "nurbs_core::curve_differential::at",
+      "evidence": [
+        "crates/nurbs-core/src/curve_differential.rs",
+        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/tests/curve_differential.rs",
+        "crates/nurbs-core/examples/curve_differential.rs",
+        "docs/design/nurbs-curve-differential.md"
+      ]
+    },
+    {
+      "id": "NURBS-0160",
+      "name": "главные кривизны и направления поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "local point query; does not trace curvature lines or certify whole-surface regularity",
+        "principal directions unresolved at umbilics or unseparated eigenvalues/vector enclosures",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_differential::at",
+      "evidence": [
+        "crates/nurbs-core/src/surface_differential.rs",
+        "crates/nurbs-core/tests/surface_differential.rs",
+        "docs/design/nurbs-surface-differential.md"
+      ]
+    },
+    {
+      "id": "NURBS-0161",
+      "name": "параметрические изолинии поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Измерения и запросы",
+      "remainingQualification": [
+        "continuous binary64 rounding certificate not supplied",
+        "periodic and high-condition input production qualification pending"
+      ],
+      "nativeApi": "nurbs_core::surface::Surface::iso",
+      "evidence": [
+        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/tests/native_edits.rs",
+        "docs/design/nurbs-native-edits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0162",
+      "name": "пересечение кривой с плоскостью",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "continuous outward root exclusion and strict monotone sign-change isolation implemented and independently tested",
+        "exact coplanar active-control coincidence, monotone interpolated endpoints and simple noninterpolated quadratic knot roots implemented; higher-degree noninterpolated endpoints remain incomplete",
+        "exact weighted and degree-elevated Bernstein midpoint powers and endpoint multiplicity 2..25, plus exact C0 periodic seam event ownership implemented; general tangency classification and higher-degree noninterpolated seam roots remain incomplete"
+      ],
+      "partialNativeApi": "nurbs_core::curve_plane::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_plane.rs",
+        "crates/nurbs-core/tests/curve_plane.rs",
+        "docs/design/nurbs-curve-plane.md"
+      ]
+    },
+    {
+      "id": "NURBS-0163",
+      "name": "пересечение двух пространственных кривых",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "partialNativeApi": "nurbs_core::intersection::intersect_curve_curve_report",
+      "evidence": ["crates/nurbs-core/src/intersection.rs", "docs/design/nurbs-curve-curve-audit.md"],
+      "remainingQualification": [
+        "original-curve outward interval exclusion implemented; coincidence, existence and contact qualification remain",
+        "independent geometric tests and invalid-input tests",
+        "documented domain, tolerance, degeneracy and resource limits"
+      ]
+    },
+    {
+      "id": "NURBS-0164",
+      "name": "пересечение кривой с поверхностью",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "outward certified plane reduction and general existence/uniqueness proof",
+        "rational and non-affine planar UV inversion and full overlap trimming",
+        "viewer adapters and export qualification"
+      ],
+      "partialNativeApi": "nurbs_core::intersection::intersect_curve_surface_report",
+      "evidence": [
+        "crates/nurbs-core/tests/curve_surface_overlap_regressions.rs",
+        "docs/design/nurbs-curve-surface-intersection-audit.md"
+      ]
+    },
+    {
+      "id": "NURBS-0165",
+      "name": "пересечение луча с поверхностью",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "boundary roots and tangencies may remain unresolved with explicit coverage",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::ray_surface::ray_intersections",
+      "evidence": [
+        "crates/nurbs-core/src/ray_surface.rs",
+        "crates/nurbs-core/tests/ray_surface.rs",
+        "docs/design/nurbs-ray-surface.md"
+      ]
+    },
+    {
+      "id": "NURBS-0166",
+      "name": "проверка самопересечений кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_self_intersection::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_self_intersection.rs",
+        "crates/nurbs-core/tests/curve_self_intersection.rs",
+        "docs/design/nurbs-self-intersection-audits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0167",
+      "name": "проверка самопересечений поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_self_intersection::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/surface_self_intersection.rs",
+        "crates/nurbs-core/src/surface_injectivity.rs",
+        "crates/nurbs-core/tests/surface_self_intersection.rs",
+        "docs/design/nurbs-self-intersection-audits.md"
+      ]
+    },
+    {
+      "id": "NURBS-0168",
+      "name": "проверка замкнутости UV-контура",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "periodic/unclamped endpoint closure not proved by this API",
+        "tolerant sewing and trim simplicity/region validity separate"
+      ],
+      "nativeApi": "nurbs_core::trim_domain::exact_loop_joins",
+      "evidence": [
+        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/tests/uv_closure.rs",
+        "docs/design/nurbs-uv-closure.md"
+      ]
+    },
+    {
+      "id": "NURBS-0169",
+      "name": "проверка простоты UV-контура",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "sufficient Bezier-loop proof; general NURBS injectivity and intersection witness not supplied",
+        "two-segment shared-endpoint loops may remain unproven"
+      ],
+      "nativeApi": "nurbs_core::trim_simplicity::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/trim_simplicity.rs",
+        "crates/nurbs-core/tests/uv_simplicity.rs",
+        "docs/design/nurbs-uv-simplicity.md"
+      ]
+    },
+    {
+      "id": "NURBS-0170",
+      "name": "проверка принадлежности UV-точки trim-области",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "UV winding domain; 3D projection and B-rep trimming separate",
+        "automatic contour role/orientation inference and complete region validity not supplied"
+      ],
+      "nativeApi": "nurbs_core::trim_domain::TrimDomain::classify_point",
+      "evidence": [
+        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/tests/uv_point.rs",
+        "docs/design/nurbs-uv-point.md"
+      ]
+    },
+    {
+      "id": "NURBS-0171",
+      "name": "trim-область с внутренними отверстиями",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "UV winding domain; 3D projection and B-rep trimming separate",
+        "automatic contour role/orientation inference and complete region validity not supplied"
+      ],
+      "nativeApi": "nurbs_core::trim_domain::TrimDomain::new",
+      "evidence": [
+        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/tests/uv_point.rs",
+        "docs/design/nurbs-uv-point.md"
+      ]
+    },
+    {
+      "id": "NURBS-0172",
+      "name": "перенос пространственного контура в UV",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_pullback::project",
+      "evidence": [
+        "crates/nurbs-core/src/curve_pullback.rs",
+        "crates/nurbs-core/tests/curve_pullback.rs",
+        "docs/design/nurbs-curve-pullback.md"
+      ]
+    },
+    {
+      "id": "NURBS-0173",
+      "name": "разбиение trim-контура на периодическом шве",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Пересечения и trim",
+      "remainingQualification": [
+        "typed Rust implementation or audit of existing API",
+        "independent geometric tests and invalid-input tests",
+        "documented domain, tolerance, degeneracy and resource limits"
+      ]
+    },
+    {
+      "id": "NURBS-0174",
+      "name": "согласование степеней и узлов сечений",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "continuous binary64 geometry preservation certificate not supplied",
+        "automatic orientation and closed-section phase alignment separate"
+      ],
+      "nativeApi": "nurbs_core::sections::compatible",
+      "evidence": [
+        "crates/nurbs-core/src/sections.rs",
+        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/tests/sections.rs",
+        "docs/design/nurbs-section-compatibility.md"
+      ]
+    },
+    {
+      "id": "NURBS-0175",
+      "name": "согласование ориентации сечений",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "endpoint heuristic only; continuous decision rounding certificate not supplied",
+        "global surface orientation and closed-section phase inference not supplied"
+      ],
+      "nativeApi": "nurbs_core::sections::orient",
+      "evidence": [
+        "crates/nurbs-core/src/sections.rs",
+        "crates/nurbs-core/tests/sections.rs",
+        "docs/design/nurbs-section-compatibility.md"
+      ]
+    },
+    {
+      "id": "NURBS-0176",
+      "name": "согласование фазы замкнутых сечений",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "explicit corresponding landmark points; near-minimal distance witness does not prove unique phase or angular accuracy",
+        "periodic or exactly closed clamped storage; orientation and global loft-twist optimization are separate",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::section_phase::align",
+      "evidence": [
+        "crates/nurbs-core/src/section_phase.rs",
+        "crates/nurbs-core/src/periodic_seam_verification.rs",
+        "crates/nurbs-core/tests/section_phase.rs",
+        "docs/design/nurbs-section-phase.md"
+      ]
+    },
+    {
+      "id": "NURBS-0177",
+      "name": "проверка G0 между кривыми",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "endpoint certificate only; whole-contour simplicity and blend construction separate",
+        "extreme numeric conditioning may remain unresolved or exceed interval limits"
+      ],
+      "nativeApi": "nurbs_core::curve_join::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_join.rs",
+        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/tests/curve_join.rs",
+        "docs/design/nurbs-curve-join.md"
+      ]
+    },
+    {
+      "id": "NURBS-0178",
+      "name": "проверка G1 между кривыми",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "endpoint certificate only; whole-contour simplicity and blend construction separate",
+        "extreme numeric conditioning may remain unresolved or exceed interval limits"
+      ],
+      "nativeApi": "nurbs_core::curve_join::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_join.rs",
+        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/tests/curve_join.rs",
+        "docs/design/nurbs-curve-join.md"
+      ]
+    },
+    {
+      "id": "NURBS-0179",
+      "name": "проверка G2 между кривыми",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "endpoint certificate only; whole-contour simplicity and blend construction separate",
+        "extreme numeric conditioning may remain unresolved or exceed interval limits"
+      ],
+      "nativeApi": "nurbs_core::curve_join::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_join.rs",
+        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/tests/curve_join.rs",
+        "docs/design/nurbs-curve-join.md"
+      ]
+    },
+    {
+      "id": "NURBS-0180",
+      "name": "проверка G0 между поверхностями",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "affine boundary correspondence is explicit; general reparameterization search is not implemented",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_join::inspect_g0",
+      "evidence": [
+        "crates/nurbs-core/src/surface_join.rs",
+        "crates/nurbs-core/tests/surface_join.rs",
+        "docs/design/nurbs-surface-g0.md"
+      ]
+    },
+    {
+      "id": "NURBS-0181",
+      "name": "проверка G1 между поверхностями",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "normalized affine boundary correspondence with G0 and unoriented normal-chord tolerances; manifold adjacency and G2 are separate",
+        "C1 free-axis basis required; unproven regularity/work/precision gives Unresolved; storage seam continuity not certified",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "partialNativeApi": "nurbs_core::continuity::inspect_surface_jets_checked_report",
+      "evidence": [
+        "crates/nurbs-core/src/surface_g1.rs",
+        "crates/nurbs-core/src/surface_measure/jets.rs",
+        "crates/nurbs-core/tests/surface_g1.rs",
+        "docs/design/nurbs-surface-g1.md"
+      ],
+      "nativeApi": "nurbs_core::surface_g1::inspect"
+    },
+    {
+      "id": "NURBS-0182",
+      "name": "проверка G2 между поверхностями",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "continuous world-tensor G2 under explicit normalized affine correspondence implemented, including transverse speed/shear/nonlinear parameter freedom",
+        "inferred and validated nonaffine seam correspondence remains unimplemented",
+        "different boundary degrees and knot layouts verified under explicit affine correspondence; inferred general correspondence qualification remains incomplete"
+      ],
+      "partialNativeApi": "nurbs_core::continuity::inspect_surface_jets_checked_report",
+      "evidence": [
+        "crates/nurbs-core/src/continuity.rs",
+        "crates/nurbs-core/tests/surface_jet_inspection.rs",
+        "docs/design/nurbs-surface-jet-inspection.md",
+        "crates/nurbs-core/src/surface_shape_operator.rs",
+        "crates/nurbs-core/tests/surface_shape_operator.rs",
+        "docs/design/nurbs-surface-shape-operator.md",
+        "crates/nurbs-core/src/surface_g2.rs",
+        "crates/nurbs-core/tests/surface_g2.rs",
+        "docs/design/nurbs-surface-g2-affine.md"
+      ],
+      "partialGeometricApi": "nurbs_core::surface_shape_operator::at",
+      "partialContinuousGeometricApi": "nurbs_core::surface_shape_operator::boundary_bounds",
+      "partialSeamGeometricApi": "nurbs_core::surface_g2::inspect"
+    },
+    {
+      "id": "NURBS-0183",
+      "name": "проверка регулярности поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::surface_regularity::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/surface_regularity.rs",
+        "crates/nurbs-core/tests/surface_regularity.rs",
+        "docs/design/nurbs-surface-regularity.md"
+      ]
+    },
+    {
+      "id": "NURBS-0184",
+      "name": "оценка отклонения кривой после редактирования",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_deviation::inspect",
+      "evidence": [
+        "crates/nurbs-core/src/curve_deviation.rs",
+        "crates/nurbs-core/tests/curve_deviation.rs",
+        "docs/design/nurbs-curve-deviation.md"
+      ]
+    },
+    {
+      "id": "NURBS-0185",
+      "name": "оценка отклонения поверхности после редактирования",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Совместимость и качество",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::continuity::deviation::positional_upper",
+      "evidence": [
+        "crates/nurbs-core/src/continuity/deviation.rs",
+        "crates/nurbs-core/tests/surface_deviation.rs",
+        "docs/design/nurbs-surface-deviation.md"
+      ]
+    },
+    {
+      "id": "NURBS-0186",
+      "name": "плоский offset кривой с допуском",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "corners require an explicit join; self-intersection cleanup and region topology are separate operations",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_offset::approximate_curve",
+      "evidence": [
+        "crates/nurbs-core/src/curve_offset.rs",
+        "crates/nurbs-core/tests/curve_offset.rs",
+        "docs/design/nurbs-planar-offset-native.md"
+      ]
+    },
+    {
+      "id": "NURBS-0187",
+      "name": "стыки offset-контура",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "round joins and automatic span trimming are not implemented by this API",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_offset_join::miter_at_knot",
+      "evidence": [
+        "crates/nurbs-core/src/curve_offset_join.rs",
+        "crates/nurbs-core/tests/offset_join.rs",
+        "docs/design/nurbs-offset-joins.md"
+      ]
+    },
+    {
+      "id": "NURBS-0188",
+      "name": "очистка самопересечений offset-контура",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "prove topology transfer from the original continuous NURBS offset to the represented chord arrangement",
+        "handle near tangencies, coincident branches and unresolved topology explicitly",
+        "qualify the end-to-end offset cleanup contract and resource limits"
+      ],
+      "partialNativeApi": "nurbs_core::chord_fill_selection::boundary_curves",
+      "evidence": [
+        "crates/nurbs-core/src/chord_fill_selection.rs",
+        "crates/nurbs-core/tests/chord_region.rs",
+        "docs/design/nurbs-offset-region-audit.md"
+      ]
+    },
+    {
+      "id": "NURBS-0189",
+      "name": "плоская эквидистантная дорожка обработки",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "typed Rust implementation or audit of existing API",
+        "independent geometric tests and invalid-input tests",
+        "documented domain, tolerance, degeneracy and resource limits"
+      ]
+    },
+    {
+      "id": "NURBS-0190",
+      "name": "параллельные сечения поверхности плоскостями",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "typed Rust implementation or audit of existing API",
+        "independent geometric tests and invalid-input tests",
+        "documented domain, tolerance, degeneracy and resource limits"
+      ]
+    },
+    {
+      "id": "NURBS-0191",
+      "name": "адаптивная тесселяция кривой",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "box-based error bounds are conservative; optimal chord counts are not guaranteed",
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_tessellation::tessellate",
+      "evidence": [
+        "crates/nurbs-core/src/curve_tessellation.rs",
+        "crates/nurbs-core/tests/curve_tessellation.rs",
+        "docs/design/nurbs-curve-tessellation-native.md"
+      ]
+    },
+    {
+      "id": "NURBS-0192",
+      "name": "адаптивная тесселяция поверхности",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "whole untrimmed natural domain; periodic seams are cut, not welded",
+        "conservative box bounds; no optimal triangle count or mesh-topology certification",
+        "cross-patch agreement is NURBS-0193; viewer adapters and export qualification are separate"
+      ],
+      "nativeApi": "nurbs_core::surface_tessellation::tessellate",
+      "evidence": [
+        "crates/nurbs-core/src/surface_tessellation.rs",
+        "crates/nurbs-core/tests/surface_tessellation.rs",
+        "docs/design/nurbs-surface-tessellation-native.md"
+      ]
+    },
+    {
+      "id": "NURBS-0193",
+      "name": "согласованная тесселяция общих границ патчей",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::shared_tessellation::tessellate",
+      "evidence": [
+        "crates/nurbs-core/src/shared_tessellation.rs",
+        "crates/nurbs-core/tests/shared_tessellation.rs",
+        "docs/design/nurbs-shared-tessellation.md"
+      ]
+    },
+    {
+      "id": "NURBS-0194",
+      "name": "аффинное преобразование рациональной геометрии",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "continuous binary64 affine construction error not certified"
+      ],
+      "nativeApi": "nurbs_core::affine::curve",
+      "evidence": [
+        "crates/nurbs-core/src/affine.rs",
+        "crates/nurbs-core/tests/affine_bounds.rs",
+        "docs/design/nurbs-affine-bounds.md"
+      ]
+    },
+    {
+      "id": "NURBS-0195",
+      "name": "ограничивающий объём рациональной геометрии",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "minimal boxes and floating-point evaluator enclosure not supplied"
+      ],
+      "nativeApi": "nurbs_core::bounds::union",
+      "evidence": [
+        "crates/nurbs-core/src/bounds.rs",
+        "crates/nurbs-core/tests/affine_bounds.rs",
+        "docs/design/nurbs-affine-bounds.md",
+        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/surface.rs"
+      ]
+    },
+    {
+      "id": "NURBS-0196",
+      "name": "проверка ориентации нормалей оболочки",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "brep_core::volume_validity::inspect",
+      "evidence": [
+        "crates/brep-core/src/volume_validity.rs",
+        "crates/brep-core/src/shell_orientation.rs",
+        "docs/design/nurbs-normal-orientation.md"
+      ]
+    },
+    {
+      "id": "NURBS-0197",
+      "name": "проверка водонепроницаемости набора патчей",
+      "status": "planned",
+      "prioritySet": "core-200",
+      "category": "Производственные операции",
+      "partialNativeApi": "brep_core::watertight::inspect",
+      "evidence": ["crates/brep-core/src/watertight.rs", "crates/brep-core/tests/watertight.rs", "docs/design/nurbs-watertight-audit.md"],
+      "remainingQualification": [
+        "continuous seam audit, unique whole-edge affine matches and explicit partial-boundary qualification implemented; automatic partial and nonlinear correspondence remain",
+        "independent geometric tests and invalid-input tests",
+        "documented domain, tolerance, degeneracy and resource limits"
+      ]
+    },
+    {
+      "id": "NURBS-0198",
+      "name": "сертификат непрерывного отклонения с учётом округления",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Точность",
+      "remainingQualification": [
+        "viewer adapters and export qualification are outside native completion"
+      ],
+      "nativeApi": "nurbs_core::curve_surface_agreement::verify",
+      "evidence": [
+        "crates/nurbs-core/src/curve_surface_agreement.rs",
+        "crates/nurbs-core/src/curve_surface_composition.rs",
+        "docs/design/nurbs-rounding-deviation-certificate.md"
+      ]
+    },
+    {
+      "id": "NURBS-0199",
+      "name": "диагностика плохо обусловленной рациональной геометрии",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Точность",
+      "remainingQualification": [
+        "scale indicators only; evaluator condition number and continuous error certificate not supplied"
+      ],
+      "nativeApi": "nurbs_core::conditioning::curve",
+      "evidence": [
+        "crates/nurbs-core/src/conditioning.rs",
+        "crates/nurbs-core/tests/conditioning.rs",
+        "docs/design/nurbs-conditioning.md"
+      ]
+    },
+    {
+      "id": "NURBS-0200",
+      "name": "нормализация масштаба и единиц геометрии",
+      "status": "native",
+      "prioritySet": "core-200",
+      "category": "Точность",
+      "remainingQualification": [
+        "continuous binary64 round-trip/deviation certificate not supplied",
+        "unit metadata and automatic tolerance rescaling not supplied"
+      ],
+      "nativeApi": "nurbs_core::coordinate_frame::curve",
+      "evidence": [
+        "crates/nurbs-core/src/coordinate_frame.rs",
+        "crates/nurbs-core/tests/coordinate_frame.rs",
+        "docs/design/nurbs-coordinate-frame.md"
+      ]
+    }
+  ],
+  "priorityTargetCount": 150,
+  "nativeCompletionRule": "Native Rust completion is independent of viewer adapters: typed API, independent geometry and invalid-input tests, documented domains, limits and approximation guarantees. Legacy qualified status additionally tracks application integration."
+}

@@ -46,3 +46,40 @@ it('roundtrips rational snap targets through structured cloning without snapping
  expect(result.point).not.toEqual(chord)
  expect(resolveModelingSnap(chord,{points:[],segments:[curved]}, {project:p=>[p[0]*100,p[1]*100],grid:0,geometry:false}).kind).toBeNull()
 })
+
+it('matches the frozen geometry oracle and retains cache and exact curve references', async () => {
+ const {referenceBodySnapGeometry}=await import('../benchmarks/modelgraph/solidSnapGeometry-reference')
+ const fixtures=[body(createBrepBox([-2,3,1],[8,15,20])),body(createBrepCylinder(5,10),8),body(createBrepSphere(5),4)]
+ fixtures.push({...fixtures[0],brep:undefined} as unknown as typeof fixtures[number])
+ for(const fixture of fixtures){
+  const before=structuredClone(fixture),actual=bodySnapGeometry(fixture),expected=referenceBodySnapGeometry(fixture)
+  expect(actual.points.map(p=>p.kind)).toEqual(expected.points.map(p=>p.kind))
+  expect(actual.segments).toHaveLength(expected.segments.length)
+  const close=(a:readonly number[],b:readonly number[])=>a.forEach((v,i)=>expect(v).toBeCloseTo(b[i],9))
+  actual.points.forEach((p,i)=>close(p.point,expected.points[i].point))
+  actual.segments.forEach((s,i)=>{
+   const e=expected.segments[i];close(s.a,e.a);close(s.b,e.b)
+   expect(Boolean(s.nurbs)).toBe(Boolean(e.nurbs))
+   if(s.nurbs&&e.nurbs){expect(s.nurbs.curve).toBe(e.nurbs.curve);expect(s.nurbs.start).toBe(e.nurbs.start);expect(s.nurbs.end).toBe(e.nurbs.end)}
+  })
+  expect(bodySnapGeometry(fixture)).toBe(actual)
+  expect(fixture).toEqual(before)
+ }
+})
+
+it('preserves suppression of coplanar internal edges and rejects ellipse center hints', async () => {
+ const {referenceBodySnapGeometry}=await import('../benchmarks/modelgraph/solidSnapGeometry-reference')
+ const box=body(createBrepBox([0,0,0],[10,20,30]))
+ const split=structuredClone(box)
+ split.brep.faces=[split.brep.faces[0],structuredClone(split.brep.faces[0])]
+ const native=bodySnapGeometry(split),reference=referenceBodySnapGeometry(split)
+ expect(native.points.filter(p=>p.kind==='vertex'||p.kind==='midpoint')).toEqual(reference.points.filter(p=>p.kind==='vertex'||p.kind==='midpoint'))
+ expect(native.segments.length).toBe(reference.segments.length)
+ expect(native.segments.length).toBeLessThan(bodySnapGeometry(box).segments.length)
+ const ellipse=body(createBrepCylinder(5,10))
+ for(const edge of ellipse.brep.edges)for(const p of edge.curve.controlPoints)p[1]*=2
+ ellipse.brep.faces=[]
+ const actual=bodySnapGeometry(ellipse),expected=referenceBodySnapGeometry(ellipse)
+ expect(actual.points.filter(p=>p.kind==='center')).toEqual(expected.points.filter(p=>p.kind==='center'))
+ expect(actual.points.filter(p=>p.kind==='center')).toHaveLength(0)
+})

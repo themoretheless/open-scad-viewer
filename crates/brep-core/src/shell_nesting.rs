@@ -20,6 +20,10 @@ pub struct Report {
 }
 pub fn inspect(model: &Model, tolerance_mm: f64, tolerance_uv: f64,
     max_pairs: usize, max_cells: usize, max_domain_cells: usize) -> Result<Report> {
+    inspect_with_boundary(model,tolerance_mm,tolerance_uv,max_pairs,max_cells,max_domain_cells,None)
+}
+pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f64,
+    max_pairs:usize,max_cells:usize,max_domain_cells:usize,boundary:Option<&crate::boundary_embedding::Report>)->Result<Report> {
     model.validate()?;
     let n = model.shells.len();
     if n == 0 || n > 448 || model.shells.iter().any(|s| !s.closed || s.faces.is_empty())
@@ -40,8 +44,19 @@ pub fn inspect(model: &Model, tolerance_mm: f64, tolerance_uv: f64,
             return Ok(out);
         }
         let remaining = total_pairs-out.pairs.len();
-        let r = shell_relation::inspect(&shells[a],&shells[b],tolerance_mm,tolerance_uv,
-            ((max_cells-out.cells)/remaining).max(2),((max_domain_cells-out.domain_cells)/remaining).max(2))?;
+        let pair_cells=((max_cells-out.cells)/remaining).max(2);
+        let pair_domains=((max_domain_cells-out.domain_cells)/remaining).max(2);
+        let mut r = shell_relation::inspect(&shells[a],&shells[b],tolerance_mm,tolerance_uv,pair_cells,pair_domains)?;
+        let separated=boundary.is_some_and(|proof|{
+            let pairs=&proof.intersections.pairs;
+            proof.proven && pairs.all_pairs_classified && pairs.next_pair.is_none()
+                && model.shells[a].faces.iter().all(|fa|model.shells[b].faces.iter().all(|fb|
+                    pairs.pairs.iter().any(|p|p.reason=="pair-disjoint" && p.boundary.is_none()
+                        && (p.faces==[fa.face,fb.face] || p.faces==[fb.face,fa.face]))))
+        });
+        if r.reason=="boundary-separation-unproven" && separated {
+            shell_relation::classify_exact_boundary_witnesses(&shells[a],&shells[b],&mut r,tolerance_uv,pair_cells,pair_domains)?;
+        }
         out.cells += r.boundary.cells + r.witness_parity.iter().flatten().map(|p|p.cells).sum::<usize>();
         out.domain_cells += r.boundary.domain_cells + r.witness_parity.iter().flatten().map(|p|p.domain_cells).sum::<usize>();
         out.pairs.push(Pair { shells: [a,b], result: r });

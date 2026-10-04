@@ -33,6 +33,11 @@ fn lex(source: &str) -> R<Vec<Token>> {
     if source.encode_utf16().count() > 262144 {
         return Err(crate::error("ModelGraph Text exceeds 256 KiB."));
     }
+    // Rush owns string/comment boundaries. CAD numeric units and range/fluent
+    // punctuation are refined below: the upstream fullkit intentionally groups
+    // e.g. `1..3` and `10mm.move` into broad number tokens.
+    let lexed = themoretheless_tokenizer_rush::lex(source);
+    let mut token_index = 0;
     let b = source.as_bytes();
     let mut p = 0;
     let mut out = Vec::new();
@@ -42,39 +47,28 @@ fn lex(source: &str) -> R<Vec<Token>> {
             p += 1;
             continue;
         }
-        if source[p..].starts_with("//") {
-            while p < b.len() && b[p] != b'\n' {
-                p += 1
+        while lexed.tokens[token_index].span.end <= p {
+            token_index += 1;
+        }
+        let rush_token = &lexed.tokens[token_index];
+        let kind = rush_token.kind.as_str();
+        if kind == "comment" {
+            if source[p..].starts_with("/*") && !source[p..rush_token.span.end].ends_with("*/") {
+                return Err(crate::error(format!("Unterminated Rush comment at {p}")));
             }
+            p = rush_token.span.end;
             continue;
         }
-        if source[p..].starts_with("/*")
-            && let Some(end) = source[p + 2..].find("*/")
-        {
-            p += end + 4;
-            continue;
-        }
-        if b[p] == b'"' {
-            p += 1;
-            let mut closed = false;
-            while p < b.len() {
-                if b[p] == b'\n' {
-                    break;
-                }
-                if b[p] == b'"' {
-                    p += 1;
-                    closed = true;
-                    break;
-                }
-                if b[p] == b'\\' {
-                    p += 1
-                }
-                if p < b.len() {
-                    p += source[p..].chars().next().unwrap().len_utf8()
-                }
-            }
-            if !closed {
-                return Err(crate::error(format!("Unexpected character at {start}: \"")));
+        if kind == "string" {
+            p = rush_token.span.end;
+            let text = &source[start..p];
+            if lexed
+                .diagnostics
+                .iter()
+                .any(|d| d.span.start < p && d.span.end > start)
+                || text.contains('\n')
+            {
+                return Err(crate::error(format!("Invalid Rush string at {start}")));
             }
         } else if b[p].is_ascii_digit()
             || (b[p] == b'.' && b.get(p + 1).is_some_and(u8::is_ascii_digit))
@@ -141,7 +135,10 @@ fn lex(source: &str) -> R<Vec<Token>> {
             )));
         }
         out.push(Token {
-            text: source[start..p].into(),
+            text: match &source[start..p] {
+                "return" => "ret".into(),
+                text => text.into(),
+            },
             start,
             end: p,
         });
@@ -1287,8 +1284,21 @@ pub fn parse(source: &str) -> R<Vec<Statement>> {
                     json!({"kind":"statement","value":p.expr(0)?})
                 } else {
                     let name = p.pop()?;
+                    let id = if p.peek() == "@" {
+                        p.pop()?;
+                        p.take("id")?;
+                        p.take("(")?;
+                        let raw = p.pop()?;
+                        let value = value_codec::from_str::<J>(&raw).map_err(|e| crate::error(e.to_string()))?;
+                        let id = value.as_str().ok_or_else(||crate::error("Node ID must be a string"))?.to_owned();
+                        if id.is_empty() || id.len()>64 || !id.bytes().all(|b|b.is_ascii_alphanumeric() || b==b'_' || b==b'-') { return p.err("Node ID must contain 1..64 ASCII letters, digits, underscores or hyphens"); }
+                        p.take(")")?;
+                        Some(id)
+                    } else { None };
                     p.take("=")?;
-                    json!({"kind":"bind","name":&name,"value":p.expr(0)?})
+                    let mut node = json!({"kind":"bind","name":&name,"value":p.expr(0)?});
+                    if let Some(id)=id { node["author_id"]=json!(id); }
+                    node
                 }
             }
         };

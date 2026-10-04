@@ -1,0 +1,63 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+stderr | tests/directModelerUi.test.ts > reports approximate CPU transparency and clears the status after reducing the scene
+[Vue warn]: Unhandled error during execution of render function 
+  at <DirectModeler open=true locale="en" canAppend=true  ... > 
+  at <App>
+[Vue warn]: Unhandled error during execution of component update 
+  at <DirectModeler open=true locale="en" canAppend=true  ... > 
+  at <App>
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (245 tests | 1 failed) 53993ms
+   × reports approximate CPU transparency and clears the status after reducing the scene 36ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > reports approximate CPU transparency and clears the status after reducing the scene
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/directModelerUi.test.ts:3442:74
+    3440|   ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')…
+    3441|   const before=ui.doc()
+    3442|   expect(ui.all().some(n=>n.props['aria-label']==='transparency-limit'…
+       |                                                                          ^
+    3443|   expect(ui.all(ui.svg()).some(n=>n.props['data-body'])).toBe(true)
+    3444|   await ui.click('Scene');await ui.click('Hide: '+before.bodies.at(-1)…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: Transparency operation limit exceeded
+ ❯ TransparentBsp.<anonymous> tests/directModelerUi.test.ts:3438:88
+ ❯ TransparentBsp.ordered node_modules/@vitest/spy/dist/index.js:332:34
+ ❯ ComputedRefImpl.fn src/features/DirectModeler.vue:2249:38
+ ❯ refreshComputed node_modules/@vue/reactivity/dist/reactivity.cjs.js:422:28
+ ❯ isDirty node_modules/@vue/reactivity/dist/reactivity.cjs.js:393:68
+ ❯ refreshComputed node_modules/@vue/reactivity/dist/reactivity.cjs.js:411:90
+ ❯ ComputedRefImpl.get value [as value] node_modules/@vue/reactivity/dist/reactivity.cjs.js:1743:5
+ ❯ unref node_modules/@vue/reactivity/dist/reactivity.cjs.js:1568:45
+ ❯ Object.get node_modules/@vue/reactivity/dist/reactivity.cjs.js:1574:64
+ ❯ src/features/DirectModeler.vue:3397:314
+
+This error originated in "tests/directModelerUi.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 257 passed (258)
+     Errors  1 error
+   Start at  16:03:03
+   Duration  55.78s (transform 1.89s, setup 0ms, import 2.10s, tests 55.79s, environment 10ms)
+

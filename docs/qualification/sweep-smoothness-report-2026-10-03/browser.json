@@ -1,0 +1,463 @@
+{
+  "schema": "sweep-multispan-browser-seams/1",
+  "recordedAt": "2026-10-03T14:44:02.355Z",
+  "browser": "151.0.7922.34",
+  "scope": "Finite exact represented seam fixtures through TypeScript, binary transport and native WASM. Common clamped along-seam basis, Bezier cross direction, at most 33 controls; not arbitrary moving-frame G1/G2 qualification.",
+  "geometryWasmSha256": "47e6d7c9bd822449f4d845e59ba669a45dbcab1a48c9059285422a51815802e3",
+  "cases": [
+    {
+      "name": "common-rational-multispan-C2",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 2819
+      }
+    },
+    {
+      "name": "common-rational-multispan-C2-transposed",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 2819
+      }
+    },
+    {
+      "name": "one-ULP-jet-mismatch",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "homogeneous-jets-different",
+        "regularityCertified": false,
+        "work": 2697
+      }
+    },
+    {
+      "name": "different-along-basis",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "exact-work-exhaustion",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "exact-jet-work-unresolved",
+        "regularityCertified": false,
+        "work": 2818
+      }
+    },
+    {
+      "name": "common-multispan-C1",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "exactIdentity": true,
+        "reason": "exact-regular-bspline-strip-jets",
+        "regularityCertified": true,
+        "work": 1574
+      }
+    },
+    {
+      "name": "C1-basis-cannot-claim-C2",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "unsupported-unclamped-basis",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": false,
+        "reason": "unsupported-bezier-strip-basis",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "singular-exact-jets",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "exactIdentity": true,
+        "reason": "seam-regularity-unproved",
+        "regularityCertified": false,
+        "work": 1963
+      }
+    },
+    {
+      "name": "whole-multispan-seam-set-C2",
+      "expected": true,
+      "report": {
+        "exactG1G2Certified": true,
+        "certifiedOrder": 2,
+        "exactWork": 5913,
+        "unresolvedSeams": [],
+        "seams": [
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 2819
+          },
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 3094
+          }
+        ],
+        "certified": true
+      }
+    },
+    {
+      "name": "shared-seam-work-exhaustion",
+      "expected": false,
+      "report": {
+        "exactG1G2Certified": false,
+        "certifiedOrder": null,
+        "exactWork": 2819,
+        "unresolvedSeams": [
+          1
+        ],
+        "seams": [
+          {
+            "certified": true,
+            "exactIdentity": true,
+            "reason": "exact-regular-bspline-strip-jets",
+            "regularityCertified": true,
+            "work": 2819
+          },
+          {
+            "certified": false,
+            "exactIdentity": false,
+            "reason": "exact-jet-work-unresolved",
+            "regularityCertified": false,
+            "work": 0
+          }
+        ],
+        "certified": false
+      }
+    },
+    {
+      "name": "projective-rational-G2-seam-0",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "certifiedOrder": 2,
+        "exactIdentity": true,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-regular-projective-strip-jets",
+        "regularityCertified": true,
+        "work": 4902
+      }
+    },
+    {
+      "name": "projective-rational-G2-seam-1",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "certifiedOrder": 2,
+        "exactIdentity": true,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-regular-projective-strip-jets",
+        "regularityCertified": true,
+        "work": 4958
+      }
+    },
+    {
+      "name": "projective-rational-G2-seam-2",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "certifiedOrder": 2,
+        "exactIdentity": true,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-regular-projective-strip-jets",
+        "regularityCertified": true,
+        "work": 4902
+      }
+    },
+    {
+      "name": "projective-rational-G2-seam-3",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "certifiedOrder": 2,
+        "exactIdentity": true,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-regular-projective-strip-jets",
+        "regularityCertified": true,
+        "work": 4958
+      }
+    },
+    {
+      "name": "projective-changed-curvature-G1",
+      "expected": true,
+      "report": {
+        "certified": true,
+        "certifiedOrder": 1,
+        "exactIdentity": true,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-regular-projective-strip-jets",
+        "regularityCertified": true,
+        "work": 3720
+      }
+    },
+    {
+      "name": "projective-changed-curvature-G2",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "certifiedOrder": null,
+        "exactIdentity": false,
+        "method": "constant-projective-strip-jets",
+        "reason": "constant-projective-jet-relation-different",
+        "regularityCertified": false,
+        "work": 4478
+      }
+    },
+    {
+      "name": "projective-zero-budget",
+      "expected": false,
+      "report": {
+        "certified": false,
+        "certifiedOrder": null,
+        "exactIdentity": false,
+        "method": "constant-projective-strip-jets",
+        "reason": "exact-jet-work-unresolved",
+        "regularityCertified": false,
+        "work": 0
+      }
+    },
+    {
+      "name": "whole-projective-cyclic-G2",
+      "expected": true,
+      "report": {
+        "method": "constant-projective-strip-jets",
+        "exactG1G2Certified": true,
+        "certifiedOrder": 2,
+        "exactWork": 19720,
+        "unresolvedSeams": [],
+        "seams": [
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4902
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4958
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4902
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4958
+          }
+        ],
+        "certified": true
+      }
+    },
+    {
+      "name": "projective-closing-seam-budget-exhausted",
+      "expected": false,
+      "report": {
+        "method": "constant-projective-strip-jets",
+        "exactG1G2Certified": false,
+        "certifiedOrder": null,
+        "exactWork": 14762,
+        "unresolvedSeams": [
+          3
+        ],
+        "seams": [
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4902
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4958
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 4902
+          },
+          {
+            "certified": false,
+            "certifiedOrder": null,
+            "exactIdentity": false,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-jet-work-unresolved",
+            "regularityCertified": false,
+            "work": 0
+          }
+        ],
+        "certified": false
+      }
+    },
+    {
+      "name": "actual-affine-progressive-sweep-G2-profile-joins",
+      "expected": true,
+      "report": {
+        "method": "constant-projective-strip-jets",
+        "exactG1G2Certified": true,
+        "certifiedOrder": 2,
+        "exactWork": 48508,
+        "unresolvedSeams": [],
+        "seams": [
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 12325
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 11916
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 12325
+          },
+          {
+            "certified": true,
+            "certifiedOrder": 2,
+            "exactIdentity": true,
+            "method": "constant-projective-strip-jets",
+            "reason": "exact-regular-projective-strip-jets",
+            "regularityCertified": true,
+            "work": 11942
+          }
+        ],
+        "certified": true
+      }
+    },
+    {
+      "name": "actual-progressive-sweep-internal-kink-refused",
+      "expected": false,
+      "report": {
+        "method": "constant-projective-strip-jets",
+        "exactG1G2Certified": false,
+        "certifiedOrder": null,
+        "exactWork": 1810,
+        "unresolvedSeams": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "seams": [
+          {
+            "certified": false,
+            "certifiedOrder": null,
+            "exactIdentity": false,
+            "method": "constant-projective-strip-jets",
+            "reason": "linear-along-jet-smoothness-unproved",
+            "regularityCertified": false,
+            "work": 480
+          },
+          {
+            "certified": false,
+            "certifiedOrder": null,
+            "exactIdentity": false,
+            "method": "constant-projective-strip-jets",
+            "reason": "linear-along-jet-smoothness-unproved",
+            "regularityCertified": false,
+            "work": 425
+          },
+          {
+            "certified": false,
+            "certifiedOrder": null,
+            "exactIdentity": false,
+            "method": "constant-projective-strip-jets",
+            "reason": "linear-along-jet-smoothness-unproved",
+            "regularityCertified": false,
+            "work": 480
+          },
+          {
+            "certified": false,
+            "certifiedOrder": null,
+            "exactIdentity": false,
+            "method": "constant-projective-strip-jets",
+            "reason": "linear-along-jet-smoothness-unproved",
+            "regularityCertified": false,
+            "work": 425
+          }
+        ],
+        "certified": false
+      }
+    }
+  ],
+  "passed": true
+}

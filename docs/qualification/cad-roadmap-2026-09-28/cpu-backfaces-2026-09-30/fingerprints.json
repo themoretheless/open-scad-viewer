@@ -1,0 +1,6 @@
+{
+  "src/features/DirectModeler.vue": "456e95d0b1c8806515c2be30cc4d4620f714aadd030137626bb17c555249364c",
+  "tests/directModelerUi.test.ts": "d2e470524d04d905819f0709ee68c77244bdda68bd41c262d03f9ee821ff620b",
+  "scripts/check-solid-flange-display-browser.mjs": "806b6df894376a4688e72796adb6c30fd872c0153f4fa6940d100f5157b98945",
+  "dist/index.html": "0c6fe15ce28ba499c3bd881dbd435e5705ee8b15840cf07556ae3e77bcc3d88e"
+}

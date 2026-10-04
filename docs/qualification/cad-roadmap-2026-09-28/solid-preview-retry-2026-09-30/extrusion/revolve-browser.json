@@ -1,0 +1,12 @@
+{
+  "operation": "extrusion",
+  "browser": "151.0.7922.34",
+  "workerRequests": 4,
+  "retryFailure": true,
+  "applyWithoutRecompute": true,
+  "invalidQuantityClearsPreview": true,
+  "undoRedo": true,
+  "keyboard": true,
+  "tabPresses": 580,
+  "downloads": 6
+}

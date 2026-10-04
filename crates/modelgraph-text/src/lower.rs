@@ -148,6 +148,11 @@ struct Compiler {
 
     active: Types,
     serial: usize,
+    stable_ids: bool,
+    owner: String,
+    owner_serial: usize,
+    show_serial: usize,
+    author_ids: Set<String>,
     check_serial: usize,
     expansions: usize,
 }
@@ -157,10 +162,20 @@ impl Compiler {
             return Err(crate::error("At most 128 geometry nodes"));
         }
         self.serial += 1;
-        let id = format!("n{}", self.serial);
+        let id = if self.stable_ids && !self.owner.is_empty() {
+            self.owner_serial += 1;
+            let hash = self.owner.bytes().fold(0xcbf29ce484222325u64, |h,b| (h ^ u64::from(b)).wrapping_mul(0x100000001b3));
+            format!("r{hash:016x}_{}", self.owner_serial)
+        } else { format!("n{}", self.serial) };
+        if self.nodes.iter().any(|n| s(n,"id") == id) { return Err(crate::error("Node identity collision")); }
         node["id"] = json!(&id);
         self.nodes.push(node);
         Ok(V::Json(json!({"geometry":id})))
+    }
+    fn loft_references(&mut self, value: V, depth: usize) -> R<J> {
+        if depth==0 { return Ok(json!(self.geometry(value)?)); }
+        let V::Array(items)=value else { return Err(crate::error("Loft references require nested arrays")); };
+        Ok(J::Array(items.into_iter().map(|v|self.loft_references(v,depth-1)).collect::<R<Vec<_>>>()?))
     }
     fn geometry(&mut self, v: V) -> R<String> {
         match v {
@@ -733,9 +748,222 @@ impl Compiler {
             "rect" => "rectangle",
             _ => name,
         };
+        if name=="boundary_fill" {
+            let at=args.iter().position(|(n,_)|n.as_deref()==Some("center")).ok_or_else(||crate::error("boundary_fill requires named center"))?;
+            let center=raw(args.remove(at).1)?;
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Boundary fill edges must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(3..=32).contains(&inputs.len()){return Err(crate::error("Boundary fill needs 3..32 edges"));}
+            return self.add(json!({"op":name,"inputs":inputs,"center":center}));
+        }
+        if name=="gordon_surface" {
+            if input.is_some(){return Err(crate::error("Gordon families must be named"));}
+            let mut node=json!({"op":name});
+            for key in ["u_curves","v_curves"] {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("gordon_surface requires named {key}")))?;
+                let V::Array(values)=args.remove(at).1 else{return Err(crate::error("Gordon families must be curve arrays"));};
+                let mut ids=Vec::new();for value in values{ids.push(self.geometry(value)?);}
+                node[key]=json!(ids);
+            }
+            for key in ["parameters_u","parameters_v"] {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("gordon_surface requires named {key}")))?;
+                node[key]=raw(args.remove(at).1)?;
+            }
+            if !args.is_empty(){return Err(crate::error("Unexpected Gordon arguments"));}
+            return self.add(node);
+        }
+        if ["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&name) {
+            let mut node=json!({"op":name});
+            if name=="loft_match_surface" {
+                let source=if let Some(id)=input {id} else {
+                    if args.is_empty() || args[0].0.is_some(){return Err(crate::error("Loft match needs a positional surface"));}
+                    self.geometry(args.remove(0).1)?
+                };
+                node["input"]=json!(source);
+            } else if input.is_some(){return Err(crate::error("Capped loft uses named loop arrays"));}
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Loft options must be named"))?;
+                let depth=match (name,key.as_str()) {
+                    ("brep_natural_loft","sections")=>Some(3),
+                    ("brep_capped_loft","start"|"end"|"sides")=>Some(2),
+                    ("loft_match_surface","sections"|"guides")=>Some(1),
+                    ("loft_match_surface","start_reference"|"end_reference")=>Some(0),
+                    _=>None,
+                };
+                node[&key]=if let Some(depth)=depth {self.loft_references(value,depth)?} else {raw(value)?};
+            }
+            return self.add(node);
+        }
+        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" {
+            let mut node=json!({"op":name});
+            let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("Loft requires named parameters"))?;
+            node["parameters"]=raw(args.remove(at).1)?;
+            if name=="guided_loft_surface" || name=="auto_guided_loft_surface" {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some("guides")).ok_or_else(||crate::error("Guided loft requires named guides"))?;
+                let V::Array(values)=args.remove(at).1 else{return Err(crate::error("Guides must be curve references"));};
+                let mut ids=Vec::new();for value in values{ids.push(self.geometry(value)?);}
+                node["guides"]=json!(ids);
+                let field=if name=="auto_guided_loft_surface" {"budget"} else {"guide_parameters"};
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(field)).ok_or_else(||crate::error(format!("Guided loft requires named {field}")))?;
+                node[field]=raw(args.remove(at).1)?;
+            }
+            for key in ["start_tangents","end_tangents"] {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
+                else if name=="control_tangent_loft_surface" {return Err(crate::error(format!("Loft requires named {key}")));}
+            }
+            if node.get("start_tangents").is_some()!=node.get("end_tangents").is_some() {return Err(crate::error("Loft requires both tangent fields"));}
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Loft requires 2..11 sections"));}
+            node["inputs"]=json!(inputs);return self.add(node);
+        }
+        if name=="clamped_loft_surface" {
+            let mut node=json!({"op":name});
+            for key in ["parameters","start_tangent","end_tangent"] {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("clamped_loft_surface requires named {key}")))?;
+                node[key]=raw(args.remove(at).1)?;
+            }
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Clamped loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Clamped loft requires 2..11 sections"));}
+            node["inputs"]=json!(inputs);return self.add(node);
+        }
+        if name=="natural_loft_surface" || name=="closed_loft_surface" {
+            let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("natural_loft_surface requires named parameters"))?;
+            let parameters=raw(args.remove(at).1)?;
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("natural loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(if name=="closed_loft_surface" {4} else {2}..=11).contains(&inputs.len()){return Err(crate::error("Cubic loft section count is outside its budget"));}
+            return self.add(json!({"op":name,"inputs":inputs,"parameters":parameters}));
+        }
+        if ["brep_miter_sweep","brep_progressive_miter_sweep"].contains(&name) {
+            if input.is_some(){return Err(crate::error("Miter sweep takes nested profile loops"));}
+            let mut node=json!({"op":name});
+            for key in ["points","normal"] {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("Miter sweep requires {key}")))?;
+                node[key]=raw(args.remove(at).1)?;
+            }
+            if name=="brep_progressive_miter_sweep" {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("orientation_guide")) {
+                    node["orientation_guide"]=json!(self.geometry(args.remove(at).1)?);
+                }
+                for key in ["axis_scale","center_law","frame_axis","frame_normal"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                        let V::Record(fields,_,_,_)=args.remove(at).1 else {return Err(crate::error(format!("{key} must be a vector-law record")));};
+                        let mut law=J::Object(value_codec::Map::new());
+                        for (component,value) in fields {law[&component]=raw(value)?;}
+                        node[key]=law;
+                    }
+                }
+                for key in ["scale","twist","max_deviation"] {
+                    let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("Miter sweep requires {key}")))?;
+                    let value=args.remove(at).1;
+                    node[key]=if key=="scale" || key=="twist" {
+                        let V::Record(fields,_,_,_)=value else {return Err(crate::error("Miter law must be a record"));};
+                        let mut law=J::Object(value_codec::Map::new());
+                        for (component,value) in fields {law[&component]=raw(value)?;} law
+                    } else {raw(value)?};
+                }
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("cap_correction_authored_frame")) {
+                    let value=raw(args.remove(at).1)?;
+                    node["cap_correction_authored_frame"]=match value {
+                        J::Bool(b)=>J::Bool(b),
+                        J::Number(n) if n.as_f64()==Some(0.) || n.as_f64()==Some(1.) => J::Bool(n.as_f64()==Some(1.)),
+                        _=>return Err(crate::error("cap_correction_authored_frame expects true or false")),
+                    };
+                }
+                for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
+            }
+            {
+                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
+                }
+            }
+            if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("miter_limit")) {node["miter_limit"]=raw(args.remove(at).1)?;}
+            if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("closed")) {
+                node["closed"]=match raw(args.remove(at).1)? {
+                    J::Bool(b)=>J::Bool(b),
+                    J::Number(n)=>J::Bool(n.as_f64().is_some_and(|x|x!=0.)),
+                    _=>return Err(crate::error("closed expects true or false")),
+                };
+            }
+            if args.len()!=1 || args[0].0.is_some(){return Err(crate::error("Miter sweep needs one positional nested loop list"));}
+            let V::Array(loops)=args.remove(0).1 else {return Err(crate::error("Miter sweep requires nested loops"));};
+            if loops.is_empty() || loops.len()>16 {return Err(crate::error("Miter sweep needs 1..16 loops"));}
+            let mut count=0;
+            node["loops"]=J::Array(loops.into_iter().map(|wire| {
+                let V::Array(curves)=wire else {return Err(crate::error("Miter sweep requires nested curves"));};
+                count+=curves.len();if curves.is_empty() || count>64 {return Err(crate::error("Miter sweep needs nonempty loops and at most64 curves"));}
+                curves.into_iter().map(|curve|self.geometry(curve).map(J::String)).collect::<crate::Result<Vec<_>>>().map(J::Array)
+            }).collect::<crate::Result<Vec<_>>>()?);
+            return self.add(node);
+        }
+        if name=="brep_progressive_sweep" || name=="progressive_sweep" || name=="profile_sweep" || name=="framed_sweep" || name=="scaled_sweep" || name=="two_guide_sweep" || name=="twist_sweep" {
+            let mut node=json!({"op":name});
+            if ["progressive_sweep","brep_progressive_sweep"].contains(&name) {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("orientation_guide")) {
+                    node["orientation_guide"]=json!(self.geometry(args.remove(at).1)?);
+                }
+            }
+            let keys: &[&str]=if ["progressive_sweep","brep_progressive_sweep"].contains(&name) {&["scale","twist","normal","max_deviation"]} else if name=="profile_sweep" {&["scale","normal","sections","max_deviation"]} else if name=="twist_sweep" {&["origin","axis","start_degrees","sweep_degrees"]} else if name=="two_guide_sweep" {&["width","axis_y","axis_z"]} else if name=="scaled_sweep" {&["origin","scale"]} else {&["normal","sections","max_deviation"]};
+            for &key in keys {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("{name} requires named {key}")))?;
+                let value=args.remove(at).1;
+                node[key]=if (["scaled_sweep","profile_sweep","progressive_sweep","brep_progressive_sweep"].contains(&name) && key=="scale") || (["progressive_sweep","brep_progressive_sweep"].contains(&name) && key=="twist") {
+                    let V::Record(fields,_,_,_)=value else {return Err(crate::error(format!("{name} {key} must be a record")));};
+                    let mut law=J::Object(value_codec::Map::new());
+                    for (component,value) in fields {law[&component]=raw(value)?;}
+                    law
+                } else {raw(value)?};
+            }
+            if ["progressive_sweep","brep_progressive_sweep"].contains(&name) {
+                for key in ["axis_scale","center_law","frame_axis","frame_normal"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                        let V::Record(fields,_,_,_)=args.remove(at).1 else {return Err(crate::error(format!("{key} must be a vector-law record")));};
+                        let mut law=J::Object(value_codec::Map::new());
+                        for (component,value) in fields {law[&component]=raw(value)?;}
+                        node[key]=law;
+                    }
+                }
+                for key in ["orientation","spacing","initial_sections","max_sections","length_tolerance","length_max_cells","contact_parameter","contact_profile"] {
+                    if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                        let value=raw(args.remove(at).1)?;
+                        node[key]=if ["orientation","spacing"].contains(&key) {
+                            J::String(value.as_str().or_else(||value.get("text").and_then(J::as_str)).ok_or_else(||crate::error(format!("{key} must be a text choice")))?.to_owned())
+                        } else {value};
+                    }
+                }
+            }
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error(format!("{name} profile/path are positional; unexpected named argument")));}
+            if name=="brep_progressive_sweep" {
+                if input.is_some() || args.len()!=2 {return Err(crate::error("brep_progressive_sweep requires nested loops followed by a path"));}
+                let V::Array(loops)=args.remove(0).1 else {return Err(crate::error("Sweep body requires nested curve lists"));};
+                if loops.is_empty() || loops.len()>16 {return Err(crate::error("Sweep body needs 1..16 loops"));}
+                let mut count=0;
+                node["loops"]=J::Array(loops.into_iter().map(|wire| {
+                    let V::Array(curves)=wire else {return Err(crate::error("Sweep body requires nested curve lists"));};
+                    count+=curves.len();if curves.is_empty() || count>64 {return Err(crate::error("Sweep body needs nonempty loops and at most64 curves"));}
+                    curves.into_iter().map(|curve|self.geometry(curve).map(J::String)).collect::<crate::Result<Vec<_>>>().map(J::Array)
+                }).collect::<crate::Result<Vec<_>>>()?);
+                node["inputs"]=json!([self.geometry(args.remove(0).1)?]);
+                return self.add(node);
+            }
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if if name=="progressive_sweep" {!(2..=65).contains(&inputs.len())} else {inputs.len()!=if name=="two_guide_sweep" {3} else {2}} {return Err(crate::error(format!("{name} requires profile curves followed by its guide curve")));}
+            node["inputs"]=json!(inputs);return self.add(node);
+        }
         if [
             "surface_sweep",
             "surface_loft",
+            "ruled_surface",
+            "triangular_patch",
+            "coons_patch",
+            "curve_compose",
             "sdf_union",
             "sdf_intersection",
             "sdf_difference",
@@ -864,7 +1092,7 @@ impl Compiler {
             if !sig.contains(&key) || node.get(key).is_some() {
                 return Err(crate::error("Unknown or duplicate argument"));
             }
-            node[key] = if name == "brep_extrude_curves" && key == "loops" {
+            node[key] = if name=="ribbon_surface" && key=="width_law" {J::String(self.geometry(v)?)} else if name == "variable_pipe_surface" && key == "radius_law" { J::String(self.geometry(v)?) } else if name == "brep_extrude_curves" && key == "loops" {
                 let V::Array(loops) = v else {
                     return Err(crate::error("Curve extrusion requires nested curve lists"));
                 };
@@ -887,7 +1115,7 @@ impl Compiler {
                         self.geometry(curve).map(J::String)
                     }).collect::<R<Vec<_>>>().map(J::Array)
                 }).collect::<R<_>>()?)
-            } else if ["herringbone", "internal", "left_handed"].contains(&key) {
+            } else if ["herringbone", "internal", "left_handed", "lower", "closed", "periodic"].contains(&key) {
                 // Text has no boolean literal: true/false lower to 1/0, and the
                 // canonical schema wants a JSON boolean for these flags.
                 match raw(v)? {
@@ -897,6 +1125,11 @@ impl Compiler {
                 }
             } else {
                 raw(v)?
+            }
+        }
+        if ["helix_curve","ribbon_surface", "variable_pipe_surface", "pipe_surface","screw_surface","clothoid_curve", "spherical_spiral_curve", "toroidal_spiral_curve", "torus_knot_curve", "helicoid_patches", "circle_rectangle_transition", "ellipse_transition_surface", "circle_transition_surface", "helicoid_surface", "catenoid_patches", "catenoid_surface", "catenary_curve", "archimedean_spiral_curve", "epicycloid_curve", "hypocycloid_curve", "trochoid_curve", "cycloid_curve", "lissajous_curve", "logarithmic_spiral_curve", "involute_curve", "elliptic_helix_curve","conical_helix_curve","variable_pitch_helix_curve"].contains(&name) {
+            for key in sig {
+                if node.get(*key).is_none(){return Err(crate::error(format!("{name} requires {key}")));}
             }
         }
         let modifier = [
@@ -913,11 +1146,12 @@ impl Compiler {
             "sdf_offset",
             "sdf_translate",
             "brep_tessellate",
+            "brep_smooth_miter_stations",
             "brep_extrude",
             "brep_revolve",
             "brep_chamfer",
             "brep_fillet",
-            "surface_extrude",
+            "ribbon_surface", "variable_pipe_surface", "pipe_surface", "screw_surface", "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
             "thicken",
@@ -1868,7 +2102,8 @@ impl Compiler {
         Ok(Vec::new())
     }
 }
-pub fn compile(statements: Vec<Statement>) -> R<J> {
+pub fn compile(statements: Vec<Statement>) -> R<J> { compile_with_ids(statements, false) }
+pub fn compile_with_ids(statements: Vec<Statement>, stable_ids: bool) -> R<J> {
     let mut c = Compiler {
         nodes: vec![],
         parameters: vec![],
@@ -1883,6 +2118,11 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
 
         active: Types::new(),
         serial: 0,
+        stable_ids,
+        owner: String::new(),
+        owner_serial: 0,
+        show_serial: 0,
+        author_ids: Set::new(),
         check_serial: 0,
         expansions: 0,
     };
@@ -1891,6 +2131,8 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
     let mut segments = None;
     for statement in statements {
         let a = statement.node;
+        c.owner.clear();
+        c.owner_serial = 0;
         let result: R<()> = try {
             let name = s(&a, "name");
             match s(&a, "kind") {
@@ -1898,6 +2140,11 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                     if e.contains_key(name) {
                         do yeet crate::error(format!("Duplicate name {name}"));
                     }
+                    c.owner = if let Some(id) = a.get("author_id").and_then(J::as_str) {
+                        if !c.author_ids.insert(id.to_owned()) { do yeet crate::error(format!("Duplicate node ID {id}")); }
+                        format!("ri_{id}")
+                    } else { format!("rb_{name}") };
+                    c.owner_serial = 0;
                     let v = c.eval(&a["value"], &e, 0)?;
                     if matches!(&v, V::Void(_)) {
                         do yeet crate::error("Function has no return value");
@@ -1972,6 +2219,9 @@ pub fn compile(statements: Vec<Statement>) -> R<J> {
                     e.insert(name.into(), V::Json(json!({"param":name})));
                 }
                 "show" => {
+                    c.show_serial += 1;
+                    c.owner = format!("rs_{}", c.show_serial);
+                    c.owner_serial = 0;
                     let v = c.eval(&a["value"], &e, 0)?;
                     root = c.geometry(v)?
                 }
@@ -2041,6 +2291,7 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_chamfer" => &["edges", "size"],
         "brep_fillet" => &["edges", "radius", "segments"],
         "brep_tessellate" => &["segments"],
+        "brep_smooth_miter_stations" => &["wall_tolerance","quantum","max_work","max_deviation"],
         "nurbs_surface" => &[
             "degree_u",
             "degree_v",
@@ -2049,7 +2300,66 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
             "control_points",
             "weights",
         ],
-        "nurbs_curve" => &["degree", "knots", "control_points", "weights"],
+        "nurbs_curve" => &["degree", "knots", "control_points", "weights", "periodic"],
+        "parabola_curve" | "hyperbola_curve" => &["center", "axis_u", "axis_v", "start", "end"],
+        "elliptic_cylinder_surface" => &["center", "radius_x", "radius_y", "height"],
+        "cone_frustum_surface" => &["center", "bottom_radius", "top_radius", "height"],
+        "quadratic_patch" => &["bounds", "coefficients"],
+        "line_curve" => &["start", "end"],
+        "bezier_curve" => &["points", "weights"],
+        "round_polyline_curve" => &["points", "radius", "closed"],
+        "transition_polyline_curve" => &["points", "setback", "closed"],
+        "closed_spline_curve" => &["points", "parameters"],
+        "clamped_spline_curve" => &["points", "parameters", "start_tangent", "end_tangent"],
+        "natural_spline_curve" => &["points", "parameters"],
+        "hermite_curve" => &["points", "tangents", "parameters"],
+        "clothoid_curve" => &["center", "length", "start_curvature", "end_curvature", "phase_degrees", "max_deviation"],
+        "spherical_spiral_curve" => &["center", "radius", "longitude_turns", "latitude_turns", "longitude_phase_degrees", "latitude_phase_degrees", "max_deviation"],
+        "toroidal_spiral_curve" => &["center", "major_radius", "minor_radius", "major_turns", "minor_turns", "major_phase_degrees", "minor_phase_degrees", "max_deviation"],
+        "torus_knot_curve" => &["center", "major_radius", "minor_radius", "p", "q", "major_phase_degrees", "minor_phase_degrees", "max_deviation"],
+        "helicoid_patches" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
+        "circle_rectangle_transition" => &["circle_center","circle_normal","circle_seam","circle_radius","rectangle_center","rectangle_axis_u","rectangle_axis_v"],
+        "ellipse_transition_surface" => &["start_center","start_axis_u","start_axis_v","end_center","end_axis_u","end_axis_v"],
+        "circle_transition_surface" => &["start_center","start_normal","start_seam","start_radius","end_center","end_normal","end_seam","end_radius"],
+        "helicoid_surface" => &["center", "inner_radius", "outer_radius", "height", "turns", "phase_degrees", "max_deviation"],
+        "catenoid_patches" => &["center", "scale", "start_z", "end_z", "max_deviation"],
+        "catenoid_surface" => &["center", "scale", "start_z", "end_z", "max_deviation"],
+        "catenary_curve" => &["center", "scale", "start_x", "end_x", "max_deviation"],
+        "archimedean_spiral_curve" => &["center", "start_radius", "end_radius", "start_degrees", "end_degrees", "max_deviation"],
+        "epicycloid_curve" => &["center", "fixed_radius", "rolling_radius", "start_degrees", "end_degrees", "max_deviation"],
+        "hypocycloid_curve" => &["center", "fixed_radius", "rolling_radius", "start_degrees", "end_degrees", "max_deviation"],
+        "trochoid_curve" => &["center", "rolling_radius", "tracing_radius", "start_degrees", "end_degrees", "max_deviation"],
+        "cycloid_curve" => &["center", "radius", "start_degrees", "end_degrees", "max_deviation"],
+        "lissajous_curve" => &["center", "amplitudes", "frequencies", "phases_degrees", "max_deviation"],
+        "logarithmic_spiral_curve" => &["center", "radius", "growth", "start_degrees", "end_degrees", "max_deviation"],
+        "involute_curve" => &["center", "radius", "start_degrees", "end_degrees", "max_deviation"],
+        "helix_curve" => &["center", "radius", "height", "turns", "phase_degrees", "max_deviation"],
+        "elliptic_helix_curve" => &["center", "radius_x", "radius_y", "height", "turns", "phase_degrees", "max_deviation"],
+        "variable_pitch_helix_curve" => &["center", "radius", "height", "turns", "start_pitch", "end_pitch", "phase_degrees", "max_deviation"],
+        "conical_helix_curve" => &["center", "start_radius", "end_radius", "height", "turns", "phase_degrees", "max_deviation"],
+        "formula_curve" | "formula_surface" => &["domain", "expressions"],
+        "sphere_surface" => &["center", "radius"],
+        "cylinder_surface" | "cone_surface" => &["center", "radius", "height"],
+        "plane_patch" => &["origin", "axis_u", "axis_v"],
+        "grid_spline_surface" => &["points", "parameters_u", "parameters_v"],
+        "hermite_patch" => &["corners", "tangent_u", "tangent_v", "twist"],
+        "bilinear_patch" => &["corners"],
+        "bezier_surface" => &["points", "weights"],
+        "polyline_curve" => &["points", "closed"],
+        "circle_curve" => &["center", "normal", "radius"],
+        "circle_arc" => &["center", "normal", "radius", "start_degrees", "sweep_degrees"],
+        "hyperboloid_one_sheet" => &["center", "radii", "start", "end"],
+        "hyperboloid_two_sheet" => &["center", "radii", "start", "end", "lower"],
+        "polynomial_graph" => &["bounds", "coefficients"],
+        "polynomial_curve" | "polynomial_surface" | "rational_polynomial_curve" | "rational_polynomial_surface" => &["domain", "coefficients"],
+        "ellipse_arc" => &["center", "axis_u", "axis_v", "start_degrees", "sweep_degrees"],
+        "ellipsoid_surface" => &["center", "radii"],
+        "torus_surface" => &["center", "major_radius", "radial_radius", "axial_radius"],
+        "ribbon_surface" => &["width_law", "normal", "sections", "max_deviation"],
+        "variable_pipe_surface" => &["radius_law", "normal", "sections", "max_deviation"],
+        "pipe_surface" => &["radius", "normal", "sections", "max_deviation"],
+        "screw_surface" => &["origin", "axis", "height", "turns", "phase_degrees", "max_deviation"],
+        "surface_extrude_patches" => &["vector"],
         "surface_extrude" => &["vector"],
         "surface_revolve" => &["origin", "axis", "angle"],
         "tessellate" => &["segments_u", "segments_v"],

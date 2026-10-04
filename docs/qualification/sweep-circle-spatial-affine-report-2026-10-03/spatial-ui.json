@@ -1,0 +1,169 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-03T17:07:36.869Z",
+  "scope": "Finite retained-miter UI scenarios; held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "c2fcb258eb53fc66edba14aa7d47ad0376799259cf0fabb2d5c6d3cc03fc7094",
+  "appSourceSha256": "1d5ef7b555891919ac4bd076e7b84815ca7e5ac5843a0fd1d0f80dc8a1e23de4",
+  "distIndexSha256": "d86e7f10141de46a5f35639057b840469cb2862ecc08a4ea644874878dd286a8",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-miter-spatial-circle-corrected-hollow.r",
+      "sourceSha256": "34ace5806967f828a0b1acf4ea4beb07deef316c7da14231b7af7367d44a6ab1",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "closed-joint-profile-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (24) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈1.45956e-12 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 26,
+        "shells": 1,
+        "geometrySha256": "c5bf1887c489e6ca360c388a9c3f60a71a27564694d494fbe0abf24b866e8a82"
+      },
+      "refusalMessage": "Miter direction must be finite and nonzero",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-miter-spatial-circle-corrected-hollow.r",
+      "sourceSha256": "34ace5806967f828a0b1acf4ea4beb07deef316c7da14231b7af7367d44a6ab1",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "closed-joint-profile-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (24) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈1.45956e-12 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 26,
+        "shells": 1,
+        "geometrySha256": "c5bf1887c489e6ca360c388a9c3f60a71a27564694d494fbe0abf24b866e8a82"
+      },
+      "refusalMessage": "Miter direction must be finite and nonzero",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "1d5ef7b555891919ac4bd076e7b84815ca7e5ac5843a0fd1d0f80dc8a1e23de4",
+    "src/services/sweepRetainedCorrespondence.ts": "faba489c0578751129420c70e48a9e582eebbb907beaf94e8a3be250ed09683e",
+    "src/services/geometry/brep.ts": "3f1f98919d2d59ef9675274da42f943db0c107149532946331cfd4767f276e88",
+    "src/features/DirectModeler.vue": "f131336b688ed8b2f27b202f8859ff5ef016b8d4bef2c84c57ef8a15203f5eff",
+    "src/generated/geometry-kernels/bytes.ts": "04097741a16fbc317bb6eccfce5abce8f648fdfc1c9cf6191cca886387efe1d9"
+  },
+  "browser": "151.0.7922.34",
+  "passed": true
+}

@@ -61,3 +61,29 @@ See `output/bench-modelgraph-end-to-end.mts` and
 `--output=output/modelgraph-end-to-end-final.json` to the benchmark script to reproduce
 that report. The final production build contains 22 artifacts totaling 2,838,544 bytes;
 the existing total size budget is unchanged.
+
+## Declarative Rush identity
+
+`compile_document` routes `// @rush` and `// @rush/1` documents through the
+same declarative CAD frontend with stable IDs scoped to each named part.
+Independent named declarations therefore do not renumber existing parts.
+Legacy `// @modelgraph-text/1` documents retain their existing IDs.
+
+```rust
+// @rush/1
+param size = 10mm range 1mm..20mm
+body @id("stable-body") = box([size,size,size])
+show body
+```
+
+An explicit ID survives renaming the binding. IDs must be unique and contain
+1..64 ASCII letters, digits, underscores or hyphens. Without an explicit ID,
+identity follows the binding name. Internal operations within a part use local
+sequence numbers; inserting or reordering operations *inside that part* can
+change those internal IDs. This is authored-part identity, not persistent
+identity of every generated face or edge.
+
+The regression suite compares authoring graphs, controls and source offsets for
+131 existing models across Rush and ModelGraph headers. Separate regressions
+verify independent insertions, explicit identity through rename, duplicate-ID
+rejection and numeric source edits preserving comments and units.

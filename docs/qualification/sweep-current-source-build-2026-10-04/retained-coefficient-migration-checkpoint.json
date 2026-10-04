@@ -1,0 +1,20 @@
+{
+  "status": "installed-in-primary-integration-tests-passed",
+  "snapshot": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791102401",
+  "nativeCommit": "853187064cde51e6ae23d823763aa7138ce5bbcf",
+  "operation": "sweep_retained_wall_coefficients_audit",
+  "adapterInputs": {
+    "src/services/sweepRetainedCorrespondence.ts": "4c4498192644c1a743da48ba5a88e28f94dfff290ffa99dd2faec935d5792ca2",
+    "tests/sweepRetainedDecomposition.test.ts": "29d9550ad1221c8d67f62616b4a5b662df115d582540fda3f0006d992b841576"
+  },
+  "tests": "one-ULP source control and changed rational weight must refuse retained coefficient correspondence",
+  "nativeTestsPassed": 3,
+  "typesPassed": true,
+  "primaryAdapterChanged": true,
+  "wasmBuildLog": "/tmp/sweep-wall-coefficients-wasm-build.log",
+  "wasmSha256": "b5b1293aa06d0301bb69bdc8896ba15360379030dcbe7291ad59963f052a8cf1",
+  "frozenIntegrationTestsPassed": 17,
+  "primaryIntegrationTestsPassed": 18,
+  "frozenRegressionTestsPassed": 30,
+  "viteBuildPassed": true
+}

@@ -1,0 +1,10 @@
+{
+  "crates/brep-core/src/analytic/rational_loft.rs": "6eacccc8106d05c5c49771b0039599106bf08bd5178ca49ae14bb4f5b7c841a4",
+  "crates/brep-core/src/analytic/rational_loft/smooth_stations.rs": "97a53367e678c638b49ba6318bed7840b011cf173cd1094aff3e82479edcb144",
+  "crates/brep-core/src/analytic.rs": "0292825fad2a102f4505f6580e492d20f8bcf102cecb077b7db2292a01c9a401",
+  "crates/geometry-bridge/src/lib.rs": "48e1193a1cf8cca24af61aa4e7ef0f410c40af9e7b79bdebd0e18dc3d44b6c03",
+  "src/services/geometry/brep.ts": "6a6ec882fd5f301404d7c6bceab3f54c4dbd7ab48d9a8cb06f01f615fb37e26e",
+  "tests/miterSmoothStationWalls.test.ts": "68cd203fc67d37f88f16a72cc285b7b0eee8e85ea7c2964f13981eca4d828dad",
+  "src/generated/geometry-kernels/kernel_bg.wasm": "ad0c428caa4858f1357fa680e0533346d6f1285429af7d0d59d249980f3d4b02",
+  "public/wasm/geometry-kernel.wasm": "ad0c428caa4858f1357fa680e0533346d6f1285429af7d0d59d249980f3d4b02"
+}

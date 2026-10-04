@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-01",
+  "scope": "Profile sweep integration and progressive sweep with combined scale/twist; full sweep objective remains incomplete",
+  "nativeProgressive": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core progressive_sweep --lib",
+    "passed": true,
+    "tests": 9,
+    "artifact": "native-progressive.log"
+  },
+  "nativeRegression": {
+    "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core -p modelgraph-runtime -p modelgraph-text",
+    "passed": true,
+    "artifact": "native-regression.log"
+  },
+  "wasmRegression": {
+    "passed": true,
+    "tests": 423,
+    "files": 13,
+    "artifact": "wasm-tests.json",
+    "scope": "Actual packaged kernels; equations, rejection semantics, units, JSON/OBJ/PLY, editor entrypoint, existing sweep/pipe/ribbon regressions"
+  },
+  "typecheck": {
+    "command": "npx vue-tsc --noEmit",
+    "passed": true
+  },
+  "visual": {
+    "url": "http://127.0.0.1:5179/",
+    "build": "/tmp/osv-sweep-review.aVnlXX",
+    "source": "examples/rush/progressive-sweep.r",
+    "observed": "One open twisted and scaled strip, 768 triangles, successful source build and transfer into Mesh viewport; source drawer closed to reveal viewport",
+    "artifact": "progressive-sweep-preview.jpg",
+    "continuousErrorCertified": false,
+    "solidTopologyCertified": false
+  },
+  "remaining": [
+    "Streaming preview/cancel and full Solid UI controls",
+    "Multiple contours/holes and swept caps/shell/solid topology",
+    "Authored orientation frames, anisotropic scale/center law, advanced rails/corner joins",
+    "Continuous error including rounding and regularity/self-intersection audit",
+    "STEP round-trip qualification"
+  ],
+  "sha256": {
+    "crates/nurbs-core/src/progressive_sweep.rs": "679f9871783300e060c534e2eddf194351442a180947a1faaf4861e260d19e14",
+    "crates/nurbs-core/src/progressive_sweep/tests.rs": "9d9fc8e618dc1358b17e4ebc680b78c17123950794c930657122dcb40d30ea32",
+    "crates/nurbs-core/src/progressive_sweep/serialization.rs": "7d4c4bee6eafb9a74d70b27ddc7d641a3e8618b21bfc89d4f47959b6941e8a5e",
+    "tests/nurbsProgressiveSweep.test.ts": "9bbcddcd40c6fb2d388aa6ce69833db55da8be7592c5263a85df8f7b93faf189",
+    "tests/nurbsProfileSweep.test.ts": "92e99cc99c81058c805a04ab76203987179ee36b3bbd3fbcbf40f5b962669c44",
+    "public/wasm/geometry-kernel.wasm": "99621f4c65b512ea4a14b88b2661e3421656febf80a187c56238f8bc7202289e",
+    "public/wasm/language-kernel.wasm": "662722a5f75007e03c51093f0a713d43a30f112d3d051ff9e6d68e19e9b948f1",
+    "docs/qualification/sweep-coverage-2026-10-01/progressive-sweep-preview.jpg": "b41f680f3c60742990033a7617c5886817cc6f70bec94411216e5fa228bdd2de"
+  }
+}

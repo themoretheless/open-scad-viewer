@@ -1,0 +1,16 @@
+{
+  "wasmSha256": "6cfe87add9229b03991147ada749311bd52c74ce94f4a4ceab47619d31f8764e",
+  "artifactReplaced": false,
+  "adapterInstalled": true,
+  "frozenIntegrationTests": 50,
+  "periodicUiCases": 2,
+  "periodicUiAssertions": 22,
+  "primaryVerification": {
+    "tests": 10,
+    "suites": 3,
+    "passed": true,
+    "typesPassed": true,
+    "testLog": "/tmp/sweep-installed-cap-contour-tests.log",
+    "typesLog": "/tmp/sweep-installed-cap-contour-types.log"
+  }
+}

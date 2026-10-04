@@ -1,0 +1,14 @@
+{
+  "cancel": true,
+  "apply": true,
+  "undo": true,
+  "redo": true,
+  "reload": true,
+  "lateCancel": true,
+  "lateDocumentSwitch": true,
+  "delayed": {
+    "terminated": 2,
+    "released": 2
+  },
+  "errors": []
+}

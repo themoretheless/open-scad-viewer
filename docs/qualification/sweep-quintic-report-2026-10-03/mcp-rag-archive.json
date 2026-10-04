@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 26,
+  "wikiHash": "b9dc61679d5781495670a26e9c790911b0103cedf7fb35dcb59ce10f4b2a61d0",
+  "raw": {
+    "document_id": "2e532a39-f855-4763-b7e0-df625eea8399",
+    "chunk_count": 6,
+    "node_id": "5b07ccde-dae0-4d11-aecc-78c3f438b6da",
+    "edge_count": 1,
+    "content_hash": "2af1e535caaa351da9b44ca8561d6f77c51d008e0436944f92a34f4272d118a9",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-quintic-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81979,
+    "chunk_count": 720417,
+    "node_count": 107749,
+    "edge_count": 238834,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 1414376,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

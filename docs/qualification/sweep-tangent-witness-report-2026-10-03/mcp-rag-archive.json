@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 17,
+  "wikiHash": "6cf4c0a5e3b065dfd640ec88e2f10df839bcd449feae02d3a91827115cda2ec6",
+  "raw": {
+    "document_id": "c0317a51-2671-44ea-b5d3-3c802f002257",
+    "chunk_count": 3,
+    "node_id": "2e48af94-ffb4-40f2-8092-71a01b446855",
+    "edge_count": 1,
+    "content_hash": "47f95e763db2f2e217cd4c8dc1c3bbce0d2d6f0e786c338ea117fe81a9cce4a3",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-tangent-witness-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81970,
+    "chunk_count": 720343,
+    "node_count": 107740,
+    "edge_count": 238825,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 5903823,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

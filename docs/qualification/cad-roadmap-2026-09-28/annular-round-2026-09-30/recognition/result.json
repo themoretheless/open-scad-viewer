@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "tests": 36,
+  "scope": "Native analytic tube recognition and analytic_features regressions",
+  "checks": [
+    "Valid tube and rigid placement recognized",
+    "Changed rational side weight rejected",
+    "Changed middle control point rejected",
+    "Elliptic affine distortion rejected",
+    "Canonical knots/weights, unit-square side trims, full cylindrical control nets and radial counts checked"
+  ],
+  "notProven": [
+    "General reparameterized/trimmed annular models",
+    "Circular-edge selection and new fillet certificate",
+    "WASM/UI behavior after this source change"
+  ]
+}

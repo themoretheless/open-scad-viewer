@@ -1,0 +1,182 @@
+[
+  {
+    "selfMs": 2185.03,
+    "function": "(idle)",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 327.71,
+    "function": "E",
+    "asset": "direct-modeling-Cm-zw9ov.js",
+    "line": 0
+  },
+  {
+    "selfMs": 243.07,
+    "function": "t",
+    "asset": "meshJson-CVKQT5bI.js",
+    "line": 0
+  },
+  {
+    "selfMs": 191.78,
+    "function": "(program)",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 127.83,
+    "function": "",
+    "asset": "mainSolidWorkerClient-3DmVgKwA.js",
+    "line": 0
+  },
+  {
+    "selfMs": 82.07,
+    "function": "a.onmessage",
+    "asset": "mainSolidWorkerClient-3DmVgKwA.js",
+    "line": 0
+  },
+  {
+    "selfMs": 60.34,
+    "function": "(garbage collector)",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 40.21,
+    "function": "match",
+    "asset": "",
+    "line": 5260
+  },
+  {
+    "selfMs": 36.56,
+    "function": "query",
+    "asset": "",
+    "line": 5300
+  },
+  {
+    "selfMs": 32.66,
+    "function": "getAriaRole",
+    "asset": "",
+    "line": 3342
+  },
+  {
+    "selfMs": 26.06,
+    "function": "",
+    "asset": "DirectModeler-DR5UVZny.js",
+    "line": 2
+  },
+  {
+    "selfMs": 17.52,
+    "function": "prepare",
+    "asset": "DirectModeler-DR5UVZny.js",
+    "line": 1
+  },
+  {
+    "selfMs": 13.14,
+    "function": "getImplicitAriaRole",
+    "asset": "",
+    "line": 3232
+  },
+  {
+    "selfMs": 12.57,
+    "function": "getExplicitAriaRole",
+    "asset": "",
+    "line": 3335
+  },
+  {
+    "selfMs": 12.55,
+    "function": "Do",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 11.31,
+    "function": "setAttribute",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 11.27,
+    "function": "rn",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 11.11,
+    "function": "elementSafeTagName",
+    "asset": "",
+    "line": 3014
+  },
+  {
+    "selfMs": 10.68,
+    "function": "To",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 9.69,
+    "function": "Rr",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 8.68,
+    "function": "",
+    "asset": "meshJson-CVKQT5bI.js",
+    "line": 0
+  },
+  {
+    "selfMs": 7.54,
+    "function": "w",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 7.43,
+    "function": "getAttribute",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 6.58,
+    "function": "",
+    "asset": "directBodies-COJ8ovNJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 6.28,
+    "function": "ct",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 6.28,
+    "function": "qo",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 6.08,
+    "function": "fs",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 1
+  },
+  {
+    "selfMs": 5.05,
+    "function": "postMessage",
+    "asset": "",
+    "line": -1
+  },
+  {
+    "selfMs": 5.02,
+    "function": "includes",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  },
+  {
+    "selfMs": 5.01,
+    "function": "ua",
+    "asset": "vue-DxqjmqvJ.js",
+    "line": 0
+  }
+]

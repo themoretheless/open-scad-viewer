@@ -1,0 +1,13 @@
+{
+  "src/services/geometry/brep.ts": "f9bd6990bf99dc9b099c8b78ff231a4c623e46992abcbe955f5bd00987ecaaa2",
+  "src/services/modelGraphNurbs.ts": "693fab3aaff158729fb19847a8012ee0bc36f89f5c812e7db032c5eee37c8fb1",
+  "src/services/modelGraphNurbsKernel.ts": "7933f7b0eb78bdf978620b1d79e06ece4c9b30ae1b64b6aaa679327cb508e0df",
+  "crates/modelgraph-text/src/lower.rs": "17a64bafe0e2d08ea8b1f39aa7b65b0f0fcc7cca5ceacc1dfd9d4cc34c5fb441",
+  "crates/modelgraph-text/src/lib.rs": "e2b3311307b246dc428aa29ad7e4aa7cae967efd98debc768d823584a75b8b47",
+  "crates/modelgraph-runtime/src/nurbs.rs": "8496a981ea94aac2e712cd2d750319b8932964645a783f895a1ef371f09554b6",
+  "docs/languages/modelgraph-nurbs-1.schema.json": "b1a69a729ce1f55540360cf36e0c38fb63a117f4f1da05d1b9f4db9e43608c11",
+  "src/generated/language-kernel/kernel_bg.wasm": "aac56d2056cc6b24dba96cb1667882797c8ed1a8cbfed080494faf739eb78a82",
+  "src/generated/geometry-kernels/kernel_bg.wasm": "c2b0c324a53fb352df49386e8768fb608baa47712cb6a959ef593b261e96689d",
+  "tests/miterStationGraph.test.ts": "72848ce109845509921d6f8142aac546db170a0813e7947bdc204e64c6b007b8",
+  "tests/miterSmoothStationWalls.test.ts": "497bdbb9dc6bee3b06af74f74dcdf350e83769dca7edd5f61ef38b9279c64012"
+}

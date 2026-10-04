@@ -1189,3 +1189,14 @@ fn layered_fillet_bridge_checks_chain_and_cavity() {
     let mut partial=request;partial["edges"]=json!([edges[0]]);
     assert!(dispatch(partial).is_err());
 }
+
+#[test]
+fn native_section_preserves_legacy_input_error_code() {
+    let error = dispatch(json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.})).unwrap_err();
+    assert_eq!(error.code,"POLYGON_INVALID_INPUT");
+    for code in ["MESH_INVALID_INPUT","MESH_QUERY_INVALID_INPUT","MESH_SECTION_INVALID_INPUT","MESH_IO_INVALID_INPUT"] {
+        let error = crate::legacy_mesh_error(crate::Error::new(code,"the mesh resource budget"));
+        assert_eq!(error.code,"POLYGON_INVALID_INPUT");
+        assert_eq!(error.message,"the polygon resource budget");
+    }
+}

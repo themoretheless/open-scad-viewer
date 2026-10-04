@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 6,
+  "wikiHash": "860d4db92eee55e001637fb4ea7da4502771dab110ade30ff6eb635ceb2fb72a",
+  "raw": {
+    "document_id": "7078f1d5-5386-44dd-a101-c8068040a76d",
+    "chunk_count": 7,
+    "node_id": "c9ab3716-4acb-4dac-a534-9cacc2c48f12",
+    "edge_count": 1,
+    "content_hash": "39b0c32fcdc192cccd40680dbfedf5aa1f86c55e177e3347e604eeb1da0c5376",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-tensor-boundary-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81959,
+    "chunk_count": 720257,
+    "node_count": 107729,
+    "edge_count": 238814,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 1839202,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

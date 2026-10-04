@@ -1,0 +1,121 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-03T11:31:48.536Z",
+  "scope": "Finite retained-miter UI scenarios; held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "ff809168a12f5248d5c66e24a1ee6246323cdc9d0b85c88cc93533db737b6602",
+  "appSourceSha256": "6ada7b69d5469a65c57275be207759eecd2a3bb9b690dad12d0c8fc555eb171a",
+  "distIndexSha256": "30affc569b96fc19b19206dbdc7670fd984358da0f6625977f30eede7a115dad",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-hollow-body.r",
+      "sourceSha256": "c7081a61eafebad6a9de2c9648ef1c4ac2063c29c1e5238e4f00629be75ad68c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "unproved-spatial-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: не доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ]
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-hollow-body.r",
+      "sourceSha256": "c7081a61eafebad6a9de2c9648ef1c4ac2063c29c1e5238e4f00629be75ad68c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "unproved-spatial-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: не доказана · Полная непрерывная ошибка: не доказана · Регулярность профиля / стен: ✓ / ✓ "
+      ]
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "6ada7b69d5469a65c57275be207759eecd2a3bb9b690dad12d0c8fc555eb171a",
+    "src/services/sweepRetainedCorrespondence.ts": "faba489c0578751129420c70e48a9e582eebbb907beaf94e8a3be250ed09683e",
+    "src/services/geometry/brep.ts": "9ca508e2d3bbe8d8e2afd3386476f6c4ead18250c1287072dbf7ba32948a8edd",
+    "src/features/DirectModeler.vue": "f131336b688ed8b2f27b202f8859ff5ef016b8d4bef2c84c57ef8a15203f5eff",
+    "src/generated/geometry-kernels/bytes.ts": "a716d119d28da22d3c3848e4ef0c88f98dfcf400c252b84ff44b6a86c46726d3"
+  },
+  "browser": "151.0.7922.34",
+  "passed": true
+}

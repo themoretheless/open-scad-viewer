@@ -1,0 +1,602 @@
+[
+  {
+    "path": "assets/BondedSolidPanel-DEnuIVMx.js",
+    "bytes": 5625,
+    "sha256": "56eee3324697a0cb08635c3cb6bbbab2339882ae88dafc5dfd5893ee1a538fcd"
+  },
+  {
+    "path": "assets/BondedSolidPanel-ePwNYYTl.css",
+    "bytes": 1020,
+    "sha256": "b3e7e491833c350752ee7cc334ef2076b25506b5d878b8e8589399ee954c21c9"
+  },
+  {
+    "path": "assets/DirectModeler-BiFnnmXa.css",
+    "bytes": 23658,
+    "sha256": "696e8bc02f94f95c7691268542afdc4b011b382c7f121aaccdf8116679a02d70"
+  },
+  {
+    "path": "assets/DirectModeler-CgSzaadV.js",
+    "bytes": 373395,
+    "sha256": "13c2a391f45ddb912ad7cf99c198a1c5577d7f23a7e96813e55e1522613eafad"
+  },
+  {
+    "path": "assets/FunctionReference-ANCCG8Tn.js",
+    "bytes": 50076,
+    "sha256": "ca7a83f6684c12c367516196a211decbd6f24ab8f8b8fda50de183460d7137c4"
+  },
+  {
+    "path": "assets/FunctionReference-BZfjppDK.css",
+    "bytes": 10596,
+    "sha256": "70caa5472ad8c94e9ed95902742449463677efd40ca250190ab7d134ef69a0f1"
+  },
+  {
+    "path": "assets/InspectPanel-CA9DW8FA.css",
+    "bytes": 12124,
+    "sha256": "149b26aed26c7695a6e800d65830548dd33aeb3938dbcc184b29c7295a2e5a47"
+  },
+  {
+    "path": "assets/InspectPanel-XZvJuHkZ.js",
+    "bytes": 11246,
+    "sha256": "3b323e61ced858e349076bb5647c722f6e6dbfd69ff780f74b95d3b86cda4cb3"
+  },
+  {
+    "path": "assets/MainModelingTools-C-KNTPG-.js",
+    "bytes": 99839,
+    "sha256": "95ffcb33b50ce75dccea2e2e05fb843e1fc1ecc6936c769709837b472b5d1016"
+  },
+  {
+    "path": "assets/MainModelingTools-CgwM4Emy.css",
+    "bytes": 5992,
+    "sha256": "045e9bb5067f11a855789c51be030fce0d1d0773760df4d4101b89a91098ba86"
+  },
+  {
+    "path": "assets/MechanicalGenerator-BBAXW1t9.css",
+    "bytes": 1873,
+    "sha256": "4d0d5ce72b9af0c632af7f9253c6037fed9bae100aa93f4fd659d292ea8fc1b7"
+  },
+  {
+    "path": "assets/MechanicalGenerator-CB2aFyDY.js",
+    "bytes": 78001,
+    "sha256": "2a788b0a23218932d17d4f0bb43f6f13a80d181fa44bbdd31943af21b3579e55"
+  },
+  {
+    "path": "assets/MeshModeler-Bzz9Od2g.css",
+    "bytes": 7654,
+    "sha256": "63d1f811a5752bab3c7a3705cd8b17699c58572d3e1b38646f02bbeabd9340fb"
+  },
+  {
+    "path": "assets/MeshModeler-CJK9eMsz.js",
+    "bytes": 37863,
+    "sha256": "8dfbf911c923ecde56262a657dde176bf6064c4e6e0a3a27f39c4ca9d85b4ad9"
+  },
+  {
+    "path": "assets/NominalTrussPanel-B55Pwr1V.css",
+    "bytes": 3814,
+    "sha256": "8d11382a179a2a22b25452121e80db58d640bcd83e142b93937848e41223b232"
+  },
+  {
+    "path": "assets/NominalTrussPanel-BSrCzhaL.js",
+    "bytes": 26898,
+    "sha256": "ea379635f7689108fdaa951ba387d1f192c35de06361bfd6976645e877e70922"
+  },
+  {
+    "path": "assets/PhotogrammetryPanel-DXS5MU0m.css",
+    "bytes": 2174,
+    "sha256": "35b290a25f4a79e54a3c0a5fc1baa24a764cd9a6af7cd0633e7cf3762b9c56b8"
+  },
+  {
+    "path": "assets/PhotogrammetryPanel-rlxFFQyu.js",
+    "bytes": 37769,
+    "sha256": "5bb23354a68cdfef1430775079b176b938ba0fd00f344a46599aa8e747fb3f33"
+  },
+  {
+    "path": "assets/ScanPlanePanel-CoJ9OQAC.css",
+    "bytes": 2875,
+    "sha256": "c8316482daf0b69aa64b94b9383c43ae403c9eafef2699972f7cb2ba92e869b3"
+  },
+  {
+    "path": "assets/ScanPlanePanel-K4Wbqe66.js",
+    "bytes": 5764,
+    "sha256": "f1a98d7e892dd5ac6198ef92430ac3d3b9fa48f7640a3bb6d50424fe17c3a412"
+  },
+  {
+    "path": "assets/SceneOutliner-CiiIw9XG.js",
+    "bytes": 11698,
+    "sha256": "0a6ebf4ea7e08934056cc0568313a02ef1b3760c8693291343b711b9c40e67b5"
+  },
+  {
+    "path": "assets/SceneOutliner-DRA00o9t.css",
+    "bytes": 7820,
+    "sha256": "5bcf18093a3720f534f25f5e8937825f023fd89755f3df758240fe1e3d77276a"
+  },
+  {
+    "path": "assets/ShellDistanceSummary-CpoTAzav.js",
+    "bytes": 2115,
+    "sha256": "75fbf19d0416c720eba3cf02f16d4e405c70edb4317474eec1e21918c2bb15df"
+  },
+  {
+    "path": "assets/SolidVolumeDistance-CCRomlDm.js",
+    "bytes": 4893,
+    "sha256": "5f35e623745d318c452c7d4519ccef03a575816f61bbe56a3a1ef69374cf71e9"
+  },
+  {
+    "path": "assets/SolidVolumeDistance-ufzvdPpS.css",
+    "bytes": 754,
+    "sha256": "4824a1165d55e1fbefc37c992da41f0b48ec89eb5cb8eeab87c59974f79625dd"
+  },
+  {
+    "path": "assets/StructuralSectionsPanel-DO5o65UX.css",
+    "bytes": 993,
+    "sha256": "4e2720922fbecd25305a68190bc1e2d43b92d99e67dd1b4a1b11000f964ca773"
+  },
+  {
+    "path": "assets/StructuralSectionsPanel-DY6NT4yL.js",
+    "bytes": 6359,
+    "sha256": "202b162ebc57d1e7c0ad14a64a9a67ca36cb3654c668b7bed63ed04049e7cf6f"
+  },
+  {
+    "path": "assets/SvgPanel-DG2rFvQK.css",
+    "bytes": 2558,
+    "sha256": "12f7e492494eab11365a8c7b82d6250f4a1ec3be0e42e5863c145ef64f7acb2c"
+  },
+  {
+    "path": "assets/SvgPanel-p5wEwehk.js",
+    "bytes": 20376,
+    "sha256": "9c8d20129ece7ebee655cf91f9792684aa665a856c48fe28a4a2a146258b1a74"
+  },
+  {
+    "path": "assets/_plugin-vue_export-helper-BDNMzG2s.js",
+    "bytes": 84,
+    "sha256": "27e87fe62aa760227b7529576953d8314891fd2aec28e0a3f03aece406f2d7d7"
+  },
+  {
+    "path": "assets/binary-codec-BidILh3q.js",
+    "bytes": 8658,
+    "sha256": "efc0f1a95f11d8374e81cadcad7b082802c3afaab8340d74409b979755046a64"
+  },
+  {
+    "path": "assets/brepInspectionCache-BVoqkLLX.js",
+    "bytes": 9843,
+    "sha256": "4b590f0742e99a1b02027bc8b4ecddb7b8ee617861eee09bc3df088ce73cc39c"
+  },
+  {
+    "path": "assets/bytes-B4jNlYaJ.js",
+    "bytes": 76,
+    "sha256": "922574fd1112c625562ccb88199b91f639ba177a6320c87dff6db8c8a3bb8672"
+  },
+  {
+    "path": "assets/cadNurbsStep-B91InKzv.js",
+    "bytes": 79,
+    "sha256": "deae9bffe76f6cab82dfd17286efeccc7d9001040b51e2d436c9bacb2c288ee1"
+  },
+  {
+    "path": "assets/cadNurbsStep-JqP_P6qe.js",
+    "bytes": 262,
+    "sha256": "d9052d9b6a3cd2e3bf683d657a83b0467c98e6931d7ca2a752d7cec4502ac3e9"
+  },
+  {
+    "path": "assets/cadStepIndexedDb-DPK5vwQ8.js",
+    "bytes": 14308,
+    "sha256": "eabd5e361e86b08aeef77da60e8cead4bfc36c9c90c26cdbb29b394dd1580f76"
+  },
+  {
+    "path": "assets/codeHighlight-taaoKFE2.js",
+    "bytes": 1172,
+    "sha256": "3fad7ccbefbe4a4e5593e61b6a0f8b1d41d5e4532e614bfeecd252437159e3ac"
+  },
+  {
+    "path": "assets/detect-BA8Bg0n8.js",
+    "bytes": 261,
+    "sha256": "4b056d1825901bcc2dc7c7660456679129b3955bd4609db47573f18cac264095"
+  },
+  {
+    "path": "assets/direct-modeling-BzhtvoLw.js",
+    "bytes": 13871,
+    "sha256": "e45b8daaebae0ff91dc047b3160bbecb399642c918ea907432891166ffe8ba27"
+  },
+  {
+    "path": "assets/directBodies-COJ8ovNJ.js",
+    "bytes": 397,
+    "sha256": "576c0e80ce35f5695d887a7d41f84be97a2e6a79bb9e2d368d3cdbc5259caa68"
+  },
+  {
+    "path": "assets/downloadArtifact-CbuKtES4.js",
+    "bytes": 1628,
+    "sha256": "b9a778090d812fd427315482b9bf9b4baf121ce77be37affbd72eb24992582e8"
+  },
+  {
+    "path": "assets/exactSolidClient-BdgOARj2.js",
+    "bytes": 2256,
+    "sha256": "a561592382ffdd826eec526b7ced78463303676a8fa9b4a831bbe28889eb2ff5"
+  },
+  {
+    "path": "assets/exactSolidRuntime--Nu8nifV.js",
+    "bytes": 2243,
+    "sha256": "bd099f48c5bf02f480c982778f6eee421bcd649074745ca8af97c37134a29a7a"
+  },
+  {
+    "path": "assets/gcodePreview.worker-B5V4vUhh.js",
+    "bytes": 14531,
+    "sha256": "b1196f10a0b002b7d47ee5f673e69f8a54fd36fd71fd51b35e2776384064ba41"
+  },
+  {
+    "path": "assets/geometry-kernel-bytes-V3weCEyL.js",
+    "bytes": 3256480,
+    "sha256": "1cb715f6d2ae59be6a5d678575816bd0f906a05f037ae3bbada31ba70631e780"
+  },
+  {
+    "path": "assets/geometry.worker-CRW5ixH6.js",
+    "bytes": 472092,
+    "sha256": "20fda5faf763943d1aee13f31007f88d1a38b577ad56eac25ea4433fd16080a5"
+  },
+  {
+    "path": "assets/harfbuzz-bytes-CWdd5xXk.js",
+    "bytes": 179520,
+    "sha256": "e5519cc5aa3ebfb903144ce994be998be188dba9fd34b15f4ef8e7706e44c4b5"
+  },
+  {
+    "path": "assets/index-CWzbY4mJ.js",
+    "bytes": 228551,
+    "sha256": "6b7d5217c38b70c7e0fc1bb274c3988d6ae6d7f0f3bb7beff8372b8440c93f4e"
+  },
+  {
+    "path": "assets/index-CdgvtXDT.css",
+    "bytes": 42020,
+    "sha256": "05eccee08a9843502e425db46ec00a6495236434c8c7d916729196fd419382d7"
+  },
+  {
+    "path": "assets/language-kernel-bytes-U4olrfGH.js",
+    "bytes": 442783,
+    "sha256": "763178efb5b3bebec66967c017394748eec048e23acb1480a223394c7fb0f39d"
+  },
+  {
+    "path": "assets/mainSolid.worker-D-8YbBK5.js",
+    "bytes": 114491,
+    "sha256": "01ce414280bfb4d4098fbf37d6b3e38da5b653966f308a44482ec24eb6ad0966"
+  },
+  {
+    "path": "assets/mainSolidWorker-DirRULnh.js",
+    "bytes": 4411,
+    "sha256": "3d689abc1d2d73c075560e0fb191f650fcedcd901969b5fe7c34fceb76e413d8"
+  },
+  {
+    "path": "assets/mainSolidWorkerClient-B43i1z7h.js",
+    "bytes": 41120,
+    "sha256": "2becdca8a1e05afc7a2dd19c154291d49c98f21d561f6736d636f1b8b612507e"
+  },
+  {
+    "path": "assets/mainSourceEditing-Buvup9yZ.js",
+    "bytes": 20833,
+    "sha256": "9630e6fdfa855f4402fd07222f8c07d86874c256a5fd281c8bc2f6c0c0994ad8"
+  },
+  {
+    "path": "assets/meshConvert-BmBC9DMe.js",
+    "bytes": 42116,
+    "sha256": "bbe8a0fefd39e34f6ce5b16daea5124a324bff6018b228371e28ef009b371412"
+  },
+  {
+    "path": "assets/meshConvert-DXq6EJEo.js",
+    "bytes": 109,
+    "sha256": "d5a70e1f3474955e18c0c798492411631fc59788fabe9353d32c7021b065361d"
+  },
+  {
+    "path": "assets/meshEditing-BWAuyjVr.css",
+    "bytes": 6178,
+    "sha256": "c91995e3cecef620d082853da59cb669b5e81869bb664944167b5583ceabb57e"
+  },
+  {
+    "path": "assets/meshEditing-ChpWh0R5.js",
+    "bytes": 31287,
+    "sha256": "55b119b4c7d90bb78802801b4162a1bed365d5435da8e3cf677202ef87206eff"
+  },
+  {
+    "path": "assets/meshExportAdapter-CfR9PgIT.js",
+    "bytes": 390,
+    "sha256": "68970e3d048985e52cf64dd1ca71d48f860bb7043317de2be9b88bd692fb9951"
+  },
+  {
+    "path": "assets/meshExportFormats-CJaJtd1a.js",
+    "bytes": 221,
+    "sha256": "9c2f3ab2637694ac36e8aacd4af591b224f5ca3c4321ae23a1bbff7cad0e8bbb"
+  },
+  {
+    "path": "assets/meshExportFormats-DlZTstZS.js",
+    "bytes": 1177,
+    "sha256": "ae038ae1bf2ca5f5d06196d615c838b1099949f7ac91e1c73c051511ecc78761"
+  },
+  {
+    "path": "assets/meshFlatten-BNtbmY1A.js",
+    "bytes": 358,
+    "sha256": "1a76fba46c542ed93a3175bb2de8259a3d08faba7df36f97b87ba232c23d7bb9"
+  },
+  {
+    "path": "assets/meshFormats-0dQIJ6em.js",
+    "bytes": 1670,
+    "sha256": "541c8ca0dffef7e2688723209c7f091d0c555455840caa36e65e7d39f6108c98"
+  },
+  {
+    "path": "assets/meshJson-CVKQT5bI.js",
+    "bytes": 201,
+    "sha256": "53fe78b98c234b8f598ce56bec30e1620eab177f97c082b37d5183d464cd6678"
+  },
+  {
+    "path": "assets/meshTopology-C4du6cb8.js",
+    "bytes": 1637,
+    "sha256": "33b44d65b04c06843f9faf89dd88f00e7be1b8b7065220df6961e0961472c3c0"
+  },
+  {
+    "path": "assets/modelGraphNurbsCompiler-CKKY1aSv.js",
+    "bytes": 2350,
+    "sha256": "56d925065d45deeef2a6401fcb7067472a3aafd35b2da4820bd1a3b6804b43e0"
+  },
+  {
+    "path": "assets/modelGraphNurbsKernel-Cbh_PPey.js",
+    "bytes": 18854,
+    "sha256": "8ef547e4c3cf985312daa86ed295c753440c336f33899fd9e1f75dcf679bc2ca"
+  },
+  {
+    "path": "assets/modelGraphText-B-cPmJ7z.js",
+    "bytes": 815,
+    "sha256": "9eca2885a7ed52b36af5749b1a8d026976a49132d740f1024ac27b136060fb55"
+  },
+  {
+    "path": "assets/modelGraphText-D1bk3JkT.js",
+    "bytes": 115,
+    "sha256": "2c1752c98cb023f4488bb0cae8261efc3028309222d5cf700bb5f591dc449c50"
+  },
+  {
+    "path": "assets/modelGraphTextScene-Bz0VHAvh.js",
+    "bytes": 7309,
+    "sha256": "de328d124a08920e3c678a3bf55b81337af675cbbbbb7786450326c402a82b24"
+  },
+  {
+    "path": "assets/modelgraph-text-CuZAcWQw.js",
+    "bytes": 4366,
+    "sha256": "009b4d2c706d541e34f0a059e616f5eaa7b4d3966bd0e7c32c995461ddbdf14c"
+  },
+  {
+    "path": "assets/nurbsSurface-B7j_D77o.js",
+    "bytes": 304,
+    "sha256": "2a96720d5b4cbcb94deba5bf973ccbf50b1d08fc281d9e07194931a07e9b38c0"
+  },
+  {
+    "path": "assets/openScadTextRuntime-Cht0SKdF.js",
+    "bytes": 26387,
+    "sha256": "db31766b5486d4cb0d7900022c478f24cf533ba821f3dd2cf39f11d8984be8e5"
+  },
+  {
+    "path": "assets/photogrammetry-bytes-C4E94wxZ.js",
+    "bytes": 222653,
+    "sha256": "6787c01588cd0baa545ae8e3bb2bfffa4bba943327ca5d61d5e816705ac94503"
+  },
+  {
+    "path": "assets/photogrammetry.worker-BK3i8TIk.js",
+    "bytes": 15569,
+    "sha256": "e44dfd9691a56079fd68978113c40479a8c3b9571cb8446d46624eda5fb42b1f"
+  },
+  {
+    "path": "assets/polygon-CjLKBCzE.js",
+    "bytes": 2519,
+    "sha256": "e63709a58735e6beb4cf37d01ee1ae27f1280f74c8715c74da5d2c869a80b464"
+  },
+  {
+    "path": "assets/preload-helper-BZ1Pz5am.js",
+    "bytes": 1218,
+    "sha256": "8820987e6a8afb54d776f21e305917e1ecf83cef678b4db38c2e5a405d04a8bf"
+  },
+  {
+    "path": "assets/renderer-CSJtQJob.js",
+    "bytes": 131987,
+    "sha256": "ee2e6d8f7f2c51436e6618d6206a79a72e6b463c6086ae423208755f41021be9"
+  },
+  {
+    "path": "assets/safeStorage-BLm4OzSk.js",
+    "bytes": 702,
+    "sha256": "c9302bc98104e7f4dcf364e3995eeddf7a3ebad69ae13e78d9113eac42a335ac"
+  },
+  {
+    "path": "assets/solid-draft-storage-D-u46Gp6.js",
+    "bytes": 4445,
+    "sha256": "f99fa53b32f4c25397b74d8580ba63646d3afef27321161cf4c974ac17124d79"
+  },
+  {
+    "path": "assets/solidBlenderExchange-DsOFRAyb.js",
+    "bytes": 693,
+    "sha256": "349a7e699e918ef402c5b9a1fcb4b62631f5659cbba474ae664d0c196e37be5a"
+  },
+  {
+    "path": "assets/solidBridge-F9O-_rlV.js",
+    "bytes": 2656,
+    "sha256": "7301e46769479cf568b2ea9ac40afeeaf1856f9fe5c18048f15d784d1ce6631a"
+  },
+  {
+    "path": "assets/solidMaterial-D-SGkJG8.js",
+    "bytes": 414,
+    "sha256": "ddf8f53cd7017a257841bd7036739d95aab3f0b7209cf07152e3401fecb99bb5"
+  },
+  {
+    "path": "assets/solidModelGraphImport-Cl5icsE9.js",
+    "bytes": 19124,
+    "sha256": "684a76c78543249b93a0b43f819547dcdff44c732d1ee2f4a553e85d9cdfc477"
+  },
+  {
+    "path": "assets/solidNurbs-BnwjIZQd.js",
+    "bytes": 755,
+    "sha256": "0ec7e737dd7179b121a5ec32ff9f14d414b61c7a14bb63ae5de19d3b631829df"
+  },
+  {
+    "path": "assets/solidPreviewWorker-CenX_AFN.js",
+    "bytes": 192,
+    "sha256": "39cd9d9792f09b740b5c8b682f1ccdd59965a53fb3794de0be8a03a7b2b28754"
+  },
+  {
+    "path": "assets/solidStepAssembly-B5zGe9Oo.js",
+    "bytes": 4688,
+    "sha256": "0f07f40cd38de639847fec5062cc8cd1d4262166532e06c41d848d93a03a7111"
+  },
+  {
+    "path": "assets/solidStepExchange-CeC2-o3n.js",
+    "bytes": 1584,
+    "sha256": "70d1725f44d2efa6a629457fc5282461a9312aedae52e18a53ddb505cf071785"
+  },
+  {
+    "path": "assets/stlImport-I_xNOC9d.js",
+    "bytes": 3290,
+    "sha256": "34a953d21d488faba6c181a714c14676bf6c079ec31b9019d0ce0f7fe42fc35a"
+  },
+  {
+    "path": "assets/surface-selection-Dc1RXHA1.js",
+    "bytes": 6070,
+    "sha256": "2212e967f69df4a75ca3b45816c1bf3eb5498e3a2f7a29b8699c65031fbf89cb"
+  },
+  {
+    "path": "assets/svg.worker-ybtV1RmG.js",
+    "bytes": 36515,
+    "sha256": "80ea167dd6935647f600676d438104b59a4257bda89657268a802fb9ef54335e"
+  },
+  {
+    "path": "assets/svgWorkerClient-C0KrGwI2.js",
+    "bytes": 5209,
+    "sha256": "33f2581ad7bb7d4e03bff3ecc588006b2b272b2dd663710944033e466ef9c555"
+  },
+  {
+    "path": "assets/svgWorkerClient-PrYD4MT2.js",
+    "bytes": 85,
+    "sha256": "024524c860fc4448f28faf85e143ae1e99ed19e249471842061364a6a8f6efb6"
+  },
+  {
+    "path": "assets/tessellation-DiywJnyD.js",
+    "bytes": 283,
+    "sha256": "6c318cdca57f27a8676610d4a33aaf829912f05eadafd071787bab66c2d6de86"
+  },
+  {
+    "path": "assets/vr-core-bytes-CBAgZmQb.js",
+    "bytes": 74844,
+    "sha256": "bd4915cc9deecbd96c5013d1a62f75f2c4e7e23de20629ed9ccf305d67474641"
+  },
+  {
+    "path": "assets/vue-DxqjmqvJ.js",
+    "bytes": 77107,
+    "sha256": "032dcdffbfa3cce3ff5469a6e5a16ff5a31a6da6c54e9bc556f3e76b1c2434d3"
+  },
+  {
+    "path": "assets/wasm-brotli-bytes-X2f0iH-P.js",
+    "bytes": 122880,
+    "sha256": "9372c34f39b26850ea4c2b3732cb282ec9cbed755a70a152a1dcceb79e6c431c"
+  },
+  {
+    "path": "assets/wasm-host-eqeMuxha.js",
+    "bytes": 1920,
+    "sha256": "13bc3bf23cc53360449b807461ccc2a9cc5ce98783549c8b46e3922ad4f5d174"
+  },
+  {
+    "path": "assets/wasmBrotliPacking-Dno2j-DW.js",
+    "bytes": 104,
+    "sha256": "7ba14931d471ea91f2a6fe8b836d105b39aeb152cbf10eacff81840ab515edea"
+  },
+  {
+    "path": "assets/wasmStreaming-BHa-SQsH.js",
+    "bytes": 1085,
+    "sha256": "55582b429178d643108dd357ac52e9fcaaf86e54420decb84b147d47dcc38303"
+  },
+  {
+    "path": "assets/worker-wasm-packing-UGYLAelr.js",
+    "bytes": 5272,
+    "sha256": "3fc311b191288d071d484147a0c5a2ce9fb1cc198b7e72addf549bb0ae55ab18"
+  },
+  {
+    "path": "assets/workspaceDocument--82FF93m.js",
+    "bytes": 7917,
+    "sha256": "08153d4f06cefc0b1f0b1e1db8a53635706746a468858bdbb666bb11faa107c2"
+  },
+  {
+    "path": "assets/workspaceIndexedDb-D7qwnK4H.js",
+    "bytes": 2826,
+    "sha256": "2241a1b4fe059b2e55d9efecdafbadd317f87a7d1829e787b2e21205d563d14b"
+  },
+  {
+    "path": "env/outdoor-sky.png",
+    "bytes": 2382,
+    "sha256": "b76657be011c3923176d5b5f76841e492963a62f3b8a744e0ed1a54e4a2bde38"
+  },
+  {
+    "path": "env/studio-softbox.png",
+    "bytes": 25263,
+    "sha256": "e044cd114e6223876d96d0749d30279b3b8609208f862c8200c50493a9e7c594"
+  },
+  {
+    "path": "env/workshop.png",
+    "bytes": 35685,
+    "sha256": "3b28a5c2ddc57e9c6caf8ca4d2ffd7df9d2835af2113ba394c8c5c311a5f3d2a"
+  },
+  {
+    "path": "index.html",
+    "bytes": 4375,
+    "sha256": "32862707c377d495957fc52e429eea87eeb6138d6a88a87bd7e36ca340ea7ad2"
+  },
+  {
+    "path": "manifest.json",
+    "bytes": 752,
+    "sha256": "19c48e7f9abdec223535542f83fef3cbd2a3fe24d6481d4ac69a7e44a8f87287"
+  },
+  {
+    "path": "matcaps/chrome.png",
+    "bytes": 24270,
+    "sha256": "b1f1f3b0c5b4681ae09984d76726519f522493614874e63c6de8e767842678a8"
+  },
+  {
+    "path": "matcaps/clay.png",
+    "bytes": 18026,
+    "sha256": "5f32567caead35fbbff7d789a5864812b11ea8cdcb475a805595765969985326"
+  },
+  {
+    "path": "matcaps/pearl.png",
+    "bytes": 33193,
+    "sha256": "fc5edeab8b6ca59e6769cf2c5218ff6d4177e3c168f64763c4653a0864192ded"
+  },
+  {
+    "path": "matcaps/studio.png",
+    "bytes": 18793,
+    "sha256": "82238bd11b79a4dab4e7b8422cf1223a38a148c288481d7b174dcb996e88e646"
+  },
+  {
+    "path": "sw.js",
+    "bytes": 4755,
+    "sha256": "eaeae1629302f06372ed4d11048b432ed847509f0be9825d451f0705151424cf"
+  },
+  {
+    "path": "third-party/brotli.txt",
+    "bytes": 1900,
+    "sha256": "3ad64cc2af5b4d99ecf4a4fe81419c76b2389c829ed07d43847709e903f32101"
+  },
+  {
+    "path": "third-party/noto-sans-OFL.txt",
+    "bytes": 4377,
+    "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb"
+  },
+  {
+    "path": "third-party/svg.txt",
+    "bytes": 218946,
+    "sha256": "42bb4d58dd2c52a8041b40e58b6672cf36b6665928f3aa2db72cda5a738f9dbd"
+  },
+  {
+    "path": "third-party/truss.txt",
+    "bytes": 144527,
+    "sha256": "b4175c0632aaa4d99ce53663640b04296ca3ec40faeb7d06c966d75015ed31aa"
+  },
+  {
+    "path": "wasm/geometry-kernel.wasm",
+    "bytes": 9380223,
+    "sha256": "4c0adddc757c9a2c21a98f0ce0c854308421234e4f76bb36f639b91f86aeeca6"
+  },
+  {
+    "path": "wasm/language-kernel.wasm",
+    "bytes": 1348715,
+    "sha256": "b4dec57c628f9463302805aefec56acde18a61d2308dbbf9290dacf70dc1c60f"
+  },
+  {
+    "path": "wasm/photogrammetry.wasm",
+    "bytes": 717670,
+    "sha256": "447a1a0b7a02f73c5ff576de1f3fcff03b255d04b862e1a8f38b006557efed69"
+  }
+]

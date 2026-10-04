@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { buildExactSolidsInWorker, type ExactSolidWorkerPort } from '../src/services/solid/exactSolidClient'
 import { runExactSolidRequest } from '../src/services/solid/exactSolidRuntime'
 import { evaluateExactSolids } from '../src/services/geometryBuildEngine'
@@ -15,6 +16,32 @@ class FakeWorker extends EventTarget implements ExactSolidWorkerPort {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('exact-solid worker boundary', () => {
+  it.each([
+    ['periodic-hollow', 16, 10],
+    ['periodic-hollow', 32, 10],
+    ['periodic-frame-guide-affine-hollow', 4, 10],
+    ['periodic-moving-axis-guide-affine-hollow-authored-caps', 4, 130],
+  ] as const)('accepts %s with %i segments through real construction and document validation', async (fixture, segments, faces) => {
+    const source = readFileSync(new URL(`../examples/rush/miter-${fixture}.r`, import.meta.url), 'utf8')
+      .replace('brep_tessellate(4)', `brep_tessellate(${segments})`)
+    const worker = new FakeWorker()
+    const pending = buildExactSolidsInWorker(source, undefined, () => worker)
+    worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0][0]))
+    const bodies = await pending
+    expect(bodies).toHaveLength(1)
+    expect(bodies[0].brep?.faces).toHaveLength(faces)
+    expect(worker.terminate).toHaveBeenCalledOnce()
+  })
+  it('refuses exhausted authored-cap correction through the worker without publishing a body',async()=>{
+    const source=readFileSync(new URL('../examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r',import.meta.url),'utf8')
+      .replace('cap_correction_max_work: 1000000','cap_correction_max_work: 0')
+    const worker=new FakeWorker()
+    const pending=buildExactSolidsInWorker(source,undefined,()=>worker)
+    worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0][0]))
+    await expect(pending).rejects.toThrow('Miter authored cap correction unproved: work-limit')
+    expect(worker.terminate).toHaveBeenCalledOnce()
+  })
+
   it.each([
     'cube([10,20,30], center=true);',
     'cube(2); translate([8,0,0]) cube(3);',
@@ -101,4 +128,25 @@ describe('exact-solid worker boundary', () => {
     expect(malformed.terminate).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
   })
+})
+
+
+it('retains Rush swept B-rep and cap holes through the exact-solid worker client',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync('examples/rush/contact-progressive-hollow-body.r','utf8')
+ const worker=new FakeWorker()
+ const pending=buildExactSolidsInWorker(source,undefined,()=>worker)
+ worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0]![0]))
+ const bodies=await pending
+ expect(bodies).toHaveLength(1)
+ expect(bodies[0]!.brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
+ const {inspectNurbsBrep}=await import('../src/services/geometry/brep')
+ expect(inspectNurbsBrep(bodies[0]!.brep!)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
+ expect(worker.terminate).toHaveBeenCalledOnce()
+})
+
+it('refuses Rush surface-only display through the exact-solid route',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync('examples/rush/progressive-sweep.r','utf8')
+ expect(await runExactSolidRequest({kind:'exact-solid',version:1,source})).toMatchObject({ok:false,error:{message:'Solid source requires native B-rep bodies.'}})
 })

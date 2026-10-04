@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-10-01T19:16:56.944133+00:00",
+  "nativeProgressiveTests": 11,
+  "packagedWasmTests": 428,
+  "packagedWasmFiles": 13,
+  "typecheck": "passed",
+  "rushLowering": "passed",
+  "catalogAudit": "passed",
+  "newVisualVerification": false,
+  "contract": "common stations and aggregate sampled budget; ordered walls only",
+  "remaining": [
+    "caps and nesting",
+    "B-rep sewing",
+    "continuous error",
+    "self-intersections",
+    "STEP qualification"
+  ],
+  "sha256": {
+    "crates/nurbs-core/src/progressive_sweep.rs": "d84a1c67ab10af3b869a36b27ffd6eef9b22878e6474c3fc6019cf8a063ecc9b",
+    "crates/nurbs-core/src/progressive_sweep/tests.rs": "b0d348cd31eedfae9a16e63cbccab96f1b386acf2b88cf23ee3a993b0fc23e06",
+    "crates/nurbs-core/src/progressive_sweep/serialization.rs": "7e5e2bb01be762653135ab87b42331b1528ce206df2a8b7f0d3b99605c819fc6",
+    "src/services/nurbsConstructors.ts": "ae715304b9fae4d7d133855c2194300a26e5d0f27fe6a037751b5c4d8d631a5b",
+    "src/services/modelGraphNurbsKernel.ts": "59df997034d517a9305ddfc8830209da6f680451c2cb553c3966580991262d69",
+    "examples/rush/multi-profile-progressive-sweep.r": "79f8fb09f599b7113f005e94d9853efd76ecdbede9ed96a7890697f64efde371",
+    "public/wasm/geometry-kernel.wasm": "fbca51b03acaf5b55d3227b0e79dcdc5e7a17fabdb409cf24a5ca4f1c2032742"
+  }
+}

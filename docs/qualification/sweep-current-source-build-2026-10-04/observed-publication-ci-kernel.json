@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "45d7f6a55e2f66e07b287de5c11ab157311bd022",
+  "runId": 37190883610,
+  "sha256": "3ca78b534b4ba38a171cde120dd2ec0c676e36c0b32f36e31d89b1b0c6ccfd26",
+  "byteLength": 9902781,
+  "artifacts": [
+    {
+      "id": 11298572646,
+      "node": "22"
+    },
+    {
+      "id": 11299406547,
+      "node": "20.19"
+    }
+  ],
+  "localSha256": "9ec9bf63a27f431673c847eb7b1bbe0bf59781cea24a413520a48b1e14428c33",
+  "crossHostIdentityClaim": false
+}

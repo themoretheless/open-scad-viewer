@@ -63,7 +63,7 @@ try {
  assert.deepEqual(await exportDoc('preview.json'),before)
  await page.screenshot({path:path.join(directory,'point-trim-preview.png')})
  await setPoint('10 mm','0 mm')
- await solid.getByText('Точка совпадает с концом кривой.',{exact:false}).first().waitFor()
+ await solid.getByText('Это конец кривой. Выберите внутреннюю точку.',{exact:false}).first().waitFor()
  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),false)
  assert.deepEqual(await exportDoc('endpoint-refused.json'),before)
  await setPoint('8 mm','6 mm');await preview()

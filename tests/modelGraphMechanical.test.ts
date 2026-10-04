@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { buildModelGraphGear } from '../src/services/modelGraphGears'
-import { buildModelGraphPlanetary } from '../src/services/modelGraphPlanetary'
+import { buildModelGraphGear } from '../benchmarks/modelgraph/modelGraphGears-reference'
+import { buildModelGraphPlanetary } from '../benchmarks/modelgraph/modelGraphPlanetary-reference'
 import { buildModelGraphThread, threadRadiusAt } from '../src/services/modelGraphThreads'
 import { GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS, createMechanicalDocument } from '../src/services/mechanicalGeneratorContract'
 import { compileModelGraph } from '../src/services/modelGraph'

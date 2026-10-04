@@ -825,7 +825,9 @@ fn foundation_v5_certified_curve_curve_and_curve_surface() {
     let cs = intersection::intersect_curve_surface(&piercing, &plane, None).unwrap();
     assert_eq!(cs["version"], "nurbs-foundation/5");
     assert_eq!(cs["kind"], "curve_surface");
-    assert_eq!(cs["coverage"]["complete"], true);
+    assert_eq!(cs["coverage"]["complete"], false);
+    assert_eq!(cs["coverage"]["searchComplete"], true);
+    assert_eq!(cs["coverage"]["certified"], false);
     let cs_points: Vec<_> = cs["components"]
         .as_array()
         .unwrap()

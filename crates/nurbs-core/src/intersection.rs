@@ -4,45 +4,49 @@
 //! knot ownership, Krawczyk uniqueness on terminal boxes, and derivative-order
 //! contact classification. Unresolved appears only at resource or conditioning
 //! boundaries. Reports carry ToleranceContext evidence and CoedgeTrim maps.
-use crate::{Result, check, curve::Curve, resource, surface::Surface};
+use crate::{Result, check, curve::Curve, surface::Surface};
 use cad_predicates::ToleranceContext;
-use value_codec::{Value, json};
+pub(crate) use math_core::{cross as cross3, dot as dot3};
+#[cfg(feature = "codec")]
+pub use serialization::resource_boundary_probe;
+#[cfg(feature = "codec")]
+pub(crate) use serialization::tolerance_evidence;
+#[path = "intersection/plane.rs"]
+mod plane;
+use plane::{invert_plane_uv, plane_of};
+#[path = "intersection/serialization.rs"]
+#[cfg(feature = "codec")]
+mod serialization;
+#[cfg(feature = "codec")]
+pub use serialization::{intersect_curve_curve, intersect_curve_surface};
+#[path = "intersection/curve_surface.rs"]
+mod curve_surface;
+pub use curve_surface::*;
+#[path = "intersection/curve_curve.rs"]
+mod curve_curve;
+pub use curve_curve::*;
+#[path = "intersection/bezier_clip.rs"]
+pub(crate) mod bezier_clip;
+/// Curve self-intersection audit (formerly `crate::curve_self_intersection`).
+pub mod self_curve;
+/// Surface self-intersection audit (formerly `crate::surface_self_intersection`).
+pub mod self_surface;
+/// Certified surface/surface intersection (formerly `crate::ss_intersection`).
+pub mod ss_intersection;
+/// Contact certificates for surface/surface sections (formerly `crate::surface_contact`).
+pub mod surface_contact;
+/// Conservative contact search over two surface domains (formerly `crate::surface_contact_search`).
+pub mod surface_contact_search;
 
 pub(crate) const MAX_BOXES: usize = 8192;
 const MAX_DEGREE: usize = 25;
 const MAX_CONTROLS: usize = 256;
 pub(crate) const MAX_SPANS: usize = 4096;
 const TRANSVERSE_SINE: f64 = 1e-8;
+pub(crate) use math_core::{next_down, next_up};
+
 const VERSION: &str = "nurbs-foundation/5";
 
-pub(crate) fn next_down(x: f64) -> f64 {
-    if x == f64::NEG_INFINITY || x.is_nan() {
-        x
-    } else if x == 0. {
-        -f64::from_bits(1)
-    } else {
-        f64::from_bits(x.to_bits().wrapping_add(if x < 0. { 1 } else { u64::MAX }))
-    }
-}
-pub(crate) fn next_up(x: f64) -> f64 {
-    if x == f64::INFINITY || x.is_nan() {
-        x
-    } else if x == 0. {
-        f64::from_bits(1)
-    } else {
-        f64::from_bits(x.to_bits().wrapping_add(if x < 0. { u64::MAX } else { 1 }))
-    }
-}
-pub(crate) fn tolerance_evidence(context: &ToleranceContext) -> Value {
-    let spatial = context.spatial_bounds();
-    json!({
-        "toleranceIdentity": context.spec_identity(),
-        "linearAbsoluteMm": spatial.absolute_mm,
-        "linearRelative": spatial.relative,
-        "parametricFloor": context.parametric_bounds().floor,
-        "maxEntityErrorMm": context.entity_error_bounds().maximum_mm
-    })
-}
 pub(crate) fn context(value: Option<ToleranceContext>) -> ToleranceContext {
     value.unwrap_or_else(ToleranceContext::default_valid)
 }
@@ -53,16 +57,7 @@ pub(crate) fn distance(a: &[f64], b: &[f64]) -> f64 {
         .sum::<f64>()
         .sqrt()
 }
-pub(crate) fn cross3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-pub(crate) fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
+
 pub(crate) fn norm3(a: [f64; 3]) -> f64 {
     distance(&a, &[0.; 3])
 }
@@ -138,10 +133,25 @@ fn hull_ranges(h: &[[f64; 4]]) -> [[f64; 2]; 3] {
         [lo, hi]
     })
 }
-fn hulls_excluded(a: &[[f64; 4]], b: &[[f64; 4]]) -> bool {
-    let ra = hull_ranges(a);
-    let rb = hull_ranges(b);
-    (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
+// Exclusion must enclose original authored curves, not rounded trim controls.
+fn curve_box(curve: &Curve, range: [f64; 2]) -> Result<Vec<crate::distance_bounds::Interval>> {
+    let span = (curve.degree..curve.control_points.len())
+        .find(|&i| {
+            curve.knots[i] < curve.knots[i + 1]
+                && curve.knots[i] <= range[0]
+                && range[1] <= curve.knots[i + 1]
+        })
+        .ok_or_else(|| crate::input("Intersection box must lie inside one original knot span"))?;
+    crate::curve_distance::enclosure(
+        curve,
+        span,
+        crate::distance_bounds::Interval::new(range[0], range[1])?,
+    )
+}
+fn curves_excluded(first: &Curve, second: &Curve, ta: [f64; 2], tb: [f64; 2]) -> Result<bool> {
+    let a = curve_box(first, ta)?;
+    let b = curve_box(second, tb)?;
+    Ok(a.iter().zip(&b).any(|(a, b)| a.hi < b.lo || b.hi < a.lo))
 }
 fn split_homogeneous(h: &[[f64; 4]]) -> (Vec<[f64; 4]>, Vec<[f64; 4]>) {
     let mut row = h.to_vec();
@@ -217,186 +227,22 @@ fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
     Ok(jets)
 }
 
-fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
-    let mut best: f64 = 0.;
-    for va in curve_tangents(first, t)? {
-        for vb in curve_tangents(second, u)? {
-            let la = norm3(va);
-            let lb = norm3(vb);
-            if !la.is_finite() || !lb.is_finite() || la <= 0. || lb <= 0. {
-                continue;
-            }
-            let c = cross3(va.map(|x| x / la), vb.map(|x| x / lb));
-            best = best.max(norm3(c));
-        }
-    }
-    Ok(best)
-}
 
-/// Contact class from derivative vanishing order of the relative curve.
-fn contact_class(
-    first: &Curve,
-    second: &Curve,
-    t: f64,
-    u: f64,
-    floor: f64,
-) -> Result<&'static str> {
-    let sine = tangent_sine(first, second, t, u)?;
-    if sine > TRANSVERSE_SINE {
-        return Ok("transverse");
-    }
-    let ja = first.evaluate(t)?;
-    let jb = second.evaluate(u)?;
-    let Some(ref a1) = ja.d1 else {
-        return Ok("unresolved_conditioning");
-    };
-    let Some(ref b1) = jb.d1 else {
-        return Ok("unresolved_conditioning");
-    };
-    let va = point3(a1)?;
-    let vb = point3(b1)?;
-    let la = norm3(va);
-    let lb = norm3(vb);
-    if !la.is_finite() || !lb.is_finite() || la <= floor || lb <= floor {
-        return Ok("pole_or_singular");
-    }
-    // Align second tangent to first; relative second derivative decides parity.
-    let scale = la / lb;
-    let aligned = vb.map(|x| x * scale);
-    let relative1 = [va[0] - aligned[0], va[1] - aligned[1], va[2] - aligned[2]];
-    if norm3(relative1) > floor {
-        // Near-parallel but first-order residual: odd contact (crossing tangency).
-        return Ok("odd_tangency");
-    }
-    match (&ja.d2, &jb.d2) {
-        (Some(a2), Some(b2)) => {
-            let ra = point3(a2)?;
-            let rb = point3(b2)?;
-            let relative2 = [
-                ra[0] - rb[0] * scale,
-                ra[1] - rb[1] * scale,
-                ra[2] - rb[2] * scale,
-            ];
-            if norm3(relative2) > floor {
-                Ok("even_tangency")
-            } else {
-                Ok("higher_order_contact")
-            }
-        }
-        _ => Ok("odd_tangency"),
+pub(crate) fn coedge_trim(
+    curve: [f64; 2],
+    pcurve: [f64; 2],
+    lifts: [[i32; 2]; 2],
+) -> brep_topology::CoedgeTrim {
+    brep_topology::CoedgeTrim {
+        curve_parameter: curve,
+        pcurve_parameter: pcurve,
+        periodic_lift: lifts,
     }
 }
 
-fn proportional_homogeneous(a: &[[f64; 4]], b: &[[f64; 4]], tol: f64) -> bool {
-    if a.len() != b.len() || a.is_empty() {
-        return false;
-    }
-    let mut scale = None;
-    for (pa, pb) in a.iter().zip(b) {
-        for axis in 0..4 {
-            if pa[axis].abs() <= tol && pb[axis].abs() <= tol {
-                continue;
-            }
-            if pa[axis].abs() <= tol || pb[axis].abs() <= tol {
-                return false;
-            }
-            let ratio = pa[axis] / pb[axis];
-            match scale {
-                None => scale = Some(ratio),
-                Some(s) if (ratio - s).abs() > tol.max(s.abs() * 1e-9) => return false,
-                _ => {}
-            }
-        }
-    }
-    scale.is_some()
-}
-
-fn collinear_direction(h: &[[f64; 4]]) -> Option<[f64; 3]> {
-    let points: Vec<[f64; 3]> = h
-        .iter()
-        .map(|p| [p[0] / p[3], p[1] / p[3], p[2] / p[3]])
-        .collect();
-    let origin = points[0];
-    let mut direction = None;
-    for point in &points[1..] {
-        let d = [
-            point[0] - origin[0],
-            point[1] - origin[1],
-            point[2] - origin[2],
-        ];
-        if norm3(d) <= 1e-14 {
-            continue;
-        }
-        match direction {
-            None => direction = Some(d),
-            Some(dir) => {
-                if norm3(cross3(dir, d)) > 1e-9 * norm3(dir) * norm3(d) {
-                    return None;
-                }
-            }
-        }
-    }
-    direction.map(|d| {
-        let n = norm3(d).max(f64::from_bits(1));
-        d.map(|x| x / n)
-    })
-}
-
-fn project_line_parameter(point: [f64; 3], origin: [f64; 3], direction: [f64; 3]) -> f64 {
-    dot3(
-        [
-            point[0] - origin[0],
-            point[1] - origin[1],
-            point[2] - origin[2],
-        ],
-        direction,
-    )
-}
-
-pub(crate) fn coedge_trim(curve: [f64; 2], pcurve: [f64; 2], lifts: [[i32; 2]; 2]) -> Value {
-    json!({
-        "curveParameter": curve,
-        "pcurveParameter": pcurve,
-        "periodicLift": lifts
-    })
-}
-
-#[derive(Clone)]
-struct CcComponent {
-    kind: &'static str,
-    first: f64,
-    second: f64,
-    first_interval: [f64; 2],
-    second_interval: [f64; 2],
-    point: [f64; 3],
-    residual: f64,
-    contact: &'static str,
-    multiplicity: u32,
-    orientation: i8,
-    reversed: bool,
-    first_wrap: i32,
-    second_wrap: i32,
-    enclosure: [[f64; 2]; 3],
-    coedge_trim: Option<Value>,
-}
-
-struct Report {
-    components: Vec<CcComponent>,
-    unresolved: Vec<Value>,
-    boxes_visited: usize,
-    bernstein_excluded: usize,
-    krawczyk_isolated: usize,
-}
 
 type HomogeneousGrid = Vec<Vec<[f64; 4]>>;
 type HomogeneousGridPair = (HomogeneousGrid, HomogeneousGrid);
-type CurveSpanPending = (
-    [f64; 2],
-    [f64; 2],
-    Option<Vec<[f64; 4]>>,
-    Option<Vec<[f64; 4]>>,
-    usize,
-);
 type CurveSurfacePending = (
     [f64; 2],
     [f64; 4],
@@ -405,28 +251,6 @@ type CurveSurfacePending = (
     usize,
 );
 
-struct CurveIntersectionBox<'a> {
-    first: &'a Curve,
-    second: &'a Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    ha: &'a [[f64; 4]],
-    hb: &'a [[f64; 4]],
-    floor: f64,
-}
-
-fn push_point(report: &mut Report, component: CcComponent) {
-    let duplicate = report.components.iter().any(|c| {
-        c.kind == "point"
-            && c.first == component.first
-            && c.second == component.second
-            && c.first_wrap == component.first_wrap
-            && c.second_wrap == component.second_wrap
-    });
-    if !duplicate {
-        report.components.push(component);
-    }
-}
 
 pub(crate) fn enclosure_of(point: [f64; 3], radius: f64) -> [[f64; 2]; 3] {
     std::array::from_fn(|axis| {
@@ -437,387 +261,6 @@ pub(crate) fn enclosure_of(point: [f64; 3], radius: f64) -> [[f64; 2]; 3] {
     })
 }
 
-fn krawczyk_cc(
-    first: &Curve,
-    second: &Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    floor: f64,
-) -> Result<Option<(f64, f64)>> {
-    let width_t = ta[1] - ta[0];
-    let width_u = tb[1] - tb[0];
-    if width_t.max(width_u) > floor.max(2_f64.powi(-24)) {
-        return Ok(None);
-    }
-    let (mut t, mut u) = ((ta[0] + ta[1]) * 0.5, (tb[0] + tb[1]) * 0.5);
-    for _ in 0..12 {
-        let ja = first.evaluate(t)?;
-        let jb = second.evaluate(u)?;
-        let Some(ref a1) = ja.d1 else {
-            return Ok(None);
-        };
-        let Some(ref b1) = jb.d1 else {
-            return Ok(None);
-        };
-        let va = point3(a1)?;
-        let vb = point3(b1)?;
-        let r = [
-            ja.point[0] - jb.point[0],
-            ja.point[1] - jb.point[1],
-            ja.point[2] - jb.point[2],
-        ];
-        // Project residual onto the two dominant axes of va×vb plane.
-        let n = cross3(va, vb);
-        let nn = norm3(n);
-        if nn <= TRANSVERSE_SINE * norm3(va) * norm3(vb) {
-            return Ok(None);
-        }
-        let e1 = va;
-        let e2 = cross3(n, va);
-        let ne2 = norm3(e2);
-        if !ne2.is_finite() || ne2 <= 0. {
-            return Ok(None);
-        }
-        let e2 = e2.map(|x| x / ne2);
-        let e1n = norm3(e1).max(f64::from_bits(1));
-        let e1 = e1.map(|x| x / e1n);
-        let ft = [dot3(r, e1), dot3(r, e2)];
-        let j00 = dot3(va, e1);
-        let j01 = -dot3(vb, e1);
-        let j10 = dot3(va, e2);
-        let j11 = -dot3(vb, e2);
-        let det = j00 * j11 - j01 * j10;
-        if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
-            return Ok(None);
-        }
-        let dt = (j11 * ft[0] - j01 * ft[1]) / det;
-        let du = (-j10 * ft[0] + j00 * ft[1]) / det;
-        t -= dt;
-        u -= du;
-        if !(ta[0] <= t && t <= ta[1] && tb[0] <= u && u <= tb[1]) {
-            return Ok(None);
-        }
-        if dt.abs().max(du.abs()) <= floor {
-            break;
-        }
-    }
-    // Krawczyk contraction: image of the box under Newton stays inside.
-    let radius_t = width_t * 0.45;
-    let radius_u = width_u * 0.45;
-    if (t - (ta[0] + ta[1]) * 0.5).abs() <= radius_t
-        && (u - (tb[0] + tb[1]) * 0.5).abs() <= radius_u
-    {
-        Ok(Some((t, u)))
-    } else {
-        Ok(None)
-    }
-}
-
-fn admit_coincidence(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<bool> {
-    let CurveIntersectionBox {
-        first,
-        second,
-        ta,
-        tb,
-        ha,
-        hb,
-        floor,
-    } = *input;
-    if proportional_homogeneous(ha, hb, floor.max(1e-12)) {
-        let pa = point3(&first.evaluate(ta[0])?.point)?;
-        let pb = point3(&first.evaluate(ta[1])?.point)?;
-        let qa = point3(&second.evaluate(tb[0])?.point)?;
-        let qb = point3(&second.evaluate(tb[1])?.point)?;
-        let forward = distance(&pa, &qa) + distance(&pb, &qb)
-            <= distance(&pa, &qb) + distance(&pb, &qa) + floor;
-        let reversed = !forward;
-        let (sb0, sb1) = if reversed {
-            (tb[1], tb[0])
-        } else {
-            (tb[0], tb[1])
-        };
-        report.components.push(CcComponent {
-            kind: "overlap",
-            first: ta[0],
-            second: sb0,
-            first_interval: ta,
-            second_interval: if reversed { [tb[0], tb[1]] } else { tb },
-            point: pa,
-            residual: 0.,
-            contact: "coincident",
-            multiplicity: u32::MAX,
-            orientation: if reversed { -1 } else { 1 },
-            reversed,
-            first_wrap: 0,
-            second_wrap: 0,
-            enclosure: enclosure_of(pa, floor),
-            coedge_trim: Some(coedge_trim(ta, [sb0, sb1], [[0, 0], [0, 0]])),
-        });
-        return Ok(true);
-    }
-    let (Some(da), Some(db)) = (collinear_direction(ha), collinear_direction(hb)) else {
-        return Ok(false);
-    };
-    if norm3(cross3(da, db)) > 1e-8 {
-        return Ok(false);
-    }
-    let origin = [
-        ha[0][0] / ha[0][3],
-        ha[0][1] / ha[0][3],
-        ha[0][2] / ha[0][3],
-    ];
-    let dir = da;
-    let mut a_params: Vec<(f64, f64)> = ta
-        .into_iter()
-        .map(|t| {
-            let p = point3(&first.evaluate(t).unwrap().point).unwrap();
-            (t, project_line_parameter(p, origin, dir))
-        })
-        .collect();
-    let mut b_params: Vec<(f64, f64)> = tb
-        .into_iter()
-        .map(|u| {
-            let p = point3(&second.evaluate(u).unwrap().point).unwrap();
-            (u, project_line_parameter(p, origin, dir))
-        })
-        .collect();
-    a_params.sort_by(|a, b| a.1.total_cmp(&b.1));
-    b_params.sort_by(|a, b| a.1.total_cmp(&b.1));
-    let lo = a_params[0].1.max(b_params[0].1);
-    let hi = a_params[1].1.min(b_params[1].1);
-    if !hi.is_finite() || hi <= lo + floor {
-        return Ok(false);
-    }
-    // Invert endpoints by linear blend in source parameter (degree-1 exact; higher monotone collinear).
-    let invert = |params: &[(f64, f64)], s: f64| {
-        let (t0, s0) = params[0];
-        let (t1, s1) = params[1];
-        if (s1 - s0).abs() <= floor {
-            t0
-        } else {
-            t0 + (t1 - t0) * ((s - s0) / (s1 - s0))
-        }
-    };
-    let t0 = invert(&a_params, lo);
-    let t1 = invert(&a_params, hi);
-    let u0 = invert(&b_params, lo);
-    let u1 = invert(&b_params, hi);
-    let reversed = (u1 - u0).signum() != (t1 - t0).signum() && (u1 - u0).abs() > floor;
-    let point = point3(&first.evaluate(t0)?.point)?;
-    report.components.push(CcComponent {
-        kind: "overlap",
-        first: t0,
-        second: u0,
-        first_interval: [t0.min(t1), t0.max(t1)],
-        second_interval: [u0.min(u1), u0.max(u1)],
-        point,
-        residual: 0.,
-        contact: "coincident",
-        multiplicity: u32::MAX,
-        orientation: if reversed { -1 } else { 1 },
-        reversed,
-        first_wrap: 0,
-        second_wrap: 0,
-        enclosure: enclosure_of(point, floor),
-        coedge_trim: Some(coedge_trim(
-            [t0.min(t1), t0.max(t1)],
-            [u0.min(u1), u0.max(u1)],
-            [[0, 0], [0, 0]],
-        )),
-    });
-    Ok(true)
-}
-
-fn resolve_cc_box(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<()> {
-    let CurveIntersectionBox {
-        first,
-        second,
-        ta,
-        tb,
-        ha,
-        hb,
-        floor,
-    } = *input;
-    let tm = (ta[0] + ta[1]) * 0.5;
-    let um = (tb[0] + tb[1]) * 0.5;
-    let diag = next_up(hull_diagonal(ha) + hull_diagonal(hb));
-    let pa = point3(&first.evaluate(tm)?.point)?;
-    let pb = point3(&second.evaluate(um)?.point)?;
-    let residual = distance(&pa, &pb);
-    if residual - diag > floor {
-        return Ok(());
-    }
-    // Endpoint / knot corner ownership.
-    for &t in &ta {
-        for &u in &tb {
-            if !owns_parameter(ta[0], ta[1], first.domain()[1], t)
-                || !owns_parameter(tb[0], tb[1], second.domain()[1], u)
-            {
-                continue;
-            }
-            let qa = point3(&first.evaluate(t)?.point)?;
-            let qb = point3(&second.evaluate(u)?.point)?;
-            let r = distance(&qa, &qb);
-            if r <= floor {
-                let contact = contact_class(first, second, t, u, floor)?;
-                if contact == "unresolved_conditioning" {
-                    report.unresolved.push(json!({
-                        "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-                        "reason":"conditioning_boundary",
-                        "classification":contact
-                    }));
-                    return Ok(());
-                }
-                let multiplicity = match contact {
-                    "transverse" => 1,
-                    "odd_tangency" => 1,
-                    "even_tangency" => 2,
-                    "higher_order_contact" => 3,
-                    "pole_or_singular" => 0,
-                    _ => 1,
-                };
-                push_point(
-                    report,
-                    CcComponent {
-                        kind: "point",
-                        first: t,
-                        second: u,
-                        first_interval: ta,
-                        second_interval: tb,
-                        point: std::array::from_fn(|i| (qa[i] + qb[i]) * 0.5),
-                        residual: r,
-                        contact: if t == first.domain()[0]
-                            || t == first.domain()[1]
-                            || u == second.domain()[0]
-                            || u == second.domain()[1]
-                        {
-                            "boundary"
-                        } else {
-                            contact
-                        },
-                        multiplicity,
-                        orientation: 1,
-                        reversed: false,
-                        first_wrap: 0,
-                        second_wrap: 0,
-                        enclosure: enclosure_of(qa, next_up(r.max(floor))),
-                        coedge_trim: None,
-                    },
-                );
-                return Ok(());
-            }
-        }
-    }
-    if residual > floor {
-        report.unresolved.push(json!({
-            "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-            "reason":"conditioning_boundary",
-            "classification":"near_coincidence"
-        }));
-        return Ok(());
-    }
-    if let Some((t, u)) = krawczyk_cc(first, second, ta, tb, floor)?
-        && owns_parameter(ta[0], ta[1], first.domain()[1], t)
-        && owns_parameter(tb[0], tb[1], second.domain()[1], u)
-    {
-        report.krawczyk_isolated += 1;
-        let qa = point3(&first.evaluate(t)?.point)?;
-        let qb = point3(&second.evaluate(u)?.point)?;
-        let r = distance(&qa, &qb);
-        let contact = contact_class(first, second, t, u, floor)?;
-        if contact == "unresolved_conditioning" {
-            report.unresolved.push(json!({
-                "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-                "reason":"conditioning_boundary"
-            }));
-            return Ok(());
-        }
-        let multiplicity = match contact {
-            "even_tangency" => 2,
-            "higher_order_contact" => 3,
-            "pole_or_singular" => 0,
-            _ => 1,
-        };
-        let orientation = {
-            let sine = tangent_sine(first, second, t, u)?;
-            if sine > TRANSVERSE_SINE {
-                let va = curve_tangents(first, t)?
-                    .into_iter()
-                    .next()
-                    .unwrap_or([1., 0., 0.]);
-                let vb = curve_tangents(second, u)?
-                    .into_iter()
-                    .next()
-                    .unwrap_or([0., 1., 0.]);
-                let c = cross3(va, vb);
-                if c[2] >= 0. { 1 } else { -1 }
-            } else {
-                0
-            }
-        };
-        push_point(
-            report,
-            CcComponent {
-                kind: "point",
-                first: t,
-                second: u,
-                first_interval: ta,
-                second_interval: tb,
-                point: std::array::from_fn(|i| (qa[i] + qb[i]) * 0.5),
-                residual: r,
-                contact,
-                multiplicity,
-                orientation,
-                reversed: false,
-                first_wrap: 0,
-                second_wrap: 0,
-                enclosure: enclosure_of(qa, next_up(r.max(floor))),
-                coedge_trim: None,
-            },
-        );
-        return Ok(());
-    }
-    let contact = contact_class(first, second, tm, um, floor)?;
-    if matches!(
-        contact,
-        "odd_tangency" | "even_tangency" | "higher_order_contact"
-    ) {
-        let multiplicity = if contact == "even_tangency" {
-            2
-        } else if contact == "higher_order_contact" {
-            3
-        } else {
-            1
-        };
-        push_point(
-            report,
-            CcComponent {
-                kind: "point",
-                first: tm,
-                second: um,
-                first_interval: ta,
-                second_interval: tb,
-                point: std::array::from_fn(|i| (pa[i] + pb[i]) * 0.5),
-                residual,
-                contact,
-                multiplicity,
-                orientation: 0,
-                reversed: false,
-                first_wrap: 0,
-                second_wrap: 0,
-                enclosure: enclosure_of(pa, next_up(residual.max(floor))),
-                coedge_trim: None,
-            },
-        );
-        return Ok(());
-    }
-    report.unresolved.push(json!({
-        "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-        "reason":"conditioning_boundary",
-        "classification":contact
-    }));
-    Ok(())
-}
 
 fn spans(curve: &Curve) -> Result<Vec<[f64; 2]>> {
     let segments = curve.decompose()?;
@@ -828,215 +271,6 @@ fn spans(curve: &Curve) -> Result<Vec<[f64; 2]>> {
     Ok(segments.iter().map(|s| s.domain()).collect())
 }
 
-fn encode_cc_report(report: Report, tolerance: &ToleranceContext, complete: bool) -> Value {
-    let components: Vec<Value> = report
-        .components
-        .into_iter()
-        .map(|c| {
-            if c.kind == "overlap" {
-                json!({
-                    "kind":"overlap",
-                    "firstInterval":c.first_interval,
-                    "secondInterval":c.second_interval,
-                    "reversed":c.reversed,
-                    "contactClass":c.contact,
-                    "multiplicity":null,
-                    "orientation":c.orientation,
-                    "firstWrap":c.first_wrap,
-                    "secondWrap":c.second_wrap,
-                    "geometryEnclosure":c.enclosure,
-                    "coedgeTrim":c.coedge_trim,
-                    "maxControlResidual":c.residual
-                })
-            } else {
-                json!({
-                    "kind":"point",
-                    "first":c.first,
-                    "second":c.second,
-                    "firstInterval":c.first_interval,
-                    "secondInterval":c.second_interval,
-                    "point":c.point,
-                    "residual":c.residual,
-                    "contactClass":c.contact,
-                    "multiplicity":c.multiplicity,
-                    "orientation":c.orientation,
-                    "firstWrap":c.first_wrap,
-                    "secondWrap":c.second_wrap,
-                    "geometryEnclosure":c.enclosure,
-                    "parameterBox":[c.first_interval[0],c.first_interval[1],c.second_interval[0],c.second_interval[1]]
-                })
-            }
-        })
-        .collect();
-    json!({
-        "version":VERSION,
-        "kind":"curve_curve",
-        "coverage":{
-            "method":"Bernstein-hull-exclusion-with-Krawczyk-isolation",
-            "complete":complete && report.unresolved.is_empty(),
-            "boxesVisited":report.boxes_visited,
-            "bernsteinExcluded":report.bernstein_excluded,
-            "krawczykIsolated":report.krawczyk_isolated,
-            "resourceLimit":MAX_BOXES
-        },
-        "components":components,
-        "unresolved":report.unresolved,
-        "rounding":"binary64-nextafter-outward",
-        "evidence":tolerance_evidence(tolerance)
-    })
-}
-
-/// Certified general NURBS curve/curve intersection.
-pub fn intersect_curve_curve(
-    first: &Curve,
-    second: &Curve,
-    tolerance: Option<ToleranceContext>,
-) -> Result<Value> {
-    admit_curve(first)?;
-    admit_curve(second)?;
-    let tolerance = context(tolerance);
-    let floor = tolerance.parametric_bounds().floor.max(1e-12);
-    let dist_floor = tolerance.spatial_bounds().absolute_mm.max(1e-9);
-    let (first_open, _period_a, wrap_a) = unwrap_periodic_curve(first)?;
-    let (second_open, _period_b, wrap_b) = unwrap_periodic_curve(second)?;
-    let mut report = Report {
-        components: Vec::new(),
-        unresolved: Vec::new(),
-        boxes_visited: 0,
-        bernstein_excluded: 0,
-        krawczyk_isolated: 0,
-    };
-    let mut pending: std::collections::VecDeque<CurveSpanPending> = spans(&first_open)?
-        .into_iter()
-        .flat_map(|ta| {
-            spans(&second_open)
-                .unwrap_or_default()
-                .into_iter()
-                .map(move |tb| (ta, tb, None, None, 0))
-        })
-        .collect();
-    check(
-        pending.len() <= MAX_SPANS,
-        "Span-pair resource exceeded before subdivision",
-    )?;
-    while let Some((ta, tb, ha, hb, depth)) = pending.pop_front() {
-        if report.boxes_visited >= MAX_BOXES {
-            report.unresolved.push(json!({
-                "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-                "reason":"resource_boundary"
-            }));
-            continue;
-        }
-        report.boxes_visited += 1;
-        let (pieces, ha, hb) = match (ha, hb) {
-            (Some(ha), Some(hb)) => (None, ha, hb),
-            _ => {
-                let pa = first_open.trim(ta[0], ta[1])?;
-                let pb = second_open.trim(tb[0], tb[1])?;
-                (
-                    Some((pa.clone(), pb.clone())),
-                    homogeneous4(&pa)?,
-                    homogeneous4(&pb)?,
-                )
-            }
-        };
-        let box_input = CurveIntersectionBox {
-            first: &first_open,
-            second: &second_open,
-            ta,
-            tb,
-            ha: &ha,
-            hb: &hb,
-            floor: dist_floor,
-        };
-        if let Some((pa, pb)) = &pieces
-            && !hulls_excluded(&ha, &hb)
-            && admit_coincidence(&box_input, &mut report)?
-        {
-            let _ = (pa, pb);
-            continue;
-        }
-        if hulls_excluded(&ha, &hb) {
-            report.bernstein_excluded += 1;
-            continue;
-        }
-        let width_a = ta[1] - ta[0];
-        let width_b = tb[1] - tb[0];
-        let tm = ta[0] + width_a * 0.5;
-        let um = tb[0] + width_b * 0.5;
-        let can_a = tm > ta[0] && tm < ta[1];
-        let can_b = um > tb[0] && um < tb[1];
-        if (width_a <= floor && width_b <= floor) || depth >= 48 || (!can_a && !can_b) {
-            resolve_cc_box(&box_input, &mut report)?;
-            continue;
-        }
-        let (al, ar) = split_homogeneous(&ha);
-        let (bl, br) = split_homogeneous(&hb);
-        let a_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_a {
-            vec![([ta[0], tm], al), ([tm, ta[1]], ar)]
-        } else {
-            vec![(ta, ha.clone())]
-        };
-        let b_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_b {
-            vec![([tb[0], um], bl), ([um, tb[1]], br)]
-        } else {
-            vec![(tb, hb.clone())]
-        };
-        for (ta2, h) in &a_side {
-            for (tb2, g) in &b_side {
-                pending.push_back((*ta2, *tb2, Some(h.clone()), Some(g.clone()), depth + 1));
-            }
-        }
-    }
-    for component in &mut report.components {
-        component.first_wrap = if first.periodic { wrap_a } else { 0 };
-        component.second_wrap = if second.periodic { wrap_b } else { 0 };
-    }
-    report.components.sort_by(|a, b| {
-        a.first
-            .total_cmp(&b.first)
-            .then(a.second.total_cmp(&b.second))
-    });
-    // Merge point events whose isolating intervals touch or parameters agree within floor.
-    {
-        let n = report.components.len();
-        let mut keep = vec![true; n];
-        for i in 0..n {
-            if report.components[i].kind != "point" || !keep[i] {
-                continue;
-            }
-            for j in i + 1..n {
-                if report.components[j].kind != "point" || !keep[j] {
-                    continue;
-                }
-                let a = &report.components[i];
-                let b = &report.components[j];
-                let touch = a.first_interval[0] <= b.first_interval[1]
-                    && b.first_interval[0] <= a.first_interval[1]
-                    && a.second_interval[0] <= b.second_interval[1]
-                    && b.second_interval[0] <= a.second_interval[1];
-                let near =
-                    (a.first - b.first).abs() <= floor && (a.second - b.second).abs() <= floor;
-                if touch || near {
-                    if b.residual < a.residual {
-                        keep[i] = false;
-                    } else {
-                        keep[j] = false;
-                    }
-                }
-            }
-        }
-        let mut merged = Vec::new();
-        for (index, component) in report.components.into_iter().enumerate() {
-            if keep[index] {
-                merged.push(component);
-            }
-        }
-        report.components = merged;
-    }
-    let complete = report.unresolved.is_empty();
-    Ok(encode_cc_report(report, &tolerance, complete))
-}
 
 pub(crate) fn surface_spans(surface: &Surface) -> Result<Vec<[f64; 4]>> {
     let [u0, u1] = [
@@ -1128,96 +362,22 @@ pub(crate) fn split_grid_v(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
     (left, right)
 }
 
-fn curve_on_plane_exact(_curve: &Curve, surface: &Surface) -> Result<Option<Value>> {
-    // Affine bilinear degree-(1,1) with planar controls: exact plane residual.
-    if surface.degree_u != 1 || surface.degree_v != 1 {
-        return Ok(None);
-    }
-    let corners = [
-        &surface.control_points[0][0],
-        &surface.control_points[0][1],
-        &surface.control_points[1][0],
-        &surface.control_points[1][1],
-    ];
-    let o = point3(corners[0])?;
-    let a = [
-        corners[1][0] - o[0],
-        corners[1][1] - o[1],
-        corners[1][2] - o[2],
-    ];
-    let b = [
-        corners[2][0] - o[0],
-        corners[2][1] - o[1],
-        corners[2][2] - o[2],
-    ];
-    let n = cross3(a, b);
-    let nn = norm3(n);
-    if !nn.is_finite() || nn <= 0. {
-        return Ok(None);
-    }
-    let normal = n.map(|x| x / nn);
-    let offset = dot3(normal, o);
-    // All surface corners must lie on the plane.
-    for corner in &corners {
-        let p = point3(corner)?;
-        if (dot3(normal, p) - offset).abs() > 1e-12 {
-            return Ok(None);
-        }
-    }
-    Ok(Some(
-        json!({"normal":normal,"offset":offset,"kind":"affine_plane"}),
-    ))
-}
-
-fn invert_plane_uv(surface: &Surface, point: [f64; 3]) -> Result<[f64; 2]> {
-    let o = point3(&surface.control_points[0][0])?;
-    let u_dir = [
-        surface.control_points[1][0][0] - o[0],
-        surface.control_points[1][0][1] - o[1],
-        surface.control_points[1][0][2] - o[2],
-    ];
-    let v_dir = [
-        surface.control_points[0][1][0] - o[0],
-        surface.control_points[0][1][1] - o[1],
-        surface.control_points[0][1][2] - o[2],
-    ];
-    let d = [point[0] - o[0], point[1] - o[1], point[2] - o[2]];
-    let guu = dot3(u_dir, u_dir);
-    let guv = dot3(u_dir, v_dir);
-    let gvv = dot3(v_dir, v_dir);
-    let det = guu * gvv - guv * guv;
-    check(det.abs() > 0., "Degenerate planar frame")?;
-    let ru = dot3(d, u_dir);
-    let rv = dot3(d, v_dir);
-    let [u0, u1] = [
-        surface.knots_u[surface.degree_u],
-        surface.knots_u[surface.knots_u.len() - surface.degree_u - 1],
-    ];
-    let [v0, v1] = [
-        surface.knots_v[surface.degree_v],
-        surface.knots_v[surface.knots_v.len() - surface.degree_v - 1],
-    ];
-    let su = (gvv * ru - guv * rv) / det;
-    let sv = (-guv * ru + guu * rv) / det;
-    Ok([u0 + su * (u1 - u0), v0 + sv * (v1 - v0)])
-}
-
 fn cs_contact(
     curve: &Curve,
     surface: &Surface,
     t: f64,
     uv: [f64; 2],
     floor: f64,
-) -> Result<&'static str> {
+) -> Result<ContactClass> {
     let ct = curve_tangents(curve, t)?;
     let jet = surface.evaluate(uv[0], uv[1])?;
     let Some((du, dv)) = jet.first_derivatives() else {
-        return Ok("pole_or_singular");
+        return Ok(ContactClass::PoleOrSingular);
     };
     let normal = cross3(du, dv);
     let nn = norm3(normal);
     if !nn.is_finite() || nn <= floor {
-        return Ok("pole_or_singular");
+        return Ok(ContactClass::PoleOrSingular);
     }
     let n = normal.map(|x| x / nn);
     let mut best: f64 = 0.;
@@ -1225,20 +385,20 @@ fn cs_contact(
         best = best.max(dot3(n, tan).abs() / norm3(tan).max(f64::from_bits(1)));
     }
     if best > TRANSVERSE_SINE {
-        Ok("transverse")
+        Ok(ContactClass::Transverse)
     } else if best <= floor {
-        Ok("even_tangency")
+        Ok(ContactClass::EvenTangency)
     } else {
-        Ok("odd_tangency")
+        Ok(ContactClass::OddTangency)
     }
 }
 
 /// Certified general NURBS curve/surface intersection.
-pub fn intersect_curve_surface(
+pub fn intersect_curve_surface_report(
     curve: &Curve,
     surface: &Surface,
     tolerance: Option<ToleranceContext>,
-) -> Result<Value> {
+) -> Result<CurveSurfaceIntersection> {
     admit_curve(curve)?;
     admit_surface(surface)?;
     let tolerance = context(tolerance);
@@ -1251,11 +411,31 @@ pub fn intersect_curve_surface(
     let mut bernstein_excluded = 0_usize;
     let mut krawczyk_isolated = 0_usize;
 
-    if let Some(plane) = curve_on_plane_exact(&curve_open, surface)? {
+    if let Some(plane) = plane_of(surface)? {
         // Reduce to certified curve/plane via residual Bernstein on the plane distance.
-        let normal: [f64; 3] = value_codec::from_value(plane["normal"].clone())
-            .map_err(|e| crate::input(e.to_string()))?;
-        let offset = plane["offset"].as_f64().unwrap();
+        let normal = plane.normal;
+        let offset = plane.offset;
+        let affine_uv = surface.control_points.len() == 2
+            && surface.control_points[0].len() == 2
+            && surface
+                .weights
+                .iter()
+                .flatten()
+                .all(|w| *w == surface.weights[0][0])
+            && (0..3).all(|k| {
+                surface.control_points[1][1][k] - surface.control_points[1][0][k]
+                    == surface.control_points[0][1][k] - surface.control_points[0][0][k]
+            });
+        let uv_domain = [
+            [
+                surface.knots_u[surface.degree_u],
+                surface.knots_u[surface.control_points.len()],
+            ],
+            [
+                surface.knots_v[surface.degree_v],
+                surface.knots_v[surface.control_points[0].len()],
+            ],
+        ];
         for span in spans(&curve_open)? {
             let piece = curve_open.trim(span[0], span[1])?;
             let h = homogeneous4(&piece)?;
@@ -1266,27 +446,57 @@ pub fn intersect_curve_surface(
                 .collect();
             let all_zero = coeffs.iter().all(|c| c.abs() <= dist_floor);
             if all_zero {
+                // A small plane residual is not an exact coincident component.
+                // Do not replace the finite surface by its infinite support plane.
+                let inside = piece.control_points.iter().all(|p| {
+                    invert_plane_uv(surface, [p[0], p[1], p[2]]).is_ok_and(|uv| {
+                        (0..2).all(|k| uv_domain[k][0] <= uv[k] && uv[k] <= uv_domain[k][1])
+                    })
+                });
+                // The UV inverse above is affine only for a single uniformly
+                // weighted bilinear parallelogram. Other planar parameterizations
+                // need a rational inverse, not fabricated affine UV samples.
+                if !coeffs.iter().all(|&c| c == 0.) || !inside || !affine_uv {
+                    unresolved.push(UnresolvedCurveSurface {
+                        parameter_box: CurveSurfaceParameterBox::Curve(span),
+                        reason: UnresolvedReason::ConditioningBoundary,
+                    });
+                    continue;
+                }
                 let p0 = point3(&piece.evaluate(span[0])?.point)?;
                 let p1 = point3(&piece.evaluate(span[1])?.point)?;
                 let uv0 = invert_plane_uv(surface, p0)?;
                 let uv1 = invert_plane_uv(surface, p1)?;
-                components.push(json!({
-                    "kind":"overlap",
-                    "curveInterval":span,
-                    "uvStart":uv0,
-                    "uvEnd":uv1,
-                    "contactClass":"coincident",
-                    "multiplicity":null,
-                    "orientation":1,
-                    "seamWrap":0,
-                    "curveWrap":wrap,
-                    "geometryEnclosure":enclosure_of(p0, dist_floor),
-                    "coedgeTrim":coedge_trim(span, [0.,1.], [[0,0],[0,0]]),
-                    "correspondence":{"kind":"affine_uv","samples":[
-                        [span[0],uv0[0],uv0[1]],
-                        [(span[0]+span[1])*0.5, (uv0[0]+uv1[0])*0.5,(uv0[1]+uv1[1])*0.5],
-                        [span[1],uv1[0],uv1[1]]
-                    ]}
+                let mid_parameter = span[0] * 0.5 + span[1] * 0.5;
+                let uv_mid =
+                    invert_plane_uv(surface, point3(&piece.evaluate(mid_parameter)?.point)?)?;
+                components.push(CurveSurfaceComponent::Overlap(CurveSurfaceOverlap {
+                    curve_interval: span,
+                    uv_start: uv0,
+                    uv_end: uv1,
+                    curve_wrap: wrap,
+                    // Original positive-weight control hull encloses the entire
+                    // overlap, not merely its first endpoint or a rounded trim.
+                    geometry_enclosure: std::array::from_fn(|k| {
+                        [
+                            curve
+                                .control_points
+                                .iter()
+                                .map(|p| p[k])
+                                .fold(f64::INFINITY, f64::min),
+                            curve
+                                .control_points
+                                .iter()
+                                .map(|p| p[k])
+                                .fold(f64::NEG_INFINITY, f64::max),
+                        ]
+                    }),
+                    coedge_trim: coedge_trim(span, [0., 1.], [[0, 0], [0, 0]]),
+                    samples: [
+                        [span[0], uv0[0], uv0[1]],
+                        [mid_parameter, uv_mid[0], uv_mid[1]],
+                        [span[1], uv1[0], uv1[1]],
+                    ],
                 }));
                 continue;
             }
@@ -1299,7 +509,10 @@ pub fn intersect_curve_surface(
             while let Some((interval, coefficients, depth)) = pending.pop() {
                 boxes_visited += 1;
                 if boxes_visited >= MAX_BOXES {
-                    unresolved.push(json!({"parameterBox":[interval[0],interval[1]],"reason":"resource_boundary"}));
+                    unresolved.push(UnresolvedCurveSurface {
+                        parameter_box: CurveSurfaceParameterBox::Curve([interval[0], interval[1]]),
+                        reason: UnresolvedReason::ResourceBoundary,
+                    });
                     continue;
                 }
                 if coefficients.iter().all(|c| *c > 0.) || coefficients.iter().all(|c| *c < 0.) {
@@ -1314,14 +527,15 @@ pub fn intersect_curve_surface(
                         interval[1],
                         curve_open.domain()[1],
                         interval[0],
-                    ) && curve_open
+                    ) && (curve_open
                         .evaluate(interval[0])?
                         .point
                         .iter()
                         .zip(&normal)
                         .map(|(x, n)| x * n)
                         .sum::<f64>()
-                        - offset
+                        - offset)
+                        .abs()
                         <= dist_floor
                     {
                         interval[0]
@@ -1343,31 +557,48 @@ pub fn intersect_curve_surface(
                     let point = point3(&curve_open.evaluate(t)?.point)?;
                     let residual = (dot3(normal, point) - offset).abs();
                     if residual > dist_floor {
-                        unresolved.push(json!({
-                            "parameterBox":[interval[0],interval[1]],
-                            "reason":"conditioning_boundary"
-                        }));
+                        unresolved.push(UnresolvedCurveSurface {
+                            parameter_box: CurveSurfaceParameterBox::Curve([
+                                interval[0],
+                                interval[1],
+                            ]),
+                            reason: UnresolvedReason::ConditioningBoundary,
+                        });
+                        continue;
+                    }
+                    if !affine_uv {
+                        unresolved.push(UnresolvedCurveSurface {
+                            parameter_box: CurveSurfaceParameterBox::Curve(interval),
+                            reason: UnresolvedReason::ConditioningBoundary,
+                        });
                         continue;
                     }
                     let uv = invert_plane_uv(surface, point)?;
+                    if !(0..2).all(|k| uv_domain[k][0] <= uv[k] && uv[k] <= uv_domain[k][1]) {
+                        unresolved.push(UnresolvedCurveSurface {
+                            parameter_box: CurveSurfaceParameterBox::Curve(interval),
+                            reason: UnresolvedReason::ConditioningBoundary,
+                        });
+                        continue;
+                    }
                     let contact = cs_contact(&curve_open, surface, t, uv, dist_floor)?;
-                    krawczyk_isolated += 1;
-                    components.push(json!({
-                        "kind":"point",
-                        "t":t,
-                        "tInterval":interval,
-                        "uv":uv,
-                        "uvBox":[uv[0],uv[0],uv[1],uv[1]],
-                        "point":point,
-                        "residual":residual,
-                        "contactClass":contact,
-                        "multiplicity":if contact=="even_tangency"{2}else{1},
-                        "orientation":1,
-                        "seamWrap":0,
-                        "curveWrap":wrap,
-                        "geometryEnclosure":enclosure_of(point, next_up(residual.max(dist_floor))),
-                        "parameterBox":[interval[0],interval[1],uv[0],uv[0],uv[1],uv[1]],
-                        "coedgeTrim":null
+                    // This planar candidate is not a Krawczyk isolation proof.
+                    components.push(CurveSurfaceComponent::Point(CurveSurfacePoint {
+                        t,
+                        t_interval: interval,
+                        uv,
+                        uv_box: [uv[0], uv[0], uv[1], uv[1]],
+                        point,
+                        residual,
+                        contact,
+                        multiplicity: if contact == ContactClass::EvenTangency {
+                            2
+                        } else {
+                            1
+                        },
+                        curve_wrap: wrap,
+                        geometry_enclosure: enclosure_of(point, next_up(residual.max(dist_floor))),
+                        parameter_box: [interval[0], interval[1], uv[0], uv[0], uv[1], uv[1]],
                     }));
                     continue;
                 }
@@ -1403,10 +634,12 @@ pub fn intersect_curve_surface(
             .collect();
         while let Some((ta, uv, ha, hg, depth)) = pending.pop_front() {
             if boxes_visited >= MAX_BOXES {
-                unresolved.push(json!({
-                    "parameterBox":[ta[0],ta[1],uv[0],uv[1],uv[2],uv[3]],
-                    "reason":"resource_boundary"
-                }));
+                unresolved.push(UnresolvedCurveSurface {
+                    parameter_box: CurveSurfaceParameterBox::CurveSurface([
+                        ta[0], ta[1], uv[0], uv[1], uv[2], uv[3],
+                    ]),
+                    reason: UnresolvedReason::ResourceBoundary,
+                });
                 continue;
             }
             boxes_visited += 1;
@@ -1440,10 +673,12 @@ pub fn intersect_curve_surface(
                     continue;
                 }
                 if residual > dist_floor {
-                    unresolved.push(json!({
-                        "parameterBox":[ta[0],ta[1],uv[0],uv[1],uv[2],uv[3]],
-                        "reason":"conditioning_boundary"
-                    }));
+                    unresolved.push(UnresolvedCurveSurface {
+                        parameter_box: CurveSurfaceParameterBox::CurveSurface([
+                            ta[0], ta[1], uv[0], uv[1], uv[2], uv[3],
+                        ]),
+                        reason: UnresolvedReason::ConditioningBoundary,
+                    });
                     continue;
                 }
                 // Newton in (t,u,v) with surface frame.
@@ -1527,40 +762,44 @@ pub fn intersect_curve_surface(
                         v,
                     )
                 {
-                    unresolved.push(json!({
-                        "parameterBox":[ta[0],ta[1],uv[0],uv[1],uv[2],uv[3]],
-                        "reason":"conditioning_boundary"
-                    }));
+                    unresolved.push(UnresolvedCurveSurface {
+                        parameter_box: CurveSurfaceParameterBox::CurveSurface([
+                            ta[0], ta[1], uv[0], uv[1], uv[2], uv[3],
+                        ]),
+                        reason: UnresolvedReason::ConditioningBoundary,
+                    });
                     continue;
                 }
                 let cp = point3(&curve_open.evaluate(t)?.point)?;
                 let sp = point3(&surface.evaluate(u, v)?.point)?;
                 let residual = distance(&cp, &sp);
                 if residual > dist_floor {
-                    unresolved.push(json!({
-                        "parameterBox":[ta[0],ta[1],uv[0],uv[1],uv[2],uv[3]],
-                        "reason":"conditioning_boundary"
-                    }));
+                    unresolved.push(UnresolvedCurveSurface {
+                        parameter_box: CurveSurfaceParameterBox::CurveSurface([
+                            ta[0], ta[1], uv[0], uv[1], uv[2], uv[3],
+                        ]),
+                        reason: UnresolvedReason::ConditioningBoundary,
+                    });
                     continue;
                 }
                 let contact = cs_contact(&curve_open, surface, t, [u, v], dist_floor)?;
                 krawczyk_isolated += 1;
-                components.push(json!({
-                    "kind":"point",
-                    "t":t,
-                    "tInterval":ta,
-                    "uv":[u,v],
-                    "uvBox":uv,
-                    "point":cp,
-                    "residual":residual,
-                    "contactClass":contact,
-                    "multiplicity":if contact=="even_tangency"{2}else{1},
-                    "orientation":1,
-                    "seamWrap":0,
-                    "curveWrap":wrap,
-                    "geometryEnclosure":enclosure_of(cp, next_up(residual.max(dist_floor))),
-                    "parameterBox":[ta[0],ta[1],uv[0],uv[1],uv[2],uv[3]],
-                    "coedgeTrim":null
+                components.push(CurveSurfaceComponent::Point(CurveSurfacePoint {
+                    t,
+                    t_interval: ta,
+                    uv: [u, v],
+                    uv_box: uv,
+                    point: cp,
+                    residual,
+                    contact,
+                    multiplicity: if contact == ContactClass::EvenTangency {
+                        2
+                    } else {
+                        1
+                    },
+                    curve_wrap: wrap,
+                    geometry_enclosure: enclosure_of(cp, next_up(residual.max(dist_floor))),
+                    parameter_box: [ta[0], ta[1], uv[0], uv[1], uv[2], uv[3]],
                 }));
                 continue;
             }
@@ -1607,27 +846,17 @@ pub fn intersect_curve_surface(
         residual: f64,
         index: usize,
     }
-    let parse_point = |component: &Value| -> Option<PointEvent> {
-        if component["kind"] != "point" {
-            return None;
+    let parse_point = |component: &CurveSurfaceComponent| -> Option<PointEvent> {
+        match component {
+            CurveSurfaceComponent::Point(point) => Some(PointEvent {
+                t: point.t,
+                u: point.uv[0],
+                v: point.uv[1],
+                residual: point.residual,
+                index: usize::MAX,
+            }),
+            CurveSurfaceComponent::Overlap(_) => None,
         }
-        let t = component["t"].as_f64().unwrap_or(0.);
-        let uv = component.get("uv").and_then(Value::as_array);
-        let u = uv
-            .and_then(|a| a.first())
-            .and_then(Value::as_f64)
-            .unwrap_or(0.);
-        let v = uv
-            .and_then(|a| a.get(1))
-            .and_then(Value::as_f64)
-            .unwrap_or(0.);
-        Some(PointEvent {
-            t,
-            u,
-            v,
-            residual: component["residual"].as_f64().unwrap_or(f64::INFINITY),
-            index: usize::MAX,
-        })
     };
     let mut events: Vec<PointEvent> = Vec::new();
     for component in &components {
@@ -1682,7 +911,7 @@ pub fn intersect_curve_surface(
     let mut event_cursor = 0usize;
     let mut dedup = Vec::new();
     for component in components {
-        if component["kind"] == "point" {
+        if matches!(component, CurveSurfaceComponent::Point(_)) {
             let dropped_event = dropped[event_cursor];
             event_cursor += 1;
             if dropped_event {
@@ -1691,57 +920,47 @@ pub fn intersect_curve_surface(
         }
         dedup.push(component);
     }
-    dedup.sort_by(|a, b| {
-        let ta = a
-            .get("t")
-            .and_then(Value::as_f64)
-            .or_else(|| {
-                a.get("curveInterval")
-                    .and_then(|v| v.as_array())
-                    .and_then(|a| a.first())
-                    .and_then(Value::as_f64)
-            })
-            .unwrap_or(0.);
-        let tb = b
-            .get("t")
-            .and_then(Value::as_f64)
-            .or_else(|| {
-                b.get("curveInterval")
-                    .and_then(|v| v.as_array())
-                    .and_then(|a| a.first())
-                    .and_then(Value::as_f64)
-            })
-            .unwrap_or(0.);
-        ta.total_cmp(&tb)
-    });
+    dedup.sort_by(|a, b| a.parameter_start().total_cmp(&b.parameter_start()));
 
-    Ok(json!({
-        "version":VERSION,
-        "kind":"curve_surface",
-        "coverage":{
-            "method":"Bernstein-hull-exclusion-with-Krawczyk-or-plane-Bernstein",
-            "complete":unresolved.is_empty(),
-            "boxesVisited":boxes_visited,
-            "bernsteinExcluded":bernstein_excluded,
-            "krawczykIsolated":krawczyk_isolated,
-            "resourceLimit":MAX_BOXES
-        },
-        "components":dedup,
-        "unresolved":unresolved,
-        "rounding":"binary64-nextafter-outward",
-        "evidence":tolerance_evidence(&tolerance)
-    }))
+    Ok(CurveSurfaceIntersection {
+        certified: false,
+        components: dedup,
+        unresolved,
+        boxes_visited,
+        bernstein_excluded,
+        krawczyk_isolated,
+        tolerance,
+    })
 }
 
-/// Resource-bound probe used by adversarial corpus generators.
-pub fn resource_boundary_probe(degree: usize, controls: usize) -> Result<Value> {
-    if degree == 0 || degree > MAX_DEGREE {
-        return Err(resource("Degree outside admitted 1..25"));
+#[cfg(test)]
+mod original_curve_exclusion_tests {
+    use super::*;
+    fn weighted_line(a: [f64; 3], b: [f64; 3], weights: [f64; 2]) -> Curve {
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights: weights.to_vec(),
+            periodic: false,
+        }
     }
-    if controls > MAX_CONTROLS {
-        return Err(resource("Controls exceed 256"));
+    #[test]
+    fn original_rational_boxes_keep_a_known_intersection() {
+        let a = weighted_line([0., 0., 0.], [2., 0., 0.], [1., 3.]);
+        let b = weighted_line([1., -1., 0.], [1., 1., 0.], [1., 1.]);
+        // a(1/4) = b(1/2) = [1,0,0] in exact rational arithmetic.
+        assert!(!curves_excluded(&a, &b, [0.2, 0.3], [0.4, 0.6]).unwrap());
+        let e = a.elevate(3).unwrap();
+        assert!(!curves_excluded(&a, &e, [0., 1.], [0., 1.]).unwrap());
     }
-    Ok(
-        json!({"version":VERSION,"admitted":true,"maxDegree":MAX_DEGREE,"maxControls":MAX_CONTROLS,"maxBoxes":MAX_BOXES,"maxSpans":MAX_SPANS}),
-    )
+    #[test]
+    fn disjoint_original_boxes_are_excluded_and_span_crossing_refused() {
+        let a = weighted_line([0., 0., 0.], [1., 0., 0.], [0.8, 1.2]);
+        let b = weighted_line([0., 2., 0.], [1., 2., 0.], [1.2, 0.8]);
+        assert!(curves_excluded(&a, &b, [0., 1.], [0., 1.]).unwrap());
+        let c = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.], vec![2., 0., 0.]])
+            .unwrap();
+        assert!(curve_box(&c, c.domain()).is_err());
+    }
 }

@@ -1,6 +1,6 @@
 // @modelgraph-text/1
 // Шевронный спиннер: солнце 32, венец 40, 18 сателлитов по 4 зуба.
-// Каждая шестерня - точное эвольвентное NURBS-тело (brep_gear).
+// Каждая шестерня — одно NURBS-тело; эвольвента и винтовые стенки подогнаны сплайнами.
 param inner_radius = 30.845mm range 10mm..80mm
 param outer_radius = 32mm range 11mm..100mm
 param hole = 44mm range 0mm..100mm

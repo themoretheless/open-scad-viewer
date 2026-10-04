@@ -1,0 +1,154 @@
+Matplotlib is building the font cache; this may take a moment.
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-ui20-0",
+      "stepSha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+      "valid": true,
+      "solids": 1,
+      "faces": 25,
+      "boundsMm": [
+        [
+          6.999999899999999,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          53.0000001,
+          30.0000001,
+          26.000000100000005
+        ]
+      ],
+      "volumeMm3": 9224.420352181907,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 6.707341526634991e-08,
+      "passed": true,
+      "previewTriangles": 160
+    },
+    {
+      "name": "bracket-ui20-1",
+      "stepSha256": "422cc795f39312ef2ebb8b1fccb71911cb887eb462b05e460d720c261de1338e",
+      "valid": true,
+      "solids": 1,
+      "faces": 25,
+      "boundsMm": [
+        [
+          6.999999899999999,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          53.0000001,
+          30.0000001,
+          26.000000100000005
+        ]
+      ],
+      "volumeMm3": 9224.420352181907,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 6.707341526634991e-08,
+      "passed": true,
+      "previewTriangles": 160
+    },
+    {
+      "name": "enclosure-ui20-0",
+      "stepSha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+      "valid": true,
+      "solids": 1,
+      "faces": 106,
+      "boundsMm": [
+        [
+          6.999999899999999,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          47.0000001,
+          30.0000001,
+          26.000000100000005
+        ]
+      ],
+      "volumeMm3": 7981.620352183748,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 6.441223376896232e-08,
+      "passed": true,
+      "previewTriangles": 494
+    },
+    {
+      "name": "enclosure-ui20-1",
+      "stepSha256": "720037fe0b7df88d5a3a0ce0ccf17a99f3d1323a7f583c880a6a80a263916e12",
+      "valid": true,
+      "solids": 1,
+      "faces": 106,
+      "boundsMm": [
+        [
+          6.999999899999999,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          47.0000001,
+          30.0000001,
+          26.000000100000005
+        ]
+      ],
+      "volumeMm3": 7981.620352183748,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 6.441223376896232e-08,
+      "passed": true,
+      "previewTriangles": 494
+    },
+    {
+      "name": "flange-ui20-0",
+      "stepSha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -13.000000100000005,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          27.00000010000001,
+          20.00000010000001,
+          12.000000100000005
+        ]
+      ],
+      "volumeMm3": 13460.190784993792,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.898868842748925e-07,
+      "passed": true,
+      "previewTriangles": 7354
+    },
+    {
+      "name": "flange-ui20-1",
+      "stepSha256": "d35e76c1186650060cf68edbad85e64db75cacc8cdd6dbbb1efe18dbd17f67a5",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -13.000000100000005,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          27.00000010000001,
+          20.00000010000001,
+          12.000000100000005
+        ]
+      ],
+      "volumeMm3": 13460.190784993792,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.898868842748925e-07,
+      "passed": true,
+      "previewTriangles": 7354
+    }
+  ]
+}

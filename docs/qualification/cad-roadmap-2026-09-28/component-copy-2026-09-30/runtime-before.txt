@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |node| tests/solidStepExchange.test.ts (12 tests | 1 failed | 11 skipped) 391ms
+   × preserves standalone surface shells when editing another assembly component 391ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/solidStepExchange.test.ts > preserves standalone surface shells when editing another assembly component
+AssertionError: expected [ …(2) ] to have a length of 3 but got 2
+
+- Expected
++ Received
+
+- 3
++ 2
+
+ ❯ tests/solidStepExchange.test.ts:33:30
+     31|  expect(JSON.stringify(body)).toBe(before)
+     32|  expect(result.brep!.bodies).toHaveLength(2)
+     33|  expect(result.brep!.shells).toHaveLength(3)
+       |                              ^
+     34|  for(const [i,vertex] of brep.vertices.entries())if(vertex.point[0]>=2…
+     35|   const id=brep.topologyIds!.vertices[i],j=result.brep!.topologyIds!.v…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  06:53:01
+   Duration  1.05s (transform 484ms, setup 0ms, import 565ms, tests 391ms, environment 0ms)
+

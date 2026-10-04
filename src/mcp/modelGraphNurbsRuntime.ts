@@ -26,7 +26,7 @@ export async function runOwnNurbs(document: unknown, request: OwnNurbsRequest, s
     active++;
     try {
         return await new Promise((resolve, reject) => {
-            const child = spawn(process.execPath, ['--import', 'tsx', entry], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'], shell: false, env: { PATH: process.env.PATH ?? '', SYSTEMROOT: process.env.SYSTEMROOT ?? '' } });
+            const child = spawn(process.execPath, ['--import', 'tsx', entry], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'], shell: false, env: { PATH: process.env.PATH ?? '', SYSTEMROOT: process.env.SYSTEMROOT ?? '', ...(process.env.ELECTRON_RUN_AS_NODE ? { ELECTRON_RUN_AS_NODE: process.env.ELECTRON_RUN_AS_NODE } : {}) } });
             let text = '', bytes = 0, failure: Error | undefined;
             let result: OwnNurbsResult | undefined;
             let terminatedAfterResponse = false;

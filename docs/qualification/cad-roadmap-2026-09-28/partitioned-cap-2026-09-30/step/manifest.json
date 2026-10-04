@@ -1,0 +1,48 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "Boolean → Push/Pull 2 mm → fillet R1",
+      "file": "chain-outward.step",
+      "sha256": "5682f41607e377c877d2bedc8fda8000f20f18810b884550fe8f0369198f927e",
+      "expected": {
+        "volumeMm3": 2389.6991118430774,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            20,
+            10,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Boolean → Push/Pull -2 mm → fillet R1",
+      "file": "chain-inward.step",
+      "sha256": "a29e82673dcb4e97e044cc1cad2e3a41be20dff57e7215649aa7f7feeda4a1bf",
+      "expected": {
+        "volumeMm3": 1593.1327412287183,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            20,
+            10,
+            8
+          ]
+        ]
+      }
+    }
+  ]
+}

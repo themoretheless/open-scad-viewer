@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "bodies": 2,
+  "shells": 3,
+  "standaloneShells": 1,
+  "pushMm": 1,
+  "unchangedNeighbors": true,
+  "panPreservesDocument": true,
+  "panCancellation": true,
+  "undoRedo": true,
+  "reload": true,
+  "errors": []
+}

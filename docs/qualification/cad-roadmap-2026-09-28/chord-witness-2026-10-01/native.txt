@@ -1,0 +1,71 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/cad-current-chain-target/.../wgsl_export
+  |                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/open-scad-viewer-cad-ready/crates/nurbs-core)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+   --> nurbs-core/src/continuity/preparation.rs:115:12
+    |
+115 |  #[test]fn aligns_degrees_domains_and_knots_without_introducing_C0_seams(){
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.79s
+     Running unittests src/lib.rs (/private/tmp/cad-current-chain-target/debug/build/nurbs-core/d40d29ff85a0f6c1/out/nurbs_core-d40d29ff85a0f6c1)
+
+running 17 tests
+test chord_winding::tests::bowtie_lobes_have_opposite_winding ... ok
+test chord_intersection::tests::refuses_contacts_parallel_outside_and_unmet_tolerance ... ok
+test chord_intersection::tests::encloses_fractional_and_translated_intersections ... ok
+test chord_winding::tests::double_wound_contour_distinguishes_fill_rules ... ok
+test chord_winding::tests::square_reversal_outside_and_boundary_are_distinct ... ok
+test chord_winding::tests::oriented_hole_and_island_alternate_the_filled_region ... ok
+test chord_intersection::tests::negative_miter_determinants_construct_the_same_join ... ok
+test chord_embedding::tests::unjoined_crossings_contacts_and_duplicate_vertices_are_refused ... ok
+test chord_arrangement::tests::simple_chains_preserve_exact_vertices_and_budget_refusal_is_atomic ... ok
+test chord_faces::tests::duplicated_rays_and_collapsed_edges_are_refused ... ok
+test chord_arrangement::tests::bowtie_splits_into_six_connected_edges_with_shared_crossing ... ok
+test chord_arrangement::tests::multiple_crossings_are_ordered_by_proved_parameter_intervals ... ok
+test chord_embedding::tests::shared_endpoints_and_separated_edges_are_admitted ... ok
+test chord_faces::tests::square_and_reversed_square_have_one_counterclockwise_walk ... ok
+test chord_faces::tests::bowtie_has_two_counterclockwise_triangle_walks ... ok
+test chord_witness::tests::witness_budget_never_returns_an_unchecked_point ... ok
+test chord_witness::tests::concave_and_crossed_contours_have_proved_interior_witnesses ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 179 filtered out; finished in 0.00s

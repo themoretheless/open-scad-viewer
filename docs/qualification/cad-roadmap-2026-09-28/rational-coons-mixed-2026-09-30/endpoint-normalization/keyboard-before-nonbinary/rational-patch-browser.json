@@ -1,0 +1,16 @@
+{
+  "prepareWeights": true,
+  "nonbinaryPreparation": false,
+  "keyboard": true,
+  "tabPresses": 1300,
+  "gpuAlignment": false,
+  "narrowLayout": true,
+  "gapEndpointMarkers": 2,
+  "localizedRefusal": true,
+  "browser": "151.0.7922.34",
+  "rationalPatch": true,
+  "cancel": true,
+  "undo": true,
+  "sourceCurvesPreserved": true,
+  "downloads": 12
+}

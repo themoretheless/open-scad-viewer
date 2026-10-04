@@ -1,0 +1,10 @@
+{
+  "browser": "151.0.7922.34",
+  "pendingDrawingBlocked": true,
+  "altReleaseCancelled": true,
+  "workerTerminated": true,
+  "retry": true,
+  "drawing": true,
+  "undoRedo": true,
+  "reload": true
+}

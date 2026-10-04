@@ -1,0 +1,7 @@
+{
+  "frozenSnapshot": "/private/tmp/open-scad-viewer-sweep-smoothness-2026-10-03",
+  "wasmSha256": "47e6d7c9bd822449f4d845e59ba669a45dbcab1a48c9059285422a51815802e3",
+  "primaryAndFrozenArtifactIdentical": true,
+  "frozenSourceBuildPassed": true,
+  "scope": "Recorded frozen native source built to the identical delivered artifact; not a clean Git tree or all-native-test success claim."
+}

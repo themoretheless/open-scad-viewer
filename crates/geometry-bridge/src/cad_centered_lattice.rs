@@ -1,160 +1,17 @@
 //! Bounded body- and face-centered graphs for CAD lightening.
-use super::{Result, Value, encode, input};
+#[cfg(test)]
+use super::{Result, Value, encode};
 
+#[cfg(test)]
 pub(super) fn graph(
     min: [f64; 3],
     max: [f64; 3],
     cells: [usize; 3],
     pattern: &str,
 ) -> Result<Value> {
-    let [nx, ny, nz] = cells;
-    let [cx, cy, cz] = cells.map(|n| n + 1);
-    let corners = cx * cy * cz;
-    let volumes = nx * ny * nz;
-    let faces = nx * ny * cz + nx * nz * cy + ny * nz * cx;
-    let (node_count, edge_count) = if pattern == "bcc" {
-        (corners + volumes, 8 * volumes)
-    } else {
-        (corners + faces, 4 * faces + 12 * volumes)
-    };
-    // The caller admits at most 125 corners; these products cannot overflow.
-    // Count the complete topology before allocating or iterating over cells.
-    if node_count > 125 || edge_count > 400 {
-        return Err(input(
-            "Spatial graph exceeds 125 nodes or 400 edges. Increase cell size.",
-        ));
-    }
-    let at = |x: f64, y: f64, z: f64| {
-        let xyz = [x, y, z];
-        std::array::from_fn::<_, 3, _>(|k| min[k] + xyz[k] * (max[k] - min[k]) / cells[k] as f64)
-    };
-    let corner = |x, y, z| (z * cy + y) * cx + x;
-    let mut nodes = Vec::with_capacity(node_count);
-    let mut edges = Vec::with_capacity(edge_count);
-    for z in 0..cz {
-        for y in 0..cy {
-            for x in 0..cx {
-                nodes.push(at(x as f64, y as f64, z as f64));
-            }
-        }
-    }
-    let mut link = |a: usize, b: usize| edges.push([a.min(b), a.max(b)]);
-    if pattern == "bcc" {
-        for z in 0..nz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    let center = nodes.len();
-                    nodes.push(at(x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5));
-                    for dz in 0..2 {
-                        for dy in 0..2 {
-                            for dx in 0..2 {
-                                link(center, corner(x + dx, y + dy, z + dz));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        let xy_base = nodes.len();
-        for z in 0..cz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    nodes.push(at(x as f64 + 0.5, y as f64 + 0.5, z as f64));
-                }
-            }
-        }
-        let xz_base = nodes.len();
-        for y in 0..cy {
-            for z in 0..nz {
-                for x in 0..nx {
-                    nodes.push(at(x as f64 + 0.5, y as f64, z as f64 + 0.5));
-                }
-            }
-        }
-        let yz_base = nodes.len();
-        for x in 0..cx {
-            for z in 0..nz {
-                for y in 0..ny {
-                    nodes.push(at(x as f64, y as f64 + 0.5, z as f64 + 0.5));
-                }
-            }
-        }
-        let xy = |x, y, z| xy_base + (z * ny + y) * nx + x;
-        let xz = |x, y, z| xz_base + (y * nz + z) * nx + x;
-        let yz = |x, y, z| yz_base + (x * nz + z) * ny + y;
-        for z in 0..cz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    for dy in 0..2 {
-                        for dx in 0..2 {
-                            link(xy(x, y, z), corner(x + dx, y + dy, z));
-                        }
-                    }
-                }
-            }
-        }
-        for y in 0..cy {
-            for z in 0..nz {
-                for x in 0..nx {
-                    for dz in 0..2 {
-                        for dx in 0..2 {
-                            link(xz(x, y, z), corner(x + dx, y, z + dz));
-                        }
-                    }
-                }
-            }
-        }
-        for x in 0..cx {
-            for z in 0..nz {
-                for y in 0..ny {
-                    for dz in 0..2 {
-                        for dy in 0..2 {
-                            link(yz(x, y, z), corner(x, y + dy, z + dz));
-                        }
-                    }
-                }
-            }
-        }
-        for z in 0..nz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    let faces = [
-                        xy(x, y, z),
-                        xy(x, y, z + 1),
-                        xz(x, y, z),
-                        xz(x, y + 1, z),
-                        yz(x, y, z),
-                        yz(x + 1, y, z),
-                    ];
-                    for [a, b] in [
-                        [0, 2],
-                        [0, 3],
-                        [0, 4],
-                        [0, 5],
-                        [1, 2],
-                        [1, 3],
-                        [1, 4],
-                        [1, 5],
-                        [2, 4],
-                        [2, 5],
-                        [3, 4],
-                        [3, 5],
-                    ] {
-                        link(faces[a], faces[b]);
-                    }
-                }
-            }
-        }
-    }
-    if nodes.iter().flatten().any(|v| !v.is_finite()) {
-        return Err(input("Spatial graph exceeds finite numeric range."));
-    }
-    debug_assert_eq!(nodes.len(), node_count);
-    debug_assert_eq!(edges.len(), edge_count);
-    encode(value_codec::json!({"nodes": nodes, "edges": edges}))
+    let g = polygon_core::lattice_tools::centered_graph(min, max, cells, pattern)?;
+    encode(value_codec::json!({"nodes":g.nodes,"edges":g.edges}))
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

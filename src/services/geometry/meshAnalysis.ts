@@ -328,3 +328,104 @@ export function extractSemanticEdgesInKernel(
     if (vp) wasm.abi_free(vp, vertices.byteLength)
   }
 }
+
+/** Manifoldness report from the manifold-core kernel (abi_manifold_check). */
+export interface KernelManifoldReport {
+  readonly vertexCount: number
+  readonly triangleCount: number
+  readonly componentCount: number
+  readonly isManifold: boolean
+  readonly isManifoldWithBoundary: boolean
+  /** Flat [a, b] vertex pairs per edge. */
+  readonly boundaryEdges: Uint32Array<ArrayBuffer>
+  readonly nonManifoldEdges: Uint32Array<ArrayBuffer>
+  readonly orientationEdges: Uint32Array<ArrayBuffer>
+  readonly degenerateTriangles: Uint32Array<ArrayBuffer>
+  readonly nonManifoldVertices: Uint32Array<ArrayBuffer>
+  readonly isolatedVertices: Uint32Array<ArrayBuffer>
+}
+
+/** Repair result from the manifold-core kernel (abi_manifold_repair). */
+export interface KernelManifoldRepair {
+  readonly positions: Float64Array<ArrayBuffer>
+  readonly indices: Uint32Array<ArrayBuffer>
+  readonly weldedVertices: number
+  readonly removedDegenerateTriangles: number
+  readonly flippedTriangles: number
+  readonly isManifold: boolean
+  readonly isManifoldWithBoundary: boolean
+}
+
+/** Run the manifold-core manifoldness check on an uploaded mesh. */
+export function checkManifoldInKernel(
+  vertices: Float32Array | Float64Array,
+  indices: Uint32Array,
+): KernelManifoldReport {
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  let vp = 0
+  let ip = 0
+  let handle = 0
+  try {
+    vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    handle = decodeNurbsResult<number>(
+      takeResponse(wasm.abi_manifold_check(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices))),
+    )
+    // Allocation above may grow memory. Never cache memory.buffer between calls.
+    const buffer = memory.buffer
+    const u32 = (slot: number) =>
+      new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+    const flags = wasm.abi_array_field(handle, 15)
+    return {
+      boundaryEdges: u32(0),
+      nonManifoldEdges: u32(2),
+      orientationEdges: u32(4),
+      degenerateTriangles: u32(6),
+      nonManifoldVertices: u32(8),
+      isolatedVertices: u32(10),
+      vertexCount: wasm.abi_array_field(handle, 12),
+      triangleCount: wasm.abi_array_field(handle, 13),
+      componentCount: wasm.abi_array_field(handle, 14),
+      isManifold: (flags & 1) !== 0,
+      isManifoldWithBoundary: (flags & 2) !== 0,
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
+  }
+}
+
+/** Repair a mesh toward manifoldness in the kernel (weld + de-degenerate + orientation unify). */
+export function repairManifoldInKernel(
+  vertices: Float32Array | Float64Array,
+  indices: Uint32Array,
+  epsilon: number,
+): KernelManifoldRepair {
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  let vp = 0
+  let ip = 0
+  let handle = 0
+  try {
+    vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    handle = decodeNurbsResult<number>(
+      takeResponse(wasm.abi_manifold_repair(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), epsilon)),
+    )
+    const buffer = memory.buffer
+    const flags = wasm.abi_array_field(handle, 7)
+    return {
+      positions: new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
+      indices: new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3))),
+      weldedVertices: wasm.abi_array_field(handle, 4),
+      removedDegenerateTriangles: wasm.abi_array_field(handle, 5),
+      flippedTriangles: wasm.abi_array_field(handle, 6),
+      isManifold: (flags & 1) !== 0,
+      isManifoldWithBoundary: (flags & 2) !== 0,
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
+  }
+}

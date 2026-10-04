@@ -1,6 +1,7 @@
 //! Read-only section coordinates are computed in Rust, including plane placement.
 use super::{field, input, Result, Value};
-use polygon_core::{solid::section::MeshSectionIndex, Mesh};
+use polygon_core::Mesh;
+use mesh_section::MeshSectionIndex;
 use value_codec::json;
 type V = [f64; 3];
 fn dot(a: V, b: V) -> f64 { (0..3).map(|i| a[i]*b[i]).sum() }
@@ -23,7 +24,7 @@ pub fn section(v: Value) -> Result<Value> {
         let p=[point[0],point[1],point[2]];
         point.copy_from_slice(&[dot(p,u),dot(p,w),dot(p,normal)]);
     }
-    let (section,collapsed)=MeshSectionIndex::new(&local)?.section_for_display(offset)?;
+    let (section,collapsed)=MeshSectionIndex::new(&local.view()).map_err(crate::legacy_mesh_error)?.section_for_display(offset).map_err(crate::legacy_mesh_error)?;
     let contours=section.contours.iter().map(|contour|{
         let mut points=contour.points.iter().map(|p|std::array::from_fn::<_,3,_>(|i|u[i]*p[0]+w[i]*p[1]+normal[i]*offset)).collect::<Vec<_>>();
         // The section kernel closes implicitly; UI polylines require the first point again.

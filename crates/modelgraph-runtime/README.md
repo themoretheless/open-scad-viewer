@@ -17,6 +17,10 @@ crate. JavaScript retains host transport, MCP input schemas and canonical SHA-25
 executor and browser renderer remain separate; compiling a graph does not construct
 its triangle mesh.
 
+Named sketch constraints are resolved to indexed `sketch-core` types. The shared
+solver computes coordinates, rank and diagnostics; this crate restores IDs and
+ModelGraph error paths. Named sketches keep the 64-iteration policy.
+
 ## Performance choices
 
 - Schema unions dispatch on their discriminator instead of trying every recursive

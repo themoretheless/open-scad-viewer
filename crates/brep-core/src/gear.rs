@@ -3,23 +3,22 @@
 //!
 //! The tooth outline is authored per tooth as exact rational arcs (tip and
 //! root circles), radial lines below the base circle, and involute flanks
-//! fitted by cubic B-spline interpolation of the analytic involute until the
-//! fit deviates by less than `FLANK_FIT` from the true curve. Each outline
+//! approximated by quintic Hermite spans with an analytic real-arithmetic
+//! remainder at most `FLANK_FIT`. Binary64 rounding is not certified. Each outline
 //! curve becomes one wall face: a ruled surface for a spur gear, or for a
-//! helical gear a cubic loft through rotated copies of the curve, refined
-//! until it deviates from the exact helical sweep by less than `SWEEP_FIT`.
+//! helical gear a quintic Hermite sweep with a continuous real-arithmetic
+//! remainder at most `SWEEP_FIT`; binary64 rounding is not certified.
 //! A herringbone gear is two mirrored helical halves sharing the mid-plane
 //! outline. Caps are planar faces bounded by the outline and its rotated
 //! image, with affine pcurves. All edges are iso-curves of the wall
 //! surfaces, so the body is self-consistent to the kernel tolerance; the
 //! stated fit bounds describe how far the surfaces sit from the ideal
 //! involute helicoid, which no polynomial surface represents exactly.
-use crate::tolerant_boolean::interpolate;
 use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::f64::consts::{PI, TAU};
 
-/// Largest deviation of a fitted involute flank from the analytic curve.
+/// Requested real-arithmetic Hermite remainder; excludes binary64 rounding.
 const FLANK_FIT: f64 = 1e-6;
 /// Largest deviation of a lofted helical wall from the exact helical sweep.
 const SWEEP_FIT: f64 = 1e-4;
@@ -76,10 +75,15 @@ pub struct GearGeometry {
     pub tip_radius: f64,
     pub root_radius: f64,
     pub outside_radius: f64,
-    /// Deviation of the fitted flanks from the analytic involute.
+    /// Continuous real-arithmetic remainder for the Hermite involute flanks.
+    /// Excludes binary64 trig, control placement and evaluation rounding.
     pub flank_deviation: f64,
-    /// Deviation of the helical walls from the exact sweep (zero for spur).
+    /// Whether the flank error report also covers binary64 rounding.
+    pub flank_rounding_certified: bool,
+    /// Continuous real-arithmetic remainder for the helical walls (zero for spur).
+    /// Binary64 rounding is excluded.
     pub sweep_deviation: f64,
+    pub sweep_rounding_certified: bool,
     pub face_count: usize,
 }
 
@@ -158,7 +162,7 @@ pub fn circle_arcs(teeth: usize) -> usize {
 
 /// Involute of the base circle `base` between roll parameters `t0..t1`,
 /// placed at the tooth centre with half-angle function `half`; `sign` picks
-/// the flank side. Fitted by interpolation and verified.
+/// the flank side. Quintic Hermite approximation with an ideal continuous bound.
 fn involute(
     base: f64,
     t0: f64,
@@ -167,44 +171,36 @@ fn involute(
     sign: f64,
     half: &dyn Fn(f64) -> f64,
 ) -> Result<(Curve, f64)> {
-    let point = |t: f64| -> [f64; 2] {
-        let r = base * (1. + t * t).sqrt();
-        polar(r, center + sign * half(r))
-    };
-    // NURBS curves and surfaces admit at most 32 control points per
-    // direction, so the fit is refined only up to 24 spans.
-    let schedule = [8usize, 12, 16, 24];
-    for (step, &samples) in schedule.iter().enumerate() {
-        let last = step + 1 == schedule.len();
-        let params: Vec<f64> = (0..=samples).map(|i| i as f64 / samples as f64).collect();
-        let data: Vec<Vec<f64>> = params
-            .iter()
-            .map(|&s| point(t0 + (t1 - t0) * s).to_vec())
-            .collect();
-        let curve = interpolate(&params, &data)?;
-        let mut worst: f64 = 0.;
-        for i in 0..samples {
-            for k in 1..4 {
-                let s = (i as f64 + k as f64 / 4.) / samples as f64;
-                let p = curve.evaluate(s)?.point;
-                let q = point(t0 + (t1 - t0) * s);
-                worst = worst.max((p[0] - q[0]).hypot(p[1] - q[1]));
-            }
-        }
-        if worst <= FLANK_FIT {
-            return Ok((curve, worst));
-        }
-        if last {
-            if worst > FLANK_FIT * 100. {
-                return Err(invalid(format!(
-                    "Gear flank could not be fitted within {:.0e} mm (achieved {worst:.2e})",
-                    FLANK_FIT * 100.
-                )));
-            }
-            return Ok((curve, worst));
-        }
+    // Reuse the native involute Hermite constructor and its continuous
+    // real-arithmetic remainder instead of a finite sample acceptance test.
+    let approximation = nurbs_core::involute::approximate_quintic(
+        [0.; 3],
+        base,
+        t0.min(t1),
+        t0.max(t1),
+        FLANK_FIT,
+    )?;
+    let mut curve = approximation.curve;
+    if curve.control_points.len() > 32 {
+        return Err(invalid(
+            "Gear flank needs more than 32 surface controls at the requested tolerance; reduce module or increase teeth",
+        ));
     }
-    unreachable!("flank fit schedule is not empty")
+    let angle = center + sign * half(base);
+    let (sin, cos) = angle.sin_cos();
+    for point in &mut curve.control_points {
+        let (x, y) = (point[0], point[1]);
+        // The canonical involute has polar angle t-atan(t). Reflection
+        // followed by rotation yields center+sign*(half(base)-t+atan(t)).
+        *point = vec![cos * x + sign * sin * y, sin * x - sign * cos * y];
+    }
+    if t1 < t0 {
+        curve = reverse2(&curve);
+    }
+    curve.validate()?;
+    // Orthogonal placement preserves the ideal Euclidean remainder.
+    // Binary64 trigonometry, placement and evaluation rounding are excluded.
+    Ok((curve, approximation.real_arithmetic_error_estimate))
 }
 
 fn reverse2(c: &Curve) -> Curve {
@@ -363,7 +359,9 @@ fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> {
         root_radius: root,
         outside_radius: outside,
         flank_deviation,
+        flank_rounding_certified: false,
         sweep_deviation: 0.,
+        sweep_rounding_certified: false,
         face_count: 0,
     };
     Ok((loops, geometry))
@@ -393,80 +391,15 @@ fn lift(c: &Curve, z: f64) -> Curve {
 }
 
 /// Wall surface of one outline curve between `z0` and `z1`, rotated by
-/// `twist` radians over the height: ruled for zero twist, else a cubic loft
-/// through `levels + 1` rotated copies, refined until the helical sweep is
-/// matched within `SWEEP_FIT`. Returns the surface and its deviation.
+/// `twist` radians over the height: ruled for zero twist, else quintic
+/// endpoint-Hermite spans with an ideal continuous bound at most SWEEP_FIT.
 fn wall(c: &Curve, z0: f64, z1: f64, theta0: f64, twist: f64) -> Result<(Surface, f64)> {
-    let h = z1 - z0;
-    if twist.abs() < 1e-15 {
-        let bottom = lift(&rotate2(c, theta0), z0);
-        let top = lift(&rotate2(c, theta0), z1);
-        return Ok((nurbs_core::surface::loft(&[bottom, top])?, 0.));
-    }
-    let schedule = [4usize, 8, 16, 24];
-    for (step, &levels) in schedule.iter().enumerate() {
-        let last = step + 1 == schedule.len();
-        let params: Vec<f64> = (0..=levels).map(|i| i as f64 / levels as f64).collect();
-        let copies: Vec<Curve> = params
-            .iter()
-            .map(|&v| lift(&rotate2(c, theta0 + twist * v), z0 + h * v))
-            .collect();
-        // Interpolate every control-point column across the levels with one
-        // shared knot vector (constant weights along v keep the rational
-        // curves exact at the levels).
-        let n = c.control_points.len();
-        let mut columns: Vec<Curve> = Vec::with_capacity(n);
-        for i in 0..n {
-            let data: Vec<Vec<f64>> = copies.iter().map(|k| k.control_points[i].clone()).collect();
-            columns.push(interpolate(&params, &data)?);
-        }
-        let knots_v = columns[0].knots.clone();
-        let degree_v = columns[0].degree;
-        let m = columns[0].control_points.len();
-        let surface = Surface {
-            degree_u: c.degree,
-            degree_v,
-            knots_u: c.knots.clone(),
-            knots_v,
-            control_points: (0..n).map(|i| columns[i].control_points.clone()).collect(),
-            weights: (0..n).map(|i| vec![c.weights[i]; m]).collect(),
-            periodic_u: false,
-            periodic_v: false,
-        };
-        surface.validate()?;
-        let mut worst: f64 = 0.;
-        let [u0, u1] = c.domain();
-        for i in 0..=8 {
-            let u = u0 + (u1 - u0) * i as f64 / 8.;
-            let base_point = c.evaluate(u)?.point;
-            for j in 0..levels {
-                for k in 1..4 {
-                    let v = (j as f64 + k as f64 / 4.) / levels as f64;
-                    let p = surface.evaluate(u, v)?.point;
-                    let (s, co) = (theta0 + twist * v).sin_cos();
-                    let q = [
-                        co * base_point[0] - s * base_point[1],
-                        s * base_point[0] + co * base_point[1],
-                        z0 + h * v,
-                    ];
-                    worst = worst.max(
-                        ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2))
-                            .sqrt(),
-                    );
-                }
-            }
-        }
-        if worst <= SWEEP_FIT || last {
-            if worst > SWEEP_FIT {
-                return Err(invalid(format!(
-                    "Gear helical wall could not be lofted within {SWEEP_FIT} mm (achieved {worst:.2e}); \
-                     reduce the helix angle or the height"
-                )));
-            }
-            return Ok((surface, worst));
-        }
-    }
-    unreachable!("sweep fit schedule is not empty")
+    let approximation =
+        nurbs_core::helical_sweep::approximate(&lift(c, z0), z1 - z0, theta0, twist, SWEEP_FIT)?;
+    Ok((
+        approximation.surface,
+        approximation.real_arithmetic_error_estimate,
+    ))
 }
 
 /// Iso-curve of a surface at u = 0 or u = 1 (the shared vertical edge).
@@ -729,6 +662,35 @@ mod tests {
     }
 
     #[test]
+    fn involute_flanks_follow_analytic_geometry_and_never_relax_remainder() {
+        for base in [2., 20., 100.] {
+            let half = |r: f64| {
+                let t = ((r / base).powi(2) - 1.).max(0.).sqrt();
+                0.18 - (t - t.atan())
+            };
+            for sign in [-1., 1.] {
+                for (start, end) in [(0., 0.7), (0.7, 0.), (0.2, 0.7)] {
+                    let (curve, bound) = involute(base, start, end, 0.4, sign, &half).unwrap();
+                    assert!(bound > 0. && bound <= FLANK_FIT);
+                    for i in 0..=200 {
+                        let s = i as f64 / 200.;
+                        let t = start + (end - start) * s;
+                        // Independent roll-radius/polar-angle definition.
+                        let radius = base * t.hypot(1.);
+                        let angle = 0.4 + sign * (0.18 - t + t.atan());
+                        let point = curve.evaluate(s).unwrap().point;
+                        let distance = (point[0] - radius * angle.cos())
+                            .hypot(point[1] - radius * angle.sin());
+                        assert!(distance <= bound + 1e-11, "{distance} > {bound}");
+                    }
+                }
+            }
+        }
+        let half = |_: f64| 0.;
+        assert!(involute(2., 0., 100., 0., 1., &half).is_err());
+    }
+
+    #[test]
     fn spur_gear_is_a_closed_exact_solid_with_the_expected_volume() {
         let spec = GearSpec {
             module: 2.,
@@ -740,6 +702,7 @@ mod tests {
         assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
         assert_eq!(geometry.face_count, 20 * 6 + 2);
         assert!(geometry.flank_deviation <= FLANK_FIT);
+        assert!(!geometry.flank_rounding_certified);
         assert_eq!(geometry.sweep_deviation, 0.);
         // The volume lies between the root and tip cylinders and close to
         // the pitch cylinder (teeth fill about half the band).
@@ -766,6 +729,7 @@ mod tests {
             let (model, geometry) = gear_with_report(&spec).unwrap();
             assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
             assert!(geometry.sweep_deviation > 0. && geometry.sweep_deviation <= SWEEP_FIT);
+            assert!(!geometry.sweep_rounding_certified);
             let expected_faces = (16 * 6 + 8) * if herringbone { 2 } else { 1 } + 2;
             assert_eq!(geometry.face_count, expected_faces);
             let spur = gear(&GearSpec {

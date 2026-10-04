@@ -1,0 +1,11 @@
+{
+  "scope": "STEP qualification scripts; separate from frozen compiler build inputs",
+  "files": {
+    "scripts/sweep-step-provenance.mjs": "a23b957e37629a59990ad54d721e1a5a41edd0cbf597c53b50d75146cd47fab7",
+    "scripts/export-sweep-step-oracle.mts": "5e4467a3d5766916d03c2c1bd7af74a9b65a53acae8193eed7ebbc1d171602cc",
+    "scripts/export-smooth-station-step-oracle.mts": "8b11d93533431c72034a6e1c939086e9c9a4fdff2f1a60f9082deb7d0a505102",
+    "scripts/verify-sweep-step-occt.py": "452197c7afea8c8c32c7d9c529404062cea06051df916a3e798baa8d24ee027e",
+    "scripts/reference-sweep-generator-volume.py": "5f3cfa155950f2638722d596d03317e7be259fa65001ad9b63eda78df00fddee",
+    "scripts/test-reference-sweep-generator-volume.py": "5891519a5dff7527de95487fac7842eb0c378c1e4a6521d5d240b67649b81433"
+  }
+}

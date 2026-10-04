@@ -1,0 +1,49 @@
+{
+  "snapshotRoot": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791107630",
+  "nativeContourTests": 9,
+  "typescriptTypesPassed": true,
+  "adapterScope": "native cyclic rational contour identity with shared cap exact-work budget",
+  "sourceHashes": {
+    "crates/nurbs-core/src/retained_wall_coefficients.rs": "a19a5987362ac2638a21e6ba1d5609bd0876efe826eaa5b8619ef5c3db8c7147",
+    "crates/nurbs-core/src/transport.rs": "54788a5d998d60a0e7fb4d5d15e9a4af3bac059351985e8bcf40769e2967f769",
+    "src/services/sweepRetainedCorrespondence.ts": "f0a0f00ec67d01c499efbbe82d6dfd4168caf2299b16a7d1447f6305cdef5d1c",
+    "tests/sweepRetainedDecomposition.test.ts": "7a58136556c3c74d1588e5947784c220f434a13b1bd071175b1ecb625a86cf9d"
+  },
+  "wasmBuildSession": 77069,
+  "nativeRegressionSession": 7837,
+  "integrationStatus": "49-passed-1-periodic-source-integration-failed",
+  "nativeContourLog": "/tmp/sweep-native-cap-contour-nine-tests.log",
+  "completedRegression": {
+    "nurbs": 909,
+    "brep": 693,
+    "predicates": 23,
+    "ignoredBrepMeasurements": 2,
+    "log": "/tmp/sweep-native-cap-contour-regression.log"
+  },
+  "additionalTestSource": "primary only: three-edge orientation regression; frozen compiler inputs preserved",
+  "wasmSha256": "d295ea767639e878dc79a8e7e917a5eed815ee679fab49025a706fdfa3ac2029",
+  "wasmByteLength": 10743688,
+  "integrationLog": "/tmp/sweep-native-cap-contour-integration-tests.log",
+  "failure": "Frozen native loft rejects periodic source; primary newer native source removes rejection and adds periodic hollow regression. Requires fresh build, no success claimed.",
+  "compilerInputsVerifiedUnchanged": 3082,
+  "compilerInputsManifest": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791107630/native-build-inputs.json",
+  "wasmBuildExitCode": 0,
+  "nextSnapshot": "/private/tmp/open-scad-viewer-sweep-current-source-2026-10-04-1791108338",
+  "nextWasmBuildSession": 89484,
+  "independentStepSession": 94729,
+  "independentStep": {
+    "baselineCases": 35,
+    "smoothCases": 10,
+    "passed": true,
+    "baselineLog": "/tmp/sweep-cap-native-d295-baseline-occt.log",
+    "smoothLog": "/tmp/sweep-cap-native-d295-occt.log",
+    "scope": "finite fixture geometry/topology/volume; periodic new-source WASM remains separate"
+  },
+  "nextNativeRegression": {
+    "nurbs": 910,
+    "brep": 694,
+    "predicates": 23,
+    "ignoredBrepMeasurements": 2,
+    "log": "/tmp/sweep-periodic-cap-current-native.log"
+  }
+}

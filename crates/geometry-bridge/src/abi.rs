@@ -336,12 +336,13 @@ pub unsafe fn abi_export_prepare(
         (Ok(v), Ok(m)) => (v, m),
         (Err(e), _) | (_, Err(e)) => return packed(geometry(Err(e))),
     };
-    let result = polygon_core::solid::export_prepare::prepare(
+    let result = mesh_io::export_prepare::prepare(
         &vertices,
         &unsafe { read_u32(ip, il) },
         &matrix,
         float32 == 1,
     )
+    .map_err(legacy_mesh_error)
     .map(|mesh| {
         mesh_analysis::store(mesh_analysis::AnalysisBuffers::Export {
             positions: mesh.positions,
@@ -440,7 +441,7 @@ pub unsafe fn abi_bvh_build(
     }
     let vertices = unsafe { read_f32(vp, vl) };
     let indices = unsafe { read_u32(ip, il) };
-    let bvh = polygon_core::solid::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
+    let bvh = mesh_query::build_mesh_bvh(&vertices, &indices, stride, leaf);
     let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Bvh {
         bounds: bvh.bounds,
         nodes: bvh.nodes,
@@ -473,7 +474,7 @@ pub unsafe fn abi_semantic_edges(
     let indices = unsafe { read_u32(ip, il) };
     let merge_from = unsafe { read_u32(mfp, mfl) };
     let merge_to = unsafe { read_u32(mtp, mtl) };
-    let edges = polygon_core::solid::edges::extract_semantic_edges(
+    let edges = mesh_topology::edges::extract_semantic_edges(
         &vertices,
         &indices,
         &merge_from,
@@ -575,4 +576,272 @@ pub unsafe fn abi_array_field(handle: usize, slot: u32) -> usize {
 /// The handle must reference a live array result; it is consumed by this call.
 pub unsafe fn abi_array_free(handle: usize) {
     mesh_analysis::free(handle)
+}
+
+/// Run manifold-core `check` on an uploaded mesh and return a result handle
+/// for `abi_array_field` (`ManifoldCheck` slots).
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt: u32) -> u64 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
+        Ok(v) => v,
+        Err(e) => return packed(geometry(Err(e))),
+    };
+    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
+        .into_iter()
+        .map(|i| i as usize)
+        .collect();
+    let report = manifold_core::check(&vertices, &indices);
+    let flat = |edges: &[manifold_core::EdgeKey]| -> Vec<u32> {
+        edges
+            .iter()
+            .flat_map(|&(a, b)| [a as u32, b as u32])
+            .collect()
+    };
+    let flags = (report.is_manifold() as u32) | ((report.is_manifold_with_boundary() as u32) << 1);
+    let buffers = mesh_analysis::AnalysisBuffers::ManifoldCheck {
+        boundary_edges: flat(&report.boundary_edges),
+        non_manifold_edges: flat(&report.non_manifold_edges),
+        orientation_edges: flat(&report.orientation_edges),
+        degenerate_triangles: report
+            .degenerate_triangles
+            .iter()
+            .map(|&i| i as u32)
+            .collect(),
+        non_manifold_vertices: report
+            .non_manifold_vertices
+            .iter()
+            .map(|&i| i as u32)
+            .collect(),
+        isolated_vertices: report.isolated_vertices.iter().map(|&i| i as u32).collect(),
+        summary: [
+            report.vertex_count as u32,
+            report.triangle_count as u32,
+            report.component_count as u32,
+            flags,
+        ],
+    };
+    packed(geometry(encode(mesh_analysis::store(buffers))))
+}
+
+/// Run manifold-core `repair` (weld + de-degenerate + orientation unify) and
+/// return the repaired mesh plus stats (`ManifoldRepair` slots).
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read. `epsilon` must be finite.
+pub unsafe fn abi_manifold_repair(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    epsilon: f64,
+) -> u64 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    if !epsilon.is_finite() {
+        return packed(geometry(Err(input("Invalid weld epsilon"))));
+    }
+    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
+        Ok(v) => v,
+        Err(e) => return packed(geometry(Err(e))),
+    };
+    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
+        .into_iter()
+        .map(|i| i as usize)
+        .collect();
+    let out = manifold_core::repair(&vertices, &indices, epsilon);
+    let flags = (out.report.residual.is_manifold() as u32)
+        | ((out.report.residual.is_manifold_with_boundary() as u32) << 1);
+    let buffers = mesh_analysis::AnalysisBuffers::ManifoldRepair {
+        positions: out.positions,
+        indices: out.indices.iter().map(|&i| i as u32).collect(),
+        stats: [
+            out.report.welded_vertices as u32,
+            out.report.removed_degenerate_triangles as u32,
+            out.report.flipped_triangles as u32,
+            flags,
+        ],
+    };
+    packed(geometry(encode(mesh_analysis::store(buffers))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Leak a copy of `data` into a raw buffer, mimicking a host upload.
+    /// `read_pod` copies out of it; the buffer is reclaimed by `reclaim`.
+    fn upload<T: Copy>(data: &[T]) -> (usize, usize) {
+        let v = data.to_vec();
+        let ptr = v.as_ptr() as usize;
+        std::mem::forget(v);
+        (ptr, data.len())
+    }
+
+    unsafe fn reclaim<T: Copy>(ptr: usize, len: usize) {
+        if ptr != 0 {
+            drop(unsafe { Vec::from_raw_parts(ptr as *mut T, len, len) });
+        }
+    }
+
+    /// Decode the last packed response and free its allocation.
+    unsafe fn take_response() -> Value {
+        let ptr = abi_response_ptr();
+        let len = abi_response_len();
+        let bytes = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }.to_vec();
+        unsafe { abi_free(ptr, len) };
+        value_codec::decode_binary(&bytes).unwrap()
+    }
+
+    fn response_handle(v: &Value) -> usize {
+        assert_eq!(v["ok"].as_bool(), Some(true), "{v:?}");
+        v["value"].as_u64().unwrap() as usize
+    }
+
+    #[test]
+    fn manifold_check_reports_open_quad() {
+        // Single quad (two triangles): manifold with boundary, one component.
+        let positions: [f64; 12] = [0., 0., 0., 1., 0., 0., 1., 1., 0., 0., 1., 0.];
+        let indices: [u32; 6] = [0, 1, 2, 0, 2, 3];
+        let (vp, vl) = upload(&positions);
+        let (ip, il) = upload(&indices);
+        let packed = unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64) };
+        let _ = packed;
+        let response = unsafe { take_response() };
+        let handle = response_handle(&response);
+        unsafe {
+            // Boundary edges: 4 edges * 2 indices.
+            assert_eq!(abi_array_field(handle, 1), 8);
+            // No non-manifold / orientation / degenerate issues.
+            assert_eq!(abi_array_field(handle, 3), 0);
+            assert_eq!(abi_array_field(handle, 5), 0);
+            assert_eq!(abi_array_field(handle, 7), 0);
+            // Summary: 4 vertices, 2 triangles, 1 component, boundary flag.
+            assert_eq!(abi_array_field(handle, 12), 4);
+            assert_eq!(abi_array_field(handle, 13), 2);
+            assert_eq!(abi_array_field(handle, 14), 1);
+            let flags = abi_array_field(handle, 15);
+            assert_eq!(flags & 1, 0, "open quad is not strictly manifold");
+            assert_ne!(flags & 2, 0, "open quad is manifold with boundary");
+            abi_array_free(handle);
+            reclaim::<f64>(vp, vl);
+            reclaim::<u32>(ip, il);
+        }
+    }
+
+    #[test]
+    fn manifold_check_flags_triple_edge() {
+        let positions: [f64; 15] = [
+            0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 1., 0., -1., 0.,
+        ];
+        let indices: [u32; 9] = [0, 1, 2, 0, 4, 1, 0, 1, 3];
+        let (vp, vl) = upload(&positions);
+        let (ip, il) = upload(&indices);
+        unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64) };
+        let response = unsafe { take_response() };
+        let handle = response_handle(&response);
+        unsafe {
+            // One non-manifold edge (0, 1) with 3 faces.
+            assert_eq!(abi_array_field(handle, 3), 2);
+            assert_ne!(abi_array_field(handle, 15) & 1, 1);
+            abi_array_free(handle);
+            reclaim::<f64>(vp, vl);
+            reclaim::<u32>(ip, il);
+        }
+    }
+
+    #[test]
+    fn manifold_repair_welds_unwelded_cube() {
+        // 24 duplicated corner vertices (face-local), 12 triangles.
+        let corners: [[f64; 3]; 8] = [
+            [0., 0., 0.],
+            [1., 0., 0.],
+            [1., 1., 0.],
+            [0., 1., 0.],
+            [0., 0., 1.],
+            [1., 0., 1.],
+            [1., 1., 1.],
+            [0., 1., 1.],
+        ];
+        // Face-local quads (bottom, top, front, back, right, left), each CCW
+        // seen from outside, referencing cube corners 0..8.
+        let faces: [[usize; 4]; 6] = [
+            [0, 3, 2, 1],
+            [4, 5, 6, 7],
+            [0, 1, 5, 4],
+            [2, 3, 7, 6],
+            [1, 2, 6, 5],
+            [3, 0, 4, 7],
+        ];
+        let mut positions: Vec<f64> = Vec::new();
+        let mut indices: Vec<u32> = Vec::new();
+        for face in faces {
+            let base = (positions.len() / 3) as u32;
+            for c in face {
+                positions.extend_from_slice(&corners[c]);
+            }
+            indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        }
+        let (vp, vl) = upload(&positions);
+        let (ip, il) = upload(&indices);
+        unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0) };
+        let response = unsafe { take_response() };
+        let handle = response_handle(&response);
+        unsafe {
+            // Welded 24 -> 8 vertices, nothing removed or flipped.
+            assert_eq!(abi_array_field(handle, 1), 24); // 8 vertices * 3
+            assert_eq!(abi_array_field(handle, 3), 36); // 12 triangles * 3
+            assert_eq!(abi_array_field(handle, 4), 16); // welded
+            assert_eq!(abi_array_field(handle, 5), 0); // degenerates
+            let flags = abi_array_field(handle, 7);
+            assert_eq!(flags & 1, 1, "repaired cube must be strictly manifold");
+            abi_array_free(handle);
+            reclaim::<f64>(vp, vl);
+            reclaim::<u32>(ip, il);
+        }
+    }
+
+    #[test]
+    fn manifold_check_rejects_unknown_format() {
+        let positions: [f64; 3] = [0., 0., 0.];
+        let (vp, vl) = upload(&positions);
+        unsafe { abi_manifold_check(vp, vl, 0, 0, 7) };
+        let response = unsafe { take_response() };
+        assert_eq!(response["ok"].as_bool(), Some(false));
+        unsafe { reclaim::<f64>(vp, vl) };
+    }
+}
+
+/// Decode bounded mesh bytes without expanding each byte through the value codec.
+/// # Safety
+/// `ptr..ptr+len` must be a live allocation owned by this kernel.
+pub unsafe fn abi_mesh_decode(format:u32,ptr:usize,len:usize)->u64{
+ if len>20_000_000{return packed(geometry(Err(input("Mesh input exceeds byte budget"))));}
+ let bytes=if len==0{&[]}else{unsafe{std::slice::from_raw_parts(ptr as *const u8,len)}};
+ let result=(||{use mesh_io::import as import;let mesh=match format{0=>import::obj(bytes)?,1=>import::ply(bytes)?,2=>import::stl(bytes)?,3=>import::off(bytes)?,4=>{let positions=import::binary_stl(bytes)?.into_iter().map(f64::from).collect::<Vec<_>>();let indices=(0..positions.len()/3).collect();import::RawMesh{positions,indices}},_=>return Err(input("Unknown mesh decoder format"))};let indices=mesh.indices.into_iter().map(|i|u32::try_from(i).map_err(|_|input("Import index exceeds u32"))).collect::<Result<Vec<_>>>()?;encode(mesh_analysis::store(mesh_analysis::AnalysisBuffers::Placement{positions:mesh.positions,indices}))})();packed(geometry(result))
+}
+/// Prepare display triangle soup into retained typed result buffers.
+/// # Safety
+/// `ptr` references `len` live f32 components owned by this kernel.
+pub unsafe fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
+ if len>250_000*9{return packed(geometry(Err(input("Triangle soup exceeds budget"))));}
+ let positions=unsafe{read_f32(ptr,len)};let result=(||{let soup=mesh_topology::soup::render(&positions)?;let discarded=soup.discarded;let handle=mesh_analysis::store(mesh_analysis::AnalysisBuffers::Render(crate::mesh::RenderMesh{vertices:soup.vertices,indices:soup.indices,merge_from:Vec::new(),merge_to:Vec::new(),face_ids:soup.face_ids}));encode(json!({"handle":handle,"discarded":discarded}))})();packed(geometry(result))
+}
+
+/// Build an owned transparency tree from packed f64 triangle attributes.
+/// # Safety
+/// vp/vl must reference a live caller-owned f64 buffer, read only.
+pub unsafe fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
+    if vl>LIMIT/8 || width>LIMIT/24 || limit>u32::MAX as usize || operations>u32::MAX as usize {
+        return packed(geometry(Err(input("Transparency input exceeds transport limit"))));
+    }
+    let result=crate::transparent_bsp::buffers(width,unsafe{read_pod::<f64>(vp,vl)},geometry_ops::transparency::Limits{fragments:limit,operations,tolerance})
+        .map(|v|mesh_analysis::store(mesh_analysis::AnalysisBuffers::Transparency(v))).and_then(encode);
+    packed(geometry(result))
 }

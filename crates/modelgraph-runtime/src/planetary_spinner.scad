@@ -1,5 +1,5 @@
 // Herringbone planetary spinner: sun 32, ring 40, 18 planets of 4 teeth,
-// every gear an exact involute NURBS body (brep_gear). Module 1.5 at the
+// every gear one NURBS body with fitted involute/helical walls (brep_gear). Module 1.5 at the
 // reference inner_radius of 30.845 mm; helix 35 degrees by default. Sun and
 // planets take opposite hands, planets and the internal ring the same hand.
 gear_scale = inner_radius / 30.845;

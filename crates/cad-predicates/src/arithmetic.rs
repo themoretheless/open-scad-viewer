@@ -511,6 +511,12 @@ impl Algebra for Expansion {
         Ok(result)
     }
     fn sub(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {
+        // Equal expansion terms represent the same exact number. Charge the
+        // comparison before cancelling; no rounded sum or sign filter is used.
+        ctx.charge(1 + self.0.len() as u64)?;
+        if self.0 == other.0 {
+            return Ok(Self::scalar(0.));
+        }
         self.add(&other.negated(), ctx)
     }
     fn mul(&self, other: &Self, ctx: &mut PredicateContext<'_>) -> Result<Self, Reason> {

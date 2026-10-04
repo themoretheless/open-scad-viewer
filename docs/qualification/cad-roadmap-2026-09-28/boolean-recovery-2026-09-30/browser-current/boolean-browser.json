@@ -1,0 +1,11 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 4,
+  "booleanOperations": 2,
+  "cancelledLateSuccess": true,
+  "retryFailure": true,
+  "undoRedo": true,
+  "keyboard": true,
+  "tabPresses": 957,
+  "downloads": 8
+}

@@ -1,0 +1,56 @@
+{
+  "op": "curve_offset_bounded",
+  "curve": {
+    "degree": 3,
+    "knots": [
+      -3,
+      -3,
+      -3,
+      -3,
+      -1,
+      2,
+      7,
+      7,
+      7,
+      7
+    ],
+    "controlPoints": [
+      [
+        0.1,
+        0.3
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        -1
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        9,
+        3
+      ]
+    ],
+    "weights": [
+      0.1,
+      0.7,
+      0.3,
+      0.9,
+      0.5,
+      1.2
+    ],
+    "periodic": false
+  },
+  "distance": 2,
+  "toleranceMm": 0.001,
+  "maxCells": 65536
+}

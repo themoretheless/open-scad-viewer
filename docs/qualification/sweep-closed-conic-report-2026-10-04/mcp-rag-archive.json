@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 30,
+  "wikiHash": "6837d27f75d2623889881572385f33c145d8a4a1ab3437cab9819caf98344eb4",
+  "raw": {
+    "document_id": "4fb48709-cf9f-422d-8cb7-40a3de1a4ee4",
+    "chunk_count": 7,
+    "node_id": "ac551d5a-da01-4045-8501-f8108172204c",
+    "edge_count": 1,
+    "content_hash": "24000fbb82e8a9711486035ff3baa4f52e7a1a7a015b96a7120c0b97ee4dd4dc",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-closed-conic-report-2026-10-04-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81983,
+    "chunk_count": 720465,
+    "node_count": 107753,
+    "edge_count": 238838,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 1986288,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

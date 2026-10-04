@@ -277,7 +277,7 @@ function defaultChildFactory(input: OfficialOpenScadChildFactoryInput): ChildPro
     input.fontPath,
     input.fontSha256,
   ], {
-    env: { NODE_NO_WARNINGS: '1' },
+    env: { NODE_NO_WARNINGS: '1', ...(process.env.ELECTRON_RUN_AS_NODE ? { ELECTRON_RUN_AS_NODE: process.env.ELECTRON_RUN_AS_NODE } : {}) },
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   })

@@ -1,0 +1,32 @@
+[
+  {
+    "mode": 0,
+    "window": 24,
+    "compressed": 412238,
+    "encoded": 3256874
+  },
+  {
+    "mode": 1,
+    "window": 24,
+    "compressed": 412238,
+    "encoded": 3256874
+  },
+  {
+    "mode": 2,
+    "window": 22,
+    "compressed": 411719,
+    "encoded": 3256306
+  },
+  {
+    "mode": 2,
+    "window": 20,
+    "compressed": 411944,
+    "encoded": 3256550
+  },
+  {
+    "mode": 0,
+    "window": 20,
+    "compressed": 411970,
+    "encoded": 3256588
+  }
+]

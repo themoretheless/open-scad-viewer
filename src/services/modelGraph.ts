@@ -1,11 +1,10 @@
 import { compileModelGraph, ModelGraphError } from './modelGraphCompiler'
 export { compileModelGraph, ModelGraphError, hashModelGraphDocument } from './modelGraphCompiler'
-import type { ModelGraphNumericType } from './modelGraphNumericType'
+import type { ModelGraphNumericType, Dimension, Unit } from './modelGraphNumericContracts'
 import { MECHANICAL_GENERATOR_GUIDE } from './mechanicalGeneratorContract'
-import type { placeAssembly } from './modelGraphAssembly'
+import type { PlacedAssemblyComponent } from './modelGraphAssembly'
 import type { solveModelGraphSketch } from './modelGraphSketch'
 import { z } from 'zod/v4'
-import type { Dimension, Unit } from './modelGraphUnits'
 
 export type CheckedValueType = {name:string;args?:CheckedValueType[];fields?:Record<string,CheckedValueType>}
 export type MatchPattern =
@@ -185,7 +184,7 @@ export type ModelGraphCompilation = {
   geometry_assertions: Array<Omit<NonNullable<ModelGraph['geometry_assertions']>[number], 'expected' | 'tolerance'> & {expected:number; tolerance:number; source?:string; instance_path?:string}>
   constraint_report: Array<{id:string;path:string;passed:boolean;status:'passed'|'failed';actual:number;expected:number;relation:string;tolerance:number;dimension:Dimension;message:string}>
   sketch_solutions: Array<ReturnType<typeof solveModelGraphSketch> & {instance_path:string}>
-  assembly_components: Array<ReturnType<typeof placeAssembly>[number] & {instance_path:string;parent_path:string|null;is_assembly:boolean;source?:string}>
+  assembly_components: Array<PlacedAssemblyComponent & {instance_path:string;parent_path:string|null;is_assembly:boolean;source?:string}>
   mechanical_reports: Array<Record<string,unknown>>
   mechanical_parts: Array<Record<string,unknown>>
   document_sha256: string

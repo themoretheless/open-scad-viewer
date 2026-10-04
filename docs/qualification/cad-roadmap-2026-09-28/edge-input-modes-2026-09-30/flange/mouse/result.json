@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "mode": "constant",
+  "inputMode": "mouse",
+  "oversizeRefusal": true,
+  "localized": true,
+  "reduceRadiusRecovery": true,
+  "undoRedo": true,
+  "applyWithoutRecompute": true,
+  "lateResponseAfterCancelAndReopen": true,
+  "errors": []
+}

@@ -1,0 +1,56 @@
+{
+  "artifactSha256": "e2817a686d9d7ced0a6a3ab3b8ee1e43b6a937814caa4714e84626244b190f0c",
+  "artifactBytes": 10744604,
+  "source": "examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r",
+  "boundaryCertificate": {
+    "method": "retained-sweep-boundary-union",
+    "scope": "boundary-set-hausdorff",
+    "continuousBound": false,
+    "withinBudget": null,
+    "errorUpper": null,
+    "budget": 0.01,
+    "closed": false,
+    "wallErrorUpper": 0.0018079013485442592,
+    "filledCapErrorUpper": null,
+    "reason": "filled-cap-bound-unproved"
+  },
+  "retainedDecomposition": {
+    "certified": true,
+    "wallErrorUpper": 1.090748214559875e-14,
+    "inspectedFaces": 128,
+    "products": 2304,
+    "reason": null
+  },
+  "retainedCapDecomposition": {
+    "certified": false,
+    "capErrorUpper": null,
+    "products": 144,
+    "reason": "cap-region-unproved"
+  },
+  "retainedCaps": {
+    "exact": false,
+    "capErrorUpper": null,
+    "exactWork": 0,
+    "reason": "unsupported-section-decomposition"
+  },
+  "idealCapDomains": {
+    "cells": 47,
+    "continuousBound": false,
+    "exactWork": 5008,
+    "idealCapDomainsCertified": true,
+    "localDomainCertified": true,
+    "method": "original-profile-endpoint-material-domains",
+    "pairs": 28,
+    "reason": null,
+    "sourcePlaneAxis": 2
+  },
+  "volume": {
+    "allFacesInjective": true,
+    "allPairsClassified": false,
+    "boundaryEmbeddingCertified": false,
+    "nesting": null,
+    "orientationCells": 0,
+    "orientationDomainCells": 0,
+    "solidGeometryCertified": false
+  }
+}

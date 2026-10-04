@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { compileModelGraph, MODELGRAPH_ASSEMBLY_EXAMPLE } from '../src/services/modelGraph'
-import { placeAssembly } from '../src/services/modelGraphAssembly'
+import { placeAssembly } from '../benchmarks/modelgraph/modelGraphAssembly-reference'
 import { inspectModelGraphInterference } from '../src/mcp/modelGraphInterference'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'

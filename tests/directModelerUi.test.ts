@@ -1,13 +1,16 @@
+import {setImmediate as realSetImmediate} from 'node:timers'
 import {createSolidNurbsCurve} from '../src/services/solidNurbs'
 import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'vue'
-import {it,expect,vi,afterEach} from 'vitest'
+import {it,expect,vi,afterEach,beforeAll} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {IDBFactory} from 'fake-indexeddb'
 import * as stepStore from '../src/services/cadStepIndexedDb'
 import * as geometryKernel from '../src/services/geometry/kernel'
+import * as transparencyKernel from '../src/services/geometry/transparentBspKernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
+beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue')})
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
@@ -73,7 +76,7 @@ vi.mock('../src/services/solidClearanceWorker',async()=>{
  return {createSolidClearanceWorker:()=>({run:(job:any)=>job.kind==='meshContacts'?contactWorkerRun(job)??Promise.resolve().then(()=>inspectSolidIntersections(job.mesh,{maxWork:job.maxWork,maxContacts:job.maxContacts})):clearanceWorkerRun(job)??Promise.resolve(inspectCadPairs(job.bodies)),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{clearanceWorkerRun.mockReset();contactWorkerRun.mockReset()})
-async function flushClearance(){for(let i=0;i<6;i++){await Promise.resolve();await nextTick()}}
+async function flushClearance(){await new Promise<void>(resolve=>realSetImmediate(resolve));for(let i=0;i<6;i++){await Promise.resolve();await nextTick()}}
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}
@@ -2831,7 +2834,7 @@ it('previews point trimming, cancels without edits and commits the retained end 
  await ui.click('Trim target');await ui.click('Trim NURBS at point')
  expect(ui.all().some(n=>n.props['aria-label']==='Cut point X'),ui.text(ui.all()[0])).toBe(true)
  for(const [axis,value] of [['X','8 mm'],['Y','6 mm'],['Z','0 mm']]){ui.all().find(n=>n.props['aria-label']==='Cut point '+axis)!.props['onUpdate:modelValue'](value);await flushClearance()}
- ui.all().find(n=>n.props['aria-label']==='Retain endpoint')!.props['onUpdate:modelValue']('end');await flushClearance()
+ ui.all().find(n=>n.props['aria-label']==='Retain endpoint')!.props.onChange({target:{value:'end'}});await flushClearance()
  expect(ui.doc()).toEqual(before)
  expect(ui.all().some(n=>n.props['data-preview']==='point-trim'&&n.props.points.split(' ').length===49)).toBe(true)
  expect(ui.all().some(n=>n.props['data-diagnostic']==='point-trim-cut')).toBe(true)
@@ -2842,7 +2845,7 @@ it('previews point trimming, cancels without edits and commits the retained end 
  expect(ui.text(ui.all()[0])).toContain('Curve endpoint')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  ui.all().find(n=>n.props['aria-label']==='Cut point X')!.props['onUpdate:modelValue']('8 mm');ui.all().find(n=>n.props['aria-label']==='Cut point Y')!.props['onUpdate:modelValue']('6 mm')
- ui.all().find(n=>n.props['aria-label']==='Retain endpoint')!.props['onUpdate:modelValue']('end');await flushClearance()
+ ui.all().find(n=>n.props['aria-label']==='Retain endpoint')!.props.onChange({target:{value:'end'}});await flushClearance()
  await ui.click('Apply · Enter');const trimmed=ui.doc().curves![0]
  expect(trimmed.id).toBe('arc');expect(trimmed.curve.controlPoints).not.toEqual(before.curves![0].curve.controlPoints)
  const point=evaluateNurbsCurve(trimmed.curve,trimmed.curve.knots[trimmed.curve.degree]).point
@@ -3448,8 +3451,7 @@ it('reports approximate CPU transparency and clears the status after reducing th
 })
 
 it('reuses CPU transparency geometry during orbit and invalidates it after scene and material edits',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp')
- const build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp')
  try{
   const ui=await mount();await ui.click('Box');await ui.click('Properties')
   const opacity=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!
@@ -3475,8 +3477,8 @@ it('reuses CPU transparency geometry during orbit and invalidates it after scene
 })
 
 it('refreshes transparent world fragments after smooth refinement and orbit settle without changing the cylinder',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp'),{prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
- const build=vi.spyOn(TransparentBsp.prototype as any,'partition'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  try{
   const seed=cylinderSeed();seed.bodies[0].material={name:'Glass',color:'#2288dd',opacity:.35}
@@ -3494,7 +3496,7 @@ it('refreshes transparent world fragments after smooth refinement and orbit sett
 })
 
 it('invalidates transparent world fragments for changed Push Pull preview and clears them on Escape',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp'),build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp')
  try{
   const ui=await mount();await ui.click('Cube');await ui.click('Properties')
   ui.all().find(n=>n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()

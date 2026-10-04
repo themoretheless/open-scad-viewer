@@ -1,0 +1,61 @@
+{
+  "scope": "Observed files for authored-axis guide hybrid; broad concurrent dirty checkout, not a clean-tree all-source reproducibility claim.",
+  "files": {
+    "crates/nurbs-core/src/progressive_miter.rs": {
+      "bytes": 65778,
+      "sha256": "6361878d38938d7ff2b8bbfd1a823ec10a880f7f937fe314280ac253ecbd4bea"
+    },
+    "crates/nurbs-core/src/progressive_miter/authored_frame_certificate/guided_axis.rs": {
+      "bytes": 7242,
+      "sha256": "e4f5eb303eccb7a48aedf2a6e4f01640bacdec75aeecd8f33d7d32547f1f5dd7"
+    },
+    "crates/nurbs-core/src/progressive_miter/frame_certificate.rs": {
+      "bytes": 51739,
+      "sha256": "e2607da811991512d1f7049c93bc18b52e788c6ee1a74fe8b64bcc5514bb38cc"
+    },
+    "crates/nurbs-core/src/progressive_miter/level_certificate.rs": {
+      "bytes": 18070,
+      "sha256": "73f90f920e02e7753a786cb1bd10d54c1399d41283514a0d1748c053729b46e8"
+    },
+    "crates/nurbs-core/src/progressive_miter/cap_endpoint_certificate.rs": {
+      "bytes": 18050,
+      "sha256": "a20b05eede6026bf8a965dfcf92c6e023fc8a9289667384739a09f098a85b733"
+    },
+    "crates/nurbs-core/src/transport.rs": {
+      "bytes": 63686,
+      "sha256": "071db888182fb676286fe1dce5f300236e634303e9a429ca2c5063e8e23195c6"
+    },
+    "src/services/nurbsConstructors.ts": {
+      "bytes": 50508,
+      "sha256": "263d85227aab3a3db655c36a91c5ced42854f7f72bb5976e23a77a35621a3388"
+    },
+    "src/generated/geometry-kernels/bytes.ts": {
+      "bytes": 3555743,
+      "sha256": "4b83ab35a6aeffc7bb5e9cf9e5129eb0b58d007a5d0a0a2d6aa937a6c9313724"
+    },
+    "public/wasm/geometry-kernel.wasm": {
+      "bytes": 10652955,
+      "sha256": "3efb5ccd52a325ba6aa600203b5403728744ba81a4cd9183c968e47476790eab"
+    },
+    "tests/nurbsProgressiveMiter.test.ts": {
+      "bytes": 41660,
+      "sha256": "c85a6be98221016e7dace1b4c5e17c02647167a91e68cb7add6d908438d23aa3"
+    },
+    "examples/rush/miter-combined-frame-guide-affine-hollow.r": {
+      "bytes": 1052,
+      "sha256": "48f1297150370a6d908b0fe07e288148c21e00dc7b7966cb899f6618058681db"
+    },
+    "examples/rush/miter-combined-frame-guide-affine-hollow-corrected.r": {
+      "bytes": 1177,
+      "sha256": "19eaa0cd14573f5afc25951cfe5d4b0d9afcf21489e39766ddd4b3ad1139e364"
+    },
+    "scripts/export-sweep-step-oracle.mts": {
+      "bytes": 17701,
+      "sha256": "d50fcac325466b27f8613f25f6d775d1188cbb3ef01386516728297404c3bf87"
+    },
+    "scripts/check-sweep-miter-matrix-browser.mjs": {
+      "bytes": 14794,
+      "sha256": "7d2cde3539a9e9518414ad2c97e4d78f2bb711655ac8587ab6b6684d102a7ddd"
+    }
+  }
+}

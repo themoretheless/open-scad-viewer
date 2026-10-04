@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 21,
+  "wikiHash": "13e6d4f6cdd038d928e541b02b02da958736e9527f6b1602156602ee181bcf5a",
+  "raw": {
+    "document_id": "e08ef98e-9ebb-4aa2-8d16-97ad866b225a",
+    "chunk_count": 4,
+    "node_id": "138658c5-45ff-4a1e-8001-7038e6465813",
+    "edge_count": 1,
+    "content_hash": "02d96c8b8c20a56bc42db093006d6261a7bec16e8b7d84cfd9c46073af6ef218",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-circle-integration-report-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81974,
+    "chunk_count": 720367,
+    "node_count": 107744,
+    "edge_count": 238829,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 9953116,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

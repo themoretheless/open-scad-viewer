@@ -1,0 +1,15 @@
+{
+  "crates/cad-predicates/src/arithmetic.rs": "51370cb08b405146be0ed52a23a5f3efcaf0986b85e3eb6920fe351f3497a6f1",
+  "crates/cad-predicates/src/tests.rs": "f6904fc0ea69e5c0afdd9e21ea77586faca0161d8931ac8464410df1b39ea090",
+  "crates/nurbs-core/src/join/continuity.rs": "c45bf4b41098c1ded79503b9cc60e619a365b44b66a7ede77c9018dee122a592",
+  "crates/nurbs-core/src/join/continuity/station_scale.rs": "3e4a39954ce1d07dd13a7d8cff13b111c1bcfb6d7b8ee6e44690b9cdcc6416a7",
+  "crates/nurbs-core/src/transport.rs": "7d4d1c9abd17290485be079bc70ada274541054d7abb35f0908d74a2f2c68dfb",
+  "src/services/miterStationSmoothness.ts": "7264d9ccc7021c5ff9df241a1cc397423a545a590bf38ec846149f50c458943b",
+  "src/services/miterProfileSmoothness.ts": "0bae11e2498841c0f8d877bc9ac6d26ab4163f8453a89dd927402a7d6ac83304",
+  "src/services/nurbsSweepAudit.ts": "7af10820ca4474098d7ae88c91e0dc973612e17dbfe96b3ef9761f0d96043dff",
+  "src/services/sweepViewportEvidence.ts": "013a2537f0f32134d948b5e39adc115a302a35419693f403641b4af0c3a9383a",
+  "scripts/export-smooth-station-step-oracle.mts": "3b664013926c12af4eb2780ec65ed29f977500cdea9d4a01faf33d8d4307aa88",
+  "scripts/reference-sweep-generator-volume.py": "9c88c43e1a61398df7c624f259222d7e4a2424341f4ce588fb3f3ba0ddaec6dd",
+  "scripts/check-sweep-miter-matrix-browser.mjs": "2f0e4f39f482d46a9009ba7f4dcc5206f109307535deff64e423a94b04c60c5e",
+  "public/wasm/geometry-kernel.wasm": "3eb03b81aa774efbfa8d98a49994b4d0131e428be9e4da41a0ba8eb2acdd913e"
+}

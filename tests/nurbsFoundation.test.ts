@@ -184,7 +184,10 @@ describe('NURBS foundation product boundary', () => {
     const piercing = {degree:1,knots:[0,0,1,1],controlPoints:[[0.25,0.4,-1],[0.25,0.4,1]],weights:[1,1]}
     const cs = intersectNurbsCurveSurfaceCertified(piercing, plane)
     expect(cs.kind).toBe('curve_surface')
-    expect(cs.coverage.complete).toBe(true)
+    expect(cs.coverage.complete).toBe(false)
+    expect(cs.coverage.searchComplete).toBe(true)
+    expect(cs.coverage.certified).toBe(false)
+    expect(cs.rounding).toBe('uncertified-binary64')
     expect(cs.components.some(c => c.kind === 'point')).toBe(true)
     const onPlane = {degree:1,knots:[0,0,1,1],controlPoints:[[0.1,0.2,0],[0.8,0.7,0]],weights:[1,1]}
     const overlap = intersectNurbsCurveSurfaceCertified(onPlane, plane)

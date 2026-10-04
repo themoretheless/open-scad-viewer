@@ -1,0 +1,8 @@
+{
+  "qualifiedSteadyOrbit": false,
+  "reason": "Preparing body snaps remained visible before and after orbit; concurrent background preparation.",
+  "rafFps": 8.827976393698483,
+  "maxFrameGapMs": 166.60000000000036,
+  "p95FrameGapMs": 133.3000000000029,
+  "geometryRoundtripPassed": true
+}

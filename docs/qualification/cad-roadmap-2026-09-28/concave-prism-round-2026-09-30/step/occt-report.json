@@ -1,0 +1,201 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "L R0.5",
+      "stepSha256": "beed48c537e06d4e7c3db6ef9df11071aa93a53001c454d1431b1ccb82b5e746",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1.0000000000551115e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 6498.926990797202,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.978514774236828e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "L base STEP roundtrip",
+      "stepSha256": "3007ed3cb519614ff3fd3066b683244109ec13d77827e8de1423ba6f25a7461a",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1.0000000000551115e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 6498.926990797202,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.978514774236828e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "L R0.5 rotated",
+      "stepSha256": "9202bb77199940f769b029b758b4122803b4b4e8ab03554f4c8336dd07f79f65",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "boundsMm": [
+        [
+          10.999999899999999,
+          -7.000000100000001,
+          2.9999999
+        ],
+        [
+          31.0000001,
+          33.0000001,
+          33.0000001
+        ]
+      ],
+      "volumeMm3": 6498.926990797202,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.978514774236828e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "L placed STEP roundtrip",
+      "stepSha256": "d8b075b33878b7e910b7d11c0b76f5002afeb2d48692b5a85b60f3591c325835",
+      "valid": true,
+      "solids": 1,
+      "faces": 9,
+      "boundsMm": [
+        [
+          10.999999899999999,
+          -7.000000100000001,
+          2.9999999
+        ],
+        [
+          31.0000001,
+          33.0000001,
+          33.0000001
+        ]
+      ],
+      "volumeMm3": 6498.926990797202,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.978514774236828e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "C R0.5",
+      "stepSha256": "614a15aba1af01b784cbbacc89fb4bce7238c7cb1dd02799ff8ebfdbe21f8be9",
+      "valid": true,
+      "solids": 1,
+      "faces": 11,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1.0000000000551115e-07,
+          -1e-07
+        ],
+        [
+          10.0000001,
+          10.0000001,
+          5.0000001
+        ]
+      ],
+      "volumeMm3": 259.7317477024868,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 1.7599859347683378e-09,
+      "passed": true,
+      "previewTriangles": 100
+    },
+    {
+      "name": "C base STEP roundtrip",
+      "stepSha256": "b1aaea3d89be2b988fdd94b84e01e2a26728713d219f21946f4645acde966978",
+      "valid": true,
+      "solids": 1,
+      "faces": 11,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1.0000000000551115e-07,
+          -1e-07
+        ],
+        [
+          10.0000001,
+          10.0000001,
+          5.0000001
+        ]
+      ],
+      "volumeMm3": 259.7317477024868,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 1.7599859347683378e-09,
+      "passed": true,
+      "previewTriangles": 100
+    },
+    {
+      "name": "C R0.5 rotated",
+      "stepSha256": "370312e5cb70741417ea6046fbed163ed5e920cc91e430764136244afd062ee7",
+      "valid": true,
+      "solids": 1,
+      "faces": 11,
+      "boundsMm": [
+        [
+          10.999999899999999,
+          -7.000000100000001,
+          2.9999999
+        ],
+        [
+          16.0000001,
+          3.0000001,
+          13.0000001
+        ]
+      ],
+      "volumeMm3": 259.7317477024868,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.7599859347683378e-09,
+      "passed": true,
+      "previewTriangles": 100
+    },
+    {
+      "name": "C placed STEP roundtrip",
+      "stepSha256": "39de0554675d0981c1ab019e92e6c5b1028acf42be96823d4fb05bc1f603f5c1",
+      "valid": true,
+      "solids": 1,
+      "faces": 11,
+      "boundsMm": [
+        [
+          10.999999899999999,
+          -7.000000100000001,
+          2.9999999
+        ],
+        [
+          16.0000001,
+          3.0000001,
+          13.0000001
+        ]
+      ],
+      "volumeMm3": 259.7317477024868,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.7599859347683378e-09,
+      "passed": true,
+      "previewTriangles": 100
+    }
+  ]
+}

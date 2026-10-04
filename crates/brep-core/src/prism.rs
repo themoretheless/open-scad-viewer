@@ -72,7 +72,7 @@ fn push_face(
     });
     FaceUse { face, reversed }
 }
-fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
+pub(crate) fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
     let [a, b] = bounds;
     Surface {
         degree_u: 1,
@@ -88,7 +88,7 @@ fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
         periodic_v: false,
     }
 }
-fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
+pub(crate) fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
     let mut result = curve.clone();
     for p in &mut result.control_points {
         for i in 0..2 {
@@ -736,6 +736,7 @@ pub fn recognize(model: &Model) -> Result<Option<ProfilePrism>> {
 mod imported_cap_tests {
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn recognizes_trimmed_step_carriers_without_admitting_deformed_sides() {
         let model: Model = value_codec::from_str(include_str!(
             "../../../docs/qualification/cad-roadmap-2026-09-28/parts-history/imported-flange.json"

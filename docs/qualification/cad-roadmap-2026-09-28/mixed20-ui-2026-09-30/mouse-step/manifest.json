@@ -1,0 +1,128 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "bracket-ui20-0",
+      "file": "bracket-ui20-0.step",
+      "sha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+      "expected": {
+        "volumeMm3": 9224.42035224898,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "bracket-ui20-1",
+      "file": "bracket-ui20-1.step",
+      "sha256": "422cc795f39312ef2ebb8b1fccb71911cb887eb462b05e460d720c261de1338e",
+      "expected": {
+        "volumeMm3": 9224.42035224898,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            53,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui20-0",
+      "file": "enclosure-ui20-0.step",
+      "sha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+      "expected": {
+        "volumeMm3": 7981.62035224816,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "enclosure-ui20-1",
+      "file": "enclosure-ui20-1.step",
+      "sha256": "720037fe0b7df88d5a3a0ce0ccf17a99f3d1323a7f583c880a6a80a263916e12",
+      "expected": {
+        "volumeMm3": 7981.62035224816,
+        "boundsMm": [
+          [
+            7,
+            0,
+            0
+          ],
+          [
+            47,
+            30,
+            26
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-ui20-0",
+      "file": "flange-ui20-0.step",
+      "sha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "expected": {
+        "volumeMm3": 13460.19078528368,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "flange-ui20-1",
+      "file": "flange-ui20-1.step",
+      "sha256": "d35e76c1186650060cf68edbad85e64db75cacc8cdd6dbbb1efe18dbd17f67a5",
+      "expected": {
+        "volumeMm3": 13460.19078528368,
+        "boundsMm": [
+          [
+            -13,
+            -20,
+            0
+          ],
+          [
+            27,
+            20,
+            12
+          ]
+        ]
+      }
+    }
+  ]
+}

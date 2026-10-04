@@ -20,6 +20,38 @@ Two independent domain libraries live in the Cargo workspace under `crates/`:
 
 The ModelGraph Text frontend and canonical graph compiler also run in Rust.
 The legacy OpenSCAD evaluator and host/renderer adapters remain TypeScript.
+Stable OpenSCAD circle and sweep subdivision rules (`$fn/$fa/$fs`) live in
+`openscad-core::fragments`; TS adapts authored values and renders native warning
+events. Automatic extrusion slices and resize ratios also use typed Rust rules.
+The viewer-subset segment rounding and preview/full caps are also shared Rust
+rules, called by the TS evaluator, semantic lowerer and native evaluator.
+The native geometry integration API records normalized solid expressions in
+`geometry-ops::solid_program` and executes them in `polygon-core::solid::program`.
+Its current viewer-subset coverage is cube, sphere, cylinder, translation, rotation,
+scaling, reflection, affine matrices and boolean operations, including evaluated
+user modules and loops. The stable profile currently records cubes, spheres, cylinders, translation, rotation,
+scaling, reflection, affine matrices and Booleans through shared parameter and transform plans, including
+explicit empty operands and singular transforms. It also records square, circle and
+polygon profiles, planar Booleans, affine profile transforms and linear extrusion
+with deferred Rust subdivision. Native rotation extrusion also handles signed angles,
+negative-X profiles, holes and axis poles. Native profile offsets share production
+round, miter and chamfer joins. Both profile and solid programs also support hulls
+through the existing 2D and 3D kernels. Polygon contours use the even-odd fill rule;
+host tests cover holes, invalid contours and extrusion warnings. Remaining
+geometry modules return positioned unsupported-operation diagnostics.
+The production OpenSCAD route still uses the TS evaluator while this coverage grows.
+Body snap targets run in Rust: `geometry-ops` owns target deduplication and circle hints,
+`mesh-topology` owns display feature edges and area-weighted centers, and `brep-core`
+owns exact curve sampling and coplanar edge suppression. The bridge composes these
+results; the TS adapter retains the body cache and original curve references.
+Transparent BSP construction and triangle clipping belong to `geometry-ops::transparency`.
+The WASM adapter uploads a whole scene as f64 attributes and copies detached arrays
+of node planes, links, owners and vertices. It releases each native result. The renderer
+retains camera traversal and writes into reusable GPU upload storage. Native limits
+bound both fragment growth and the number of partition/insertion operations.
+Repeat transport and constructor measurements with `npm run bench:transparency`.
+Local warmed Node/WASM evidence is saved in `docs/qualification/native-transparency-2026-10-01.json`;
+it excludes startup and GPU upload and uses an explicit 500,000-operation budget for large scenes.
 The mesh engine is the workspace CAD kernel (`own-rust-cad-v1`) with an exact
 WASM SHA-256 fingerprint. A foreign Manifold comparison bench, if needed, lives
 only in `tools/manifold-bench` and is not a product dependency.

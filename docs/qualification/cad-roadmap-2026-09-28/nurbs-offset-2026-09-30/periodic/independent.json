@@ -1,0 +1,10 @@
+{
+  "oracle": "Decimal(70) Cox-de Boor and rational first derivative",
+  "samples": 2295,
+  "curves": 1,
+  "cells": 255,
+  "maxSampledErrorMm": 0.00020231713288175945,
+  "errorUpperMm": 0.0004970256354838692,
+  "continuousCertificateFromIndependentOracle": false,
+  "regionTopologyCertified": false
+}

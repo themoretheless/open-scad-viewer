@@ -1,0 +1,3 @@
+{"count":100,"ms":7.021582999999993,"operations":5050,"fragments":100,"status":"built"}
+{"count":500,"ms":50.832667,"status":"refused","reason":"Transparency operation limit exceeded"}
+{"count":1000,"ms":43.664457999999996,"status":"refused","reason":"Transparency operation limit exceeded"}

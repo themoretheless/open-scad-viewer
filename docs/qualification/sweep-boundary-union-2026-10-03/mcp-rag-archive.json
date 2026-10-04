@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "wikiId": "4ac08bb0-fbb4-4b9a-81b8-f6fbedd3afd6",
+  "wikiRevision": 5,
+  "wikiHash": "7dc68ee7829b8d53b7ee01466ff1dd66ba3f1eb9833a002b0b18171a9e3a5f6a",
+  "raw": {
+    "document_id": "186bbb10-24af-4d51-b014-8d37c912adf5",
+    "chunk_count": 6,
+    "node_id": "c5f83c78-fac2-4244-9659-b83ff74f7c30",
+    "edge_count": 1,
+    "content_hash": "fedbe22937dbbf406fcd25dead06b43c7bed68397364fa31656c38479524d98c",
+    "op": "inserted",
+    "revision": 1,
+    "etag": "W/\"1\""
+  },
+  "uri": "project://open-scad-viewer/session-results/sweep-boundary-union-2026-10-03-v1",
+  "doctor": {
+    "backend": "duckdb",
+    "storage_capabilities": [
+      "documents",
+      "full_text_search",
+      "vector_search",
+      "transactions",
+      "graph",
+      "temporal_knowledge_graph"
+    ],
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "schema_ok": true,
+    "fts_ready": true,
+    "document_count": 81958,
+    "chunk_count": 720243,
+    "node_count": 107728,
+    "edge_count": 238813,
+    "embed_dims": 768,
+    "manifest_dims": 768,
+    "embed_ok": true,
+    "ready_for_search": true,
+    "ingest_roots_configured": true,
+    "db_path": "/Users/themoretheless/.local/share/rag-mcp/rag.duckdb",
+    "wal_bytes": 1420677,
+    "wal_warn_bytes": 268435456,
+    "wal_too_large": false,
+    "documents_without_chunks": 0,
+    "orphan_chunks": 0,
+    "orphan_document_nodes": 0,
+    "orphan_edges": 0,
+    "unscoped_documents": 168,
+    "relational_integrity_ok": true,
+    "ok": true
+  }
+}

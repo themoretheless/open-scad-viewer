@@ -1,0 +1,434 @@
+{
+  "active": {
+    "tag": "BUTTON",
+    "label": "Показать: Instance 999",
+    "class": ""
+  },
+  "rows": [
+    {
+      "key": "object:instance-975",
+      "buttons": [
+        {
+          "label": "Instance 975",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 975",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 975",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-976",
+      "buttons": [
+        {
+          "label": "Instance 976",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 976",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 976",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-977",
+      "buttons": [
+        {
+          "label": "Instance 977",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 977",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 977",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-978",
+      "buttons": [
+        {
+          "label": "Instance 978",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 978",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 978",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-979",
+      "buttons": [
+        {
+          "label": "Instance 979",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 979",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 979",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-980",
+      "buttons": [
+        {
+          "label": "Instance 980",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 980",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 980",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-981",
+      "buttons": [
+        {
+          "label": "Instance 981",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 981",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 981",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-982",
+      "buttons": [
+        {
+          "label": "Instance 982",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 982",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 982",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-983",
+      "buttons": [
+        {
+          "label": "Instance 983",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 983",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 983",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-984",
+      "buttons": [
+        {
+          "label": "Instance 984",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 984",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 984",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-985",
+      "buttons": [
+        {
+          "label": "Instance 985",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 985",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 985",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-986",
+      "buttons": [
+        {
+          "label": "Instance 986",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 986",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 986",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-987",
+      "buttons": [
+        {
+          "label": "Instance 987",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 987",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 987",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-988",
+      "buttons": [
+        {
+          "label": "Instance 988",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 988",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 988",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-989",
+      "buttons": [
+        {
+          "label": "Instance 989",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 989",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 989",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-990",
+      "buttons": [
+        {
+          "label": "Instance 990",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 990",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 990",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-991",
+      "buttons": [
+        {
+          "label": "Instance 991",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 991",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 991",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-992",
+      "buttons": [
+        {
+          "label": "Instance 992",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 992",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 992",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-993",
+      "buttons": [
+        {
+          "label": "Instance 993",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 993",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 993",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-994",
+      "buttons": [
+        {
+          "label": "Instance 994",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 994",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 994",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-995",
+      "buttons": [
+        {
+          "label": "Instance 995",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 995",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 995",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-996",
+      "buttons": [
+        {
+          "label": "Instance 996",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 996",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 996",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-997",
+      "buttons": [
+        {
+          "label": "Instance 997",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 997",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 997",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-998",
+      "buttons": [
+        {
+          "label": "Instance 998",
+          "focused": false
+        },
+        {
+          "label": "Скрыть: Instance 998",
+          "focused": false
+        },
+        {
+          "label": "Заблокировать: Instance 998",
+          "focused": false
+        }
+      ]
+    },
+    {
+      "key": "object:instance-999",
+      "buttons": [
+        {
+          "label": "Instance 999",
+          "focused": false
+        },
+        {
+          "label": "Показать: Instance 999",
+          "focused": true
+        },
+        {
+          "label": "Заблокировать: Instance 999",
+          "focused": false
+        }
+      ]
+    }
+  ]
+}
