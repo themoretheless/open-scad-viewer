@@ -65,6 +65,62 @@ fn bounds(s: &Surface, d: [[f64; 2]; 2]) -> Result<Vec<I>> {
         .map(|[lo, hi]| I::new(lo, hi))
         .collect()
 }
+pub(crate) enum SectionVerdict {
+    Excluded,
+    Unresolved,
+    Unique {
+        parameters: [[f64; 2]; 3],
+        contraction_upper: f64,
+    },
+}
+/// Shared interval section inclusion. The caller must supply the full Jacobian
+/// enclosure of a continuous section function and its interval midpoint value.
+pub(crate) fn section_krawczyk(
+    domain: [[f64; 2]; 3],
+    jac: [[I; 3]; 3],
+    f: [I; 3],
+) -> Result<SectionVerdict> {
+    let Some(y) = inverse(jac.map(|r| r.map(|v| v.lo * 0.5 + v.hi * 0.5))) else {
+        return Ok(SectionVerdict::Unresolved);
+    };
+    let center = domain.map(|d| d[0] * 0.5 + d[1] * 0.5);
+    if (0..3).any(|k| center[k] <= domain[k][0] || center[k] >= domain[k][1]) {
+        return Ok(SectionVerdict::Unresolved);
+    }
+    let mut image = center.map(I::point);
+    let mut contraction = 0_f64;
+    for i in 0..3 {
+        let mut row = I::point(0.);
+        for j in 0..3 {
+            image[i] = image[i].sub(I::point(y[i][j]).mul(f[j])?)?;
+        }
+        for k in 0..3 {
+            let mut residual = I::point(if i == k { 1. } else { 0. });
+            for j in 0..3 {
+                residual = residual.sub(I::point(y[i][j]).mul(jac[j][k])?)?;
+            }
+            row = row.add(I::point(residual.lo.abs().max(residual.hi.abs())))?;
+            let offset = I::new(domain[k][0], domain[k][1])?.sub(I::point(center[k]))?;
+            image[i] = image[i].add(residual.mul(offset)?)?;
+        }
+        contraction = contraction.max(row.hi);
+    }
+    if (0..3).any(|k| image[k].hi < domain[k][0] || image[k].lo > domain[k][1]) {
+        return Ok(SectionVerdict::Excluded);
+    }
+    // A norm bound below one for I-YJ proves YJ, and therefore Y,
+    // invertible. The invariant image gives a fixed point with F=0, not merely
+    // a small Newton residual. The whole 3D section box has a unique root.
+    if contraction >= 0.5
+        || (0..3).any(|k| image[k].lo <= domain[k][0] || image[k].hi >= domain[k][1])
+    {
+        return Ok(SectionVerdict::Unresolved);
+    }
+    Ok(SectionVerdict::Unique {
+        parameters: image.map(|v| [v.lo, v.hi]),
+        contraction_upper: contraction,
+    })
+}
 /// Every interval is in the original natural parameter domain. Boxes crossing
 /// an interior knot return Unresolved and must be split by the caller.
 pub fn certify(
@@ -108,9 +164,6 @@ pub fn certify(
             I::point(0.).sub(jb[k][1])?,
         ];
     }
-    let Some(y) = inverse(jac.map(|r| r.map(|v| v.lo * 0.5 + v.hi * 0.5))) else {
-        return Ok(Verdict::Unresolved);
-    };
     let domain = [first_other, second[0], second[1]];
     let center = domain.map(|d| d[0] * 0.5 + d[1] * 0.5);
     if (0..3).any(|k| center[k] <= domain[k][0] || center[k] >= domain[k][1]) {
@@ -124,37 +177,16 @@ pub fn certify(
     for k in 0..3 {
         f[k] = ac[k].sub(bc[k])?;
     }
-    let mut image = center.map(I::point);
-    let mut contraction = 0_f64;
-    for i in 0..3 {
-        let mut row = I::point(0.);
-        for j in 0..3 {
-            image[i] = image[i].sub(I::point(y[i][j]).mul(f[j])?)?;
-        }
-        for k in 0..3 {
-            let mut residual = I::point(if i == k { 1. } else { 0. });
-            for j in 0..3 {
-                residual = residual.sub(I::point(y[i][j]).mul(jac[j][k])?)?;
-            }
-            row = row.add(I::point(residual.lo.abs().max(residual.hi.abs())))?;
-            let offset = I::new(domain[k][0], domain[k][1])?.sub(I::point(center[k]))?;
-            image[i] = image[i].add(residual.mul(offset)?)?;
-        }
-        contraction = contraction.max(row.hi);
-    }
-    if (0..3).any(|k| image[k].hi < domain[k][0] || image[k].lo > domain[k][1]) {
-        return Ok(Verdict::Excluded);
-    }
-    // A norm bound below one for I-YJ proves YJ, and therefore Y,
-    // invertible. The invariant image gives a fixed point with F=0, not merely
-    // a small Newton residual. The whole 3D section box has a unique root.
-    if contraction >= 0.5
-        || (0..3).any(|k| image[k].lo <= domain[k][0] || image[k].hi >= domain[k][1])
-    {
-        return Ok(Verdict::Unresolved);
-    }
-    first[free] = [image[0].lo, image[0].hi];
-    let second = [[image[1].lo, image[1].hi], [image[2].lo, image[2].hi]];
+    let (image, contraction) = match section_krawczyk(domain, jac, f)? {
+        SectionVerdict::Excluded => return Ok(Verdict::Excluded),
+        SectionVerdict::Unresolved => return Ok(Verdict::Unresolved),
+        SectionVerdict::Unique {
+            parameters,
+            contraction_upper,
+        } => (parameters, contraction_upper),
+    };
+    first[free] = image[0];
+    let second = [image[1], image[2]];
     let pa = bounds(a, first)?;
     let pb = bounds(b, second)?;
     let mut point = [[0.; 2]; 3];

@@ -1,0 +1,54 @@
+# Rolling-ball offset foundation
+
+Status: native kernel implementation, under qualification. No new fillet capability or UI command is admitted by this change. General curved fillets and endpoint transitions remain required work.
+
+## Geometry
+
+For an authored rational surface S, the signed carrier is F = S + d n, with n = N / |N| and N = S_u × S_v. The sign is relative to the surface parameter orientation, not inferred material orientation. Reversing one parameter requires reversing d to preserve the physical carrier. B-rep face orientation and UV trim admission must be applied by the feature owner.
+
+`surface_offset::bounds` encloses the original surface image and the original derivative cross product on every intersecting knot span. After positive scalar normalization, an outward interval norm with strictly positive lower bound encloses the unit normal. Component intervals are intersected with [-1,1], then multiplied by signed d and added to the image enclosure. These operations bound all source parameters in the requested rectangle. No analytic recognition, sampled radius, or sampled derivative is used for this bound. Incomplete span coverage and normals that cannot be separated from zero produce no offset-image bound.
+
+`surface_offset::evaluate` computes numerical points and first derivatives for predictor/corrector proposals. It uses n_u = (N_u - n(n·N_u))/|N| and the analogous V derivative, with N_u = S_uu × S_v + S_u × S_uv. Numerical evaluations carry no root-existence or regularity authority. An inward radius-three offset of a radius-three cylinder collapses its U derivative; the API retains this result rather than inventing a regular patch.
+
+`surface_offset::intersection_candidates` subdivides the complete pair of original UV rectangles. Only a positive interval separation between both offset-image enclosures excludes a box. Possible intersections and every unvisited, singular or precision-limited box remain in the report. Candidate boxes do not establish a root, unique branch, contact on trimmed faces, or a valid fillet. Both original operands are validated before early exclusion can hide an invalid second input. Initial enclosures are reused and included in reported normal-span visits.
+
+## Native checks
+
+- Offset foundation and JSON transport: 17/17 tests, including signed planes, rational cylinders, general spatial rational patches, derivative finite-difference regression, orientation reversal, very small regular normals, collapsed carriers, invalid inputs and exhausted budgets.
+- Existing normal alignment: 5/5.
+- Existing surface contact and contact search: 8/8.
+- Existing circular blend: 26/26, including the explicit refusal of a regular G1 claim at the current collapsed transition tip.
+- `git diff --check` passed.
+
+The enclosure argument above is the basis for continuous bounds. Point samples and derivative finite differences are regression checks, not a proof of a whole surface.
+
+## Interval section extension
+
+`surface_offset::jacobian_bounds` bounds source homogeneous jets through second order and uses the quotient recurrence to enclose Euclidean derivatives. Interval differentiation of N and normalization then enclose the first derivatives of the offset carrier. Every incident knot side contributes; this union does not itself establish continuity. Point samples and finite differences independently exercise the bounds on rational cylinders and spatial rational patches.
+
+Periodic natural-domain endpoints include their wrapped start branch. Both branch evaluations consume the shared span budget. A valid degree-one periodic fixture has different normal limits at the seam; bounds retain both incident limiting images while the numerical evaluator refuses an undefined source jet. No root certificate infers continuity from a periodic flag.
+
+`surface_offset::certify_contact_section` reuses the existing `surface_contact::section_krawczyk` inclusion engine. It proves an isolated center contact for one fixed source parameter, using full interval Jacobian bounds and an independent interval midpoint residual. The contraction bound and strictly invariant box establish a unique section root. Source C1 continuity is required across interior knots, and periodic endpoint seams remain unresolved without a separate continuity proof. Coincident supports and collapsed offset carriers remain unresolved.
+
+Native examples certify crossing offset planes and a rational cylinder/plane section. These are section certificates, not complete intersection curves, trim admission, rolling-ball envelope surfaces or fillet features.
+
+Five JSON operations and TypeScript adapters are added: numerical offset evaluation, offset image bounds, offset Jacobian bounds, pair candidate boxes and section contact inclusion. Results explicitly distinguish root existence, complete-curve evidence and topology authority. The final WASM build and product checks pass. The three new offset tests exercise the five JSON operations through the actual WASM module; they do not yet exercise a worker offset request or a current UI command. Existing distance and real-worker regression tests also pass.
+
+## Next required stages
+
+1. Branch continuation and completeness, including tangencies and singularities.
+2. Admission of contact parameters on original trimmed faces and rolling-ball radius/tangency bounds.
+3. Envelope patch construction, trim replacement, endpoint/corner transitions, sewing, persistent naming and global volume/self-intersection checks.
+4. WASM/worker/current UI admission and independent STEP measurement.
+
+The complete P1 requirement includes general NURBS edges, cylinder/cylinder cases and complex corners. This native foundation does not replace that scope with its fixtures.
+
+## Published module validation
+
+- Native checks: 17 offset/transport, 5 normal bounds, 8 contact and 26 circular regression checks passed.
+- Product checks: 54 tests across seven files passed, including three new offset tests and existing distance/real-worker checks.
+- Vue and MCP TypeScript checks and Vite production build passed.
+- WASM: 11,000,183 bytes; SHA-256 `08e0de0ed697f2a6e8e8499cfc8c0d86a189140519714e042699c3ca3d3ff31d`.
+- Packed geometry chunk measured 3,674,022 bytes; production assets measured 7,906,737 bytes. Explicit package budgets move to 3,675,000 and 7,910,000 bytes respectively. No runtime dependency was added.
+
+This delivery provides kernel queries and typed adapters. It does not admit general fillets to the worker or UI, nor prove a complete centerline or trimmed solid.

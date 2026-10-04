@@ -1,5 +1,6 @@
 //! Optional bounded JSON request boundary.
 use super::*;
+use crate::surface::Surface;
 #[path="retained_body_coverage.rs"]
 mod retained_body_coverage;
 use crate::retained_wall_domain;
@@ -742,6 +743,88 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
+    if op == "surface_offset_evaluate" {
+        let e = surface_offset::evaluate(
+            &field(&v, "surface")?,
+            field(&v, "parameters")?,
+            field(&v, "distance")?,
+        )?;
+        return Ok(
+            json!({"method":"normal-offset-numerical-jets","point":e.point,"du":e.du,"dv":e.dv,
+            "sourceUnitNormal":e.source_unit_normal,"certified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_bounds" {
+        let r = surface_offset::bounds(
+            &field(&v, "surface")?,
+            field(&v, "domain")?,
+            field(&v, "distance")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-source-normal-offset","scope":"incident-span-offset-images",
+            "image":r.image,"unitNormals":r.unit_normals,"normalSpanVisits":r.spans,"reason":r.reason,
+            "offsetRegularityCertified":false,"continuityCertified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_jacobian_bounds" {
+        let r = surface_offset::jacobian_bounds(
+            &field(&v, "surface")?,
+            field(&v, "domain")?,
+            field(&v, "distance")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-source-normal-offset-jets","scope":"incident-span-offset-jets",
+            "image":r.image,"derivatives":r.derivatives,"normalSpanVisits":r.spans,"reason":r.reason,
+            "offsetRegularityCertified":false,"continuityCertified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_candidates" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::intersection_candidates(
+            [&a, &b],
+            field(&v, "domains")?,
+            field(&v, "distances")?,
+            field(&v, "parameterTolerance")?,
+            field(&v, "maxBoxes")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-offset-pair-exclusion","scope":"untrimmed-offset-carriers",
+            "candidateBoxes":r.boxes,"pendingBoxes":r.pending,"visitedBoxes":r.visited_boxes,
+            "excludedBoxes":r.excluded_boxes,"normalSpanVisits":r.normal_span_visits,"reason":r.reason,
+            "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_contact_section" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::certify_contact_section(
+            [&a, &b],
+            field(&v, "distances")?,
+            field(&v, "fixedAxis")?,
+            field(&v, "fixed")?,
+            field(&v, "firstOther")?,
+            field(&v, "secondDomain")?,
+            field(&v, "maxSpans")?,
+        )?;
+        let (status, witness) = match r {
+            surface_contact::Verdict::Excluded => ("excluded", Value::Null),
+            surface_contact::Verdict::Unresolved => ("unresolved", Value::Null),
+            surface_contact::Verdict::Witness(w) => (
+                "unique-contact",
+                json!({"firstUV":w.first_uv,"secondUV":w.second_uv,
+                "centerIntervalMm":w.point,"contractionUpper":w.contraction_upper}),
+            ),
+        };
+        return Ok(
+            json!({"method":"interval-offset-section-krawczyk","scope":"fixed-parameter-offset-section",
+            "status":status,"witness":witness,"rootExistenceProven":status=="unique-contact",
+            "uniqueInSection":status=="unique-contact","wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
+        );
+    }
     if op == "surface_distance" {
         return Ok(surface_distance::distance(
             &field(&v, "a")?,
@@ -1205,3 +1288,7 @@ fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
     let curve=curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![value.to_vec();2],weights:vec![1.,1.],periodic:false};
     curve.validate()?;Ok(curve)
 }
+
+#[cfg(test)]
+#[path="surface_offset_transport_tests.rs"]
+mod surface_offset_transport_tests;
