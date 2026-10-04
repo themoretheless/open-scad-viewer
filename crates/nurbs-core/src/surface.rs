@@ -2,7 +2,7 @@ use crate::curve::{Curve, basis, bounds};
 use crate::{Result, check, numeric};
 use math_core::{cross, dot, norm};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Surface {
     pub degree_u: usize,
     pub degree_v: usize,
@@ -444,6 +444,28 @@ impl Surface {
                 self.periodic_v,
             )
         };
+        // At a nonperiodic clamped endpoint, the fixed basis selects exactly
+        // one original row/column. Preserve definitions without recomputation.
+        let a = k[p];
+        let z = k[fixed];
+        let endpoint = if !periodic && parameter == a && k[..=p].iter().all(|&t| t == a) {
+            Some(0)
+        } else if !periodic && parameter == z && k[k.len()-p-1..].iter().all(|&t| t == z) {
+            Some(fixed-1)
+        } else { None };
+        if let Some(j) = endpoint {
+            let curve = Curve {
+                degree: if fixed_u { self.degree_v } else { self.degree_u },
+                knots: if fixed_u { self.knots_v.clone() } else { self.knots_u.clone() },
+                control_points: (0..varying).map(|i| if fixed_u {
+                    self.control_points[j][i].clone()
+                } else { self.control_points[i][j].clone() }).collect(),
+                weights: (0..varying).map(|i| if fixed_u { self.weights[j][i] } else { self.weights[i][j] }).collect(),
+                periodic: if fixed_u { self.periodic_v } else { self.periodic_u },
+            };
+            curve.validate()?;
+            return Ok(curve);
+        }
         let b = basis(p, k, fixed, parameter, periodic)?.basis;
         let mut points = Vec::new();
         let mut weights = Vec::new();
@@ -734,6 +756,17 @@ pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
 #[cfg(test)]
 mod construction_tests {
     use super::*;
+    #[test]
+    fn clamped_iso_preserves_authored_coordinates_and_nonuniform_weights() {
+        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.1,0.2,0.3],vec![0.7,-0.2,0.8],vec![1.1,0.4,-0.3]],weights:vec![0.7,1.3,0.9],periodic:false};
+        let mut other=c.clone();
+        for p in &mut other.control_points {p[2]+=2.;}
+        let surface=loft(&[c.clone(),other.clone()]).unwrap();
+        let before=surface.clone();
+        assert_eq!(surface.iso(Axis::V,0.).unwrap(),c);
+        assert_eq!(surface.iso(Axis::V,1.).unwrap(),other);
+        assert_eq!(surface,before);
+    }
     #[test]
     fn rational_sweep_matches_sum_of_curves() {
         let p = Curve {

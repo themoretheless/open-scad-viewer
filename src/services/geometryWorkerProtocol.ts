@@ -14,7 +14,7 @@ import { sha256Hex } from '../core/sha256'
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 7 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 12 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -43,6 +43,7 @@ interface GeometryJobEnvelope {
 }
 
 export interface GeometryBuildRequest extends GeometryJobEnvelope {
+  acknowledgeSweepPreviews?: boolean
   selectionSurfaces?: boolean
   type: 'build'
   source: string
@@ -53,7 +54,12 @@ export interface GeometryCancelRequest extends Omit<GeometryJobEnvelope, 'qualit
   reason: GeometryCancelReason
 }
 
-export type GeometryWorkerRequest = GeometryBuildRequest | GeometryCancelRequest
+export interface GeometrySweepPreviewAcknowledgement extends GeometryJobEnvelope {
+ type:'sweep-preview-ack'
+ nodeId:string
+ sections:number
+}
+export type GeometryWorkerRequest = GeometryBuildRequest | GeometryCancelRequest | GeometrySweepPreviewAcknowledgement
 
 export interface GeometryBuildAccepted extends GeometryJobEnvelope {
   status: 'accepted'
@@ -70,6 +76,25 @@ export interface GeometryBuildProgress extends GeometryJobEnvelope {
   phase: GeometryBuildPhase
   /** Null means that the current kernel phase cannot report meaningful completion. */
   progress: number | null
+}
+
+/** Display-only per-node sweep geometry, never an authoritative publication. */
+export interface GeometrySweepPreview extends GeometryJobEnvelope {
+ status:'sweep-preview'
+ phase:'compiling'
+ nodeId:string
+ sections:number
+ accepted:boolean
+ continuousErrorUpper?:number
+ profileRegularityCertified?:boolean
+ wallRegularityCertified?:boolean|null
+ certifiedErrorUpper?:number|null
+ endpointContourErrorUpper?:[number,number]|null
+ frameTransportCertified?:boolean
+ phaseResolved?:boolean
+ sampledControlDeviation:number
+ budget:number
+ meshes:MeshData[]
 }
 
 export interface GeometryBuildSuccess extends GeometryJobEnvelope {
@@ -129,6 +154,7 @@ export type GeometryWorkerEvent =
   | GeometryBuildAccepted
   | GeometryBuildStarted
   | GeometryBuildProgress
+  | GeometrySweepPreview
   | GeometryBuildTerminal
 
 const QUALITIES = new Set<GeometryQuality>(['preview', 'full'])
@@ -668,7 +694,7 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
     if (!isRecord(value) || !hasBoundedDataProperties(value, 12)) return false
     const candidate = value as Partial<GeometryWorkerRequest>
     const envelopeIsValid = candidate.protocolVersion === GEOMETRY_WORKER_PROTOCOL_VERSION
-      && (candidate.type === 'build' || candidate.type === 'cancel')
+      && (candidate.type === 'build' || candidate.type === 'cancel' || candidate.type === 'sweep-preview-ack')
       && isNonNegativeSafeInteger(candidate.documentRevision)
       && isNonNegativeSafeInteger(candidate.jobId)
     if (!envelopeIsValid) return false
@@ -677,7 +703,8 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
       return hasExactKeys(value, [
         'protocolVersion', 'type', 'documentRevision', 'jobId', 'source',
         'sourceSha256', 'quality',
-      ], ['selectionSurfaces'])
+      ], ['selectionSurfaces','acknowledgeSweepPreviews'])
+        && (build.acknowledgeSweepPreviews===undefined||typeof build.acknowledgeSweepPreviews==='boolean')
         && (build.selectionSurfaces === undefined || typeof build.selectionSurfaces === 'boolean')
         && typeof build.source === 'string'
         && build.source.length <= MAX_GEOMETRY_SOURCE_CHARACTERS
@@ -687,6 +714,10 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
         && sha256Hex(build.source) === build.sourceSha256
         && isQuality(build.quality)
     }
+    if(candidate.type==='sweep-preview-ack')return hasExactKeys(value,['protocolVersion','type','documentRevision','jobId','quality','sourceSha256','nodeId','sections'])
+      && isQuality(candidate.quality) && typeof candidate.sourceSha256==='string' && /^[a-f0-9]{64}$/.test(candidate.sourceSha256)
+      && typeof candidate.nodeId==='string' && candidate.nodeId.length>0 && candidate.nodeId.length<=GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
+      && Number.isInteger(candidate.sections) && (candidate.sections as number)>=2 && (candidate.sections as number)<=1025
     const cancel = candidate as Partial<GeometryCancelRequest>
     return hasExactKeys(value, [
       'protocolVersion', 'type', 'documentRevision', 'jobId', 'reason',
@@ -722,6 +753,28 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
             && Number.isFinite(value.progress)
             && value.progress >= 0
             && value.progress <= 1))
+      case 'sweep-preview':
+        return hasExactKeys(value,[
+          'protocolVersion','documentRevision','jobId','quality','sourceSha256',
+          'status','phase','nodeId','sections','accepted','sampledControlDeviation','budget','meshes',
+        ],['phaseResolved','continuousErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
+          && typeof value.nodeId==='string' && value.nodeId.length>0
+          && value.nodeId.length<=GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
+          && Number.isInteger(value.sections) && (value.sections as number)>=2 && (value.sections as number)<=1025
+          && typeof value.accepted==='boolean'
+          && isNonNegativeFiniteNumber(value.sampledControlDeviation)
+          && isNonNegativeFiniteNumber(value.budget)
+          && hasSafeSuccessPayload({...value,warnings:[]})
+          && (value.phaseResolved===undefined||typeof value.phaseResolved==='boolean')
+          && (value.frameTransportCertified===undefined||typeof value.frameTransportCertified==='boolean')
+          && (value.profileRegularityCertified===undefined||typeof value.profileRegularityCertified==='boolean')
+          && (value.wallRegularityCertified===undefined||value.wallRegularityCertified===null||typeof value.wallRegularityCertified==='boolean')
+          && (value.certifiedErrorUpper===undefined||value.certifiedErrorUpper===null||isNonNegativeFiniteNumber(value.certifiedErrorUpper))
+          && (value.endpointContourErrorUpper===undefined||value.endpointContourErrorUpper===null||(Array.isArray(value.endpointContourErrorUpper)&&value.endpointContourErrorUpper.length===2&&value.endpointContourErrorUpper.every(isNonNegativeFiniteNumber)))
+          && (value.continuousErrorUpper===undefined||isNonNegativeFiniteNumber(value.continuousErrorUpper))
+          && value.accepted===((value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number))))
+          && (value.meshes as unknown[]).every(mesh=>isMeshData(mesh)&&!('nativeGeometry' in mesh)
+            && mesh.faceIdsAuthoritative===false && mesh.provenance.every(run=>run.source===null))
       case 'succeeded':
         return hasExactKeys(value, [
           'protocolVersion', 'documentRevision', 'jobId', 'quality', 'sourceSha256',

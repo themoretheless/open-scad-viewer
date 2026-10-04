@@ -7,13 +7,14 @@ use cad_predicates::{
     AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
 use nurbs_core::{curve::Curve, surface::Surface};
+mod monotone_coordinate;
 #[derive(Clone, Debug)]
 pub struct Certificate {
     pub edge: usize,
     pub planar_face: usize,
     pub sided_face: usize,
 }
-fn orient(points: &[&[f64]], projection: Option<[usize; 2]>) -> Option<Sign> {
+pub(crate) fn orient(points: &[&[f64]], projection: Option<[usize; 2]>) -> Option<Sign> {
     let values = points
         .iter()
         .flat_map(|p| p.iter().map(|x| AuthoredScalar::Binary64Bits(x.to_bits())))
@@ -273,8 +274,6 @@ pub fn inspect_opposite_pair(
     }
     certify_opposite(model, faces)
 }
-/// A straight shared edge still admits an authored coordinate plane. Strict
-/// control-net sidedness excludes every off-boundary point from that plane.
 fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->bool{
     let (Some(ba),Some(bb))=(boundary(a,pa,edge),boundary(b,pb,edge)) else{return false};
     if [a,b].iter().zip([ba,bb]).any(|(s,bound)|[s.degree_u,s.degree_v][bound.0]==0){return false;}
@@ -312,7 +311,10 @@ pub(crate) fn certify_opposite(
     for ca in uses(a) {
         if let Some(others) = by_edge.get(&ca.edge) {
             for cb in others {
-                if opposite_axis_sides(&a.surface,&b.surface,&ca.pcurve,&cb.pcurve,&model.edges[ca.edge].curve) || separates_surfaces(
+                if opposite_axis_sides(&a.surface,&b.surface,&ca.pcurve,&cb.pcurve,&model.edges[ca.edge].curve) || monotone_coordinate::separates(
+                    &a.surface, &b.surface, &ca.pcurve, &cb.pcurve,
+                    &model.edges[ca.edge].curve,
+                ) || separates_surfaces(
                     &a.surface,
                     &b.surface,
                     &ca.pcurve,
@@ -364,21 +366,26 @@ pub fn separates_surfaces(
     let Some(p1) = points.iter().copied().find(|p| *p != p0) else {
         return Ok(false);
     };
-    let Some(p2) = points.iter().copied().find(|p| {
-        [[0, 1], [0, 2], [1, 2]].iter().any(|&axes| {
-            matches!(
-                orient(&[p0, p1, p], Some(axes)),
-                Some(Sign::Positive | Sign::Negative)
-            )
-        })
-    }) else {
-        return Ok(false);
-    };
+    // Candidate planes for a straight edge still require exact edge incidence
+    // and opposite strict signs for every off-boundary control point below.
+    let mut candidates=vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![0.,1.,0.],vec![0.,0.,1.]];
+    let controls=[a,b].map(|s|s.control_points.iter().flatten().collect::<Vec<_>>());
+    if controls.iter().all(|ps|ps.len()<=16) {
+        for x in &controls[0] { for y in &controls[1] {
+            let p=(0..3).map(|k|0.5*x[k]+0.5*y[k]).collect::<Vec<_>>();
+            if p.iter().all(|x|x.is_finite()) {candidates.push(p);}
+        }}
+    }
+    // Rounded midpoints propose planes only; every incidence and strict side
+    // below is decided exactly on original retained coefficients.
+    for p2 in points.iter().copied().chain(candidates.iter().map(|p|p.as_slice())) {
+        if ![[0,1],[0,2],[1,2]].iter().any(|&axes|matches!(
+            orient(&[p0,p1,p2],Some(axes)),Some(Sign::Positive|Sign::Negative))) {continue;}
     if !points
         .iter()
         .all(|p| orient(&[p0, p1, p2, p], None) == Some(Sign::Zero))
     {
-        return Ok(false);
+        continue;
     }
     let strict_side = |surface: &Surface, bound: (usize, usize)| -> Option<Sign> {
         let mut side = None;
@@ -399,10 +406,12 @@ pub fn separates_surfaces(
         }
         side
     };
-    Ok(matches!(
+    if matches!(
         (strict_side(a, ba), strict_side(b, bb)),
         (Some(Sign::Positive), Some(Sign::Negative)) | (Some(Sign::Negative), Some(Sign::Positive))
-    ))
+    ) { return Ok(true); }
+    }
+    Ok(false)
 }
 
 #[cfg(test)]
@@ -532,6 +541,25 @@ mod tests {
         assert_eq!(count, 12);
         assert!(inspect_pair(&m, [0, 0]).is_err());
         assert!(inspect_pair(&m, [0, 6]).is_err());
+    }
+    #[test]
+    fn straight_shared_edge_requires_exact_opposite_strict_sides() {
+        let edge=Curve::from_polyline(vec![vec![1.,0.,0.],vec![1.,0.,2.]]).unwrap();
+        let uv=Curve::from_polyline(vec![vec![0.,0.],vec![0.,1.]]).unwrap();
+        let make=|side:f64|Surface{degree_u:1,degree_v:1,
+            knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![edge.control_points.clone(),vec![vec![2.,side,0.],vec![2.,side,2.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let a=make(1.);let b=make(-1.);
+        assert!(separates_surfaces(&a,&b,&uv,&uv,&edge).unwrap());
+        assert!(!separates_surfaces(&a,&a,&uv,&uv,&edge).unwrap());
+        let mut changed=b.clone();changed.control_points[1][1][1]=0.;
+        assert!(separates_surfaces(&a,&changed,&uv,&uv,&edge).unwrap());
+        // An off-boundary pole on the shared line defeats every strict plane.
+        let mut bad=b.clone();bad.control_points[1][1]=edge.control_points[1].clone();
+        assert!(!separates_surfaces(&a,&bad,&uv,&uv,&edge).unwrap());
+        let mut shifted=b;shifted.control_points[0][0][1]=f64::EPSILON;
+        assert!(!separates_surfaces(&a,&shifted,&uv,&uv,&edge).unwrap());
     }
     #[test]
     fn curved_faces_with_rational_curved_shared_edge_are_separated() {

@@ -1,0 +1,80 @@
+{
+  "schema": "sweep-local-verification/1",
+  "geometryWasmSha256": "d18ff8c6a310a587bda1268d92a8b708fd101346ef2497ed95d516a666f67892",
+  "checks": [
+    {
+      "check": "native-workspace",
+      "exitCode": 0,
+      "log": "logs/native-workspace.log",
+      "sha256": "da82558e916d3930f89df6441e3b1836611fa6b1c7a24d2e5ad6c4c9e9e795d0"
+    },
+    {
+      "check": "frontend",
+      "exitCode": 0,
+      "log": "logs/frontend.log",
+      "sha256": "9ee37b389ed09774cdc31db708c0cbebd83bcb893f08f0b6f5eead615e6ff9d8"
+    },
+    {
+      "check": "fingerprints",
+      "exitCode": 0,
+      "log": "logs/fingerprints.log",
+      "sha256": "ce8fd07de4c849c31febf49641567e15f958ff90436d54bf64709cd7918dac64"
+    },
+    {
+      "check": "dist",
+      "exitCode": 0,
+      "log": "logs/dist.log",
+      "sha256": "1d190b1074f6c1a5a119f7b313e1f82e31b9fa70bb8c3bf6f15b478348c2b503"
+    },
+    {
+      "check": "optimizer",
+      "exitCode": 0,
+      "log": "logs/optimizer.log",
+      "sha256": "7aacb0343fcf019521df32dbbe8aaf3a310f3d4e08062e586a93ac6129ce5376"
+    },
+    {
+      "check": "gpu-architecture",
+      "exitCode": 0,
+      "log": "logs/gpu-architecture.log",
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    {
+      "check": "compute-clippy",
+      "exitCode": 0,
+      "log": "logs/compute-clippy.log",
+      "sha256": "d7e1b1ee3ff18580a65cb7c89a849ea2c47b8233f753c63fb56a27bc968c4371"
+    },
+    {
+      "check": "math-clippy",
+      "exitCode": 0,
+      "log": "logs/math-clippy.log",
+      "sha256": "768bf28182baaefb5a25ce9e546b6aabf7c4307dcaaa815c5a5fa7b9b484e30a"
+    }
+  ],
+  "rustWorkspace": {
+    "passed": 3187,
+    "failed": 0,
+    "ignored": 4
+  },
+  "frontend": {
+    "passed": 4388,
+    "failed": 0,
+    "excluded": 9
+  },
+  "ui": {
+    "cases": 78,
+    "assertions": 896,
+    "pageErrors": 0,
+    "widths": [
+      1440,
+      600
+    ]
+  },
+  "independentStep": {
+    "baseline": 36,
+    "smoothStations": 10,
+    "passed": true
+  },
+  "publication": "pending",
+  "qualificationClaim": "finite local checks; no imported G1 clean-run work"
+}

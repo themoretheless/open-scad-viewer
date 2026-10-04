@@ -3,22 +3,29 @@
 use crate::{Algebra, AuthoredScalar, BezierIdentity, BezierIdentityDecision, Expansion,
     InputError, LeafRef, PredicateContext, Reason, Sign, exact_inputs};
 type Poly = Vec<Expansion>;
+// Exact zero leading coefficients do not change a power polynomial. Keep a
+// nonempty representation even for zero so convolution dimensions stay valid.
+fn trim(p: &mut Poly) {
+    while p.len() > 1 && p.last().is_some_and(|x| x.sign() == Sign::Zero) {
+        p.pop();
+    }
+}
 fn choose(n: usize,k: usize)->u64 {(0..k).fold(1,|v,i|v*(n-i) as u64/(i+1) as u64)}
 fn add_scaled(out: &mut Poly, a: &Poly, scale: &Expansion, ctx: &mut PredicateContext<'_>)->Result<(),Reason>{
     out.resize_with(out.len().max(a.len()),||Expansion::scalar(0.));
-    for (i,x) in a.iter().enumerate(){out[i]=out[i].add(&x.mul(scale,ctx)?,ctx)?;}
+    if scale.sign()==Sign::Zero {return ctx.charge(0);}
+    for (i,x) in a.iter().enumerate(){
+        if x.sign()!=Sign::Zero {out[i]=out[i].add(&x.mul(scale,ctx)?,ctx)?;}
+    }
     Ok(())
 }
 fn mul(a:&Poly,b:&Poly,ctx:&mut PredicateContext<'_>)->Result<Poly,Reason>{
     let mut out=vec![Expansion::scalar(0.);a.len()+b.len()-1];
     for (i,x) in a.iter().enumerate(){for (j,y) in b.iter().enumerate(){
+        if x.sign()==Sign::Zero || y.sign()==Sign::Zero {continue;}
         out[i+j]=out[i+j].add(&x.mul(y,ctx)?,ctx)?;
     }}
-    Ok(out)
-}
-fn power(a:&Poly,n:usize,ctx:&mut PredicateContext<'_>)->Result<Poly,Reason>{
-    let mut out=vec![Expansion::scalar(1.)];
-    for _ in 0..n {out=mul(&out,a,ctx)?;}
+    trim(&mut out);
     Ok(out)
 }
 /// Bernstein coefficients to power coefficients. All factors are integers;
@@ -30,6 +37,7 @@ fn polynomial(values:&[Expansion],ctx:&mut PredicateContext<'_>)->Result<Poly,Re
         let term=value.mul(&factor,ctx)?;
         out[k]=if (k-i)%2==0 {out[k].add(&term,ctx)?}else{out[k].sub(&term,ctx)?};
     }}
+    trim(&mut out);
     Ok(out)
 }
 fn homogeneous<const N:usize>(points:&[[Expansion;N]],ctx:&mut PredicateContext<'_>)->Result<Vec<Poly>,Reason>{
@@ -66,16 +74,69 @@ pub fn rational_bezier_composition_identity(
             || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         }
+        // An exact affine bilinear chart maps each rational pole with the
+        // same parameter weights. Prove the chart and pole identities using
+        // cross-multiplied domain widths; no rounded inverse is introduced.
+        if nu==2 && nv==2 && nc==np {
+            let mut eligible=true;
+            for pole in &s {
+                eligible &= pole[3].sub(&s[0][3],ctx)?.sign()==Sign::Zero;
+            }
+            for i in 0..nc {
+                eligible &= c[i][3].sub(&p[i][2],ctx)?.sign()==Sign::Zero;
+            }
+            for axis in 0..3 {
+                let mixed=s[3][axis].sub(&s[2][axis],ctx)?.sub(&s[1][axis],ctx)?.add(&s[0][axis],ctx)?;
+                eligible &= mixed.sign()==Sign::Zero;
+            }
+            if eligible {
+                let wu=d[1].sub(&d[0],ctx)?;
+                let wv=d[3].sub(&d[2],ctx)?;
+                let area=wu.mul(&wv,ctx)?;
+                for axis in 0..3 {
+                    let u=s[2][axis].sub(&s[0][axis],ctx)?.mul(&wv,ctx)?;
+                    let v=s[1][axis].sub(&s[0][axis],ctx)?.mul(&wu,ctx)?;
+                    for i in 0..nc {
+                        let left=c[i][axis].sub(&s[0][axis],ctx)?.mul(&area,ctx)?;
+                        let right=p[i][0].sub(&d[0],ctx)?.mul(&u,ctx)?
+                            .add(&p[i][1].sub(&d[2],ctx)?.mul(&v,ctx)?,ctx)?;
+                        if left.sub(&right,ctx)?.sign()!=Sign::Zero {
+                            return Ok(BezierIdentity::Different);
+                        }
+                    }
+                }
+                return Ok(BezierIdentity::Equal);
+            }
+        }
+        // Positive rational bases preserve a coordinate that is exactly the
+        // same constant at every curve and surface pole. Compare exact source
+        // expansions, never a tolerance; disagreement keeps the full predicate.
+        let mut constant_axes=[false;3];
+        for axis in 0..3 {
+            let first=&c[0][axis];
+            let mut same=true;
+            for pole in c.iter().chain(&s) {
+                if pole[axis].sub(first,ctx)?.sign()!=Sign::Zero {same=false;break;}
+            }
+            constant_axes[axis]=same;
+        }
         let c=homogeneous(&c,ctx)?;let p=homogeneous(&p,ctx)?;
         let mut basis=Vec::new();
         for axis in 0..2 {
             let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
             let mut high=Vec::new();add_scaled(&mut high,&p[2],&d[2*axis+1],ctx)?;add_scaled(&mut high,&p[axis],&Expansion::scalar(-1.),ctx)?;
             let degree=if axis==0 {nu-1}else{nv-1};
+            // Reuse exact powers across Bernstein basis terms. Recomputing
+            // each prefix spends the shared proof budget on identical work.
+            let mut lows=vec![vec![Expansion::scalar(1.)]];
+            let mut highs=vec![vec![Expansion::scalar(1.)]];
+            for exponent in 1..=degree {
+                lows.push(mul(&lows[exponent-1],&low,ctx)?);
+                highs.push(mul(&highs[exponent-1],&high,ctx)?);
+            }
             let mut parts=Vec::new();
             for i in 0..=degree {
-                let a=power(&low,i,ctx)?;let b=power(&high,degree-i,ctx)?;
-                let product=mul(&a,&b,ctx)?;let factor=Expansion::integer(choose(degree,i),ctx)?;
+                let product=mul(&lows[i],&highs[degree-i],ctx)?;let factor=Expansion::integer(choose(degree,i),ctx)?;
                 let mut part=Vec::new();add_scaled(&mut part,&product,&factor,ctx)?;parts.push(part);
             }
             basis.push(parts);
@@ -84,14 +145,18 @@ pub fn rational_bezier_composition_identity(
         for i in 0..nu {for j in 0..nv {
             let basis=mul(&basis[0][i],&basis[1][j],ctx)?;let control=&s[i*nv+j];
             for axis in 0..4 {
+                if axis<3 && constant_axes[axis] {continue;}
                 let factor=if axis==3 {control[3].clone()}else{control[axis].mul(&control[3],ctx)?};
                 add_scaled(&mut composed[axis],&basis,&factor,ctx)?;
             }
         }}
         for axis in 0..3 {
+            if constant_axes[axis] {continue;}
             let a=mul(&c[axis],&composed[3],ctx)?;let b=mul(&composed[axis],&c[3],ctx)?;
-            debug_assert_eq!(a.len(),b.len());
-            for (x,y) in a.iter().zip(&b) {if x.sub(y,ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}}
+            let zero=Expansion::scalar(0.);
+            for i in 0..a.len().max(b.len()) {
+                if a.get(i).unwrap_or(&zero).sub(b.get(i).unwrap_or(&zero),ctx)?.sign()!=Sign::Zero {return Ok(BezierIdentity::Different);}
+            }
         }
         Ok(BezierIdentity::Equal)
     })().and_then(|v|ctx.charge(0).map(|_|v));
@@ -133,6 +198,18 @@ mod tests {
                 assert_eq!(run(&reversed_c,&p,d,Limits::default()),BezierIdentity::Different);
             }
         }
+    }
+    #[test]
+    fn reduced_power_degrees_compare_missing_coefficients_as_zero() {
+        let p=[[0.,0.,1.],[1.,0.,1.]];
+        let d=[[0.,1.],[0.,1.]];
+        let c=[[0.,0.,0.,1.],[0.5,0.,0.,1.],[1.,0.,0.,1.]];
+        assert_eq!(run(&c,&p,d,Limits::default()),BezierIdentity::Equal);
+        let mut bent=c;bent[1][0]=0.75;
+        assert_eq!(run(&bent,&p,d,Limits::default()),BezierIdentity::Different);
+        let short=[[0.,0.,0.,1.],[1.,1.,1.,1.]];
+        let diagonal=[[0.,0.,1.],[1.,1.,1.]];
+        assert_eq!(run(&short,&diagonal,d,Limits::default()),BezierIdentity::Different);
     }
     #[test]
     fn rational_surface_weights_participate_in_the_exact_composition() {

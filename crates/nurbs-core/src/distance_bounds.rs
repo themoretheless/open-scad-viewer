@@ -1,29 +1,38 @@
 //! Outward binary64 interval arithmetic shared by curve and surface distance.
 use crate::{Result, numeric};
 
+/// Outward-rounded binary64 interval `[lo, hi]`, shared by curve and surface
+/// distance machinery and promoted for public certified-enclosure APIs
+/// (`crate::interval_eval`). Every arithmetic operation rounds `lo` down and
+/// `hi` up, so the true result always lies inside.
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Interval {
-    pub(crate) lo: f64,
-    pub(crate) hi: f64,
+pub struct Interval {
+    pub lo: f64,
+    pub hi: f64,
 }
 impl Interval {
-    pub(crate) fn point(x: f64) -> Self {
+    /// Degenerate interval containing exactly `x`.
+    pub fn point(x: f64) -> Self {
         Self { lo: x, hi: x }
     }
-    pub(crate) fn new(lo: f64, hi: f64) -> Result<Self> {
+    /// Construct a validated interval; rejects non-finite or inverted bounds.
+    pub fn new(lo: f64, hi: f64) -> Result<Self> {
         numeric(
             lo.is_finite() && hi.is_finite() && lo <= hi,
             "Distance interval exceeded numeric range",
         )?;
         Ok(Self { lo, hi })
     }
-    pub(crate) fn add(self, b: Self) -> Result<Self> {
+    /// Outward-rounded sum.
+    pub fn add(self, b: Self) -> Result<Self> {
         Self::new((self.lo + b.lo).next_down(), (self.hi + b.hi).next_up())
     }
-    pub(crate) fn sub(self, b: Self) -> Result<Self> {
+    /// Outward-rounded difference.
+    pub fn sub(self, b: Self) -> Result<Self> {
         Self::new((self.lo - b.hi).next_down(), (self.hi - b.lo).next_up())
     }
-    pub(crate) fn mul(self, b: Self) -> Result<Self> {
+    /// Outward-rounded product.
+    pub fn mul(self, b: Self) -> Result<Self> {
         let p = [
             self.lo * b.lo,
             self.lo * b.hi,
@@ -42,16 +51,30 @@ impl Interval {
                 .next_up(),
         )
     }
-    pub(crate) fn div(self, b: Self) -> Result<Self> {
+    /// Outward-rounded quotient; `b` must be separated above zero.
+    pub fn div(self, b: Self) -> Result<Self> {
         numeric(b.lo > 0., "Distance denominator is not separated from zero")?;
         self.mul(Self::new((1. / b.hi).next_down(), (1. / b.lo).next_up())?)
     }
-    pub(crate) fn div_signed(self, b: Self) -> Result<Self> {
-        if b.hi < 0. { Self::new(-self.hi, -self.lo)?.div(Self::new(-b.hi, -b.lo)?) }
-        else { self.div(b) }
+    /// Outward-rounded quotient for a nonzero-signed denominator.
+    pub fn div_signed(self, b: Self) -> Result<Self> {
+        if b.hi < 0. {
+            Self::new(-self.hi, -self.lo)?.div(Self::new(-b.hi, -b.lo)?)
+        } else {
+            self.div(b)
+        }
     }
-    pub(crate) fn intersect(self, lo: f64, hi: f64) -> Result<Self> {
+    /// Tighten against the plain scalar bounds `lo..=hi`.
+    pub fn intersect(self, lo: f64, hi: f64) -> Result<Self> {
         Self::new(self.lo.max(lo), self.hi.min(hi))
+    }
+    /// Width `hi - lo` (an upper bound on the enclosure uncertainty).
+    pub fn width(self) -> f64 {
+        self.hi - self.lo
+    }
+    /// Whether `x` lies inside the interval.
+    pub fn contains(self, x: f64) -> bool {
+        self.lo <= x && x <= self.hi
     }
 }
 
@@ -75,4 +98,15 @@ pub(crate) fn box_distance(a: &[Interval], b: &[Interval]) -> Result<(f64, f64)>
     let hi = high.hi.sqrt().next_up();
     numeric(hi.is_finite(), "Distance norm exceeded numeric range")?;
     Ok((lo, hi))
+}
+
+#[cfg(feature = "codec")]
+mod serialization;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DistanceStopReason {
+    Tolerance,
+    WorkLimit,
+    PrecisionLimit,
+    EmptyDomain,
+    DomainWorkLimit,
 }

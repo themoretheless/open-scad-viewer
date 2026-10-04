@@ -119,13 +119,13 @@ fn retained_hollow_rational_loft_step_roundtrip_preserves_topology_and_surfaces(
                 .unwrap()
                 .reversed
             {
-                1. - u
+                a.surface.knots_u[a.surface.degree_u] + a.surface.knots_u[a.surface.control_points.len()] - u
             } else {
                 u
             };
             let p = a.surface.evaluate(original_u, v).unwrap().point;
             let q = b.surface.evaluate(u, v).unwrap().point;
-            assert!(p.iter().zip(q).all(|(x, y)| (x - y).abs() < 1e-10));
+            assert!(p.iter().zip(q).all(|(x, y)| (x - y).abs() < 1e-10), "STEP changed face {i}");
         }
     }
 }
@@ -245,11 +245,11 @@ fn natural_capped_loft_step_roundtrip_and_independent_fixture() {
         for (u, v) in [(0.13, 0.27), (0.61, 0.83)] {
             let p = a
                 .surface
-                .evaluate(if reverse { 1. - u } else { u }, v)
+                .evaluate(if reverse { a.surface.knots_u[a.surface.degree_u] + a.surface.knots_u[a.surface.control_points.len()] - u } else { u }, v)
                 .unwrap()
                 .point;
             let q = b.surface.evaluate(u, v).unwrap().point;
-            assert!(p.iter().zip(q).all(|(x, y)| (x - y).abs() < 1e-9));
+            assert!(p.iter().zip(q).all(|(x, y)| (x - y).abs() < 1e-9), "STEP changed face {i}");
         }
     }
     if let Ok(dir) = std::env::var("ADVANCED_LOFT_STEP_OUTPUT") {

@@ -6,6 +6,7 @@ import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
 import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
+import {readSweepViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
@@ -616,11 +617,18 @@ const mainRay=(x:number,y:number)=>renderer?.worldRay(x,y)??null
 let mainPreserveGroup=false
 function mainSelectMany(indices:number[]){mainSelectedIndices.value=indices;mainPreserveGroup=true;try{renderer?.selectMesh(indices[0]??null)}finally{mainPreserveGroup=false}}
 let mainPreviewActive = false
+let sweepViewportActive=false
+const sweepViewportProgress=ref<{sections:number;deviation:number;budget:number;profileRegularityCertified?:boolean;wallRegularityCertified?:boolean|null;certifiedErrorUpper?:number|null;continuousErrorUpper?:number;phaseResolved?:boolean;frameTransportCertified?:boolean}|null>(null)
 let mainEditSelection: {source:string;index:number}|null = null
 function previewMainGeometry(meshes:MeshData[]|null) {
  if(meshes){mainPreviewActive=true;renderer?.setMeshes(meshes)}
  else if(mainPreviewActive){try{renderer?.setMeshes(sceneMeshes.value);renderer?.setMeshVisibilityBatch(meshVisibility.value);renderer?.selectMesh(selectedMesh.value)}finally{mainPreviewActive=false}}
 }
+function clearSweepViewportPreview(){
+ sweepViewportProgress.value=null
+ if(sweepViewportActive){previewMainGeometry(null);sweepViewportActive=false}
+}
+watch(code,clearSweepViewportPreview,{flush:'sync'})
 function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  try {
   if(source.length>MAX_WORKSPACE_SOURCE_LENGTH)throw Error('source limit')
@@ -694,6 +702,8 @@ const paletteOpen = ref(false)
 const shortcutHelpOpen = ref(false)
 const canPreviousView = computed(() => viewportState.value.canGoBack)
 const commandMru = ref<string[]>(readCommandMru())
+const sweepFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
 const sceneMeshes = computed({
   get: () => sceneState.value.meshes,
   set: (meshes: MeshData[]) => { sceneController.update({ meshes }) },
@@ -1616,6 +1626,13 @@ function startBuildCoordinator() {
     // reach a yield point.
     supersedeGraceMs: 300,
     onPublish: handleGeometryResponse,
+    onSweepPreview:preview=>{
+      if(preview.documentRevision!==buildGeneration||!renderer)return
+      if(mainPreviewActive&&!sweepViewportActive)return
+      previewMainGeometry(preview.meshes)
+      sweepViewportActive=true
+      sweepViewportProgress.value={sections:preview.sections,deviation:preview.sampledControlDeviation,budget:preview.budget,profileRegularityCertified:preview.profileRegularityCertified,wallRegularityCertified:preview.wallRegularityCertified,certifiedErrorUpper:preview.certifiedErrorUpper,continuousErrorUpper:preview.continuousErrorUpper,phaseResolved:preview.phaseResolved,frameTransportCertified:preview.frameTransportCertified}
+    },
     workerSilenceTimeoutMs: 30_000,
     onWorkerRestart: () => showNotice(t('workerRestarted')),
     onStateChange: handleBuildState,
@@ -1641,6 +1658,7 @@ function doRender(quality: GeometryQuality = 'full') {
 }
 
 function handleBuildState(state: BuildCoordinatorState) {
+  if(state.status!=='building')clearSweepViewportPreview()
   if (buildCoordinator) {
     const current = buildCoordinator.diagnostics
     buildCounters.value = {
@@ -1668,6 +1686,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
   if (response.documentRevision !== buildGeneration) return
+  clearSweepViewportPreview()
   renderDuration.value = response.durationMs
   const source = buildSources.get(response.documentRevision) ?? code.value
   for (const revision of buildSources.keys()) {
@@ -3086,6 +3105,64 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :aria-label="t('viewport')"
           @keydown="handleViewportKey"
         />
+        <div v-if="sweepFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Геометрия тела' : 'Solid geometry' }}:
+            {{ evidence.solidGeometryCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+            {{ lang === 'ru' ? 'Непрерывная ошибка границы' : 'Continuous boundary error' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+            {{ lang === 'ru' ? 'Регулярность профиля / стен' : 'Profile / wall regularity' }}:
+            {{ evidence.profileRegularityCertified ? '✓' : '?' }} / {{ evidence.wallRegularityCertified ? '✓' : '?' }}
+            <template v-if="evidence.profileG2Certified !== undefined">
+              · {{ lang === 'ru' ? 'G1 / G2 стыков профиля' : 'Profile joins G1 / G2' }}:
+              {{ evidence.profileG1Certified ? '✓' : '?' }} / {{ evidence.profileG2Certified ? '✓' : '?' }} ({{ evidence.profileSeamCount }})
+              · {{ lang === 'ru' ? 'Стыки вдоль пути' : 'Path station joins' }}: {{ evidence.stationContinuity ?? 'C0' }}
+              <template v-if="evidence.capContinuity === 'C0'"> · {{ lang === 'ru' ? 'Стыки крышек' : 'Cap joins' }}: C0</template>
+            </template>
+            <template v-if="evidence.boundaryErrorUpper !== null">
+              · {{ lang === 'ru' ? 'Оценка ошибки границы' : 'Boundary error bound' }}:
+              ≈{{ evidence.boundaryErrorUpper.toPrecision(6) }} mm
+              <template v-if="evidence.boundaryErrorBudget !== null">
+                / {{ evidence.boundaryErrorBudget.toPrecision(6) }} mm
+              </template>
+              · {{ evidence.boundaryErrorWithinBudget === true ? (lang === 'ru' ? 'в допуске' : 'within budget') : evidence.boundaryErrorWithinBudget === false ? (lang === 'ru' ? 'выше допуска' : 'over budget') : (lang === 'ru' ? 'допуск не подтверждён' : 'budget unproved') }}
+            </template>
+          </div>
+        </div>
+        <div v-if="sweepViewportProgress" class="sweep-preview-status" role="status" aria-live="polite">
+          {{ lang === 'ru' ? 'Предпросмотр стен' : 'Wall preview' }} ·
+          {{ sweepViewportProgress.sections }} {{ lang === 'ru' ? 'сечений' : 'sections' }} ·
+          {{ lang === 'ru' ? 'Контрольное отклонение' : 'Sampled deviation' }}
+          {{ formatNumber(sweepViewportProgress.deviation, 6) }} /
+          {{ formatNumber(sweepViewportProgress.budget, 6) }} mm
+          <span v-if="sweepViewportProgress.certifiedErrorUpper !== undefined"> ·
+            {{ sweepViewportProgress.certifiedErrorUpper === null
+              ? (lang === 'ru' ? 'Граница ошибки интерполяции не доказана' : 'Section interpolation bound unproved')
+              : (lang === 'ru' ? 'Доказанная граница ошибки интерполяции' : 'Certified section interpolation bound') }}
+            <template v-if="sweepViewportProgress.certifiedErrorUpper !== null">:
+              {{ formatNumber(sweepViewportProgress.certifiedErrorUpper, 6) }} mm
+            </template>
+          </span>
+          <span v-else-if="sweepViewportProgress.continuousErrorUpper !== undefined"> ·
+            {{ lang === 'ru' ? 'Непрерывная оценка' : 'Continuous estimate' }}:
+            {{ formatNumber(sweepViewportProgress.continuousErrorUpper, 6) }} mm
+            ({{ lang === 'ru' ? 'без сертификации округления' : 'rounding uncertified' }})
+          </span>
+          <span v-if="sweepViewportProgress.profileRegularityCertified !== undefined"> ·
+            {{ sweepViewportProgress.profileRegularityCertified
+              ? (lang === 'ru' ? 'Касательные профиля доказаны' : 'Profile tangents certified')
+              : (lang === 'ru' ? 'Касательные профиля не доказаны' : 'Profile tangents unproved') }}
+          </span>
+          <span v-if="sweepViewportProgress.wallRegularityCertified !== undefined"> ·
+            {{ sweepViewportProgress.wallRegularityCertified === null
+              ? (lang === 'ru' ? 'Регулярность стен ожидает допуска ошибки' : 'Wall regularity awaits error admission')
+              : sweepViewportProgress.wallRegularityCertified
+                ? (lang === 'ru' ? 'Jacobian стен доказан' : 'Wall Jacobian certified')
+                : (lang === 'ru' ? 'Jacobian стен не доказан' : 'Wall Jacobian unproved') }}
+          </span>
+          <span v-if="sweepViewportProgress.frameTransportCertified === false"> · {{ lang === 'ru' ? 'Не доказан перенос кадров' : 'Frame transport unproved' }}</span>
+          <span v-if="sweepViewportProgress.phaseResolved === false"> · {{ lang === 'ru' ? 'Уточняется фаза twist' : 'Resolving twist phase' }}</span>
+        </div>
         <div v-if="!gpuOk" class="no-gpu" role="alert">
           <span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span>
           <button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button>
@@ -3840,4 +3917,21 @@ button, select { color: inherit; }
 
 <style scoped>
 .code-editor :deep(.syntax-occurrence) { background: color-mix(in srgb, var(--accent) 23%, transparent); outline: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 2px; }
+</style>
+
+<style scoped>
+.sweep-preview-status {
+ position:absolute;
+ z-index:6;
+ bottom:40px;
+ left:12px;
+ max-width:calc(100% - 24px);
+ padding:6px 10px;
+ border:1px solid var(--border);
+ border-radius:6px;
+ background:var(--surface-raised);
+ color:var(--text);
+ font-size:12px;
+ pointer-events:none;
+}
 </style>

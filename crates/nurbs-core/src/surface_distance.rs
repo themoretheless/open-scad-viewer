@@ -142,7 +142,7 @@ fn control_bounds(controls: &[Vec<Interval>]) -> Vec<Interval> {
         })
         .collect()
 }
-fn enclosure(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Vec<Interval>> {
+pub(crate) fn enclosure(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Vec<Interval>> {
     Ok(control_bounds(&restricted_controls(s, span, domain)?))
 }
 

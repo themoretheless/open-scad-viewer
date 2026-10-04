@@ -164,13 +164,23 @@ pub fn ellipse_arc(
     let arcs = (sweep.abs() / 90.).ceil() as usize;
     let delta = sweep * PI / 180. / arcs as f64;
     let initial = start.rem_euclid(360.) * PI / 180.;
+    // Exact authored quarter turns use shared signed axis coefficients.
+    // Independently rounded trigonometric values at pi/2 and its multiples
+    // introduce represented tangent/curvature mismatches between quadrants.
+    let quarter_start=start.rem_euclid(360.)/90.;
+    let canonical_quarters=quarter_start.fract()==0. && sweep.abs()/arcs as f64==90.;
+    let quarter_coefficients=[[1.,0.],[1.,1.],[0.,1.],[-1.,1.],[-1.,0.],[-1.,-1.],[0.,-1.],[1.,-1.]];
     let mut points: Vec<Vec<f64>> = Vec::with_capacity(2 * arcs + 1);
     let mut weights = Vec::with_capacity(2 * arcs + 1);
     for i in 0..=2 * arcs {
-        let w = if i % 2 == 0 { 1. } else { (delta / 2.).cos() };
+        let w = if i % 2 == 0 { 1. } else if canonical_quarters {std::f64::consts::FRAC_1_SQRT_2} else { (delta / 2.).cos() };
         let theta = initial + i as f64 * delta / 2.;
         let point = if i == 2 * arcs && sweep.abs() == 360. {
             points[0].clone()
+        } else if canonical_quarters {
+            let index=(2*quarter_start as i32+if sweep>0. {i as i32}else{-(i as i32)}).rem_euclid(8) as usize;
+            let [u,v]=quarter_coefficients[index];
+            (0..3).map(|a|center[a]+axis_u[a]*u+axis_v[a]*v).collect()
         } else {
             (0..3)
                 .map(|a| center[a] + (axis_u[a] * theta.cos() + axis_v[a] * theta.sin()) / w)
@@ -193,4 +203,23 @@ pub fn ellipse_arc(
     };
     result.validate()?;
     Ok(result)
+}
+
+#[cfg(test)]
+mod canonical_quarter_tests {
+    use super::*;
+    #[test]
+    fn full_ellipse_and_signed_quadrants_share_authored_axis_coefficients() {
+        let center=[2.,4.,8.];let u=[0.5,0.,0.];let v=[0.,0.25,0.];
+        for direction in [1.,-1.] {
+            let full=ellipse_arc(center,u,v,0.,direction*360.).unwrap();
+            for quadrant in 0..4 {
+                let arc=ellipse_arc(center,u,v,direction*quadrant as f64*90.,direction*90.).unwrap();
+                assert_eq!(&full.control_points[2*quadrant..=2*quadrant+2],arc.control_points.as_slice());
+                assert_eq!(&full.weights[2*quadrant..=2*quadrant+2],arc.weights.as_slice());
+            }
+            assert_eq!(full.control_points.first(),full.control_points.last());
+            assert_eq!(full.weights[1],std::f64::consts::FRAC_1_SQRT_2);
+        }
+    }
 }

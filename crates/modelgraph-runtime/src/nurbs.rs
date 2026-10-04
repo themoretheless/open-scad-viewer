@@ -275,6 +275,9 @@ pub fn compile(mut document: J) -> Result<J> {
         } else {
             node["input"].as_str().into_iter().collect()
         };
+        if ["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {if let Some(id)=node["orientation_guide"].as_str(){refs.push(id);}}
+        if s(node,"op")=="ribbon_surface" {refs.push(s(node,"width_law"));}
+        if s(node,"op")=="variable_pipe_surface" {refs.push(s(node,"radius_law"));}
         if let Some(maps)=node.get("section_mappings") {
             if maps.as_array().map(Vec::len)!=node["inputs"].as_array().map(Vec::len) {
                 return Err(err(&path,"Loft needs one mapping entry per section"));
@@ -308,12 +311,9 @@ pub fn compile(mut document: J) -> Result<J> {
                 if let Some(value)=node.get(field){collect(value,&mut refs);}
             }
         }
-        if s(node,"op")=="brep_capped_loft" {
-            if node.get("cap_surfaces").is_some()!=node.get("cap_trims").is_some() {
-                return Err(err(&path,"Authored loft caps require both surfaces and trims"));
-            }
-            if node.get("cap_surfaces").is_none() && ["embedding_limits","tolerance_uv"].iter().any(|k|node.get(*k).is_some()) {
-                return Err(err(&path,"Cap audit options require authored cap surfaces and trims"));
+        if s(node,"op")=="gordon_surface" {
+            for key in ["u_curves","v_curves"] {
+                if let Some(xs)=node[key].as_array(){refs.extend(xs.iter().filter_map(J::as_str));}
             }
         }
         if s(node, "op") == "tessellate" && node.get("trim_curves").is_some() {
@@ -322,7 +322,7 @@ pub fn compile(mut document: J) -> Result<J> {
                 refs.extend(holes.iter().filter_map(J::as_str))
             }
         }
-        if s(node, "op") == "brep_extrude_curves" {
+        if ["brep_extrude_curves","brep_progressive_sweep","brep_miter_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {
             let curves = node["loops"]
                 .as_array()
                 .unwrap()
@@ -513,8 +513,16 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             if let Some(input) = node["input"].as_str() {
                 n["input"] = json!(select(input, depth + 1, by_id, params, found, selected)?)
             }
-            if let Some(inputs) = node["inputs"].as_array() {
-                n["inputs"] = J::Array(
+            if s(node,"op")=="ribbon_surface" {n["width_law"]=json!(select(s(node,"width_law"),depth+1,by_id,params,found,selected)?);}
+            if s(node,"op")=="variable_pipe_surface" {
+                n["radius_law"]=json!(select(s(node,"radius_law"),depth+1,by_id,params,found,selected)?);
+            }
+            if ["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {
+                if let Some(id)=node["orientation_guide"].as_str(){n["orientation_guide"]=json!(select(id,depth+1,by_id,params,found,selected)?);}
+            }
+            for reference_key in ["inputs","u_curves","v_curves"] {
+            if let Some(inputs) = node[reference_key].as_array() {
+                n[reference_key] = J::Array(
                     inputs
                         .iter()
                         .map(|i| {
@@ -531,7 +539,8 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                         .collect::<Result<_>>()?,
                 )
             }
-            if s(node, "op") == "brep_extrude_curves" {
+            }
+            if ["brep_extrude_curves","brep_progressive_sweep","brep_miter_sweep","brep_progressive_miter_sweep"].contains(&s(node,"op")) {
                 n["loops"] = J::Array(
                     node["loops"]
                         .as_array()
@@ -598,12 +607,28 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             node["op"] = json!("curve")
         }
         let supported = [
+            "sphere_surface", "cylinder_surface", "cone_surface",
+            "plane_patch", "bilinear_patch", "bezier_surface",
+            "bezier_curve", "curve_compose", "round_polyline_curve", "transition_polyline_curve", "brep_miter_sweep","brep_progressive_miter_sweep",
+            "line_curve", "polyline_curve", "circle_curve", "circle_arc",
+            "hyperboloid_one_sheet", "hyperboloid_two_sheet", "polynomial_graph",
+            "polynomial_curve", "polynomial_surface", "rational_polynomial_curve", "rational_polynomial_surface",
+            "parabola_curve",
+            "hyperbola_curve",
+            "elliptic_cylinder_surface",
+            "cone_frustum_surface",
+            "quadratic_patch",
+
+            "ellipse_arc", "ellipsoid_surface", "torus_surface",
             "polygon_profile",
             "polygon_extrude",
             "polygon_sweep",
             "polygon_loft",
-            "surface_sweep",
+            "ribbon_surface", "variable_pipe_surface", "pipe_surface", "screw_surface", "clothoid_curve", "spherical_spiral_curve", "toroidal_spiral_curve", "torus_knot_curve", "helicoid_patches", "circle_rectangle_transition", "ellipse_transition_surface", "circle_transition_surface", "helicoid_surface", "catenoid_patches", "catenoid_surface", "catenary_curve", "archimedean_spiral_curve", "epicycloid_curve", "hypocycloid_curve", "trochoid_curve", "cycloid_curve", "lissajous_curve", "logarithmic_spiral_curve", "involute_curve", "elliptic_helix_curve", "variable_pitch_helix_curve", "conical_helix_curve", "helix_curve", "surface_sweep", "brep_progressive_sweep", "progressive_sweep", "profile_sweep", "framed_sweep", "scaled_sweep", "two_guide_sweep", "twist_sweep",
             "surface_loft",
+            "ruled_surface",
+            "coons_patch",
+            "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "control_tangent_loft_surface", "clamped_loft_surface", "boundary_fill", "triangular_patch", "gordon_surface", "closed_loft_surface", "natural_loft_surface", "grid_spline_surface", "hermite_patch", "closed_spline_curve", "clamped_spline_curve", "natural_spline_curve", "hermite_curve", "formula_curve", "formula_surface",
             "extrude",
             "revolve",
             "triangle_mesh",
@@ -639,10 +664,10 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_chamfer",
             "brep_fillet",
             "brep_tessellate",
+            "brep_smooth_miter_stations",
             "surface",
             "curve",
-            "line_curve", "circle_curve", "bezier_curve", "control_tangent_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "guided_loft_surface", "clamped_loft_surface", "natural_loft_surface", "closed_loft_surface",
-            "surface_extrude",
+            "surface_extrude_patches", "surface_extrude",
             "surface_revolve",
             "tessellate",
             "thicken",
@@ -658,10 +683,20 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 ),
             ));
         }
+        let progressive_sweep=["progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
+        let line_coordinates=s(&node,"op")=="line_curve";
+        let scaled_sweep=["scaled_sweep","profile_sweep","progressive_sweep","brep_progressive_sweep","brep_progressive_miter_sweep"].contains(&s(&node,"op"));
+        let catenary=s(&node,"op")=="catenary_curve";
+        let circle_rectangle=s(&node,"op")=="circle_rectangle_transition";
+        let ellipse_transition=s(&node,"op")=="ellipse_transition_surface";
+        let circle_transition=s(&node,"op")=="circle_transition_surface";
+        let catenoid=["catenoid_surface","catenoid_patches"].contains(&s(&node,"op"));
+        let clothoid=s(&node,"op")=="clothoid_curve";
+        let pipe=["profile_sweep","framed_sweep","pipe_surface","variable_pipe_surface","ribbon_surface"].contains(&s(&node,"op"));
         let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
             if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
-            if ["id", "op", "input", "inputs", "guides", "operation", "loops", "construction"].contains(&key.as_str()) {
+            if ["id", "op", "orientation", "spacing", "width_law", "radius_law", "orientation_guide", "input", "inputs", "u_curves", "v_curves", "guides", "operation", "loops", "lower", "closed", "periodic", "construction"].contains(&key.as_str()) {
                 continue;
             }
             if key=="section_mappings" {
@@ -684,7 +719,17 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 }
                 continue;
             }
-            if key == "matrix" {
+            if key == "expressions" {
+                let groups=value.as_array().ok_or_else(||text_error(key,"Expected three formula token lists"))?;
+                *value=J::Array(groups.iter().enumerate().map(|(axis,group)| {
+                    if let Some(text)=group.as_str().or_else(||group.get("text").and_then(J::as_str)){return Ok(J::String(text.to_owned()));}
+                    let tokens=group.as_array().ok_or_else(||text_error(key,"Expected formula text or a token list"))?;
+                    tokens.iter().enumerate().map(|(i,token)| {
+                        if let Some(text)=token.as_str().or_else(||token.get("text").and_then(J::as_str)) {Ok(J::String(text.to_owned()))}
+                        else {field(token,SCALAR,&params,&format!("{key}/{axis}/{i}"))}
+                    }).collect::<Result<Vec<_>>>().map(J::Array)
+                }).collect::<Result<Vec<_>>>()?);
+            } else if key == "matrix" {
                 let rows = value
                     .as_array()
                     .ok_or_else(|| text_error(key, "Expected a matrix"))?;
@@ -708,17 +753,38 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     ))
                 }
                 *value = J::Array(matrix)
+            } else if progressive_sweep && ["axis_scale","center_law","frame_axis","frame_normal"].contains(&key.as_str()) {
+                let law=value.as_object_mut().ok_or_else(||text_error(key,"Sweep vector law must be an object"))?;
+                for (component,entry) in law {
+                    *entry=field(entry,if key=="center_law" && component=="values" {LENGTH} else {SCALAR},&params,&format!("{key}/{component}"))?;
+                }
+            } else if key == "twist" && progressive_sweep {
+                let law=value.as_object_mut().ok_or_else(||text_error(key,"Sweep twist must be an object"))?;
+                for (component,entry) in law {
+                    *entry=field(entry,if component=="values" {ANGLE} else {SCALAR},&params,&format!("twist/{component}"))?;
+                }
+            } else if key == "scale" && scaled_sweep {
+                let law=value.as_object_mut().ok_or_else(||text_error(key,"Sweep scale must be an object"))?;
+                for (component,entry) in law {
+                    *entry=field(entry,SCALAR,&params,&format!("scale/{component}"))?;
+                }
             } else {
-                let dimension = if [
+                let dimension = if progressive_sweep && key=="length_tolerance" {LENGTH} else if circle_rectangle {if ["circle_normal","circle_seam"].contains(&key.as_str()) {SCALAR} else {LENGTH}} else if ellipse_transition {LENGTH} else if circle_transition && ["start_center","end_center","start_radius","end_radius"].contains(&key.as_str()) {LENGTH} else if pipe && key=="sections" {SCALAR} else if clothoid && ["start_curvature","end_curvature"].contains(&key.as_str()) {[-1,0]} else if clothoid && key=="length" {LENGTH} else if catenoid && ["scale","start_z","end_z"].contains(&key.as_str()) || catenary && ["scale","start_x","end_x"].contains(&key.as_str()) || line_coordinates && ["start","end"].contains(&key.as_str()) || [
                     "height",
+                    "width",
                     "z_min",
                     "z_max",
                     "outer",
                     "holes",
                     "sections",
                     "path",
-                    "max_deviation",
+                    "tangent_u", "tangent_v", "twist", "points", "tangents", "start_tangent", "end_tangent", "start_tangents", "end_tangents",
+                    "corners",
+                    "wall_tolerance", "quantum", "max_deviation", "budget", "error_budget", "cap_correction_tolerance", "cap_correction_quantum", "circle_correction_tolerance", "circle_correction_quantum",
                     "vertices",
+                    "axis_u", "axis_v", "radii", "radial_radius", "axial_radius",
+                    "radius_x", "radius_y", "bounds",
+                    "fixed_radius", "rolling_radius", "tracing_radius", "amplitudes", "start_radius", "end_radius", "start_pitch", "end_pitch",
                     "center",
                     "half_size",
                     "radius",
@@ -734,17 +800,17 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "size",
                     "major_radius",
                     "minor_radius",
-                    "distance",
+                    "distance", "setback",
                     "min",
                     "max",
-                    "start", "end", "points", "start_tangents", "end_tangents", "start_tangent", "end_tangent", "budget", "error_budget", "control_points",
+                    "control_points",
                     "vector",
                     "origin",
                 ]
                 .contains(&key.as_str())
                 {
                     LENGTH
-                } else if ["angle", "pressure_angle", "helix_angle"].contains(&key.as_str()) {
+                } else if ["angle", "pressure_angle", "helix_angle", "start_degrees", "sweep_degrees", "phase_degrees", "end_degrees", "phases_degrees", "major_phase_degrees", "minor_phase_degrees", "longitude_phase_degrees", "latitude_phase_degrees"].contains(&key.as_str()) {
                     ANGLE
                 } else {
                     SCALAR
@@ -812,6 +878,21 @@ mod tests {
         let mut bad = body;
         bad["z_max"]["unit"] = json!("deg");
         assert!(compile_text(vec![bad], &[], "Empty".into()).is_err());
+    }
+
+    #[test]
+    fn text_curve_periodicity_survives_canonical_compilation() {
+        let curve = json!({"id":"Curve","op":"nurbs_curve","degree":2,
+            "knots":[0,1,2,3,4,5,6,7,8],
+            "control_points":[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],
+            "weights":[1,1,1,1,1,1],"periodic":true});
+        let body = json!({"id":"Body","op":"surface_extrude","input":"Curve","vector":[0,0,10]});
+        let compiled = compile_text(vec![curve.clone(),body.clone()], &[], "Body".into()).unwrap();
+        assert_eq!(compiled["document"]["nodes"][0]["periodic"], true);
+        assert_eq!(compiled["resolved_document"]["nodes"][0]["periodic"], true);
+        let mut invalid = curve;
+        invalid["periodic"] = json!("true");
+        assert!(compile_text(vec![invalid,body], &[], "Body".into()).is_err());
     }
 
     #[test]
@@ -979,6 +1060,24 @@ mod tests {
                 .message
                 .starts_with("ModelGraph Text radius: Incompatible dimensions")
         );
+    }
+
+    #[test]
+    fn scaled_sweep_scale_law_is_dimensionless_and_origin_is_length() {
+        let profile=json!({"id":"Profile","op":"line_curve","start":[1,0,0],"end":[2,0,0]});
+        let path=json!({"id":"Path","op":"line_curve","start":[0,0,0],"end":[0,0,4]});
+        let sweep=json!({"id":"Sweep","op":"scaled_sweep","inputs":["Profile","Path"],
+            "origin":[{"op":"quantity","value":1,"unit":"cm"},0,0],
+            "scale":{"degree":1,"knots":[0,0,1,1],"values":[1,2],"weights":[1,1]}});
+        let output=compile_text(vec![profile.clone(),path.clone(),sweep.clone()],&[],"Sweep".into()).unwrap();
+        let nodes=output["document"]["nodes"].as_array().unwrap();
+        let law=nodes.iter().find(|n|n["op"]=="scaled_sweep").unwrap();
+        assert_eq!(law["origin"],json!([10.0,0.0,0.0]));
+        assert_eq!(law["scale"]["values"],json!([1.0,2.0]));
+        let mut bad=sweep;
+        bad["scale"]["values"][1]=json!({"op":"quantity","value":2,"unit":"mm"});
+        let error=compile_text(vec![profile,path,bad],&[],"Sweep".into()).unwrap_err();
+        assert!(error.message.contains("scale/values/1"));
     }
 
     #[test]

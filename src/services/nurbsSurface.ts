@@ -76,3 +76,7 @@ export interface NurbsSurfaceDistance {
 export function measureNurbsSurfaceDistance(a:NurbsSurface,b:NurbsSurface,toleranceMm=0.001,maxCells=10000):NurbsSurfaceDistance {
   return callNurbsRust('surface_distance',{a,b,toleranceMm,maxCells})
 }
+
+export function transformNurbsSurface(surface:NurbsSurface,matrix:number[][]):NurbsSurface {return callNurbsRust("surface_affine",{surface,matrix})}
+
+export function transformNurbsSurfacePatches(patches:NurbsSurface[],matrix:number[][]):NurbsSurface[] {return callNurbsRust("patches_affine",{patches,matrix})}

@@ -69,6 +69,7 @@ pub struct Decision {
 enum Predicate {
     Orient2,
     Orient3,
+    DirectionDot3,
     Distance(usize),
 }
 
@@ -109,6 +110,14 @@ fn expression<T: Algebra>(
                 .mul(&x, ctx)?
                 .add(&vectors[1].mul(&y, ctx)?, ctx)?
                 .add(&vectors[2].mul(&z, ctx)?, ctx)
+        }
+        Predicate::DirectionDot3 => {
+            let product = |k: usize, ctx: &mut PredicateContext<'_>| {
+                values[3 + k].sub(&values[k], ctx)?.mul(
+                    &values[9 + k].sub(&values[6 + k], ctx)?, ctx,
+                )
+            };
+            product(0, ctx)?.add(&product(1, ctx)?, ctx)?.add(&product(2, ctx)?, ctx)
         }
         Predicate::Distance(dimension) => {
             let first = values[0].sub(&values[dimension], ctx)?;
@@ -225,6 +234,17 @@ pub fn orient2d(
         Predicate::Orient2,
         &[a[0], a[1], b[0], b[1], c[0], c[1]],
     )
+}
+
+/// Sign of (b-a) dot (d-c), evaluated from original coordinates without
+/// rounding either direction first. Zero certifies perpendicular directions;
+/// callers must establish nondegeneracy separately.
+pub fn direction_dot3d(
+    ctx: &mut PredicateContext<'_>,
+    a: [LeafRef; 3], b: [LeafRef; 3], c: [LeafRef; 3], d: [LeafRef; 3],
+) -> Result<Decision, InputError> {
+    evaluate(ctx, Predicate::DirectionDot3,
+        &[a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],d[0],d[1],d[2]])
 }
 
 pub fn orient3d(

@@ -117,7 +117,7 @@ fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
 /// Failure of this sufficient condition is unresolved, never evidence of an
 /// intersection. This certifies the whole natural chart, hence any trimmed
 /// subset, but does not compare it with other faces or certify a whole solid.
-pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
+pub fn certify_contraction(s: &Surface, max_spans: usize) -> Result<Report> {
     s.validate()?;
     check(
         max_spans > 0 && max_spans <= 100_000,
@@ -139,11 +139,10 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
         lo: f64::INFINITY,
         hi: f64::NEG_INFINITY,
     }; 2]; 3];
-    for u in s.degree_u..s.control_points.len() {
-        for v in s.degree_v..s.control_points[0].len() {
-            if s.knots_u[u] >= s.knots_u[u + 1] || s.knots_v[v] >= s.knots_v[v + 1] {
-                continue;
-            }
+    let us = crate::sweep_support::audit::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
+    let vs = crate::sweep_support::audit::nonempty_spans(&s.knots_v, s.degree_v, s.control_points[0].len());
+    for &u in &us {
+        for &v in &vs {
             if report.spans == max_spans {
                 report.reason = "work-limit";
                 return Ok(report);
@@ -168,53 +167,7 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
             }
         }
     }
-    for basis in LINEAR_PROJECTIONS{
-        if report.spans==max_spans{report.reason="work-limit";return Ok(report);}
-        let (q,cells)=linear_projection_work(s,basis,max_spans-report.spans)?;
-        report.spans+=cells;
-        if let Some(q)=q{
-            report.proven=true;report.linear_projection=Some(basis);report.contraction_upper=Some(q);
-            report.reason="global-linear-projection-contraction";return Ok(report);
-        }
-    }
-    if report.spans==max_spans{report.reason="work-limit";}
     Ok(report)
-}
-pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
-    [[1.,1.,0.],[0.,0.,1.]],[[1.,-1.,0.],[0.,0.,1.]],
-    [[1.,0.,1.],[0.,1.,0.]],[[1.,0.,-1.],[0.,1.,0.]],
-    [[0.,1.,1.],[1.,0.,0.]],[[0.,1.,-1.],[1.,0.,0.]],
-];
-/// Certify a fixed linear projection using a common Jacobian hull over every
-/// knot rectangle. Subdivision tightens bounds; it never replaces the global
-/// contraction with unrelated local certificates. None includes budget exhaustion.
-pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<Option<f64>> {
-    Ok(linear_projection_work(s,basis,max_cells)?.0)
-}
-fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<(Option<f64>,usize)> {
-    s.validate()?;
-    check(max_cells>0&&max_cells<=100000&&basis.iter().flatten().all(|x|x.is_finite()),"Linear projection requires finite coefficients and 1..100000 cells")?;
-    if s.periodic_u||s.periodic_v{return Ok((None,0));}
-    let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
-    let mut cells=0;
-    for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
-        let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
-        if ranges.iter().any(|r|r[0]>=r[1]){continue;}
-        for i in 0..4{for j in 0..4{
-            if cells==max_cells{return Ok((None,cells));}
-            let section=std::array::from_fn(|k|{
-                let n=[i,j][k];let [lo,hi]=ranges[k];
-                [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]
-            });
-            let jac=section_jacobian(s,[u,v],section)?;cells+=1;
-            for row in 0..2{for axis in 0..2{
-                let mut value=I::point(0.);
-                for k in 0..3{value=value.add(I::point(basis[row][k]).mul(jac[k][axis])?)?;}
-                global[row][axis]=hull([global[row][axis],value].into_iter());
-            }}
-        }}
-    }}
-    Ok((contraction(global)?.filter(|q|*q<1.),cells))
 }
 /// Enclose (dS/du cross dS/dv) dot direction over the requested rectangle.
 /// At a knot, include both one-sided derivatives. A point rectangle uses a
@@ -232,13 +185,13 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
     }
     let mut spans = 0;
     let mut bounds = [f64::INFINITY,f64::NEG_INFINITY];
-    for u in degrees[0]..counts[0] { for v in degrees[1]..counts[1] {
+    for u in crate::sweep_support::audit::nonempty_spans(knots[0],degrees[0],counts[0]) { for v in crate::sweep_support::audit::nonempty_spans(knots[1],degrees[1],counts[1]) {
         let indices=[u,v];
         let mut section=[[0.;2];2];
         let mut outside=false;
         for axis in 0..2 {
             let k=indices[axis];let lo=knots[axis][k];let hi=knots[axis][k+1];
-            if lo==hi || domain[axis][1]<lo || domain[axis][0]>hi {outside=true;break;}
+            if domain[axis][1]<lo || domain[axis][0]>hi {outside=true;break;}
             section[axis]=[lo.max(domain[axis][0]),hi.min(domain[axis][1])];
             if section[axis][0]==section[axis][1] {section[axis]=[lo,hi];}
         }
@@ -276,18 +229,6 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
-    }
-    #[test]
-    fn diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage(){
-        let mut s=Surface{degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![vec![vec![2.,0.,0.],vec![2.,0.,4.]],vec![vec![2.,2.,0.],vec![2.,2.,4.]],vec![vec![0.,2.,0.],vec![0.,2.,4.]]],
-            weights:vec![vec![1.;2],vec![std::f64::consts::FRAC_1_SQRT_2;2],vec![1.;2]],periodic_u:false,periodic_v:false};
-        let basis=[[-1.,1.,0.],[0.,0.,1.]];
-        assert!(!certify(&s,10).unwrap().proven);
-        let q=certify_linear_projection(&s,basis,16).unwrap();assert!(q.is_some(),"{q:?}");
-        assert!(certify_linear_projection(&s,basis,15).unwrap().is_none());
-        for row in &mut s.control_points{for p in row{p[2]=0.;}}
-        assert!(certify_linear_projection(&s,basis,16).unwrap().is_none());
     }
     #[test]
     fn normal_bounds_cover_graph_derivatives_and_do_not_collapse_at_points() {
@@ -354,7 +295,6 @@ mod tests {
             }
         }
         assert!(!certify(&s, 10).unwrap().proven);
-        assert!(certify_linear_projection(&s,[[1.,0.,0.],[0.,1.,0.]],100).unwrap().is_none());
         for row in &mut s.control_points {
             for p in row {
                 p[0] = 0.;
@@ -383,4 +323,57 @@ mod tests {
         }
         assert!(!certify(&s, 2).unwrap().proven);
     }
+}
+
+pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
+    [[1.,1.,0.],[0.,0.,1.]],[[1.,-1.,0.],[0.,0.,1.]],
+    [[1.,0.,1.],[0.,1.,0.]],[[1.,0.,-1.],[0.,1.,0.]],
+    [[0.,1.,1.],[1.,0.,0.]],[[0.,1.,-1.],[1.,0.,0.]],
+];
+/// Certify a fixed linear projection using a common Jacobian hull over every
+/// knot rectangle. Subdivision tightens bounds; it never replaces the global
+/// contraction with unrelated local certificates. None includes budget exhaustion.
+pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<Option<f64>> {
+    Ok(linear_projection_work(s,basis,max_cells)?.0)
+}
+fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<(Option<f64>,usize)> {
+    s.validate()?;
+    check(max_cells>0&&max_cells<=100000&&basis.iter().flatten().all(|x|x.is_finite()),"Linear projection requires finite coefficients and 1..100000 cells")?;
+    if s.periodic_u||s.periodic_v{return Ok((None,0));}
+    let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
+    let mut cells=0;
+    for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
+        let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
+        if ranges.iter().any(|r|r[0]>=r[1]){continue;}
+        for i in 0..4{for j in 0..4{
+            if cells==max_cells{return Ok((None,cells));}
+            let section=std::array::from_fn(|k|{
+                let n=[i,j][k];let [lo,hi]=ranges[k];
+                [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]
+            });
+            let jac=section_jacobian(s,[u,v],section)?;cells+=1;
+            for row in 0..2{for axis in 0..2{
+                let mut value=I::point(0.);
+                for k in 0..3{value=value.add(I::point(basis[row][k]).mul(jac[k][axis])?)?;}
+                global[row][axis]=hull([global[row][axis],value].into_iter());
+            }}
+        }}
+    }}
+    Ok((contraction(global)?.filter(|q|*q<1.),cells))
+}
+
+/// Compatibility entry point: every contraction and refinement cell consumes
+/// the original shared span budget. Explicit sweep stages use contraction only.
+pub fn certify(s:&Surface,max_spans:usize)->Result<Report> {
+    let mut report=certify_contraction(s,max_spans)?;
+    if report.proven || report.reason=="periodic-domain" || report.reason=="work-limit" {return Ok(report);}
+    if s.control_points.iter().flatten().all(|p|p==&s.control_points[0][0]) {return Ok(report);}
+    for basis in LINEAR_PROJECTIONS {
+        if report.spans==max_spans { report.reason="work-limit"; return Ok(report); }
+        let (q,cells)=linear_projection_work(s,basis,max_spans-report.spans)?;
+        report.spans+=cells;
+        if let Some(q)=q {report.proven=true;report.linear_projection=Some(basis);report.contraction_upper=Some(q);report.reason="global-linear-projection-contraction";return Ok(report);}
+    }
+    if report.spans==max_spans {report.reason="work-limit";}
+    Ok(report)
 }

@@ -14,6 +14,8 @@
 )]
 #![allow(unused_features)]
 pub mod brep;
+mod miter_smoothness;
+mod sweep_cap_evidence;
 pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
@@ -685,7 +687,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             field(&v, "mode")?,
             field(&v, "maxDeviationMm")?,
         )?),
-        "nurbs_patches_tessellate" => encode(reconstruction::tessellate_patches(
+        "nurbs_patches_tessellate" => encode(reconstruction::tessellate_surface_set(
             &field(&v, "patches")?,
             field(&v, "segments")?,
         )?),
@@ -817,6 +819,47 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "baseZ")?,
                 plane,
             )?)
+        }
+        "brep_sweep_retained_wall_charts_audit" => {
+            let report = brep_core::miter_seams::inspect_charts(&field(&v,"model")?,&field::<Vec<usize>>(&v,"capFaces")?,field(&v,"maxCells")?)?;
+            let charts: Vec<_> = report.charts.iter().map(|(face,a)| json!({"face":face,"audit":{
+                "certified":a.certified,"cells":a.cells,"projection":a.projection,"reason":a.reason,"globalEmbeddingCertified":false}})).collect();
+            Ok(json!({"allChartsCertified":report.certified,"cells":report.cells,"charts":charts,
+                "unresolvedFaces":report.unresolved,"globalEmbeddingCertified":false}))
+        }
+        "brep_sweep_cap_pairs_audit" => {
+            sweep_cap_evidence::inspect_pairs(&field(&v,"model")?,&field::<Vec<usize>>(&v,"capFaces")?,&v["budgets"])
+        }
+        "brep_sweep_cap_evidence_audit" => {
+            let options=&v["boundaryOptions"];
+            sweep_cap_evidence::inspect(&field(&v,"model")?,&field::<Vec<usize>>(&v,"capFaces")?,field(&v,"maxWalls")?,
+                field(options,"tolerance")?,field(options,"maxProducts")?,field(options,"maxCells")?,field(options,"maxWork")?)
+        }
+        "brep_miter_station_smoothness_audit" => {
+            let model = field(&v,"model")?; let caps: Vec<usize> = field(&v,"capFaces")?; let max_work = field(&v,"maxWork")?;
+            let report = brep_core::miter_seams::inspect(&model,&caps,max_work,true)?;
+            Ok(miter_smoothness::station(&report,max_work))
+        }
+        "brep_miter_profile_smoothness_audit" => {
+            let model = field(&v,"model")?; let caps: Vec<usize> = field(&v,"capFaces")?; let max_work = field(&v,"maxWork")?;
+            let report = brep_core::miter_seams::inspect_profile(&model,&caps,max_work)?;
+            Ok(miter_smoothness::profile(&report,max_work,!caps.is_empty()))
+        }
+        "brep_sweep_retained_decomposition_audit" => {
+            let r=brep_core::sweep_retained::decomposition(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?,field(&v,"maxProducts")?,field(&v,"maxFaces")?,field(&v,"maxExactWork")?)?;
+            Ok(json!({"certified":r.error_upper.is_some(),"wallErrorUpper":r.error_upper,"inspectedFaces":r.inspected_faces,"products":r.products,"reason":r.reason}))
+        }
+        "brep_sweep_retained_correspondence_audit" => {
+            let r=brep_core::sweep_retained::inspect(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?,field(&v,"maxFaces")?,field(&v,"maxExactWork")?)?;
+            Ok(json!({"exact":r.exact,"wallErrorUpper":if r.exact {Some(0)} else {None},"inspectedFaces":r.inspected_faces,"exactWork":r.work,"reason":r.reason}))
+        }
+        "brep_nurbs_section_loft_source_audit" => {
+            let exact=brep_core::analytic::section_loft_source_matches(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,field(&v,"closed")?)?;
+            Ok(json!({"geometryAndTopologyIdentical":exact,"globalEmbeddingCertified":false}))
+        }
+        "brep_nurbs_affine_lattice" => {
+            let report=brep_core::affine_lattice::place(&field(&v,"model")?,field(&v,"matrix")?,field(&v,"quantum")?,field(&v,"maxWork")?)?;
+            Ok(json!({"model":report.model,"operatorNormUpper":report.operator_norm_upper,"arithmeticErrorUpper":report.arithmetic_error_upper,"work":report.work,"reason":report.reason}))
         }
         "brep_nurbs_transform" => encode(brep_core::transform::affine(
             &field(&v, "model")?,
@@ -986,6 +1029,45 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "zMax")?,
             )?)
         }
+        "brep_nurbs_section_loft_surfaces" => encode(brep_core::analytic::section_loft_surfaces(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?,&field::<Vec<Vec<Surface>>>(&v,"sides")?,field(&v,"closed")?)?),
+        "brep_nurbs_smooth_station_walls" => {
+            let report = brep_core::analytic::smooth_station_walls(
+                &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
+                &field::<Vec<usize>>(&v, "sharp")?,
+                field(&v, "closed")?, field(&v, "quantum")?,
+                field(&v, "tolerance")?, field(&v, "maxWork")?,
+            )?;
+            encode(json!({"sides": report.sides,
+                "wallDisplacementUpper": report.wall_displacement_upper,
+                "work": report.work, "reason": report.reason}))
+        },
+        "brep_sweep_retained_cap_decomposition_audit" => {
+            let r=brep_core::sweep_retained::cap_decomposition(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"endpoints")?,brep_core::sweep_cap_contacts::Budgets {
+                max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+            },field(&v,"maxProducts")?,field(&v,"maxEdges")?)?;
+            let regions=r.regions.map(|r|json!({"exact":r.exact,"capErrorUpper":if r.exact {Some(0)} else {None},"exactWork":r.exact_work,"faces":r.faces,"reason":r.reason}));
+            Ok(json!({"certified":r.error_upper.is_some(),"capErrorUpper":r.error_upper,"products":r.products,"regions":regions,"reason":r.reason}))
+        }
+        "brep_sweep_retained_caps_audit" => {
+            let r=brep_core::sweep_cap_contacts::inspect_retained_caps(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"endpoints")?,brep_core::sweep_cap_contacts::Budgets {
+                max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+            },field(&v,"maxEdges")?)?;
+            Ok(json!({"exact":r.exact,"capErrorUpper":if r.exact {Some(0)} else {None},"exactWork":r.exact_work,"faces":r.faces,"reason":r.reason}))
+        }
+        "brep_sweep_cap_contacts_audit" => {
+            let report=brep_core::sweep_cap_contacts::inspect(&field::<brep_core::Model>(&v,"model")?,field(&v,"capFace")?,
+                &field::<Vec<usize>>(&v,"capFaces")?,brep_core::sweep_cap_contacts::Budgets {
+                    max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,
+                    max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,
+                    max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+                })?;
+            Ok(json!({"capCertified":report.cap_certified,"planarControlHullCertified":report.planar_control_hull_certified,"allCapWallContactsCertified":report.all_cap_wall_contacts_certified,
+                "separatedWalls":report.separated_walls,"allowedBoundaries":report.allowed_boundaries,
+                "unresolvedWalls":report.unresolved_walls,"exactWork":report.exact_work,"reason":report.reason,
+                "globalEmbeddingCertified":false}))
+        }
+        "brep_sweep_embedding_audit" => cad_face_contacts::diagnose_sweep_embedding(v),
+        "brep_sweep_volume_audit" => cad_face_contacts::diagnose_sweep_volume(v),
         "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?, &field::<Vec<f64>>(&v,"parameters")?)?),
         "brep_nurbs_capped_loft_with_caps" => {
             let definitions: Vec<Value> = field(&v,"caps")?;

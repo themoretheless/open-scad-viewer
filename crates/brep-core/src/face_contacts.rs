@@ -12,6 +12,7 @@ pub struct Limits {
 }
 #[derive(Clone, Debug)]
 pub enum SharedBoundary {
+    SweepCap { cap: usize, wall: usize, edge: usize },
     ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
@@ -21,6 +22,12 @@ pub struct Pair {
     pub faces: [usize; 2],
     pub result: Option<Search>,
     pub boundary: Option<SharedBoundary>,
+    /// Disjointness was proven exactly by control-hull separation, so no
+    /// trimmed search report exists for this pair.
+    pub hull_disjoint: bool,
+    /// Exact control-hull separation work spent on this pair. Attributed to
+    /// the pair so per-pair work adds up to the report totals.
+    pub hull_cells: usize,
     pub reason: &'static str,
 }
 #[derive(Clone, Debug)]
@@ -42,6 +49,11 @@ pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Repor
 /// Hull certificates are admitted only by the exact boundary embedding audit.
 pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limits,
     hulls: &[crate::boundary_hull_contact::Certificate]) -> Result<Report> {
+    inspect_with_certificates(model,tolerance_uv,limits,hulls,&[])
+}
+/// Cap tuples originate only from native recomputation in boundary embedding.
+pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits: Limits,
+    hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize;3]]) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100_000).contains(&limits.pairs)
         || !(1..=1_000_000).contains(&limits.cells)
@@ -87,7 +99,10 @@ pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limit
             }
             let sa = &model.faces[a].surface;
             let sb = &model.faces[b].surface;
-            let boundary = if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
+            let boundary = if let Some(c)=caps.iter().find(|c|
+                [c[0].min(c[1]),c[0].max(c[1])]==[a,b]) {
+                Some(SharedBoundary::SweepCap {cap:c[0],wall:c[1],edge:c[2]})
+            } else if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
                 Some(SharedBoundary::ExactHull(c.clone()))
             } else if let Some(c) = crate::shared_boundary::certify(model, [a, b]) {
                 Some(SharedBoundary::PlanarFace(c))
@@ -95,11 +110,19 @@ pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limit
                 crate::shared_boundary::certify_opposite(model, [a, b])?
                     .map(SharedBoundary::OppositeSides)
             };
-            let result = if boundary.is_some()
-                || sa.periodic_u
-                || sa.periodic_v
-                || sb.periodic_u
-                || sb.periodic_v
+            let periodic = sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v;
+            // Exact control-hull separation is the fast path only for sweep
+            // cap certification (cap tuples present): the plain face-contact
+            // API keeps the frozen trim-search work accounting byte-for-byte.
+            let (hull_disjoint,hull_cells)=if boundary.is_none() && !periodic && !caps.is_empty() {
+                crate::control_hull_separation::inspect(sa,sb,
+                    (limits.cells-out.cells).min(limits.cells_per_pair/2).min(64))
+            } else { (false,0) };
+            out.cells+=hull_cells;
+            let result = if boundary.is_some() || hull_disjoint
+                || periodic
+                || out.cells == limits.cells
+                || hull_cells == limits.cells_per_pair
             {
                 None
             } else {
@@ -107,20 +130,22 @@ pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limit
                     sa,
                     sb,
                     [&domains[a].region, &domains[b].region],
-                    (limits.cells - out.cells).min(limits.cells_per_pair),
+                    (limits.cells - out.cells).min(limits.cells_per_pair-hull_cells),
                     (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_pair),
                 )?)
             };
             let reason = match &result {
+                None if hull_disjoint => "pair-disjoint",
                 None if boundary.is_some() => "shared-boundary",
-                None => "periodic-trim-not-supported",
+                None if sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v => "periodic-trim-not-supported",
+                None => "pair-unresolved",
                 Some(r) if r.absence_proven => "pair-disjoint",
                 Some(r) if r.contact.is_some() => "interior-contact",
                 Some(_) => "pair-unresolved",
             };
             out.all_pairs_classified &=
-                boundary.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
-            out.all_pairs_disjoint &= result.as_ref().is_some_and(|r| r.absence_proven);
+                boundary.is_some() || hull_disjoint || result.as_ref().is_some_and(|r| r.absence_proven);
+            out.all_pairs_disjoint &= hull_disjoint || result.as_ref().is_some_and(|r| r.absence_proven);
             if let Some(r) = &result {
                 out.cells += r.cells;
                 out.domain_cells += r.domain_cells;
@@ -129,6 +154,8 @@ pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limit
                 faces: [a, b],
                 result,
                 boundary,
+                hull_disjoint,
+                hull_cells,
                 reason,
             });
         }

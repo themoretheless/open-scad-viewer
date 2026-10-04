@@ -286,7 +286,7 @@ pub fn inspect_surface_jets_checked_report(
     let (rp,rn,rk,_)=r.along(reference);let (ep,en,ek,_)=e.along(edited);
     check(rp==ep&&rn==en,"Surface jet inspection requires a common seam basis")?;
     affine_knots(rk,[rk[rp],rk[rn]],ek,[ek[ep],ek[en]])?;
-    r.coefficients(reference,order)?;e.coefficients(edited,order)?;
+    r.coefficients(reference,order.min(r.cross(reference).0))?;e.coefficients(edited,order.min(e.cross(edited).0))?;
     let reference_regularity=regularity::certify(reference,r)?;
     let edited_regularity=regularity::certify(edited,e)?;
     let error_bounds=bounds::certify(reference,edited,r,e,order,scale)?;

@@ -1343,4 +1343,9 @@ mod tests {
 }
 
 mod rational_loft;
-pub use rational_loft::{rational_section_loft, natural_section_loft, capped_loft_surfaces, capped_loft_with_caps, capped_loft_with_caps_checked, LoftCap, periodic_section_loft};
+mod rational_loft_legacy;
+pub use rational_loft_legacy::{capped_loft_with_caps, capped_loft_with_caps_checked, LoftCap};
+pub use rational_loft::{SmoothStationWalls, smooth_station_walls, section_loft_surfaces};
+pub use rational_loft::{rational_section_loft, natural_section_loft, capped_loft_surfaces, periodic_section_loft};
+
+pub use rational_loft::section_loft_source_matches;

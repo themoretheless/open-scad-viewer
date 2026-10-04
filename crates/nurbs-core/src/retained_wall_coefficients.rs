@@ -94,6 +94,45 @@ pub fn family_matches(surfaces:&[Surface],sections:&[Vec<Vec<Curve>>],closed:boo
     face>0 && face==surfaces.len().saturating_sub(if closed {0}else{2})
 }
 
+/// Exact cyclic contour identity, allowing opposite traversal. Every attempted
+/// control-row comparison consumes shared work, including failed candidates.
+/// This premise alone does not certify the filled cap region.
+pub fn contour_matches(expected:&[Curve],actual:&[Curve],reversed:&[bool],max_work:usize)->(bool,usize) {
+    if max_work==0 || max_work>1000000 || expected.is_empty() || expected.len()>1024
+        || actual.len()!=expected.len() || reversed.len()!=actual.len() {return (false,0);}
+    let valid=|c:&Curve| {
+        let n=c.control_points.len();
+        n>=2 && n<=4096 && c.degree.checked_add(1)==Some(n) && !c.periodic
+            && c.weights.len()==n && c.knots.len()==2*n
+            && c.knots.iter().enumerate().all(|(i,&k)|k==if i<n {0.}else{1.})
+            && c.weights.iter().all(|w|w.is_finite()&&*w>0.)
+            && c.control_points.iter().all(|p|p.len()==3&&p.iter().all(|x|x.is_finite()))
+    };
+    if !expected.iter().chain(actual).all(valid) {return (false,0);}
+    let mut work=0;
+    for offset in 0..expected.len() {
+        for reverse in [false,true] {
+            let mut matched=true;
+            for (i,c) in actual.iter().enumerate() {
+                let index=if reverse {(offset+expected.len()-i)%expected.len()}else{(offset+i)%expected.len()};
+                let part=&expected[index];
+                if c.degree!=part.degree {matched=false;break;}
+                for row in 0..c.control_points.len() {
+                    if work==max_work {return (false,work);}
+                    work+=1;
+                    let j=if reversed[i]!=reverse {part.control_points.len()-1-row}else{row};
+                    if c.weights[row]!=part.weights[j] || c.control_points[row]!=part.control_points[j] {
+                        matched=false;break;
+                    }
+                }
+                if !matched {break;}
+            }
+            if matched {return (true,work);}
+        }
+    }
+    (false,work)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,6 +147,27 @@ mod tests {
             weights:(0..3).map(|i|vec![a.weights[i],b.weights[i]]).collect(),periodic_u:false,periodic_v:false};
         (s,a,b)
     }
+    #[test]
+    fn cyclic_contours_preserve_weights_orientation_and_atomic_budget() {
+        let (_,mut a,mut b)=fixture();
+        a.knots=vec![0.,0.,0.,1.,1.,1.];b.knots=a.knots.clone();
+        let expected=vec![a.clone(),b.clone()];
+        let actual=vec![b.clone(),a.clone()];
+        let (matched,work)=contour_matches(&expected,&actual,&[false,false],100);
+        assert!(matched);assert!(work>6);
+        assert_eq!(contour_matches(&expected,&actual,&[false,false],work),(true,work));
+        assert!(!contour_matches(&expected,&actual,&[false,false],work-1).0);
+        let mut backwards=actual.clone();
+        for c in &mut backwards {c.control_points.reverse();c.weights.reverse();}
+        assert!(contour_matches(&expected,&backwards,&[true,true],100).0);
+        assert!(!contour_matches(&expected,&backwards,&[false,true],100).0);
+        let mut damaged=actual;damaged[0].weights[1]=f64::from_bits(0.5f64.to_bits()+1);
+        assert!(!contour_matches(&expected,&damaged,&[false,false],100).0);
+        assert!(!contour_matches(&expected,&damaged,&[false],100).0);
+        damaged[0].control_points[0].clear();
+        assert_eq!(contour_matches(&expected,&damaged,&[false,false],100),(false,0));
+    }
+
     #[test]
     fn normalized_ruled_wall_keeps_authored_rational_controls() {
         let (s,a,b)=fixture(); assert!(matches(&s,&a,&b,3));
@@ -151,6 +211,31 @@ mod tests {
         let mut partition=sections;partition[1].push(vec![b]);
         assert!(!family_matches(&surfaces,&partition,false,1));
     }
+    #[test]
+    fn three_edge_contour_rejects_permutation_and_accepts_opposite_traversal() {
+        let (_,mut a,mut b)=fixture();a.knots=vec![0.,0.,0.,1.,1.,1.];b.knots=a.knots.clone();
+        let mut c=a.clone();for p in &mut c.control_points {p[0]+=8.;}
+        let expected=vec![a.clone(),b.clone(),c.clone()];
+        assert!(!contour_matches(&expected,&[a.clone(),c.clone(),b.clone()],&[false;3],100).0);
+        let mut reverse=vec![c,b,a];
+        for curve in &mut reverse {curve.control_points.reverse();curve.weights.reverse();}
+        assert!(contour_matches(&expected,&reverse,&[false;3],100).0);
+        for curve in &mut reverse {curve.control_points.reverse();curve.weights.reverse();}
+        assert!(contour_matches(&expected,&reverse,&[true;3],100).0);
+    }
+
+    #[cfg(feature="transport")]
+    #[test]
+    fn contour_json_boundary_does_not_claim_a_filled_region() {
+        let (_,mut a,_)=fixture();a.knots=vec![0.,0.,0.,1.,1.,1.];
+        let r=crate::transport::dispatch(value_codec::json!({
+            "op":"sweep_retained_cap_contour_audit","expected":[a.clone()],
+            "actual":[a],"reversed":[false],"maxWork":3})).unwrap();
+        assert_eq!(r["contourIdentity"].as_bool(),Some(true));
+        assert_eq!(r["work"].as_u64(),Some(3));
+        assert_eq!(r["filledRegionCertified"].as_bool(),Some(false));
+    }
+
     #[cfg(feature="transport")]
     #[test]
     fn family_and_segmentation_json_boundaries_preserve_proof_scope() {

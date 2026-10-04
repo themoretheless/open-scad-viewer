@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Execute one G1 v57 clean-run fragment and append evidence.
+ * Execute one G1 v62 clean-run fragment and append evidence.
  *
  * One fragment = one (matrixRowId, environmentId, runIndex).
  * Does not invent pass/fail: records the real process exit and digests.
@@ -31,9 +31,9 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_REL = 'docs/qualification/semantic-manifold-g1-plan-v57.json'
-const RESULT_REL = 'output/qualification/semantic-manifold-g1-candidate-run-v57/result.json'
-const FRAGMENTS_REL = 'output/qualification/semantic-manifold-g1-candidate-run-v57/fragments.jsonl'
+const PLAN_REL = 'docs/qualification/semantic-manifold-g1-plan-v62.json'
+const RESULT_REL = 'output/qualification/semantic-manifold-g1-candidate-run-v62/result.json'
+const FRAGMENTS_REL = 'output/qualification/semantic-manifold-g1-candidate-run-v62/fragments.jsonl'
 
 const FORBIDDEN_ENV = [
   'NODE_OPTIONS',
@@ -133,7 +133,7 @@ function sanitizeEnv(seed) {
     TERM: process.env.TERM ?? 'dumb',
     CI: '1',
     QUALIFICATION_SEED: seed,
-    QUALIFICATION_PLAN_ID: 'semantic-manifold-g1-plan-v57',
+    QUALIFICATION_PLAN_ID: 'semantic-manifold-g1-plan-v62',
   }
   for (const key of Object.keys(base)) {
     if (base[key] === undefined) delete base[key]
