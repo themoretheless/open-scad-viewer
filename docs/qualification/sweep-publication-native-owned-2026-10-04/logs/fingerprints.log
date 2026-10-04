@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/themoretheless/.codex/worktrees/loft-publication-2026-10-02/open-scad-viewer
+
+
+ Test Files  2 passed (2)
+      Tests  23 passed (23)
+   Start at  17:17:58
+   Duration  2.91s (transform 52ms, setup 0ms, import 88ms, tests 4.09s, environment 0ms)
+
