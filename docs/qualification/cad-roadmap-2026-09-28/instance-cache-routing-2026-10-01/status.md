@@ -15,3 +15,5 @@ Retry 99948 completed with exit 1: placement/source checks passed, but immediate
 Final retry 37264 completed with exit 0: instance creation, exact +7 mm matrix, unchanged source, exact Undo after restoration, held-worker Esc cancellation, late-result rejection, transform preview/apply and Undo/Redo passed. Nine downloads. Mouse scenario; keyboard-only and large-scene speed qualification remain open. See browser-result.json.
 
 Keyboard acceptance completed with exit 0 in sessions 20892 and 21413. Commands, numerical placement, Apply, Esc, exports and Undo/Redo use Tab/Enter; initial fixture upload is automated. The second run includes invalid-input and accessible field-error checks. Trial click only checks actionability and sends no pointer input. See keyboard-result.json and keyboard-errors-result.json. These results qualify the named scenario, not the full P0 tool matrix.
+
+Full test:cad-roadmap gate passed at 2a1c04b5 before the subsequent retained-revolve work: 785 tests across 65 files, no skips/failures, duration 51.49 s. See full-roadmap-tests.txt.
