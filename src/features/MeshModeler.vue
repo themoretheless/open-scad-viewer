@@ -836,7 +836,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .mesh-workspace {
   user-select: none;
   position: fixed;
-  inset: var(--topbar-h, 52px) 0 28px;
+  inset: var(--workspace-top, var(--topbar-h, 40px)) 0 var(--statusbar-h, 24px);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -918,9 +918,9 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .mesh-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; pointer-events: none; color: var(--text-dim); padding: 24px; }
 .mesh-empty strong { font-size: 18px; font-weight: 500; }
 .mesh-empty span { font-size: 12px; max-width: 300px; }
-.mesh-view .face { fill: #3d5a80; stroke: #0b1220; stroke-width: 0.15; cursor: pointer; }
+.mesh-view .face { fill: #5c5954; stroke: #1e1d1b; stroke-width: 0.15; cursor: pointer; }
 .mesh-view .face.selected { fill: var(--accent); }
-.mesh-view .edge { stroke: #8ecaff; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
+.mesh-view .edge { stroke: #e9c9a5; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
 .mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
 .mesh-view .vert { fill: #eee; cursor: grab; }
 .mesh-view .vert.selected { fill: #e76f51; }
@@ -928,3 +928,27 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .stats { font-size: 0.8rem; color: var(--text-dim); }
 .error { color: var(--danger); font-size: 0.85rem; }
 </style>
+
+<style scoped>
+/* Quiet chrome, viewport first: matches the app shell and the Solid workspace. */
+.mesh-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.mesh-bar > strong, .mesh-bar > .command-search { display: none; }
+.mesh-bar button:not(.primary), .mesh-bar summary, .dock-props button:not(.primary) { border-color: transparent; background: transparent; border-radius: 6px; }
+.mesh-bar button:hover:not(:disabled), .mesh-bar summary:hover, .dock-props button:hover:not(:disabled) { background: var(--hover); }
+.mesh-body { position: relative; }
+.pane-tools {
+  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
+  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.pane-tools .tool-icon { width: 30px; height: 30px; border-color: transparent; background: transparent; }
+.pane-tools .tool-icon:hover { background: var(--hover); }
+.pane-tools .tool-icon[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: transparent; }
+.pane-tools .tool-divider { height: 16px; background: var(--hairline); }
+.mesh-body > :deep(.modeling-grid-controls) {
+  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+}
+.mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+</style>
+
