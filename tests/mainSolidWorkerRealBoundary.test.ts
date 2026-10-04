@@ -32,6 +32,19 @@ function realWorker(){
 }
 afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()));vi.unstubAllGlobals()})
 
+it('prepares and extrudes polynomial rounded profiles through the shipped worker',async()=>{
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const points=[[[3,0],[3,3],[0,3]],[[0,3],[-3,3],[-3,0]],[[-3,0],[-3,-3],[0,-3]],[[0,-3],[3,-3],[3,0]]]
+  const document={version:1 as const,sketches:[],bodies:[],curves:points.map((controlPoints,i)=>({id:`curve-${i}`,name:`Curve ${i}`,curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints,weights:[1,1,1]}}))}
+  const before=JSON.stringify(document)
+  const prepared=await client.run({kind:'profilePrepare',document,ids:document.curves.map(c=>c.id),tolerance:0})
+  expect(prepared.report.accepted).toBe(true)
+  const extruded=await client.run({kind:'extrusion',document:prepared.document,options:{sketchIds:[prepared.document.sketches[0].id],height:5,offset:-2,operation:'new',targetId:'',id:'rounded'}})
+  const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  expect(analyzeNurbsBrep(extruded.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(150,6)
+  expect(JSON.stringify(document)).toBe(before)
+},30000)
+
 it('runs the shipped entry with real WASM, reuses it and preserves typed errors',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
   let ticks=0

@@ -1,0 +1,13 @@
+{
+  "scope": "real browser IndexedDB; source module bundled with esbuild; full interface not exercised",
+  "browser": "151.0.7922.34",
+  "sourceSha256": "5fc90e3b959d5b230f84d10c420741110ab4316fea6bf5df45ccd8fc148ef058",
+  "bundleSha256": "8f5dd204218c54b01a400fb48dc7d7d6a9251c64a8c611ff3c49f4662a890ca0",
+  "error": "DRAFT_SUPERSEDED",
+  "retainedExact": true,
+  "retry": "latest",
+  "committed": 1,
+  "conflicts": 1,
+  "finalText": "first",
+  "errors": []
+}

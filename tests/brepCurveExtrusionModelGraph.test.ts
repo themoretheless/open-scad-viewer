@@ -116,7 +116,21 @@ it('checks nested references, scalar dimensions, runtime curve kinds and active-
   expect(() => buildOwnNurbs(document([outer,body([Array(64).fill('outer')])]),{action:'build'})).toThrow(/254.*active|active.*254/)
   expect(() => buildOwnNurbs(document([{id:'wrong',op:'brep_box',min:[0,0,0],max:[1,1,1]},body([['wrong']])]),{action:'build'})).toThrow(/Expected curve/)
   expect(() => buildOwnNurbs(document([{...outer,control_points:outer.control_points.map(point=>[...point,0])},body([['outer']])]),{action:'build'})).toThrow(/2D/)
-  expect(() => buildOwnNurbs(document([{...outer,weights:Array(9).fill(1)},body([['outer']])]),{action:'build'})).toThrow(/circular|circle|quadratic/i)
+  expect(() => buildOwnNurbs(document([{...outer,weights:[0,...outer.weights.slice(1)]},body([['outer']])]),{action:'build'})).toThrow(/weight|positive/i)
   expect(() => compileModelGraphText(curveText.replace('z_max:3mm','z_max:3deg'))).toThrow(/Expected/)
   expect(() => compileModelGraphText('// @modelgraph-text/1\nshow brep_extrude_curves([[]],0mm,2mm)')).toThrow(/nonempty/)
+})
+
+it('retains and extrudes a general polynomial rounded loop with independently known volume', () => {
+  // Equal weights make this a polynomial rounded profile, not an invalid
+  // circular arc. General profiles are admitted only after topology proof.
+  const outer = {...circle('outer',3),weights:Array(9).fill(1)}
+  const input = document([outer,body([['outer']])])
+  const before = JSON.stringify(input)
+  const built = buildOwnNurbs(input,{action:'build'})
+  const model = definition(built,'body')
+  expect(inspectNurbsBrep(model).topologyValid).toBe(true)
+  // Four quadratic quadrants have Green area 30 mm², extruded over 5 mm.
+  expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(150,6)
+  expect(JSON.stringify(input)).toBe(before)
 })

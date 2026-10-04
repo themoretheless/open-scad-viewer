@@ -269,4 +269,24 @@ mod tests {
         );
         assert_eq!(model.bodies.len(), 1);
     }
+
+    #[test]
+    fn polynomial_rounded_profile_has_proven_area_and_extrudes() {
+        let controls = [
+            [[3., 0.], [3., 3.], [0., 3.]],
+            [[0., 3.], [-3., 3.], [-3., 0.]],
+            [[-3., 0.], [-3., -3.], [0., -3.]],
+            [[0., -3.], [3., -3.], [3., 0.]],
+        ];
+        let wire = controls.into_iter().map(|points| Curve {
+            degree: 2, knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: points.into_iter().map(|p| p.to_vec()).collect(),
+            weights: vec![1.; 3], periodic: false,
+        }).collect::<Vec<_>>();
+        let report = inspect(&[wire.clone()], 1e-8, true).unwrap();
+        assert!(report.areas_mm2[0][0] <= 30. && report.areas_mm2[0][1] >= 30.);
+        let model = crate::prism::extrude(&[wire], -2., 3.).unwrap();
+        model.validate().unwrap();
+        assert_eq!(model.bodies.len(), 1);
+    }
 }
