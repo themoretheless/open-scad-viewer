@@ -1,0 +1,31 @@
+{
+  "wasmSha256": "a4ed818b5f65fad277d4ebeb1985bc776806e20d86896aa33b4793894d9ee4fd",
+  "wasmBytes": 10952893,
+  "sourceHashes": {
+    "crates/gcode-core/src/firmware.rs": "462ab73e4529b0b8cd3eb34d6c051ccfd3f17d6a822ec6735decb379f099c46e",
+    "crates/gcode-core/src/configured_job.rs": "9903fe7c2274ee96bd21578560b6565920413ba073859451f24eb5a73ae6b186",
+    "crates/geometry-bridge/src/gcode.rs": "4391665f0b59e582d8fbfcf4437cb241342ab39d5c173fc087d2936f8da14e95",
+    "crates/geometry-bridge/src/laser.rs": "c8bdcf0fce28cbe693e18703f6df4c8708b106d11fbbb5753e6365c4e7e05a09",
+    "src/features/DirectModeler.vue": "b66630dcf1ab183e2ca7b57247272eaa12fdb5f9c2b7370890a373fd589315ce",
+    "src/features/GcodePanel.vue": "654953dbb2cb3c19205ff9b2c4c0ba04f7cc5d192334b43293c7006780f5e5be",
+    "src/features/LaserCamPanel.vue": "69b22bccb73145bd79c2c91312b560ec762762e4513a8340943d2fb062f091d4",
+    "scripts/check-gcode-manufacturing-browser.mjs": "2ab976b026eb84e494f766cfb6399f711bf141ddd339136cd935f5407c6e3b8b"
+  },
+  "evidenceHashes": {
+    "bridge.log.gz": "462c7cb02c508907c93a866227a3debe1dee1ee37399e7539e8edb07450e320d",
+    "build-contracts.log.gz": "ca07d71976e7fd1939d949f502ca40df35b9836160ecf47bc517f41c6ffc8fd5",
+    "cad-regression.log.gz": "fa54caed82bcbbc581e935434cfeef2d4e940477ad4dde3332eb0c9db5f0aa1c",
+    "dist.log.gz": "21c872156471cb5da5e42d9dc661cd8a01bd3468709f85928f7ec16796c0dac0",
+    "keyboard-configured-job.gcode": "1f553b3689d5f840304158b4f4f84641f9590d77e38a2e45d0de819e56926102",
+    "keyboard-laser-job.gcode": "a434d4adabf7ea45bd6235ef91d066e780ae8cd642aeb5c08d784ce486faff39",
+    "keyboard-manufacturing.png": "f1fa296106c71dc4c79bd1c5673a83636c26d1202482652c09c6baa7ccab051b",
+    "keyboard-report.json": "0f7132686b96161f431806dd45e7ef0684b2fb77a79bbd06a2acb038f52c2633",
+    "mouse-configured-job.gcode": "1f553b3689d5f840304158b4f4f84641f9590d77e38a2e45d0de819e56926102",
+    "mouse-laser-job.gcode": "a434d4adabf7ea45bd6235ef91d066e780ae8cd642aeb5c08d784ce486faff39",
+    "mouse-manufacturing.png": "fd1073af04690985bf3beeaf580bd4c618eb2e340c2e3da66639c39519fa6fb9",
+    "mouse-report.json": "c22f2b24731bc7bba5f8660973ea4cf270ad273ecdda8d095e62ac080eef9266",
+    "native.log.gz": "e7b29171e6a92cef13ab4d60620c5b5598af6fac7883d6116554e1c7367e8989",
+    "real-wasm.log.gz": "693108c4d3d1c215c184080304f68139789dba30d39b9e15906ab7f42deca136",
+    "ui-worker.log.gz": "9973d580d4f6f86c1b4bf31ae55ebd2a14150048f27d9e7061e027a859c17ba3"
+  }
+}

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
+import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
+const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
+const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
 import VrControls from '../components/VrControls.vue'
 import { prepareVrPolygons } from '../services/vrScene'
 import {faceAbsenceProven,type SelfIntersection} from '../services/solidSelfIntersection'
@@ -550,6 +553,11 @@ function selectEdgeChain() {
   edgeIndexes.value=connectedEdgeChain(authoredEdges.value,edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value])
 }
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
+const manufacturingOpen=ref(false),manufacturingRevision=ref(0)
+watch(document,()=>{manufacturingRevision.value++},{flush:'sync'})
+const manufacturingSelection=computed(()=>selectedIds.value.length===1?document.value.bodies.filter(body=>body.id===selectedIds.value[0]):[])
+const manufacturingScene=computed(()=>manufacturingOpen.value?manufacturingMeshes({version:1,sketches:[],bodies:manufacturingSelection.value}):[])
+
 const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.value.bodies.find(b=>b.id===id)).filter(b=>b?.brep))
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
@@ -4051,6 +4059,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <li v-else-if="row.kind==='label'" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-group">{{row.title}}</li>
             <li v-else :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-empty">{{label('Сцена пуста. Добавьте примитив или нарисуйте эскиз.','The scene is empty. Add a primitive or draw a sketch.')}}</li>
           </SceneVirtualList>
+          <button type="button" :aria-expanded="manufacturingOpen" @click="manufacturingOpen=!manufacturingOpen">{{ label('Производство: G-code / Laser','Manufacturing: G-code / Laser') }}</button>
+          <section v-if="manufacturingOpen" :aria-label="label('Производство','Manufacturing')">
+            <SolidGcodePanel :meshes="manufacturingScene" :selection="manufacturingScene.length?[0]:[]" :source="'solid:'+manufacturingRevision" :ready="!restoringDraft" :locale="props.locale"/>
+            <SolidLaserPanel :meshes="manufacturingScene" :selection="manufacturingScene.length?[0]:[]" :source="'solid:'+manufacturingRevision" :ready="!restoringDraft" :locale="props.locale"/>
+          </section>
         </template>
         <template v-else>
           <div class="dock-heading">{{ selectedSketch?.name || selectedBody?.name || label('Свойства', 'Properties') }}</div>

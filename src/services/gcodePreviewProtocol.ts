@@ -10,6 +10,7 @@ export type GcodePreviewJob =
   | { kind: 'job'; mesh: GcodeSceneMesh; zMin: number; zMax: number; settings: JobSettingsInput }
   | { kind: 'parse'; gcode: string }
 export interface GcodePreviewDocument {
+  firmware?:import('./geometry/polygon').GcodeFirmwareState|null;
   gcode: string
   preview: GcodePreviewResult
   dialect: string
@@ -52,8 +53,9 @@ function checkJobSettings(settings: JobSettingsInput): JobSettingsInput {
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error('Invalid job settings.')
   const cleaned: JobSettingsInput = Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined))
   for (const [name, value] of Object.entries(cleaned)) {
-    if (name === 'homeAxes') {
-      if (typeof value !== 'boolean') throw new Error('homeAxes must be a boolean.')
+    if (name === 'startTemplate') {if(typeof value!=='string'||value.includes('\0')||new TextEncoder().encode(value).length>65536) throw new Error('Invalid start template.');continue}
+    if (name === 'homeAxes'||name==='inches'||name==='relativeXyz'||name==='relativeE') {
+      if (typeof value !== 'boolean') throw new Error(`${name} must be a boolean.`)
       continue
     }
     if (name === 'flavor') {
@@ -61,6 +63,7 @@ function checkJobSettings(settings: JobSettingsInput): JobSettingsInput {
       continue
     }
     if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${name} must be a finite number.`)
+    if (name === 'zHopMm'||name==='chamberTempC') {if(value<0||value>(name==='zHopMm'?100:150)) throw new Error(`${name} is out of bounds.`);continue}
     if (name === 'fanSpeed') {
       if (value < 0 || value > 255) throw new Error('fanSpeed must be between 0 and 255.')
       continue

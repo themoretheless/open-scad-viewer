@@ -150,7 +150,14 @@ export interface GcodeJobExportResult extends GcodeExportResult {
   flavor: GcodeFlavor
 }
 /** Result of opening an arbitrary G-code file: preview plus what was detected. */
+export interface GcodeFirmwareState {
+  activeTool?:number; bedTargetC?:number|null; chamberTargetC?:number|null;
+  tools?:{id:number;targetC:number|null;standbyC:number|null;retracted:boolean|null}[];
+  events?:{line:number;tool:number|null;targetC:number|null;wait:string;retractOffsetMm:number|null}[];
+  unverifiedLines?:number[]; error?:string;
+}
 export interface GcodeInspectResult {
+  firmware?:GcodeFirmwareState|null;
   preview: GcodePreviewResult
   /** Native dialect line, or `"<generator> G-code (tolerant preview)"` for foreign files. */
   dialect: string
@@ -162,6 +169,7 @@ export interface GcodeInspectResult {
   filamentDiameterMm: number | null
 }
 export interface JobSettingsInput extends ToolpathSettingsInput {
+  inches?:boolean; relativeXyz?:boolean; relativeE?:boolean; startTemplate?:string; zHopMm?:number; chamberTempC?:number;
   nozzleTempC?: number
   bedTempC?: number
   retractLengthMm?: number
@@ -190,6 +198,7 @@ function toolpathArguments(settings: ToolpathSettingsInput): ToolpathSettingsInp
 function jobArguments(settings: JobSettingsInput): JobSettingsInput {
   return {
     ...toolpathArguments(settings),
+    inches:settings.inches, relativeXyz:settings.relativeXyz,relativeE:settings.relativeE,startTemplate:settings.startTemplate,zHopMm:settings.zHopMm,chamberTempC:settings.chamberTempC,
     nozzleTempC: settings.nozzleTempC,
     bedTempC: settings.bedTempC,
     retractLengthMm: settings.retractLengthMm,
