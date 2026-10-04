@@ -74,3 +74,24 @@ The client expectation copies request intervals independently of the host object
 - WASM: 11,003,806 bytes; SHA-256 `eec0102d42cfb8f512ac0ffd31e12a989752b438574c2c0b5116d706ed4c7cfd`.
 - Production assets: 7,907,646 bytes; existing package limits remain unchanged.
 - No new UI fillet command is admitted by this delivery.
+
+## Original trim admission extension
+
+`trimmed_offset_contact::certify` combines the uniform offset band with audits of both authored UV regions. Both domains are constructed and validated before any early offset exclusion. A successful admission requires simple exactly joined loops, valid outer/hole roles, disjoint loops, and whole-rectangle inside classification of both original source UV enclosures. All region audits and classifications consume shared pair, cell and domain-cell limits. Work stops and boundary intersections remain unproven.
+
+Four new native checks cover inside admission, a contact inside a hole, an interval crossing a trim boundary whose middle contact is inside, an incorrectly oriented hole, shared-budget exhaustion, a multispan rational outer contour, and malformed second trims hidden behind otherwise excluded carriers. The trimmed-offset filter passes five tests including one existing curve-offset transport test; the offset regression filter passes twenty tests (the new transport case overlaps both filters). Vue type checks pass. The final WASM build and product tests pass.
+
+The new JSON query and typed adapter report `trimMembershipProven` separately from `continuousBranchProven`. They retain false `worldCoedgeIdentityProven`, `wholeCurveComplete`, and `topologyAuthority` gates. This is admission on original UV regions, not replacement trims or a completed fillet solid.
+
+### Trim admission worker integration
+
+The existing MainSolid worker now accepts `trimmedOffsetContactBand`. Its response validator reuses uniform contact-band admission, checks shared budget totals against the sum of individual audits/classifications, and requires two valid region audits and two inside classifications before accepting trim membership. World coedge and topology promotion, incomplete region lists, inconsistent work totals and outside classifications cannot be admitted. Vue/MCP type checks pass. Prepared actual-worker cases cover inside admission, holes, boundary crossing, bounded work, precise invalid-input errors and successful Retry. All prepared artifact/real-worker cases pass on the final WASM build.
+
+### Final trim admission delivery
+
+- 98 product tests across nine files passed, including complete-band trim admission and existing distance/worker regression checks.
+- Native trim-contact filter: five tests passed (four new checks and one existing offset transport check). Native offset regression: twenty tests passed, including one new trim-contact transport case also included by the other filter.
+- Vue/MCP type checks, production Vite build, package validation and diff checks passed.
+- WASM: 11,014,718 bytes; SHA-256 `9a19dd762b2971925a79d8d954b61c23b1d8934cafdfbed55be10d0643e30af6`.
+- Packed geometry chunk: 3,677,712 bytes. Production assets: 7,914,653 bytes (+7,007 from band delivery). Explicit limits move to 3,679,000 and 7,917,000 bytes.
+- No replacement trim, envelope patch, endpoint transition or UI fillet command is admitted.

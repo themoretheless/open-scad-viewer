@@ -2,7 +2,7 @@ import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidPro
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
+import {certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
 beforeAll(async()=>{await warmGeometryKernel()})
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 function contains(bounds:number[][],point:number[]){point.forEach((x,k)=>{expect(bounds[k][0]).toBeLessThanOrEqual(x);expect(bounds[k][1]).toBeGreaterThanOrEqual(x)})}
@@ -50,4 +50,31 @@ it('proves a continuous branch over the driving interval and refuses a tube miss
  expect(mainSolidResult(expectation,{...r,witness:{...r.witness!,contractionUpper:.5}})).toBe(false)
  const narrow=certifyNurbsOffsetContactBand({...options,secondDomain:[[.36,.38],[.15,.25]]})
  expect(narrow).toMatchObject({status:'unresolved',rootForEveryParameterProven:false,continuousBranchProven:false,witness:null})
+})
+
+it('admits the entire offset band on authored trims and rejects contact inside a hole',()=>{
+ const a=plane(),b=plane();for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const rectangle=(lo:[number,number],hi:[number,number],reverse=false)=>{
+  const p=[lo,[hi[0],lo[1]],hi,[lo[0],hi[1]]];if(reverse)p.reverse()
+  return p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ }
+ const outer=rectangle([0,0],[1,1]),options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000}
+ const before=structuredClone(options),r=certifyTrimmedNurbsOffsetContactBand(options)
+ expect(r).toMatchObject({trimMembershipProven:true,continuousBranchProven:true,worldCoedgeIdentityProven:false,topologyAuthority:false})
+ expect(r.classifications.map(c=>c.location)).toEqual(['inside','inside'])
+ const expected=mainSolidExpectation({kind:'trimmedOffsetContactBand',options})
+ expect(mainSolidResult(expected,r)).toBe(true)
+ expect(mainSolidResult(expected,{...r,worldCoedgeIdentityProven:true})).toBe(false)
+ expect(mainSolidResult(expected,{...r,regions:[r.regions[0]]})).toBe(false)
+ expect(mainSolidResult(expected,{...r,domainCells:r.domainCells+1})).toBe(false)
+ expect(mainSolidResult(expected,{...r,classifications:[r.classifications[0],{...r.classifications[1],location:'outside'}]})).toBe(false)
+ expect(options).toEqual(before)
+ const hole=certifyTrimmedNurbsOffsetContactBand({...options,firstLoops:[outer,rectangle([.34,.29],[.40,.31],true)]})
+ expect(hole).toMatchObject({trimMembershipProven:false,reason:'contact-outside-trim'})
+ expect(mainSolidResult(expected,hole)).toBe(true)
+ expect(mainSolidResult(expected,{...hole,trimMembershipProven:true})).toBe(false)
+ const crossing=certifyTrimmedNurbsOffsetContactBand({...options,firstLoops:[rectangle([.36,.1],[.9,.9])]})
+ expect(crossing).toMatchObject({trimMembershipProven:false,reason:'contact-trim-unresolved'})
+ const cap=certifyTrimmedNurbsOffsetContactBand({...options,maxPairs:1,maxCells:1,maxDomainCells:1})
+ expect(cap.trimMembershipProven).toBe(false);expect(cap.pairs).toBeLessThanOrEqual(1);expect(cap.cells).toBeLessThanOrEqual(1);expect(cap.domainCells).toBeLessThanOrEqual(1)
 })

@@ -1,3 +1,4 @@
+import type {NurbsCurve} from './nurbsCurve'
 import type {NurbsSurface} from './nurbsSurface'
 import {callNurbsRust} from './geometry/nurbs'
 
@@ -69,3 +70,20 @@ export interface OffsetContactBand {
 /** Uniform root coverage within a tube; does not exclude branches outside it. */
 export const certifyNurbsOffsetContactBand=(options:OffsetContactBandOptions):OffsetContactBand=>
  callNurbsRust('surface_offset_contact_band',options)
+
+export interface TrimmedOffsetContactBandOptions extends OffsetContactBandOptions {
+ firstLoops:NurbsCurve[][];secondLoops:NurbsCurve[][];toleranceUv:number
+ maxPairs:number;maxCells:number;maxDomainCells:number
+}
+export interface TrimmedOffsetContactBand {
+ method:'interval-offset-band-trim-admission';scope:'audited-original-uv-regions'
+ contactStatus:OffsetContactBand['status'];witness:OffsetContactBand['witness']
+ continuousBranchProven:boolean;trimMembershipProven:boolean;reason:string
+ wholeCurveComplete:false;worldCoedgeIdentityProven:false;topologyAuthority:false
+ pairs:number;cells:number;domainCells:number
+ regions:{valid:boolean|null;reason:string;pairs:number;cells:number;domainCells:number;problemLoops:[number,number]|null}[]
+ classifications:{location:'inside'|'outside'|'unresolved';reason:string;cells:number}[]
+}
+/** Requires the entire contact band inside both audited authored UV regions. */
+export const certifyTrimmedNurbsOffsetContactBand=(options:TrimmedOffsetContactBandOptions):TrimmedOffsetContactBand=>
+ callNurbsRust('surface_offset_trimmed_contact_band',options)

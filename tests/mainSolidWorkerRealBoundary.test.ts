@@ -482,3 +482,25 @@ it('certifies every parameter of an offset contact band through the actual worke
  await rejection
  expect((await client.run({kind:'offsetContactBand',options})).status).toBe('continuous-branch')
 },30_000)
+
+it('admits a trimmed offset contact band through real WASM and worker with holes and bounded work',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const rectangle=(lo:[number,number],hi:[number,number],reverse=false)=>{
+  const p=[lo,[hi[0],lo[1]],hi,[lo[0],hi[1]]];if(reverse)p.reverse()
+  return p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ }
+ const outer=rectangle([0,0],[1,1]),options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const before=structuredClone(options),r=await client.run({kind:'trimmedOffsetContactBand',options})
+ expect(r).toMatchObject({trimMembershipProven:true,continuousBranchProven:true,topologyAuthority:false,worldCoedgeIdentityProven:false})
+ const hole=await client.run({kind:'trimmedOffsetContactBand',options:{...options,firstLoops:[outer,rectangle([.34,.29],[.40,.31],true)]}})
+ expect(hole).toMatchObject({trimMembershipProven:false,reason:'contact-outside-trim'})
+ const crossing=await client.run({kind:'trimmedOffsetContactBand',options:{...options,firstLoops:[rectangle([.36,.1],[.9,.9])]}})
+ expect(crossing).toMatchObject({trimMembershipProven:false,reason:'contact-trim-unresolved'})
+ const cap=await client.run({kind:'trimmedOffsetContactBand',options:{...options,maxPairs:1,maxCells:1,maxDomainCells:1}})
+ expect(cap.trimMembershipProven).toBe(false);expect(cap.cells).toBeLessThanOrEqual(1)
+ await expect(client.run({kind:'trimmedOffsetContactBand',options:{...options,toleranceUv:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'trimmedOffsetContactBand',options})).trimMembershipProven).toBe(true)
+ expect(options).toEqual(before)
+},30_000)

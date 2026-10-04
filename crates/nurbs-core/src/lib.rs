@@ -137,3 +137,5 @@ pub mod sweep_seam_set;
 pub mod sweep_section_correction;
 
 pub mod surface_offset;
+
+pub mod trimmed_offset_contact;

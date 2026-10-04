@@ -109,3 +109,37 @@ fn offset_band_transport_exposes_uniform_coverage_without_global_admission() {
     assert_eq!(r["rootForEveryParameterProven"], json!(false));
     assert!(r["witness"].is_null());
 }
+
+#[test]
+fn trimmed_offset_band_transport_requires_whole_domain_membership() {
+    let a = plane();
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            let z = p[1];
+            p[1] = 0.5;
+            p[2] = z
+        }
+    }
+    let rectangle = |lo: [f64; 2], hi: [f64; 2], reverse: bool| {
+        let mut p = vec![lo, [hi[0], lo[1]], hi, [lo[0], hi[1]]];
+        if reverse {
+            p.reverse()
+        }
+        (0..4).map(|i|json!({"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[p[i],p[(i+1)%4]],"weights":[1.,1.],"periodic":false})).collect::<Vec<_>>()
+    };
+    let outer = rectangle([0., 0.], [1., 1.], false);
+    let request = json!({"op":"surface_offset_trimmed_contact_band","a":a,"b":b,"distances":[0.2,0.2],"fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],"secondDomain":[[0.30,0.44],[0.15,0.25]],"maxSpans":2,"firstLoops":[outer],"secondLoops":[outer],"toleranceUv":1e-7,"maxPairs":10000,"maxCells":10000,"maxDomainCells":100000});
+    let r = dispatch(request.clone()).unwrap();
+    assert_eq!(r["trimMembershipProven"], true);
+    assert_eq!(r["topologyAuthority"], false);
+    let mut hole = request.clone();
+    hole["firstLoops"] = json!([outer, rectangle([0.34, 0.29], [0.40, 0.31], true)]);
+    let r = dispatch(hole).unwrap();
+    assert_eq!(r["trimMembershipProven"], false);
+    assert_eq!(r["reason"], "contact-outside-trim");
+    let mut invalid = request;
+    invalid["firstOther"] = json!([0.75, 0.85]);
+    invalid["secondLoops"][0][0]["weights"] = json!([0., 1.]);
+    assert!(dispatch(invalid).is_err());
+}
