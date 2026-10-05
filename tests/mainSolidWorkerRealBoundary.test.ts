@@ -1,3 +1,4 @@
+import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 import {bondedSolidExample} from '../src/features/bondedSolidExample'
 import {Worker} from 'node:worker_threads'
 import {afterEach, expect, it, vi} from 'vitest'
@@ -524,4 +525,33 @@ it('links original source coedges through real WASM and worker without promoting
  await expect(client.run({kind:'offsetSourceBoundary',options:{...options,secondCoedges:[]}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
  expect((await client.run({kind:'offsetSourceBoundary',options})).worldCoedgeIdentityProven).toBe(true)
  expect(options).toEqual(before)
+},30_000)
+
+it('qualifies center tangent regularity through real WASM and worker, including a nearly collapsed offset',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetContactTangent',options})
+ expect(r).toMatchObject({centerRegularityProven:true,envelopeRegularityProven:false,trimMembershipProven:false,topologyAuthority:false})
+ expect(r.speedIntervalMm![0]).toBeGreaterThan(0)
+ const cylinder={degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[[3,0],[3,3],[0,3]].map(p=>[[p[0],p[1],0],[p[0],p[1],5]]),weights:[1,Math.SQRT1_2,1].map(w=>[w,w]),periodicU:false,periodicV:false}
+ const cap=structuredClone(a);for(const row of cap.controlPoints)for(const p of row){p[0]-=.5;p[1]-=.5;p[2]=1.65}
+ const collapsed=await client.run({kind:'offsetContactTangent',options:{...options,a:cylinder,b:cap,distances:[-3,.2],fixedInterval:[.299999,.300001],firstOther:[.369,.371],secondDomain:[[.49,.51],[.49,.51]]}})
+ expect(collapsed).toMatchObject({contactStatus:'continuous-branch',centerRegularityProven:false,reason:'center-regularity-unproven'})
+ expect(collapsed.speedIntervalMm![0]).toBe(0)
+ await expect(client.run({kind:'offsetContactTangent',options:{...options,maxSpans:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetContactTangent',options})).centerRegularityProven).toBe(true)
+ const periodic=structuredClone(a);periodic.controlPoints.push(structuredClone(periodic.controlPoints[0]));periodic.weights.push([1,1]);periodic.knotsU=[-1,0,1,2,3];periodic.periodicU=true
+ const seamPlane=structuredClone(b);for(const row of seamPlane.controlPoints)for(const p of row)p[0]-=.5
+ const seam=await client.run({kind:'offsetContactTangent',options:{...options,a:periodic,b:seamPlane,fixedInterval:[0,1e-6],secondDomain:[[.49,.51],[.15,.25]]}})
+ expect(seam).toMatchObject({contactStatus:'unresolved',centerRegularityProven:false,centerTangentIntervalsMm:null})
+ // The fixture's numerical proposal uses the same published WASM as the host.
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options,tangents}=curvedTangentFixture(rotated),r=await client.run({kind:'offsetContactTangent',options})
+  expect(r.centerRegularityProven).toBe(true)
+  for(const t of tangents)for(let k=0;k<3;k++){expect(r.centerTangentIntervalsMm![k][0]).toBeLessThanOrEqual(t[k]);expect(r.centerTangentIntervalsMm![k][1]).toBeGreaterThanOrEqual(t[k])}
+ }
+
 },30_000)

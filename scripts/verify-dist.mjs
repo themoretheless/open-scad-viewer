@@ -96,7 +96,8 @@ const limits = new Map([
 // Signed rational surface offsets and interval contact sections: measured 3,674,022 bytes.
 // Complete contact-band admission on audited UV regions: measured 3,677,712 bytes.
 // Original spatial coedge audit: measured 3,681,036 bytes.
-const geometryChunkBudget = 3_683_000
+// Full-band center tangent and periodic-start coverage: measured 3,685,512 bytes.
+const geometryChunkBudget = 3_688_000
 const jsChunkBudgets = [
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -347,6 +348,7 @@ for (const [name, artifact, compression] of [
 // Signed rational surface offsets and interval contact sections: measured 7,906,737 asset bytes.
 // Contact-band trim admission and worker validation: measured 7,914,653 asset bytes.
 // Original spatial coedge audit and worker validation: measured 7,921,097 asset bytes.
-const totalBudget = 7_924_000
+// Full-band center tangent and worker admission: measured 7,927,322 asset bytes.
+const totalBudget = 7_930_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

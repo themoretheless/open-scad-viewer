@@ -192,3 +192,28 @@ fn offset_source_boundary_transport_requires_all_original_spatial_coedges() {
     hidden["secondCoedges"][0][0]["world"]["weights"] = json!([0., 1.]);
     assert!(dispatch(hidden).is_err());
 }
+
+#[test]
+fn offset_contact_tangent_transport_does_not_admit_an_envelope() {
+    let a = plane();
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            let z = p[1];
+            p[1] = 0.5;
+            p[2] = z
+        }
+    }
+    let request = json!({"op":"surface_offset_contact_tangent","a":a,"b":b,"distances":[0.2,0.2],"fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],"secondDomain":[[0.30,0.44],[0.15,0.25]],"maxSpans":2});
+    let r = dispatch(request).unwrap();
+    assert_eq!(r["centerRegularityProven"], true);
+    assert!(!r["parameterDerivativeIntervals"].is_null());
+    for field in [
+        "wholeCurveComplete",
+        "envelopeRegularityProven",
+        "trimMembershipProven",
+        "topologyAuthority",
+    ] {
+        assert_eq!(r[field], false);
+    }
+}

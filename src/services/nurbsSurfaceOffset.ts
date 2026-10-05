@@ -103,3 +103,15 @@ export interface OffsetSourceBoundary {
 /** Source coedge agreement does not construct replacement trims or a solid. */
 export const certifyNurbsOffsetSourceBoundary=(options:OffsetSourceBoundaryOptions):OffsetSourceBoundary=>
  callNurbsRust('surface_offset_source_boundary',options)
+
+export interface OffsetContactTangent {
+ method:'interval-offset-center-tangent';scope:'constant-offset-contact-band'
+ contactStatus:OffsetContactBand['status'];contactWitness:OffsetContactBand['witness']
+ parameterDerivativeIntervals:[Interval,Interval,Interval]|null
+ centerTangentIntervalsMm:[Interval,Interval,Interval]|null;speedIntervalMm:Interval|null
+ centerRegularityProven:boolean;reason:string
+ wholeCurveComplete:false;envelopeRegularityProven:false;trimMembershipProven:false;topologyAuthority:false
+}
+/** A regular center tangent does not certify a fillet envelope or trims. */
+export const certifyNurbsOffsetContactTangent=(options:OffsetContactBandOptions):OffsetContactTangent=>
+ callNurbsRust('surface_offset_contact_tangent',options)

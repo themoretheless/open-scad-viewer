@@ -798,6 +798,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
             "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
         );
     }
+    if op == "surface_offset_contact_tangent" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        return Ok(crate::offset_contact_tangent::certify([&a,&b],field(&v,"distances")?,
+            field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?)?.to_value());
+    }
     if op == "surface_offset_source_boundary" {
         let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
         let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;

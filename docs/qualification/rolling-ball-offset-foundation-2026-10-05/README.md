@@ -120,3 +120,32 @@ Vue/MCP type checks pass. Prepared product/real-worker tests cover exact admissi
 - WASM: 11,027,460 bytes; SHA-256 `9b1c0a16a65c6cb075d0f076f9c923509ca5729b59a229312f2e777183624013`.
 - Packed geometry chunk: 3,681,036 bytes; total production assets: 7,921,097 bytes (+6,444 bytes from trim admission). Explicit limits move to 3,683,000 and 7,924,000 bytes.
 - This verifies original source boundaries. Replacement trims, a rolling-ball envelope, corner/end transitions, global volume qualification and UI fillet admission remain required.
+
+## Uniform center tangent extension
+
+`offset_contact_tangent::certify` differentiates the already certified constant-offset contact branch implicitly. Over the full contact band, the three free source parameter derivatives solve `J y' = -F_t`. Row scaling avoids unnecessary magnitude growth; outward interval Cramer's rule requires a determinant enclosure separated from zero. Tangent images evaluated from both original offset supports are intersected, and an outward norm interval bounds center speed. Only a positive speed lower bound proves a regular centerline.
+
+The offset equation must be differentiable over the complete source enclosure: C2 source jets for nonzero offsets, or C1 for zero offsets. Repeated knots with insufficient continuity and unqualified periodic endpoint seams remain unresolved. A complete isolated contact band alone does not prove centerline regularity.
+
+Five new native/transport checks pass: moving plane contacts, a curved rational cylinder/oblique-plane centerline in original and rotated/translated frames, a nearly collapsed cylinder offset with a unique contact band but a speed enclosure containing zero, continuity guards and false envelope/trim/topology gates. Twenty-two offset regression checks pass (including the new tangent transport case). Vue type checks pass. JSON/typed adapters and actual WASM tests are now qualified by the final delivery below.
+
+The center tangent certificate does not construct or certify an envelope, replacement trims, end/corner transitions or a fillet solid. General curve completeness and complete P1 qualification remain open.
+
+### Periodic-start correction and worker preparation
+
+A new regression exposed an actual false positive: the periodic-start normal evaluator refused an undefined normal, but a contact band starting at that parameter could still receive a regular tangent certificate. The pre-fix failing reproduction is retained. Offset contact continuity now refuses both unqualified periodic endpoints. Offset image/Jacobian branch coverage at the start also includes the incident end side, sharing the existing span budget; a missing budget does not silently discard that side.
+
+Six tangent/transport checks and twenty-three offset regression checks now pass (the tangent transport case overlaps both filters). The corrected WASM build is complete; the first tangent artifact predates the seam correction and was replaced before delivery. Prepared product tests check both limiting start images, budget exhaustion and rejection of the undefined seam normal.
+
+The existing MainSolid worker accepts `offsetContactTangent`. Its response validator requires the original whole driving interval, finite derivative/tangent/speed enclosures, consistent regularity and reason fields, and all envelope/trim/topology gates false. A speed enclosure starting at zero cannot become a regular centerline; neither can a tangent box containing the zero vector. Prepared real-worker tests include regular plane contacts, a nearly collapsed offset, invalid input and Retry.
+
+Tangent and speed values are derivatives in millimeters per unit of the original fixed source parameter. They are not curve lengths or measurements of a finished fillet. The complete envelope and topology still require independent qualification.
+
+### Final center tangent delivery
+
+- Six native tangent/transport checks and twenty-three offset regression checks pass; the transport check overlaps the filters. The pre-fix periodic-start failure is retained separately.
+- 105 product tests in nine files pass on the corrected artifact, including original and rotated curved contacts through the real worker, seam refusal, bounded work, invalid input and Retry.
+- Vue/MCP type checks and production Vite build pass.
+- WASM: 11,039,983 bytes; SHA-256 `7c8ab55a3714f572cb5f28556030076d29af134f030501f47c3ec31d16f02061`.
+- Packed geometry chunk: 3,685,512 bytes; production assets: 7,927,322 bytes (+6,225 bytes). Explicit limits are 3,688,000 and 7,930,000 bytes.
+- This certifies center tangent regularity on the declared band. Envelope construction, replacement trims, transitions and solid/UI fillet admission remain open.

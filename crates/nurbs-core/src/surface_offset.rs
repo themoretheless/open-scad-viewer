@@ -98,6 +98,17 @@ fn parameter_branches(
                 .collect::<Vec<_>>();
             branches.extend(extra);
         }
+        if periodic[axis] && domain[axis][0] == start && domain[axis][1] < end {
+            let extra = branches
+                .iter()
+                .map(|d| {
+                    let mut mapped = *d;
+                    mapped[axis] = [end; 2];
+                    mapped
+                })
+                .collect::<Vec<_>>();
+            branches.extend(extra);
+        }
     }
     Ok(branches)
 }
@@ -367,7 +378,7 @@ fn source_continuous_for_offset(s: &Surface, domain: [[f64; 2]; 2]) -> bool {
         let start = knots[axis][degrees[axis]];
         let end = knots[axis][counts[axis]];
         // No periodic flag alone proves matching source jets across its seam.
-        if periodic[axis] && domain[axis][1] == end {
+        if periodic[axis] && (domain[axis][0] == start || domain[axis][1] == end) {
             return false;
         }
         let mut i = 0;
@@ -892,6 +903,16 @@ mod tests {
         enclosed(j.derivatives.unwrap()[0], [1., 0., 0.]);
         enclosed(j.derivatives.unwrap()[0], [-1., 0., 0.]);
         assert!(jacobian_bounds(&s, d, 0.2, 1).unwrap().image.is_none());
+    }
+    #[test]
+    fn periodic_start_bounds_include_the_incident_end_side() {
+        let s = folded_periodic_plane();
+        let r = bounds(&s, [[0., 1e-6], [0.3, 0.3]], 0.2, 2).unwrap();
+        enclosed(r.image.unwrap(), [0., 0.3, 0.2]);
+        enclosed(r.image.unwrap(), [0., 0.3, -0.2]);
+        assert_eq!(r.spans, 2);
+        let r = bounds(&s, [[0., 1e-6], [0.3, 0.3]], 0.2, 1).unwrap();
+        assert!(r.image.is_none());
     }
     #[test]
     fn crossing_offset_planes_have_a_unique_section_center() {

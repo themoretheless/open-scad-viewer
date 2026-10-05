@@ -1,8 +1,9 @@
+import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
+import {certifyNurbsOffsetContactTangent,certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
 beforeAll(async()=>{await warmGeometryKernel()})
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 function contains(bounds:number[][],point:number[]){point.forEach((x,k)=>{expect(bounds[k][0]).toBeLessThanOrEqual(x);expect(bounds[k][1]).toBeGreaterThanOrEqual(x)})}
@@ -104,4 +105,42 @@ it('links every source spatial coedge while keeping exact identity and tolerance
  expect(mainSolidResult(limitedExpected,{...limited,worldBoundaryWithinToleranceProven:true})).toBe(false)
  expect(certifyNurbsOffsetSourceBoundary({...options,maxExactWork:0})).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:true})
  expect(()=>certifyNurbsOffsetSourceBoundary({...options,secondCoedges:[]})).toThrow()
+})
+
+it('bounds center tangents over the whole contact band without promoting an envelope',()=>{
+ const a=plane(),b=plane();for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const r=certifyNurbsOffsetContactTangent(options)
+ expect(r).toMatchObject({contactStatus:'continuous-branch',centerRegularityProven:true,envelopeRegularityProven:false,trimMembershipProven:false,topologyAuthority:false})
+ contains(r.centerTangentIntervalsMm!,[1,0,0]);contains(r.parameterDerivativeIntervals!,[0,1,0])
+ const expected=mainSolidExpectation({kind:'offsetContactTangent',options})
+ expect(mainSolidResult(expected,r)).toBe(true)
+ expect(mainSolidResult(expected,{...r,envelopeRegularityProven:true})).toBe(false)
+ expect(mainSolidResult(expected,{...r,speedIntervalMm:[0,2]})).toBe(false)
+ expect(mainSolidResult(expected,{...r,centerTangentIntervalsMm:[[-1,1],[-1,1],[-1,1]]})).toBe(false)
+ expect(r.speedIntervalMm![0]).toBeGreaterThan(0);expect(r.speedIntervalMm![0]).toBeLessThanOrEqual(1);expect(r.speedIntervalMm![1]).toBeGreaterThanOrEqual(1)
+ const unresolved=certifyNurbsOffsetContactTangent({...options,b:a,secondDomain:[[.30,.44],[.25,.35]]})
+ expect(unresolved).toMatchObject({centerRegularityProven:false,centerTangentIntervalsMm:null,speedIntervalMm:null})
+})
+
+it('retains both incident periodic start images and refuses an undefined seam normal',()=>{
+ const a=plane();a.controlPoints.push(structuredClone(a.controlPoints[0]));a.weights.push([1,1]);a.knotsU=[-1,0,1,2,3];a.periodicU=true
+ const b=plane();for(const row of b.controlPoints)for(const p of row){const z=p[1];p[0]-=.5;p[1]=.5;p[2]=z}
+ expect(()=>evaluateNurbsSurfaceOffset(a,[0,.3],.2)).toThrow()
+ const bounds=boundNurbsSurfaceOffset(a,[[0,1e-6],[.3,.3]],.2,2)
+ contains(bounds.image!,[0,.3,.2]);contains(bounds.image!,[0,.3,-.2])
+ expect(boundNurbsSurfaceOffset(a,[[0,1e-6],[.3,.3]],.2,1).image).toBeNull()
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[0,1e-6] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.49,.51],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ expect(certifyNurbsOffsetContactBand(options).status).toBe('unresolved')
+ const r=certifyNurbsOffsetContactTangent(options)
+ expect(r).toMatchObject({contactStatus:'unresolved',centerRegularityProven:false,centerTangentIntervalsMm:null})
+ expect(mainSolidResult(mainSolidExpectation({kind:'offsetContactTangent',options}),r)).toBe(true)
+})
+
+it.each([false,true])('bounds an oblique cylinder-plane centerline through WASM (rotated=%s)',rotated=>{
+ const {options,tangents}=curvedTangentFixture(rotated),before=structuredClone(options)
+ const r=certifyNurbsOffsetContactTangent(options)
+ expect(r.centerRegularityProven).toBe(true)
+ for(const t of tangents){contains(r.centerTangentIntervalsMm!,t);const speed=Math.hypot(...t);expect(r.speedIntervalMm![0]).toBeLessThanOrEqual(speed);expect(r.speedIntervalMm![1]).toBeGreaterThanOrEqual(speed)}
+ expect(options).toEqual(before)
 })
