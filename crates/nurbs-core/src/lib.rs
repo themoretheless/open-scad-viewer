@@ -147,3 +147,7 @@ pub mod offset_contact_tangent;
 pub mod offset_envelope;
 
 pub mod offset_envelope_fit;
+
+pub mod offset_contact_pcurve;
+
+pub mod offset_contact_trims;
