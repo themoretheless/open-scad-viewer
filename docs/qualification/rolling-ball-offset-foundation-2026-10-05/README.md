@@ -1016,3 +1016,22 @@ All 44 selected source regressions passed
 rational curved rim and a two-span kinked height chart. An extra plane contact
 at the interior knot refuses certification. This broadens the chart locus
 proof only; shared retained-region ownership and pair admission remain open.
+
+## Original fragment contact with a natural plane fiber
+
+`source_fiber_boundary::inspect` checks an immutable source Fragment against
+the matching source-plane certificate. Constant source-coordinate control nets
+prove an entire fragment on the fiber; strict one-sided hulls prove absence.
+A one-sided single Bezier net proves its interior away even when nonmonotone;
+otherwise fresh original-coordinate strict monotonicity and already qualified
+chart containment exclude interior contact. Actual endpoints are checked through
+exact natural endpoint poles, outward interval evaluation or immutable crossing
+UV boxes. Potential endpoint contacts remain explicit, without tolerance welding.
+Driver work is bounded and unsupported proofs remain unresolved.
+
+All 45 selected source regressions passed (`source-fiber-boundary.log.gz`).
+Tests cover full fiber paths, endpoint-only contact in either traversal, a
+1e-12-separated path, a nonmonotone curved path touching at both ends and an
+interior restriction of that same original curve. Shared ownership and complete
+retained-region/pair admission remain outstanding; these locus reports alone
+never authorize skipping a surface intersection search.
