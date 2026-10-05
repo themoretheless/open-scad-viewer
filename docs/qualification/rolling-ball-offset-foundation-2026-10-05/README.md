@@ -2442,3 +2442,20 @@ next scene integration stage. This proves source input retention and fresh
 loading of that control. It does not prove twenty geometry edits, source-aware
 scene preview/selection, full error highlighting, general root-body acceptance,
 STEP transfer, crash/multi-tab acceptance or completion of the roadmap.
+
+
+## Native restricted-edge display sampling (2026-10-06)
+
+`Restriction::display_segments` samples the original world carrier over the
+outer enclosure of the qualified endpoint intervals. Each segment retains a
+native interval box containing the carrier on that parameter interval. Root
+recipes and endpoint enclosures remain authoritative; samples do not replace
+root vertices and are not a chord-error or admission certificate. Rendering
+must distinguish endpoint uncertainty; the outer enclosure can extend beyond
+the exact root. Segment counts are bounded to 1..4096.
+
+Eight `source_shared_edge` tests pass. Replay controls exercise segment
+continuity, preservation through fresh restriction restore, enclosure checks
+at interior samples, and invalid work limits. This is native display support;
+WASM transport, scene rendering, face tessellation and UI selection remain
+unfinished. No new WASM artifact was built for this change.

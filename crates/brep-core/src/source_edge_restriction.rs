@@ -71,6 +71,55 @@ impl Restriction {
         }
         Ok(common)
     }
+    /// Display samples only: endpoint root enclosures remain authoritative.
+    /// Each segment box encloses the original carrier over the sampled interval;
+    /// the polyline itself is not a geometric admission or chord-error certificate.
+    pub fn display_segments(
+        &self,
+        segments: usize,
+    ) -> Result<Vec<([f64; 2], [[f64; 3]; 2], [[f64; 2]; 3])>> {
+        if !(1..=4096).contains(&segments) {
+            return Err(Error::new(
+                "BREP_SOURCE_DISPLAY_WORK",
+                "Choose 1..4096 display segments",
+            ));
+        }
+        let ends = self.parameter_bounds()?;
+        let start = ends[0][0];
+        let stop = ends[1][1];
+        if start >= stop {
+            return Err(Error::new(
+                "BREP_SOURCE_DISPLAY_DOMAIN",
+                "Display restriction needs an ordered interval",
+            ));
+        }
+        let curve = self.edge.world();
+        let mut output = Vec::with_capacity(segments);
+        for i in 0..segments {
+            let t = |j: usize| {
+                if j == segments {
+                    stop
+                } else {
+                    start + (stop - start) * (j as f64 / segments as f64)
+                }
+            };
+            let range = [t(i), t(i + 1)];
+            let evaluated = [curve.evaluate(range[0])?, curve.evaluate(range[1])?];
+            let enclosure = interval_eval::evaluate_interval(curve, I::new(range[0], range[1])?)?;
+            if enclosure.len() != 3 || evaluated.iter().any(|p| p.point.len() != 3) {
+                return Err(Error::new(
+                    "BREP_SOURCE_RESTRICTION_DIMENSION",
+                    "Canonical carrier must be 3D",
+                ));
+            }
+            output.push((
+                range,
+                evaluated.map(|p| std::array::from_fn(|a| p.point[a])),
+                std::array::from_fn(|a| [enclosure[a].lo, enclosure[a].hi]),
+            ));
+        }
+        Ok(output)
+    }
     /// Enclose each canonical end, without choosing a point in its root box.
     /// Work counts all original nonempty knot spans, independently per end.
     pub fn endpoint_boxes(&self, max_spans: usize) -> Result<[[[f64; 2]; 3]; 2]> {
@@ -134,4 +183,30 @@ pub(crate) fn assert_replay(edge: &SharedEdge) {
         recovered.endpoint_boxes(10000).unwrap()
     );
     assert!(restriction.endpoint_boxes(0).is_err());
+    assert!(restriction.display_segments(0).is_err());
+    assert!(restriction.display_segments(4097).is_err());
+    let display = restriction.display_segments(16).unwrap();
+    assert_eq!(display.len(), 16);
+    assert_eq!(display, recovered.display_segments(16).unwrap());
+    assert_eq!(
+        display[0].0[0],
+        restriction.parameter_bounds().unwrap()[0][0]
+    );
+    assert_eq!(
+        display[15].0[1],
+        restriction.parameter_bounds().unwrap()[1][1]
+    );
+    for pair in display.windows(2) {
+        assert_eq!(pair[0].0[1], pair[1].0[0]);
+        assert_eq!(pair[0].1[1], pair[1].1[0]);
+    }
+    for (range, _, bounds) in &display {
+        for i in 0..=8 {
+            let t = range[0] + (range[1] - range[0]) * i as f64 / 8.;
+            let p = restriction.edge.world().evaluate(t).unwrap().point;
+            for axis in 0..3 {
+                assert!(bounds[axis][0] <= p[axis] && p[axis] <= bounds[axis][1]);
+            }
+        }
+    }
 }
