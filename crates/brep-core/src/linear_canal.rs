@@ -2,8 +2,9 @@
 //! Authors NURBS support sheets. Qualification and closed-body admission remain
 //! separate: a construction formula cannot authorize its own rounded output.
 use crate::{
+    Model, Result,
     circular_blend::{CircularBlendBoundary, CircularEnvelopeReport},
-    invalid, Model, Result,
+    invalid,
 };
 use nurbs_core::{
     curve::Curve,
@@ -564,6 +565,24 @@ mod tests {
                         radius.reason,
                         radius.error_upper
                     );
+                    for boundary in cap.boundaries().unwrap() {
+                        if let Some(point) = boundary.collapsed_pole {
+                            let source = Fragment::new(
+                                cap.surface(),
+                                &boundary.pcurve,
+                                Endpoint::Parameter(0.),
+                                Endpoint::Parameter(1.),
+                            )
+                            .unwrap();
+                            let pole = crate::source_collapsed_boundary::qualify(
+                                &source,
+                                point,
+                                cad_predicates::MAX_WORK,
+                            )
+                            .unwrap();
+                            assert!(pole.boundary.is_some(), "{}", pole.reason);
+                        }
+                    }
                     cap.to_open_sheet(1e-7).unwrap().validate().unwrap();
                 }
             }

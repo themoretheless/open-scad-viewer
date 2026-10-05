@@ -1757,3 +1757,27 @@ Validation after the control-hull fix: the complete B-rep library suite passes
 873 tests, with zero failures and three ignored tests. The compressed full-suite
 log is retained. This supersedes the wall-coverage failure recorded in the
 preceding cap stage; it does not expand admission to general curved walls.
+
+## Exact original collapsed-boundary ownership
+
+`source_collapsed_boundary::qualify` treats a finite world point as a candidate,
+then independently checks homogeneous identity of the original surface/pcurve
+composition against that constant. Only exact equality produces an immutable
+certificate owning the original Fragment and point. Source endpoint restrictions
+are retained; full source algebraic identity also covers every retained subset.
+Unsupported composition layouts, exhausted exact work, wrong candidates and
+nonconstant curves retain no certificate. This is a conservative supported-layout
+gate, not a tolerance weld or a caller-provided pole flag.
+
+Native regressions cover a rational collapsed boundary with a retained partial
+parameter restriction, coincident endpoints with a nonconstant interior, a
+1e-12 mm control deviation, wrong world point, exhausted work and invalid inputs.
+Translated/rotated endpoint sphere caps now independently qualify every reported
+collapsed boundary through this original-source identity gate. All 75 source
+regressions and six linear-canal regressions pass; compressed logs accompany
+this stage.
+
+This first ownership gate does not yet contract shell incidence, certify a
+vertex-link cycle, prove chart injectivity modulo poles, complete face-contact
+coverage or authorize a native closed body. Those checks remain required before
+Model/STEP/WASM/UI admission.
