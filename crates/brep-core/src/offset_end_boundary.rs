@@ -179,6 +179,80 @@ pub fn qualify_clipped_end(
     })
 }
 
+/// One canonical patch end bound to a fully audited replacement support face.
+/// Sewing the face into a shell and geometric volume admission remain separate.
+pub struct ReplacedEndFace {
+    pub edge: QualifiedEnd,
+    pub contour_support: CurvePcurveCorrespondence,
+    pub face: crate::trimmed_face_recipe::ReplaceBoundary,
+}
+pub fn qualify_replaced_face(
+    context: &ToleranceContext,
+    patch: &Surface,
+    adjacent: &Surface,
+    adjacent_pcurve: &Curve,
+    loop_contact: &Curve,
+    original_wires: &[Vec<crate::trimmed_face_recipe::Boundary>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    start: bool,
+    shell: usize,
+    owners: [BoundaryUse; 2],
+    tolerance_uv: f64,
+    limits: crate::trimmed_face_recipe::Limits,
+) -> Result<ReplacedEndFace> {
+    if owners[1].cyclic_index != 0 {
+        return Err(Error::new(
+            "BREP_OFFSET_END_OWNERSHIP",
+            "Replacement end contact must start the adjacent contour",
+        ));
+    }
+    let owner = owners[1].clone();
+    let edge = qualify(
+        context,
+        patch,
+        adjacent,
+        adjacent_pcurve,
+        start,
+        shell,
+        owners,
+    )?;
+    let contour_support = trim_sew::prove_curve_pcurve_correspondence(
+        context,
+        &edge.world_curve,
+        adjacent,
+        loop_contact,
+        if owner.reversed {
+            ParameterOrientation::Reversed
+        } else {
+            ParameterOrientation::Same
+        },
+        owner.clone(),
+    )?;
+    let contact = crate::trimmed_face_recipe::Boundary {
+        curve: edge.world_curve.clone(),
+        pcurve: loop_contact.clone(),
+        reversed: owner.reversed,
+    };
+    let face = crate::trimmed_face_recipe::replace_boundary_arc(
+        context,
+        adjacent,
+        original_wires,
+        loop_index,
+        arc_start,
+        arc_count,
+        &contact,
+        tolerance_uv,
+        limits,
+    )?;
+    Ok(ReplacedEndFace {
+        edge,
+        contour_support,
+        face,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,6 +320,72 @@ mod tests {
                 reversed: !start,
             },
         ]
+    }
+    #[test]
+    fn both_canonical_ends_build_trimmed_support_faces_with_owned_reversal() {
+        for start in [true, false] {
+            let z = if start { 0. } else { 1. };
+            let (patch, plane, uv) = fixture(z);
+            let mut loop_contact = uv.clone();
+            if !start {
+                loop_contact.control_points.reverse();
+                loop_contact.weights.reverse();
+            }
+            let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
+            let wires = vec![
+                (0..4)
+                    .map(|i| {
+                        let pcurve = Curve::from_polyline(vec![
+                            points[i].clone(),
+                            points[(i + 1) % 4].clone(),
+                        ])
+                        .unwrap();
+                        let mut curve = pcurve.clone();
+                        for p in &mut curve.control_points {
+                            if !start {
+                                p.swap(0, 1);
+                            }
+                            p.push(z);
+                        }
+                        crate::trimmed_face_recipe::Boundary {
+                            curve,
+                            pcurve,
+                            reversed: false,
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            ];
+            let result = qualify_replaced_face(
+                &ToleranceContext::default_valid(),
+                &patch,
+                &plane,
+                &uv,
+                &loop_contact,
+                &wires,
+                0,
+                0,
+                2,
+                start,
+                7,
+                owners(start),
+                1e-8,
+                crate::trimmed_face_recipe::Limits {
+                    pairs: 10000,
+                    region_cells: 100000,
+                    domain_cells: 100000,
+                    agreement_cells: 100000,
+                },
+            )
+            .unwrap();
+            assert!(result.contour_support.permits_exact_correspondence());
+            let replacement = result.face.replacement.unwrap();
+            let face = replacement.face.expect(replacement.reason);
+            assert_eq!(face.edges().len(), 3);
+            assert_eq!(face.edges()[0].curve, result.edge.world_curve);
+            assert_eq!(face.loops()[0].coedges[0].reversed, !start);
+            assert_eq!(face.edges()[1].curve, wires[0][2].curve);
+            assert_eq!(face.face().surface, plane);
+        }
     }
     #[test]
     fn both_end_arcs_receive_original_patch_and_adjacent_plane_authority() {
