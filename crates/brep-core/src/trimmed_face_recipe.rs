@@ -65,6 +65,7 @@ pub struct Limits {
     pub domain_cells: usize,
     pub agreement_cells: usize,
 }
+#[derive(Clone)]
 pub struct QualifiedFace {
     vertices: Vec<Vertex>,
     edges: Vec<Edge>,

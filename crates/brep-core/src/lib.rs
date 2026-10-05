@@ -1840,3 +1840,5 @@ pub mod offset_end_boundary;
 pub mod trimmed_face_recipe;
 
 pub mod trimmed_shell_recipe;
+
+pub mod offset_edge_supports;
