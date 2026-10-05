@@ -46,8 +46,10 @@ pub(crate) fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
 }
 
 pub(crate) fn mapped(c: &Curve, t: Interval, reversed: bool) -> Result<Interval> {
-    let a = c.knots[c.degree];
-    let b = c.knots[c.control_points.len()];
+    mapped_range(c.domain(), t, reversed)
+}
+pub(crate) fn mapped_range(domain: [f64;2], t: Interval, reversed: bool) -> Result<Interval> {
+    let [a,b] = domain;
     let t = if reversed {
         Interval::point(1.).sub(t)?.intersect(0., 1.)?
     } else {
@@ -73,9 +75,10 @@ fn distance(
     s: &Surface,
     t: Interval,
     reversed: bool,
+    source_interval: [f64;2],
 ) -> Result<Option<(f64, f64)>> {
     let edge = curve_bounds(c, mapped(c, t, reversed)?)?;
-    let uv = curve_bounds(p, mapped(p, t, false)?)?;
+    let uv = curve_bounds(p, mapped_range(source_interval, t, false)?)?;
     let domain = [
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
@@ -118,6 +121,16 @@ pub fn verify(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<Report> {
+    p.validate()?;
+    verify_on(c,p,s,reversed,p.domain(),tolerance,max_cells)
+}
+/// Full normalized world-curve traversal against an unchanged original pcurve
+/// restricted only by an explicit source parameter interval. No trim proposal
+/// or rounded extracted pcurve replaces the source definition.
+pub fn verify_on(
+    c: &Curve, p: &Curve, s: &Surface, reversed: bool,
+    source_interval: [f64;2], tolerance: f64, max_cells: usize,
+) -> Result<Report> {
     c.validate()?;
     p.validate()?;
     s.validate()?;
@@ -133,6 +146,9 @@ pub fn verify(
         max_cells > 0 && max_cells <= 100_000,
         "Agreement cell budget must be in 1..100000",
     )?;
+    check(source_interval.iter().all(|x|x.is_finite()) && source_interval[0]<source_interval[1]
+        && source_interval[0]>=p.domain()[0] && source_interval[1]<=p.domain()[1],
+        "Source pcurve interval must have positive width inside its original domain")?;
     let mut report = Report {
         status: Status::Unresolved,
         cells: 0,
@@ -142,7 +158,12 @@ pub fn verify(
     // Keep the common parameter correlated before trying Cartesian boxes.
     // An unavailable or numerically inconclusive optional bound falls back to
     // the full-span interval traversal; it never turns into a success.
-    if let Ok(Some(upper)) = crate::curve_surface_composition::upper(c, p, s, reversed) {
+    let complete_bound = if source_interval==p.domain() {
+        crate::curve_surface_composition::upper(c,p,s,reversed)
+    } else {
+        crate::curve_surface_composition::upper_cell_on(c,p,s,reversed,[0.,1.],source_interval)
+    };
+    if let Ok(Some(upper)) = complete_bound {
         if upper <= tolerance {
             report.status = Status::WithinTolerance;
             report.cells = 1;
@@ -155,20 +176,23 @@ pub fn verify(
             return Ok(report);
         }
         report.cells += 1;
-        if let Ok(Some(upper)) =
-            crate::curve_surface_composition::upper_cell(c, p, s, reversed, [lo, hi])
-        {
+        let cell_bound = if source_interval==p.domain() {
+            crate::curve_surface_composition::upper_cell(c,p,s,reversed,[lo,hi])
+        } else {
+            crate::curve_surface_composition::upper_cell_on(c,p,s,reversed,[lo,hi],source_interval)
+        };
+        if let Ok(Some(upper)) = cell_bound {
             if upper <= tolerance {
                 continue;
             }
         }
-        if let Some((_, upper)) = distance(c, p, s, Interval::new(lo, hi)?, reversed)? {
+        if let Some((_, upper)) = distance(c, p, s, Interval::new(lo, hi)?, reversed, source_interval)? {
             if upper <= tolerance {
                 continue;
             }
         }
         let mid = lo + (hi - lo) * 0.5;
-        if let Some((lower, upper)) = distance(c, p, s, Interval::point(mid), reversed)? {
+        if let Some((lower, upper)) = distance(c, p, s, Interval::point(mid), reversed, source_interval)? {
             if lower > tolerance {
                 report.status = Status::Mismatch;
                 report.witness = Some(mid);
@@ -753,4 +777,25 @@ mod tests {
         );
         assert!(verify(&c, &p, &plane(), false, 0., 100).is_err());
     }
+    #[test]
+    fn unchanged_original_pcurve_interval_preserves_nonunit_and_reversed_mapping() {
+        let mut pc=line(vec![vec![0.,0.4],vec![1.,0.4]]);
+        pc.knots=vec![2.,2.,8.,8.];
+        let before=pc.clone();
+        let mut world=line(vec![vec![0.75,0.4,0.],vec![0.25,0.4,0.]]);
+        world.knots=vec![10.,10.,20.,20.];
+        assert_eq!(verify_on(&world,&pc,&plane(),true,[3.5,6.5],1e-9,128).unwrap().status,Status::WithinTolerance);
+        assert_eq!(verify(&world,&pc,&plane(),true,1e-9,128).unwrap().status,Status::Mismatch);
+        assert!(verify_on(&world,&pc,&plane(),true,[1.,6.5],1e-9,128).is_err());
+        assert_eq!(pc,before);
+    }
+    #[test]
+    fn rational_subinterval_world_proposal_is_checked_against_original_definition() {
+        let pc=Curve {degree:2,knots:vec![2.,2.,2.,8.,8.,8.],
+            control_points:vec![vec![0.,0.25],vec![0.5,0.4],vec![1.,0.7]],weights:vec![1.,0.75,1.],periodic:false};
+        let mut world=pc.clone();for p in &mut world.control_points{p.push(0.);}
+        let piece=world.trim(3.5,6.5).unwrap();
+        assert_eq!(verify_on(&piece,&pc,&plane(),false,[3.5,6.5],1e-9,128).unwrap().status,Status::WithinTolerance);
+    }
+
 }

@@ -171,3 +171,5 @@ pub mod curve_axis_driver;
 pub mod offset_path_trims;
 
 pub mod offset_path_pcurves;
+
+pub mod curve_surface_lift;
