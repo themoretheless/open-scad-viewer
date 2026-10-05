@@ -773,3 +773,28 @@ new regression uses distinct surface charts with swapped UV axes and different
 UV crossing equations. It refuses absent cutter evidence, a displaced cutter
 and a non-3D canonical edge. General parameter remapping, tangential projected
 roots, body assembly, embedding, end transitions and UI admission remain open.
+
+## Closed source shell incidence
+
+`source_shell_incidence::assemble` requalifies every canonical edge pair across
+original surface-composed wires. Each directed use must have exactly one partner
+on a distinct face. Opposite traversal and source/world identity are checked
+fresh. Shared vertex owners follow local source joins and cross-face pair
+endpoints, never coordinate proximity. All faces must belong to one connected
+component. Incomplete pair proofs produce no shell and retain the uncertain pair
+address. Immutable shell payload includes original face wires, canonical shared
+edges, pair addresses and global vertex indices.
+
+Exact identity work is shared over the shell. Individual predicate queries are
+capped at the predicate engine's MAX_WORK while retaining the caller's total
+budget; passing a larger total directly previously caused ResourceLimit refusal.
+
+All 36 selected source tests passed (`source-shell-incidence.log.gz`). An exact
+tetrahedron assembles six edges and four shared vertices. Missing and duplicate
+uses, a 1e-12 canonical world displacement, disconnected closed components and
+work exhaustion refuse shell admission.
+
+This is closed oriented incidence, not embedded/material volume qualification.
+Face geometry, vertex-neighborhood embedding, self-intersections, retained
+wall/radius/tangency, automatic end transitions, Model realization, STEP and
+WASM/UI admission remain outstanding.

@@ -150,7 +150,7 @@ pub fn qualify_with_cutters(
             edge.curve(),
             edge.surface(),
             world_reversed[i],
-            max_work - out.work_used,
+            (max_work - out.work_used).min(cad_predicates::MAX_WORK),
         )?
         else {
             out.reason = "source-world-identity-layout-unproven";
@@ -197,7 +197,7 @@ fn common_world_root(
             other,
             point.surface(),
             false,
-            max_work - out.work_used,
+            (max_work - out.work_used).min(cad_predicates::MAX_WORK),
         )?
         else {
             return Ok(false);
