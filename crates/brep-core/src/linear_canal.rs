@@ -13,6 +13,13 @@ pub struct Span {
     surface: Surface,
     centers: Curve,
     radius: Curve,
+    frame: Option<Frame>,
+}
+struct Frame {
+    tangent: [f64; 3],
+    angular: [[f64; 3]; 3],
+    slope: f64,
+    radial_factor: f64,
 }
 impl Span {
     pub fn surface(&self) -> &Surface {
@@ -83,6 +90,121 @@ impl Span {
         crate::circular_blend::open_face(self.surface.clone(), self.boundaries()?, tolerance_mm)
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum End {
+    Start,
+    Finish,
+}
+impl Span {
+    /// Sphere-family endpoint caps. The characteristic junction row is copied
+    /// from the unchanged canal so curve definitions agree exactly.
+    /// A zero-radius end has no sphere patch; its original canal pole remains.
+    pub fn end_caps(&self, end: End) -> Result<Vec<Span>> {
+        let f = self
+            .frame
+            .as_ref()
+            .ok_or_else(|| invalid("Only an authored linear canal has endpoint sphere caps"))?;
+        let index = usize::from(end == End::Finish);
+        let center = &self.centers.control_points[index];
+        let r = self.radius.control_points[index][0];
+        if r == 0. {
+            return Ok(Vec::new());
+        }
+        let join = f.slope.acos();
+        let (lo, hi) = if index == 0 {
+            (0., join)
+        } else {
+            (join, std::f64::consts::PI)
+        };
+        let count = ((hi - lo) / std::f64::consts::FRAC_PI_2).ceil() as usize;
+        let angles = (0..=count)
+            .map(|i| lo + (hi - lo) * i as f64 / count as f64)
+            .collect::<Vec<_>>();
+        let meridians = angles
+            .iter()
+            .enumerate()
+            .map(|(i, &a)| {
+                if (index == 0 && i == count) || (index == 1 && i == 0) {
+                    [f.radial_factor, -f.slope]
+                } else if a == 0. {
+                    [0., -1.]
+                } else if a == std::f64::consts::PI {
+                    [0., 1.]
+                } else {
+                    [a.sin(), -a.cos()]
+                }
+            })
+            .collect::<Vec<_>>();
+        let c = Curve::from_polyline(vec![center.clone(), center.clone()])?;
+        let radius = Curve::from_polyline(vec![vec![r, 0.], vec![r, 0.]])?;
+        let mut out = Vec::new();
+        for i in 0..count {
+            let middle = (angles[i] + angles[i + 1]) * 0.5;
+            let w = ((angles[i + 1] - angles[i]) * 0.5).cos();
+            let meridian = [
+                meridians[i],
+                [middle.sin() / w, -middle.cos() / w],
+                meridians[i + 1],
+            ];
+            let mut controls = meridian
+                .iter()
+                .map(|p| {
+                    f.angular
+                        .iter()
+                        .map(|q| {
+                            (0..3)
+                                .map(|k| center[k] + r * p[1] * f.tangent[k] + r * p[0] * q[k])
+                                .collect()
+                        })
+                        .collect()
+                })
+                .collect::<Vec<Vec<Vec<f64>>>>();
+            if index == 0 && i + 1 == count {
+                controls[2] = self.surface.control_points[0].clone();
+            }
+            if index == 1 && i == 0 {
+                controls[0] = self.surface.control_points[1].clone();
+            }
+            let weights = [1., w, 1.]
+                .iter()
+                .map(|&m| self.surface.weights[index].iter().map(|&a| m * a).collect())
+                .collect();
+            let surface = Surface {
+                degree_u: 2,
+                degree_v: 2,
+                knots_u: vec![0., 0., 0., 1., 1., 1.],
+                knots_v: self.surface.knots_v.clone(),
+                control_points: controls,
+                weights,
+                periodic_u: false,
+                periodic_v: false,
+            };
+            surface.validate()?;
+            out.push(Span {
+                surface,
+                centers: c.clone(),
+                radius: radius.clone(),
+                frame: None,
+            });
+        }
+        Ok(out)
+    }
+}
+/// Assemble the existing support region and its exact authored endpoint caps.
+/// Keeps open-sheet status until source pole/embedding/body admission is proven.
+pub fn to_capped_region(spans: &[Span], tolerance_mm: f64) -> Result<Model> {
+    let mut sheets = Vec::new();
+    for span in spans {
+        sheets.push((span.to_open_sheet(tolerance_mm)?, false));
+        for end in [End::Start, End::Finish] {
+            for cap in span.end_caps(end)? {
+                sheets.push((cap.to_open_sheet(tolerance_mm)?, false));
+            }
+        }
+    }
+    crate::circular_blend::assemble_support_sheets(sheets)
+}
+
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     (0..3).map(|k| a[k] * b[k]).sum()
 }
@@ -185,6 +307,12 @@ pub fn construct(
             surface,
             centers: c.clone(),
             radius: r.clone(),
+            frame: Some(Frame {
+                tangent,
+                angular: unit.map(|p| std::array::from_fn(|k| p[0] * x[k] + p[1] * y[k])),
+                slope: a,
+                radial_factor: b,
+            }),
         });
     }
     Ok(out)
@@ -354,5 +482,144 @@ mod tests {
         assert!(construct([[0., 0., 0.], [0., 0., 1.]], [1., 1.], [0., 0., 1.], 0.7).is_err());
         assert!(construct([[0., 0., 0.]; 2], [1., 1.], [1., 0., 0.], 0.7).is_err());
         assert!(construct([[0., 0., 0.], [0., 0., 5.]], [0., 0.], [1., 0., 0.], 0.7).is_err());
+    }
+    #[test]
+    fn sphere_endcaps_preserve_junction_curves_and_certify_tangent_planes() {
+        use crate::source_boundary_fragment::{Endpoint, Fragment};
+        for radii in [[0.5, 1.25], [1.25, 0.5]] {
+            let span = construct([[10., -7., 5.], [13., -3., 17.]], radii, [1., 0., 0.], 0.7)
+                .unwrap()
+                .remove(0);
+            for end in [End::Start, End::Finish] {
+                let caps = span.end_caps(end).unwrap();
+                assert!(!caps.is_empty());
+                let index = usize::from(end == End::Finish);
+                let cap = if index == 0 {
+                    caps.last().unwrap()
+                } else {
+                    &caps[0]
+                };
+                let cap_u = if index == 0 { 1. } else { 0. };
+                let world = span.surface().iso(Axis::U, index as f64).unwrap();
+                assert_eq!(world, cap.surface().iso(Axis::U, cap_u).unwrap());
+                let a = Curve::from_polyline(vec![vec![index as f64, 0.], vec![index as f64, 1.]])
+                    .unwrap();
+                let b = Curve::from_polyline(vec![vec![cap_u, 0.], vec![cap_u, 1.]]).unwrap();
+                let a = Fragment::new(
+                    span.surface(),
+                    &a,
+                    Endpoint::Parameter(0.),
+                    Endpoint::Parameter(1.),
+                )
+                .unwrap();
+                let b = Fragment::new(
+                    cap.surface(),
+                    &b,
+                    Endpoint::Parameter(1.),
+                    Endpoint::Parameter(0.),
+                )
+                .unwrap();
+                let edge = crate::source_shared_edge::qualify(
+                    &world,
+                    [&a, &b],
+                    [false, false],
+                    100_000_000,
+                )
+                .unwrap()
+                .edge
+                .unwrap();
+                let tangent = crate::source_seam_tangency::qualify(
+                    &edge,
+                    crate::source_seam_tangency::Limits {
+                        max_sine_squared: 1e-3,
+                        cells: 100000,
+                        curve_spans: 100000,
+                        normal_spans: 100000,
+                    },
+                )
+                .unwrap();
+                eprintln!(
+                    "cap {:?} radii {:?}: {} cells {} accepted {}",
+                    end, radii, tangent.reason, tangent.cells, tangent.accepted_cells
+                );
+                assert!(
+                    tangent.seam.is_some(),
+                    "{} {:?}",
+                    tangent.reason,
+                    tangent.uncertain_canonical
+                );
+                for cap in &caps {
+                    let radius = nurbs_core::moving_radius::qualify(
+                        cap.surface(),
+                        cap.centers(),
+                        cap.radius(),
+                        1e-8,
+                        100,
+                        100_000_000,
+                    )
+                    .unwrap();
+                    assert!(
+                        radius.certificate.is_some(),
+                        "{} {:?}",
+                        radius.reason,
+                        radius.error_upper
+                    );
+                    cap.to_open_sheet(1e-7).unwrap().validate().unwrap();
+                }
+            }
+        }
+    }
+    #[test]
+    fn capped_full_turn_has_poles_and_paired_nondegenerate_edges_without_body_claim() {
+        for radii in [[0.5, 1.25], [1.25, 0.5], [0., 1.], [1., 0.]] {
+            let spans = construct(
+                [[10., -7., 5.], [13., -3., 17.]],
+                radii,
+                [1., 0., 0.],
+                std::f64::consts::TAU,
+            )
+            .unwrap();
+            let model = to_capped_region(&spans, 1e-7).unwrap();
+            model.validate().unwrap();
+            let mut uses = vec![Vec::new(); model.edges.len()];
+            for loop_ in &model.loops {
+                for coedge in &loop_.coedges {
+                    uses[coedge.edge].push(coedge.reversed);
+                }
+            }
+            for (i, edge) in model.edges.iter().enumerate() {
+                if edge.degenerate {
+                    assert_eq!(uses[i].len(), 1);
+                } else {
+                    assert_eq!(uses[i].len(), 2);
+                    assert_ne!(uses[i][0], uses[i][1]);
+                }
+            }
+            assert!(model.bodies.is_empty());
+            assert!(!model.shells[0].closed);
+            // Pole boundary identities follow their source face/UV ownership,
+            // not face array order or arbitrary duplicate numbering.
+            let ids = model
+                .1
+                .edges
+                .iter()
+                .copied()
+                .collect::<std::collections::BTreeSet<_>>();
+            let mut permuted = model.clone();
+            let count = permuted.faces.len();
+            permuted.0.faces.reverse();
+            for shell in &mut permuted.0.shells {
+                for usage in &mut shell.faces {
+                    usage.face = count - 1 - usage.face;
+                }
+            }
+            permuted.rebuild_topology_ids();
+            permuted.validate().unwrap();
+            assert_eq!(ids, permuted.1.edges.iter().copied().collect());
+            let saved = value_codec::to_string(&model).unwrap();
+            let restored: Model = value_codec::from_str(&saved).unwrap();
+            restored.validate().unwrap();
+            assert_eq!(restored, model);
+        }
     }
 }

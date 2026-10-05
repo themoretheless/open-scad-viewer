@@ -974,7 +974,19 @@ impl Model {
                         // loop by its face, which carries the surface.
                         loop_owners[wire].insert(faces[use_.face].clone());
                         for coedge in &self.loops[wire].coedges {
-                            edge_owners[coedge.edge].insert(key.clone());
+                            // A pole can own several collapsed UV boundaries in
+                            // one shell. They are distinct chart entities even
+                            // though their world curves and vertices coincide.
+                            let owner = if self.edges[coedge.edge].degenerate {
+                                Self::hash([
+                                    key.clone(),
+                                    faces[use_.face].clone(),
+                                    Self::directed_curve_key(&coedge.pcurve, false),
+                                ])
+                            } else {
+                                key.clone()
+                            };
+                            edge_owners[coedge.edge].insert(owner);
                             for &vertex in &self.edges[coedge.edge].vertices {
                                 vertex_owners[vertex].insert(key.clone());
                             }

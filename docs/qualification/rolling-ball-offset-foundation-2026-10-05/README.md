@@ -1695,3 +1695,38 @@ accompany this stage. End caps/transitions, support-face contact and trimming,
 closed-body admission, general NURBS spines/radius laws and complex corners
 remain open, along with tight qualification/performance, wall checks,
 STEP/WASM/worker/UI acceptance and the remaining P0/P2/P3 scope.
+
+## Linear canal sphere end caps and pole boundary identity
+
+The authored straight-spine, linear-radius canals now construct rational
+spherical endpoint patches. Meridian arcs are split at at most pi/2; the
+characteristic junction row is copied unchanged from the shaft. Both endpoint
+seams retain exact original curve definitions. Native SourceSharedEdge admission
+and full-seam tangent-plane qualification pass on increasing/decreasing radius
+controls at translated, rotated positions, with max sine squared 1e-3. Each
+cap also passes complete native moving-radius qualification at 1e-8 mm. This
+does not certify a regular parameter chart at its collapsed pole.
+
+Full-turn assemblies in both radius directions and zero-radius endpoint cases
+validate and have paired opposite uses on every nondegenerate edge. Colliding
+collapsed chart-boundary IDs now include the owning face and original UV curve;
+no array index or arbitrary ordinal is used. Face permutation and JSON roundtrip
+regressions preserve edge identities. Duplicate indistinguishable entities
+remain rejected. These assemblies retain open-shell status and no native bodies.
+
+Independent OCCT controls rebuild original surfaces, sew ten full-turn models,
+and produce valid oriented solids with zero free or multiple edges. Across
+25432 point controls, maximum radius error is 7.7e-15 mm. Adaptive Gauss-Kronrod
+volume integration with BSpline spans agrees with analytical endpoint-ball
+envelope volumes within 2.2e-14 mm3. Pole normal queries are explicitly skipped.
+These independent solids do not authorize native body admission or STEP export.
+
+Validation: all six linear canal tests pass. The full B-rep library suite has
+871 passing tests, three ignored tests and one failure in
+`material_wall_coverage::tests::all_open_enclosure_walls_and_floor_contribute_to_the_minimum`.
+The same assertion fails with the previous committed topology-ID implementation;
+its baseline log is retained. The full suite is therefore not green, and the
+wall-coverage acceptance remains open. Native pole quotient topology, injectivity
+at poles, complete face-contact/embedding and source-body admission remain
+unfinished, as do general curved-spine blends, complex corners, STEP, WASM,
+worker/UI and application acceptance.
