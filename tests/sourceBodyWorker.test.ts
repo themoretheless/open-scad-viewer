@@ -39,13 +39,20 @@ function realClient(){
 const denied:SourceBodyResult={admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'source-volume-initial-work-limit',incidence:{},embedding:{},volume:{}}}
 function reply(port:Port,result:SourceBodyResult){port.onmessage?.({data:{version:1,id:port.requests.at(-1)!.id,kind:'sourceBodyRestore',ok:true,result}} as MessageEvent)}
 it('restores original source definitions through the real WASM CAD worker',async()=>{
- const o=options(),before=JSON.stringify(o),client=realClient()
+ const o={...options(),displaySegments:8},before=JSON.stringify(o),client=realClient()
  const start=performance.now()
  const r=await client.run({kind:'sourceBodyRestore',options:o})
  const restoreElapsedMs=performance.now()-start
  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
  expect(r.sourceBody!.shell).toEqual(o.definition.shell)
  expect(r.edges.map(e=>e.definition)).toEqual(o.definition.shell.pairs.map(p=>p.edge))
+ expect(r.edges.every(edge=>edge.displaySegments?.length===8)).toBe(true)
+ const broken=structuredClone(r);broken.edges[0]!.displaySegments![0]![0][0]+=1
+ expect(validSourceBody(sourceBodyExpectation(o),broken)).toBe(false)
+ const missing=structuredClone(r);delete missing.edges[0]!.displaySegments
+ expect(validSourceBody(sourceBodyExpectation(o),missing)).toBe(false)
+ expect(()=>sourceBodyExpectation({...o,displaySegments:4097})).toThrow()
+
  const oracle=2*Math.PI/3;expect(r.volume![0]).toBeLessThanOrEqual(oracle);expect(r.volume![1]).toBeGreaterThanOrEqual(oracle)
  const changed=structuredClone(r);changed.edges[0]!.definition={changed:true}
  expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)

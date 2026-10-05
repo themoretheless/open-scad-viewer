@@ -7,6 +7,7 @@ export function bodyPoints(b: DirectBody): number[][] {
 /** Kernel-free SCAD text for the bodies; kept out of directModeling so history
  * restore does not pull the geometry kernel into the startup graph. */
 export function directBodiesScad(document: DirectDocument): string {
+  if(document.sourceBodies?.length)throw Error('SCAD export cannot yet tessellate exact source bodies. Keep the native document.')
   return document.bodies.map(b => {
     // OpenSCAD polyhedron uses clockwise faces, opposite the kernel's outward CCW mesh.
     const faces = Array.from({ length: b.mesh.indices.length / 3 }, (_, i) => Array.from(b.mesh.indices.slice(i * 3, i * 3 + 3)).reverse())

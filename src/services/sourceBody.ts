@@ -7,6 +7,7 @@ export interface SourceBodyDefinition {
 export interface SourceBodyOptions {
  definition:SourceBodyDefinition
  endpointSpans:number
+ displaySegments?:number
  limits:{
   shell:{exactWork:number;driverCells:number;regions:{region:{pairs:number;regionCells:number;domainCells:number;agreementCells:number};searchCells:number;pointChecks:number;mappingCells:number;driverCells:number;membershipCells:number;controls:number;windingCells:number;steps:number}}
   embedding:{toleranceUv:number;corners:number;spans:number;linearCells:number;exactWork:number;driverCells:number;pairs:{pairs:number;cells:number;domainCells:number;cellsPerPair:number;domainCellsPerPair:number}}
@@ -16,6 +17,7 @@ export interface SourceBodyOptions {
 type Interval=[number,number]
 export interface SourceBodyEdge {
  index:number;definition:unknown;parameterBounds:[Interval,Interval];endpointBoxes:[[Interval,Interval,Interval],[Interval,Interval,Interval]]
+ displaySegments?:[Interval,[[number,number,number],[number,number,number]],[Interval,Interval,Interval]][]|null
  vertices:[number,number];uses:[number[],number[]]
 }
 export interface SourceBodyResult {
@@ -52,12 +54,14 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
  if(d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
   ||!Array.isArray(s.pairs)||s.pairs.length>524288||!Array.isArray(s.poles)||s.poles.length>1000000
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
+ const segments=options.displaySegments??0
+ if(!integer(segments,4096)||segments*s.pairs.length>65536)throw new Error('Source display exceeds transport limits')
  const edges=s.pairs.map(pair=>{
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
  return {definition:key({version:1,shell:s}),faces:s.regions.length,poles:s.poles.length,edges,
-  absoluteError:options.limits.volume.absoluteError}
+  absoluteError:options.limits.volume.absoluteError,segments}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {
  try {
@@ -68,10 +72,21 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
    ||r.faceCount!==e.faces||r.poleCount!==e.poles||typeof r.reverseOrientation!=='boolean'
    ||!interval(r.volume)||r.volume[0]<=0||!Number.isFinite(e.absoluteError)||e.absoluteError<=0||r.volume[1]-r.volume[0]>e.absoluteError
    ||r.edges.length!==e.edges.length)return false
+  const displayValid=(edge:SourceBodyEdge)=>{
+   if(e.segments===0)return edge.displaySegments==null
+   const list=edge.displaySegments
+   if(!Array.isArray(list)||list.length!==e.segments)return false
+   return list.every((segment,i)=>Array.isArray(segment)&&segment.length===3&&interval(segment[0])&&segment[0][0]<segment[0][1]
+    &&Array.isArray(segment[1])&&segment[1].length===2&&segment[1].every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))
+    &&Array.isArray(segment[2])&&segment[2].length===3&&segment[2].every(interval)
+    &&(i===0?segment[0][0]===edge.parameterBounds[0][0]:segment[0][0]===list[i-1]![0][1])
+    &&(i===0||segment[1][0].every((n,a)=>n===list[i-1]![1][1][a]))
+    &&(i!==list.length-1||segment[0][1]===edge.parameterBounds[1][1]))
+  }
   return r.edges.every((edge,i)=>edge.index===i&&key(edge.definition)===e.edges[i]!.definition&&key(edge.uses)===e.edges[i]!.uses
    &&Array.isArray(edge.vertices)&&edge.vertices.length===2&&edge.vertices.every(n=>integer(n,2*e.edges.length+e.poles))
    &&Array.isArray(edge.parameterBounds)&&edge.parameterBounds.length===2&&edge.parameterBounds.every(interval)
-   &&Array.isArray(edge.endpointBoxes)&&edge.endpointBoxes.length===2&&edge.endpointBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval)))
+   &&Array.isArray(edge.endpointBoxes)&&edge.endpointBoxes.length===2&&edge.endpointBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval))&&displayValid(edge))
  }catch{return false}
 }
 export function restoreSourceBody(options:SourceBodyOptions):SourceBodyResult {

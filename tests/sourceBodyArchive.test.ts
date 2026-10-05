@@ -1,3 +1,5 @@
+import {solidDocumentToMeshDocument} from '../src/services/solidBridge'
+import {directBodiesScad} from '../src/services/directBodiesScad'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
@@ -41,4 +43,11 @@ it('refuses unsupported whole-scene exchange rather than omitting native source 
  const document={...emptyDirectDocument(),sourceBodies:[createSourceBodyRecord('source','Source',options())]}
  await expect(exportSolidStepAssembly(document)).rejects.toThrow('exact source Body restrictions')
  expect(()=>exportSolidBlenderSnapshot(document,'project')).toThrow('exact source bodies')
+})
+
+it('refuses silent omission of native source bodies in mesh and SCAD exchange',()=>{
+ const source=createSourceBodyRecord('source','Native',options())
+ const doc={...emptyDirectDocument(),sourceBodies:[source]}
+ expect(()=>solidDocumentToMeshDocument(doc)).toThrow('exact source bodies')
+ expect(()=>directBodiesScad(doc)).toThrow('exact source bodies')
 })

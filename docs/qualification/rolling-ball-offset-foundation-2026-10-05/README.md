@@ -2459,3 +2459,42 @@ continuity, preservation through fresh restriction restore, enclosure checks
 at interior samples, and invalid work limits. This is native display support;
 WASM transport, scene rendering, face tessellation and UI selection remain
 unfinished. No new WASM artifact was built for this change.
+
+
+## Source edge preview through WASM and the existing UI (2026-10-06)
+
+Native restoration optionally returns display segments with original-carrier
+interval boxes. Limits: 4096 segments per edge, 65536 total. The UI chooses up
+to 32 segments per edge, reduces density for larger bodies, and refuses more
+than 65536 edges. This is display sampling, not a chord-error certificate.
+Endpoint root definitions remain unchanged; outer endpoint enclosures can
+include points beyond the exact trim and are shown for the selected edge.
+
+The existing DirectModeler SVG scene displays admitted source edges, supports
+hover, mouse and Enter/Space selection, Esc, cancellation and Retry. A separate
+worker client and request generations reject publication after cancellation,
+document replacement or closing. Hidden/isolated objects are filtered; locked
+edges cannot be selected. Fit includes native display points. This selection
+is read-only and is not yet integrated with geometric edit command inputs or
+the scene outliner. Faces are not yet displayed. Native diagnostics survive
+refusal; errors have body identity and a next action.
+
+The production browser control displays 20 edges of the equal-radius capped
+canal. Mouse selection, keyboard selection, Retry and reload pass without
+page errors; the screenshot shows the CPU SVG path. This is not root-valued
+body UI qualification or a full command matrix. The real WASM worker preview
+and its malformed-response checks pass. The combined five-file run has 77
+passing tests and one 30-second history timeout; the isolated archive run
+passes all six tests unchanged (27.64 seconds test time). Do not claim the
+combined run was wholly green. Controller/client tests pass all 32 tests.
+
+Production build and artifact audit pass: 151 files, 8145420 asset bytes plus
+14906292 raw WASM bytes. New geometry WASM: 11609900 bytes, SHA-256
+`605e1a122e6fb0935e6df556df05e7a4c1467b24a8d803728d82f38cb13e0b90`.
+Named size budgets reflect the measured UI and kernel growth. Mesh and SCAD
+exchange now refuse documents containing source bodies instead of silently
+omitting them, matching the existing STEP/Blender restrictions.
+
+General trimmed face preview, editing, exact root restriction transfer to
+conventional Model/STEP, the three-part acceptance chain and all remaining
+roadmap requirements remain unfinished.

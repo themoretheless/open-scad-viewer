@@ -58,6 +58,21 @@ fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
 pub fn restore(v: Value) -> Result<Value> {
     let definition: Value = field(&v, "definition")?;
     let config: Value = field(&v, "limits")?;
+    let display_segments: usize = if v["displaySegments"].is_null() {
+        0
+    } else {
+        field(&v, "displaySegments")?
+    };
+    let edge_count = definition["shell"]["pairs"].as_array().map_or(0, Vec::len);
+    if display_segments > 4096
+        || edge_count
+            .checked_mul(display_segments)
+            .is_none_or(|n| n > 65536)
+    {
+        return Err(super::input(
+            "Bound display to 4096 segments per edge and 65536 total",
+        ));
+    }
     let max_spans: usize = field(&v, "endpointSpans")?;
     if !(1..=100000).contains(&max_spans) {
         return Err(super::input("Choose endpointSpans in 1..100000"));
@@ -81,7 +96,8 @@ pub fn restore(v: Value) -> Result<Value> {
         let uses = shell.uses()[index];
         let mut vertices = shell.vertices()[uses[0].face][uses[0].wire][uses[0].edge];
         if shell.edges()[index].reversed()[0] { vertices.reverse(); }
-        Ok(json!({"index":index,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
+        let display = if display_segments == 0 { None } else { Some(r.display_segments(display_segments)?.into_iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
+        Ok(json!({"index":index,"displaySegments":display,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
             "uses":uses.map(|a|[a.face,a.wire,a.edge])}))
     }).collect::<Result<Vec<_>>>()?;
@@ -151,7 +167,7 @@ mod tests {
         wire_numbers(&mut wire_definition);
 
         let run = |cells| {
-            let request = json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(cells),"endpointSpans":10000});
+            let request = json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(cells),"endpointSpans":10000,"displaySegments":8});
             let text = value_codec::to_string(&request).unwrap();
             let result = super::super::execute(&text);
             {
@@ -184,6 +200,11 @@ mod tests {
         for (index, edge) in restored["edges"].as_array().unwrap().iter().enumerate() {
             assert_eq!(edge["definition"], shell.edges()[index].definition());
             assert_eq!(edge["index"], json!(index));
+            let display = edge["displaySegments"].as_array().unwrap();
+            assert_eq!(display.len(), 8);
+            for segment in display {
+                assert_eq!(segment.as_array().unwrap().len(), 3);
+            }
             assert_eq!(
                 edge["uses"],
                 json!(shell.uses()[index].map(|a| [a.face, a.wire, a.edge]))
