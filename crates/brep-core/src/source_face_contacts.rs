@@ -1,0 +1,244 @@
+//! Different-face contact search over immutable qualified source UV regions.
+//! Shared topology does not prune searches or authorize absence of extra contact.
+use crate::{source_contour_proposal::SourceRegion, source_contour_winding};
+use nurbs_core::{
+    surface_contact_search::{self, DomainClassification, DomainClassifier},
+    Error, Result,
+};
+struct Domain<'a> {
+    region: &'a SourceRegion,
+    tolerance_uv: f64,
+}
+impl DomainClassifier for Domain<'_> {
+    fn classify_domain(
+        &self,
+        rectangle: [[f64; 2]; 2],
+        max_cells: usize,
+    ) -> Result<DomainClassification> {
+        let r = source_contour_winding::classify(
+            self.region.loops(),
+            rectangle,
+            self.tolerance_uv,
+            max_cells,
+        )?;
+        Ok(DomainClassification {
+            location: r.location,
+            cells: r.cells,
+        })
+    }
+}
+pub fn search(
+    regions: [&SourceRegion; 2],
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<surface_contact_search::Report> {
+    if !tolerance_uv.is_finite() || tolerance_uv <= 0. {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Choose a positive original UV tolerance",
+        ));
+    }
+    let domains = regions.map(|region| Domain {
+        region,
+        tolerance_uv,
+    });
+    surface_contact_search::search_domains(
+        regions[0].loops()[0][0].surface(),
+        regions[1].loops()[0][0].surface(),
+        [&domains[0], &domains[1]],
+        max_cells,
+        max_domain_cells,
+    )
+}
+pub struct PairReport {
+    pub faces: [usize; 2],
+    pub result: surface_contact_search::Report,
+}
+pub struct ShellReport {
+    pub pairs: Vec<PairReport>,
+    pub total_pairs: usize,
+    pub next_pair: Option<[usize; 2]>,
+    pub cells: usize,
+    pub domain_cells: usize,
+    pub all_pairs_absence_proven: bool,
+}
+/// Adjacent pairs are included: topology sharing does not exclude extra contact.
+pub fn inspect_shell(
+    shell: &crate::source_shell_incidence::Shell,
+    tolerance_uv: f64,
+    limits: crate::face_contacts::Limits,
+) -> Result<ShellReport> {
+    if !(1..=100000).contains(&limits.pairs)
+        || !(1..=1000000).contains(&limits.cells)
+        || !(1..=8000000).contains(&limits.domain_cells)
+        || !(1..=100000).contains(&limits.cells_per_pair)
+        || !(1..=1000000).contains(&limits.domain_cells_per_pair)
+        || !tolerance_uv.is_finite()
+        || tolerance_uv <= 0.
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Choose bounded source pair and domain work",
+        ));
+    }
+    let regions = shell.regions().ok_or_else(|| {
+        Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Source pair search requires qualified material regions",
+        )
+    })?;
+    let n = regions.len();
+    let mut out = ShellReport {
+        pairs: Vec::new(),
+        total_pairs: n * (n - 1) / 2,
+        next_pair: None,
+        cells: 0,
+        domain_cells: 0,
+        all_pairs_absence_proven: true,
+    };
+    for a in 0..n {
+        for b in a + 1..n {
+            if out.pairs.len() == limits.pairs
+                || out.cells == limits.cells
+                || out.domain_cells == limits.domain_cells
+            {
+                out.next_pair = Some([a, b]);
+                out.all_pairs_absence_proven = false;
+                return Ok(out);
+            }
+            let result = search(
+                [&regions[a], &regions[b]],
+                tolerance_uv,
+                limits.cells_per_pair.min(limits.cells - out.cells),
+                limits
+                    .domain_cells_per_pair
+                    .min(limits.domain_cells - out.domain_cells),
+            )?;
+            out.cells += result.cells;
+            out.domain_cells += result.domain_cells;
+            out.all_pairs_absence_proven &= result.absence_proven;
+            out.pairs.push(PairReport {
+                faces: [a, b],
+                result,
+            });
+        }
+    }
+    Ok(out)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        source_contour_proposal::{qualify_linear_region, qualify_original_region},
+        trimmed_face_recipe::{Boundary, Limits},
+    };
+    use nurbs_core::{curve::Curve, surface::Surface};
+    fn surface(vertical: bool) -> Surface {
+        Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..2)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| {
+                            if vertical {
+                                vec![0.5, u as f64, v as f64 - 0.5]
+                            } else {
+                                vec![u as f64, v as f64, 0.]
+                            }
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+    fn wire(s: &Surface) -> Vec<Boundary> {
+        let points = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+        (0..4)
+            .map(|i| {
+                let a = points[i];
+                let b = points[(i + 1) % 4];
+                Boundary {
+                    curve: Curve::from_polyline(vec![
+                        s.evaluate(a[0], a[1]).unwrap().point.to_vec(),
+                        s.evaluate(b[0], b[1]).unwrap().point.to_vec(),
+                    ])
+                    .unwrap(),
+                    pcurve: Curve::from_polyline(vec![a.to_vec(), b.to_vec()]).unwrap(),
+                    reversed: false,
+                }
+            })
+            .collect()
+    }
+    #[test]
+    fn original_interior_contact_is_removed_only_after_root_valued_region_clipping() {
+        let a = surface(false);
+        let b = surface(true);
+        let context = cad_predicates::ToleranceContext::default_valid();
+        let limits = Limits {
+            pairs: 1000,
+            region_cells: 10000,
+            domain_cells: 10000,
+            agreement_cells: 10000,
+        };
+        let wa = wire(&a);
+        let wb = wire(&b);
+        let ra = qualify_original_region(&context, &a, &[wa.clone()], 1e-8, limits)
+            .unwrap()
+            .region
+            .unwrap();
+        let rb = qualify_original_region(&context, &b, &[wb], 1e-8, limits)
+            .unwrap()
+            .region
+            .unwrap();
+        let crossing = search([&ra, &rb], 1e-8, 1000, 100000).unwrap();
+        assert!(crossing.contact.is_some());
+        assert!(!crossing.absence_proven);
+        let contact = Curve::from_polyline(vec![vec![0.75, 1.2], vec![0.75, -0.2]]).unwrap();
+        let clipped = qualify_linear_region(
+            &context,
+            &a,
+            &[wa],
+            &contact,
+            0,
+            2,
+            0,
+            1e-8,
+            limits,
+            10000,
+            [1e-8; 2],
+            32,
+            10000,
+            1,
+            10000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert!(
+            clipped.region.is_some(),
+            "{} / {}",
+            clipped.reason,
+            clipped.interior.reason
+        );
+        let clipped = clipped.region.unwrap();
+        let excluded = search([&clipped, &rb], 1e-8, 10000, 1000000).unwrap();
+        assert!(
+            excluded.absence_proven,
+            "cells {} domain {} unknown {}",
+            excluded.cells,
+            excluded.domain_cells,
+            excluded.unresolved.len()
+        );
+        assert!(excluded.contact.is_none());
+        let stopped = search([&clipped, &rb], 1e-8, 1, 1).unwrap();
+        assert!(!stopped.absence_proven && stopped.contact.is_none());
+        assert!(!stopped.unresolved.is_empty());
+    }
+}

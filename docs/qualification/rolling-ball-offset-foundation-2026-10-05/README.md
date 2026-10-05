@@ -891,3 +891,32 @@ identity and proves all original charts injective. Damaged world curves and a
 wrong crossing role refuse. This combines qualified UV regions with exact closed
 incidence and chart injectivity; cross-face contacts, material/volume admission,
 fillet transitions and WASM/UI remain outstanding.
+
+## Different-face contact search on root-valued material regions
+
+The native surface contact search now accepts conservative original-domain
+classifiers through an explicit rectangle classification contract. Existing
+TrimDomain callers retain the same geometry search. Classification work cannot
+exceed its allowance. Only complete Outside classifications prune geometry;
+contact roots require complete Inside classifications on both original domains.
+
+`source_face_contacts` supplies the trusted native adapter over immutable
+SourceRegion loops using root-aware original-curve winding. Original surfaces
+and root-valued restrictions stay unchanged. Shell pair enumeration includes
+adjacent faces and uses shared geometry/domain budgets. Reports preserve all
+unresolved product cells and the first unvisited pair address; an existing
+shared edge never silently excludes a possible extra contact. Raw incidence
+without qualified material regions cannot enter this search.
+
+All 40 selected B-rep source tests and all 643 NURBS library tests passed
+(`source-face-contact-regression.log.gz`, `source-domain-nurbs-regression.log.gz`).
+A transverse interior crossing is witnessed on two original faces. After one
+region is clipped at root-valued boundaries, the same chart crossing is proven
+outside the retained material and the complete pair search proves absence.
+Geometry/domain exhaustion preserves unresolved coverage. The qualified
+root-partitioned shell exercises adjacent pair enumeration and pending suffix.
+
+This stage searches interior contact and absence. Complete classification of
+allowed shared boundary contacts, tangencies, neighborhood embedding, material
+volume and fillet transitions/radius/tangency/walls remain open. General fillet
+WASM/UI and STEP admission are still outstanding.

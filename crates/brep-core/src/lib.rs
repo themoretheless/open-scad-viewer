@@ -1845,6 +1845,7 @@ pub mod source_contour_winding;
 pub mod source_world_wire;
 pub mod source_shared_edge;
 pub mod source_shell_incidence;
+pub mod source_face_contacts;
 
 pub mod trimmed_shell_recipe;
 

@@ -518,6 +518,24 @@ mod tests {
         let shell = r.shell.unwrap();
         assert_eq!(shell.regions().unwrap().len(), 4);
         assert!(shell.inspect_face_charts(4, 0).unwrap().all_injective);
+        let pairs = crate::source_face_contacts::inspect_shell(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 1,
+                cells: 2,
+                domain_cells: 2,
+                cells_per_pair: 1,
+                domain_cells_per_pair: 1,
+            },
+        )
+        .unwrap();
+        assert_eq!(pairs.total_pairs, 6);
+        assert_eq!(pairs.pairs.len(), 1);
+        assert_eq!(pairs.pairs[0].faces, [0, 1]);
+        assert_eq!(pairs.next_pair, Some([0, 2]));
+        assert!(!pairs.all_pairs_absence_proven);
+        assert!(!pairs.pairs[0].result.unresolved.is_empty());
         for (face, region) in shell.regions().unwrap().iter().enumerate() {
             assert_eq!(region.source_loop_indices(), &[0]);
             for (i, edge) in region.loops()[0].iter().enumerate() {

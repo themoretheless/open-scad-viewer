@@ -2,10 +2,11 @@
 //! Spatial separation or a complete outside-trim classification removes a cell. A section
 //! witness proves existence, never coverage of its surrounding intersection arc.
 use crate::{
-    Result, check,
+    check,
     surface::Surface,
     surface_contact::{self, Witness},
     surface_distance::rectangle_bounds,
+    Result,
 };
 use std::collections::VecDeque;
 
@@ -18,6 +19,53 @@ pub struct Report {
     /// Empty only after all parameter pairs have been excluded.
     pub unresolved: Vec<Cell>,
     pub absence_proven: bool,
+}
+/// Conservative complete-rectangle classification. Implementations must return
+/// Outside only when the entire rectangle misses their original material domain,
+/// and Inside only when it lies wholly inside. Search authority is conditional
+/// on this contract; source B-rep adapters use freshly qualified original loops.
+pub trait DomainClassifier {
+    fn classify_domain(
+        &self,
+        rectangle: [[f64; 2]; 2],
+        max_cells: usize,
+    ) -> Result<DomainClassification>;
+}
+pub struct DomainClassification {
+    pub location: crate::trim_domain::Location,
+    pub cells: usize,
+}
+impl DomainClassifier for crate::trim_domain::TrimDomain {
+    fn classify_domain(
+        &self,
+        rectangle: [[f64; 2]; 2],
+        max_cells: usize,
+    ) -> Result<DomainClassification> {
+        let r = self.classify(rectangle, max_cells)?;
+        Ok(DomainClassification {
+            location: r.location,
+            cells: r.cells,
+        })
+    }
+}
+/// Original-source classifiers can retain root-valued boundaries without
+/// manufacturing trimmed curves. Only complete classifications prune or admit.
+pub fn search_domains(
+    a: &Surface,
+    b: &Surface,
+    domains: [&dyn DomainClassifier; 2],
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<Report> {
+    check(
+        !(a.periodic_u || a.periodic_v || b.periodic_u || b.periodic_v),
+        "Periodic source domains require branch-aware classification",
+    )?;
+    check(
+        (1..=1_000_000).contains(&max_domain_cells),
+        "Bound original domain classification work",
+    )?;
+    search_impl(a, b, max_cells, Some(domains), max_domain_cells)
 }
 fn natural(s: &Surface) -> [[f64; 2]; 2] {
     [
@@ -48,13 +96,19 @@ pub fn search_trimmed(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(a, b, max_cells, Some(domains), max_domain_cells)
+    search_impl(
+        a,
+        b,
+        max_cells,
+        Some([domains[0], domains[1]]),
+        max_domain_cells,
+    )
 }
 fn search_impl(
     a: &Surface,
     b: &Surface,
     max_cells: usize,
-    domains: Option<[&crate::trim_domain::TrimDomain; 2]>,
+    domains: Option<[&dyn DomainClassifier; 2]>,
     max_domain_cells: usize,
 ) -> Result<Report> {
     a.validate()?;
@@ -79,7 +133,12 @@ fn search_impl(
             if *used == max_domain_cells {
                 return Ok(Location::Unresolved);
             }
-            let r = domains[i].classify(boxes[i], (max_domain_cells - *used).min(100_000))?;
+            let allowance = (max_domain_cells - *used).min(100_000);
+            let r = domains[i].classify_domain(boxes[i], allowance)?;
+            check(
+                r.cells <= allowance,
+                "Domain classifier exceeded its shared work allowance",
+            )?;
             *used += r.cells;
             if r.location == Location::Outside {
                 return Ok(Location::Outside);
@@ -278,10 +337,9 @@ mod tests {
         let r = search(&a, &b, 127).unwrap();
         assert!(!r.absence_proven);
         assert!(r.contact.is_none());
-        assert!(
-            r.unresolved
-                .iter()
-                .any(|c| c.iter().flatten().all(|d| d[0] <= 0.5 && d[1] >= 0.5))
-        );
+        assert!(r
+            .unresolved
+            .iter()
+            .any(|c| c.iter().flatten().all(|d| d[0] <= 0.5 && d[1] >= 0.5)));
     }
 }
