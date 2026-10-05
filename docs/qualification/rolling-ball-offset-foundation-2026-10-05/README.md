@@ -736,3 +736,18 @@ Different UV root equations, affine parameter remapping and reversed canonical
 partial domains still need independent equivalence proofs. No enclosure overlap,
 rounded root parameter or coordinate welding substitutes for these proofs.
 Body assembly, end transitions and interactive fillets remain outstanding.
+
+## Independently selected common source roots
+
+Shared restrictions no longer require identical root selectors when their
+original boundary/contact equations and roles match. A fresh one-box crossing
+certificate inside the intersection of both original unique-root selectors
+proves the same root belongs to both. Selector overlap alone does not admit
+identity. Empty/degenerate intersections or an unresolved fresh certificate
+refuse the restriction. The report counts these queries; at most two are
+performed per edge pair, separately from the shared exact composition budget.
+
+All 32 selected source tests passed (`source-shared-root-equivalence.log.gz`).
+The new case joins independently selected roots across two surfaces. Different
+UV equations, parameter remapping, body assembly and interactive operations
+remain outstanding.

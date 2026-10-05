@@ -22,6 +22,7 @@ impl SharedEdge {
 pub struct Report {
     pub edge: Option<SharedEdge>,
     pub work_used: u64,
+    pub root_checks: usize,
     pub reason: &'static str,
 }
 /// `world_reversed` relates canonical world traversal to each forward UV curve.
@@ -42,6 +43,7 @@ pub fn qualify(
     let mut out = Report {
         edge: None,
         work_used: 0,
+        root_checks: 0,
         reason: "source-restriction-identity-unproven",
     };
     let complete = uses.iter().all(|edge| {
@@ -52,7 +54,7 @@ pub fn qualify(
     if !complete {
         // Exact full-source identity uses normalized traversal. With identical
         // domains and no world reversal, original t is the canonical parameter.
-        // Root identity follows identical original equations and selector, not
+        // Root identity follows original equations and a fresh common-root proof, not
         // overlapping isolating intervals. Different UV equations need another
         // root-equivalence proof and remain unqualified here.
         if world_reversed != [false, false]
@@ -60,21 +62,47 @@ pub fn qualify(
         {
             return Ok(out);
         }
-        let same = |a: &Endpoint, b: &Endpoint| match (a, b) {
-            (Endpoint::Parameter(a), Endpoint::Parameter(b)) => a.to_bits() == b.to_bits(),
-            (
-                Endpoint::Crossing { point: a, role: ar },
-                Endpoint::Crossing { point: b, role: br },
-            ) => {
-                ar == br
-                    && a.boundary() == b.boundary()
-                    && a.contact() == b.contact()
-                    && a.selector() == b.selector()
+        for i in 0..2 {
+            let same = match (&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i]) {
+                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => a.to_bits() == b.to_bits(),
+                (
+                    Endpoint::Crossing { point: a, role: ar },
+                    Endpoint::Crossing { point: b, role: br },
+                ) => {
+                    if ar != br || a.boundary() != b.boundary() || a.contact() != b.contact() {
+                        false
+                    } else if a.selector() == b.selector() {
+                        true
+                    } else {
+                        let selector: [[f64; 2]; 2] = std::array::from_fn(|axis| {
+                            [
+                                a.selector()[axis][0].max(b.selector()[axis][0]),
+                                a.selector()[axis][1].min(b.selector()[axis][1]),
+                            ]
+                        });
+                        if selector.iter().any(|r| r[0] >= r[1]) {
+                            false
+                        } else {
+                            // A freshly certified root inside both unique-root
+                            // selectors is their common root. Overlap alone is
+                            // never an identity argument. At most two fresh
+                            // one-box queries are needed for this edge pair.
+                            out.root_checks += 1;
+                            nurbs_core::uv_curve_crossings::certify_box(
+                                a.boundary(),
+                                a.contact(),
+                                selector,
+                            )?
+                            .state
+                                == nurbs_core::uv_curve_crossings::State::Unique
+                        }
+                    }
+                }
+                _ => false,
+            };
+            if !same {
+                return Ok(out);
             }
-            _ => false,
-        };
-        if !(0..2).all(|i| same(&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i])) {
-            return Ok(out);
         }
     }
     let effective = [
@@ -186,6 +214,29 @@ mod tests {
             shared.edge.unwrap().uses()[0].definition(),
             cut_a.definition()
         );
+        let refined =
+            crate::source_contact_point::qualify(b.surface(), &p, &cutter, [[0.2, 0.8]; 2], 16)
+                .unwrap()
+                .point
+                .unwrap();
+        let refined = Fragment::new(
+            b.surface(),
+            &p,
+            Endpoint::Crossing {
+                point: refined,
+                role: crate::source_boundary_fragment::Role::Boundary,
+            },
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let independently_selected =
+            qualify(&c, [&cut_a, &refined], [false, false], 1_000_000).unwrap();
+        assert!(
+            independently_selected.edge.is_some(),
+            "{}",
+            independently_selected.reason
+        );
+        assert_eq!(independently_selected.root_checks, 1);
         let mut other = cutter.clone();
         other.control_points[0][0] += 1e-12;
         other.control_points[1][0] += 1e-12;
