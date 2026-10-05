@@ -489,6 +489,101 @@ pub fn partition_and_replace_path(
     Ok(out)
 }
 
+pub struct BoundaryCrossing {
+    pub loop_index: usize,
+    pub boundary_index: usize,
+    /// First parameter is the original boundary, second is the contact curve.
+    pub report: nurbs_core::uv_curve_crossings::Report,
+}
+pub struct FaceCrossings {
+    pub original: Report,
+    pub crossings: Vec<BoundaryCrossing>,
+    pub visited: usize,
+    pub complete: bool,
+    pub precision_proven: bool,
+}
+/// Search contact crossings against every original boundary of a freshly
+/// qualified source face. Shared root budget covers all boundaries and holes.
+/// This returns source-addressed enclosures; it does not choose rounded cuts.
+pub fn locate_contact_boundaries(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    contact: &Curve,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_cells: usize,
+    target_width: [f64; 2],
+) -> Result<FaceCrossings> {
+    use nurbs_core::uv_curve_crossings as crossings;
+    contact.validate()?;
+    if contact.control_points[0].len() != 2
+        || contact.periodic
+        || !(1..=100000).contains(&max_cells)
+        || !target_width.iter().all(|x| x.is_finite() && *x > 0.)
+    {
+        return Err(Error::new(
+            "BREP_FACE_RECIPE_CROSSINGS",
+            "Choose a nonperiodic UV contact and bounded positive crossing precision/work",
+        ));
+    }
+    for b in wires.iter().flatten() {
+        b.pcurve.validate()?;
+        if b.pcurve.periodic {
+            return Err(Error::new(
+                "BREP_FACE_RECIPE_CROSSINGS",
+                "Original boundary crossing search requires nonperiodic pcurves",
+            ));
+        }
+    }
+    let original = assemble(context, surface, wires, tolerance_uv, limits)?;
+    let mut out = FaceCrossings {
+        original,
+        crossings: vec![],
+        visited: 0,
+        complete: false,
+        precision_proven: false,
+    };
+    if out.original.face.is_none() {
+        return Ok(out);
+    }
+    out.complete = true;
+    out.precision_proven = true;
+    for (loop_index, wire) in wires.iter().enumerate() {
+        for (boundary_index, b) in wire.iter().enumerate() {
+            let report = if out.visited < max_cells {
+                crossings::isolate_refined(
+                    &b.pcurve,
+                    contact,
+                    max_cells - out.visited,
+                    target_width,
+                )?
+            } else {
+                crossings::Report {
+                    cells: vec![crossings::Cell {
+                        parameters: [b.pcurve.domain(), contact.domain()],
+                        root: None,
+                        state: crossings::State::Unresolved,
+                    }],
+                    visited: 0,
+                    complete: false,
+                    target_width: Some(target_width),
+                    precision_proven: false,
+                }
+            };
+            out.visited += report.visited;
+            out.complete &= report.complete;
+            out.precision_proven &= report.precision_proven;
+            out.crossings.push(BoundaryCrossing {
+                loop_index,
+                boundary_index,
+                report,
+            });
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -865,5 +960,53 @@ mod tests {
         )
         .unwrap();
         assert!(r.replacement.unwrap().replacement.unwrap().face.is_none());
+    }
+    #[test]
+    fn source_face_crossing_search_retains_original_addresses_and_shared_budget() {
+        let (surface, wires) = fixture();
+        let contact = Curve::from_polyline(vec![vec![-0.2, 0.3], vec![1.2, 0.3]]).unwrap();
+        let r = locate_contact_boundaries(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            &contact,
+            1e-8,
+            limits(),
+            10000,
+            [1e-7, 1e-7],
+        )
+        .unwrap();
+        assert!(r.complete && r.precision_proven);
+        assert_eq!(r.crossings.len(), 3);
+        let roots = r
+            .crossings
+            .iter()
+            .flat_map(|c| {
+                c.report
+                    .cells
+                    .iter()
+                    .filter_map(move |cell| cell.root.map(|root| (c.boundary_index, root)))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(roots.len(), 2);
+        assert!(roots.iter().any(|x| x.0 == 0));
+        assert!(roots.iter().any(|x| x.0 == 1));
+        let r = locate_contact_boundaries(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            &contact,
+            1e-8,
+            limits(),
+            1,
+            [1e-7, 1e-7],
+        )
+        .unwrap();
+        assert!(!r.complete && !r.precision_proven);
+        assert_eq!(r.visited, 1);
+        assert_eq!(r.crossings.len(), 3);
+        assert!(r.crossings[1..]
+            .iter()
+            .all(|c| c.report.visited == 0 && !c.report.complete));
     }
 }

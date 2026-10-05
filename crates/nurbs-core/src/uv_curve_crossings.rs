@@ -16,6 +16,9 @@ pub struct Report {
     pub cells: Vec<Cell>,
     pub visited: usize,
     pub complete: bool,
+    /// Requested widths use each original curve parameter, not normalized cells.
+    pub target_width: Option<[f64; 2]>,
+    pub precision_proven: bool,
 }
 fn point(c: &Curve, span: usize, t: f64) -> Result<Vec<I>> {
     let net = crate::curve_distance::restricted_controls(c, span, I::point(t))?;
@@ -96,6 +99,28 @@ fn classify(
 /// Search the complete original span product. Every unvisited cell is retained.
 /// Only strict Krawczyk inclusion plus contraction admits a unique crossing.
 pub fn isolate(a: &Curve, b: &Curve, max_cells: usize) -> Result<Report> {
+    isolate_impl(a, b, max_cells, None)
+}
+/// Tighten isolated roots under the same global work budget. Stopping refinement
+/// preserves its last valid root enclosure and marks unmet precision explicitly.
+pub fn isolate_refined(
+    a: &Curve,
+    b: &Curve,
+    max_cells: usize,
+    target_width: [f64; 2],
+) -> Result<Report> {
+    check(
+        target_width.iter().all(|x| x.is_finite() && *x > 0.),
+        "Requested root widths must be finite and positive",
+    )?;
+    isolate_impl(a, b, max_cells, Some(target_width))
+}
+fn isolate_impl(
+    a: &Curve,
+    b: &Curve,
+    max_cells: usize,
+    target_width: Option<[f64; 2]>,
+) -> Result<Report> {
     for c in [a, b] {
         c.validate()?;
         check(
@@ -136,9 +161,11 @@ pub fn isolate(a: &Curve, b: &Curve, max_cells: usize) -> Result<Report> {
         cells: vec![],
         visited: 0,
         complete: true,
+        target_width,
+        precision_proven: true,
     };
     while let Some((sa, sb, d, depth)) = queue.pop_front() {
-        let (state, root) = if out.visited == max_cells {
+        let (state, mut root) = if out.visited == max_cells {
             (State::Unresolved, None)
         } else {
             out.visited += 1;
@@ -157,6 +184,52 @@ pub fn isolate(a: &Curve, b: &Curve, max_cells: usize) -> Result<Report> {
                 continue;
             }
         }
+        if let (State::Unique, Some(target), Some(mut current)) = (state, target_width, root) {
+            let mut owner = d;
+            while (0..2).any(|i| (current[i][1] - current[i][0]).next_up() > target[i])
+                && out.visited < max_cells
+            {
+                let mut candidate = current;
+                for i in 0..2 {
+                    let pad = (current[i][1] - current[i][0]) * 0.5;
+                    candidate[i] = [
+                        (current[i][0] - pad).next_down().max(owner[i][0]),
+                        (current[i][1] + pad).next_up().min(owner[i][1]),
+                    ];
+                }
+                if (0..2).any(|i| candidate[i][0] >= candidate[i][1]) || candidate == owner {
+                    break;
+                }
+                out.visited += 1;
+                let (next, enclosure) = classify(a, b, sa, sb, candidate)?;
+                crate::numeric(
+                    next != State::Excluded,
+                    "Refinement excluded a previously certified crossing",
+                )?;
+                if let (State::Unique, Some(narrower)) = (next, enclosure) {
+                    let mut intersection = narrower;
+                    for i in 0..2 {
+                        intersection[i] = [
+                            current[i][0].max(narrower[i][0]),
+                            current[i][1].min(narrower[i][1]),
+                        ];
+                        crate::numeric(
+                            intersection[i][0] <= intersection[i][1],
+                            "Certified crossing enclosures became disjoint",
+                        )?;
+                    }
+                    if intersection == current {
+                        break;
+                    }
+                    current = intersection;
+                    owner = candidate;
+                } else {
+                    break;
+                }
+            }
+            root = Some(current);
+            out.precision_proven &= (0..2).all(|i| (current[i][1] - current[i][0]).next_up() <= target[i]);
+        }
         out.complete &= state != State::Unresolved;
         out.cells.push(Cell {
             parameters: d,
@@ -164,6 +237,7 @@ pub fn isolate(a: &Curve, b: &Curve, max_cells: usize) -> Result<Report> {
             state,
         });
     }
+    out.precision_proven &= out.complete;
     Ok(out)
 }
 #[cfg(test)]
@@ -226,5 +300,37 @@ mod tests {
         }
         let r = isolate(&a, &near, 4096).unwrap();
         assert!(r.cells.iter().all(|c| c.state != State::Unique));
+    }
+    #[test]
+    fn refinement_preserves_certified_root_when_requested_precision_cannot_be_reached() {
+        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
+        let b = Curve::from_polyline(vec![vec![0., 1.], vec![1., 0.]]).unwrap();
+        let r = isolate_refined(&a, &b, 1, [1e-30, 1e-30]).unwrap();
+        assert!(r.complete && !r.precision_proven);
+        assert_eq!(r.visited, 1);
+        assert_eq!(r.cells[0].state, State::Unique);
+        assert!(r.cells[0]
+            .root
+            .unwrap()
+            .iter()
+            .all(|x| x[0] <= 0.5 && x[1] >= 0.5));
+    }
+    #[test]
+    fn rational_crossing_refines_to_requested_original_parameter_widths() {
+        let a = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+            weights: vec![1., 0.5f64.sqrt(), 1.],
+            periodic: false,
+        };
+        let b = Curve::from_polyline(vec![vec![0., 0.3], vec![1., 0.3]]).unwrap();
+        let r = isolate_refined(&a, &b, 4096, [1e-8, 1e-8]).unwrap();
+        assert!(r.complete && r.precision_proven);
+        let roots = r.cells.iter().filter_map(|c| c.root).collect::<Vec<_>>();
+        assert_eq!(roots.len(), 1);
+        assert!(roots[0].iter().all(|x| x[1] - x[0] <= 1e-8));
+        let expected = (1_f64 - 0.3 * 0.3).sqrt();
+        assert!(roots[0][1][0] <= expected && expected <= roots[0][1][1]);
     }
 }

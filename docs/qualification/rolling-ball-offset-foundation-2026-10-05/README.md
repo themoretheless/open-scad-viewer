@@ -484,3 +484,33 @@ offset contact system against an original face boundary. Root intervals are
 not exactly representable split parameters or shared world vertices. Boundary
 ownership, original source references, world realization, closed-shell
 admission, WASM and interactive fillet integration remain outstanding.
+
+## Root refinement and original face-boundary addresses
+
+`uv_curve_crossings::isolate_refined` refines each already certified crossing
+under the same global budget as span-product search. Every smaller box is
+freshly checked against the original definitions. Refined enclosures intersect
+the prior enclosure; exclusion/disjointness contradicting a certified root
+is a numerical error. Work/conditioning stops retain the last valid enclosure.
+`precision_proven` additionally requires complete search and outward width
+bounds within both requested original parameter tolerances. It is distinct
+from root existence/uniqueness. No caller report is accepted as authority.
+
+`trimmed_face_recipe::locate_contact_boundaries` freshly qualifies the original
+face and searches a supplied UV contact against all original contour edges,
+including holes. Reports retain original loop/boundary addresses and original
+parameter enclosures. One shared root budget covers all boundaries; untouched
+boundaries after exhaustion retain full-domain unresolved boxes. Face audit
+limits remain a separate phase budget.
+
+Validation: 5 crossing/refinement tests and 8 B-rep face tests passed on the
+final sources. A rational crossing reaches requested parameter widths; an
+unattainable precision request preserves its certified root without claiming
+precision. Source face tests find two addressed original boundary roots and
+retain remaining boundaries when the shared budget is exhausted. Logs:
+`uv-crossings-refinement.log.gz`, `source-face-crossings.log.gz`.
+
+These are supplied curve crossings, not implicit offset-to-boundary roots.
+They do not authorize midpoint split parameters, rounded shared vertices,
+closed shells, WASM/UI fillets or general endpoint transitions. An exact source
+endpoint representation and contact/world alignment remain required.
