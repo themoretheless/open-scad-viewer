@@ -604,6 +604,120 @@ mod tests {
         assert!(audit.into_qualified().is_err());
     }
     #[test]
+    fn replaced_partial_corner_caps_sew_with_curved_wall_and_pass_volume_audit() {
+        use nurbs_core::curve::Curve;
+        let arc = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0.75], vec![1., 1.], vec![0.75, 1.]],
+            weights: vec![1., 0.5f64.sqrt(), 1.],
+            periodic: false,
+        };
+        let retained = [
+            vec![0.75, 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 0.75],
+        ];
+        let mut profile = vec![arc];
+        profile.extend(
+            retained
+                .windows(2)
+                .map(|w| Curve::from_polyline(w.to_vec()).unwrap()),
+        );
+        let (source, context, mut fragments, keys) =
+            from_source(crate::prism::extrude(&[profile], 0., 2.).unwrap());
+        assert_eq!(source.faces.len(), 7);
+        // The independent expanded cap has the original sharp corner and
+        // prepartitioned straight boundaries; replacement must remove it.
+        let points = [
+            vec![1., 0.75],
+            vec![1., 1.],
+            vec![0.75, 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+        ];
+        for face_index in [5, 6] {
+            let face = &source.faces[face_index];
+            let use0 = &source.loops[face.outer].coedges[0];
+            let contact = Boundary {
+                curve: source.edges[use0.edge].curve.clone(),
+                pcurve: use0.pcurve.clone(),
+                reversed: use0.reversed,
+            };
+            let z = if face_index == 5 { 0. } else { 2. };
+            let original = vec![
+                (0..points.len())
+                    .map(|i| {
+                        let pcurve = Curve::from_polyline(vec![
+                            points[i].clone(),
+                            points[(i + 1) % points.len()].clone(),
+                        ])
+                        .unwrap();
+                        let mut curve = pcurve.clone();
+                        for p in &mut curve.control_points {
+                            p.push(z);
+                        }
+                        Boundary {
+                            curve,
+                            pcurve,
+                            reversed: false,
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            ];
+            let replacement = trimmed_face_recipe::replace_boundary_arc(
+                &context,
+                &face.surface,
+                &original,
+                0,
+                0,
+                2,
+                &contact,
+                1e-8,
+                Limits {
+                    pairs: 10000,
+                    region_cells: 100000,
+                    domain_cells: 100000,
+                    agreement_cells: 100000,
+                },
+            )
+            .unwrap();
+            assert!(replacement.contour.as_ref().unwrap().region_subset_proven);
+            let report = replacement.replacement.unwrap();
+            fragments[face_index] = report.face.expect(report.reason);
+            assert_eq!(fragments[face_index].edges().len(), 5);
+        }
+        let placements = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, face)| Placement {
+                face,
+                reversed: source.shells[0].faces[i].reversed,
+                edge_keys: &keys[i],
+            })
+            .collect::<Vec<_>>();
+        let boundary = assemble(&context, &placements, &[&source]).unwrap();
+        assert_eq!(boundary.model().faces.len(), 7);
+        assert!(boundary.model().shells[0].closed);
+        let audit = boundary.audit_volume(1e-8, volume_limits()).unwrap();
+        let r = audit.report();
+        assert!(
+            r.proven,
+            "partial corner: exact={} joins={} trim={} charts={} pairs={} boundary={} volume={}",
+            r.boundary.agreement.all_equal,
+            r.boundary.agreement.all_joins_exact,
+            r.boundary.trim.all_valid,
+            r.boundary.intersections.faces.all_faces_injective,
+            r.boundary.intersections.pairs.all_pairs_classified,
+            r.boundary.proven,
+            r.proven
+        );
+        assert!(audit.into_qualified().is_ok());
+    }
+    #[test]
     fn rational_curved_closed_boundary_receives_full_volume_qualification() {
         use nurbs_core::curve::Curve;
         let arc = Curve {
