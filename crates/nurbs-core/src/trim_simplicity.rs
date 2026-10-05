@@ -155,22 +155,28 @@ fn adjacent_separated(a:&Curve,b:&Curve,join:&[f64])->bool {
                 &a.control_points[1],
             )
         };
-        let direction = [b_control[0] - a_control[0], b_control[1] - a_control[1]];
-        let sides = |c: &Curve, positive: bool| {
-            c.control_points
-                .iter()
-                .filter(|p| p.as_slice() != join)
-                .all(|p| {
+        let mut directions = vec![[b_control[0] - a_control[0], b_control[1] - a_control[1]]];
+        // Unequal adjacent edge lengths can put the raw control difference
+        // on the same side of both curves. Normalize only to propose another
+        // separating plane; outward signs below remain the proof.
+        let away = |p: &[f64]| {
+            let v = [p[0] - join[0], p[1] - join[1]];
+            let length = v[0].hypot(v[1]);
+            (length.is_finite() && length > 0.).then(|| [v[0] / length, v[1] / length])
+        };
+        if let (Some(a), Some(b)) = (away(a_control), away(b_control)) {
+            directions.push([b[0] - a[0], b[1] - a[1]]);
+        }
+        directions.into_iter().any(|direction| {
+            let sides = |c: &Curve, positive: bool| {
+                c.control_points.iter().filter(|p| p.as_slice() != join).all(|p| {
                     projection_delta(p, join, direction).is_some_and(|r| {
-                        if positive {
-                            r.lo > 0.
-                        } else {
-                            r.hi < 0.
-                        }
+                        if positive { r.lo > 0. } else { r.hi < 0. }
                     })
                 })
-        };
-        (sides(a, true) && sides(b, false)) || (sides(a, false) && sides(b, true))
+            };
+            (sides(a, true) && sides(b, false)) || (sides(a, false) && sides(b, true))
+        })
     }
 }
 pub fn inspect(curves:&[Curve],tolerance_uv:f64,max_pairs:usize,max_cells:usize)->Result<Report>{

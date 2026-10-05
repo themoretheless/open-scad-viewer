@@ -151,3 +151,5 @@ pub mod offset_envelope_fit;
 pub mod offset_contact_pcurve;
 
 pub mod offset_contact_trims;
+
+pub mod offset_face_loops;
