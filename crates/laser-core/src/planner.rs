@@ -1,6 +1,8 @@
 use math_core::{Error, Result};
+use planar_geometry::path_offset::{OffsetOptions, offset_closed_rings};
+use planar_geometry::tessellation::FillRule;
 
-use crate::{Bounds, MachineProfile, OperationKind, Plan, Summary};
+use crate::{Bounds, KerfMode, MachineProfile, OperationKind, PathOrder, Plan, Summary};
 
 pub(crate) const COORDINATE_RESOLUTION_MM: f64 = 0.001;
 const MIN_MACHINE_MM: f64 = 1.0;
@@ -9,8 +11,10 @@ const MIN_FEED_MM_MIN: f64 = 1.0;
 const MAX_FEED_MM_MIN: f64 = 100_000.0;
 const MAX_POWER: u32 = 100_000;
 const MAX_PASSES: u32 = 100;
+const MAX_KERF_MM: f64 = 20.0;
 const MAX_PATHS: usize = 100_000;
 const MAX_SEGMENTS: usize = 1_000_000;
+const MAX_ORDERED_PATHS: usize = 4_096;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PreparedPath {
@@ -68,9 +72,9 @@ pub(crate) fn prepare(plan: &Plan, require_laser_mode: bool) -> Result<PreparedP
         } else {
             1
         };
-        let mut paths = Vec::new();
-        for path in &operation.paths {
-            let prepared = prepare_path(path, &plan.machine)?;
+        let mut paths = prepare_operation_paths(operation, &plan.machine)?;
+        paths = order_paths(paths, operation.path_order, head)?;
+        for prepared in &paths {
             path_count = path_count.checked_add(1).ok_or_else(path_limit)?;
             if path_count > MAX_PATHS {
                 return Err(path_limit());
@@ -98,7 +102,6 @@ pub(crate) fn prepare(plan: &Plan, require_laser_mode: bool) -> Result<PreparedP
                     *prepared.points.last().expect("validated path")
                 };
             }
-            paths.push(prepared);
         }
         if !paths.is_empty() {
             operations.push(PreparedOperation {
@@ -180,6 +183,23 @@ fn validate_operation(
     machine: &MachineProfile,
     require_laser_mode: bool,
 ) -> Result<()> {
+    if !operation.kerf_mm.is_finite() || operation.kerf_mm < 0.0 || operation.kerf_mm > MAX_KERF_MM
+    {
+        return Err(invalid(
+            "LASER_INVALID_KERF",
+            "Operation kerf must be finite and within 0..20 mm",
+        ));
+    }
+    if operation.kerf_mm > 0.0
+        && operation.kerf_mode != KerfMode::Center
+        && (operation.kind != OperationKind::Line
+            || operation.paths.iter().any(|path| !path.closed))
+    {
+        return Err(invalid(
+            "LASER_KERF_REQUIRES_CLOSED_LINE",
+            "Kerf compensation requires a Line operation containing only closed paths",
+        ));
+    }
     if !require_laser_mode {
         return Ok(());
     }
@@ -210,6 +230,201 @@ fn validate_operation(
         ));
     }
     Ok(())
+}
+
+fn prepare_operation_paths(
+    operation: &crate::Operation,
+    machine: &MachineProfile,
+) -> Result<Vec<PreparedPath>> {
+    if operation.kerf_mm == 0.0 || operation.kerf_mode == KerfMode::Center {
+        return operation
+            .paths
+            .iter()
+            .map(|path| prepare_path(path, machine))
+            .collect();
+    }
+
+    let rings = operation
+        .paths
+        .iter()
+        .map(|path| path.points.clone())
+        .collect::<Vec<_>>();
+    let signed_distance = match operation.kerf_mode {
+        KerfMode::Center => unreachable!("center kerf returned above"),
+        KerfMode::Part => operation.kerf_mm / 2.0,
+        KerfMode::Cavity => -operation.kerf_mm / 2.0,
+    };
+    let offset = offset_closed_rings(
+        &rings,
+        &OffsetOptions {
+            distance: signed_distance,
+            // Laser contours are often imported without reliable winding.
+            // Even-odd makes geometric nesting, not authoring direction,
+            // determine which rings are holes.
+            fill_rule: FillRule::EvenOdd,
+            tolerance: COORDINATE_RESOLUTION_MM / 2.0,
+            segments: 32,
+            ..OffsetOptions::default()
+        },
+    )
+    .map_err(|error| {
+        Error::new(
+            "LASER_KERF_FAILED",
+            format!("Kerf compensation failed: {}", error.message),
+        )
+    })?;
+    offset
+        .into_iter()
+        .map(|points| {
+            prepare_path(
+                &crate::Path {
+                    points,
+                    closed: true,
+                },
+                machine,
+            )
+        })
+        .collect()
+}
+
+fn order_paths(
+    paths: Vec<PreparedPath>,
+    order: PathOrder,
+    start: [f64; 2],
+) -> Result<Vec<PreparedPath>> {
+    if order == PathOrder::Preserve || paths.len() < 2 {
+        return Ok(paths);
+    }
+    if paths.len() > MAX_ORDERED_PATHS {
+        return Err(invalid(
+            "LASER_OPTIMIZATION_LIMIT",
+            "Path ordering is limited to 4096 paths per operation",
+        ));
+    }
+
+    let depths = if matches!(order, PathOrder::InnerFirst | PathOrder::InnerFirstNearest) {
+        containment_depths(&paths)
+    } else {
+        vec![0; paths.len()]
+    };
+    let mut pending = paths
+        .into_iter()
+        .zip(depths)
+        .enumerate()
+        .collect::<Vec<_>>();
+
+    if order == PathOrder::InnerFirst {
+        pending.sort_by(|a, b| b.1.1.cmp(&a.1.1).then(a.0.cmp(&b.0)));
+        return Ok(pending.into_iter().map(|(_, (path, _))| path).collect());
+    }
+
+    let mut ordered = Vec::with_capacity(pending.len());
+    let mut head = start;
+    while !pending.is_empty() {
+        let target_depth = if order == PathOrder::InnerFirstNearest {
+            pending
+                .iter()
+                .map(|(_, (_, depth))| *depth)
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let selected = pending
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, (_, depth)))| {
+                order != PathOrder::InnerFirstNearest || *depth == target_depth
+            })
+            .min_by(
+                |(_, (original_a, (path_a, _))), (_, (original_b, (path_b, _)))| {
+                    path_start_distance(path_a, head)
+                        .total_cmp(&path_start_distance(path_b, head))
+                        .then(original_a.cmp(original_b))
+                },
+            )
+            .map(|(index, _)| index)
+            .expect("pending paths are non-empty");
+        let (_, (mut path, _)) = pending.remove(selected);
+        orient_path_from(&mut path, head);
+        head = if path.closed {
+            path.points[0]
+        } else {
+            *path.points.last().expect("validated path")
+        };
+        ordered.push(path);
+    }
+    Ok(ordered)
+}
+
+fn path_start_distance(path: &PreparedPath, head: [f64; 2]) -> f64 {
+    if path.closed {
+        path.points
+            .iter()
+            .map(|point| distance(head, *point))
+            .min_by(f64::total_cmp)
+            .unwrap_or(f64::INFINITY)
+    } else {
+        distance(head, path.points[0])
+            .min(distance(head, *path.points.last().expect("validated path")))
+    }
+}
+
+fn orient_path_from(path: &mut PreparedPath, head: [f64; 2]) {
+    if path.closed {
+        let nearest = path
+            .points
+            .iter()
+            .enumerate()
+            .min_by(|(index_a, point_a), (index_b, point_b)| {
+                distance(head, **point_a)
+                    .total_cmp(&distance(head, **point_b))
+                    .then(index_a.cmp(index_b))
+            })
+            .map(|(index, _)| index)
+            .unwrap_or(0);
+        path.points.rotate_left(nearest);
+    } else if distance(head, *path.points.last().expect("validated path"))
+        < distance(head, path.points[0])
+    {
+        path.points.reverse();
+    }
+}
+
+fn containment_depths(paths: &[PreparedPath]) -> Vec<usize> {
+    paths
+        .iter()
+        .enumerate()
+        .map(|(index, path)| {
+            if !path.closed {
+                return 0;
+            }
+            let sample = path.points[0];
+            paths
+                .iter()
+                .enumerate()
+                .filter(|(other_index, other)| {
+                    *other_index != index && other.closed && point_in_polygon(sample, &other.points)
+                })
+                .count()
+        })
+        .collect()
+}
+
+fn point_in_polygon(point: [f64; 2], polygon: &[[f64; 2]]) -> bool {
+    let mut inside = false;
+    let mut previous = *polygon.last().expect("validated closed path");
+    for &current in polygon {
+        if (current[1] > point[1]) != (previous[1] > point[1])
+            && point[0]
+                < (previous[0] - current[0]) * (point[1] - current[1]) / (previous[1] - current[1])
+                    + current[0]
+        {
+            inside = !inside;
+        }
+        previous = current;
+    }
+    inside
 }
 
 fn prepare_path(path: &crate::Path, machine: &MachineProfile) -> Result<PreparedPath> {

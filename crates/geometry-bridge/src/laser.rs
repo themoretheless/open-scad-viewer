@@ -1,5 +1,6 @@
 use laser_core::{
-    Bounds, MachineProfile, Operation, OperationKind, Path, Plan, PowerMode, Program, Summary,
+    Bounds, KerfMode, MachineProfile, Operation, OperationKind, Path, PathOrder, Plan, PowerMode,
+    Program, Summary,
 };
 use value_codec::{Value, json};
 
@@ -25,13 +26,17 @@ const OPERATION_FIELDS: &[&str] = &[
     "power",
     "passes",
     "airAssist",
+    "kerfMm",
+    "kerfMode",
+    "pathOrder",
     "paths",
 ];
 
 pub(crate) fn dispatch(value: &Value) -> Result<Value> {
     let plan = parse_plan(value)?;
     match value["op"].as_str().unwrap_or_default() {
-        "laser_preflight" => Ok(json!({"summary": summary_value(laser_core::preflight(&plan)?)})),
+        "laser_preflight" => preview_value(laser_core::preview(&plan)?),
+        "laser_frame_preview" => preview_value(laser_core::preview_frame(&plan)?),
         "laser_grbl" => program_value(
             "open-scad-viewer/laser-grbl 1",
             laser_core::generate_grbl(&plan)?,
@@ -42,6 +47,17 @@ pub(crate) fn dispatch(value: &Value) -> Result<Value> {
         ),
         _ => Err(input("Unknown laser operation")),
     }
+}
+
+fn preview_value(preview: laser_core::Preview) -> Result<Value> {
+    Ok(json!({
+        "summary": summary_value(preview.summary),
+        "operations": preview.operations.into_iter().map(|operation| json!({
+            "name": operation.name,
+            "kind": match operation.kind { OperationKind::Line => "line", OperationKind::Fill => "fill" },
+            "paths": operation.paths.into_iter().map(|path| json!({"points": path.points, "closed": path.closed})).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
+    }))
 }
 
 fn parse_plan(value: &Value) -> Result<Plan> {
@@ -91,6 +107,27 @@ fn parse_operation(value: &Value, index: usize) -> Result<Operation> {
         .enumerate()
         .map(|(path_index, path)| parse_path(path, index, path_index))
         .collect::<Result<Vec<_>>>()?;
+    let kerf_mode = match string(value, "kerfMode")? {
+        "center" => KerfMode::Center,
+        "part" => KerfMode::Part,
+        "cavity" => KerfMode::Cavity,
+        _ => {
+            return Err(input(format!(
+                "{label} kerfMode must be center, part or cavity"
+            )));
+        }
+    };
+    let path_order = match string(value, "pathOrder")? {
+        "preserve" => PathOrder::Preserve,
+        "nearest" => PathOrder::Nearest,
+        "inner-first" => PathOrder::InnerFirst,
+        "inner-first-nearest" => PathOrder::InnerFirstNearest,
+        _ => {
+            return Err(input(format!(
+                "{label} pathOrder must be preserve, nearest, inner-first or inner-first-nearest"
+            )));
+        }
+    };
     Ok(Operation {
         name: string(value, "name")?.to_owned(),
         kind,
@@ -99,6 +136,9 @@ fn parse_operation(value: &Value, index: usize) -> Result<Operation> {
         power: unsigned(value, "power")?,
         passes: unsigned(value, "passes")?,
         air_assist: boolean(value, "airAssist")?,
+        kerf_mm: number(value, "kerfMm")?,
+        kerf_mode,
+        path_order,
         paths,
     })
 }
@@ -206,6 +246,9 @@ mod tests {
                 "power": 250,
                 "passes": 2,
                 "airAssist": true,
+                "kerfMm": 0,
+                "kerfMode": "center",
+                "pathOrder": "preserve",
                 "paths": [{"points": [[10, 20], [30, 20], [30, 40]], "closed": true}],
             }],
         })
@@ -224,12 +267,21 @@ mod tests {
 
         let preflight = dispatch(&request("laser_preflight")).unwrap();
         assert_eq!(preflight["summary"], job["summary"]);
+        assert_eq!(
+            preflight["operations"][0]["paths"][0]["points"][0],
+            json!([10.0, 20.0])
+        );
 
         let mut frame_request = request("laser_frame");
         frame_request["machine"]["laserModeConfirmed"] = json!(false);
         frame_request["operations"][0]["power"] = json!(0);
         frame_request["operations"][0]["passes"] = json!(0);
         let frame = dispatch(&frame_request).unwrap();
+        let frame_preview = dispatch({
+            frame_request["op"] = json!("laser_frame_preview");
+            &frame_request
+        })
+        .unwrap();
         let gcode = frame["gcode"].as_str().unwrap();
         assert!(!gcode.contains("M3"));
         assert!(!gcode.contains("M4"));
@@ -238,6 +290,8 @@ mod tests {
         assert_eq!(frame["summary"]["operationCount"].as_u64(), Some(0));
         assert_eq!(frame["summary"]["pathCount"].as_u64(), Some(1));
         assert_eq!(frame["summary"]["segmentCount"].as_u64(), Some(5));
+        assert_eq!(frame_preview["summary"], frame["summary"]);
+        assert_eq!(frame_preview["operations"][0]["paths"][0]["closed"], true);
     }
 
     #[test]

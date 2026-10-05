@@ -41,6 +41,27 @@ pub enum OperationKind {
     Fill,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum KerfMode {
+    #[default]
+    Center,
+    /// Keep the material represented by the closed rings at nominal size:
+    /// outer boundaries grow and holes shrink by half the kerf.
+    Part,
+    /// Keep the removed cavity at nominal size: outer boundaries shrink and
+    /// holes grow by half the kerf.
+    Cavity,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PathOrder {
+    #[default]
+    Preserve,
+    Nearest,
+    InnerFirst,
+    InnerFirstNearest,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
     pub points: Vec<[f64; 2]>,
@@ -56,6 +77,9 @@ pub struct Operation {
     pub power: u32,
     pub passes: u32,
     pub air_assist: bool,
+    pub kerf_mm: f64,
+    pub kerf_mode: KerfMode,
+    pub path_order: PathOrder,
     pub paths: Vec<Path>,
 }
 
@@ -69,6 +93,9 @@ impl Default for Operation {
             power: 100,
             passes: 1,
             air_assist: false,
+            kerf_mm: 0.0,
+            kerf_mode: KerfMode::Center,
+            path_order: PathOrder::Preserve,
             paths: Vec::new(),
         }
     }
@@ -101,4 +128,17 @@ pub struct Summary {
 pub struct Program {
     pub gcode: String,
     pub summary: Summary,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreviewOperation {
+    pub name: String,
+    pub kind: OperationKind,
+    pub paths: Vec<Path>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Preview {
+    pub summary: Summary,
+    pub operations: Vec<PreviewOperation>,
 }

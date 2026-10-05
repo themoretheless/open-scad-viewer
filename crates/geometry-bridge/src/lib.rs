@@ -801,7 +801,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "mesh_gcode_job" => gcode::export_job(&v),
         "gcode_preview" => gcode::parse(&v),
         "gcode_parse" => gcode::inspect(&v),
-        "laser_preflight" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
+        "laser_preflight" | "laser_frame_preview" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {
