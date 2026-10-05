@@ -41,6 +41,7 @@ pub mod radial_bounds;
 pub mod ray_surface;
 pub mod normal_alignment;
 pub mod curve_surface_agreement;
+pub mod curve_surface_plane;
 mod curve_surface_composition;
 mod periodic_chart;
 pub mod trim_domain;

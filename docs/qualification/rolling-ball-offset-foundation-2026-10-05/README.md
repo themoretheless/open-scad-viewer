@@ -1089,3 +1089,50 @@ general parameter remapping, exact corner ownership, neighborhood embedding,
 material volume and fillet transition/radius/wall/STEP/WASM/UI admission remain
 open. Rational source identity is not an exact-circle assertion for the rounded
 binary weight used by these fixtures.
+
+## Nonlinear local root equivalence through an exact world plane
+
+`rational_bezier_composition_plane_identity` forms the plane normal and the
+homogeneous surface/pcurve plane numerator with exact expansion arithmetic.
+`curve_surface_plane::verify_algebraic` transports unchanged source definitions;
+its report proves formal plane identity only, without source chart membership
+or denominator positivity. Unsupported degrees/layouts and exhausted exact work
+remain inconclusive. No rounded plane coefficients or extracted crossing curve
+are introduced.
+
+`source_shared_edge::qualify_with_planes` independently checks both local
+crossing compositions against one supplied raw plane. Immutable SourcePoints
+provide actual in-chart crossing authority. The original canonical world curve
+must intersect that plane at at most one parameter: its plane restriction must
+be an affine function of one strictly monotone source coordinate, with other
+nonzero normal components multiplying exactly constant source coordinates.
+Normal components are exact anchor determinants. Fresh canonical main-curve
+composition and opposite traversal checks remain mandatory. Thus unrelated UV
+root equations can identify the same world parameter without equating selectors
+or rounding a root. Exact and source-driver budgets are recorded separately.
+
+`assemble_with_root_planes` and `assemble_regions_with_root_planes` recompute
+these gates under globally shared budgets. Raw plane inputs use unique pair/end
+addresses; malformed addresses and duplicate specifications are refused.
+Legacy assembly retains its existing behavior.
+
+All 50 selected B-rep source regressions, all 645 NURBS library tests and all
+24 exact-predicate tests passed (`source-plane-root-regression.log.gz`,
+`source-plane-composition-nurbs.log.gz`,
+`source-plane-composition-predicates.log.gz`). Fixtures cover a nonlinear UV
+arc on a planar cap and a different nonlinear cut on a nonplanar side, with an
+irrational canonical root, exact oblique plane identity and preserved source
+definitions. A closed five-face curved wedge with those split roots assembles
+and passes its complete ten-pair allowed-contact audit. Source plane displacement,
+canonical displacement, work exhaustion and absent driver budget refuse.
+A counterexample with two distinct world-plane roots refuses shared endpoint
+ownership even though both local crossing images lie exactly in the same plane.
+The kernel also tests changed rational weights, domain changes, reversal and a
+degenerate plane.
+
+Generic plane pullbacks with several varying coordinates, affine parameter
+remapping between different original curve intervals, multiple knot spans for
+formal composition, iterative retained-region cuts and new cap/corner ownership
+remain outstanding. These fixtures still partition complete rims; material
+volume, complete fillet transition/radius/wall/STEP and WASM/UI admission remain
+open.

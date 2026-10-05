@@ -239,6 +239,17 @@ mod tests {
         }
     }
     fn wedge() -> Shell {
+        let (regions, pairs) = wedge_regions(0.5_f64.sqrt());
+        let r = source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000).unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        r.shell.unwrap()
+    }
+    fn wedge_regions(weight: f64) -> (Vec<SourceRegion>, Vec<Pair>) {
+        let arc = |z, swapped, uv| {
+            let mut c = arc(z, swapped, uv);
+            c.weights[1] = weight;
+            c
+        };
         let bottom = plane(|u, v| vec![u, v, 0.]);
         let top = plane(|u, v| vec![v, u, 1.]);
         let rim = arc(0., false, false);
@@ -351,9 +362,7 @@ mod tests {
             "{} unpaired boundaries",
             unmatched.len()
         );
-        let r = source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000).unwrap();
-        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
-        r.shell.unwrap()
+        (regions, pairs)
     }
     fn curved_strip() -> (Vec<SourceRegion>, Vec<Pair>) {
         let base = arc(0., false, false);
@@ -599,6 +608,187 @@ mod tests {
                 .shell
                 .is_none()
         );
+    }
+    #[test]
+    fn closed_curved_wedge_owns_nonlinear_root_ends_through_recomputed_planes() {
+        use crate::source_boundary_fragment::Role;
+        use source_shell_incidence::RootPlanes;
+        let (mut regions, mut pairs) = wedge_regions(1.);
+        let index = pairs
+            .iter()
+            .position(|p| p.uses.iter().all(|a| [0, 2].contains(&a.face)))
+            .unwrap();
+        let old = pairs.remove(index);
+        let original = old.world.clone();
+        for address in old.uses {
+            let fragment = &regions[address.face].loops()[address.wire][address.edge];
+            let (cut, selector) = if address.face == 0 {
+                (
+                    Curve::from_polyline(vec![vec![0.5, 1.25], vec![0.5, -0.25]]).unwrap(),
+                    [[0.65, 0.8], [0.15, 0.3]],
+                )
+            } else {
+                (
+                    Curve {
+                        degree: 2,
+                        knots: vec![0., 0., 0., 1., 1., 1.],
+                        control_points: vec![
+                            vec![0.4375, -0.25],
+                            vec![0.8125, 0.5],
+                            vec![-1.0625, 1.25],
+                        ],
+                        weights: vec![1.; 3],
+                        periodic: false,
+                    },
+                    [[0.2, 0.4], [0.55, 0.75]],
+                )
+            };
+            let r = crate::source_contact_point::qualify(
+                fragment.surface(),
+                fragment.curve(),
+                &cut,
+                selector,
+                10000,
+            )
+            .unwrap();
+            assert!(
+                r.point.is_some(),
+                "nonlinear face {} {}",
+                address.face,
+                r.reason
+            );
+            regions[address.face] = regions[address.face]
+                .split_boundary(
+                    address.wire,
+                    address.edge,
+                    &r.point.unwrap(),
+                    Role::Boundary,
+                )
+                .unwrap();
+        }
+        for pair in &mut pairs {
+            for address in &mut pair.uses {
+                for split in old.uses {
+                    if address.face == split.face
+                        && address.wire == split.wire
+                        && address.edge > split.edge
+                    {
+                        address.edge += 1;
+                    }
+                }
+            }
+        }
+        let [a, b] = old.uses;
+        let first = pairs.len();
+        pairs.push(Pair {
+            uses: [
+                a,
+                Address {
+                    edge: b.edge + 1,
+                    ..b
+                },
+            ],
+            world: original.clone(),
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        pairs.push(Pair {
+            uses: [
+                Address {
+                    edge: a.edge + 1,
+                    ..a
+                },
+                b,
+            ],
+            world: original.clone(),
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        let plane = [[0.5, 0., 0.], [0.5, 1., 0.], [1.5, 0., 1.]];
+        let specs = [
+            RootPlanes {
+                pair: first,
+                planes: [None, Some(plane)],
+            },
+            RootPlanes {
+                pair: first + 1,
+                planes: [Some(plane), None],
+            },
+        ];
+        assert!(
+            source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000)
+                .unwrap()
+                .shell
+                .is_none()
+        );
+        let r = source_shell_incidence::assemble_regions_with_root_planes(
+            &regions,
+            &pairs,
+            &specs,
+            100_000_000,
+            10000,
+        )
+        .unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        assert!(r.driver_cells > 0 && r.driver_cells <= 10000);
+        let shell = r.shell.unwrap();
+        assert!(
+            shell
+                .edges()
+                .iter()
+                .filter(|e| e.world() == &original)
+                .count()
+                == 2
+        );
+        let audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 10,
+                cells: 10000,
+                domain_cells: 10000,
+                cells_per_pair: 1000,
+                domain_cells_per_pair: 1000,
+            },
+            100_000_000,
+            1000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert!(audit.all_pairs_qualified);
+        assert_eq!(audit.pairs.len(), 10);
+        assert!(audit
+            .pairs
+            .iter()
+            .any(|p| p.faces == [0, 2] && p.fiber.as_ref().is_some_and(|c| c.edges().len() == 2)));
+        assert!(source_shell_incidence::assemble_regions_with_root_planes(
+            &regions,
+            &pairs,
+            &specs,
+            100_000_000,
+            0
+        )
+        .unwrap()
+        .shell
+        .is_none());
+        assert!(source_shell_incidence::assemble_regions_with_root_planes(
+            &regions,
+            &pairs,
+            &[
+                RootPlanes {
+                    pair: first,
+                    planes: [None, Some(plane)]
+                },
+                RootPlanes {
+                    pair: first,
+                    planes: [None, Some(plane)]
+                }
+            ],
+            100_000_000,
+            10000
+        )
+        .is_err());
     }
     #[test]
     fn nonplanar_rational_rim_has_exact_pair_ownership_with_fresh_oblique_chart() {

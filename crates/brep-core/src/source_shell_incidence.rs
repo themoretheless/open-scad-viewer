@@ -18,6 +18,12 @@ pub struct Pair {
     pub world_reversed: [bool; 2],
     pub cutters: [Option<Curve>; 2],
 }
+/// Raw plane inputs, indexed by canonical pair and first-use endpoint.
+/// Assembly recomputes all plane/root identities; these are not certificates.
+pub struct RootPlanes {
+    pub pair: usize,
+    pub planes: [Option<[[f64; 3]; 3]>; 2],
+}
 pub struct Shell {
     faces: Vec<Vec<Wire>>,
     edges: Vec<SharedEdge>,
@@ -113,6 +119,7 @@ pub struct Report {
     pub shell: Option<Shell>,
     pub work_used: u64,
     pub root_checks: usize,
+    pub driver_cells: usize,
     pub uncertain_pair: Option<usize>,
     pub reason: &'static str,
 }
@@ -138,6 +145,15 @@ pub fn assemble_regions(
     pairs: &[Pair],
     max_work: u64,
 ) -> Result<Report> {
+    assemble_regions_with_root_planes(regions, pairs, &[], max_work, 0)
+}
+pub fn assemble_regions_with_root_planes(
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
     if regions.len() < 2 || regions.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
         return Err(error(
             "Choose bounded qualified regions and exact shell work",
@@ -147,7 +163,7 @@ pub fn assemble_regions(
         .iter()
         .map(|r| r.world_wires())
         .collect::<Result<Vec<_>>>()?;
-    let mut report = assemble(&faces, pairs, max_work)?;
+    let mut report = assemble_with_root_planes(&faces, pairs, planes, max_work, max_driver_cells)?;
     if let Some(shell) = report.shell.as_mut() {
         shell.regions = Some(regions.to_vec());
     }
@@ -156,7 +172,21 @@ pub fn assemble_regions(
 /// Recheck every canonical pair. Each directed use must appear exactly once.
 /// Source joins own local vertices; exact opposite pairs own cross-face vertices.
 pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Report> {
-    if faces.len() < 2 || faces.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
+    assemble_with_root_planes(faces, pairs, &[], max_work, 0)
+}
+pub fn assemble_with_root_planes(
+    faces: &[Vec<Wire>],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
+    if faces.len() < 2
+        || faces.len() > 4096
+        || max_work == 0
+        || max_work > 100_000_000
+        || max_driver_cells > 100000
+    {
         return Err(error("Choose bounded faces and exact shell work"));
     }
     let mut offsets = Vec::new();
@@ -181,6 +211,23 @@ pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Re
     }
     if pairs.len().checked_mul(2) != Some(total) {
         return Err(error("Every directed source edge requires one partner"));
+    }
+    let mut supplied = BTreeMap::new();
+    for spec in planes {
+        if spec.pair >= pairs.len()
+            || supplied.insert(spec.pair, spec.planes).is_some()
+            || spec
+                .planes
+                .iter()
+                .flatten()
+                .flatten()
+                .flatten()
+                .any(|v| !v.is_finite())
+        {
+            return Err(error(
+                "Plane inputs need unique valid pair addresses and finite anchors",
+            ));
+        }
     }
     let lookup = |a: Address| -> Result<usize> {
         let wire = faces
@@ -209,6 +256,7 @@ pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Re
         shell: None,
         work_used: 0,
         root_checks: 0,
+        driver_cells: 0,
         uncertain_pair: None,
         reason: "source-shell-pair-unqualified",
     };
@@ -222,15 +270,18 @@ pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Re
             return Ok(out);
         }
         let sources = p.uses.map(|a| &faces[a.face][a.wire].edges()[a.edge]);
-        let report = source_shared_edge::qualify_with_cutters(
+        let report = source_shared_edge::qualify_with_cutters_and_planes(
             &p.world,
             sources,
             p.world_reversed,
             [p.cutters[0].as_ref(), p.cutters[1].as_ref()],
+            supplied.get(&i).copied().unwrap_or([None, None]),
             max_work - out.work_used,
+            max_driver_cells - out.driver_cells,
         )?;
         out.work_used += report.work_used;
         out.root_checks += report.root_checks;
+        out.driver_cells += report.driver_cells;
         let Some(edge) = report.edge else {
             out.uncertain_pair = Some(i);
             out.reason = report.reason;
@@ -359,7 +410,9 @@ mod tests {
         let shell = report.shell.unwrap();
         assert_eq!(shell.edges().len(), 6);
         assert!(crate::source_allowed_contact::certify(&shell, [0, 1], 100_000_000, 2).is_err());
-        assert!(crate::source_fiber_contact::certify(&shell,[0,1],100_000_000,2,10000).is_err());
+        assert!(
+            crate::source_fiber_contact::certify(&shell, [0, 1], 100_000_000, 2, 10000).is_err()
+        );
         let owners: std::collections::BTreeSet<_> = shell
             .vertices()
             .iter()
@@ -534,34 +587,71 @@ mod tests {
         let mut fiber_pairs = 0;
         for a in 0..4 {
             for b in 0..4 {
-                if a == b { continue; }
-                let r = crate::source_fiber_contact::certify(&shell,[a,b],100_000_000,2,10000).unwrap();
+                if a == b {
+                    continue;
+                }
+                let r = crate::source_fiber_contact::certify(&shell, [a, b], 100_000_000, 2, 10000)
+                    .unwrap();
                 if let Some(c) = r.certificate {
                     fiber_pairs += 1;
-                    assert_eq!(c.faces(),[a,b]);
+                    assert_eq!(c.faces(), [a, b]);
                     assert!(!c.edges().is_empty());
-                    assert_eq!(c.regions()[1].loops().len(),regions[b].loops().len());
-                    assert_eq!(c.fiber().surface(),regions[b].loops()[0][0].surface());
+                    assert_eq!(c.regions()[1].loops().len(), regions[b].loops().len());
+                    assert_eq!(c.fiber().surface(), regions[b].loops()[0][0].surface());
                 }
             }
         }
         assert!(fiber_pairs > 0);
         let fiber_audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
-            &shell,1e-8,crate::face_contacts::Limits {pairs:6,cells:1,domain_cells:1,cells_per_pair:1,domain_cells_per_pair:1},
-            100_000_000,128,10000).unwrap();
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 6,
+                cells: 1,
+                domain_cells: 1,
+                cells_per_pair: 1,
+                domain_cells_per_pair: 1,
+            },
+            100_000_000,
+            128,
+            10000,
+        )
+        .unwrap();
         assert!(fiber_audit.all_pairs_qualified);
-        assert_eq!(fiber_audit.pairs.len(),6);
-        assert!(fiber_audit.pairs.iter().any(|p|p.fiber.is_some()));
-        assert_eq!(fiber_audit.cells,0);
+        assert_eq!(fiber_audit.pairs.len(), 6);
+        assert!(fiber_audit.pairs.iter().any(|p| p.fiber.is_some()));
+        assert_eq!(fiber_audit.cells, 0);
         let exhausted = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
-            &shell,1e-8,crate::face_contacts::Limits {pairs:6,cells:1,domain_cells:1,cells_per_pair:1,domain_cells_per_pair:1},
-            1,128,10000).unwrap();
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 6,
+                cells: 1,
+                domain_cells: 1,
+                cells_per_pair: 1,
+                domain_cells_per_pair: 1,
+            },
+            1,
+            128,
+            10000,
+        )
+        .unwrap();
         assert!(!exhausted.all_pairs_qualified);
-        assert!(exhausted.pairs.iter().all(|p|p.fiber.is_none()));
+        assert!(exhausted.pairs.iter().all(|p| p.fiber.is_none()));
         assert!(exhausted.pairs[0].result.is_some());
 
-        assert!(crate::source_fiber_contact::certify(&shell,[0,1],1,2,100).unwrap().certificate.is_none());
-        assert!(crate::source_fiber_contact::certify(&shell,[0,1],100_000_000,1,100).unwrap().certificate.is_none());
+        assert!(
+            crate::source_fiber_contact::certify(&shell, [0, 1], 1, 2, 100)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
+            crate::source_fiber_contact::certify(&shell, [0, 1], 100_000_000, 1, 100)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
         let allowed = crate::source_face_contacts::inspect_shell_with_allowed(
             &shell,
             1e-8,
