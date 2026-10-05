@@ -1841,6 +1841,7 @@ pub mod trimmed_face_recipe;
 pub mod source_contact_point;
 pub mod source_boundary_fragment;
 pub mod source_contour_proposal;
+pub mod source_contour_winding;
 
 pub mod trimmed_shell_recipe;
 

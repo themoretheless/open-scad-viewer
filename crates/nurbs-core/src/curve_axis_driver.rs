@@ -1,10 +1,16 @@
-//! Strict interval monotonicity of one original clamped pcurve coordinate.
+//! Strict monotonicity of one original clamped pcurve coordinate.
 //! Cell derivatives are normalized to each cell; only their signs are combined.
 use crate::{check, curve::Curve, Result};
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Method {
+    IntervalDerivative,
+    OrderedRationalBezier,
+}
 pub struct Cell {
     pub parameter: [f64; 2],
     pub normalized_derivative: Option<[f64; 2]>,
     pub admitted: bool,
+    pub method: Method,
 }
 pub struct Report {
     pub cells: Vec<Cell>,
@@ -47,6 +53,31 @@ pub fn certify(curve: &Curve, axis: usize, max_cells: usize) -> Result<Report> {
         increasing,
         monotonic_proven: false,
     };
+    // Positive rational Bernstein basis. For 0<x<1, the derivative
+    // numerator is the sum over i<j of (j-i)*wi*wj*(Pj-Pi)*Bi*Bj
+    // divided by x*(1-x). Ordered poles and distinct end coordinates
+    // therefore prove strict interior monotonicity, even if an endpoint
+    // derivative vanishes. This is not an inverse regularity certificate.
+    if curve.control_points.len() == curve.degree + 1
+        && start != end
+        && curve.control_points.windows(2).all(|p| {
+            if increasing {
+                p[0][axis] <= p[1][axis]
+            } else {
+                p[0][axis] >= p[1][axis]
+            }
+        })
+    {
+        out.visited = 1;
+        out.monotonic_proven = true;
+        out.cells.push(Cell {
+            parameter: d,
+            normalized_derivative: None,
+            admitted: true,
+            method: Method::OrderedRationalBezier,
+        });
+        return Ok(out);
+    }
     let mut queue = vec![];
     for span in (curve.degree..curve.control_points.len()).rev() {
         let interval = [curve.knots[span], curve.knots[span + 1]];
@@ -60,6 +91,7 @@ pub fn certify(curve: &Curve, axis: usize, max_cells: usize) -> Result<Report> {
                 parameter,
                 normalized_derivative: None,
                 admitted: false,
+                method: Method::IntervalDerivative,
             });
             continue;
         }
@@ -84,6 +116,7 @@ pub fn certify(curve: &Curve, axis: usize, max_cells: usize) -> Result<Report> {
                 parameter,
                 normalized_derivative: Some([derivative.lo, derivative.hi]),
                 admitted,
+                method: Method::IntervalDerivative,
             });
         }
     }
@@ -114,5 +147,25 @@ mod tests {
             assert_eq!(p[0].parameter[1], p[1].parameter[0]);
         }
         assert!(r.visited <= 31);
+    }
+    #[test]
+    fn ordered_rational_bezier_allows_zero_endpoint_derivative_without_claiming_regular_inverse() {
+        let mut c = Curve {
+            degree: 2,
+            knots: vec![2., 2., 2., 8., 8., 8.],
+            control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+            weights: vec![1., 0.5f64.sqrt(), 1.],
+            periodic: false,
+        };
+        for axis in 0..2 {
+            let r = certify(&c, axis, 1).unwrap();
+            assert!(r.monotonic_proven);
+            assert_eq!(r.cells[0].method, Method::OrderedRationalBezier);
+            assert!(r.cells[0].normalized_derivative.is_none());
+        }
+        c.control_points[1][0] = 1.2;
+        assert!(!certify(&c, 0, 1).unwrap().monotonic_proven);
+        c.control_points = vec![vec![0., 0.], vec![0., 1.], vec![0., 2.]];
+        assert!(!certify(&c, 0, 1).unwrap().monotonic_proven);
     }
 }

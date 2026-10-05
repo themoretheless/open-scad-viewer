@@ -559,6 +559,139 @@ pub fn qualify_linear_region(
     Ok(out)
 }
 
+pub struct CurvedHole {
+    pub source_loop: usize,
+    pub classification: crate::source_contour_winding::Report,
+}
+pub struct CurvedRegion {
+    pub interior: InteriorContact,
+    pub holes: Vec<CurvedHole>,
+    pub winding_cells: usize,
+    pub removed_holes: Vec<usize>,
+    pub region: Option<SourceRegion>,
+    pub reason: &'static str,
+}
+/// Qualify a source contact by Jordan arc replacement and original-fragment
+/// winding, without substituting a line or a rounded curve partition.
+/// Complete simplicity/inside/no-extra-crossing proofs precede hole queries.
+pub fn qualify_curved_region(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    contact: &Curve,
+    loop_index: usize,
+    start_edge: usize,
+    end_edge: usize,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_cells: usize,
+    target_width: [f64; 2],
+    max_point_checks: usize,
+    max_mapping_cells: usize,
+    driver_axis: usize,
+    max_driver_cells: usize,
+    max_membership_cells: usize,
+    max_winding_cells: usize,
+) -> Result<CurvedRegion> {
+    use nurbs_core::{
+        interval_eval::{self, Interval as I},
+        trim_domain::Location,
+    };
+    if !(1..=100000).contains(&max_winding_cells) {
+        return Err(Error::new(
+            "BREP_CURVED_REGION_WORK",
+            "Bound source contour winding work",
+        ));
+    }
+    let interior = qualify_interior_contact(
+        context,
+        surface,
+        wires,
+        contact,
+        loop_index,
+        start_edge,
+        end_edge,
+        tolerance_uv,
+        limits,
+        max_cells,
+        target_width,
+        max_point_checks,
+        max_mapping_cells,
+        driver_axis,
+        max_driver_cells,
+        max_membership_cells,
+    )?;
+    let mut out = CurvedRegion {
+        interior,
+        holes: vec![],
+        winding_cells: 0,
+        removed_holes: vec![],
+        region: None,
+        reason: "source-contact-interior-unqualified",
+    };
+    if !out.interior.contact_inside_proven {
+        return Ok(out);
+    }
+    if loop_index != 0 {
+        out.reason = "source-hole-boundary-clipping-unqualified";
+        return Ok(out);
+    }
+    let loops = out.interior.proposal.candidate_loops.as_ref().unwrap();
+    let mut retained = vec![0];
+    for i in 1..loops.len() {
+        if out.winding_cells == max_winding_cells {
+            out.reason = "source-hole-winding-work-limit";
+            return Ok(out);
+        }
+        let c = &wires[i][0].pcurve;
+        let d = c.domain();
+        let query = if c.knots[..=c.degree].iter().all(|&k| k == d[0]) {
+            [[c.control_points[0][0]; 2], [c.control_points[0][1]; 2]]
+        } else {
+            let p = interval_eval::evaluate_interval(c, I::point(d[0]))?;
+            [[p[0].lo, p[0].hi], [p[1].lo, p[1].hi]]
+        };
+        let classification = crate::source_contour_winding::classify(
+            std::slice::from_ref(&loops[0]),
+            query,
+            tolerance_uv,
+            max_winding_cells - out.winding_cells,
+        )?;
+        out.winding_cells += classification.cells;
+        let location = classification.location;
+        out.holes.push(CurvedHole {
+            source_loop: i,
+            classification,
+        });
+        match location {
+            Location::Inside => retained.push(i),
+            Location::Outside => out.removed_holes.push(i),
+            Location::Unresolved => {
+                out.reason = "source-hole-winding-unproven";
+                return Ok(out);
+            }
+        }
+    }
+    // The original outer Jordan curve and simple interior crosscut bound two
+    // subregions. The retained original arc fixes the selected subregion and
+    // orientation. Complete original boundary search proves each old hole
+    // disjoint from the crosscut; one certified boundary witness fixes its side.
+    let qualified = retained
+        .iter()
+        .map(|&i| loops[i].clone())
+        .collect::<Vec<_>>();
+    out.region = Some(SourceRegion {
+        loops: qualified.clone(),
+        source_loop_indices: retained.clone(),
+    });
+    out.interior.proposal.candidate_loops = Some(qualified);
+    out.interior.proposal.candidate_source_loops = Some(retained);
+    out.interior.proposal.reason = "source-curved-contour-region-qualified";
+    out.interior.region_subset_proven = true;
+    out.reason = "source-curved-material-region-qualified";
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -937,6 +1070,104 @@ mod tests {
         )
         .unwrap();
         assert!(vertical.region.is_some() && vertical.interior.region_subset_proven);
+
+        let curved = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![-0.2, 0.25], vec![0.5, 0.3], vec![1.2, 0.6]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let curved_region = qualify_curved_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
+            &curved,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert!(
+            curved_region.region.is_some(),
+            "{} / {}",
+            curved_region.reason,
+            curved_region.interior.reason
+        );
+        assert_eq!(curved_region.removed_holes, vec![2]);
+        assert_eq!(
+            curved_region.region.as_ref().unwrap().source_loop_indices(),
+            &[0, 1]
+        );
+        assert_eq!(
+            curved_region.region.as_ref().unwrap().loops()[0][0].curve(),
+            &curved
+        );
+
+        let mut rational = curved.clone();
+        rational.weights[1] = 0.7;
+        let rational_region = qualify_curved_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
+            &rational,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert!(
+            rational_region.region.is_some(),
+            "{} / {}",
+            rational_region.reason,
+            rational_region.interior.reason
+        );
+        assert_eq!(rational_region.removed_holes, vec![2]);
+        assert_eq!(
+            rational_region.region.as_ref().unwrap().loops()[0][0].curve(),
+            &rational
+        );
+        let stopped_curved = qualify_curved_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
+            &curved,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1,
+        )
+        .unwrap();
+        assert!(stopped_curved.region.is_none() && !stopped_curved.interior.region_subset_proven);
         let stopped = propose(
             &ToleranceContext::default_valid(),
             &s,

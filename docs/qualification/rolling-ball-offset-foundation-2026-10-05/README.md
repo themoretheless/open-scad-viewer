@@ -631,3 +631,41 @@ source-contract refusal and shared control-budget exhaustion.
 General curved contact region proofs, partial rational side bounds near root
 ends, cut holes, world embedding/exact edge realization, shell/volume admission,
 implicit offset endpoint roots and WASM/UI fillets remain outstanding.
+
+## Curved original-source regions and root-aware winding
+
+`qualify_curved_region` now qualifies a simple contact crosscut of the original
+outer UV loop after fresh source-face, complete boundary-crossing and interior
+contact checks. Original polynomial and nonuniform rational contact definitions
+are retained. The resulting Jordan region preserves the original outer
+orientation. Each disjoint original hole is classified against the new outer
+loop; retained holes keep their original definitions and loop indices, while
+wholly discarded holes are removed. The proposal payload and lineage map are
+updated together before region containment is admitted.
+
+`source_contour_winding` uses original curve interval images and root-valued
+endpoints. Root caps, adaptive middle cells and explicit endpoint join homotopies
+must all stay separated from the complete inflated query rectangle. Chords are
+winding witnesses inside these convex boxes, never replacement geometry.
+Unresolved root caps, boundary bands and shared work-budget exhaustion refuse
+classification and retain the uncertain fragment address.
+
+The coordinate driver additionally proves monotonicity of a single clamped
+positive rational Bezier with weakly ordered Cartesian poles and distinct
+endpoints. This permits zero endpoint derivatives; it does not prove a regular
+inverse or replace independent root Jacobian gates. Fragment chart membership
+can use independently qualified coordinate monotonicity, with a bounded 4096
+visits per required axis. Natural endpoint membership uses the actual last
+control point, including nonlinear curves.
+
+Validation on final sources: 29 selected B-rep source tests, all 643 NURBS library
+tests and 5 original-edge support tests passed. Logs: respectively
+`curved-source-region-final.log.gz`, `curved-region-nurbs-regression.log.gz` and
+`curved-driver-supports.log.gz`. Cases include rational quarter-circle winding,
+polynomial and nonuniform rational crosscuts, retained/discarded holes, budget
+refusal and nonlinear endpoint chart rejection.
+
+This stage qualifies source UV material regions only. Cut-hole boundaries,
+non-monotone general contact simplicity, exact world-edge and vertex realization,
+3D embedding, end transitions, shell/volume admission and WASM/UI fillets remain
+outstanding.

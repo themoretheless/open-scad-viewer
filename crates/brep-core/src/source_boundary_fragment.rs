@@ -124,8 +124,17 @@ impl Fragment {
                         point.uv_box()[i][0] >= chart[i][0] && point.uv_box()[i][1] <= chart[i][1]
                     })),
                     Endpoint::Parameter(t) => {
-                        if *t == d[0] || *t == d[1] {
-                            let p = &curve.control_points[usize::from(*t == d[1])];
+                        let n = curve.control_points.len();
+                        let exact = if *t == d[0]
+                            && curve.knots[..=curve.degree].iter().all(|&k| k == *t)
+                        {
+                            Some(&curve.control_points[0])
+                        } else if *t == d[1] && curve.knots[n..].iter().all(|&k| k == *t) {
+                            Some(&curve.control_points[n - 1])
+                        } else {
+                            None
+                        };
+                        if let Some(p) = exact {
                             return Ok((0..2).all(|i| p[i] >= chart[i][0] && p[i] <= chart[i][1]));
                         }
                         let p = nurbs_core::interval_eval::evaluate_interval(
@@ -139,7 +148,25 @@ impl Fragment {
             // Positive rational linear Bezier restriction traces the segment
             // between its exact endpoints. The natural chart rectangle is convex.
             let line_inside = single_line && endpoint_inside(&start)? && endpoint_inside(&end)?;
-            if !line_inside {
+            let endpoints_in_chart = endpoint_inside(&start)? && endpoint_inside(&end)?;
+            let mut monotone_axes = endpoints_in_chart;
+            if monotone_axes {
+                for axis in 0..2 {
+                    if curve
+                        .control_points
+                        .iter()
+                        .all(|p| p[axis] >= chart[axis][0] && p[axis] <= chart[axis][1])
+                    {
+                        continue;
+                    }
+                    let driver = nurbs_core::curve_axis_driver::certify(curve, axis, 4096)?;
+                    if !driver.monotonic_proven {
+                        monotone_axes = false;
+                        break;
+                    }
+                }
+            }
+            if !line_inside && !monotone_axes {
                 let lo = parameter_bounds[0][0].min(parameter_bounds[1][0]);
                 let hi = parameter_bounds[0][1].max(parameter_bounds[1][1]);
                 let image = nurbs_core::interval_eval::evaluate_interval(
@@ -379,6 +406,18 @@ mod tests {
         };
         assert!(Fragment::new(&s, &c, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).is_err());
         let c = Curve::from_polyline(vec![vec![-0.2, 0.3], vec![1.2, 0.3]]).unwrap();
+        assert!(Fragment::new(&s, &c, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).is_err());
+    }
+    #[test]
+    fn nonlinear_endpoint_chart_membership_uses_the_actual_last_control() {
+        let (s, _, _, _) = fixture();
+        let c = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0.2, 0.5], vec![0.5, 0.5], vec![1.2, 0.5]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
         assert!(Fragment::new(&s, &c, Endpoint::Parameter(0.), Endpoint::Parameter(1.)).is_err());
     }
 }
