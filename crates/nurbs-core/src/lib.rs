@@ -159,3 +159,5 @@ pub mod offset_patch_boundary;
 pub mod curve_partition_agreement;
 
 pub mod boundary_partition;
+
+pub mod contact_normal_agreement;
