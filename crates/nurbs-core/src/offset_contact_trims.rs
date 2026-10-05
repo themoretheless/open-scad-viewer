@@ -243,6 +243,27 @@ pub struct TangentReport {
     pub contact_curves_and_tangent_planes_proven: bool,
     pub reason: &'static str,
 }
+impl TangentReport {
+    pub fn to_value(&self) -> value_codec::Value {
+        use value_codec::json;
+        let tangents=self.tangent_planes.iter().map(|r| {
+            let positions=r.positions.iter().map(|p|json!({"status":match p.status {
+                agreement::Status::WithinTolerance=>"within-tolerance",agreement::Status::Mismatch=>"mismatch",agreement::Status::Unresolved=>"unresolved"},
+                "cells":p.cells,"witnessParameter":p.witness,"witnessDistanceMm":p.witness_distance})).collect::<Vec<_>>();
+            let cells=r.cells.iter().map(|c|json!({"interval":c.interval,"aligned":c.normals.as_ref().and_then(|n|n.aligned),
+                "sineSquaredInterval":c.normals.as_ref().and_then(|n|n.sine_squared_interval),
+                "normalComponents":c.normals.as_ref().map(|n|n.normal_components),
+                "normalSpans":c.normals.as_ref().map(|n|n.spans),"reason":c.normals.as_ref().map(|n|n.reason)})).collect::<Vec<_>>();
+            json!({"positions":positions,"cells":cells,"visitedCells":r.visited,"normalSpanVisits":r.spans,
+                "positionsProven":r.positions_proven,"tangentPlanesProven":r.tangent_planes_proven})
+        }).collect::<Vec<_>>();
+        json!({"method":"interval-offset-contact-qualification","scope":"original-contact-branch-and-tangent-planes",
+            "contacts":self.contacts.to_value(),"tangentPlanes":tangents,
+            "contactCurvesAndTangentPlanesProven":self.contact_curves_and_tangent_planes_proven,"reason":self.reason,
+            "wholeCurveComplete":false,"replacementFaceTrimsProven":false,"stitchedTopologyProven":false,
+            "radiusToleranceProven":false,"globalG1Proven":false,"embeddingProven":false,"topologyAuthority":false})
+    }
+}
 /// Fresh fit, original UV branch/trim and contact-angle checks on one snapshot.
 /// This admits contact geometry only, never a replacement face or fillet solid.
 pub fn certify_with_tangency(

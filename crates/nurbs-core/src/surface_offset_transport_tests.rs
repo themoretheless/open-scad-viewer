@@ -255,3 +255,53 @@ fn finite_envelope_transport_binds_candidate_and_complete_partition() {
     assert_eq!(r["proposalSections"],json!(0));assert_eq!(r["qualification"]["finiteNurbsPatchProven"],json!(false));
     assert_eq!(r["qualification"]["partition"][0]["leaf"],json!(0));
 }
+
+#[test]
+fn contact_qualification_delivery_binds_snapshot_and_retains_angular_work_stops() {
+    let a = plane();
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            let z = p[1];
+            p[1] = 0.5;
+            p[2] = z;
+        }
+    }
+    let candidate = crate::offset_envelope_fit::propose(
+        [&a, &b], [0.2, 0.2], 0, [0.35, 0.39], [0.25, 0.35],
+        [[0.30, 0.44], [0.15, 0.25]], 2,
+    ).unwrap().unwrap();
+    let pc = crate::offset_contact_pcurve::propose(
+        [&a, &b], [0.2, 0.2], 0, [0.35, 0.39], [0.25, 0.35],
+        [[0.30, 0.44], [0.15, 0.25]], 2, 3,
+    ).unwrap().unwrap();
+    let points = [vec![0., 0.], vec![1., 0.], vec![1., 1.], vec![0., 1.]];
+    let loops = vec![(0..4).map(|i| crate::curve::Curve::from_polyline(
+        vec![points[i].clone(), points[(i+1)%4].clone()]).unwrap()).collect::<Vec<_>>()];
+    let request = json!({"op":"surface_offset_contact_qualification","a":a,"b":b,"candidate":candidate,
+        "sourcePcurves":pc,"firstLoops":loops,"secondLoops":loops,"distances":[0.2,0.2],
+        "fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],"secondDomain":[[0.30,0.44],[0.15,0.25]],
+        "maxSpans":2,"toleranceMm":1e-3,"toleranceUv":1e-6,"maxFitCells":511,"maxUvCells":511,
+        "maxAgreementCells":511,"rootRefinements":3,"maxPairs":1000,"maxTrimCells":10000,"maxDomainCells":10000,
+        "maxSineSquared":1e-10,"maxTangentPositionCells":10000,"maxNormalCells":1000,"maxNormalSpans":10000});
+    let result = dispatch(request.clone()).unwrap();
+    assert_eq!(result["request"], request);
+    assert_eq!(result["candidateSurface"], request["candidate"]);
+    let q = &result["qualification"];
+    assert_eq!(q["contactCurvesAndTangentPlanesProven"], json!(true));
+    assert_eq!(q["tangentPlanes"].as_array().unwrap().len(), 2);
+    for gate in ["wholeCurveComplete", "replacementFaceTrimsProven", "stitchedTopologyProven",
+        "radiusToleranceProven", "globalG1Proven", "embeddingProven", "topologyAuthority"] {
+        assert_eq!(q[gate], json!(false));
+    }
+    let mut stopped = request.clone();
+    stopped["maxNormalSpans"] = json!(1);
+    let result = dispatch(stopped).unwrap();
+    assert_eq!(result["qualification"]["contacts"]["contactTrimCurvesProven"], json!(true));
+    assert_eq!(result["qualification"]["contactCurvesAndTangentPlanesProven"], json!(false));
+    assert_eq!(result["qualification"]["tangentPlanes"][0]["cells"][0]["interval"], json!([0.,1.]));
+    let mut malformed = request;
+    malformed["maxFitCells"] = json!(1);
+    malformed["sourcePcurves"][1]["weights"][0] = json!(-1.);
+    assert!(dispatch(malformed).is_err());
+}

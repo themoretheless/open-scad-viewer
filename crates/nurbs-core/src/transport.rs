@@ -798,6 +798,22 @@ pub fn dispatch(v: Value) -> Result<Value> {
             "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
         );
     }
+    if op == "surface_offset_contact_qualification" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        let candidate: Surface = field(&v,"candidate")?;
+        let pcurves: [crate::curve::Curve;2] = field(&v,"sourcePcurves")?;
+        let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;
+        let second_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"secondLoops")?;
+        let report=crate::offset_contact_trims::certify_with_tangency(&candidate,[&pcurves[0],&pcurves[1]],[&a,&b],[&first_loops,&second_loops],
+            field(&v,"distances")?,field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,field(&v,"secondDomain")?,field(&v,"maxSpans")?,
+            field(&v,"toleranceMm")?,field(&v,"toleranceUv")?,crate::offset_contact_trims::Limits {
+                fit_cells:field(&v,"maxFitCells")?,uv_cells:field(&v,"maxUvCells")?,agreement_cells:field(&v,"maxAgreementCells")?,root_refinements:field(&v,"rootRefinements")?,
+                trim:crate::trimmed_offset_contact::Limits {max_pairs:field(&v,"maxPairs")?,max_cells:field(&v,"maxTrimCells")?,max_domain_cells:field(&v,"maxDomainCells")?},
+            },field(&v,"maxSineSquared")?,crate::offset_contact_trims::TangentLimits {
+                position_cells:field(&v,"maxTangentPositionCells")?,normal_cells:field(&v,"maxNormalCells")?,normal_spans:field(&v,"maxNormalSpans")?,
+            })?;
+        return Ok(json!({"method":"offset-contact-qualification-delivery","request":v,"candidateSurface":candidate,"qualification":report.to_value()}));
+    }
     if op == "surface_offset_envelope_fit" {
         let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
         let candidate: Option<Surface> = v.get("candidate").filter(|x|!x.is_null()).map(|_|field(&v,"candidate")).transpose()?;

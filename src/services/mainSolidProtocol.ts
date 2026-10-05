@@ -1,3 +1,4 @@
+import {contactQualificationExpectation,validContactQualification,type OffsetContactQualificationOptions,type OffsetContactQualification,type ContactQualificationExpectation} from './nurbsOffsetContactQualification'
 import {envelopeFitExpectation,validEnvelopeFit,type OffsetEnvelopeFitOptions,type OffsetEnvelopeFit,type EnvelopeFitExpectation} from './nurbsOffsetEnvelopeFit'
 import type {OffsetContactBandOptions,OffsetContactBand,TrimmedOffsetContactBandOptions,TrimmedOffsetContactBand,OffsetSourceBoundaryOptions,OffsetSourceBoundary,OffsetContactTangent,OffsetEnvelopeOptions,OffsetEnvelope} from './nurbsSurfaceOffset'
 import {wholeWallExpectation,validWholeWall,type WholeWallOptions,type WholeWallResult} from './solidWholeWall'
@@ -57,6 +58,7 @@ import {isNominalLatticeGraph, type LatticeGraphMesh, type NominalLatticeGraph} 
 import type {LighteningOptions} from './solidLightening'
 
 export type MainSolidJob =
+  | {kind:'offsetContactQualification';options:OffsetContactQualificationOptions}
   | {kind:'offsetEnvelopeFit';options:OffsetEnvelopeFitOptions}
   | {kind:'offsetEnvelope';options:OffsetEnvelopeOptions}
   | {kind:'offsetSourceBoundary';options:OffsetSourceBoundaryOptions}
@@ -118,7 +120,7 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+export interface MainSolidResults {offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -150,6 +152,7 @@ function distanceWitnessConsistent(points:number[][],bounds:number[][][],lo:numb
 }
 
 export type MainSolidExpectation =
+  | ({kind:'offsetContactQualification'}&ContactQualificationExpectation)
   | ({kind:'offsetEnvelopeFit'}&EnvelopeFitExpectation)
   | {kind:'offsetEnvelope';tangent:Extract<MainSolidExpectation,{kind:'offsetContactTangent'}>;radiusMm:number;maxCells:number}
   | {kind:'offsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]]}
@@ -186,7 +189,7 @@ export type MainSolidExpectation =
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:Exclude<MainSolidJob['kind'],'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='partialAnnularPreview')return {kind:job.kind,id:job.body.id,bodyIdentity:job.body.brep?.topologyIds?.bodies[0]}
   if(job.kind==='profileIntersections')return {kind:job.kind,loops:structuredClone(job.loops),options:{...job.options}}
@@ -201,6 +204,7 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
   if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
   if(job.kind==='faceDistance'){const o=job.options;return {kind:job.kind,domains:[o.a.faces[o.faceA]?.surface,o.b.faces[o.faceB]?.surface].map(s=>s?[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]:[]),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
+  if(job.kind==='offsetContactQualification')return {kind:job.kind,...contactQualificationExpectation(job.options)}
   if(job.kind==='offsetEnvelopeFit')return {kind:job.kind,...envelopeFitExpectation(job.options)}
   if(job.kind==='offsetEnvelope') {
     const tangent=mainSolidExpectation({kind:'offsetContactTangent',options:job.options})
@@ -251,6 +255,7 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
   if (!value || typeof value!=='object') return false
+  if(job.kind==='offsetContactQualification')return validContactQualification(job,value)
   if(job.kind==='offsetEnvelopeFit')return validEnvelopeFit(job,value)
   if(job.kind==='offsetEnvelope') {
     const v=value as OffsetEnvelope
