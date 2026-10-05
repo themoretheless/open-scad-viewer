@@ -42,6 +42,7 @@ mod cad_clearance;
 mod cad_draft;
 mod cad_display;
 mod cad_edge_edit;
+mod cad_source_body;
 mod cad_face_selection;
 mod cad_hole;
 mod cad_lattice;
@@ -75,6 +76,7 @@ mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
 mod gcode;
+mod laser;
 pub mod intersections;
 #[cfg(feature = "cuda")]
 mod lattice_cuda;
@@ -792,6 +794,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_shell_distance" => cad_shell_distance::measure(v),
         "cad_solid_distance" => cad_solid_distance::measure(v),
         "cad_material_segment" => cad_material_segment::inspect(v),
+        "cad_source_body_restore" => cad_source_body::restore(v),
         "cad_material_chord" => cad_material_chord::inspect(v),
         "cad_material_wall" => cad_material_wall::inspect(v),
         "cad_whole_wall" => cad_whole_wall::inspect(v),
@@ -817,6 +820,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "mesh_gcode_job" => gcode::export_job(&v),
         "gcode_preview" => gcode::parse(&v),
         "gcode_parse" => gcode::inspect(&v),
+        "laser_preflight" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {

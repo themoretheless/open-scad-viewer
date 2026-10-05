@@ -1001,7 +1001,12 @@ fn quarter_disk_face(
         && bezier(arc)
         && arc.degree == 2
         && arc.control_points == vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]]
-        && arc.weights == vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.];
+        // The sphere's exact binary rational traversal has a different
+        // parameter speed from the symmetric quarter arc. Both trace the
+        // same quarter circle; evaluate the authored curve below so the
+        // interior grid retains its shared edge sample schedule.
+        && (arc.weights == vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.]
+            || arc.weights == vec![1., 1., 2.]);
     if !quarter {
         return Ok(None);
     }

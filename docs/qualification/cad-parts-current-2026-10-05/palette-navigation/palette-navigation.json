@@ -1,0 +1,632 @@
+{
+  "browser": "151.0.7922.34",
+  "scope": "palette discovery and navigation only; command execution unverified",
+  "options": 96,
+  "pointerVisited": 96,
+  "keyboardVisited": 96,
+  "disabledExplained": 45,
+  "documentUnchanged": true,
+  "rows": [
+    {
+      "id": "v-2-1-listbox-option-0",
+      "label": "Фокус на выбранном",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-1",
+      "label": "Выбор",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-2",
+      "label": "Прямоугольник",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-3",
+      "label": "Круг",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-4",
+      "label": "Паз",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-5",
+      "label": "Дуга",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-6",
+      "label": "Обрезать",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-7",
+      "label": "Ломаная",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-8",
+      "label": "Рамка",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-9",
+      "label": "Куб",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-10",
+      "label": "Клин",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-11",
+      "label": "Цилиндр",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-12",
+      "label": "Усечённый конус",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-13",
+      "label": "Труба",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-14",
+      "label": "Конус",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-15",
+      "label": "Сфера",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-16",
+      "label": "Тор",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-17",
+      "label": "NURBS-кривая",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-18",
+      "label": "NURBS-поверхность",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-19",
+      "label": "Выбирать тела",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-20",
+      "label": "Выбирать грани",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-21",
+      "label": "Выбирать рёбра",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-22",
+      "label": "Выбирать вершины",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-23",
+      "label": "Манипулятор: двигать",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-24",
+      "label": "Манипулятор: вращать",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-25",
+      "label": "Манипулятор: масштаб",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-26",
+      "label": "Обзор камерой",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-27",
+      "label": "Двигать тело",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-28",
+      "label": "Скрыть панель эскизов 2D",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-29",
+      "label": "Скрыть панель сцены",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-30",
+      "label": "Вписать",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-31",
+      "label": "Изометрия",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-32",
+      "label": "Показывать B-rep гранёным",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-33",
+      "label": "Скрыть сетку 3D",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-34",
+      "label": "Отменить",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-35",
+      "label": "Вычесть: A − B",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-36",
+      "label": "Разрезать",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-37",
+      "label": "Создать связанный экземпляр",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-38",
+      "label": "Измерить вершины / ребро",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-39",
+      "label": "Диагностика тела",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-40",
+      "label": "Преобразовать выбор",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-41",
+      "label": "Точные преобразования",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-42",
+      "label": "Копия",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-43",
+      "label": "Удалить",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-44",
+      "label": "Bake в Code",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-45",
+      "label": "Открыть в Mesh",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-46",
+      "label": "SVG выбранного тела · проекция XY",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-47",
+      "label": "Экспорт для Blender",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-48",
+      "label": "Скачать проект JSON",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-49",
+      "label": "Экспорт SCAD",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-50",
+      "label": "Горячие клавиши",
+      "disabled": false,
+      "describedBy": null
+    },
+    {
+      "id": "v-2-1-listbox-option-51",
+      "label": "Продолжить цепочку рёбер",
+      "disabled": true,
+      "reason": "Выберите ребро тела",
+      "describedBy": "v-2-1-listbox-option-51-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-52",
+      "label": "Снизить степень поверхности",
+      "disabled": true,
+      "reason": "Выберите NURBS-поверхность степени выше 1",
+      "describedBy": "v-2-1-listbox-option-52-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-53",
+      "label": "Подготовить границы поверхностей",
+      "disabled": true,
+      "reason": "Выберите две NURBS-поверхности",
+      "describedBy": "v-2-1-listbox-option-53-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-54",
+      "label": "Объединить точные профили",
+      "disabled": true,
+      "reason": "Выберите два замкнутых профиля",
+      "describedBy": "v-2-1-listbox-option-54-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-55",
+      "label": "Вычесть области профилей",
+      "disabled": true,
+      "reason": "Выберите два замкнутых профиля",
+      "describedBy": "v-2-1-listbox-option-55-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-56",
+      "label": "Пересечь точные профили",
+      "disabled": true,
+      "reason": "Выберите два замкнутых профиля",
+      "describedBy": "v-2-1-listbox-option-56-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-57",
+      "label": "Собрать профиль",
+      "disabled": true,
+      "reason": "Выберите открытые ломаные, дуги и NURBS в одной плоскости",
+      "describedBy": "v-2-1-listbox-option-57-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-58",
+      "label": "Смещение NURBS-кривой",
+      "disabled": true,
+      "reason": "Выберите NURBS-кривую",
+      "describedBy": "v-2-1-listbox-option-58-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-59",
+      "label": "Обрезать NURBS по точке",
+      "disabled": true,
+      "reason": "Выберите NURBS-кривую",
+      "describedBy": "v-2-1-listbox-option-59-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-60",
+      "label": "Согласовать кривые G1",
+      "disabled": true,
+      "reason": "Выберите две NURBS-кривые",
+      "describedBy": "v-2-1-listbox-option-60-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-61",
+      "label": "Согласовать поверхности G1/G2",
+      "disabled": true,
+      "reason": "Выберите две NURBS-поверхности",
+      "describedBy": "v-2-1-listbox-option-61-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-62",
+      "label": "Перестроить поверхность",
+      "disabled": true,
+      "reason": "Выберите NURBS-поверхность",
+      "describedBy": "v-2-1-listbox-option-62-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-63",
+      "label": "Перестроить кривую",
+      "disabled": true,
+      "reason": "Выберите независимую NURBS-кривую",
+      "describedBy": "v-2-1-listbox-option-63-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-64",
+      "label": "Снизить степень кривой",
+      "disabled": true,
+      "reason": "Выберите независимую NURBS-кривую степени выше 1",
+      "describedBy": "v-2-1-listbox-option-64-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-65",
+      "label": "Coons patch",
+      "disabled": true,
+      "reason": "Выберите четыре граничные NURBS-кривые",
+      "describedBy": "v-2-1-listbox-option-65-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-66",
+      "label": "Перенос профиля по пути",
+      "disabled": true,
+      "reason": "Выберите две NURBS-кривые: профиль, затем путь",
+      "describedBy": "v-2-1-listbox-option-66-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-67",
+      "label": "Поверхность по сечениям",
+      "disabled": true,
+      "reason": "Выберите NURBS-сечения по порядку",
+      "describedBy": "v-2-1-listbox-option-67-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-68",
+      "label": "Повторить",
+      "disabled": true,
+      "reason": "Нечего повторять",
+      "describedBy": "v-2-1-listbox-option-68-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-69",
+      "label": "Объединить тела",
+      "disabled": true,
+      "reason": "Выберите два тела: Shift + клик",
+      "describedBy": "v-2-1-listbox-option-69-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-70",
+      "label": "Пересечение тел",
+      "disabled": true,
+      "reason": "Выберите два тела: Shift + клик",
+      "describedBy": "v-2-1-listbox-option-70-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-71",
+      "label": "B-rep XOR",
+      "disabled": true,
+      "reason": "Нужны два точных тела B-rep",
+      "describedBy": "v-2-1-listbox-option-71-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-72",
+      "label": "Push / Pull",
+      "disabled": true,
+      "reason": "Выберите грань тела",
+      "describedBy": "v-2-1-listbox-option-72-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-73",
+      "label": "Эскиз на грани",
+      "disabled": true,
+      "reason": "Выберите грань тела",
+      "describedBy": "v-2-1-listbox-option-73-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-74",
+      "label": "Shell",
+      "disabled": true,
+      "reason": "Выберите грань тела",
+      "describedBy": "v-2-1-listbox-option-74-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-75",
+      "label": "Фаска 3D",
+      "disabled": true,
+      "reason": "Выберите ребро тела",
+      "describedBy": "v-2-1-listbox-option-75-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-76",
+      "label": "Скруглить 3D",
+      "disabled": true,
+      "reason": "Выберите ребро тела",
+      "describedBy": "v-2-1-listbox-option-76-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-77",
+      "label": "Свойства B-rep",
+      "disabled": true,
+      "reason": "Выберите тело B-rep",
+      "describedBy": "v-2-1-listbox-option-77-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-78",
+      "label": "Перестроить mesh",
+      "disabled": true,
+      "reason": "Выберите тело B-rep",
+      "describedBy": "v-2-1-listbox-option-78-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-79",
+      "label": "Параметры кривой",
+      "disabled": true,
+      "reason": "Выберите круг или дугу",
+      "describedBy": "v-2-1-listbox-option-79-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-80",
+      "label": "Offset",
+      "disabled": true,
+      "reason": "Нужен замкнутый эскиз",
+      "describedBy": "v-2-1-listbox-option-80-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-81",
+      "label": "Продлить",
+      "disabled": true,
+      "reason": "Выберите незамкнутую линию",
+      "describedBy": "v-2-1-listbox-option-81-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-82",
+      "label": "Преобразовать экземпляр",
+      "disabled": true,
+      "reason": "Выберите связанный экземпляр",
+      "describedBy": "v-2-1-listbox-option-82-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-83",
+      "label": "Разместить экземпляр",
+      "disabled": true,
+      "reason": "Выберите связанный экземпляр",
+      "describedBy": "v-2-1-listbox-option-83-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-84",
+      "label": "Сделать независимым",
+      "disabled": true,
+      "reason": "Выберите связанный экземпляр",
+      "describedBy": "v-2-1-listbox-option-84-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-85",
+      "label": "Выбрать источник экземпляра",
+      "disabled": true,
+      "reason": "Выберите связанный экземпляр",
+      "describedBy": "v-2-1-listbox-option-85-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-86",
+      "label": "Зазор двух тел по сетке",
+      "disabled": true,
+      "reason": "Выберите два тела с Shift",
+      "describedBy": "v-2-1-listbox-option-86-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-87",
+      "label": "Размеры эскиза",
+      "disabled": true,
+      "reason": "Выберите эскиз",
+      "describedBy": "v-2-1-listbox-option-87-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-88",
+      "label": "Детализация B-rep",
+      "disabled": true,
+      "reason": "Выберите тело B-rep",
+      "describedBy": "v-2-1-listbox-option-88-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-89",
+      "label": "Выдавить",
+      "disabled": true,
+      "reason": "Нужен замкнутый эскиз",
+      "describedBy": "v-2-1-listbox-option-89-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-90",
+      "label": "Вращение",
+      "disabled": true,
+      "reason": "Нужен замкнутый эскиз",
+      "describedBy": "v-2-1-listbox-option-90-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-91",
+      "label": "B-rep loft",
+      "disabled": true,
+      "reason": "Выберите два и более эскиза",
+      "describedBy": "v-2-1-listbox-option-91-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-92",
+      "label": "Скруглить",
+      "disabled": true,
+      "reason": "Нужен замкнутый эскиз",
+      "describedBy": "v-2-1-listbox-option-92-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-93",
+      "label": "DogEar",
+      "disabled": true,
+      "reason": "Нужен замкнутый эскиз",
+      "describedBy": "v-2-1-listbox-option-93-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-94",
+      "label": "Круговые копии",
+      "disabled": true,
+      "reason": "Выберите эскиз",
+      "describedBy": "v-2-1-listbox-option-94-reason"
+    },
+    {
+      "id": "v-2-1-listbox-option-95",
+      "label": "Повторить команду",
+      "disabled": true,
+      "reason": "Сначала примените команду",
+      "describedBy": "v-2-1-listbox-option-95-reason"
+    }
+  ]
+}

@@ -35,6 +35,10 @@ export async function writeSolidDraftHead(key:string,expected:string|null,text:s
    try{
     if(!current()){failure=Error('DRAFT_SUPERSEDED');tx.abort();return}
     const write=tx.objectStore(store).put(head)
+    write.onsuccess=()=>{
+     try{if(!current()){failure=Error('DRAFT_SUPERSEDED');tx.abort()}}
+     catch(e){failure=e instanceof Error?e:Error(String(e));tx.abort()}
+    }
     write.onerror=()=>{failure=write.error??Error('Durable draft write failed.')}
    }catch(e){failure=e instanceof Error?e:Error(String(e));tx.abort()}
   }

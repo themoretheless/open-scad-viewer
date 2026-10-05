@@ -92,12 +92,24 @@ const limits = new Map([
 // Expanded native sweep/miter, retained decomposition and authored surface input:
 // local c94f6fca artifact production chunk measured at 3,521,252 bytes.
 // Combined sweep and CAD diagnostics: locally measured 3,647,400 packed bytes.
-// Rust constructor ownership, native refinement and viewport evidence validation:
-// measured 3,686,058 packed bytes; retain 33,942 bytes of headroom.
-const geometryChunkBudget = 3_720_000
+// G-code firmware state, configured jobs and laser dispatch: measured 3,659,108 bytes.
+// Signed rational surface offsets and interval contact sections: measured 3,674,022 bytes.
+// Complete contact-band admission on audited UV regions: measured 3,677,712 bytes.
+// Original spatial coedge audit: measured 3,681,036 bytes.
+// Full-band center tangent and periodic-start coverage: measured 3,685,512 bytes.
+// Local analytic envelope and interval cell transport: measured 3,689,468 bytes.
+// Finite rational envelope fit and partition serialization: measured 3,694,954 bytes.
+// Full contact trim/tangent qualification and delivery: measured 3,708,032 bytes.
+// Fresh source Body replay, exact root restrictions and volume admission: 3,871,336 bytes.
+// Coherent native source boundary endpoints: measured 3,881,800 bytes, +5,362.
+// Combined native sweep ownership: measured 3,918,058 packed bytes;
+// retain 6,942 bytes of headroom.
+const geometryChunkBudget = 3_925_000
 const jsChunkBudgets = [
+  // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
+  [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 156_600], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -123,7 +135,7 @@ const jsChunkBudgets = [
   // Instance editing, draft recovery, exchange, diagnostics materials, SVG exchange and localized patch diagnostics and framed sweep controls: about 279 kB.
   // Profile region commands and target selection: measured 310,394 bytes.
   // Material path overlay: measured 405,355 bytes; retain 654-byte headroom.
-  [/^assets\/DirectModeler-[^/]+\.js$/, 406_009], // Arc sweep range validation and corrective field message: measured 401,363 bytes, +803 bytes; previous 654-byte margin retained. Named profile inputs and two localized refusal cases: measured 400,560 bytes, +814 bytes; previous 654-byte margin retained. Numeric rectangle and retained-slot authoring: measured 399,746 bytes. Numeric arc authoring: measured 392,515 bytes. Numeric circle authoring: measured 390,417 bytes, total 7,208,418 bytes. Exact polyline point authoring: measured 388,518 bytes. Surface boundary validation and diagnostic retries: measured 386,547 bytes. Mesh clearance retry: measured 384,502 bytes. Measurement field validation, localized retries and edge keyboard selection: measured 383,412 bytes; 888-byte margin. Manual GPU reconnection and stale initialization cancellation: measured 381,431 bytes; 869-byte margin. Localized source-deletion dependency guard: measured 380,622 bytes; 778-byte margin. Profile intersection presentation loads asynchronously: measured 379,305 bytes; 795-byte margin. Retained profile revolution and exact-mode controls: 378,043 measured bytes. // Cancellable display collection: 377,171 bytes; approximately the prior 847-byte headroom. // Current UI with calculation retry/localized worker failures and VR controls: 376,153 bytes; 847-byte headroom. // Face-contact panel: measured 369,457 bytes. Distance kernels panel growth: measured 364,044 bytes. Radial bound diagnostics: measured 358,648 bytes. Trimmed face distance: measured 353,799 bytes. Full NURBS surface distance panel: measured 348,231 bytes. NURBS edge distance controls and witnesses: measured 344,995 bytes. All mesh contacts, completion and navigation: measured 340,273 bytes. Diagnostic input errors, retry and focus: measured 337,331 bytes. Screen point picking and focus: measured 334,107 bytes. Point trim preview and numeric inputs: measured 332,651 bytes. Retained NURBS targets in world coordinates: measured 328,305 bytes. Async body snap readiness: measured 327,041 bytes. Async authored edges: measured 326,006 bytes. Async topology selection: measured 325,581 bytes. Localized CV errors and accessible field association: measured 324,730 bytes. Cancellable retained profile display: measured 323,401 bytes. Cancellable surface display queue: measured 320,648 bytes. Worker startup recovery: measured 317,274 bytes. Cancellable JSON import: measured 316,313 bytes. Durable draft head and async restoration; previously async extrusion preview: measured 312,541 bytes.
+  [/^assets\/DirectModeler-[^/]+\.js$/, 417_800], // Native source face preview and outliner: measured 417289 bytes. Native source edge preview: measured 412806 bytes. Solid manufacturing entry: measured 407,522 bytes; 478-byte margin. Arc sweep range validation and corrective field message: measured 401,363 bytes, +803 bytes; previous 654-byte margin retained. Named profile inputs and two localized refusal cases: measured 400,560 bytes, +814 bytes; previous 654-byte margin retained. Numeric rectangle and retained-slot authoring: measured 399,746 bytes. Numeric arc authoring: measured 392,515 bytes. Numeric circle authoring: measured 390,417 bytes, total 7,208,418 bytes. Exact polyline point authoring: measured 388,518 bytes. Surface boundary validation and diagnostic retries: measured 386,547 bytes. Mesh clearance retry: measured 384,502 bytes. Measurement field validation, localized retries and edge keyboard selection: measured 383,412 bytes; 888-byte margin. Manual GPU reconnection and stale initialization cancellation: measured 381,431 bytes; 869-byte margin. Localized source-deletion dependency guard: measured 380,622 bytes; 778-byte margin. Profile intersection presentation loads asynchronously: measured 379,305 bytes; 795-byte margin. Retained profile revolution and exact-mode controls: 378,043 measured bytes. // Cancellable display collection: 377,171 bytes; approximately the prior 847-byte headroom. // Current UI with calculation retry/localized worker failures and VR controls: 376,153 bytes; 847-byte headroom. // Face-contact panel: measured 369,457 bytes. Distance kernels panel growth: measured 364,044 bytes. Radial bound diagnostics: measured 358,648 bytes. Trimmed face distance: measured 353,799 bytes. Full NURBS surface distance panel: measured 348,231 bytes. NURBS edge distance controls and witnesses: measured 344,995 bytes. All mesh contacts, completion and navigation: measured 340,273 bytes. Diagnostic input errors, retry and focus: measured 337,331 bytes. Screen point picking and focus: measured 334,107 bytes. Point trim preview and numeric inputs: measured 332,651 bytes. Retained NURBS targets in world coordinates: measured 328,305 bytes. Async body snap readiness: measured 327,041 bytes. Async authored edges: measured 326,006 bytes. Async topology selection: measured 325,581 bytes. Localized CV errors and accessible field association: measured 324,730 bytes. Cancellable retained profile display: measured 323,401 bytes. Cancellable surface display queue: measured 320,648 bytes. Worker startup recovery: measured 317,274 bytes. Cancellable JSON import: measured 316,313 bytes. Durable draft head and async restoration; previously async extrusion preview: measured 312,541 bytes.
   // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
@@ -341,6 +353,19 @@ for (const [name, artifact, compression] of [
 // Expanded kernel, Rush operations, preview lifecycle and proof status UI:
 // local c94f6fca production assets measured at 7,663,736 bytes.
 // Combined CAD and sweep build: measured 7,858,043 asset bytes.
-const totalBudget = 7_870_000
+// Solid manufacturing panel and updated kernel: measured 7,889,516 asset bytes.
+// Signed rational surface offsets and interval contact sections: measured 7,906,737 asset bytes.
+// Contact-band trim admission and worker validation: measured 7,914,653 asset bytes.
+// Original spatial coedge audit and worker validation: measured 7,921,097 asset bytes.
+// Full-band center tangent and worker admission: measured 7,927,322 asset bytes.
+// Local envelope adapter and worker validation: measured 7,933,678 asset bytes.
+// Finite patch adapter and linear partition validation: measured 7,944,599 asset bytes.
+// Contact qualification worker adapter and report validation: measured 7,963,849 asset bytes.
+// Source Body restoration, exhaustive CAD job registry and request binding: 8,130,274 asset bytes.
+// Native source Body archive, document reload and explicit exchange refusal: 8,136,343 asset bytes.
+// Native source edge preview: measured total 8145420 asset bytes.
+// Native source face preview: measured 8154777 total asset bytes; kernel 3876438, worker 156077.
+// Coherent boundary display and worker validation: measured 8,160,939 bytes.
+const totalBudget = 8_161_700
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

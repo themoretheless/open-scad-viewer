@@ -1,3 +1,4 @@
+import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 import {bondedSolidExample} from '../src/features/bondedSolidExample'
 import {Worker} from 'node:worker_threads'
 import {afterEach, expect, it, vi} from 'vitest'
@@ -31,6 +32,40 @@ function realWorker(){
   workers.push(worker);return new NodePort(worker)
 }
 afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()));vi.unstubAllGlobals()})
+
+it('rounds all rotated cuboid edges with endpoint radii through the real body-edit worker',async()=>{
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
+  const brep=transformNurbsBrep(source,[
+    [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
+    [Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b),-9],
+    [-Math.sin(b),0,Math.cos(b),23],[0,0,0,1],
+  ])
+  const body={id:'rotated',name:'Rotated',brep,mesh:tessellateNurbsBrep(brep)}
+  const document={version:1 as const,sketches:[],bodies:[body]},before=JSON.stringify(document)
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  for(let edge=0;edge<brep.edges.length;edge++){
+    const result=await client.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[edge],openings:[],segments:8,distance:0,radius:.5,endRadius:1.5,filletMode:'variable',axis:'z'}})
+    const [p,q]=source.edges[edge].vertices.map(i=>source.vertices[i].point)
+    const length=Math.hypot(...p.map((x,i)=>x-q[i]))
+    expect(result.bodies[0].id).toBe(body.id)
+    expect(analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(480-(1-Math.PI/4)*length*(.25+.75+2.25)/3,4)
+  }
+  expect(JSON.stringify(document)).toBe(before)
+},60_000)
+
+it('prepares and extrudes polynomial rounded profiles through the shipped worker',async()=>{
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const points=[[[3,0],[3,3],[0,3]],[[0,3],[-3,3],[-3,0]],[[-3,0],[-3,-3],[0,-3]],[[0,-3],[3,-3],[3,0]]]
+  const document={version:1 as const,sketches:[],bodies:[],curves:points.map((controlPoints,i)=>({id:`curve-${i}`,name:`Curve ${i}`,curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints,weights:[1,1,1]}}))}
+  const before=JSON.stringify(document)
+  const prepared=await client.run({kind:'profilePrepare',document,ids:document.curves.map(c=>c.id),tolerance:0})
+  expect(prepared.report.accepted).toBe(true)
+  const extruded=await client.run({kind:'extrusion',document:prepared.document,options:{sketchIds:[prepared.document.sketches[0].id],height:5,offset:-2,operation:'new',targetId:'',id:'rounded'}})
+  const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  expect(analyzeNurbsBrep(extruded.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(150,6)
+  expect(JSON.stringify(document)).toBe(before)
+},30000)
 
 it('runs the shipped entry with real WASM, reuses it and preserves typed errors',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
@@ -398,3 +433,191 @@ it('prepares original general NURBS through the real worker boundary',async()=>{
  expect(result.document.curves).toEqual([])
  expect(document).toEqual(before)
 })
+
+it('converges oblique sphere distances across the real worker boundary',async()=>{
+ const {obliqueSphereRequests}=await import('./fixtures/oblique-sphere-distance')
+ const {validSolidDistance,solidDistanceExpectation}=await import('../src/services/solidDistance')
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ for(const {options,expected} of await obliqueSphereRequests()){
+  const before=structuredClone(options),r=await client.run({kind:'solidDistance',options})
+  expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)
+  expect(r.converged,JSON.stringify(r)).toBe(true)
+  expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(options.toleranceMm)
+  expect(r.separationWitness).not.toBeNull()
+  expect(options).toEqual(before)
+ }
+})
+
+it('certifies every parameter of an offset contact band through the actual worker and WASM',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const pending=client.run({kind:'offsetContactBand',options})
+ // postMessage and the expectation must retain their own request snapshot.
+ options.fixedInterval[0]=.36
+ options.secondDomain[0][0]=.31
+ const r=await pending
+ expect(r).toMatchObject({status:'continuous-branch',rootForEveryParameterProven:true,continuousBranchProven:true,wholeCurveComplete:false,trimMembershipProven:false,topologyAuthority:false})
+ expect(r.witness!.firstUV[0]).toEqual(before.fixedInterval)
+ options.fixedInterval[0]=before.fixedInterval[0];options.secondDomain[0][0]=before.secondDomain[0][0]
+ expect(options).toEqual(before)
+ const narrow=await client.run({kind:'offsetContactBand',options:{...options,secondDomain:[[.36,.38],[.15,.25]]}})
+ expect(narrow).toMatchObject({status:'unresolved',rootForEveryParameterProven:false,witness:null})
+ await expect(client.run({kind:'offsetContactBand',options:{...options,maxSpans:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetContactBand',options})).status).toBe('continuous-branch')
+ // Capture a genuinely successful worker reply, cancel before its admission,
+ // then deliver it through the original callback. Cancellation must stay final.
+ const heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+ const cancelled=heldClient.run({kind:'offsetContactBand',options})
+ const rejection=expect(cancelled).rejects.toMatchObject({code:'CAD_CANCELLED'})
+ const callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+ heldPort.onmessage=event=>release(event)
+ const event=await captured
+ expect(event.data.ok).toBe(true)
+ heldClient.cancel();callback(event)
+ await rejection
+ expect((await client.run({kind:'offsetContactBand',options})).status).toBe('continuous-branch')
+},30_000)
+
+it('admits a trimmed offset contact band through real WASM and worker with holes and bounded work',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const rectangle=(lo:[number,number],hi:[number,number],reverse=false)=>{
+  const p=[lo,[hi[0],lo[1]],hi,[lo[0],hi[1]]];if(reverse)p.reverse()
+  return p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ }
+ const outer=rectangle([0,0],[1,1]),options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const before=structuredClone(options),r=await client.run({kind:'trimmedOffsetContactBand',options})
+ expect(r).toMatchObject({trimMembershipProven:true,continuousBranchProven:true,topologyAuthority:false,worldCoedgeIdentityProven:false})
+ const hole=await client.run({kind:'trimmedOffsetContactBand',options:{...options,firstLoops:[outer,rectangle([.34,.29],[.40,.31],true)]}})
+ expect(hole).toMatchObject({trimMembershipProven:false,reason:'contact-outside-trim'})
+ const crossing=await client.run({kind:'trimmedOffsetContactBand',options:{...options,firstLoops:[rectangle([.36,.1],[.9,.9])]}})
+ expect(crossing).toMatchObject({trimMembershipProven:false,reason:'contact-trim-unresolved'})
+ const cap=await client.run({kind:'trimmedOffsetContactBand',options:{...options,maxPairs:1,maxCells:1,maxDomainCells:1}})
+ expect(cap.trimMembershipProven).toBe(false);expect(cap.cells).toBeLessThanOrEqual(1)
+ await expect(client.run({kind:'trimmedOffsetContactBand',options:{...options,toleranceUv:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'trimmedOffsetContactBand',options})).trimMembershipProven).toBe(true)
+ expect(options).toEqual(before)
+},30_000)
+
+it('links original source coedges through real WASM and worker without promoting tolerance agreement',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const p=[[0,0],[1,0],[1,1],[0,1]],outer=p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ const world=(side:number)=>outer.map(c=>({world:{...c,controlPoints:c.controlPoints.map(uv=>side===0?[uv[0],uv[1],0]:[uv[0],.5,uv[1]])},reversed:false}))
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],firstCoedges:[world(0)],secondCoedges:[world(1)],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000,toleranceMm:1e-5,maxExactWork:1000000,maxAgreementCells:10000}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetSourceBoundary',options})
+ expect(r).toMatchObject({worldCoedgeIdentityProven:true,worldBoundaryWithinToleranceProven:true,checkedCoedges:8,totalCoedges:8,topologyAuthority:false})
+ const changed=structuredClone(options);changed.secondCoedges[0][0].world.controlPoints[0][1]=.501
+ const mismatch=await client.run({kind:'offsetSourceBoundary',options:changed})
+ expect(mismatch).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'spatial-boundary-mismatch'})
+ const tolerance=await client.run({kind:'offsetSourceBoundary',options:{...options,maxExactWork:0}})
+ expect(tolerance).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:true})
+ const cap=await client.run({kind:'offsetSourceBoundary',options:{...options,maxExactWork:0,maxAgreementCells:1}})
+ expect(cap).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'boundary-work-limit'})
+ await expect(client.run({kind:'offsetSourceBoundary',options:{...options,secondCoedges:[]}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetSourceBoundary',options})).worldCoedgeIdentityProven).toBe(true)
+ expect(options).toEqual(before)
+},30_000)
+
+it('qualifies center tangent regularity through real WASM and worker, including a nearly collapsed offset',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetContactTangent',options})
+ expect(r).toMatchObject({centerRegularityProven:true,envelopeRegularityProven:false,trimMembershipProven:false,topologyAuthority:false})
+ expect(r.speedIntervalMm![0]).toBeGreaterThan(0)
+ const cylinder={degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[[3,0],[3,3],[0,3]].map(p=>[[p[0],p[1],0],[p[0],p[1],5]]),weights:[1,Math.SQRT1_2,1].map(w=>[w,w]),periodicU:false,periodicV:false}
+ const cap=structuredClone(a);for(const row of cap.controlPoints)for(const p of row){p[0]-=.5;p[1]-=.5;p[2]=1.65}
+ const collapsed=await client.run({kind:'offsetContactTangent',options:{...options,a:cylinder,b:cap,distances:[-3,.2],fixedInterval:[.299999,.300001],firstOther:[.369,.371],secondDomain:[[.49,.51],[.49,.51]]}})
+ expect(collapsed).toMatchObject({contactStatus:'continuous-branch',centerRegularityProven:false,reason:'center-regularity-unproven'})
+ expect(collapsed.speedIntervalMm![0]).toBe(0)
+ await expect(client.run({kind:'offsetContactTangent',options:{...options,maxSpans:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetContactTangent',options})).centerRegularityProven).toBe(true)
+ const periodic=structuredClone(a);periodic.controlPoints.push(structuredClone(periodic.controlPoints[0]));periodic.weights.push([1,1]);periodic.knotsU=[-1,0,1,2,3];periodic.periodicU=true
+ const seamPlane=structuredClone(b);for(const row of seamPlane.controlPoints)for(const p of row)p[0]-=.5
+ const seam=await client.run({kind:'offsetContactTangent',options:{...options,a:periodic,b:seamPlane,fixedInterval:[0,1e-6],secondDomain:[[.49,.51],[.15,.25]]}})
+ expect(seam).toMatchObject({contactStatus:'unresolved',centerRegularityProven:false,centerTangentIntervalsMm:null})
+ // The fixture's numerical proposal uses the same published WASM as the host.
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options,tangents}=curvedTangentFixture(rotated),r=await client.run({kind:'offsetContactTangent',options})
+  expect(r.centerRegularityProven).toBe(true)
+  for(const t of tangents)for(let k=0;k<3;k++){expect(r.centerTangentIntervalsMm![k][0]).toBeLessThanOrEqual(t[k]);expect(r.centerTangentIntervalsMm![k][1]).toBeGreaterThanOrEqual(t[k])}
+ }
+
+},30_000)
+
+it('qualifies local envelopes through the real worker with work stops, invalid input and Retry',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options=planeEnvelopeFixture(),before=structuredClone(options)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetEnvelope',options})
+ expect(r).toMatchObject({envelopeRegularityProven:true,finiteNurbsPatchProven:false,embeddingProven:false,trimMembershipProven:false,topologyAuthority:false})
+ const limited=await client.run({kind:'offsetEnvelope',options:{...options,maxCells:1}})
+ expect(limited).toMatchObject({envelopeRegularityProven:false,visitedCells:1})
+ expect(limited.cells[0].arcParameter).toEqual([0,1])
+ await expect(client.run({kind:'offsetEnvelope',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options}=curvedTangentFixture(rotated)
+  expect((await client.run({kind:'offsetEnvelope',options:{...options,maxCells:511}})).envelopeRegularityProven).toBe(true)
+ }
+ expect(options).toEqual(before)
+},30_000)
+
+it('keeps envelope cancellation final after a genuine successful late worker response',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options=planeEnvelopeFixture(),heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+ const pending=heldClient.run({kind:'offsetEnvelope',options}),rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+ const callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve});heldPort.onmessage=event=>release(event)
+ const event=await captured;expect(event.data.ok).toBe(true);expect(event.data.result.envelopeRegularityProven).toBe(true)
+ heldClient.cancel();callback(event);await rejection
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
+},30_000)
+
+it('qualifies actual finite envelope patches in the real worker with authored candidates and Retry',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options={...planeEnvelopeFixture(),toleranceMm:1e-3,maxCells:511},before=structuredClone(options)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetEnvelopeFit',options})
+ expect(r.qualification!.finiteNurbsPatchProven).toBe(true)
+ const authored={...options,candidate:r.candidateSurface!},saved=structuredClone(authored)
+ const pending=client.run({kind:'offsetEnvelopeFit',options:authored});authored.candidate.controlPoints[0][0][2]+=.01
+ const restored=await pending;expect(restored.qualification!.finiteNurbsPatchProven).toBe(true);expect(restored.candidateSurface).toEqual(saved.candidate)
+ const mismatch=await client.run({kind:'offsetEnvelopeFit',options:authored})
+ expect(mismatch.qualification).toMatchObject({finiteNurbsPatchProven:false,reason:'candidate-mismatch'})
+ const limited=await client.run({kind:'offsetEnvelopeFit',options:{...options,maxCells:1}})
+ expect(limited.qualification).toMatchObject({finiteNurbsPatchProven:false,visitedCells:1})
+ await expect(client.run({kind:'offsetEnvelopeFit',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetEnvelopeFit',options})).qualification!.finiteNurbsPatchProven).toBe(true)
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options}=curvedTangentFixture(rotated)
+  const r=await client.run({kind:'offsetEnvelopeFit',options:{...options,toleranceMm:1e-3,maxCells:511}})
+  expect(r.qualification!.finiteNurbsPatchProven).toBe(true)
+ }
+ expect(options).toEqual(before)
+},60_000)
+
+it('refuses a captured successful finite-patch response after cancellation',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options={...planeEnvelopeFixture(),toleranceMm:1e-3,maxCells:511},heldPort=realWorker(),client=new MainSolidWorkerClient(()=>heldPort);clients.push(client)
+ const pending=client.run({kind:'offsetEnvelopeFit',options}),rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'}),callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve});heldPort.onmessage=event=>release(event)
+ const event=await captured;expect(event.data.ok).toBe(true);expect(event.data.result.qualification.finiteNurbsPatchProven).toBe(true)
+ client.cancel();callback(event);await rejection
+},30_000)

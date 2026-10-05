@@ -1,0 +1,133 @@
+import type {NurbsCurve} from './nurbsCurve'
+import type {NurbsSurface} from './nurbsSurface'
+import {callNurbsRust} from './geometry/nurbs'
+
+type Interval=[number,number]
+type Point3=[number,number,number]
+export type SurfaceDomain=[Interval,Interval]
+export type OffsetPairDomain=[SurfaceDomain,SurfaceDomain]
+export interface OffsetEvaluation {
+ method:'normal-offset-numerical-jets';point:Point3;du:Point3;dv:Point3;sourceUnitNormal:Point3
+ certified:false;topologyAuthority:false
+}
+interface OffsetBoundsBase {
+ image:[Interval,Interval,Interval]|null;normalSpanVisits:number;reason:string
+ offsetRegularityCertified:false;continuityCertified:false;topologyAuthority:false
+}
+export interface OffsetBounds extends OffsetBoundsBase {
+ method:'interval-source-normal-offset';scope:'incident-span-offset-images'
+ unitNormals:[Interval,Interval,Interval]|null
+}
+export interface OffsetJacobianBounds extends OffsetBoundsBase {
+ method:'interval-source-normal-offset-jets';scope:'incident-span-offset-jets'
+ derivatives:[[Interval,Interval,Interval],[Interval,Interval,Interval]]|null
+}
+export interface OffsetContactOptions {
+ a:NurbsSurface;b:NurbsSurface;distances:[number,number];fixedAxis:0|1;fixed:number
+ firstOther:Interval;secondDomain:SurfaceDomain;maxSpans:number
+}
+export interface OffsetContactSection {
+ method:'interval-offset-section-krawczyk';scope:'fixed-parameter-offset-section'
+ status:'unique-contact'|'excluded'|'unresolved'
+ witness:{firstUV:SurfaceDomain;secondUV:SurfaceDomain;centerIntervalMm:[Interval,Interval,Interval];contractionUpper:number}|null
+ rootExistenceProven:boolean;uniqueInSection:boolean
+ wholeCurveComplete:false;trimMembershipProven:false;topologyAuthority:false
+}
+export interface OffsetCandidateOptions {
+ a:NurbsSurface;b:NurbsSurface;domains:OffsetPairDomain;distances:[number,number]
+ parameterTolerance:number;maxBoxes:number;maxSpans:number
+}
+export interface OffsetCandidates {
+ method:'interval-offset-pair-exclusion';scope:'untrimmed-offset-carriers'
+ candidateBoxes:OffsetPairDomain[];pendingBoxes:OffsetPairDomain[]
+ visitedBoxes:number;excludedBoxes:number;normalSpanVisits:number;reason:string
+ rootExistenceProven:false;wholeCurveComplete:false;trimMembershipProven:false;topologyAuthority:false
+}
+/** Numerical proposal only; interval inclusion is a separate query. */
+export const evaluateNurbsSurfaceOffset=(surface:NurbsSurface,parameters:[number,number],distance:number):OffsetEvaluation=>
+ callNurbsRust('surface_offset_evaluate',{surface,parameters,distance})
+/** Encloses incident span sides; does not prove a unique normal across a knot. */
+export const boundNurbsSurfaceOffset=(surface:NurbsSurface,domain:SurfaceDomain,distance:number,maxSpans:number):OffsetBounds=>
+ callNurbsRust('surface_offset_bounds',{surface,domain,distance,maxSpans})
+export const boundNurbsSurfaceOffsetJacobian=(surface:NurbsSurface,domain:SurfaceDomain,distance:number,maxSpans:number):OffsetJacobianBounds=>
+ callNurbsRust('surface_offset_jacobian_bounds',{surface,domain,distance,maxSpans})
+/** A section center is not a complete center curve or an admitted fillet. */
+export const certifyNurbsOffsetContactSection=(options:OffsetContactOptions):OffsetContactSection=>
+ callNurbsRust('surface_offset_contact_section',options)
+export const findNurbsOffsetCandidateBoxes=(options:OffsetCandidateOptions):OffsetCandidates=>
+ callNurbsRust('surface_offset_candidates',options)
+
+export interface OffsetContactBandOptions extends Omit<OffsetContactOptions,'fixed'> {
+ fixedInterval:Interval
+}
+export interface OffsetContactBand {
+ method:'interval-offset-band-krawczyk';scope:'parameter-band-within-tube'
+ status:'continuous-branch'|'excluded'|'unresolved'
+ witness:OffsetContactSection['witness']
+ rootForEveryParameterProven:boolean;uniqueWithinTube:boolean;continuousBranchProven:boolean
+ wholeCurveComplete:false;trimMembershipProven:false;topologyAuthority:false
+}
+/** Uniform root coverage within a tube; does not exclude branches outside it. */
+export const certifyNurbsOffsetContactBand=(options:OffsetContactBandOptions):OffsetContactBand=>
+ callNurbsRust('surface_offset_contact_band',options)
+
+export interface TrimmedOffsetContactBandOptions extends OffsetContactBandOptions {
+ firstLoops:NurbsCurve[][];secondLoops:NurbsCurve[][];toleranceUv:number
+ maxPairs:number;maxCells:number;maxDomainCells:number
+}
+export interface TrimmedOffsetContactBand {
+ method:'interval-offset-band-trim-admission';scope:'audited-original-uv-regions'
+ contactStatus:OffsetContactBand['status'];witness:OffsetContactBand['witness']
+ continuousBranchProven:boolean;trimMembershipProven:boolean;reason:string
+ wholeCurveComplete:false;worldCoedgeIdentityProven:false;topologyAuthority:false
+ pairs:number;cells:number;domainCells:number
+ regions:{valid:boolean|null;reason:string;pairs:number;cells:number;domainCells:number;problemLoops:[number,number]|null}[]
+ classifications:{location:'inside'|'outside'|'unresolved';reason:string;cells:number}[]
+}
+/** Requires the entire contact band inside both audited authored UV regions. */
+export const certifyTrimmedNurbsOffsetContactBand=(options:TrimmedOffsetContactBandOptions):TrimmedOffsetContactBand=>
+ callNurbsRust('surface_offset_trimmed_contact_band',options)
+
+export interface OffsetSourceBoundaryOptions extends TrimmedOffsetContactBandOptions {
+ firstCoedges:{world:NurbsCurve;reversed:boolean}[][];secondCoedges:{world:NurbsCurve;reversed:boolean}[][]
+ toleranceMm:number;maxExactWork:number;maxAgreementCells:number
+}
+export interface OffsetSourceBoundary {
+ method:'offset-source-boundary-admission';scope:'original-trims-and-spatial-coedges'
+ trim:TrimmedOffsetContactBand;worldCoedgeIdentityProven:boolean;worldBoundaryWithinToleranceProven:boolean
+ reason:string;totalCoedges:number;checkedCoedges:number;exactWork:number;agreementCells:number
+ toleranceMm:number;maxExactWork:number;maxAgreementCells:number
+ topologyAuthority:false;wholeCurveComplete:false
+ audits:{side:number;loop:number;curve:number;exactStatus:'equal'|'different'|'unresolved'|'unsupported';agreementStatus:'exact'|'within-tolerance'|'mismatch'|'unresolved';exactWork:number;cells:number;witnessParameter:number|null;witnessDistanceMm:[number,number]|null}[]
+}
+/** Source coedge agreement does not construct replacement trims or a solid. */
+export const certifyNurbsOffsetSourceBoundary=(options:OffsetSourceBoundaryOptions):OffsetSourceBoundary=>
+ callNurbsRust('surface_offset_source_boundary',options)
+
+export interface OffsetContactTangent {
+ method:'interval-offset-center-tangent';scope:'constant-offset-contact-band'
+ contactStatus:OffsetContactBand['status'];contactWitness:OffsetContactBand['witness']
+ parameterDerivativeIntervals:[Interval,Interval,Interval]|null
+ centerTangentIntervalsMm:[Interval,Interval,Interval]|null;speedIntervalMm:Interval|null
+ centerRegularityProven:boolean;reason:string
+ wholeCurveComplete:false;envelopeRegularityProven:false;trimMembershipProven:false;topologyAuthority:false
+}
+/** A regular center tangent does not certify a fillet envelope or trims. */
+export const certifyNurbsOffsetContactTangent=(options:OffsetContactBandOptions):OffsetContactTangent=>
+ callNurbsRust('surface_offset_contact_tangent',options)
+
+export interface OffsetEnvelopeOptions extends OffsetContactBandOptions {maxCells:number}
+export interface OffsetEnvelopeCell {
+ arcParameter:Interval;imageIntervalsMm:[Interval,Interval,Interval]
+ centerDerivativeIntervalsMm:[Interval,Interval,Interval];arcDerivativeIntervalsMm:[Interval,Interval,Interval]
+ areaSpeedIntervalMm2:Interval;regularityProven:boolean
+}
+export interface OffsetEnvelope {
+ method:'interval-rolling-ball-envelope';scope:'constant-radius-local-contact-band'
+ radiusMm:number;centerTangent:OffsetContactTangent;cells:OffsetEnvelopeCell[];visitedCells:number
+ envelopeRegularityProven:boolean;reason:string
+ wholeCurveComplete:false;finiteNurbsPatchProven:false;trimMembershipProven:false;embeddingProven:false;topologyAuthority:false
+}
+/** Local immersion only; no finite tensor patch, embedding, trims or fillet solid. */
+export const certifyNurbsOffsetEnvelope=(options:OffsetEnvelopeOptions):OffsetEnvelope=>
+ callNurbsRust('surface_offset_envelope',options)

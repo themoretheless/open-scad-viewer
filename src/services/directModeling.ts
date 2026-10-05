@@ -1,3 +1,4 @@
+import {qualifySourceBodyRecord,type SourceBodyRecord} from './sourceBodyArchive'
 import {validCurveOffsetRegion} from './curveOffsetRegion'
 import {validCurveOffsetConstruction} from './curveOffsetConstruction'
 import {extrudeSketchProfile} from './directExtrusion'
@@ -30,7 +31,7 @@ export interface DirectInterchangeMetadata {
   step?:{route:string;retained:boolean;refusalBoundary:string[];identityLoss:string[];metadataLoss:string[];
     definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[]}
 }
-export interface DirectDocument { version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
+export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => structuredClone(value)
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
@@ -71,8 +72,10 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   const d = JSON.parse(text) as DirectDocument
   if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200+MAX_DIRECT_INSTANCES) throw new Error('Invalid direct modeling document.')
   if(d.blenderProjectId!==undefined&&(typeof d.blenderProjectId!=='string'||!d.blenderProjectId.trim()||d.blenderProjectId.length>100))throw Error('Invalid Blender project identity.')
+  if(d.sourceBodies!==undefined&&(!Array.isArray(d.sourceBodies)||d.sourceBodies.length>200))throw Error('Invalid source Body collection.')
+  const sourceCount=d.sourceBodies?.length??0
   const instanceCount=d.bodies.filter(body=>body?.instance).length
-  if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
+  if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount+sourceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
   d.curves ??= []
   d.surfaces ??= []
   if(d.interchange){
@@ -94,10 +97,14 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     groupNames.add(g.name)
   }
   const ids = new Set<string>()
-  for (const item of [...d.sketches, ...d.bodies, ...d.curves, ...d.surfaces]) {
-    if (typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
+  for (const item of [...d.sketches, ...d.bodies, ...d.curves, ...d.surfaces,...d.sourceBodies??[]]) {
+    if (!item || typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
     if (item.group !== undefined && (typeof item.group !== 'string' || !item.group.length || item.group.length > 100)) throw new Error('Invalid object group.')
     ids.add(item.id)
+  }
+  for(const source of d.sourceBodies??[]) {
+    qualifySourceBodyRecord(source)
+    yield
   }
   for (const s of d.sketches) {
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
@@ -290,7 +297,7 @@ export class DirectHistory {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
     const d=this.current.document??JSON.parse(this.current.text) as DirectDocument
-    return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]].map(object=>object.id)
+    return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
   get snapshotKey() { return this.current.text }

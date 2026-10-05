@@ -3,7 +3,7 @@
 //! exclusion is available. Sampling supplies an upper witness, never coverage.
 use crate::{Error, Model, Result, material_chord, material_wall, shell_distance};
 use cad_predicates::Sign;
-use nurbs_core::surface::Surface;
+use nurbs_core::{surface::Surface, surface_distance::enclosure_distance};
 
 pub struct Limits {
     pub wall: material_wall::Limits,
@@ -127,15 +127,29 @@ pub fn inspect(
         .and_then(|n| n.checked_div(2))
         .ok_or_else(|| Error::new("BREP_RESOURCE_LIMIT", "Whole-wall face pair count overflow"))?;
     let mut used_controls = 0;
-    let planes = model
+    let (planes, enclosures): (Vec<_>, Vec<_>) = model
         .faces
         .iter()
         .map(|f| {
             let (p, used) = plane(&f.surface, limits.plane_controls - used_controls);
             used_controls += used;
-            p
+            // Positive rational weights enclose the entire original chart in
+            // the Cartesian control hull. Trimming only restricts that image.
+            // Keep this bound even after subdivision work is exhausted.
+            let enclosure = (used > 0).then(|| {
+                std::array::from_fn::<_, 3, _>(|axis| {
+                    f.surface
+                        .control_points
+                        .iter()
+                        .flatten()
+                        .fold([f64::INFINITY, f64::NEG_INFINITY], |[lo, hi], p| {
+                            [lo.min(p[axis]), hi.max(p[axis])]
+                        })
+                })
+            });
+            (p, enclosure)
         })
-        .collect::<Vec<_>>();
+        .unzip();
     let necessary = necessary_normal_sine(max_sine_squared)?;
     let mut report = Report {
         candidate,
@@ -157,10 +171,14 @@ pub fn inspect(
             if report.pairs.len() == limits.pairs {
                 break 'pairs;
             }
+            let enclosure_lower = match (&enclosures[a], &enclosures[b]) {
+                (Some(a), Some(b)) => enclosure_distance(a, b)?.0,
+                _ => 0.,
+            };
             let mut pair = Pair {
                 faces: [a, b],
-                lower_bound_mm: Some(0.),
-                reason: "distance-work-limit",
+                lower_bound_mm: Some(enclosure_lower),
+                reason: "control-hull-distance-bound",
             };
             if a == b {
                 if planes[a].is_some() {
@@ -190,7 +208,14 @@ pub fn inspect(
                         pair.reason = "endpoint-normal-excluded";
                     }
                 }
-                if pair.lower_bound_mm.is_some() {
+                let enclosure_sufficient = report.candidate.aligned == Some(true)
+                    && report.candidate.chord.proven
+                    && report
+                        .candidate
+                        .chord
+                        .length_interval_mm
+                        .is_some_and(|d| (d[1] - enclosure_lower).next_up() <= tolerance_mm);
+                if pair.lower_bound_mm.is_some() && !enclosure_sufficient {
                     let cells = limits.wall.distance_cells - report.cells;
                     let domains = limits.wall.distance_domain_cells - report.domain_cells;
                     if cells > 0 && domains > 0 {
@@ -206,7 +231,7 @@ pub fn inspect(
                         )?;
                         report.cells += d.cells;
                         report.domain_cells += d.domain_cells;
-                        pair.lower_bound_mm = Some(d.lower_bound_mm);
+                        pair.lower_bound_mm = Some(enclosure_lower.max(d.lower_bound_mm));
                         pair.reason = "complete-face-distance-bound";
                     }
                 }
@@ -290,6 +315,45 @@ mod tests {
         let d = r.interval_mm.unwrap();
         assert!(d[0] <= 10. && d[1] >= 10. && d[1] - d[0] <= 1e-5);
         assert_eq!(format!("{model:?}"), before);
+    }
+    #[test]
+    fn control_hull_bounds_survive_minimal_distance_work_and_face_permutation() {
+        let mut model = crate::cuboid([10., -7., 5.], [20., 13., 35.]).unwrap();
+        for reversed in [false, true] {
+            if reversed {
+                let count = model.faces.len();
+                model.faces.reverse();
+                for shell in &mut model.shells {
+                    for use_ in &mut shell.faces {
+                        use_.face = count - 1 - use_.face;
+                    }
+                }
+                model.rebuild_topology_ids();
+            }
+            let mut limited = limits();
+            limited.wall.distance_cells = 1;
+            limited.wall.distance_domain_cells = 1;
+            let r = inspect(
+                &model,
+                [8., 3., 20.],
+                [14., 0., 0.],
+                1e-5,
+                1e-7,
+                1e-6,
+                limited,
+            )
+            .unwrap();
+            assert!(r.enumeration_complete && r.converged);
+            assert_eq!(r.cells, 0);
+            assert_eq!(r.domain_cells, 0);
+            assert!(
+                r.pairs
+                    .iter()
+                    .any(|p| p.reason == "control-hull-distance-bound")
+            );
+            let d = r.interval_mm.unwrap();
+            assert!(d[0] <= 10. && d[1] >= 10. && d[1] - d[0] <= 1e-5);
+        }
     }
     #[test]
     fn missing_pairs_and_plane_work_never_become_whole_wall_success() {

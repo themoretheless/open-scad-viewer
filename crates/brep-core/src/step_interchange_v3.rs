@@ -4683,7 +4683,7 @@ fn certify_step_v8_topology(model: &Model) -> Result<StepV8Certificate> {
         ],
     })
 }
-fn canonical_face_senses(model: &Model) -> Result<Model> {
+pub(crate) fn canonical_face_senses(model: &Model) -> Result<Model> {
     let mut result = model.clone();
     let reversed = result
         .shells

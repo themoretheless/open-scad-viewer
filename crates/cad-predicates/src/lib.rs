@@ -7,6 +7,8 @@
 mod arithmetic;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
+mod line_crossing_parameter;
+pub use line_crossing_parameter::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
@@ -387,3 +389,6 @@ pub fn classify_residual(
 
 #[cfg(test)]
 mod tests;
+
+mod bezier_point_identity;
+pub use bezier_point_identity::*;

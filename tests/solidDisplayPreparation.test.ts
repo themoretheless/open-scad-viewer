@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {parseDirectDocument} from '../src/services/directModeling'
 import {expect,it} from 'vitest'
-import {createBrepBox,createBrepSphere,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import type {PolygonMesh} from '../src/services/geometry/polygon'
 import {prepareSolidDisplay} from '../src/services/solidDisplayPreparation'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
@@ -96,8 +96,19 @@ it('preserves exact closed-shell membership for dense and working mixed meshes',
  expect(prepareSolidDisplay(changed,body.brep).workClosed).toBeNull()
 })
 
-it('keeps the sphere working mesh and picking when requested refinement exceeds its budget',()=>{
+it('refines the exact rational sphere at default detail without losing working-mesh picking',()=>{
  const brep=createBrepSphere(5),mesh=tessellateNurbsBrep(brep,3),before=structuredClone(mesh)
+ const display=prepareSolidDisplay(mesh,brep,12)
+ expect(display.mesh.indices.length).toBeGreaterThan(mesh.indices.length)
+ expect(display.mesh.indices.length/3).toBeLessThanOrEqual(4000)
+ expect(display.map).toHaveLength(display.mesh.indices.length/3)
+ expect(display.map!.every(i=>Number.isInteger(i)&&i>=0&&i<mesh.indices.length/3)).toBe(true)
+ expect(display.closed?.every(Boolean)).toBe(true)
+ expect(mesh).toEqual(before)
+})
+
+it('keeps the torus working mesh and picking when requested refinement exceeds its budget',()=>{
+ const brep=createBrepTorus(10,2),mesh=tessellateNurbsBrep(brep,3),before=structuredClone(mesh)
  const dense=tessellateNurbsBrep(brep,12)
  expect(dense.indices.length/3).toBeGreaterThan(4000)
  const actual=prepareSolidDisplay(mesh,brep,12)

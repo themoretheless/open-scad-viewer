@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "actualStepMenu": true,
+  "sourceUnchanged": true,
+  "keyboard": true,
+  "errors": [],
+  "files": 6,
+  "wasmSha256": "ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84"
+}

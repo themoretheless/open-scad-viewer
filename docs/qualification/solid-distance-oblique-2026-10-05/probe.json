@@ -1,0 +1,81 @@
+{
+  "status": "qualification-incomplete",
+  "rows": [
+    {
+      "offset": [
+        4,
+        4,
+        4
+      ],
+      "expected": 0.9282032302755088,
+      "valid": true,
+      "reason": "boundary-distance-unresolved",
+      "converged": false,
+      "interval": [
+        0.8226620562975187,
+        0.9283534961127836
+      ],
+      "validity": [
+        true,
+        true
+      ]
+    },
+    {
+      "offset": [
+        8,
+        1,
+        2
+      ],
+      "expected": 2.306623862918075,
+      "valid": true,
+      "reason": "boundary-distance-unresolved",
+      "converged": false,
+      "interval": [
+        2.2898136686671458,
+        2.307669269831501
+      ],
+      "validity": [
+        true,
+        true
+      ]
+    },
+    {
+      "offset": [
+        6.000000953674316,
+        0,
+        0
+      ],
+      "expected": 9.5367431640625e-07,
+      "valid": true,
+      "reason": "separated-volumes",
+      "converged": true,
+      "interval": [
+        9.536743164062496e-07,
+        3.81749252031938e-06
+      ],
+      "validity": [
+        true,
+        true
+      ]
+    },
+    {
+      "offset": [
+        0,
+        0,
+        6.000000953674316
+      ],
+      "expected": 9.5367431640625e-07,
+      "valid": true,
+      "reason": "separated-volumes",
+      "converged": true,
+      "interval": [
+        9.536743164062497e-07,
+        9.536743199589643e-07
+      ],
+      "validity": [
+        true,
+        true
+      ]
+    }
+  ]
+}

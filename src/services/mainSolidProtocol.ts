@@ -1,3 +1,8 @@
+import {isSourceBodyRecordPayload} from './sourceBodyArchive'
+import {sourceBodyExpectation,validSourceBody,type SourceBodyOptions,type SourceBodyResult} from './sourceBody'
+import {contactQualificationExpectation,validContactQualification,type OffsetContactQualificationOptions,type OffsetContactQualification,type ContactQualificationExpectation} from './nurbsOffsetContactQualification'
+import {envelopeFitExpectation,validEnvelopeFit,type OffsetEnvelopeFitOptions,type OffsetEnvelopeFit,type EnvelopeFitExpectation} from './nurbsOffsetEnvelopeFit'
+import type {OffsetContactBandOptions,OffsetContactBand,TrimmedOffsetContactBandOptions,TrimmedOffsetContactBand,OffsetSourceBoundaryOptions,OffsetSourceBoundary,OffsetContactTangent,OffsetEnvelopeOptions,OffsetEnvelope} from './nurbsSurfaceOffset'
 import {wholeWallExpectation,validWholeWall,type WholeWallOptions,type WholeWallResult} from './solidWholeWall'
 import {materialWallExpectation,validMaterialWall,type MaterialWallOptions,type MaterialWallResult} from './solidMaterialWall'
 import {materialExpectation,validMaterial,type MaterialOptions,type MaterialSegment,type MaterialChord} from './solidMaterialVolume'
@@ -55,6 +60,14 @@ import {isNominalLatticeGraph, type LatticeGraphMesh, type NominalLatticeGraph} 
 import type {LighteningOptions} from './solidLightening'
 
 export type MainSolidJob =
+  | {kind:'sourceBodyRestore';options:SourceBodyOptions}
+  | {kind:'offsetContactQualification';options:OffsetContactQualificationOptions}
+  | {kind:'offsetEnvelopeFit';options:OffsetEnvelopeFitOptions}
+  | {kind:'offsetEnvelope';options:OffsetEnvelopeOptions}
+  | {kind:'offsetSourceBoundary';options:OffsetSourceBoundaryOptions}
+  | {kind:'trimmedOffsetContactBand';options:TrimmedOffsetContactBandOptions}
+  | {kind:'offsetContactTangent';options:OffsetContactBandOptions}
+  | {kind:'offsetContactBand';options:OffsetContactBandOptions}
   | {kind:'sketchSnaps';sketch:DirectSketch}
   | {kind:'bodySnaps';body:DirectBody}
   | {kind:'faceSketch';body:DirectBody;face:number}
@@ -110,7 +123,74 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+/** Exhaustive registry: adding a typed job must also admit it at the worker boundary. */
+export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
+ sourceBodyRestore:true,
+ offsetContactQualification:true,
+ offsetEnvelopeFit:true,
+ offsetEnvelope:true,
+ offsetContactTangent:true,
+ offsetSourceBoundary:true,
+ trimmedOffsetContactBand:true,
+ offsetContactBand:true,
+ wholeWall:true,
+ materialWall:true,
+ materialSegment:true,
+ materialChord:true,
+ solidDistance:true,
+ selfIntersection:true,
+ faceContacts:true,
+ boundaryAgreement:true,
+ shellDistance:true,
+ faceDistance:true,
+ surfaceDistance:true,
+ curveDistance:true,
+ sketchSnaps:true,
+ bodySnaps:true,
+ faceSketch:true,
+ bodyEdges:true,
+ topology:true,
+ curveDisplay:true,
+ profileDisplay:true,
+ surfaceMesh:true,
+ surfaceBoundary:true,
+ measureVertices:true,
+ measureEdge:true,
+ primitive:true,
+ modelGraphImport:true,
+ displayMesh:true,
+ restoreDocument:true,
+ brepTool:true,
+ curveChainInspection:true,
+ trimmedCurveOffset:true,
+ curveOffset:true,
+ nurbsEdit:true,
+ pointEdit:true,
+ sketchEdit:true,
+ boolean:true,
+ sceneEdit:true,
+ curveMatch:true,
+ surfaceMatch:true,
+ seamPrepare:true,
+ surfaceBuild:true,
+ nurbsRefit:true,
+ profileIntersections:true,
+ profilePrepare:true,
+ profileEdit:true,
+ bodyEdit:true,
+ partialAnnularPreview:true,
+ revolve:true,
+ extrusion:true,
+ main:true,
+ cad:true,
+ inspect:true,
+ meshContacts:true,
+ truss:true,
+ latticeGraph:true,
+ structuralSections:true,
+ bondedSolid:true,
+}
+export interface MainSolidResults {sourceBodyRestore:SourceBodyResult;offsetContactQualification:OffsetContactQualification;offsetEnvelopeFit:OffsetEnvelopeFit;offsetEnvelope:OffsetEnvelope;offsetContactTangent:OffsetContactTangent;offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -141,7 +221,16 @@ function distanceWitnessConsistent(points:number[][],bounds:number[][][],lo:numb
  return Number.isFinite(gap)&&Number.isFinite(enclosureUpper)&&gap>=lo-roundoff&&gap<=hi+roundoff&&enclosureUpper<=hi+roundoff
 }
 
-export type MainSolidExpectation = {kind:'partialAnnularPreview';id:string;bodyIdentity:string|undefined}
+export type MainSolidExpectation =
+  | ({kind:'sourceBodyRestore'}&ReturnType<typeof sourceBodyExpectation>)
+  | ({kind:'offsetContactQualification'}&ContactQualificationExpectation)
+  | ({kind:'offsetEnvelopeFit'}&EnvelopeFitExpectation)
+  | {kind:'offsetEnvelope';tangent:Extract<MainSolidExpectation,{kind:'offsetContactTangent'}>;radiusMm:number;maxCells:number}
+  | {kind:'offsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]]}
+  | {kind:'offsetContactTangent';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]]}
+  | {kind:'trimmedOffsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]];maxPairs:number;maxCells:number;maxDomainCells:number;loopCounts:[number,number]}
+  | {kind:'offsetSourceBoundary';trim:{kind:'trimmedOffsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]];maxPairs:number;maxCells:number;maxDomainCells:number;loopCounts:[number,number]};addresses:[number,number,number][];toleranceMm:number;maxExactWork:number;maxAgreementCells:number}
+  | {kind:'partialAnnularPreview';id:string;bodyIdentity:string|undefined}
   | {kind:'trimmedCurveOffset';createdId:string;fillRule:'nonzero'|'evenodd';toleranceMm:number;intersectionToleranceMm:number}
   | {kind:'displayMesh';triangles:number}
   | ({kind:'wholeWall'}&ReturnType<typeof wholeWallExpectation>)
@@ -171,8 +260,9 @@ export type MainSolidExpectation = {kind:'partialAnnularPreview';id:string;bodyI
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:Exclude<MainSolidJob['kind'],'sourceBodyRestore'|'offsetContactQualification'|'offsetEnvelopeFit'|'offsetEnvelope'|'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
+  if(job.kind==='sourceBodyRestore')return {kind:job.kind,...sourceBodyExpectation(job.options)}
   if(job.kind==='partialAnnularPreview')return {kind:job.kind,id:job.body.id,bodyIdentity:job.body.brep?.topologyIds?.bodies[0]}
   if(job.kind==='profileIntersections')return {kind:job.kind,loops:structuredClone(job.loops),options:{...job.options}}
   if(job.kind==='profilePrepare')return {kind:job.kind,chainSegments:job.ids.map(id=>{if(job.document.curves?.some(c=>c.id===id))return 1;const s=job.document.sketches.find(s=>s.id===id);return s?.analytic?.kind==='arc'?Math.ceil(Math.abs(s.analytic.sweep)/90):Math.max(0,(s?.points.length??0)-1)})}
@@ -186,6 +276,33 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
   if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
   if(job.kind==='faceDistance'){const o=job.options;return {kind:job.kind,domains:[o.a.faces[o.faceA]?.surface,o.b.faces[o.faceB]?.surface].map(s=>s?[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]:[]),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
+  if(job.kind==='offsetContactQualification')return {kind:job.kind,...contactQualificationExpectation(job.options)}
+  if(job.kind==='offsetEnvelopeFit')return {kind:job.kind,...envelopeFitExpectation(job.options)}
+  if(job.kind==='offsetEnvelope') {
+    const tangent=mainSolidExpectation({kind:'offsetContactTangent',options:job.options})
+    if(tangent.kind!=='offsetContactTangent')throw Error('Invalid envelope expectation')
+    return {kind:job.kind,tangent,radiusMm:Math.abs(job.options.distances[0]),maxCells:job.options.maxCells}
+  }
+  if(job.kind==='offsetContactTangent') {
+    const band=mainSolidExpectation({kind:'offsetContactBand',options:job.options})
+    if(band.kind!=='offsetContactBand')throw Error('Invalid tangent expectation')
+    return {...band,kind:job.kind}
+  }
+  if(job.kind==='offsetSourceBoundary') {
+    const o=job.options,trim=mainSolidExpectation({kind:'trimmedOffsetContactBand',options:o})
+    if(trim.kind!=='trimmedOffsetContactBand')throw Error('Invalid boundary expectation')
+    return {kind:job.kind,trim,addresses:[o.firstLoops,o.secondLoops].flatMap((loops,side)=>loops.flatMap((loop,li)=>loop.map((_,ci)=>[side,li,ci] as [number,number,number]))),toleranceMm:o.toleranceMm,maxExactWork:o.maxExactWork,maxAgreementCells:o.maxAgreementCells}
+  }
+  if(job.kind==='trimmedOffsetContactBand') {
+    const o=job.options,band=mainSolidExpectation({kind:'offsetContactBand',options:o})
+    if(band.kind!=='offsetContactBand')throw Error('Invalid contact expectation')
+    return {...band,kind:job.kind,maxPairs:o.maxPairs,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells,loopCounts:[o.firstLoops.length,o.secondLoops.length]}
+  }
+  if(job.kind==='offsetContactBand') {
+    const o=job.options,first:[ [number,number],[number,number] ]=[o.firstOther,o.firstOther]
+    first[o.fixedAxis]=o.fixedInterval
+    return {kind:job.kind,fixedAxis:o.fixedAxis,domains:[first.map(r=>[r[0],r[1]]) as typeof first,o.secondDomain.map(r=>[r[0],r[1]]) as typeof first]}
+  }
   if(job.kind==='surfaceDistance')return {kind:job.kind,domains:[job.a,job.b].map(s=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
   if(job.kind==='curveDistance')return {kind:job.kind,dimension:job.a.controlPoints[0]?.length??0,domains:[job.a,job.b].map(c=>[c.knots[c.degree],c.knots[c.controlPoints.length]]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
   if(job.kind==='sketchSnaps'){const s=job.sketch,n=s.retainedProfile?s.retainedProfile.loops.reduce((sum,loop)=>sum+loop.length,0):s.points.length;return {kind:job.kind,maxPoints:s.retainedProfile?n*3:s.analytic?5:n*2+2,maxSegments:s.retainedProfile?s.retainedProfile.loops.flat().reduce((sum,c)=>sum+(c.controlPoints.length-c.degree)*(c.degree===1?1:16),0):s.analytic?0:n,maxCircles:!s.retainedProfile&&s.analytic?1:0}}
@@ -209,7 +326,149 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
 
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
+  if(job.kind==='sourceBodyRestore')return validSourceBody(job,value)
   if (!value || typeof value!=='object') return false
+  if(job.kind==='offsetContactQualification')return validContactQualification(job,value)
+  if(job.kind==='offsetEnvelopeFit')return validEnvelopeFit(job,value)
+  if(job.kind==='offsetEnvelope') {
+    const v=value as OffsetEnvelope
+    if(!Number.isSafeInteger(job.maxCells)||job.maxCells<1||job.maxCells>1_000_000
+      ||v.method!=='interval-rolling-ball-envelope'||v.scope!=='constant-radius-local-contact-band'
+      ||v.radiusMm!==job.radiusMm||!finite(v.radiusMm)||v.radiusMm<=0
+      ||v.wholeCurveComplete!==false||v.finiteNurbsPatchProven!==false||v.trimMembershipProven!==false
+      ||v.embeddingProven!==false||v.topologyAuthority!==false||typeof v.envelopeRegularityProven!=='boolean'
+      ||!mainSolidResult(job.tangent,v.centerTangent)||!Array.isArray(v.cells)
+      ||!Number.isSafeInteger(v.visitedCells)||v.visitedCells<0||v.visitedCells>job.maxCells)return false
+    if(v.cells.length===0)return v.visitedCells===0&&!v.envelopeRegularityProven
+      &&(v.reason==='center-regularity-unproven'?!v.centerTangent.centerRegularityProven:
+        v.centerTangent.centerRegularityProven&&['source-jet-enclosure-unresolved','antipodal-contact-unresolved','arc-weight-unresolved'].includes(v.reason))
+    if(!v.centerTangent.centerRegularityProven||v.visitedCells!==2*v.cells.length-1)return false
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    let end=0,regular=true
+    for(const c of v.cells) {
+      if(!c||!interval(c.arcParameter)||c.arcParameter[0]!==end||c.arcParameter[1]<=end||c.arcParameter[1]>1
+        ||!arrayOf(c.imageIntervalsMm,3,interval)||!arrayOf(c.centerDerivativeIntervalsMm,3,interval)
+        ||!arrayOf(c.arcDerivativeIntervalsMm,3,interval)||!interval(c.areaSpeedIntervalMm2)
+        ||c.areaSpeedIntervalMm2[0]<0||typeof c.regularityProven!=='boolean'
+        ||c.regularityProven!==(c.areaSpeedIntervalMm2[0]>0))return false
+      if(c.regularityProven&&(c.centerDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)
+        ||c.arcDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)))return false
+      if(c.regularityProven) {
+        const mul=(a:number[],b:number[])=>{const p=[a[0]*b[0],a[0]*b[1],a[1]*b[0],a[1]*b[1]];return [Math.min(...p),Math.max(...p)]}
+        const crossIncludesZero=[0,1,2].every(k=>{
+          const a=mul(c.centerDerivativeIntervalsMm[(k+1)%3],c.arcDerivativeIntervalsMm[(k+2)%3])
+          const b=mul(c.centerDerivativeIntervalsMm[(k+2)%3],c.arcDerivativeIntervalsMm[(k+1)%3])
+          return a[0]-b[1]<=0&&a[1]-b[0]>=0
+        })
+        if(crossIncludesZero)return false
+      }
+      end=c.arcParameter[1];regular&&=c.regularityProven
+    }
+    return end===1&&v.envelopeRegularityProven===regular
+      &&v.reason===(regular?'regular-local-envelope':'envelope-regularity-unproven')
+  }
+  if(job.kind==='offsetContactTangent') {
+    const v=value as OffsetContactTangent,unique=v.contactStatus==='continuous-branch'
+    if(v.method!=='interval-offset-center-tangent'||v.scope!=='constant-offset-contact-band'
+      ||v.envelopeRegularityProven!==false||v.trimMembershipProven!==false||v.topologyAuthority!==false||v.wholeCurveComplete!==false
+      ||typeof v.centerRegularityProven!=='boolean')return false
+    if(!mainSolidResult({kind:'offsetContactBand',fixedAxis:job.fixedAxis,domains:job.domains},
+      {method:'interval-offset-band-krawczyk',scope:'parameter-band-within-tube',status:v.contactStatus,witness:v.contactWitness,
+       rootForEveryParameterProven:unique,uniqueWithinTube:unique,continuousBranchProven:unique,wholeCurveComplete:false,trimMembershipProven:false,topologyAuthority:false}))return false
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    if(v.centerTangentIntervalsMm===null)return v.parameterDerivativeIntervals===null&&v.speedIntervalMm===null&&!v.centerRegularityProven
+      &&(v.reason==='offset-carriers-excluded'?v.contactStatus==='excluded':v.reason==='contact-band-unresolved'?v.contactStatus==='unresolved':unique&&['source-jet-continuity-unproven','offset-jacobian-unresolved','implicit-jacobian-unresolved'].includes(v.reason))
+    if(!unique||!arrayOf(v.centerTangentIntervalsMm,3,interval)||!arrayOf(v.parameterDerivativeIntervals,3,interval)
+      ||!interval(v.speedIntervalMm)||v.speedIntervalMm![0]<0||v.centerRegularityProven!==(v.speedIntervalMm![0]>0))return false
+    if(v.centerRegularityProven&&v.centerTangentIntervalsMm.every(r=>r[0]<=0&&r[1]>=0))return false
+    return v.reason===(v.centerRegularityProven?'regular-center-tangent':'center-regularity-unproven')
+  }
+  if(job.kind==='offsetSourceBoundary') {
+    const v=value as OffsetSourceBoundary,count=(n:unknown,max:number)=>Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=max
+    if(v.method!=='offset-source-boundary-admission'||v.scope!=='original-trims-and-spatial-coedges'
+      ||v.topologyAuthority!==false||v.wholeCurveComplete!==false||!mainSolidResult(job.trim,v.trim)
+      ||typeof v.worldCoedgeIdentityProven!=='boolean'||typeof v.worldBoundaryWithinToleranceProven!=='boolean'
+      ||v.toleranceMm!==job.toleranceMm||v.maxExactWork!==job.maxExactWork||v.maxAgreementCells!==job.maxAgreementCells
+      ||v.totalCoedges!==job.addresses.length||!count(v.checkedCoedges,v.totalCoedges)
+      ||!count(v.exactWork,job.maxExactWork)||!count(v.agreementCells,job.maxAgreementCells)
+      ||!Array.isArray(v.audits)||v.audits.length>v.totalCoedges)return false
+    if(!v.audits.every((a,i)=>{
+      if(!a||a.side!==job.addresses[i][0]||a.loop!==job.addresses[i][1]||a.curve!==job.addresses[i][2]
+        ||!['equal','different','unresolved','unsupported'].includes(a.exactStatus)
+        ||!count(a.exactWork,job.maxExactWork)||!count(a.cells,job.maxAgreementCells))return false
+      if(a.agreementStatus==='exact')return a.exactStatus==='equal'&&a.cells===0&&a.witnessParameter===null&&a.witnessDistanceMm===null
+      if(a.exactStatus==='equal')return false
+      if(a.agreementStatus==='mismatch')return a.cells>0&&finite(a.witnessParameter)&&a.witnessParameter!>=0&&a.witnessParameter!<=1
+        &&arrayOf(a.witnessDistanceMm,2,finite)&&a.witnessDistanceMm![0]>job.toleranceMm&&a.witnessDistanceMm![1]>=a.witnessDistanceMm![0]
+      return ['within-tolerance','unresolved'].includes(a.agreementStatus)&&a.witnessParameter===null&&a.witnessDistanceMm===null
+        &&(a.agreementStatus!=='within-tolerance'||a.cells>0)
+    }))return false
+    if(v.exactWork!==v.audits.reduce((n,a)=>n+a.exactWork,0)||v.agreementCells!==v.audits.reduce((n,a)=>n+a.cells,0))return false
+    const accepted=(a:OffsetSourceBoundary['audits'][number])=>a.agreementStatus==='exact'||a.agreementStatus==='within-tolerance'
+    if(v.worldBoundaryWithinToleranceProven){
+      const allExact=v.audits.every(a=>a.exactStatus==='equal')
+      return v.trim.trimMembershipProven&&v.checkedCoedges===v.totalCoedges&&v.audits.length===v.totalCoedges
+        &&v.audits.every(accepted)&&v.worldCoedgeIdentityProven===allExact
+        &&v.reason===(allExact?'exact-source-boundaries':'source-boundaries-within-tolerance')
+    }
+    if(v.worldCoedgeIdentityProven)return false
+    if(!v.trim.trimMembershipProven)return v.reason==='contact-not-admitted-on-trims'&&v.checkedCoedges===0&&v.audits.length===0
+    if(!v.audits.length||!v.audits.slice(0,-1).every(accepted))return false
+    const last=v.audits.at(-1)!
+    if(v.reason==='boundary-work-limit')return last.agreementStatus==='unresolved'&&last.cells===0
+      &&v.agreementCells===job.maxAgreementCells&&v.checkedCoedges===v.audits.length-1
+    return v.checkedCoedges===v.audits.length&&((v.reason==='spatial-boundary-mismatch'&&last.agreementStatus==='mismatch')
+      ||(v.reason==='spatial-boundary-unresolved'&&last.agreementStatus==='unresolved'))
+  }
+  if(job.kind==='trimmedOffsetContactBand') {
+    const v=value as TrimmedOffsetContactBand,unique=v.contactStatus==='continuous-branch'
+    if(v.method!=='interval-offset-band-trim-admission'||v.scope!=='audited-original-uv-regions'
+      ||v.worldCoedgeIdentityProven!==false||v.topologyAuthority!==false||v.wholeCurveComplete!==false
+      ||typeof v.trimMembershipProven!=='boolean'||v.continuousBranchProven!==unique)return false
+    if(!mainSolidResult({kind:'offsetContactBand',fixedAxis:job.fixedAxis,domains:job.domains},
+      {method:'interval-offset-band-krawczyk',scope:'parameter-band-within-tube',status:v.contactStatus,witness:v.witness,
+       rootForEveryParameterProven:unique,uniqueWithinTube:unique,continuousBranchProven:v.continuousBranchProven,
+       wholeCurveComplete:v.wholeCurveComplete,trimMembershipProven:false,topologyAuthority:v.topologyAuthority}))return false
+    const count=(n:unknown,max:number)=>Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=max
+    if(!count(v.pairs,job.maxPairs)||!count(v.cells,job.maxCells)||!count(v.domainCells,job.maxDomainCells)
+      ||!Array.isArray(v.regions)||v.regions.length>2||!Array.isArray(v.classifications)||v.classifications.length>2)return false
+    if(!v.regions.every((r,i)=>r&&[true,false,null].includes(r.valid)&&typeof r.reason==='string'
+      &&count(r.pairs,job.maxPairs)&&count(r.cells,job.maxCells)&&count(r.domainCells,job.maxDomainCells)
+      &&(r.problemLoops===null||arrayOf(r.problemLoops,2,n=>count(n,job.loopCounts[i]-1)))))return false
+    if(!v.classifications.every(c=>c&&['inside','outside','unresolved'].includes(c.location)&&typeof c.reason==='string'&&count(c.cells,job.maxDomainCells)))return false
+    if(v.pairs!==v.regions.reduce((n,r)=>n+r.pairs,0)||v.cells!==v.regions.reduce((n,r)=>n+r.cells,0)
+      ||v.domainCells!==v.regions.reduce((n,r)=>n+r.domainCells,0)+v.classifications.reduce((n,c)=>n+c.cells,0))return false
+    if(v.trimMembershipProven)return unique&&v.reason==='contact-band-inside-trims'
+      &&v.regions.length===2&&v.regions.every(r=>r.valid===true)
+      &&v.classifications.length===2&&v.classifications.every(c=>c.location==='inside')
+    switch(v.reason){
+      case 'offset-carriers-excluded':return v.contactStatus==='excluded'&&v.regions.length===0&&v.classifications.length===0
+      case 'offset-contact-unresolved':return v.contactStatus==='unresolved'&&v.regions.length===0&&v.classifications.length===0
+      case 'invalid-trim-region':return unique&&v.regions.at(-1)?.valid===false&&v.classifications.length===0
+      case 'trim-region-unresolved':return unique&&v.regions.at(-1)?.valid===null&&v.classifications.length===0
+      case 'contact-outside-trim':return unique&&v.regions.length===2&&v.regions.every(r=>r.valid===true)&&v.classifications.at(-1)?.location==='outside'
+      case 'contact-trim-unresolved':return unique&&v.regions.length===2&&v.regions.every(r=>r.valid===true)&&v.classifications.at(-1)?.location==='unresolved'
+      case 'trim-work-limit':return unique&&(v.pairs===job.maxPairs||v.cells===job.maxCells||v.domainCells===job.maxDomainCells)
+      default:return false
+    }
+  }
+  if(job.kind==='offsetContactBand') {
+    const v=value as OffsetContactBand
+    const unique=v.status==='continuous-branch'
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    if(v.method!=='interval-offset-band-krawczyk'||v.scope!=='parameter-band-within-tube'
+      ||!['continuous-branch','excluded','unresolved'].includes(v.status)
+      ||v.rootForEveryParameterProven!==unique||v.uniqueWithinTube!==unique||v.continuousBranchProven!==unique
+      ||v.wholeCurveComplete!==false||v.trimMembershipProven!==false||v.topologyAuthority!==false)return false
+    if(!unique)return v.witness===null
+    const w=v.witness
+    if(!w||!finite(w.contractionUpper)||w.contractionUpper<0||w.contractionUpper>=.5
+      ||!arrayOf(w.centerIntervalMm,3,interval)||!arrayOf(w.firstUV,2,interval)||!arrayOf(w.secondUV,2,interval))return false
+    return [w.firstUV,w.secondUV].every((uv,side)=>uv.every((r,axis)=>{
+      const d=job.domains[side][axis]
+      return side===0&&axis===job.fixedAxis?r[0]===d[0]&&r[1]===d[1]:r[0]>d[0]&&r[1]<d[1]
+    }))
+  }
   if(job.kind==='wholeWall')return validWholeWall(job,value)
   if(job.kind==='materialWall')return validMaterialWall(job,value)
   if(job.kind==='materialSegment'||job.kind==='materialChord')return validMaterial(job,value)
@@ -516,6 +775,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     && (v.displayMeshOnly===undefined || v.displayMeshOnly===true))
   const v=value as DirectDocument
   return v.version===1 && Array.isArray(v.sketches) && Array.isArray(v.bodies)
+    && (v.sourceBodies===undefined||(Array.isArray(v.sourceBodies)&&v.sourceBodies.length<=200&&v.sourceBodies.every(isSourceBodyRecordPayload)))
 }
 
 /** Validate bounded provenance before accepting a worker report. No mechanics in TS. */

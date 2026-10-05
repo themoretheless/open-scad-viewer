@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import {SourceBodyDisplay} from '../services/sourceBodyDisplay'
+import type {SourceBodyResult} from '../services/sourceBody'
+
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
+import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
+const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
+const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
 import VrControls from '../components/VrControls.vue'
 import { prepareVrPolygons } from '../services/vrScene'
 import {faceAbsenceProven,type SelfIntersection} from '../services/solidSelfIntersection'
@@ -529,6 +535,7 @@ function toggleObjectState(id:string, kind:'hidden'|'locked') {
   cancelCommandState()
   const state=kind==='hidden'?hiddenIds:lockedIds
   state.value=state.value.includes(id)?state.value.filter(value=>value!==id):[...state.value,id]
+  if(!objectSelectable(id)&&sourceEdgeSelection.value.startsWith(id+':'))sourceEdgeSelection.value=''
   const ids=[selection.value,...extraSelection.value].filter(objectSelectable)
   selection.value=ids[0]??'';extraSelection.value=ids.slice(1);hovered.value=''
   faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
@@ -550,6 +557,11 @@ function selectEdgeChain() {
   edgeIndexes.value=connectedEdgeChain(authoredEdges.value,edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value])
 }
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
+const manufacturingOpen=ref(false),manufacturingRevision=ref(0)
+watch(document,()=>{manufacturingRevision.value++},{flush:'sync'})
+const manufacturingSelection=computed(()=>selectedIds.value.length===1?document.value.bodies.filter(body=>body.id===selectedIds.value[0]):[])
+const manufacturingScene=computed(()=>manufacturingOpen.value?manufacturingMeshes({version:1,sketches:[],bodies:manufacturingSelection.value}):[])
+
 const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.value.bodies.find(b=>b.id===id)).filter(b=>b?.brep))
 const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
@@ -1316,6 +1328,56 @@ async function refreshBodyEdges(){
  }catch(e){if(generation===bodyEdgesGeneration)error.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===bodyEdgesGeneration)bodyEdgesPending.value=false}
 }
+const sourceDisplayWorker=createSolidPreviewWorker(),sourceDisplay=new SourceBodyDisplay(sourceDisplayWorker)
+const sourceDisplayResults=shallowRef<Record<string,SourceBodyResult>>({}),sourceDisplayErrors=shallowRef<Record<string,string>>({})
+const sourceDisplayPending=ref(false),sourceEdgeSelection=ref(''),sourceEdgeHover=ref('')
+let sourceDisplayGeneration=0
+function cancelSourceDisplay(){sourceDisplayGeneration++;sourceDisplay.cancel();sourceDisplayPending.value=false}
+async function refreshSourceDisplay(){
+ cancelSourceDisplay();sourceDisplayResults.value={};sourceDisplayErrors.value={};sourceEdgeSelection.value=''
+ if(!props.open||!kernelReady.value)return
+ const source=document.value,generation=sourceDisplayGeneration
+ sourceDisplayPending.value=true
+ await sourceDisplay.prepare(source.sourceBodies??[],(id,result)=>{
+  if(generation===sourceDisplayGeneration&&document.value===source)sourceDisplayResults.value={...sourceDisplayResults.value,[id]:result}
+ },(id,e)=>{
+  if(generation===sourceDisplayGeneration&&document.value===source)sourceDisplayErrors.value={...sourceDisplayErrors.value,[id]:e instanceof Error?e.message:String(e)}
+ })
+ if(generation===sourceDisplayGeneration)sourceDisplayPending.value=false
+}
+function pickSourceEdge(id:string,index:number){
+ if(!objectSelectable(id)||!sourceDisplayResults.value[id]?.edges.some(edge=>edge.index===index))return
+ cancelCommandState();selection.value='';extraSelection.value=[];hovered.value=''
+ sourceEdgeSelection.value=id+':'+index;mode.value='3d';tool.value='select'
+ faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
+}
+function pickSourceBody(id:string){
+ const edge=sourceDisplayResults.value[id]?.edges[0]
+ if(edge)pickSourceEdge(id,edge.index)
+}
+watch(selection,id=>{if(id)sourceEdgeSelection.value=''})
+const sourceDisplayEdges=computed(()=>(document.value.sourceBodies??[]).filter(item=>objectInView(item.id)).flatMap(item=>
+ (sourceDisplayResults.value[item.id]?.edges??[]).map(edge=>({key:item.id+':'+edge.index,body:item.id,name:item.name,index:edge.index,selectable:objectSelectable(item.id),
+  points:(edge.displaySegments??[]).flatMap((segment,i)=>i===0?segment[1]:[segment[1][1]]).map(p=>project(p,'3d').join(',')).join(' ')}))))
+const sourceDisplayFaces=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).flatMap(([id,result])=>
+ (result.displayFaces??[]).flatMap(face=>face.tiles.flatMap((tile,i)=>[[0,1,2],[0,2,3]].map((indexes,k)=>({key:id+':'+face.index+':'+i+':'+k,
+ points:indexes.map(index=>project(tile.corners[index]!,'3d').join(',')).join(' '),
+ depth:indexes.reduce((sum,index)=>sum+projectDirectPoint(tile.corners[index]! as Vec3,camera.value)[2],0)/3}))))).sort((a,b)=>a.depth-b.depth))
+const sourceUnresolvedCount=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).reduce((sum,[,result])=>sum+(result.displayFaces??[]).reduce((n,face)=>n+face.unresolved.length,0),0))
+const sourceUnresolvedBoxes=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).flatMap(([id,result])=>
+ (result.displayFaces??[]).flatMap(face=>face.unresolvedBoxes.map((box,i)=>{
+ const points=Array.from({length:8},(_,k)=>project([box[0][k&1],box[1][(k>>1)&1],box[2][(k>>2)&1]],'3d'))
+ const x=Math.min(...points.map(p=>p[0])),y=Math.min(...points.map(p=>p[1]))
+ return {key:id+':'+face.index+':'+i,body:id,face:face.index,uv:face.unresolved[i],x,y,width:Math.max(...points.map(p=>p[0]))-x,height:Math.max(...points.map(p=>p[1]))-y}
+ }))))
+const sourceDisplayEndpointBoxes=computed(()=>Object.entries(sourceDisplayResults.value).flatMap(([id,result])=>
+ result.edges.filter(edge=>id+':'+edge.index===sourceEdgeSelection.value&&objectInView(id)).flatMap(edge=>edge.endpointBoxes.map((box,end)=>{
+  const corners=Array.from({length:8},(_,i)=>project([box[0][i&1],box[1][(i>>1)&1],box[2][(i>>2)&1]],'3d'))
+  const x=Math.min(...corners.map(p=>p[0])),y=Math.min(...corners.map(p=>p[1]))
+  return {key:id+':'+edge.index+':'+end,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,
+   bounds:box.map(b=>'['+b.join(', ')+']').join(' ')}
+ }))))
+onUnmounted(()=>{cancelSourceDisplay();sourceDisplayWorker.dispose()})
 const featureEdges=computed(()=>authoredEdges.value.map(edge=>({i:edge.index,id:edge.id,points:edge.points.map(point=>project(point,'3d').join(',')).join(' ')})))
 const splitPlanePoints=computed(()=>{
  if(advancedOp.value!=='split'||!selectedBody.value)return ''
@@ -1525,7 +1587,7 @@ function moveAt(e: PointerEvent) {
   } catch { /* canvas not ready */ }
 }
 
-function sync(next:DirectDocument=history.document) { snapDocument.value=next; document.value=next; const ids=new Set(documentObjects(document.value).map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
+function sync(next:DirectDocument=history.document) { snapDocument.value=next; document.value=next; const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
 function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
   const previous=origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):history.objectIds)
@@ -1831,7 +1893,10 @@ async function importFile(event: Event) {
    historyPending.value=false;finishCommit(added);selection.value='';extraSelection.value=[]
   }
   fit('2d');fit('3d')
- }catch(e){if(generation===historyGeneration)error.value=String(e)}
+ }catch(e){
+  const {solidImportErrorMessage}=await import('../services/solidImportErrorMessage')
+  if(generation===historyGeneration)error.value=solidImportErrorMessage(e,ru.value?'ru':'en')
+ }
  finally{if(generation===historyGeneration)historyPending.value=false;input.value=''}
 }
 const bodyExportFormat = ref<MeshExportFormat>('stl_binary')
@@ -1999,6 +2064,7 @@ function wheelZoom(e: WheelEvent, pane: Pane) {
 function fit(pane: Pane, selectedOnly=false) {
   const points = pane === '2d' ? visibleSketches.value.filter(s=>!selectedOnly||selectedIds.value.includes(s.id)).flatMap(s => (retainedDisplay.value.get(s.id)??[s.points]).flat()).concat(selectedOnly?[]:copyPreview.value.flatMap(s=>s.points)) : [
     ...[...sceneBodies.value.filter(b=>!selectedOnly||selectedIds.value.includes(b.id)), ...(previewBody.value ? [previewBody.value] : [])].flatMap(bodyPoints),
+    ...Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)&&(!selectedOnly||sourceEdgeSelection.value.startsWith(id+':'))).flatMap(([,r])=>[...r.edges.flatMap(e=>(e.displaySegments??[]).flatMap(segment=>segment[1])),...(r.displayFaces??[]).flatMap(face=>[...face.tiles.flatMap(tile=>tile.corners),...face.unresolvedBoxes.flatMap(box=>Array.from({length:8},(_,i)=>[box[0][i&1],box[1][(i>>1)&1],box[2][(i>>2)&1]]))])]),
     ...document.value.sketches.filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item=>(retainedDisplay.value.get(item.id)??[item.points]).flat().map(p=>worldPoint(p,item.plane))),
     ...(document.value.curves ?? []).filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item => item.curve.controlPoints),
     ...(document.value.surfaces ?? []).filter(item=>objectInView(item.id)&&(!selectedOnly||selectedIds.value.includes(item.id))).flatMap(item => item.surface.controlPoints.flat()),
@@ -2185,7 +2251,7 @@ watch(restoringDraft,pending=>{
  try{
   const state=JSON.parse(storageGet(workspaceKey)??'null')
   if(!state || state.version!==1)return
-  const ids=new Set(documentObjects(document.value).map(o=>o.id))
+  const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
   const read=(value:unknown):string[]=>Array.isArray(value)?value.filter((id):id is string=>typeof id==='string'&&ids.has(id)).slice(0,1000):[]
   hiddenIds.value=read(state.hidden);lockedIds.value=read(state.locked);isolatedBodyIds.value=read(state.isolated)
   if(typeof state.group==='string' && ((document.value.groups??[]).some(g=>g.name===state.group)||documentObjects(document.value).some(o=>o.group===state.group)))activeGroup.value=state.group
@@ -2203,7 +2269,7 @@ function toggleBodyIsolation() {
 }
 watch(() => document.value, d => {
   if (!isolatedBodyIds.value.length) return
-  const ids = new Set(documentObjects(d).map(object => object.id))
+  const ids = new Set([...documentObjects(d),...d.sourceBodies??[]].map(object => object.id))
   const retained = isolatedBodyIds.value.filter(id => ids.has(id))
   // Preview snapshots retain identity; only invalidate visibility when an isolated object disappears.
   if (retained.length !== isolatedBodyIds.value.length) isolatedBodyIds.value = retained
@@ -2987,7 +3053,7 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
-  if (e.key === 'Escape') { e.preventDefault(); const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
+  if (e.key === 'Escape') { e.preventDefault(); cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
     if ((e.target as HTMLElement).closest?.('button, summary, a[href], select')) return
@@ -3163,12 +3229,16 @@ const bodySections = computed(() => {
 })
 
 
-interface SceneRow {key:string;height:number;kind:'object'|'group'|'label'|'empty';pane?:Pane;dot?:string;title?:string;section?:{name:string|null};item?:{id:string;name:string;group?:string;instance?:unknown;brep?:unknown;material?:{color:string}}}
+interface SceneRow {key:string;height:number;kind:'object'|'source'|'group'|'label'|'empty';pane?:Pane;dot?:string;title?:string;section?:{name:string|null};item?:{id:string;name:string;group?:string;instance?:unknown;brep?:unknown;material?:{color:string}}}
 const sceneRows=computed(()=>{
  const rows:SceneRow[]=[]
  const objects=(items:SceneRow['item'][],pane:Pane,dot:string)=>{for(const item of items)if(item)rows.push({key:'object:'+item.id,height:32,kind:'object',item,pane,dot})}
  if(document.value.sketches.length){rows.push({key:'label:sketch',height:28,kind:'label',title:label('Эскизы','Sketches')});objects(document.value.sketches,'2d','sketch')}
  for(const section of bodySections.value){rows.push({key:'group:'+section.key,height:44,kind:'group',section});objects(section.bodies,'3d','body')}
+ if(document.value.sourceBodies?.length){
+  rows.push({key:'label:source',height:28,kind:'label',title:label('Исходные тела · preview','Native source bodies · preview')})
+  for(const item of document.value.sourceBodies)rows.push({key:'source:'+item.id,height:32,kind:'source',item,pane:'3d',dot:'nurbs'})
+ }
  const nurbs=[...document.value.curves??[],...document.value.surfaces??[]]
  if(nurbs.length){rows.push({key:'label:nurbs',height:28,kind:'label',title:'NURBS'});objects(nurbs,'3d','nurbs')}
  if(!rows.length)rows.push({key:'empty',height:80,kind:'empty'})
@@ -3286,6 +3356,7 @@ async function refreshCurveDisplay(){
  curveDisplayErrors.value=result.errors;curveDisplayPending.value=false
 }
 watch(()=>[props.open,tool.value,document.value,JSON.stringify(activePlane.value),JSON.stringify(draftPoint.value),JSON.stringify(draftPointValid.value),JSON.stringify(draftEnd.value),JSON.stringify(draftEndValid.value),slotWidth.value,slotWidthValid.value,numericSlotRetry.value],refreshNumericSlot,{flush:'sync'})
+watch(()=>[props.open,kernelReady.value,document.value],()=>void refreshSourceDisplay(),{immediate:true,flush:'post'})
 watch(()=>[props.open,kernelReady.value,displayCurves.value],()=>void refreshCurveDisplay(),{immediate:true,flush:'post'})
 
 const displayProfiles=computed(()=>[...document.value.sketches,...(advancedPreview.value.document?.sketches??[])].flatMap(s=>s.retainedProfile?[{id:s.id,profile:s.retainedProfile}]:[]))
@@ -3389,6 +3460,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button v-if="snapPreparationNeedsRetry" @click="refreshSnapPreparation">{{ label('Обновить привязки','Refresh snaps') }}</button>
       <span v-if="snapPreparationErrors.length" role="alert">{{ label('Не готовы привязки: ','Snaps unavailable: ')+snapPreparationErrors.map(e=>e.id).join(', ') }} {{ snapPreparationErrors[0].message }}</span>
       <span v-if="faceSketchPending" role="status" aria-label="face-sketch-preparation">{{ label('Готовлю плоскость эскиза…','Preparing sketch plane…') }} <button @click="cancelFaceSketch">Esc</button></span>
+      <span v-if="sourceDisplayPending" role="status">{{ label('Готовлю исходные рёбра…','Preparing source edges…') }} <button @click="cancelSourceDisplay">{{ label('Отмена','Cancel') }}</button></span>
+      <button v-if="document.sourceBodies?.length && !sourceDisplayPending" @click="refreshSourceDisplay">{{ label('Обновить исходные рёбра','Retry source edges') }}</button>
+      <span v-for="(message,id) in sourceDisplayErrors" :key="id" role="alert">{{ (document.sourceBodies??[]).find(body=>body.id===id)?.name??id }}: {{ label('Подготовка рёбер не завершена. Повторите расчёт; если отказ повторяется, проверьте исходную геометрию и лимиты.','Edge preparation is incomplete. Retry; if it fails again, inspect the source geometry and work limits.') }} <details><summary>{{ label('Подробности','Details') }}</summary>{{ id }}: {{ message }}</details></span>
+      <span v-if="sourceUnresolvedCount" role="status">{{ label('Не проверены участки граней: ','Unresolved face cells: ')+sourceUnresolvedCount }} · {{ label('Выделены оранжевым.','Shown in orange.') }}</span>
+      <span v-if="sourceEdgeSelection" role="status">{{ label('Исходное ребро','Source edge') }}: {{ sourceEdgeSelection }} · {{ label('Предпросмотр исходных поверхностей. Концы заданы интервалами.','Source surface preview. Endpoints are enclosed by intervals.') }}</span>
       <span v-if="bodyEdgesPending" role="status" aria-label="body-edges">{{ label('Готовлю рёбра…','Preparing edges…') }} <button @click="cancelBodyEdges">Esc</button></span>
       <button v-if="pickMode==='edge' && selectedBody && !bodyEdgesPending && !authoredEdges.length" @click="refreshBodyEdges">{{ label('Обновить рёбра','Refresh edges') }}</button>
       <span v-if="topologyPending" role="status" aria-label="topology-preparation">{{ label('Готовлю выбор граней…','Preparing face selection…') }} <button @click="cancelTopology()">Esc</button></span>
@@ -3581,6 +3657,16 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+              <g v-if="pane==='3d'" data-source-face-preview="true" pointer-events="none">
+                <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" fill="#77b8b0" fill-opacity=".25" stroke="none" />
+                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" fill="none" stroke="#ff9977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+              </g>
+              <g v-if="pane==='3d'" data-source-endpoint-enclosures="true" pointer-events="none">
+                <rect v-for="box in sourceDisplayEndpointBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" fill="none" stroke="#ffc977" stroke-width="2" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"><title>{{ label('Интервал конца: ','Endpoint enclosure: ')+box.bounds }}</title></rect>
+              </g>
+              <g v-if="pane==='3d'" data-source-body-preview="edges">
+                <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?'#ffc977':sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
+              </g>
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
@@ -3841,7 +3927,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <label v-if="['push','shell','split','offset'].includes(advancedOp)">{{ advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm') }}<CadQuantityInput :aria-label="advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm')" v-model="advanced.distance" kind="length" :locale="locale" @validity="quantityValidity('advanced.distance', $event)" step=".5" /></label>
               <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep">{{ label('Тип скругления','Fillet type') }}<select v-model="advanced.filletMode" :aria-label="label('Тип скругления','Fillet type')" @change="quantityValidity('endRadius',true)"><option value="constant">{{ label('Постоянный радиус','Constant radius') }}</option><option value="variable">{{ label('Радиус A → B','Radius A → B') }}</option><option value="corner">{{ label('Угол трёх рёбер','Three-edge corner') }}</option><option value="partial-preview">{{ label("Частичная дуга · просмотр", "Partial arc preview") }}</option></select></label>
               <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='partial-preview'" role="status">{{ label('Только предпросмотр: проверка геометрии не завершена. Выберите одну внешнюю дугу кольца. Esc — закрыть.', 'Preview only: geometry checks remain incomplete. Select one outer quarter-circle of an annular body. Esc to close.') }}</small>
-              <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'">{{ label('Один вертикальный край осевого параллелепипеда. Радиус меняется линейно от A к B; оба радиуса положительны и различны.','One vertical edge of an axis-aligned cuboid. Radius varies linearly from A to B; both radii must be positive and different.') }}</small>
+              <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'">{{ label('Одно прямое ребро параллелепипеда, в том числе повёрнутого. Радиус сечения меняется линейно от A к B; оба радиуса положительны и различны.','One straight edge of a cuboid, including rotated parts. Cross-section radius varies linearly from A to B; both radii must be positive and different.') }}</small>
               <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='corner'">{{ label('Три ребра у вершины с максимальными X, Y, Z осевого параллелепипеда. Общий радиус; сферическое сопряжение.','Three edges at the maximum X, Y, Z corner of an axis-aligned cuboid. Equal radius with a spherical corner blend.') }}</small>
               <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'">{{ label('Радиус B, мм','Radius B, mm') }}<CadQuantityInput :aria-label="label('Радиус B, мм','Radius B, mm')" v-model="advanced.endRadius" kind="length" :locale="locale" :min=".01" @validity="quantityValidity('endRadius',$event)" /></label>
               <label v-if="['edge-fillet','chamfer','curve'].includes(advancedOp)">{{ advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm') }}<CadQuantityInput :aria-label="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm')" v-model="advanced.radius" kind="length" :locale="locale" @validity="quantityValidity('advanced.radius', $event)" :min=".01" :max="advancedOp==='curve'?1000000:undefined" step=".5" /></label>
@@ -3986,7 +4072,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <div><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
-            <div v-if="pane === '3d' && !advancedOp && !document.bodies.length && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && !advancedOp && !document.bodies.length && !(document.sourceBodies?.length) && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
               <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">
@@ -4047,10 +4133,23 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   @click="removeGroup(row.section.name)"
                 >×</button>
               </li>
+            <li v-else-if="row.kind==='source' && row.item" :data-scene-key="row.key" :style="style" :aria-posinset="position" :aria-setsize="total" class="object-row" :class="{muted:!objectVisible(row.item.id),locked:lockedIds.includes(row.item.id)}">
+              <button type="button" :disabled="!objectSelectable(row.item.id)||!sourceDisplayResults[row.item.id]?.edges.length" :aria-label="row.item.name" :aria-pressed="sourceEdgeSelection.startsWith(row.item.id+':')" @click="pickSourceBody(row.item.id)"><span class="dot nurbs"></span>{{ row.item.name }}<small>preview</small></button>
+              <button :aria-label="label('Изолировать: ','Isolate: ')+row.item.name" :aria-pressed="isolatedBodyIds.length===1&&isolatedBodyIds[0]===row.item.id" @click="isolatedBodyIds=isolatedBodyIds.length===1&&isolatedBodyIds[0]===row.item.id?[]:[row.item.id]">◎</button>
+              <SceneObjectControls :name="row.item.name" :locale="locale" :hidden="!objectVisible(row.item.id)" :locked="lockedIds.includes(row.item.id)" @visibility="toggleObjectState(row.item.id,'hidden')" @lock="toggleObjectState(row.item.id,'locked')" />
+            </li>
             <li v-else-if="row.kind==='object' && row.item" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="object-row" :class="{muted:!objectVisible(row.item.id),locked:lockedIds.includes(row.item.id)}"><button type="button" :disabled="!objectSelectable(row.item.id)" :aria-label="row.item.name" :aria-pressed="selectedIds.includes(row.item.id)" @click="pickObject(row.item.id,row.pane!,$event.shiftKey)"><span class="dot" :class="row.dot" :style="row.item.material?{background:row.item.material.color}:undefined"></span>{{row.item.name}}<small v-if="row.item.instance">{{label('Экземпляр','Instance')}}</small><small v-if="row.item.brep">B-rep</small><small v-if="row.dot!=='body' && row.item.group">{{row.item.group}}</small></button><SceneObjectControls :name="row.item.name" :locale="locale" :hidden="!objectVisible(row.item.id)" :locked="lockedIds.includes(row.item.id)" @visibility="toggleObjectState(row.item.id,'hidden')" @lock="toggleObjectState(row.item.id,'locked')" /></li>
             <li v-else-if="row.kind==='label'" :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-group">{{row.title}}</li>
             <li v-else :data-scene-key="row.key" :aria-posinset="position" :aria-setsize="total" :style="style" class="scene-empty">{{label('Сцена пуста. Добавьте примитив или нарисуйте эскиз.','The scene is empty. Add a primitive or draw a sketch.')}}</li>
           </SceneVirtualList>
+          <button type="button" :aria-expanded="manufacturingOpen" @click="manufacturingOpen=!manufacturingOpen">{{ label('Производство: G-code / Laser','Manufacturing: G-code / Laser') }}</button>
+          <section v-if="manufacturingOpen" :aria-label="label('Производство','Manufacturing')">
+            <p v-if="document.sourceBodies?.length" role="status">{{ label('Для исходных тел ещё не подготовлена замкнутая сетка. Сохраните нативный документ; подготовка G-code и Laser для этой сцены пока недоступна.','Native source bodies need a closed mesh before manufacturing. Save the native document; G-code and Laser preparation for this scene are not yet available.') }}</p>
+            <template v-else>
+            <SolidGcodePanel :meshes="manufacturingScene" :selection="manufacturingScene.length?[0]:[]" :source="'solid:'+manufacturingRevision" :ready="!restoringDraft" :locale="props.locale"/>
+            <SolidLaserPanel :meshes="manufacturingScene" :selection="manufacturingScene.length?[0]:[]" :source="'solid:'+manufacturingRevision" :ready="!restoringDraft" :locale="props.locale"/>
+            </template>
+          </section>
         </template>
         <template v-else>
           <div class="dock-heading">{{ selectedSketch?.name || selectedBody?.name || label('Свойства', 'Properties') }}</div>

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "renderer": "browser-default",
+  "keyboard": false,
+  "tabs": 0,
+  "edits": 20,
+  "cancelledPreviewsPerPart": 7,
+  "cases": [
+    "bracket",
+    "enclosure",
+    "flange"
+  ],
+  "errors": []
+}

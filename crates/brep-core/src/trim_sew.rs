@@ -1071,6 +1071,22 @@ fn affine_planar_lift(
     pcurve: &Curve,
     context: &ToleranceContext,
 ) -> Result<Option<Curve>> {
+    // A geometric plane can still have a nonlinear rational chart. The
+    // affine UV lift is valid only for a complete uniform-weight Bernstein
+    // grid, not a prefix of a multispan or periodic surface.
+    let nu = surface.control_points.len();
+    let nv = surface.control_points[0].len();
+    let weight = surface.weights[0][0];
+    if surface.periodic_u || surface.periodic_v
+        || nu != surface.degree_u + 1 || nv != surface.degree_v + 1
+        || surface.weights.iter().flatten().any(|w| *w != weight)
+        || !surface.knots_u[..=surface.degree_u].iter().all(|k| *k == surface.knots_u[surface.degree_u])
+        || !surface.knots_u[nu..].iter().all(|k| *k == surface.knots_u[nu])
+        || !surface.knots_v[..=surface.degree_v].iter().all(|k| *k == surface.knots_v[surface.degree_v])
+        || !surface.knots_v[nv..].iter().all(|k| *k == surface.knots_v[nv])
+    {
+        return Ok(None);
+    }
     let o = surface
         .evaluate(
             surface.knots_u[surface.degree_u],
@@ -1200,6 +1216,19 @@ pub fn prove_curve_pcurve_correspondence(
             "BREP_SEW_CURVE_MISMATCH",
             "3D rational definition does not equal the oriented pcurve lift",
         ));
+    }
+    if support == CurvePcurveSupport::AffinePlanar {
+        // Source near-planarity and curve coefficient residuals can add up.
+        // Qualification must bound the actual original surface composition
+        // over the entire parameter interval within the model tolerance.
+        let agreement = nurbs_core::curve_surface_agreement::verify(
+            curve, pcurve, surface, orientation == ParameterOrientation::Reversed,
+            context.spatial_bounds().on_mm, 10000,
+        )?;
+        if agreement.status != nurbs_core::curve_surface_agreement::Status::WithinTolerance {
+            return Err(refuse("BREP_SEW_CURVE_MISMATCH",
+                "Affine support correspondence is not qualified over the full source interval"));
+        }
     }
     let pcurve_definition = RationalCurveDefinition::from_curve(pcurve)?;
     let parameter_domain_bits = curve.domain().map(f64::to_bits);
@@ -2131,6 +2160,18 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn planar_geometry_with_nonlinear_rational_chart_cannot_gain_affine_authority() {
+        let context = ToleranceContext::default_valid();
+        let (graph, mut plane) = curved_graph_and_plane();
+        let seam = crate::nurbs_ss_g6::certify_exact_planar_iso_intersection(
+            &graph, &plane, &context).unwrap();
+        plane.weights[1][1] = 3.;
+        let owner = BoundaryUse { face: 3, wire: 5, cyclic_index: 1, reversed: false };
+        assert!(prove_curve_pcurve_correspondence(&context, &seam.curve, &plane,
+            &seam.uv_traces[1], ParameterOrientation::Same, owner).is_err());
     }
 
     #[test]

@@ -38,7 +38,8 @@ pub const EXACT_BENT_RMF_SWEEP_CAPABILITY: &str = "exact-parallel-frame-sweep/2"
 /// Qualified finite shell/offset successor. The admitted cells are audited
 /// convex planar-faced bodies and exact finite cylinders under rigid placement.
 pub const EXACT_ANALYTIC_SHELL_CAPABILITY: &str = "analytic-shell/2";
-/// Exact linear radius law on one vertical edge of an audited AA cuboid.
+/// Exact linear cross-section radius law on one edge of an audited cuboid
+/// under rigid placement. This is not a general rolling-ball envelope.
 pub const EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY: &str = "exact-variable-radius-fillet/1";
 /// Exact equal-radius sphere/cylinder valence-3 corner on an audited AA cuboid.
 pub const EXACT_VALENCE3_CORNER_BLEND_CAPABILITY: &str = "exact-valence3-corner-blend/1";
@@ -621,11 +622,70 @@ fn exact_prism_fillet(
     )
 }
 
-/// Exact linear radius law on one vertical edge of an audited axis-aligned
-/// cuboid. Endpoint radii must be positive, unequal (constant radius stays on
+/// Exact linear cross-section radius law on one edge of an audited cuboid.
+/// Endpoint radii must be positive, unequal (constant radius stays on
 /// the constant-fillet capabilities), and within the profile collision bound.
-/// Cap edges and multi-edge / valence-3 networks remain typed-refused.
+/// Multi-edge / valence-3 networks remain typed-refused.
 pub fn exact_variable_radius_fillet(
+    model: &Model,
+    edges: &[usize],
+    radii: &[[f64; 2]],
+) -> Result<AuditedFeatureResult> {
+    model.validate()?;
+    let refusal = || refuse(
+        "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+        "Variable-radius fillet requires one straight edge of an orthogonal planar cuboid",
+    );
+    if edges.len() != 1 || radii.len() != 1 || edges[0] >= model.edges.len() {
+        return Err(refusal());
+    }
+    let selected = &model.edges[edges[0]];
+    let a = model.vertices[selected.vertices[0]].point;
+    let b = model.vertices[selected.vertices[1]].point;
+    if is_axis_aligned_cuboid(model) && (a[0]-b[0]).abs() <= 1e-12
+        && (a[1]-b[1]).abs() <= 1e-12 && (a[2]-b[2]).abs() > 1e-12 {
+        return exact_axis_aligned_variable_radius_fillet(model, edges, radii);
+    }
+    let vertex = selected.vertices[0];
+    let adjacent: Vec<_> = model.edges.iter().enumerate()
+        .filter_map(|(i,e)| (i != edges[0] && e.vertices.contains(&vertex)).then_some(i))
+        .collect();
+    if adjacent.len() != 2 { return Err(refusal()); }
+    let mut axes = [[0.;3];3];
+    for (axis, edge_id) in [adjacent[0], adjacent[1], edges[0]].into_iter().enumerate() {
+        let edge = &model.edges[edge_id];
+        if edge.curve.degree != 1 { return Err(refusal()); }
+        let other = edge.vertices.iter().copied().find(|&v|v != vertex).ok_or_else(refusal)?;
+        let delta: [f64;3] = std::array::from_fn(|j|model.vertices[other].point[j]-a[j]);
+        let length = delta[0].hypot(delta[1]).hypot(delta[2]);
+        if !length.is_finite() || length <= 1e-12 { return Err(refusal()); }
+        axes[axis] = delta.map(|v|v/length);
+    }
+    for i in 0..3 { for j in 0..i {
+        if (0..3).map(|k|axes[i][k]*axes[j][k]).sum::<f64>().abs() > 1e-12 {
+            return Err(refusal());
+        }
+    }}
+    let mut to_local = [[0.;4];4];
+    let mut to_world = [[0.;4];4];
+    to_local[3][3]=1.;to_world[3][3]=1.;
+    for i in 0..3 {
+        for j in 0..3 { to_local[i][j]=axes[i][j];to_world[i][j]=axes[j][i]; }
+        to_local[i][3]=-(0..3).map(|j|axes[i][j]*a[j]).sum::<f64>();
+        to_world[i][3]=a[i];
+    }
+    // Recover a coordinate frame, then recognize and audit the entire source.
+    // Three orthogonal incident edges alone do not qualify a cuboid.
+    let local = crate::transform::affine(model,to_local)?;
+    let result = exact_axis_aligned_variable_radius_fillet(&local,edges,radii)?;
+    let world = crate::transform::affine(&result.model,to_world)?;
+    certify_blend_result(world,EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY,
+        vec!["exact_linear_radius_law","rational_conical_fillet_face",
+             "no_constant_radius_substitution","no_valence3_corner","rigid_cuboid_placement"],
+        radii[0][0].max(radii[0][1]),"BREP_VARIABLE_RADIUS_FILLET_REFUSED")
+}
+
+fn exact_axis_aligned_variable_radius_fillet(
     model: &Model,
     edges: &[usize],
     radii: &[[f64; 2]],
@@ -3435,6 +3495,83 @@ mod tests {
                 .code,
             "BREP_VARIABLE_RADIUS_FILLET_REFUSED"
         );
+    }
+
+    #[test]
+    fn variable_radius_frame_does_not_admit_non_cuboids_or_invalid_laws() {
+        let bracket=extrude_polygon(&[[0.,0.],[10.,0.],[10.,3.],[3.,3.],[3.,8.],[0.,8.]],0.,6.).unwrap();
+        let a=0.37_f64;
+        let rotated=crate::transform::affine(&bracket,[
+            [a.cos(),-a.sin(),0.,17.],[a.sin(),a.cos(),0.,-9.],
+            [0.,0.,1.,23.],[0.,0.,0.,1.],
+        ]).unwrap();
+        // Some vertices have three orthogonal incident edges, but the entire
+        // body is concave. Frame recovery must not authorize cuboid authorship.
+        for edge in 0..rotated.edges.len() {
+            assert_eq!(exact_variable_radius_fillet(&rotated,&[edge],&[[0.4,0.6]]).unwrap_err().code,"BREP_VARIABLE_RADIUS_FILLET_REFUSED");
+        }
+        let source=cuboid([0.;3],[10.,8.,6.]).unwrap();
+        for edge in 0..source.edges.len() {
+            for pair in [[0.,1.],[-1.,1.],[1.,1.],[f64::NAN,1.],[1.,f64::INFINITY],[1.,100.]] {
+                assert_eq!(exact_variable_radius_fillet(&source,&[edge],&[pair]).unwrap_err().code,"BREP_VARIABLE_RADIUS_FILLET_REFUSED");
+            }
+        }
+        for edges in [vec![],vec![0,1],vec![usize::MAX]] {
+            assert_eq!(exact_variable_radius_fillet(&source,&edges,&[[0.4,0.6]]).unwrap_err().code,"BREP_VARIABLE_RADIUS_FILLET_REFUSED");
+        }
+    }
+
+    #[test]
+    fn variable_radius_fillet_all_cuboid_edges_under_rigid_placement() {
+        let source = cuboid([-7.,3.,-2.],[3.,11.,4.]).unwrap();
+        let a=0.37_f64;let b=-0.61_f64;
+        let matrix=[
+            [a.cos()*b.cos(),-a.sin(),a.cos()*b.sin(),17.],
+            [a.sin()*b.cos(),a.cos(),a.sin()*b.sin(),-9.],
+            [-b.sin(),0.,b.cos(),23.],[0.,0.,0.,1.],
+        ];
+        let placed=crate::transform::affine(&source,matrix).unwrap();
+        let before=value_codec::to_value(&placed).unwrap();
+        for edge in 0..source.edges.len() {
+            let [v0,v1]=source.edges[edge].vertices;
+            let p=source.vertices[v0].point;let q=source.vertices[v1].point;
+            let length=(p[0]-q[0]).hypot(p[1]-q[1]).hypot(p[2]-q[2]);
+            for radii in [[0.5,1.5],[1.5,0.5]] {
+                for model in [&source,&placed] {
+                    let out=exact_variable_radius_fillet(model,&[edge],&[radii]).unwrap();
+                    assert!(out.audit.ok && out.naming_complete);
+                    assert_eq!(out.model.validate().unwrap().boundary_edge_count,0);
+                    let volume=crate::analysis::mass_properties(&out.model,1e-9,300_000).unwrap().signed_volume_mm3;
+                    let expected=480.-(1.-std::f64::consts::PI/4.)*length
+                        *(radii[0]*radii[0]+radii[0]*radii[1]+radii[1]*radii[1])/3.;
+                    assert!((volume-expected).abs()<2e-5,"edge {edge}, radii {radii:?}: {volume} != {expected}");
+                    // Volume is symmetric in the endpoint radii: additionally
+                    // measure each end of the rational conical patch to catch
+                    // accidental A/B reversal during frame recovery.
+                    let selected=&model.edges[edge];
+                    let origin=model.vertices[selected.vertices[0]].point;
+                    let end=model.vertices[selected.vertices[1]].point;
+                    let axis: [f64;3]=std::array::from_fn(|i|(end[i]-origin[i])/length);
+                    let patch=out.model.faces.iter().find(|f|f.surface.degree_u==2&&f.surface.degree_v==1).unwrap();
+                    for v in [0.,1.] {
+                        let point=patch.surface.evaluate(0.5,v).unwrap().point;
+                        let delta: [f64;3]=std::array::from_fn(|i|point[i]-origin[i]);
+                        let along=(0..3).map(|i|delta[i]*axis[i]).sum::<f64>();
+                        let expected_radius=if along.abs()<1e-7 {radii[0]} else {
+                            assert!((along-length).abs()<1e-7);radii[1]
+                        };
+                        let perpendicular: [f64;3]=std::array::from_fn(|i|delta[i]-along*axis[i]);
+                        let measured=perpendicular[0].hypot(perpendicular[1]).hypot(perpendicular[2])/(2_f64.sqrt()-1.);
+                        assert!((measured-expected_radius).abs()<1e-7,"edge {edge}: endpoint radius {measured} != {expected_radius}");
+                    }
+                }
+            }
+        }
+        assert_eq!(value_codec::to_value(&placed).unwrap(),before);
+        let sheared=crate::transform::affine(&placed,[[1.,0.2,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]).unwrap();
+        for edge in 0..sheared.edges.len() {
+            assert_eq!(exact_variable_radius_fillet(&sheared,&[edge],&[[0.5,1.5]]).unwrap_err().code,"BREP_VARIABLE_RADIUS_FILLET_REFUSED");
+        }
     }
 
     #[test]
