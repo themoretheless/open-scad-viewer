@@ -287,10 +287,17 @@ impl Fragment {
         })
     }
     pub fn split_at(&self, point: &SourcePoint, role: Role) -> Result<[Self; 2]> {
-        let end = Endpoint::Crossing {
+        self.split_at_endpoint(Endpoint::Crossing {
             point: point.clone(),
             role,
-        };
+        })
+    }
+    /// Partition at an explicitly supplied original parameter. The source
+    /// definition and geometry remain unchanged; no Cartesian vertex is made.
+    pub fn split_at_parameter(&self, t: f64) -> Result<[Self; 2]> {
+        self.split_at_endpoint(Endpoint::Parameter(t))
+    }
+    fn split_at_endpoint(&self, end: Endpoint) -> Result<[Self; 2]> {
         let bounds = parameter(&self.surface, &self.curve, &end)?;
         let [a, b] = self.parameter_bounds;
         let inside = if self.reversed {
@@ -300,7 +307,7 @@ impl Fragment {
         };
         if !inside {
             return Err(error(
-                "Split crossing must lie strictly inside the source fragment",
+                "Split endpoint must lie strictly inside the source fragment",
             ));
         }
         Ok([

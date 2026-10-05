@@ -297,3 +297,50 @@ pub fn rational_bezier_composition_plane_identity(
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
+
+/// Exact plane membership of C(q), where q is an optionally reflected fraction
+/// (t-lo)/(hi-lo) from another original source domain. Evaluation stays entirely
+/// homogeneous; neither q nor a Cartesian point is rounded.
+pub fn rational_bezier_plane_point_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],reversed:bool,
+) -> Result<BezierIdentityDecision,InputError> {
+    if !(2..=33).contains(&curve.len()) {
+        return Err(InputError::InvalidInput("Plane point curve degree exceeds supported bounds"));
+    }
+    let refs:Vec<_>=curve.iter().flatten().chain(plane.iter().flatten()).chain(parameter.iter()).copied().collect();
+    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let result=(|| -> Result<BezierIdentity,Reason> {
+        ctx.charge(values.len() as u64)?;
+        let v=exact_inputs(&values,ctx)?;
+        let points=&v[..4*curve.len()];let anchors=&v[4*curve.len()..4*curve.len()+9];
+        let parameter=&v[4*curve.len()+9..];
+        if points.chunks_exact(4).any(|p|p[3].sign()!=Sign::Positive) {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let low=parameter[0].sub(&parameter[1],ctx)?;
+        let high=parameter[2].sub(&parameter[0],ctx)?;
+        if parameter[2].sub(&parameter[1],ctx)?.sign()!=Sign::Positive
+            || low.sign()==Sign::Negative || high.sign()==Sign::Negative {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let a=(0..3).map(|k|anchors[3+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let b=(0..3).map(|k|anchors[6+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let normal=(0..3).map(|k|a[(k+1)%3].mul(&b[(k+2)%3],ctx)?.sub(&a[(k+2)%3].mul(&b[(k+1)%3],ctx)?,ctx)).collect::<Result<Vec<_>,_>>()?;
+        if normal.iter().all(|x|x.sign()==Sign::Zero) { return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)); }
+        let degree=curve.len()-1;
+        let (numerator,complement)=if reversed {(high,low)} else {(low,high)};
+        let mut powers=vec![Expansion::scalar(1.)];let mut complements=vec![Expansion::scalar(1.)];
+        for i in 1..=degree {powers.push(powers[i-1].mul(&numerator,ctx)?);complements.push(complements[i-1].mul(&complement,ctx)?);}
+        let mut total=Expansion::scalar(0.);
+        for (i,p) in points.chunks_exact(4).enumerate() {
+            let mut signed=Expansion::scalar(0.);
+            for k in 0..3 {signed=signed.add(&p[k].sub(&anchors[k],ctx)?.mul(&normal[k],ctx)?,ctx)?;}
+            let factor=signed.mul(&p[3],ctx)?.mul(&Expansion::integer(choose(degree,i),ctx)?,ctx)?;
+            let term=factor.mul(&powers[i],ctx)?.mul(&complements[degree-i],ctx)?;
+            total=total.add(&term,ctx)?;
+        }
+        Ok(if total.sign()==Sign::Zero {BezierIdentity::Equal} else {BezierIdentity::Different})
+    })().and_then(|v|ctx.charge(0).map(|_|v));
+    Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}

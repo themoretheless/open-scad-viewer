@@ -353,7 +353,16 @@ impl SourceRegion {
             .get(loop_index)
             .and_then(|w| w.get(edge_index))
             .ok_or_else(|| Error::new("BREP_SOURCE_REGION", "Unknown source boundary address"))?;
-        let parts = edge.split_at(point, role)?;
+        self.partition_boundary(loop_index,edge_index,edge.split_at(point,role)?)
+    }
+    /// Preserve the qualified region while partitioning an original boundary
+    /// at an explicit parameter. This never approximates a crossing root.
+    pub fn split_boundary_parameter(&self,loop_index:usize,edge_index:usize,t:f64) -> Result<Self> {
+        let edge=self.loops.get(loop_index).and_then(|w|w.get(edge_index))
+            .ok_or_else(||Error::new("BREP_SOURCE_REGION","Unknown source boundary address"))?;
+        self.partition_boundary(loop_index,edge_index,edge.split_at_parameter(t)?)
+    }
+    fn partition_boundary(&self,loop_index:usize,edge_index:usize,parts:[Fragment;2]) -> Result<Self> {
         let mut out = self.clone();
         out.loops[loop_index].splice(edge_index..edge_index + 1, parts);
         if out.loops[loop_index].len() > 256 {

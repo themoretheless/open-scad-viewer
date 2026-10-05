@@ -791,6 +791,147 @@ mod tests {
         .is_err());
     }
     #[test]
+    fn closed_curved_wedge_preserves_mixed_root_and_fixed_vertex_ownership() {
+        use crate::source_boundary_fragment::{Endpoint, Role};
+        use source_shell_incidence::RootPlanes;
+        let (mut regions, mut pairs) = wedge_regions(1.);
+        let index = pairs
+            .iter()
+            .position(|p| p.uses.iter().all(|a| [0, 2].contains(&a.face)))
+            .unwrap();
+        let old = pairs.remove(index);
+        let original = old.world.clone();
+        let a = old.uses[0];
+        let b = old.uses[1];
+        assert_eq!([a.face, b.face], [0, 2]);
+        let fragment = &regions[a.face].loops()[a.wire][a.edge];
+        let cut = Curve::from_polyline(vec![vec![0.609375, 1.25], vec![0.609375, -0.25]]).unwrap();
+        let point = crate::source_contact_point::qualify(
+            fragment.surface(),
+            fragment.curve(),
+            &cut,
+            [[0.6, 0.65], [0.24, 0.28]],
+            10000,
+        )
+        .unwrap();
+        assert!(point.point.is_some(), "{}", point.reason);
+        regions[a.face] = regions[a.face]
+            .split_boundary(a.wire, a.edge, &point.point.unwrap(), Role::Boundary)
+            .unwrap();
+        let mut displaced = regions.clone();
+        displaced[b.face] = displaced[b.face]
+            .split_boundary_parameter(b.wire, b.edge, 0.375 + 1e-12)
+            .unwrap();
+        assert!(regions[b.face]
+            .split_boundary_parameter(b.wire, b.edge, 0.)
+            .is_err());
+        assert!(regions[b.face]
+            .split_boundary_parameter(b.wire, b.edge, 1.)
+            .is_err());
+        regions[b.face] = regions[b.face]
+            .split_boundary_parameter(b.wire, b.edge, 0.375)
+            .unwrap();
+        for pair in &mut pairs {
+            for address in &mut pair.uses {
+                for split in old.uses {
+                    if address.face == split.face
+                        && address.wire == split.wire
+                        && address.edge > split.edge
+                    {
+                        address.edge += 1;
+                    }
+                }
+            }
+        }
+        let first = pairs.len();
+        pairs.push(Pair {
+            uses: [
+                a,
+                Address {
+                    edge: b.edge + 1,
+                    ..b
+                },
+            ],
+            world: original.clone(),
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        pairs.push(Pair {
+            uses: [
+                Address {
+                    edge: a.edge + 1,
+                    ..a
+                },
+                b,
+            ],
+            world: original.clone(),
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        let plane = [[0.609375, 0., 0.], [0.609375, 1., 0.], [0.609375, 0., 1.]];
+        let specs = [
+            RootPlanes {
+                pair: first,
+                planes: [None, Some(plane)],
+            },
+            RootPlanes {
+                pair: first + 1,
+                planes: [Some(plane), None],
+            },
+        ];
+        let r = source_shell_incidence::assemble_regions_with_root_planes(
+            &regions,
+            &pairs,
+            &specs,
+            100_000_000,
+            10000,
+        )
+        .unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        let shell = r.shell.unwrap();
+        let common = shell
+            .edges()
+            .iter()
+            .filter(|e| e.world() == &original)
+            .collect::<Vec<_>>();
+        assert_eq!(common.len(), 2);
+        assert!(common.iter().all(|e| e
+            .uses()
+            .iter()
+            .flat_map(|f| f.endpoints())
+            .filter(|x| matches!(x, Endpoint::Crossing { .. }))
+            .count()
+            == 1));
+        let audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 10,
+                cells: 10000,
+                domain_cells: 10000,
+                cells_per_pair: 1000,
+                domain_cells_per_pair: 1000,
+            },
+            100_000_000,
+            1000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert!(audit.all_pairs_qualified);
+        assert_eq!(audit.pairs.len(), 10);
+        assert!(source_shell_incidence::assemble_regions_with_root_planes(
+            &displaced,
+            &pairs,
+            &specs,
+            100_000_000,
+            10000
+        )
+        .unwrap()
+        .shell
+        .is_none());
+    }
+    #[test]
     fn nonplanar_rational_rim_has_exact_pair_ownership_with_fresh_oblique_chart() {
         let shell = wedge();
         let r = certify_with_linear_chart(&shell, [0, 2], 100_000_000, 100, 10000, 10000).unwrap();

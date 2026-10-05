@@ -1170,3 +1170,42 @@ Mapping original curves with different geometric coverage onto a common carrier,
 fixed/root mixed endpoint ownership, iterative retained-region cuts, new closing
 cap/corner ownership and material volume remain outstanding. General fillet
 transition/radius/wall/STEP and WASM/UI admission remain open.
+
+## Exact mixed crossing/fixed endpoint ownership
+
+`rational_bezier_plane_point_identity` checks plane membership of a canonical
+curve at an exact normalized fraction from another original source domain.
+Plane normals, Bernstein factors, powers, weights and parameter fractions remain
+exact expansions. No divided parameter or Cartesian evaluation is used.
+`curve_surface_plane::verify_curve_point` keeps original curve definitions and
+returns point membership only; uniqueness is a separate requirement.
+
+The source shared-edge gate now accepts crossing/fixed endpoint pairs through
+fresh plane identity of the local crossing image, exact fixed-point plane
+membership and strict uniqueness of the canonical world-plane root. Both
+endpoint directions are supported. Whole original main-curve composition,
+actual chart membership and opposite traversal still apply. Exact/driver work
+remain bounded and shared by shell assembly. Common root/root and mixed
+root/fixed proofs reuse the same native plane and uniqueness gates.
+
+`Fragment::split_at_parameter` and `SourceRegion::split_boundary_parameter`
+partition an unchanged source restriction at an explicitly supplied original
+parameter, strictly inside its existing endpoint bounds. They preserve region
+geometry and exact source joins; this API never converts a crossing root to a
+fixed number. Root-valued and fixed splits share the same native partition path.
+
+All 53 selected B-rep source regressions and all 646 NURBS library tests passed
+(`source-mixed-endpoint-regression.log.gz`,
+`mixed-endpoint-nurbs-regression.log.gz`). A nonlinear cap crossing shares its
+canonical end with a fixed side parameter in a different domain, in either
+direction. A closed curved wedge combines root and fixed partitions and passes
+its complete ten-pair audit; moving the fixed split by 1e-12 refuses assembly.
+Natural-end splits and exhausted budgets refuse. A two-world-root counterexample
+refuses mixed ownership even though both candidates lie exactly in the plane.
+The kernel checks exact rational fractions with reversal, degenerate planes,
+resource refusal and the distinction between rational 2/5 and Binary64 0.4.
+
+These fixtures partition existing complete rims. Different geometric coverage
+on a common carrier, iterative retained-region cuts, new cap/corner ownership,
+material volume and general fillet transition/radius/wall/STEP/WASM/UI admission
+remain outstanding.

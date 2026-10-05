@@ -230,7 +230,40 @@ fn qualify_impl(
                         }
                     }
                 }
-                _ => false,
+                (Endpoint::Crossing { point, role }, Endpoint::Parameter(t)) => {
+                    if let Some(plane) = planes[i] {
+                        common_plane_fixed_root(
+                            world,
+                            plane,
+                            point,
+                            *role,
+                            [*t, uses[1].curve().domain()[0], uses[1].curve().domain()[1]],
+                            world_reversed[1],
+                            &mut out,
+                            max_work,
+                            max_driver_cells,
+                        )?
+                    } else {
+                        false
+                    }
+                }
+                (Endpoint::Parameter(t), Endpoint::Crossing { point, role }) => {
+                    if let Some(plane) = planes[i] {
+                        common_plane_fixed_root(
+                            world,
+                            plane,
+                            point,
+                            *role,
+                            [*t, uses[0].curve().domain()[0], uses[0].curve().domain()[1]],
+                            world_reversed[0],
+                            &mut out,
+                            max_work,
+                            max_driver_cells,
+                        )?
+                    } else {
+                        false
+                    }
+                }
             };
             if !same {
                 return Ok(out);
@@ -288,29 +321,78 @@ fn common_plane_root(
 ) -> Result<bool> {
     out.root_checks += 1;
     for (point, role) in points {
-        if out.work_used == max_work {
-            return Ok(false);
-        }
-        let other = match role {
-            Role::Boundary => point.contact(),
-            Role::Contact => point.boundary(),
-        };
-        // A qualified SourcePoint proves its actual crossing belongs to the
-        // positive source chart. The formal identity needs no unused-tail weld.
-        let Some(r) = nurbs_core::curve_surface_plane::verify_algebraic(
-            other,
-            point.surface(),
-            plane,
-            (max_work - out.work_used).min(cad_predicates::MAX_WORK),
-        )?
-        else {
-            return Ok(false);
-        };
-        out.work_used += r.work_used;
-        if r.outcome != BezierIdentity::Equal {
+        if !source_point_cut_plane(point, role, plane, out, max_work)? {
             return Ok(false);
         }
     }
+    unique_world_plane(world, plane, out, max_work, max_driver_cells)
+}
+fn source_point_cut_plane(
+    point: &crate::source_contact_point::SourcePoint,
+    role: Role,
+    plane: [[f64; 3]; 3],
+    out: &mut Report,
+    max_work: u64,
+) -> Result<bool> {
+    if out.work_used == max_work {
+        return Ok(false);
+    }
+    let other = match role {
+        Role::Boundary => point.contact(),
+        Role::Contact => point.boundary(),
+    };
+    // Actual source crossing membership and positive chart denominator are
+    // immutable SourcePoint authority, separate from this formal plane identity.
+    let Some(r) = nurbs_core::curve_surface_plane::verify_algebraic(
+        other,
+        point.surface(),
+        plane,
+        (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+    )?
+    else {
+        return Ok(false);
+    };
+    out.work_used += r.work_used;
+    Ok(r.outcome == BezierIdentity::Equal)
+}
+fn common_plane_fixed_root(
+    world: &Curve,
+    plane: [[f64; 3]; 3],
+    point: &crate::source_contact_point::SourcePoint,
+    role: Role,
+    parameter: [f64; 3],
+    reversed: bool,
+    out: &mut Report,
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<bool> {
+    out.root_checks += 1;
+    if !source_point_cut_plane(point, role, plane, out, max_work)? || out.work_used == max_work {
+        return Ok(false);
+    }
+    let Some(r) = nurbs_core::curve_surface_plane::verify_curve_point(
+        world,
+        plane,
+        parameter,
+        reversed,
+        (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+    )?
+    else {
+        return Ok(false);
+    };
+    out.work_used += r.work_used;
+    if r.outcome != BezierIdentity::Equal {
+        return Ok(false);
+    }
+    unique_world_plane(world, plane, out, max_work, max_driver_cells)
+}
+fn unique_world_plane(
+    world: &Curve,
+    plane: [[f64; 3]; 3],
+    out: &mut Report,
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<bool> {
     // Restricting an oblique plane to the original world curve must give a
     // nonconstant affine function of one monotone coordinate. Every other
     // nonzero normal coefficient requires an exactly constant source coordinate.
@@ -581,6 +663,156 @@ mod tests {
     use super::*;
     use nurbs_core::surface::Surface;
     #[test]
+    fn mixed_root_and_fixed_endpoints_need_exact_point_membership_and_unique_world_root() {
+        use crate::source_boundary_fragment::{Endpoint, Role};
+        use nurbs_core::surface::Surface;
+        let cap = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let side = Surface {
+            degree_u: 1,
+            degree_v: 2,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![
+                vec![vec![1., 0., 0.], vec![1., 1., 0.], vec![0., 1., 0.]],
+                vec![vec![1., 0., 1.], vec![1., 1., 1.], vec![0., 1., 1.]],
+            ],
+            weights: vec![vec![1.; 3]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let main_a = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let main_b = Curve {
+            degree: 1,
+            knots: vec![10., 10., 18., 18.],
+            control_points: vec![vec![0., 1.], vec![0., 0.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let cut = Curve::from_polyline(vec![vec![0.609375, 1.25], vec![0.609375, -0.25]]).unwrap();
+        let point = crate::source_contact_point::qualify(
+            &cap,
+            &main_a,
+            &cut,
+            [[0.6, 0.65], [0.24, 0.28]],
+            10000,
+        )
+        .unwrap();
+        assert!(point.point.is_some(), "{}", point.reason);
+        let fa = Fragment::new(
+            &cap,
+            &main_a,
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: point.point.unwrap(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let fb = Fragment::new(
+            &side,
+            &main_b,
+            Endpoint::Parameter(13.),
+            Endpoint::Parameter(18.),
+        )
+        .unwrap();
+        let world = Curve {
+            degree: 2,
+            knots: vec![-5., -5., -5., 3., 3., 3.],
+            control_points: side.control_points[0].clone(),
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let plane = [[0.609375, 0., 0.], [0.609375, 1., 0.], [0.609375, 0., 1.]];
+        assert!(qualify(&world, [&fa, &fb], [false, true], 100_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+        let r = qualify_with_planes(
+            &world,
+            [&fa, &fb],
+            [false, true],
+            [None, Some(plane)],
+            100_000_000,
+            10000,
+        )
+        .unwrap();
+        assert!(r.edge.is_some(), "{}", r.reason);
+        assert_eq!(r.root_checks, 1);
+        assert!(r.driver_cells > 0);
+        let e = r.edge.unwrap();
+        assert_eq!(e.world(), &world);
+        assert_eq!(e.uses()[1].curve(), &main_b);
+        assert!(qualify_with_planes(
+            &world,
+            [&fb, &fa],
+            [true, false],
+            [Some(plane), None],
+            100_000_000,
+            10000
+        )
+        .unwrap()
+        .edge
+        .is_some());
+        let wrong = Fragment::new(
+            &side,
+            &main_b,
+            Endpoint::Parameter(13. + 1e-12),
+            Endpoint::Parameter(18.),
+        )
+        .unwrap();
+        assert!(qualify_with_planes(
+            &world,
+            [&fa, &wrong],
+            [false, true],
+            [None, Some(plane)],
+            100_000_000,
+            10000
+        )
+        .unwrap()
+        .edge
+        .is_none());
+        assert!(qualify_with_planes(
+            &world,
+            [&fa, &fb],
+            [false, true],
+            [None, Some(plane)],
+            100_000_000,
+            0
+        )
+        .unwrap()
+        .edge
+        .is_none());
+        assert!(qualify_with_planes(
+            &world,
+            [&fa, &fb],
+            [false, true],
+            [None, Some(plane)],
+            1,
+            10000
+        )
+        .unwrap()
+        .edge
+        .is_none());
+    }
+    #[test]
     fn distinct_original_domains_share_exact_normalized_parameters_and_rational_roots() {
         use crate::source_boundary_fragment::{Endpoint, Role};
         use nurbs_core::surface::Surface;
@@ -816,6 +1048,48 @@ mod tests {
         .unwrap();
         assert!(r.edge.is_none());
         assert!(r.driver_cells <= 100);
+        let fixed_cut =
+            Curve::from_polyline(vec![vec![0.3125, -0.25], vec![0.3125, 1.25]]).unwrap();
+        let fixed_root = crate::source_contact_point::qualify(
+            &cap,
+            &main_a,
+            &fixed_cut,
+            [[0.2, 0.3], [0.3, 0.36]],
+            10000,
+        )
+        .unwrap();
+        assert!(fixed_root.point.is_some(), "{}", fixed_root.reason);
+        let root_use = Fragment::new(
+            &cap,
+            &main_a,
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: fixed_root.point.unwrap(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let parameter_use = Fragment::new(
+            &side,
+            &main_b,
+            Endpoint::Parameter(0.25),
+            Endpoint::Parameter(1.),
+        )
+        .unwrap();
+        let fixed_plane = [[0.3125, 0., 0.], [0.3125, 1., 0.], [1.3125, 0., 1.]];
+        // Fixed q=.75 and crossing q=.25 both satisfy the same plane exactly.
+        // Mixed endpoint admission still requires a unique canonical plane root.
+        let mixed = qualify_with_planes(
+            &world,
+            [&root_use, &parameter_use],
+            [false, true],
+            [None, Some(fixed_plane)],
+            100_000_000,
+            100,
+        )
+        .unwrap();
+        assert!(mixed.edge.is_none());
+        assert!(mixed.driver_cells > 0 && mixed.driver_cells <= 100);
     }
     #[test]
     fn nonlinear_local_crossings_share_only_a_fresh_unique_world_plane_root() {
