@@ -792,6 +792,13 @@ mod tests {
     }
     #[test]
     fn closed_curved_wedge_preserves_mixed_root_and_fixed_vertex_ownership() {
+        mixed_wedge(false);
+    }
+    #[test]
+    fn closed_curved_wedge_uses_exact_root_candidates_without_planes() {
+        mixed_wedge(true);
+    }
+    fn mixed_wedge(exact_candidates: bool) {
         use crate::source_boundary_fragment::{Endpoint, Role};
         use source_shell_incidence::RootPlanes;
         let (mut regions, mut pairs) = wedge_regions(1.);
@@ -805,12 +812,14 @@ mod tests {
         let b = old.uses[1];
         assert_eq!([a.face, b.face], [0, 2]);
         let fragment = &regions[a.face].loops()[a.wire][a.edge];
-        let cut = Curve::from_polyline(vec![vec![0.609375, 1.25], vec![0.609375, -0.25]]).unwrap();
+        let cut = Curve::from_polyline(if exact_candidates {
+            vec![vec![0.609375, 1.], vec![0.609375, 0.]]
+        } else { vec![vec![0.609375, 1.25], vec![0.609375, -0.25]] }).unwrap();
         let point = crate::source_contact_point::qualify(
             fragment.surface(),
             fragment.curve(),
             &cut,
-            [[0.6, 0.65], [0.24, 0.28]],
+            [[0.6, 0.65], if exact_candidates {[0.12,0.16]} else {[0.24,0.28]}],
             10000,
         )
         .unwrap();
@@ -888,7 +897,31 @@ mod tests {
         )
         .unwrap();
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
-        let shell = r.shell.unwrap();
+        let mut shell = r.shell.unwrap();
+        if exact_candidates {
+            let witnesses = [
+                source_shell_incidence::RootCandidates { pair: first,
+                    candidates: [[None,Some([0.625,0.140625])],[None,None]] },
+                source_shell_incidence::RootCandidates { pair: first+1,
+                    candidates: [[Some([0.625,0.140625]),None],[None,None]] },
+            ];
+            let admitted=source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &regions,&pairs,&[],&[],&witnesses,100_000_000,0).unwrap();
+            assert!(admitted.shell.is_some(), "{} {:?}", admitted.reason, admitted.uncertain_pair);
+            shell=admitted.shell.unwrap();
+            let duplicate = [
+                source_shell_incidence::RootCandidates {pair:first,candidates:witnesses[0].candidates},
+                source_shell_incidence::RootCandidates {pair:first,candidates:witnesses[0].candidates},
+            ];
+            assert!(source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &regions,&pairs,&[],&[],&duplicate,100_000_000,0).is_err());
+            let invalid = [source_shell_incidence::RootCandidates {
+                pair:pairs.len(), candidates:witnesses[0].candidates}];
+            assert!(source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &regions,&pairs,&[],&[],&invalid,100_000_000,0).is_err());
+            assert!(source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &displaced,&pairs,&[],&[],&witnesses,100_000_000,0).unwrap().shell.is_none());
+        }
         let common = shell
             .edges()
             .iter()

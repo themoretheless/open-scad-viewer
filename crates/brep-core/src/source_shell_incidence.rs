@@ -29,6 +29,11 @@ pub struct AffineMaps {
     pub pair: usize,
     pub ranges: [[[f64; 2]; 2]; 2],
 }
+/// Raw UV parameter witnesses indexed by pair, use and directed endpoint.
+pub struct RootCandidates {
+    pub pair: usize,
+    pub candidates: [[Option<[f64; 2]>; 2]; 2],
+}
 pub struct Shell {
     faces: Vec<Vec<Wire>>,
     edges: Vec<SharedEdge>,
@@ -169,6 +174,25 @@ pub fn assemble_regions_with_maps(
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
+    assemble_regions_with_endpoint_inputs(
+        regions,
+        pairs,
+        planes,
+        maps,
+        &[],
+        max_work,
+        max_driver_cells,
+    )
+}
+pub fn assemble_regions_with_endpoint_inputs(
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    maps: &[AffineMaps],
+    candidates: &[RootCandidates],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
     if regions.len() < 2 || regions.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
         return Err(error(
             "Choose bounded qualified regions and exact shell work",
@@ -178,7 +202,15 @@ pub fn assemble_regions_with_maps(
         .iter()
         .map(|r| r.world_wires())
         .collect::<Result<Vec<_>>>()?;
-    let mut report = assemble_with_maps(&faces, pairs, planes, maps, max_work, max_driver_cells)?;
+    let mut report = assemble_with_endpoint_inputs(
+        &faces,
+        pairs,
+        planes,
+        maps,
+        candidates,
+        max_work,
+        max_driver_cells,
+    )?;
     if let Some(shell) = report.shell.as_mut() {
         shell.regions = Some(regions.to_vec());
     }
@@ -203,6 +235,17 @@ pub fn assemble_with_maps(
     pairs: &[Pair],
     planes: &[RootPlanes],
     maps: &[AffineMaps],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
+    assemble_with_endpoint_inputs(faces, pairs, planes, maps, &[], max_work, max_driver_cells)
+}
+pub fn assemble_with_endpoint_inputs(
+    faces: &[Vec<Wire>],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    maps: &[AffineMaps],
+    candidates: &[RootCandidates],
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
@@ -269,6 +312,22 @@ pub fn assemble_with_maps(
             return Err(error("Affine maps need unique valid pair addresses, finite fractions and no cutter hints"));
         }
     }
+    let mut witnessed = BTreeMap::new();
+    for spec in candidates {
+        if spec.pair >= pairs.len()
+            || witnessed.insert(spec.pair, spec.candidates).is_some()
+            || spec
+                .candidates
+                .iter()
+                .flatten()
+                .flatten()
+                .flatten()
+                .any(|v| !v.is_finite())
+            || pairs[spec.pair].cutters.iter().any(Option::is_some)
+        {
+            return Err(error("Root witnesses need unique valid addresses, finite original parameters and no cutter hints"));
+        }
+    }
     let lookup = |a: Address| -> Result<usize> {
         let wire = faces
             .get(a.face)
@@ -310,12 +369,21 @@ pub fn assemble_with_maps(
             return Ok(out);
         }
         let sources = p.uses.map(|a| &faces[a.face][a.wire].edges()[a.edge]);
-        let report = if let Some(ranges) = mapped.get(&i) {
-            crate::source_mapped_edge::qualify(
+        let report = if mapped.contains_key(&i) || witnessed.contains_key(&i) {
+            let full = p.world_reversed.map(|r| {
+                if r {
+                    [[1., 1.], [0., 1.]]
+                } else {
+                    [[0., 1.], [1., 1.]]
+                }
+            });
+            let ranges = mapped.get(&i).copied().unwrap_or(full);
+            crate::source_mapped_edge::qualify_with_candidates(
                 &p.world,
                 sources,
-                *ranges,
+                ranges,
                 supplied.get(&i).copied().unwrap_or([None, None]),
+                witnessed.get(&i).copied().unwrap_or([[None; 2]; 2]),
                 max_work - out.work_used,
                 max_driver_cells - out.driver_cells,
             )?

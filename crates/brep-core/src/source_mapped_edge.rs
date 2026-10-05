@@ -168,6 +168,27 @@ pub fn qualify(
     max_work: u64,
     max_driver: usize,
 ) -> Result<Report> {
+    qualify_with_candidates(
+        world,
+        fragments,
+        ranges,
+        planes,
+        [[None; 2]; 2],
+        max_work,
+        max_driver,
+    )
+}
+/// Raw exact parameter candidates indexed by use and directed endpoint. Each
+/// root candidate is rechecked against its original UV equations and selector.
+pub fn qualify_with_candidates(
+    world: &Curve,
+    fragments: [&Fragment; 2],
+    ranges: [Range; 2],
+    planes: [Option<[[f64; 3]; 3]>; 2],
+    candidates: [[Option<[f64; 2]>; 2]; 2],
+    max_work: u64,
+    max_driver: usize,
+) -> Result<Report> {
     if !(1..=100_000_000).contains(&max_work) || max_driver > 100000 {
         return Err(error());
     }
@@ -199,55 +220,97 @@ pub fn qualify(
     }
     out.reason = "mapped-source-endpoints-unproven";
     for i in 0..2 {
-        let same = match (
-            &fragments[0].endpoints()[i],
-            &fragments[1].endpoints()[1 - i],
-        ) {
-            (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
-                let da = fragments[0].curve().domain();
-                let db = fragments[1].curve().domain();
-                fixed_identity(
-                    [[*a, da[0], da[1]], [*b, db[0], db[1]]],
-                    ranges,
-                    &mut out,
-                    max_work,
-                )?
-            }
-            (
-                Endpoint::Crossing { point: a, role: ar },
-                Endpoint::Crossing { point: b, role: br },
-            ) => {
-                if linear_identity([(a, *ar), (b, *br)], ranges, &mut out, max_work)? {
-                    true
-                } else if let Some(plane) = planes[i] {
-                    source_shared_edge::common_plane_root(
-                        world,
-                        plane,
-                        [(a, *ar), (b, *br)],
+        let mut authored = [None; 2];
+        for use_index in 0..2 {
+            let endpoint_index = if use_index == 0 { i } else { 1 - i };
+            authored[use_index] = match &fragments[use_index].endpoints()[endpoint_index] {
+                Endpoint::Parameter(t) => Some(*t),
+                Endpoint::Crossing { point, role } => {
+                    if let Some(candidate) = candidates[use_index][endpoint_index] {
+                        if out.work_used == max_work {
+                            return Ok(out);
+                        }
+                        let r = crate::source_root_parameter::verify(
+                            point,
+                            candidate,
+                            (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+                        )?;
+                        out.work_used += r.work_used;
+                        out.root_checks += 1;
+                        r.parameters.map(|p| {
+                            p[match role {
+                                Role::Boundary => 0,
+                                Role::Contact => 1,
+                            }]
+                        })
+                    } else {
+                        None
+                    }
+                }
+            };
+        }
+        let same = if let [Some(a), Some(b)] = authored {
+            let da = fragments[0].curve().domain();
+            let db = fragments[1].curve().domain();
+            fixed_identity(
+                [[a, da[0], da[1]], [b, db[0], db[1]]],
+                ranges,
+                &mut out,
+                max_work,
+            )?
+        } else {
+            match (
+                &fragments[0].endpoints()[i],
+                &fragments[1].endpoints()[1 - i],
+            ) {
+                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
+                    let da = fragments[0].curve().domain();
+                    let db = fragments[1].curve().domain();
+                    fixed_identity(
+                        [[*a, da[0], da[1]], [*b, db[0], db[1]]],
+                        ranges,
                         &mut out,
                         max_work,
-                        max_driver,
                     )?
-                } else {
-                    false
                 }
-            }
-            (Endpoint::Crossing { point, role }, Endpoint::Parameter(t)) => {
-                if let Some(plane) = planes[i] {
-                    mixed_identity(
-                        world, point, *role, *t, &uses[1], plane, &mut out, max_work, max_driver,
-                    )?
-                } else {
-                    false
+                (
+                    Endpoint::Crossing { point: a, role: ar },
+                    Endpoint::Crossing { point: b, role: br },
+                ) => {
+                    if linear_identity([(a, *ar), (b, *br)], ranges, &mut out, max_work)? {
+                        true
+                    } else if let Some(plane) = planes[i] {
+                        source_shared_edge::common_plane_root(
+                            world,
+                            plane,
+                            [(a, *ar), (b, *br)],
+                            &mut out,
+                            max_work,
+                            max_driver,
+                        )?
+                    } else {
+                        false
+                    }
                 }
-            }
-            (Endpoint::Parameter(t), Endpoint::Crossing { point, role }) => {
-                if let Some(plane) = planes[i] {
-                    mixed_identity(
-                        world, point, *role, *t, &uses[0], plane, &mut out, max_work, max_driver,
-                    )?
-                } else {
-                    false
+                (Endpoint::Crossing { point, role }, Endpoint::Parameter(t)) => {
+                    if let Some(plane) = planes[i] {
+                        mixed_identity(
+                            world, point, *role, *t, &uses[1], plane, &mut out, max_work,
+                            max_driver,
+                        )?
+                    } else {
+                        false
+                    }
+                }
+                (Endpoint::Parameter(t), Endpoint::Crossing { point, role }) => {
+                    if let Some(plane) = planes[i] {
+                        mixed_identity(
+                            world, point, *role, *t, &uses[0], plane, &mut out, max_work,
+                            max_driver,
+                        )?
+                    } else {
+                        false
+                    }
                 }
             }
         };
@@ -444,6 +507,122 @@ mod tests {
             qualify(&world, [&fa, &wrong], RANGES, [None, None], 100_000_000, 0)
                 .unwrap()
                 .edge
+                .is_none()
+        );
+    }
+    #[test]
+    fn nonlinear_root_fixed_end_has_exact_candidate_without_plane_hints() {
+        let (sa, _, _, _, _) = fixture();
+        let uv = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let world = Curve {
+            control_points: uv
+                .control_points
+                .iter()
+                .map(|p| vec![p[0], p[1], 0.])
+                .collect(),
+            ..uv.clone()
+        };
+        let sb = Surface {
+            degree_u: 1,
+            degree_v: 2,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: uv.knots.clone(),
+            control_points: (0..2)
+                .map(|z| {
+                    uv.control_points
+                        .iter()
+                        .map(|p| vec![p[0], p[1], z as f64])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 3]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let side = Curve::from_polyline(vec![vec![0., 0.], vec![0., 1.]]).unwrap();
+        let cut = Curve::from_polyline(vec![vec![0., 0.859375], vec![1., 0.859375]]).unwrap();
+        let point = crate::source_contact_point::qualify(
+            &sa,
+            &uv,
+            &cut,
+            [[0.6, 0.65], [0.58, 0.63]],
+            10000,
+        )
+        .unwrap()
+        .point
+        .unwrap();
+        let definition = point.definition();
+        let fa = Fragment::new(
+            &sa,
+            &uv,
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: point.clone(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let fb = Fragment::new(
+            &sb,
+            &side,
+            Endpoint::Parameter(0.625),
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let ranges = [[[0., 1.], [1., 1.]]; 2];
+        assert!(
+            qualify(&world, [&fa, &fb], ranges, [None; 2], 100_000_000, 0)
+                .unwrap()
+                .edge
+                .is_none()
+        );
+        let candidates = [[None, Some([0.625, 0.609375])], [None, None]];
+        let report = qualify_with_candidates(
+            &world,
+            [&fa, &fb],
+            ranges,
+            [None; 2],
+            candidates,
+            100_000_000,
+            0,
+        )
+        .unwrap();
+        assert!(report.edge.is_some(), "{}", report.reason);
+        let edge = report.edge.unwrap();
+        match &edge.uses()[0].endpoints()[1] {
+            Endpoint::Crossing { point, .. } => assert_eq!(point.definition(), definition),
+            _ => panic!("root expression was replaced"),
+        }
+        assert!(qualify_with_candidates(
+            &world,
+            [&fa, &fb],
+            ranges,
+            [None; 2],
+            [[None, Some([0.625 + 1e-12, 0.609375])], [None, None]],
+            100_000_000,
+            0
+        )
+        .unwrap()
+        .edge
+        .is_none());
+        assert!(crate::source_root_parameter::verify(
+            &point,
+            [0.6, 0.609375],
+            cad_predicates::MAX_WORK
+        )
+        .unwrap()
+        .parameters
+        .is_none());
+        assert!(
+            crate::source_root_parameter::verify(&point, [0.625, 0.609375], 1)
+                .unwrap()
+                .parameters
                 .is_none()
         );
     }

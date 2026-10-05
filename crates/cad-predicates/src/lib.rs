@@ -389,3 +389,6 @@ pub fn classify_residual(
 
 #[cfg(test)]
 mod tests;
+
+mod bezier_point_identity;
+pub use bezier_point_identity::*;

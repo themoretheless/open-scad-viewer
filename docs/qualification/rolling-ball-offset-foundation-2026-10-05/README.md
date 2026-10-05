@@ -1274,3 +1274,38 @@ corners, radius/wall qualification, STEP acceptance and WASM/UI remain open.
 
 Validation: 58 selected source B-rep tests, 648 NURBS tests and 25 exact
 predicate tests passed. Compressed native test logs accompany this stage.
+
+
+## Exact original UV root parameter witnesses
+
+A new exact homogeneous de Casteljau predicate compares unchanged positive
+single-span rational UV curves at original authored parameters without division
+or Cartesian point rounding. Parameter domains are independent. Degree 1..32
+is supported; unsupported original multispan layouts remain unproven.
+
+`source_root_parameter::verify` requires both candidates strictly inside the
+immutable SourcePoint original unique-root selector, then verifies the original
+UV equations exactly. Thus the candidate identifies that unique root; it never
+replaces the root expression, original definitions or root enclosures. Current
+candidates are finite exact binary64 parameters, not arbitrary rational or
+irrational parameter values. Plane/root and linear-root paths remain available
+for other cases, subject to their existing qualification limits.
+
+Mapped edge admission and shell assembly now accept raw indexed root candidates,
+recheck both compositions and endpoint identities under the shared exact budget,
+and preserve original root payloads. Duplicate/unknown addresses are rejected;
+explicit cutter hints with witnessed pairs remain unsupported and rejected.
+A nonlinear polynomial rim with a mixed root/fixed end qualifies without plane
+hints or plane-driver work. A five-face wedge closes with two such rim fragments
+and all ten face pairs qualify using actual boundary fibers. Displaced candidates
+or fixed ends, selector-boundary candidates and exhausted budgets refuse proof.
+A rational point fixture compares two differently oriented and independently
+parameterized curves at a non-binary Cartesian point without dividing weights.
+
+Validation: 60 selected source B-rep tests, 649 NURBS tests and 25 exact predicate
+tests passed. After the final unsupported-degree guard, the targeted NURBS point
+regression and the selected B-rep tests passed again. Compressed logs accompany
+this stage. This establishes additional source endpoint admission; it does not
+construct a new cap, material volume or general fillet body. Iterative retained
+region cuts, end transitions, variable radii/corners, global radius/wall and
+self-intersection qualification, STEP acceptance and WASM/UI remain open.
