@@ -2171,3 +2171,39 @@ unfinished.
 Full validation: all 663 NURBS library tests and 892 B-rep library tests pass;
 B-rep has three ignored tests and zero failures. Compressed focused and full
 logs accompany this stage.
+
+## Exact full-source Body to Model and STEP control
+
+`source_body_model::convert` now accepts only a privately admitted native Body.
+It copies unchanged original surfaces and canonical world curves. Vertices use
+immutable source shell identities, with exact clamped canonical endpoint points
+and privately qualified pole points; inconsistent points for one identity refuse
+conversion. No distance welding occurs. Ordinary coedges retain source pairing
+and directed pcurves; reversed clamped Bezier pcurves reverse coefficients without
+knot arithmetic. Pole uses become explicit degenerate edges. Shell face senses
+apply native material orientation, then the resulting closed Model gets stable
+identity tables and full existing Model validation.
+
+Current conversion explicitly refuses root-valued/partial trims, incomplete
+canonical carriers, nonclamped canonical endpoint expressions and reverse
+multispan pcurves requiring additional exact parameter transport. Their general
+storage/transport remains a roadmap requirement; no rounded substitute is used.
+
+The admitted capped canal control converts reproducibly, and a JSON reload
+preserves the entire Model and identities. STEP /3 explicitly refuses poles,
+so the control uses STEP /6. The importer changes index order and normalizes
+face orientation. Regression comparison maps every entity by persistent ID,
+checks exact original vertex/curve/surface payloads after existing orientation
+normalization, directed loops modulo cyclic start, and all face/shell/body links.
+It does not compare only counts or sampled positions.
+
+Independent OCCT import of the exported STEP confirms one valid solid. Volume
+37.645933930508455 mm^3 differs from the independent cap/frustum formula by
+8.80776411804618e-8 mm^3. Axis extents match the fixture specification within
+1.0000000294496658e-7 mm. The compressed STEP and hash-bound OCCT JSON report
+are retained alongside `scripts/verify-source-capped-body-step.py`. This is one
+control, not the bracket/flange/enclosure acceptance matrix, whole-wall proof,
+arbitrary fillets, root-trim Model conversion or WASM/UI qualification.
+
+Full B-rep validation after Model/STEP transfer: 893 tests pass, zero failures
+and three ignored tests. Compressed focused and full logs accompany this stage.

@@ -1889,6 +1889,7 @@ pub mod source_hull_separation;
 pub mod source_shell_geometry;
 
 pub mod source_volume;
+pub mod source_body_model;
 
 pub mod source_seam_tangency;
 

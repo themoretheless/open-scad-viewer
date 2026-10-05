@@ -137,6 +137,23 @@ mod tests {
             report.volume.as_ref().unwrap().cells,
             report.volume.as_ref().unwrap().spans
         );
+        let model = crate::source_body_model::convert(body, 1e-7).unwrap();
+        assert_eq!(model.bodies.len(), 1);
+        assert!(model.shells[0].closed);
+        assert_eq!(model.faces.len(), body.geometry().shell().faces().len());
+        assert_eq!(
+            model,
+            crate::source_body_model::convert(body, 1e-7).unwrap()
+        );
+        let encoded = value_codec::to_value(&model).unwrap();
+        let restored: crate::Model = value_codec::from_value(encoded).unwrap();
+        assert_eq!(restored, model);
+        let (step, _, _) = crate::export_step_v6(&model).unwrap();
+        let (imported, _, _) = crate::import_step_v6(&step).unwrap();
+        crate::source_body_model::assert_step_identity(&model, &imported);
+        if let Some(path) = std::env::var_os("CAD_SOURCE_MODEL_STEP_OUTPUT") {
+            std::fs::write(path, step).unwrap();
+        }
         let exhausted = qualify(&spans, limits(1)).unwrap();
         assert!(exhausted.body().is_none());
         assert_eq!(exhausted.reason(), "source-volume-initial-work-limit");
