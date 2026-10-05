@@ -163,6 +163,15 @@ pub fn qualify_clipped_end(
         tolerance_uv,
         limits,
     )?;
+    if contours.region_subset_proven {
+        let winding = &contours.replacement.as_ref().unwrap().winding;
+        if winding[0] != Some(1) || winding[1..].iter().any(|w| *w != Some(-1)) {
+            return Err(Error::new(
+                "BREP_OFFSET_END_WINDING",
+                "B-rep face contours require a counterclockwise outer loop and clockwise holes",
+            ));
+        }
+    }
     Ok(ClippedEndReport {
         edge,
         contours,
@@ -188,7 +197,7 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        let adjacent = Surface {
+        let mut adjacent = Surface {
             degree_u: 1,
             degree_v: 1,
             knots_u: vec![0., 0., 1., 1.],
@@ -201,13 +210,25 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        let uv = Curve {
+        let mut uv = Curve {
             degree: 2,
             knots: vec![0., 0., 0., 1., 1., 1.],
             control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
             weights: w,
             periodic: false,
         };
+        if z == 1. {
+            // Upper end chart has negative normal; its CCW UV loop maps to
+            // the canonical opposite world traversal required by the patch.
+            for row in &mut adjacent.control_points {
+                for q in row {
+                    q.swap(0, 1);
+                }
+            }
+            for q in &mut uv.control_points {
+                q.swap(0, 1);
+            }
+        }
         (patch, adjacent, uv)
     }
     fn owners(start: bool) -> [BoundaryUse; 2] {
@@ -276,7 +297,7 @@ mod tests {
     fn shared_end_arc_and_complete_adjacent_corner_region_are_qualified_together() {
         let context = ToleranceContext::default_valid();
         let (patch, plane, uv) = fixture(1.);
-        let points = [vec![0., 1.], vec![1., 1.], vec![1., 0.], vec![0., 0.]];
+        let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
         let mut loop_contact = uv.clone();
         loop_contact.control_points.reverse();
         loop_contact.weights.reverse();
@@ -335,6 +356,10 @@ mod tests {
         assert_eq!(
             r.contours.loops.as_ref().unwrap()[0],
             vec![loop_contact.clone(), outer[2].clone(), outer[3].clone()]
+        );
+        assert_eq!(
+            r.contours.replacement.as_ref().unwrap().winding,
+            vec![Some(1)]
         );
         assert_eq!(outer, before);
         assert!(r.contour_support.permits_exact_correspondence());

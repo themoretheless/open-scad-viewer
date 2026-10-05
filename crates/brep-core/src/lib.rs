@@ -1836,3 +1836,5 @@ pub mod sweep_retained;
 pub mod miter_seams;
 
 pub mod offset_end_boundary;
+
+pub mod trimmed_face_recipe;
