@@ -183,6 +183,33 @@ mod tests {
         .unwrap()
         .shell
         .unwrap();
+        let network = brep_core::source_boundary_network::inspect(&shell, 10000, 10000).unwrap();
+        assert!(!network.vertices.is_empty());
+        assert_eq!(
+            network.vertices.iter().map(|v| v.ends.len()).sum::<usize>(),
+            2 * shell.edges().len()
+        );
+        assert_eq!(
+            network
+                .vertices
+                .iter()
+                .map(|v| v.poles.len())
+                .sum::<usize>(),
+            shell.poles().len()
+        );
+        assert!(brep_core::source_boundary_network::inspect(&shell, 1, 10000).is_err());
+        assert!(brep_core::source_boundary_network::inspect(&shell, 10000, 1).is_err());
+        let recovered = brep_core::source_shell_restore::restore(
+            shell.definition().unwrap(),
+            &limits(&config(50000)).unwrap().shell,
+        )
+        .unwrap()
+        .shell
+        .unwrap();
+        assert_eq!(
+            network,
+            brep_core::source_boundary_network::inspect(&recovered, 10000, 10000).unwrap()
+        );
         for region in shell.regions().unwrap() {
             assert!(region.whole_chart_material());
             let preview =

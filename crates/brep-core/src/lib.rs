@@ -1859,6 +1859,7 @@ pub mod source_world_wire;
 pub mod source_shared_edge;
 pub mod source_shared_edge_restore;
 pub mod source_edge_restriction;
+pub mod source_boundary_network;
 pub mod source_region_display;
 pub mod source_collapsed_boundary;
 pub mod source_shell_incidence;

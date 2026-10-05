@@ -2546,3 +2546,22 @@ chain and all remaining P0/P2/P3 requirements remain unfinished.
 
 Final existing-UI and source archive regression: 323 tests pass in two files
 (100.19 seconds wall time). This does not cover the entire 95-command matrix.
+
+
+## Common native endpoint network (2026-10-06)
+
+`source_boundary_network::inspect` uses the privately qualified Shell vertex
+identities to aggregate canonical edge ends and collapsed poles. For every
+identity it intersects original-carrier endpoint enclosures; disjoint boxes
+are refused. Separate IDs remain separate even with equal coordinates. No
+rounded root or distance welding defines topology. Roots remain on original
+edge definitions; the report is display data and does not admit new geometry.
+Global limits count all carrier spans twice (one evaluation per end) and all
+ordinary endpoints plus poles, before enclosure work begins.
+
+Two unit refusal/identity tests and the native bridge control pass. The latter
+checks all edge ends and poles of the full-source capped canal, refusal under
+span/endpoint limits, and identical network after fresh shell restoration.
+This does not yet qualify a root-valued closed body network, weld a display
+mesh, establish chord tolerances, or enable editing. WASM/UI transport is not
+connected and the shipped WASM is unchanged for this native-only step.
