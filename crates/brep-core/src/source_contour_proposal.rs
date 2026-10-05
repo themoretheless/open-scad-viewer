@@ -275,8 +275,10 @@ pub struct SourceRegion {
     whole_chart: bool,
     loops: Vec<Vec<Fragment>>,
     source_loop_indices: Vec<usize>,
+    recipe: value_codec::Value,
 }
 impl SourceRegion {
+    pub fn definition(&self) -> value_codec::Value { self.recipe.clone() }
     /// Material orientation relative to the unchanged original UV chart.
     pub fn chart_winding(&self) -> i32 {
         self.chart_winding
@@ -375,6 +377,7 @@ pub fn qualify_original_region(
             })
         });
     out.region = Some(SourceRegion {
+        recipe: crate::source_region_restore::original_definition(context,surface,wires,tolerance_uv),
         whole_chart,
         chart_winding: out.audit.region.winding[0].unwrap(),
         loops,
@@ -398,14 +401,19 @@ impl SourceRegion {
             .get(loop_index)
             .and_then(|w| w.get(edge_index))
             .ok_or_else(|| Error::new("BREP_SOURCE_REGION", "Unknown source boundary address"))?;
-        self.partition_boundary(loop_index,edge_index,edge.split_at(point,role)?)
+        let mut out=self.partition_boundary(loop_index,edge_index,edge.split_at(point,role)?)?;
+        out.recipe=value_codec::json!({"version":1,"kind":"splitRoot","parent":self.definition(),
+            "address":[loop_index,edge_index],"point":point.definition(),"role":match role {Role::Boundary=>"boundary",Role::Contact=>"contact"}});
+        Ok(out)
     }
     /// Preserve the qualified region while partitioning an original boundary
     /// at an explicit parameter. This never approximates a crossing root.
     pub fn split_boundary_parameter(&self,loop_index:usize,edge_index:usize,t:f64) -> Result<Self> {
         let edge=self.loops.get(loop_index).and_then(|w|w.get(edge_index))
             .ok_or_else(||Error::new("BREP_SOURCE_REGION","Unknown source boundary address"))?;
-        self.partition_boundary(loop_index,edge_index,edge.split_at_parameter(t)?)
+        let mut out=self.partition_boundary(loop_index,edge_index,edge.split_at_parameter(t)?)?;
+        out.recipe=value_codec::json!({"version":1,"kind":"splitParameter","parent":self.definition(),"address":[loop_index,edge_index],"parameter":t});
+        Ok(out)
     }
     fn partition_boundary(&self,loop_index:usize,edge_index:usize,parts:[Fragment;2]) -> Result<Self> {
         let mut out = self.clone();
@@ -698,6 +706,7 @@ pub fn qualify_linear_region(
             .map(|&i| loops[i].clone())
             .collect::<Vec<_>>();
         out.region = Some(SourceRegion {
+            recipe: crate::source_region_restore::cut_definition(context,"linear",surface,wires,contact,[loop_index,start_edge,end_edge],tolerance_uv,target_width,driver_axis),
             chart_winding: winding,
             whole_chart: false,
             loops: qualified.clone(),
@@ -843,6 +852,7 @@ pub fn qualify_curved_region(
         .map(|&i| loops[i].clone())
         .collect::<Vec<_>>();
     out.region = Some(SourceRegion {
+        recipe: crate::source_region_restore::cut_definition(context,"curved",surface,wires,contact,[loop_index,start_edge,end_edge],tolerance_uv,target_width,driver_axis),
         chart_winding: out.interior.proposal.search.search.original.region.winding[0].unwrap(),
         whole_chart: false,
         loops: qualified.clone(),
@@ -1046,6 +1056,7 @@ mod tests {
         .unwrap();
         assert!(region.kept_side_proven && region.removed_side_proven && region.holes_kept_proven);
         assert!(region.interior.region_subset_proven && region.region.is_some());
+        crate::source_region_restore::assert_replay(region.region.as_ref().unwrap());
         let make_hole = |y0: f64, y1: f64| {
             let points = [vec![0.4, y0], vec![0.4, y1], vec![0.6, y1], vec![0.6, y0]];
             (0..4)
@@ -1086,6 +1097,7 @@ mod tests {
         )
         .unwrap();
         assert!(kept.holes_kept_proven && kept.region.is_some());
+        crate::source_region_restore::assert_replay(kept.region.as_ref().unwrap());
         assert_eq!(kept.region.unwrap().loops().len(), 2);
         let removed_hole = qualify_linear_region(
             &ToleranceContext::default_valid(),
@@ -1268,6 +1280,7 @@ mod tests {
             curved_region.reason,
             curved_region.interior.reason
         );
+        crate::source_region_restore::assert_replay(curved_region.region.as_ref().unwrap());
         assert_eq!(curved_region.removed_holes, vec![2]);
         assert_eq!(
             curved_region.region.as_ref().unwrap().source_loop_indices(),
@@ -1306,6 +1319,7 @@ mod tests {
             rational_region.reason,
             rational_region.interior.reason
         );
+        crate::source_region_restore::assert_replay(rational_region.region.as_ref().unwrap());
         assert_eq!(rational_region.removed_holes, vec![2]);
         let world_wires = rational_region
             .region

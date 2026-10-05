@@ -137,6 +137,26 @@ mod tests {
             report.volume.as_ref().unwrap().cells,
             report.volume.as_ref().unwrap().spans
         );
+        let shell_json =
+            value_codec::to_string(&body.geometry().shell().definition().unwrap()).unwrap();
+        let shell_value = value_codec::from_str(&shell_json).unwrap();
+        let replay = crate::source_shell_restore::restore(
+            shell_value,
+            &crate::source_shell_restore::Limits {
+                regions: crate::source_region_restore::test_limits(),
+                exact_work: 100_000_000,
+                driver_cells: 100000,
+            },
+        )
+        .unwrap();
+        let replay =
+            source_shell_geometry::qualify(replay.shell.unwrap(), limits(1).embedding).unwrap();
+        assert!(replay.geometry.is_some(), "{}", replay.reason);
+        assert_eq!(replay.pairs, 120);
+        assert_eq!(
+            replay.geometry.as_ref().unwrap().shell().vertices(),
+            body.geometry().shell().vertices()
+        );
         let model = crate::source_body_model::convert(body, 1e-7).unwrap();
         assert_eq!(model.bodies.len(), 1);
         assert!(model.shells[0].closed);

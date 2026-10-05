@@ -2244,3 +2244,42 @@ the broader roadmap.
 Full B-rep validation after component restoration: 894 tests pass, zero
 failures and three ignored tests. Compressed selected, mapped and full logs
 accompany this stage.
+
+## Qualified region and complete source-shell JSON replay
+
+Qualified source regions now privately retain original construction recipes.
+Original material recipes keep the authored surface, world/UV boundaries,
+world directions, UV tolerance and original `ToleranceContext`. Linear and
+curved crosscuts additionally keep their original contact curve, selected arc,
+root target widths and driver axis. Fixed/root boundary partitions retain the
+parent recipe and original split expression. `source_region_restore` replays
+those native factories with bounded depth (1..64); material masks, winding,
+root selectors and source loop indices are freshly derived. Replay audit budgets
+apply independently per step/face. No saved region-success flag admits material.
+
+`Shell::definition` emits qualified material recipes, canonical shared-edge
+recipes with addressed uses, and collapsed-point proposals.
+`source_shell_restore` replays each region, checks that every recorded edge
+fragment equals the addressed restored material boundary, then freshly assembles
+every canonical pair, affine/root input and pole use. Exact/driver incidence
+work is shared through the existing native shell gate. The result is private
+qualified oriented incidence; embedding and volume remain subsequent gates.
+
+JSON byte roundtrips preserve region recipes, actual original fragment/root
+definitions, winding and material/source-loop ownership. Controls cover linear
+regions with retained holes, polynomial/rational curved cuts, root partitions
+and eight translated/rotated capped-shell controls including zero endpoint
+radii and both sweep directions. Restored shell use addresses and global vertex
+identities match; fresh vertex-link checks pass. Removing a canonical pair or
+pole refuses restoration even with an injected successful-certificate flag.
+Exhausted exact work returns no shell. All 92 selected source regressions pass.
+
+The capped native Body/Model/STEP control additionally serializes its shell to
+JSON, restores it and freshly qualifies embedded geometry again, including
+all 120 face pairs and identical global vertex ownership. This is native source
+shell recovery. Editor document wiring, complete Body volume recovery, crash
+and multi-tab scenarios, exact root restrictions in conventional Model/STEP,
+WASM/UI, walls and the broader roadmap remain unfinished.
+
+Full B-rep validation after region/shell replay: 894 tests pass, zero failures
+and three ignored tests. Compressed selected and full logs accompany this stage.

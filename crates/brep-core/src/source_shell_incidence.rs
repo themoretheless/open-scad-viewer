@@ -47,6 +47,9 @@ pub struct Shell {
     regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
 }
 impl Shell {
+    pub fn definition(&self) -> Result<value_codec::Value> {
+        crate::source_shell_restore::definition(self)
+    }
     pub fn poles(&self) -> &[(Address, crate::source_collapsed_boundary::CollapsedBoundary)] {
         &self.poles
     }
@@ -328,6 +331,18 @@ pub fn assemble_regions_with_poles(
     if let Some(shell) = report.shell.as_mut() {
         shell.regions = Some(regions.to_vec());
     }
+    Ok(report)
+}
+/// Recompute qualified material incidence with all root inputs and pole uses.
+pub fn assemble_regions_with_pole_inputs(
+    regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
+    planes:&[RootPlanes],maps:&[AffineMaps],candidates:&[RootCandidates],poles:&[Pole],
+    max_work:u64,max_driver_cells:usize,
+)->Result<Report> {
+    if regions.len()<2 || regions.len()>4096 {return Err(error("Choose bounded qualified regions"));}
+    let faces=regions.iter().map(|r|r.world_wires()).collect::<Result<Vec<_>>>()?;
+    let mut report=assemble_with_pole_inputs(&faces,pairs,planes,maps,candidates,poles,max_work,max_driver_cells)?;
+    if let Some(shell)=report.shell.as_mut() {shell.regions=Some(regions.to_vec());}
     Ok(report)
 }
 /// Recheck every canonical pair. Each directed use must appear exactly once.
@@ -726,6 +741,7 @@ mod tests {
             let report =
                 assemble_regions_with_poles(&regions, &pairs, &poles, 100_000_000).unwrap();
             let shell = report.shell.expect(report.reason);
+            crate::source_shell_restore::assert_replay(&shell);
             assert_eq!(shell.poles().len(), poles.len());
             assert!(shell.regions().is_some());
             let authored = crate::linear_canal::to_capped_source_shell(
@@ -1193,6 +1209,7 @@ mod tests {
         let r = assemble_regions(&regions, &pairs, 100_000_000).unwrap();
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
+        crate::source_shell_restore::assert_replay(&shell);
         assert_eq!(shell.regions().unwrap().len(), 4);
         let topology = crate::source_vertex_links::inspect(&shell, 14).unwrap();
         assert!(topology.all_manifold);
