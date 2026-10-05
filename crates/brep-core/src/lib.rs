@@ -1861,6 +1861,7 @@ pub mod source_shared_edge_restore;
 pub mod source_collapsed_boundary;
 pub mod source_shell_incidence;
 pub mod source_shell_restore;
+pub mod source_body_restore;
 pub mod source_face_contacts;
 pub mod source_allowed_contact;
 pub mod source_plane_fiber;

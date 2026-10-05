@@ -18,6 +18,10 @@ pub struct Body {
     reverse_orientation: bool,
 }
 impl Body {
+    /// Persist original definitions; admission is recomputed during restoration.
+    pub fn definition(&self) -> Result<value_codec::Value> {
+        Ok(value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?}))
+    }
     pub fn geometry(&self) -> &Geometry {
         &self.geometry
     }

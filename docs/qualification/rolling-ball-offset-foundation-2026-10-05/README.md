@@ -2283,3 +2283,24 @@ WASM/UI, walls and the broader roadmap remain unfinished.
 
 Full B-rep validation after region/shell replay: 894 tests pass, zero failures
 and three ignored tests. Compressed selected and full logs accompany this stage.
+
+## Native Body JSON recovery (2026-10-06)
+
+`Body::definition` stores the original qualified shell recipes.
+`source_body_restore::restore` replays material regions, canonical edges, poles
+and incidence, then reruns the shared embedding/contact and signed-volume
+pipeline. Saved success, volume and orientation fields are ignored.
+
+The capped canal control now round-trips Body JSON and requires the identical
+fresh signed-volume interval, orientation, 120 face contacts, global vertices
+and converted conventional Model. Low incidence and volume budgets must refuse
+admission even when injected saved fields claim success. This extends native
+recovery of the existing control; editor document integration, crash/multi-tab
+acceptance and root-restricted conventional Model/STEP remain unfinished.
+
+Focused Body recovery control passed (97.64 seconds for the combined original,
+restored and budget-refusal checks). This is a correctness measurement, not
+an interactive latency claim.
+
+Full `cargo test -p brep-core` completed successfully: 995 passing tests across unit, integration and documentation targets; three ignored.
+Compressed focused and full logs accompany this stage.

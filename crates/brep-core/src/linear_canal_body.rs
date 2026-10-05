@@ -32,13 +32,20 @@ impl Report {
 /// Rebuild all gates from immutable authored spans. Diagnostics or caller
 /// certificate flags never skip incidence, injectivity, contacts or volume.
 pub fn qualify(spans: &[linear_canal::Span], limits: Limits) -> crate::Result<Report> {
-    let mut incidence = linear_canal::to_capped_source_shell(
+    let incidence = linear_canal::to_capped_source_shell(
         spans,
         limits.tolerance_mm,
         limits.tolerance_uv,
         limits.regions,
         limits.incidence_exact_work,
     )?;
+    from_incidence(incidence, limits.embedding, limits.volume)
+}
+pub(crate) fn from_incidence(
+    mut incidence: crate::source_shell_incidence::Report,
+    embedding_limits: source_shell_geometry::Limits,
+    volume_limits: source_volume::Limits,
+) -> crate::Result<Report> {
     let shell = incidence.shell.take();
     let mut out = Report {
         incidence,
@@ -48,13 +55,13 @@ pub fn qualify(spans: &[linear_canal::Span], limits: Limits) -> crate::Result<Re
     let Some(shell) = shell else {
         return Ok(out);
     };
-    let mut embedding = source_shell_geometry::qualify(shell, limits.embedding)
+    let mut embedding = source_shell_geometry::qualify(shell, embedding_limits)
         .map_err(|e| crate::Error::new(e.code, e.message))?;
     let geometry = embedding.geometry.take();
     out.embedding = Some(embedding);
     if let Some(geometry) = geometry {
         out.volume = Some(
-            source_volume::qualify(geometry, limits.volume)
+            source_volume::qualify(geometry, volume_limits)
                 .map_err(|e| crate::Error::new(e.code, e.message))?,
         );
     }
@@ -137,27 +144,51 @@ mod tests {
             report.volume.as_ref().unwrap().cells,
             report.volume.as_ref().unwrap().spans
         );
-        let shell_json =
-            value_codec::to_string(&body.geometry().shell().definition().unwrap()).unwrap();
-        let shell_value = value_codec::from_str(&shell_json).unwrap();
-        let replay = crate::source_shell_restore::restore(
-            shell_value,
-            &crate::source_shell_restore::Limits {
+        let definition = body.definition().unwrap();
+        let bytes = value_codec::to_string(&definition).unwrap();
+        let mut value: value_codec::Value = value_codec::from_str(&bytes).unwrap();
+        // Saved claims cannot bypass any native gate.
+        value["success"] = value_codec::json!(true);
+        value["volume"] = value_codec::json!([1., 1.]);
+        value["reverseOrientation"] = value_codec::json!(false);
+        let restore_limits = |cells| crate::source_body_restore::Limits {
+            shell: crate::source_shell_restore::Limits {
                 regions: crate::source_region_restore::test_limits(),
                 exact_work: 100_000_000,
                 driver_cells: 100000,
             },
-        )
-        .unwrap();
+            embedding: limits(cells).embedding,
+            volume: limits(cells).volume,
+        };
         let replay =
-            source_shell_geometry::qualify(replay.shell.unwrap(), limits(1).embedding).unwrap();
-        assert!(replay.geometry.is_some(), "{}", replay.reason);
-        assert_eq!(replay.pairs, 120);
+            crate::source_body_restore::restore(value.clone(), restore_limits(50000)).unwrap();
+        let recovered = replay.body().expect(replay.reason());
+        assert_eq!(recovered.definition().unwrap(), definition);
+        assert_eq!(recovered.volume(), body.volume());
+        assert_eq!(recovered.signed_volume(), body.signed_volume());
+        assert_eq!(recovered.reverse_orientation(), body.reverse_orientation());
+        assert_eq!(recovered.geometry().contacts().pairs.len(), 120);
         assert_eq!(
-            replay.geometry.as_ref().unwrap().shell().vertices(),
+            recovered.geometry().shell().vertices(),
             body.geometry().shell().vertices()
         );
+        let exhausted_restore =
+            crate::source_body_restore::restore(value.clone(), restore_limits(1)).unwrap();
+        assert!(exhausted_restore.body().is_none());
+        assert_eq!(
+            exhausted_restore.reason(),
+            "source-volume-initial-work-limit"
+        );
+        let mut small = restore_limits(1);
+        small.shell.exact_work = 1;
+        let exhausted_shell = crate::source_body_restore::restore(value, small).unwrap();
+        assert!(exhausted_shell.body().is_none());
+        assert!(exhausted_shell.embedding.is_none());
         let model = crate::source_body_model::convert(body, 1e-7).unwrap();
+        assert_eq!(
+            model,
+            crate::source_body_model::convert(recovered, 1e-7).unwrap()
+        );
         assert_eq!(model.bodies.len(), 1);
         assert!(model.shells[0].closed);
         assert_eq!(model.faces.len(), body.geometry().shell().faces().len());
