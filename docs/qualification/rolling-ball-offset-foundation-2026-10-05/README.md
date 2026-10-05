@@ -2581,3 +2581,19 @@ Targeted native test: 1 passed, 8.20 seconds, log
 `source-root-boundary-network.log.gz`. This qualifies endpoint aggregation for
 this closed shell, not general curved fillet bodies, volume, closed tessellation,
 root-valued Model/STEP transport, or browser rendering of partial faces.
+
+### Coherent native boundary display — 2026-10-06
+
+`source_boundary_display::prepare` uses freshly computed exact shell vertex
+identities to give every incident display edge the same endpoint representative.
+Original root definitions and parameter ranges remain authoritative. Endpoint
+segment boxes are expanded to contain the common uncertainty enclosure.
+The display representative is explicitly not an exact root or geometry proof.
+
+The root-partitioned closed shell verifies bitwise matching display endpoints
+with 1, 2 and 8 segments, enclosure containment, invalid segment limits and
+complete preview equality after fresh source restoration. A separate numerical
+control covers extreme finite and subnormal bounds. Both targeted tests passed.
+Logs: `source-boundary-display-native.log.gz`,
+`source-boundary-display-anchor.log.gz`. This native API is not yet connected
+to the WASM bridge or UI; closed tessellation and STEP restrictions remain open.

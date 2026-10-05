@@ -1217,6 +1217,26 @@ mod tests {
         assert_eq!(network.spans, 14);
         let root_vertex = network.vertices.iter().find(|v| v.ends.len() == 2).unwrap();
         assert!(root_vertex.poles.is_empty());
+        for count in [1, 2, 8] {
+            let preview = crate::source_boundary_display::prepare(&shell, count, 14, 14).unwrap();
+            let mut common = None;
+            for [edge, end] in &root_vertex.ends {
+                let displayed = &preview.edges[*edge];
+                assert_eq!(displayed.vertices[*end], root_vertex.id);
+                let segment = &displayed.segments[if *end == 0 { 0 } else { count - 1 }];
+                let point = segment.1[*end];
+                if let Some(previous) = common { assert_eq!(point, previous); }
+                common = Some(point);
+                for axis in 0..3 {
+                    assert!(point[axis] >= root_vertex.bounds[axis][0]);
+                    assert!(point[axis] <= root_vertex.bounds[axis][1]);
+                    assert!(segment.2[axis][0] <= root_vertex.bounds[axis][0]);
+                    assert!(segment.2[axis][1] >= root_vertex.bounds[axis][1]);
+                }
+            }
+        }
+        assert!(crate::source_boundary_display::prepare(&shell, 0, 14, 14).is_err());
+        assert!(crate::source_boundary_display::prepare(&shell, 4097, 14, 14).is_err());
         // Both halves keep their original carrier and independent root recipes.
         // The shared vertex enclosure must be inside each canonical end box.
         for [edge, end] in &root_vertex.ends {
