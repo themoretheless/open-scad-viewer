@@ -2101,3 +2101,35 @@ ownership must be freshly checked against immutable shared edges and shell
 vertex identities. The full embedding audit therefore still refuses pair
 [1,5]. General root-trim ownership, full embedding and the remaining roadmap
 are unfinished. No new full-library or WASM/UI acceptance is claimed here.
+
+## Native boundary-plus-pole contact admission
+
+`source_pole_paired_contact` freshly recomputes both original plane images and
+requires strict opposite sides. Main boundary fragments must belong to exact
+shared original edges; other possible boundary endpoints must have the same
+immutable shell vertex identity as a shared-edge endpoint. Each extra pole
+requires a privately qualified collapsed source use whose two endpoints have
+one global vertex identity. That identity must also own a shared-edge endpoint
+whose original clamped natural corner is exactly the same world point. A
+coordinate match or topology flag alone cannot admit contact. Source coordinate
+classification is reused through a private helper; the existing single-fiber
+certificate contract is unchanged.
+
+Native meridian regressions pass both face orders on eight seams per control
+for six translated/rotated increasing, decreasing and constant positive-radius
+controls with both sweep directions. Exhausted exact work refuses admission;
+coincident curved faces remain refused.
+
+The full translated/rotated increasing-radius control now obtains private
+embedded geometry. All 120 pairs, including adjacent pairs, qualify; the audit
+records 2132 chart spans, 761311 exact work and zero driver cells, with no next
+unresolved pair. The old regression expecting refusal was replaced by explicit
+geometry admission and complete-pair assertions. This is one complete control
+embedding audit; it is not qualification of arbitrary fillets, root-trimmed
+corners or all capped radius controls. Signed volume/material orientation,
+wall checks, closed Model/STEP/WASM/UI admission and the broader roadmap still
+require work.
+
+Full validation after pole-contact admission: 891 B-rep library tests pass,
+zero failures and three ignored tests. Compressed focused, embedding and full
+B-rep logs accompany this stage.

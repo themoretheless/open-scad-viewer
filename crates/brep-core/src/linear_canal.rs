@@ -413,7 +413,7 @@ pub fn to_open_region(spans: &[Span], tolerance_mm: f64) -> Result<Model> {
 mod tests {
     use super::*;
     #[test]
-    fn capped_source_embedding_does_not_skip_unproven_neighbor_contacts() {
+    fn capped_source_embedding_qualifies_every_neighbor_and_non_neighbor_pair() {
         let spans = construct(
             [[10., -7., 5.], [13., -3., 17.]],
             [0.5, 1.25],
@@ -466,13 +466,10 @@ mod tests {
             audit.driver_cells,
             audit.exact_work
         );
-        assert!(audit.geometry.is_none());
-        assert_eq!(
-            audit.reason,
-            "source-shell-different-face-contacts-unproven"
-        );
-        assert!(audit.next_pair.is_some());
-        assert!(audit.pairs > 0 && audit.pairs <= face_count * (face_count - 1) / 2);
+        assert!(audit.geometry.is_some());
+        assert_eq!(audit.reason, "source-shell-embedded-geometry-qualified");
+        assert!(audit.next_pair.is_none());
+        assert_eq!(audit.pairs, face_count * (face_count - 1) / 2);
     }
     #[test]
     fn capped_source_factory_rejects_open_angular_boundaries_and_invalid_work() {

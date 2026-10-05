@@ -21,14 +21,22 @@ pub struct Report {
 /// Strict source-coordinate monotonicity therefore excludes an interior
 /// extremum at the natural chart boundary, even for root-valued restrictions.
 pub fn inspect(fragment: &Fragment, fiber: &Certificate, max_cells: usize) -> Result<Report> {
-    if fragment.surface() != fiber.surface() || !(1..=100000).contains(&max_cells) {
+    inspect_natural(fragment, fiber.surface(), fiber.boundary(), max_cells)
+}
+/// Coordinate classification only; callers separately prove the plane image.
+pub(crate) fn inspect_natural(
+    fragment: &Fragment,
+    s: &nurbs_core::surface::Surface,
+    boundary: (usize, bool),
+    max_cells: usize,
+) -> Result<Report> {
+    if fragment.surface() != s || !(1..=100000).contains(&max_cells) {
         return Err(Error::new(
             "BREP_SOURCE_FIBER_BOUNDARY",
-            "Use the certified source surface and bounded driver work",
+            "Use original surface and bounded work",
         ));
     }
-    let (axis, upper) = fiber.boundary();
-    let s = fiber.surface();
+    let (axis, upper) = boundary;
     let (knots, degree, count) = if axis == 0 {
         (&s.knots_u, s.degree_u, s.control_points.len())
     } else {

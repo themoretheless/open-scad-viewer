@@ -40,7 +40,7 @@ pub struct Report {
     pub exact_work: u64,
     pub reason: &'static str,
 }
-fn corner(source: &Fragment, end: usize) -> Option<[f64; 3]> {
+pub(crate) fn corner(source: &Fragment, end: usize) -> Option<[f64; 3]> {
     let Endpoint::Parameter(t) = source.endpoints()[end] else {
         return None;
     };

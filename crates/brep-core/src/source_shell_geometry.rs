@@ -127,6 +127,7 @@ pub fn qualify(shell: Shell, limits: Limits) -> Result<Report> {
                 && p.paired_fiber.is_none()
                 && p.vertex_contact.is_none()
                 && p.disjoint_hull.is_none()
+                && p.pole_paired.is_none()
                 && !p.result.as_ref().is_some_and(|r| r.absence_proven)
         })
         .map(|p| p.faces)

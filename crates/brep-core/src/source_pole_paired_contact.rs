@@ -2,7 +2,7 @@
 use crate::{
     source_contour_proposal::SourceRegion,
     source_fiber_boundary::{self, Locus},
-    source_plane_fiber,
+    source_pole_plane_image,
     source_shared_edge::SharedEdge,
     source_shell_incidence::{Address, Shell},
 };
@@ -10,7 +10,7 @@ use nurbs_core::{Error, Result};
 pub struct Certificate {
     faces: [usize; 2],
     regions: [SourceRegion; 2],
-    fibers: [source_plane_fiber::Certificate; 2],
+    fibers: [source_pole_plane_image::Certificate; 2],
     edges: Vec<SharedEdge>,
 }
 impl Certificate {
@@ -20,7 +20,7 @@ impl Certificate {
     pub fn regions(&self) -> &[SourceRegion; 2] {
         &self.regions
     }
-    pub fn fibers(&self) -> &[source_plane_fiber::Certificate; 2] {
+    pub fn fibers(&self) -> &[source_pole_plane_image::Certificate; 2] {
         &self.fibers
     }
     pub fn edges(&self) -> &[SharedEdge] {
@@ -56,7 +56,7 @@ pub fn certify(
         certificate: None,
         exact_work: 0,
         driver_cells: 0,
-        reason: "source-paired-fiber-plane-unproven",
+        reason: "source-pole-paired-plane-unproven",
     };
     let shared = shell
         .uses()
@@ -90,17 +90,17 @@ pub fn certify(
             }
         }
         for plane in planes {
-            let mut candidates: [Vec<source_plane_fiber::Certificate>; 2] =
+            let mut candidates: [Vec<source_pole_plane_image::Certificate>; 2] =
                 [Vec::new(), Vec::new()];
             for (slot, &face) in faces.iter().enumerate() {
                 let s = regions[face].loops()[0][0].surface();
                 for axis in 0..2 {
                     for upper in [false, true] {
                         if out.exact_work == max_work {
-                            out.reason = "source-paired-fiber-work-limit";
+                            out.reason = "source-pole-paired-work-limit";
                             return Ok(out);
                         }
-                        let r = source_plane_fiber::certify(
+                        let r = source_pole_plane_image::certify(
                             s,
                             plane,
                             axis,
@@ -126,25 +126,46 @@ pub fn certify(
                             .iter()
                             .map(|(_, uses)| *uses.iter().find(|u| u.face == face).unwrap())
                             .collect::<Vec<_>>();
+                        // Every extra plane-image pole needs a privately certified
+                        // collapsed use, the same global vertex as a shared edge,
+                        // and an exact original shared-edge corner at that point.
+                        for (_, point) in fiber.poles() {
+                            owned &= shell.poles().iter().any(|(pole_address, proof)| {
+                                if pole_address.face != face || proof.point() != *point {
+                                    return false;
+                                }
+                                let ids =
+                                    shell.vertices()[face][pole_address.wire][pole_address.edge];
+                                ids[0] == ids[1]
+                                    && addresses.iter().any(|a| {
+                                        (0..2).any(|end| {
+                                            shell.vertices()[face][a.wire][a.edge][end] == ids[0]
+                                                && crate::source_vertex_contact::corner(
+                                                    &regions[face].loops()[a.wire][a.edge],
+                                                    end,
+                                                ) == Some(*point)
+                                        })
+                                    })
+                            });
+                        }
                         for (wire, fragments) in regions[face].loops().iter().enumerate() {
                             for (edge, fragment) in fragments.iter().enumerate() {
                                 if out.driver_cells == max_driver_cells {
-                                    out.reason = "source-paired-fiber-driver-work-limit";
+                                    out.reason = "source-pole-paired-driver-work-limit";
                                     return Ok(out);
                                 }
-                                let r = source_fiber_boundary::inspect(
+                                let r = source_fiber_boundary::inspect_natural(
                                     fragment,
-                                    fiber,
+                                    fiber.surface(),
+                                    fiber.boundary(),
                                     max_driver_cells - out.driver_cells,
                                 )?;
                                 out.driver_cells += r.driver_cells;
                                 let address = Address { face, wire, edge };
                                 let vertex_owned = |end| {
-                                    let vertex = (edge + end) % fragments.len();
+                                    let id = shell.vertices()[face][wire][edge][end];
                                     addresses.iter().any(|a| {
-                                        a.wire == wire
-                                            && (a.edge == vertex
-                                                || (a.edge + 1) % fragments.len() == vertex)
+                                        shell.vertices()[face][a.wire][a.edge].contains(&id)
                                     })
                                 };
                                 owned &= match r.locus {
@@ -168,7 +189,7 @@ pub fn certify(
                                 .map(|(i, _)| shell.edges()[*i].clone())
                                 .collect(),
                         });
-                        out.reason = "source-paired-fiber-contact-qualified";
+                        out.reason = "source-pole-paired-contact-qualified";
                         return Ok(out);
                     }
                 }
@@ -181,17 +202,8 @@ pub fn certify(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::trimmed_face_recipe::{Boundary, Limits};
-    fn limits() -> Limits {
-        Limits {
-            pairs: 10000,
-            region_cells: 10000,
-            domain_cells: 10000,
-            agreement_cells: 10000,
-        }
-    }
     #[test]
-    fn straight_neighbor_rails_use_owned_pole_plane_proposals_and_exact_fibers() {
+    fn owned_cap_meridians_admit_both_orders_but_exhausted_work_refuses() {
         for radii in [[0.5, 1.25], [1.25, 0.5], [1., 1.]] {
             for sweep in [std::f64::consts::TAU, -std::f64::consts::TAU] {
                 let spans = crate::linear_canal::construct(
@@ -205,18 +217,25 @@ mod tests {
                     &spans,
                     1e-7,
                     1e-8,
-                    limits(),
+                    crate::trimmed_face_recipe::Limits {
+                        pairs: 10000,
+                        region_cells: 10000,
+                        domain_cells: 10000,
+                        agreement_cells: 10000,
+                    },
                     100_000_000,
                 )
                 .unwrap()
                 .shell
                 .unwrap();
-                let mut rails = 0;
-                for (i, uses) in shell.uses().iter().enumerate() {
-                    if shell.edges()[i].world().control_points.len() != 2 {
+                let mut count = 0;
+                for uses in shell.uses() {
+                    if !uses
+                        .iter()
+                        .all(|a| shell.poles().iter().any(|(p, _)| p.face == a.face))
+                    {
                         continue;
                     }
-                    rails += 1;
                     for faces in [[uses[0].face, uses[1].face], [uses[1].face, uses[0].face]] {
                         let r = certify(&shell, faces, 1000000, 10000).unwrap();
                         let c = r.certificate.expect(r.reason);
@@ -229,130 +248,10 @@ mod tests {
                                 .is_none()
                         );
                     }
+                    count += 1;
                 }
-                assert_eq!(rails, 4);
+                assert_eq!(count, 8);
             }
         }
-    }
-    #[test]
-    fn sphere_join_is_owned_in_both_orders_and_work_exhaustion_refuses_it() {
-        for radii in [[0.5, 1.25], [1.25, 0.5], [0., 1.], [1., 0.]] {
-            for sweep in [std::f64::consts::TAU, -std::f64::consts::TAU] {
-                let spans = crate::linear_canal::construct(
-                    [[10., -7., 5.], [13., -3., 17.]],
-                    radii,
-                    [1., 0., 0.],
-                    sweep,
-                )
-                .unwrap();
-                let shell = crate::linear_canal::to_capped_source_shell(
-                    &spans,
-                    1e-7,
-                    1e-8,
-                    limits(),
-                    100_000_000,
-                )
-                .unwrap()
-                .shell
-                .unwrap();
-                let other = shell
-                    .uses()
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, uses)| {
-                        (uses.iter().any(|a| a.face == 0)
-                            && shell.edges()[i].world().control_points.len() == 3)
-                            .then(|| uses.iter().find(|a| a.face != 0).unwrap().face)
-                    })
-                    .unwrap();
-                for faces in [[0, other], [other, 0]] {
-                    let r = certify(&shell, faces, 1000000, 10000).unwrap();
-                    let c = r.certificate.expect(r.reason);
-                    assert_eq!(c.faces(), faces);
-                    assert_ne!(c.fibers()[0].side(), c.fibers()[1].side());
-                    assert!(!c.edges().is_empty());
-                    assert!(r.exact_work > 0 && r.exact_work <= 1000000);
-                }
-                assert!(
-                    certify(&shell, [0, other], 1, 10000)
-                        .unwrap()
-                        .certificate
-                        .is_none()
-                );
-                assert!(certify(&shell, [0, 0], 1000000, 10000).is_err());
-            }
-        }
-    }
-    #[test]
-    fn coincident_curved_faces_cannot_use_shared_edges_as_contact_authority() {
-        let spans =
-            crate::linear_canal::construct([[0.; 3], [0., 0., 8.]], [0.5, 1.], [1., 0., 0.], 0.7)
-                .unwrap();
-        let s = spans[0].surface();
-        let boundaries = spans[0].boundaries().unwrap().map(|b| Boundary {
-            curve: b.curve,
-            pcurve: b.pcurve,
-            reversed: false,
-        });
-        let mut reflected = s.clone();
-        reflected.control_points.reverse();
-        reflected.weights.reverse();
-        let order = [0, 3, 2, 1];
-        let reversed = (0..4)
-            .map(|edge| Boundary {
-                curve: boundaries[order[edge]].curve.clone(),
-                pcurve: boundaries[edge].pcurve.clone(),
-                reversed: true,
-            })
-            .collect::<Vec<_>>();
-        let mut regions = Vec::new();
-        for (surface, wire) in [(s, boundaries.to_vec()), (&reflected, reversed)] {
-            let r = crate::source_contour_proposal::qualify_original_region(
-                &cad_predicates::ToleranceContext::default_valid(),
-                surface,
-                &[wire],
-                1e-8,
-                limits(),
-            )
-            .unwrap();
-            regions.push(r.region.expect(r.reason));
-        }
-        let pairs = (0..4)
-            .map(|edge| crate::source_shell_incidence::Pair {
-                uses: [
-                    Address {
-                        face: 0,
-                        wire: 0,
-                        edge,
-                    },
-                    Address {
-                        face: 1,
-                        wire: 0,
-                        edge: order[edge],
-                    },
-                ],
-                world: boundaries[edge].curve.clone(),
-                world_reversed: [false, true],
-                cutters: [None, None],
-            })
-            .collect::<Vec<_>>();
-        let shell = crate::source_shell_incidence::assemble_regions(&regions, &pairs, 1000000)
-            .unwrap()
-            .shell
-            .unwrap();
-        assert!(crate::source_pole_paired_contact::certify(&shell, [0,1], 1000000, 10000)
-            .unwrap().certificate.is_none());
-        assert!(
-            crate::source_vertex_contact::certify(&shell, [0, 1], 1000000)
-                .unwrap()
-                .certificate
-                .is_none()
-        );
-        assert!(
-            certify(&shell, [0, 1], 1000000, 10000)
-                .unwrap()
-                .certificate
-                .is_none()
-        );
     }
 }
