@@ -1136,3 +1136,37 @@ formal composition, iterative retained-region cuts and new cap/corner ownership
 remain outstanding. These fixtures still partition complete rims; material
 volume, complete fillet transition/radius/wall/STEP and WASM/UI admission remain
 open.
+
+## Exact normalized identity across different original parameter domains
+
+`normalized_parameter_identity` compares (t-lo)/(hi-lo), optionally reflected,
+by exact expansion cross products. Domain widths must be strictly positive and
+the source parameters inside their original domains. No division or rounded
+affine parameter is introduced. Equal raw parameters can have unequal normalized
+traversals; a rounded sum or quotient is never identity authority.
+
+The source shared-edge gate no longer requires UV and world curves to use the
+same authored knot domain. Fixed endpoints use exact normalized fractions;
+linear rational crossing roots already provide exact normalized fractions from
+source equations. The unique-world-plane gate works independently of domain
+labels. Canonical world-cutter root selectors are mapped outward from each
+original domain to the corresponding canonical domain, then rechecked by fresh
+projected crossing uniqueness. Original curves, knots and root expressions
+remain unchanged.
+
+All 51 selected B-rep source regressions and all 25 exact-predicate tests passed
+(`normalized-domains-source-regression.log.gz`,
+`normalized-domains-predicates.log.gz`). Tests cover opposite rational paths on
+orthogonal faces with UV domains [2,4] and [10,18], a canonical world domain
+[-5,3], independently selected rational roots and cutters with additional domain
+labels. A nonlinear world-plane root works with a different canonical domain;
+canonical crossing curves also exercise two different canonical domains.
+Endpoint displacement, wrong normalized orientation, equal raw parameters with
+different fractions, rounded reflection, invalid widths and exact exhaustion
+refuse identity.
+
+This stage handles affine labeling of the same full normalized source traversal.
+Mapping original curves with different geometric coverage onto a common carrier,
+fixed/root mixed endpoint ownership, iterative retained-region cuts, new closing
+cap/corner ownership and material volume remain outstanding. General fillet
+transition/radius/wall/STEP and WASM/UI admission remain open.

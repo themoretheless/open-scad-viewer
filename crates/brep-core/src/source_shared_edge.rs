@@ -131,23 +131,21 @@ fn qualify_impl(
         (0..2).all(|i| matches!(&edge.endpoints()[i], Endpoint::Parameter(t) if t.to_bits() == expected[i].to_bits()))
     });
     if !complete {
-        // Exact full-source identity uses normalized traversal. With identical
-        // domains, reversal is an exact reflection of normalized traversal.
+        // Exact full-source identity uses normalized traversal. Compare source
+        // parameters by exact affine fractions, even when their domains differ.
         // Root identity follows exact equations and a fresh common-root proof, not
         // overlapping isolating intervals. Different UV equations require
         // independent canonical cutter identity and projected root uniqueness.
-        if uses.iter().any(|e| e.curve().domain() != world.domain()) {
-            return Ok(out);
-        }
         for i in 0..2 {
             let same = match (&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i]) {
-                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
-                    if world_reversed[0] == world_reversed[1] {
-                        a.to_bits() == b.to_bits()
-                    } else {
-                        same_reflected_parameter(*a, *b, world.domain(), &mut out, max_work)?
-                    }
-                }
+                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => same_normalized_parameter(
+                    *a,
+                    *b,
+                    [uses[0].curve().domain(), uses[1].curve().domain()],
+                    world_reversed,
+                    &mut out,
+                    max_work,
+                )?,
                 (
                     Endpoint::Crossing { point: a, role: ar },
                     Endpoint::Crossing { point: b, role: br },
@@ -368,10 +366,11 @@ fn common_plane_root(
     }
     Ok(false)
 }
-fn same_reflected_parameter(
+fn same_normalized_parameter(
     a: f64,
     b: f64,
-    domain: [f64; 2],
+    domains: [[f64; 2]; 2],
+    reversed: [bool; 2],
     out: &mut Report,
     max_work: u64,
 ) -> Result<bool> {
@@ -382,17 +381,24 @@ fn same_reflected_parameter(
         return Ok(false);
     }
     let arena = SourceArena::authored(
-        "source-reflected-parameter",
+        "source-normalized-parameter",
         1,
-        [a, b, domain[0], domain[1]]
-            .iter()
-            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
-            .collect(),
+        [
+            a,
+            domains[0][0],
+            domains[0][1],
+            b,
+            domains[1][0],
+            domains[1][1],
+        ]
+        .iter()
+        .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+        .collect(),
     )
     .map_err(|_| {
         Error::new(
             "BREP_SOURCE_SHARED_EDGE",
-            "Invalid reflected parameter source",
+            "Invalid normalized parameter source",
         )
     })?;
     let tol = ToleranceContext::default_valid();
@@ -405,14 +411,15 @@ fn same_reflected_parameter(
         },
         None,
     );
-    let r = cad_predicates::reflected_parameter_identity(
+    let r = cad_predicates::normalized_parameter_identity(
         &mut ctx,
-        std::array::from_fn(|i| arena.leaf(i).unwrap()),
+        std::array::from_fn(|i| std::array::from_fn(|k| arena.leaf(3 * i + k).unwrap())),
+        reversed,
     )
     .map_err(|_| {
         Error::new(
             "BREP_SOURCE_SHARED_EDGE",
-            "Invalid reflected parameter request",
+            "Invalid normalized parameter request",
         )
     })?;
     out.work_used += r.work_used;
@@ -510,9 +517,6 @@ fn common_world_root(
             Role::Boundary => (point.boundary(), point.contact(), 0),
             Role::Contact => (point.contact(), point.boundary(), 1),
         };
-        if main.domain() != world.domain() || other.domain() != cutter.domain() {
-            return Ok(false);
-        }
         if out.work_used == max_work {
             return Ok(false);
         }
@@ -530,7 +534,21 @@ fn common_world_root(
         if proof.outcome != BezierIdentity::Equal {
             return Ok(false);
         }
-        ranges[i] = [point.selector()[index], point.selector()[1 - index]];
+        let mapped = |range: [f64; 2], source: [f64; 2], target: [f64; 2]| -> Result<[f64; 2]> {
+            use nurbs_core::interval_eval::Interval as I;
+            let normalized = I::new(range[0], range[1])?
+                .sub(I::point(source[0]))?
+                .div(I::point(source[1]).sub(I::point(source[0]))?)?
+                .intersect(0., 1.)?;
+            let value = I::point(target[0])
+                .add(normalized.mul(I::point(target[1]).sub(I::point(target[0]))?)?)?
+                .intersect(target[0], target[1])?;
+            Ok([value.lo, value.hi])
+        };
+        ranges[i] = [
+            mapped(point.selector()[index], main.domain(), world.domain())?,
+            mapped(point.selector()[1 - index], other.domain(), cutter.domain())?,
+        ];
     }
     let box_: [[f64; 2]; 2] = std::array::from_fn(|axis| {
         [
@@ -562,6 +580,136 @@ fn common_world_root(
 mod tests {
     use super::*;
     use nurbs_core::surface::Surface;
+    #[test]
+    fn distinct_original_domains_share_exact_normalized_parameters_and_rational_roots() {
+        use crate::source_boundary_fragment::{Endpoint, Role};
+        use nurbs_core::surface::Surface;
+        let surface = |vertical: bool| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..2)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| {
+                            if vertical {
+                                vec![u as f64, 0., v as f64]
+                            } else {
+                                vec![u as f64, v as f64, 0.]
+                            }
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let sa = surface(false);
+        let sb = surface(true);
+        let a = Curve {
+            degree: 1,
+            knots: vec![2., 2., 4., 4.],
+            control_points: vec![vec![0., 0.], vec![1., 0.]],
+            weights: vec![1., 2.],
+            periodic: false,
+        };
+        let b = Curve {
+            degree: 1,
+            knots: vec![10., 10., 18., 18.],
+            control_points: vec![vec![1., 0.], vec![0., 0.]],
+            weights: vec![2., 1.],
+            periodic: false,
+        };
+        let world = Curve {
+            degree: 1,
+            knots: vec![-5., -5., 3., 3.],
+            control_points: vec![vec![0., 0., 0.], vec![1., 0., 0.]],
+            weights: vec![1., 2.],
+            periodic: false,
+        };
+        let fa =
+            Fragment::new(&sa, &a, Endpoint::Parameter(2.5), Endpoint::Parameter(3.5)).unwrap();
+        let fb =
+            Fragment::new(&sb, &b, Endpoint::Parameter(12.), Endpoint::Parameter(16.)).unwrap();
+        let r = qualify(&world, [&fa, &fb], [false, true], 100_000_000).unwrap();
+        assert!(r.edge.is_some(), "{}", r.reason);
+        let edge = r.edge.unwrap();
+        assert_eq!(edge.world(), &world);
+        assert_eq!(edge.uses()[0].curve(), &a);
+        assert_eq!(edge.uses()[1].curve(), &b);
+        let wrong = Fragment::new(
+            &sb,
+            &b,
+            Endpoint::Parameter(12.),
+            Endpoint::Parameter(16. + 1e-12),
+        )
+        .unwrap();
+        assert!(qualify(&world, [&fa, &wrong], [false, true], 100_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+        let cut_a = Curve {
+            degree: 1,
+            knots: vec![20., 20., 24., 24.],
+            control_points: vec![vec![0.5, -1.], vec![0.5, 1.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let cut_b = Curve {
+            degree: 1,
+            knots: vec![-4., -4., 2., 2.],
+            control_points: cut_a.control_points.clone(),
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let pa = crate::source_contact_point::qualify(
+            &sa,
+            &a,
+            &cut_a,
+            [[2.6, 2.8], [21.6, 22.4]],
+            10000,
+        )
+        .unwrap();
+        let pb = crate::source_contact_point::qualify(
+            &sb,
+            &b,
+            &cut_b,
+            [[15.2, 15.5], [-1.5, -0.5]],
+            10000,
+        )
+        .unwrap();
+        assert!(pa.point.is_some(), "{}", pa.reason);
+        assert!(pb.point.is_some(), "{}", pb.reason);
+        let ra = Fragment::new(
+            &sa,
+            &a,
+            Endpoint::Parameter(2.),
+            Endpoint::Crossing {
+                point: pa.point.unwrap(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let rb = Fragment::new(
+            &sb,
+            &b,
+            Endpoint::Crossing {
+                point: pb.point.unwrap(),
+                role: Role::Boundary,
+            },
+            Endpoint::Parameter(18.),
+        )
+        .unwrap();
+        let root = qualify(&world, [&ra, &rb], [false, true], 100_000_000).unwrap();
+        assert!(root.edge.is_some(), "{}", root.reason);
+        assert_eq!(root.edge.unwrap().uses()[0].curve().domain(), [2., 4.]);
+        assert!(qualify(&world, [&ra, &rb], [false, true], 1)
+            .unwrap()
+            .edge
+            .is_none());
+    }
     #[test]
     fn two_world_plane_roots_never_become_one_shared_endpoint() {
         use crate::source_boundary_fragment::{Endpoint, Role};
@@ -779,6 +927,20 @@ mod tests {
         assert!(r.edge.is_some(), "{} {}", r.reason, r.work_used);
         assert_eq!(r.edge.unwrap().world(), &world);
         assert!(r.driver_cells > 0);
+        let mut alternate = world.clone();
+        alternate.knots = vec![-5., -5., -5., 3., 3., 3.];
+        let remapped = qualify_with_planes(
+            &alternate,
+            [&fa, &fb],
+            [false, true],
+            [None, Some(plane)],
+            100_000_000,
+            10000,
+        )
+        .unwrap();
+        assert!(remapped.edge.is_some(), "{}", remapped.reason);
+        assert_eq!(remapped.edge.unwrap().world(), &alternate);
+
         let mut displaced = plane;
         for p in &mut displaced {
             p[0] += 1e-12;
@@ -1097,6 +1259,21 @@ mod tests {
         .unwrap();
         assert!(r.edge.is_some(), "{}", r.reason);
         assert_eq!(r.root_checks, 1);
+        let mut mapped_world = world.clone();
+        mapped_world.knots = vec![-5., -5., 3., 3.];
+        let mut mapped_cutter = cutter.clone();
+        mapped_cutter.knots = vec![10., 10., 18., 18.];
+        let mapped = qualify_with_cutters(
+            &mapped_world,
+            [&a, &b],
+            [false, false],
+            [None, Some(&mapped_cutter)],
+            1_000_000,
+        )
+        .unwrap();
+        assert!(mapped.edge.is_some(), "{}", mapped.reason);
+        assert_eq!(mapped.root_checks, 1);
+        assert_eq!(mapped.edge.unwrap().world(), &mapped_world);
         let mut wrong = cutter.clone();
         wrong.control_points[0][2] = 1e-12;
         assert!(qualify_with_cutters(

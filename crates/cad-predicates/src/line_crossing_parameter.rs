@@ -223,3 +223,126 @@ mod tests {
         ));
     }
 }
+
+/// Compare normalized traversal across different original source domains.
+/// Each row is [parameter, lower, upper]. Positive widths and containment are
+/// checked with exact expansions; no division or rounded affine remap is used.
+pub fn normalized_parameter_identity(
+    ctx: &mut PredicateContext<'_>,
+    values: [[LeafRef; 3]; 2],
+    reversed: [bool; 2],
+) -> Result<ParameterDecision, InputError> {
+    let values = values
+        .iter()
+        .flatten()
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    let computed = (|| -> Result<ParameterIdentity, Reason> {
+        let v = exact_inputs(&values, ctx)?;
+        let mut ratios = Vec::new();
+        for i in 0..2 {
+            let row = &v[3 * i..3 * i + 3];
+            let width = row[2].sub(&row[1], ctx)?;
+            let low = row[0].sub(&row[1], ctx)?;
+            let high = row[2].sub(&row[0], ctx)?;
+            if width.sign() != Sign::Positive
+                || low.sign() == Sign::Negative
+                || high.sign() == Sign::Negative
+            {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            }
+            ratios.push((if reversed[i] { high } else { low }, width));
+        }
+        let difference = ratios[0]
+            .0
+            .mul(&ratios[1].1, ctx)?
+            .sub(&ratios[1].0.mul(&ratios[0].1, ctx)?, ctx)?;
+        ctx.charge(0)?;
+        Ok(if difference.sign() == Sign::Zero {
+            ParameterIdentity::Equal
+        } else {
+            ParameterIdentity::Different
+        })
+    })();
+    Ok(ParameterDecision {
+        outcome: computed.unwrap_or_else(ParameterIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+#[cfg(test)]
+mod normalized_tests {
+    use super::*;
+    use crate::{Limits, SourceArena, ToleranceContext};
+    fn run(v: [[f64; 3]; 2], reverse: [bool; 2], budget: u64) -> ParameterIdentity {
+        let source = SourceArena::authored(
+            "normalized-source-domains",
+            1,
+            v.iter()
+                .flatten()
+                .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(
+            &source,
+            &tolerance,
+            Limits {
+                max_work: budget,
+                ..Limits::default()
+            },
+            None,
+        );
+        normalized_parameter_identity(
+            &mut ctx,
+            std::array::from_fn(|i| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap())),
+            reverse,
+        )
+        .unwrap()
+        .outcome
+    }
+    #[test]
+    fn domains_orientation_and_false_rounded_ratios() {
+        assert_eq!(
+            run([[2.5, 2., 4.], [12., 10., 18.]], [false, false], 1_000_000),
+            ParameterIdentity::Equal
+        );
+        assert_eq!(
+            run([[2.5, 2., 4.], [16., 10., 18.]], [false, true], 1_000_000),
+            ParameterIdentity::Equal
+        );
+        assert_eq!(
+            run([[2.5, 2., 4.], [12., 10., 18.]], [false, true], 1_000_000),
+            ParameterIdentity::Different
+        );
+        assert_eq!(
+            run([[0.1, 0., 1.], [0.9, 0., 1.]], [false, true], 1_000_000),
+            ParameterIdentity::Different
+        );
+        assert_eq!(
+            run(
+                [[2.5, 2., 4.], [12. + 1e-12, 10., 18.]],
+                [false, false],
+                1_000_000
+            ),
+            ParameterIdentity::Different
+        );
+        assert_eq!(
+            run([[2.5, 2., 4.], [2.5, 2., 6.]], [false, false], 1_000_000),
+            ParameterIdentity::Different
+        );
+        assert!(matches!(
+            run([[2.5, 2., 4.], [12., 10., 18.]], [false, false], 0),
+            ParameterIdentity::Indeterminate(_)
+        ));
+        assert!(matches!(
+            run([[2.5, 2., 2.], [12., 10., 18.]], [false, false], 1_000_000),
+            ParameterIdentity::Indeterminate(_)
+        ));
+        assert!(matches!(
+            run([[1.5, 2., 4.], [12., 10., 18.]], [false, false], 1_000_000),
+            ParameterIdentity::Indeterminate(_)
+        ));
+    }
+}
