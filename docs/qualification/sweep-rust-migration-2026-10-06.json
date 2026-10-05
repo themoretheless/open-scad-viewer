@@ -1,0 +1,77 @@
+{
+  "schema": "sweep-rust-migration-verification/1",
+  "implementationCommit": "e2cce83024fd668eafe4bd232ed8326272e6bf41",
+  "scope": "Rust construction/refinement/correction/ownership/certificate composition/admission/display-evidence ownership; finite regression qualification.",
+  "nativeTests": 128,
+  "additionalNativeRegressions": 1,
+  "wasmRushBrepTests": 171,
+  "orchestrationParityCases": 4,
+  "browserCases": 78,
+  "browserAssertions": 896,
+  "stepCases": 36,
+  "smoothStepCases": 10,
+  "occtVersion": "8.0.1.0.0",
+  "integratedMain": "3a907e32f",
+  "distArtifacts": 151,
+  "ci": {
+    "implementationCommit": "e2cce83024fd668eafe4bd232ed8326272e6bf41",
+    "url": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37390580852",
+    "executed": false,
+    "reason": "GitHub account locked due to billing issue"
+  },
+  "geometryWasm": {
+    "sha256": "6a251bd6ef83f4565e7779dfdec7e87db28d5f900e81fa385aa6429a8b6af777",
+    "byteLength": 11795991
+  },
+  "sourceHashes": {
+    "crates/geometry-bridge/src/sweep_pipeline.rs": "9e4293307a01ba03f803e6708974d6b2a2d83ee991a04b0d2318c917a2a8ceb3",
+    "crates/geometry-bridge/src/sweep_viewport.rs": "7c62b38786aa7a27c65ae016912071d539ff51b3068804ededef79e198753609",
+    "crates/geometry-bridge/src/lib.rs": "7f554d61ca3adf98d263f9745c043689bf65eda990b7128dd37fe738befbc9bf",
+    "crates/geometry-bridge/tests/sweep_pipeline.rs": "1cee1daf44df3b81425940b701968cbc669763efc4e8cac2e2a917fa66ea6f98",
+    "src/services/nurbsConstructors.ts": "f7d6e5200897c44f977964c379e3bf6ffb5431a95d150874938935b2252c437c",
+    "src/services/sweep/construction/brep.ts": "7038960dbdb06824f70ad037413d42e8765626b94222b65331f87b6f71599125",
+    "src/services/sweep/construction/correction.ts": "0ded9e4238ece436392e638ee76012019027cf38bbec0e55902e9b3f7f1f6ccc",
+    "src/services/sweep/admission/sweepSolidAdmission.ts": "5da2f8b5dbf99d5f72f27384ea94e111ff0f677ff96b0bf848dc1a8773603e81",
+    "src/services/sweep/viewport/sweepViewportEvidence.ts": "347bad4911f93086e10803ab03c36d83c9b6c8987a33a7e8e96b6a033b51e020",
+    "docs/design/sweep-qualification-catalog.json": "c11f249670023a1ae6d3b25213c29313ce262b696031e88df06f6fc234ac0a4c"
+  },
+  "evidenceHashes": {
+    "docs/qualification/sweep-rust-migration-2026-10-06/step-opencascade-sweep.json": "840983c21f3f3d73c7ca55ca2b99b14127018042c30632f807c82bb9550172b7",
+    "docs/qualification/sweep-rust-migration-2026-10-06/smooth-opencascade-sweep.json": "4f6c1d2d43180a44e1f649ed233b4141cfe71590a61873280390e379c2c00f94",
+    "docs/qualification/sweep-rust-migration-2026-10-06/browser-matrix.json": "76a4b995c1f55c9c0b36cfc0366e3429be9cc0542def8edc679de1397b75cd1b",
+    "docs/qualification/sweep-rust-migration-2026-10-06/orchestration-parity.json": "edd1e1fde566dce601acf20ec646cfa66c61a765c83913dd7c32ee5e154d0e15",
+    "docs/qualification/sweep-rust-migration-2026-10-06/wasm-package.json": "c8579e56a7c11450e3a34f24cc61a14504b3d3db2a53ee6a13185855709ca40e",
+    "docs/qualification/sweep-rust-migration-2026-10-06/ci-annotations.json": "db3afb5d9b577b8d65f626603d2f2a44f2539a80cadeaa37529726146dbbd17d",
+    "docs/qualification/sweep-rust-migration-2026-10-06/step-manifest.json.gz": "094edc102d06631f5f65906d1ac8f6b607928932c031670454855975b2db60b0",
+    "docs/qualification/sweep-rust-migration-2026-10-06/smooth-manifest.json.gz": "d95f5d4a3eadf429845a8769484d9fe92bcf57d2146316fe86e973c1cf5e4879",
+    "docs/qualification/sweep-rust-migration-2026-10-06/README.md": "03da91821a65b2460e0162802ce756dde1b64ec434eb4b66d6c05b9de90b3c8e"
+  },
+  "checks": [
+    "Vue/MCP type checks",
+    "production build and 151 packaged artifacts",
+    "128 native checks",
+    "171 WASM/Rush/B-rep tests",
+    "four prior-orchestration full-result parity cases",
+    "all 46 independent OCCT STEP imports/topology/volume checks",
+    "all 78 browser scenarios at 1440 and 600 pixels",
+    "packaged WASM exact round trip",
+    "new Rust files formatting and git diff --check"
+  ],
+  "limitations": [
+    "Finite cases do not establish guarantees for every possible input.",
+    "Browser held-dispatch cancellation validates lifecycle, not mid-kernel interruption latency.",
+    "Headless CPU fallback is not GPU qualification.",
+    "Legacy surface_scaled_sweep and surface_profile_sweep are unsupported and retain native refusal.",
+    "Historical qualification archives remain immutable; this snapshot does not close unrelated G0/G1/global CI gates."
+  ],
+  "compressedManifests": {
+    "docs/qualification/sweep-rust-migration-2026-10-06/step-manifest.json.gz": {
+      "uncompressedSha256": "d7f17b4a30910d5c87245e80db6c214210382b34a6a180d02b2c2d0793731da4",
+      "uncompressedBytes": 17095077
+    },
+    "docs/qualification/sweep-rust-migration-2026-10-06/smooth-manifest.json.gz": {
+      "uncompressedSha256": "d3366e4a0e21b3846ae41bce7849704753fcc72d7d2426a989a050c92102b75d",
+      "uncompressedBytes": 5090831
+    }
+  }
+}
