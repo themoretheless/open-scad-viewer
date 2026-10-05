@@ -92,7 +92,14 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
                 .and_then(|r| r.loops().get(a.wire))
                 .and_then(|w| w.get(a.edge))
                 .ok_or_else(|| invalid("Unknown source use address"))?;
-            if fragment.definition() != recorded[slot] {
+            // JSON/binary transports may encode integral f64 coordinates as
+            // integer number variants. Reconstruct typed original expressions
+            // before comparing; never relax source identity to proximity.
+            let recorded_fragment = crate::source_boundary_fragment::restore(
+                recorded[slot].clone(),
+                limits.regions.mapping_cells,
+            )?;
+            if fragment.definition() != recorded_fragment.definition() {
                 return Err(invalid(
                     "Recorded edge use disagrees with replayed material boundary",
                 ));

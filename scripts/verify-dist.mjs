@@ -100,8 +100,11 @@ const limits = new Map([
 // Local analytic envelope and interval cell transport: measured 3,689,468 bytes.
 // Finite rational envelope fit and partition serialization: measured 3,694,954 bytes.
 // Full contact trim/tangent qualification and delivery: measured 3,708,032 bytes.
-const geometryChunkBudget = 3_710_000
+// Fresh source Body replay, exact root restrictions and volume admission: 3,871,336 bytes.
+const geometryChunkBudget = 3_873_000
 const jsChunkBudgets = [
+  // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
+  [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
@@ -355,6 +358,7 @@ for (const [name, artifact, compression] of [
 // Local envelope adapter and worker validation: measured 7,933,678 asset bytes.
 // Finite patch adapter and linear partition validation: measured 7,944,599 asset bytes.
 // Contact qualification worker adapter and report validation: measured 7,963,849 asset bytes.
-const totalBudget = 7_967_000
+// Source Body restoration, exhaustive CAD job registry and request binding: 8,130,274 asset bytes.
+const totalBudget = 8_132_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

@@ -128,8 +128,30 @@ mod tests {
         .shell
         .unwrap();
         let definition = json!({"version":1,"shell":shell.definition().unwrap(),"success":true,"volume":[1.,1.]});
+        // Browser binary transport uses integer tags for integral numbers.
+        fn wire_numbers(v: &mut Value) {
+            match v {
+                Value::Number(value_codec::Number::Float(n))
+                    if n.fract() == 0.
+                        && n.abs() <= 9007199254740991.
+                        && !(*n == 0. && n.is_sign_negative()) =>
+                {
+                    *v = if *n >= 0. {
+                        json!(*n as u64)
+                    } else {
+                        json!(*n as i64)
+                    };
+                }
+                Value::Array(a) => a.iter_mut().for_each(wire_numbers),
+                Value::Object(o) => o.values_mut().for_each(wire_numbers),
+                _ => {}
+            }
+        }
+        let mut wire_definition = definition.clone();
+        wire_numbers(&mut wire_definition);
+
         let run = |cells| {
-            let request = json!({"op":"cad_source_body_restore","definition":definition.clone(),"limits":config(cells),"endpointSpans":10000});
+            let request = json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(cells),"endpointSpans":10000});
             let text = value_codec::to_string(&request).unwrap();
             let result = super::super::execute(&text);
             {
@@ -149,6 +171,10 @@ mod tests {
             json!("source-volume-initial-work-limit")
         );
         let restored = run(50000);
+        if let Some(path) = std::env::var_os("CAD_SOURCE_BODY_FIXTURE_OUTPUT") {
+            let request = json!({"op":"cad_source_body_restore","definition":definition.clone(),"limits":config(50000),"endpointSpans":10000});
+            std::fs::write(path, value_codec::to_string(&request).unwrap()).unwrap();
+        }
         assert_eq!(restored["admitted"], json!(true), "{restored:?}");
         assert_eq!(restored["sourceBody"]["shell"], definition["shell"]);
         assert_eq!(

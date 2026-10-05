@@ -2358,3 +2358,55 @@ still require additional qualification.
 This wires the Rust dispatcher contract only. A new WASM binary, worker
 operation, editor document field, scene preview, cancel/Retry/late responses
 and source-root STEP transfer remain unfinished.
+
+## Source Body worker/WASM transport (2026-10-06)
+
+The existing MainSolid CAD lane has a `sourceBodyRestore` job and a typed
+result contract. Its request binding compares original source definitions,
+edge addresses and finite display intervals, including signed zero; native
+Rust still owns all admission decisions. The normal lane cancellation destroys
+the running realm and rejects late replies.
+
+Two real-boundary failures were found before delivery:
+
+1. The manual worker message allow-list omitted the new typed job and silently
+   ignored it until timeout. A `Record<MainSolidJob['kind'],true>` now covers
+   every job at compile time and is used by the actual worker boundary.
+2. Browser binary transport gives integral numbers integer tags. Comparing raw
+   recorded Fragment JSON against freshly serialized f64 fields rejected valid
+   source ownership. The shell gate now freshly restores recorded fragments
+   under the bounded source mapping work, then compares canonical original
+   definitions. This preserves curve/root identity checks and avoids numerical
+   proximity or tolerance-based equality.
+
+The native bridge regression explicitly retags integral f64 values as the
+browser does, and passes. All 92 source-focused native tests pass after the
+change. `source-body-request.json.gz` is the native-authored capped-canal input
+for subsequent real WASM/worker qualification. Failed and native replay logs
+are retained for causal evidence.
+
+Final validation: all 103 tests across the six CAD worker/client/runtime/real
+boundary suites pass on the corrected shipped WASM. The separately instrumented
+three source-worker tests also pass, including body restoration/refusal, source
+definition and signed-zero binding, cancellation, superseding/late responses
+and retry after worker replacement. Vue and MCP TypeScript checks pass.
+
+The corrected WASM is 11,606,065 bytes, SHA-256
+`068ffdea0f4034f8c08a57294558d643fb4ffdbb92a85dcf9c1aee4a5f923788`.
+Production build and distribution audit pass, including exact packed/raw WASM
+identity. The packed geometry JS chunk is 3,871,336 bytes; the full measured
+asset total excluding the three separately counted raw WASM files is 8,130,274
+bytes. Named budgets were updated to 3,873,000 and 8,132,000 bytes; the shared
+CAD client/protocol chunk is 100,734 bytes with a named 102,000-byte limit.
+The decoder's 16 MiB output and 4 MiB compressed limits remain unchanged.
+
+The one instrumented equal-radius canal has 12 faces and 20 ordinary edges.
+Host request-to-response restoration took 876.63 ms, worker warmup 122.82 ms,
+and execution 594.54 ms. Execution includes the bridge adapter and native gates;
+this does not isolate Rust time, measure rendered UI latency, or establish a
+large-scene benchmark. The warm one-cell refusal took 248.88 ms execution.
+The report stores actual timings, volume enclosure and artifact identity.
+
+Editor document persistence, scene preview/selection/error highlighting,
+root-valued Body cases through WASM, root restrictions in conventional
+Model/STEP, crash/multi-tab acceptance and the remaining roadmap are still open.
