@@ -40,6 +40,7 @@ mod cad_clearance;
 mod cad_draft;
 mod cad_display;
 mod cad_edge_edit;
+mod cad_source_body;
 mod cad_face_selection;
 mod cad_hole;
 mod cad_lattice;
@@ -776,6 +777,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_shell_distance" => cad_shell_distance::measure(v),
         "cad_solid_distance" => cad_solid_distance::measure(v),
         "cad_material_segment" => cad_material_segment::inspect(v),
+        "cad_source_body_restore" => cad_source_body::restore(v),
         "cad_material_chord" => cad_material_chord::inspect(v),
         "cad_material_wall" => cad_material_wall::inspect(v),
         "cad_whole_wall" => cad_whole_wall::inspect(v),

@@ -2330,3 +2330,31 @@ Validation: the initial source-focused run passed 92 tests; the final full
 B-rep library run, including strengthened analytic endpoint checks, passed
 894 tests with zero failures and three ignored (278.94 seconds). Compressed
 logs are stored with this stage.
+
+## Source Body editor transport foundation (2026-10-06)
+
+The existing Rust JSON dispatcher now exposes `cad_source_body_restore`.
+Input contains an original `definition`, bounded `limits` for every native
+region/incidence/embedding/volume gate, and `endpointSpans` in 1..100000.
+The endpoint work bound is checked before expensive geometry restoration.
+
+A successful response returns the recomputed source Body definition, volume
+interval, orientation, face/pole counts and exact ordinary edge definitions.
+Each edge has its body-owned index, two original face/wire/edge addresses,
+canonical vertex ownership IDs, parameter bounds and endpoint boxes.
+The bounds do not replace the source root definitions. An unresolved native
+gate returns `admitted:false`, no Body/edge payload, and stage diagnostics
+including uncertain pair/face/UV addresses where available. Malformed inputs
+use the existing structured bridge error response.
+
+The native JSON execute test constructs a capped equal-radius canal, loads its
+raw shell definition, checks all returned original edge definitions/addresses
+and verifies the analytic volume 2*pi/3 lies in the computed interval. A saved
+fake success/volume does not bypass a one-cell volume refusal. Invalid endpoint
+work is rejected. The focused bridge test passes; compressed log accompanies
+this stage. The control has full-source edges; root-valued bridge Body cases
+still require additional qualification.
+
+This wires the Rust dispatcher contract only. A new WASM binary, worker
+operation, editor document field, scene preview, cancel/Retry/late responses
+and source-root STEP transfer remain unfinished.
