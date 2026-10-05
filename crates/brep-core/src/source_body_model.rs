@@ -33,6 +33,16 @@ fn directed(fragment: &Fragment) -> crate::Result<nurbs_core::curve::Curve> {
     }
     Ok(c)
 }
+fn canonical_vertex_ids(
+    shared: &crate::source_shared_edge::SharedEdge,
+    slot: usize,
+    mut ids: [usize; 2],
+) -> [usize; 2] {
+    if shared.reversed()[slot] {
+        ids.reverse();
+    }
+    ids
+}
 /// Only a private native Body can authorize conversion. Entity addresses and
 /// shell vertex identities are preserved; coordinates never merge vertices.
 pub fn convert(
@@ -74,11 +84,12 @@ pub fn convert(
         for (slot, address) in shell.uses()[index].iter().enumerate() {
             let fragment = &shell.faces()[address.face][address.wire].edges()[address.edge];
             full(fragment)?;
-            let reversed = shared.reversed()[slot] ^ fragment.reversed();
-            let mut ids = shell.vertices()[address.face][address.wire][address.edge];
-            if reversed {
-                ids.reverse();
-            }
+            let reversed = shared.reversed()[slot];
+            let ids = canonical_vertex_ids(
+                shared,
+                slot,
+                shell.vertices()[address.face][address.wire][address.edge],
+            );
             if canonical.is_some_and(|v| v != ids) {
                 return Err(unsupported("Shared canonical endpoint ownership conflicts"));
             }
@@ -299,6 +310,53 @@ pub(crate) fn assert_step_identity(original: &crate::Model, imported: &crate::Mo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn directed_fragment_reversal_is_counted_once_in_canonical_vertex_ownership() {
+        let surface = nurbs_core::polynomial::graph([0., 1., 0., 1.], &[vec![0.]]).unwrap();
+        let uv = nurbs_core::curve::Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
+        let world =
+            nurbs_core::curve::Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]])
+                .unwrap();
+        let forward = Fragment::new(
+            &surface,
+            &uv,
+            Endpoint::Parameter(0.),
+            Endpoint::Parameter(1.),
+        )
+        .unwrap();
+        let backward = Fragment::new(
+            &surface,
+            &uv,
+            Endpoint::Parameter(1.),
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let edge = crate::source_shared_edge::qualify(
+            &world,
+            [&forward, &backward],
+            [false, false],
+            1000000,
+        )
+        .unwrap()
+        .edge
+        .unwrap();
+        assert_eq!(
+            canonical_vertex_ids(&edge, 0, [4, 5]),
+            canonical_vertex_ids(&edge, 1, [5, 4])
+        );
+        let restored = crate::source_shared_edge_restore::restore(
+            edge.definition(),
+            crate::source_shared_edge_restore::Limits {
+                mapping_cells_per_use: 100,
+                exact_work: 1000000,
+                driver_cells: 100,
+            },
+        )
+        .unwrap()
+        .edge
+        .unwrap();
+        assert_eq!(canonical_vertex_ids(&restored, 1, [5, 4]), [4, 5]);
+    }
     #[test]
     fn partial_trims_refuse_and_bezier_reversal_preserves_original_coefficients() {
         let surface = nurbs_core::polynomial::graph([0., 1., 0., 1.], &[vec![0.]]).unwrap();

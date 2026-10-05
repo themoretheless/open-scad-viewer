@@ -318,7 +318,7 @@ pub fn qualify_with_candidates(
             return Ok(out);
         }
     }
-    out.edge = Some(SharedEdge::from_mapped(uses));
+    out.edge = Some(SharedEdge::from_mapped(uses, planes, candidates));
     out.reason = "mapped-source-shared-edge-qualified";
     Ok(out)
 }
@@ -595,6 +595,17 @@ mod tests {
         .unwrap();
         assert!(report.edge.is_some(), "{}", report.reason);
         let edge = report.edge.unwrap();
+        let restore = |value| crate::source_shared_edge_restore::restore(value,
+            crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000}).unwrap();
+        let restored=restore(edge.definition()).edge.unwrap();
+        assert_eq!(restored.definition(),edge.definition());
+        assert_eq!(restored.ranges(),edge.ranges());
+        assert_eq!(restored.reversed(),edge.reversed());
+        let mut displaced=edge.definition();
+        displaced["recipe"]["candidates"][0][1][0]=value_codec::json!(0.625+1e-12);
+        displaced["certificateQualified"]=value_codec::json!(true);
+        assert!(restore(displaced).edge.is_none());
+
         match &edge.uses()[0].endpoints()[1] {
             Endpoint::Crossing { point, .. } => assert_eq!(point.definition(), definition),
             _ => panic!("root expression was replaced"),

@@ -8,6 +8,7 @@ pub struct SharedEdge {
     uses: [Fragment; 2],
     reversed: [bool; 2],
     ranges: Option<[[[f64; 2]; 2]; 2]>,
+    recipe: value_codec::Value,
 }
 impl SharedEdge {
     pub fn world(&self) -> &Curve {
@@ -26,14 +27,26 @@ impl SharedEdge {
             })
         })
     }
-    pub(crate) fn from_mapped(uses: [crate::source_affine_use::MappedUse; 2]) -> Self {
+    pub(crate) fn from_mapped(
+        uses: [crate::source_affine_use::MappedUse; 2],
+        planes: [Option<[[f64; 3]; 3]>; 2],
+        candidates: [[Option<[f64; 2]>; 2]; 2],
+    ) -> Self {
         Self {
             world: uses[0].world().clone(),
             uses: [uses[0].fragment().clone(), uses[1].fragment().clone()],
             reversed: [uses[0].reversed(), uses[1].reversed()],
             ranges: Some([uses[0].range(), uses[1].range()]),
+            recipe: value_codec::json!({"kind":"mapped","ranges":[uses[0].range(),uses[1].range()],"planes":planes,"candidates":candidates}),
         }
     }
+    /// Original definitions and proposal inputs only; restoration recomputes authority.
+    pub fn definition(&self) -> value_codec::Value {
+        use value_codec::Serialize;
+        value_codec::json!({"version":1,"world":self.world.to_value(),
+            "uses":self.uses.each_ref().map(|f|f.definition()),"recipe":self.recipe.clone()})
+    }
+    /// Direction of each directed fragment relative to the canonical world curve.
     pub fn reversed(&self) -> [bool; 2] {
         self.reversed
     }
@@ -327,6 +340,8 @@ fn qualify_impl(
         uses: [uses[0].clone(), uses[1].clone()],
         reversed: effective,
         ranges: None,
+        recipe: value_codec::json!({"kind":"direct","worldReversed":world_reversed,
+            "cutters":cutters.map(|c|c.cloned()),"planes":planes}),
     });
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
@@ -778,6 +793,17 @@ mod tests {
         assert_eq!(r.root_checks, 1);
         assert!(r.driver_cells > 0);
         let e = r.edge.unwrap();
+        let restore = |definition, work| crate::source_shared_edge_restore::restore(definition,
+            crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:work,driver_cells:10000}).unwrap();
+        let restored = restore(e.definition(),100_000_000).edge.unwrap();
+        assert_eq!(restored.definition(),e.definition());
+        assert_eq!(restored.reversed(),e.reversed());
+        assert!(restore(e.definition(),1).edge.is_none());
+        let mut missing_plane=e.definition();
+        missing_plane["recipe"]["planes"][1]=value_codec::Value::Null;
+        missing_plane["certificateQualified"]=value_codec::Value::Bool(true);
+        assert!(restore(missing_plane,100_000_000).edge.is_none());
+
         assert_eq!(e.world(), &world);
         assert_eq!(e.uses()[1].curve(), &main_b);
         assert!(qualify_with_planes(

@@ -2207,3 +2207,40 @@ arbitrary fillets, root-trim Model conversion or WASM/UI qualification.
 
 Full B-rep validation after Model/STEP transfer: 893 tests pass, zero failures
 and three ignored tests. Compressed focused and full logs accompany this stage.
+
+## Original shared-edge restoration and directed-use ownership correction
+
+Shared edges now privately retain their original qualification recipe: direct
+world-to-forward-pcurve directions, original cutters and planes, or exact affine
+ranges, planes and raw root parameter proposals. `definition()` emits original
+world/UV/root definitions and those proposals. `source_shared_edge_restore`
+restores each source crossing by fresh original qualification, then recomputes
+shared-edge equality and endpoint ownership with the direct or mapped native
+factory. Cached success/direction/bounds fields do not authorize an edge. Root
+mapping budgets apply independently per use, while edge exact/driver work is
+shared through the existing native gates.
+
+Regressions restore the original mixed nonlinear root/fixed plane-owned edge
+and the mapped nonlinear root/fixed edge with an exact parameter candidate.
+Restored definitions, ranges, root expressions and directed-use signs match.
+Removing the required plane or displacing a candidate by 1e-12 refuses the edge
+even with an injected successful-certificate flag. Exhausted exact work also
+refuses admission. Full forward/backward uses restore without replacing the
+original endpoint expressions.
+
+The Model bridge also corrects a double reversal: SharedEdge already records
+the direction of the directed fragment, so conversion must not XOR the fragment
+direction again. A regression creates a privately qualified forward/backward
+world pair and checks that both uses own the same ordered canonical vertices,
+before and after restoration. Previous full-source canal conversion remains
+covered by the complete B-rep suite.
+
+The selected 92 source regressions and three mapped-edge regressions pass.
+This is shared-edge component restoration, not persistent source-shell/body
+recovery or exact root restriction storage in Model/STEP/WASM/UI. Those remain
+unfinished, together with wall qualification, general fillet trims/corners and
+the broader roadmap.
+
+Full B-rep validation after component restoration: 894 tests pass, zero
+failures and three ignored tests. Compressed selected, mapped and full logs
+accompany this stage.
