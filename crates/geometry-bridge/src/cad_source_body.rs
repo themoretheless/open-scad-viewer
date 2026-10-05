@@ -73,6 +73,29 @@ pub fn restore(v: Value) -> Result<Value> {
             "Bound display to 4096 segments per edge and 65536 total",
         ));
     }
+    let face_display = if v["faceDisplay"].is_null() {
+        None
+    } else {
+        let option = &v["faceDisplay"];
+        let divisions: usize = field(option, "divisions")?;
+        let domain_cells: usize = field(option, "domainCellsPerFace")?;
+        let tolerance_uv: f64 = field(option, "toleranceUv")?;
+        let faces = definition["shell"]["regions"]
+            .as_array()
+            .map_or(0, Vec::len);
+        if !(1..=64).contains(&divisions)
+            || !(1..=100000).contains(&domain_cells)
+            || !tolerance_uv.is_finite()
+            || tolerance_uv <= 0.
+            || faces
+                .checked_mul(divisions * divisions)
+                .is_none_or(|n| n > 65536)
+            || faces.checked_mul(domain_cells).is_none_or(|n| n > 1000000)
+        {
+            return Err(super::input("Bound face display cells and domain work"));
+        }
+        Some((divisions, tolerance_uv, domain_cells))
+    };
     let max_spans: usize = field(&v, "endpointSpans")?;
     if !(1..=100000).contains(&max_spans) {
         return Err(super::input("Choose endpointSpans in 1..100000"));
@@ -101,10 +124,27 @@ pub fn restore(v: Value) -> Result<Value> {
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
             "uses":uses.map(|a|[a.face,a.wire,a.edge])}))
     }).collect::<Result<Vec<_>>>()?;
+    let display_faces = face_display.map(|(divisions,tolerance_uv,domain_cells)| -> Result<Vec<Value>> {
+        shell.regions().unwrap().iter().enumerate().map(|(index,region)| -> Result<Value> {
+            let preview=brep_core::source_region_display::prepare(region,divisions,tolerance_uv,domain_cells)?;
+            let tiles=preview.tiles.into_iter().map(|tile| {
+                let mut corners=tile.corners;
+                if body.reverse_orientation() ^ (region.chart_winding()<0) {corners.reverse();}
+                json!({"uv":tile.uv,"corners":corners})
+            }).collect::<Vec<_>>();
+            let surface=region.loops()[0][0].surface();
+            let unresolved_boxes=preview.unresolved.iter().map(|uv| -> Result<Value> {
+                use nurbs_core::interval_eval::{self,Interval};
+                let bounds=interval_eval::evaluate_surface_interval(surface,Interval::new(uv[0][0],uv[0][1])?,Interval::new(uv[1][0],uv[1][1])?)?;
+                Ok(json!(bounds.into_iter().map(|b|[b.lo,b.hi]).collect::<Vec<_>>()))
+            }).collect::<Result<Vec<_>>>()?;
+            Ok(json!({"index":index,"tiles":tiles,"unresolved":preview.unresolved,"unresolvedBoxes":unresolved_boxes,"outside":preview.outside,"domainCells":preview.domain_cells}))
+        }).collect()
+    }).transpose()?;
     Ok(
         json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
-        "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"diagnostics":diagnostics}),
+        "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
 }
 #[cfg(test)]
@@ -143,6 +183,17 @@ mod tests {
         .unwrap()
         .shell
         .unwrap();
+        for region in shell.regions().unwrap() {
+            assert!(region.whole_chart_material());
+            let preview =
+                brep_core::source_region_display::prepare(region, 4, 1e-8, 10000).unwrap();
+            assert_eq!(preview.tiles.len(), 16);
+            assert_eq!(preview.domain_cells, 0);
+            assert!(preview.unresolved.is_empty());
+            for tile in preview.tiles {
+                assert!(tile.corners.iter().flatten().all(|x| x.is_finite()));
+            }
+        }
         let definition = json!({"version":1,"shell":shell.definition().unwrap(),"success":true,"volume":[1.,1.]});
         // Browser binary transport uses integer tags for integral numbers.
         fn wire_numbers(v: &mut Value) {
@@ -167,7 +218,7 @@ mod tests {
         wire_numbers(&mut wire_definition);
 
         let run = |cells| {
-            let request = json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(cells),"endpointSpans":10000,"displaySegments":8});
+            let request = json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(cells),"endpointSpans":10000,"displaySegments":8,"faceDisplay":{"divisions":4,"toleranceUv":1e-8,"domainCellsPerFace":10000}});
             let text = value_codec::to_string(&request).unwrap();
             let result = super::super::execute(&text);
             {
@@ -209,6 +260,12 @@ mod tests {
                 edge["uses"],
                 json!(shell.uses()[index].map(|a| [a.face, a.wire, a.edge]))
             );
+        }
+        let faces = restored["displayFaces"].as_array().unwrap();
+        assert_eq!(faces.len(), shell.faces().len());
+        for face in faces {
+            assert_eq!(face["tiles"].as_array().unwrap().len(), 16);
+            assert!(face["unresolved"].as_array().unwrap().is_empty());
         }
         let oracle = 2. * std::f64::consts::PI / 3.;
         assert!(

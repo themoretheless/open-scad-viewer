@@ -2498,3 +2498,51 @@ omitting them, matching the existing STEP/Blender restrictions.
 General trimmed face preview, editing, exact root restriction transfer to
 conventional Model/STEP, the three-part acceptance chain and all remaining
 roadmap requirements remain unfinished.
+
+
+## Original material face preview (2026-10-06)
+
+Rust `source_region_display::prepare` partitions the original surface chart
+into bounded rectangles. Whole-chart material uses its freshly replayed source
+region; trimmed regions require whole-rectangle winding classification with
+the original root-valued contours. Only proven material cells yield display
+corners. Outside cells are counted and boundary/work-limit cells remain
+explicitly unresolved. Source-region replay controls check identical preview,
+partition accounting, work limits and refusal to turn exhausted work into
+material. Bridge tests cover all original faces of the capped canal.
+
+Optional `faceDisplay` restoration transports tiles, unresolved UV regions
+and native interval boxes for the unresolved surface images. Up to 64 divisions,
+65536 total face cells and 1000000 total domain classification cells are
+allowed. UI requests up to eight divisions and a bounded per-face work share.
+Display triangles are linear approximations; neither a chord-error bound,
+watertight mesh, boundary welding nor a complete clipped tessellation is
+certified. Unresolved boxes can include removed material and indicate the
+unclassified area; they are not replacement geometry.
+
+Existing SVG scene renders the surface preview and orange uncertainty boxes;
+Fit includes these representations. The native source outliner supports
+visibility, locking, isolation and workspace-state restore. Source edge
+selection cancels an active regular command and clears its old operands.
+Normal object selection clears source edge highlighting. Source selection is
+still separate from geometric editing and the native body cannot yet be
+passed to general fillet/edit commands. Manufacturing refuses source-body
+scenes pending closed mesh preparation, consistent with mesh export limits.
+
+36 real-worker/controller/client tests pass. Production browser checks pass
+for 1536 preview triangles and 20 edges of the equal-radius capped canal,
+mouse and keyboard selection, Retry, reload, source/regular selection handoff,
+locking, isolation, persisted hiding and explicit manufacturing restriction.
+No page errors. Screenshot inspected on the CPU SVG path. This browser control
+has full original face regions; trimmed/root-valued body UI qualification is
+still pending. Native partial region controls are separate evidence.
+
+New WASM: 11616821 bytes, SHA-256
+`eb2c6335af30619579cbd14ff279658ea2109c9e135314468be42f1391816a41`.
+Production build and artifact audit pass: 151 artifacts, 8154777 asset bytes
+plus 14913213 raw WASM bytes. Size budgets reflect measured kernel, worker and
+UI growth. Full fillets, exact root STEP transfer, the three-part acceptance
+chain and all remaining P0/P2/P3 requirements remain unfinished.
+
+Final existing-UI and source archive regression: 323 tests pass in two files
+(100.19 seconds wall time). This does not cover the entire 95-command matrix.

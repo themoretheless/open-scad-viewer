@@ -39,7 +39,7 @@ function realClient(){
 const denied:SourceBodyResult={admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'source-volume-initial-work-limit',incidence:{},embedding:{},volume:{}}}
 function reply(port:Port,result:SourceBodyResult){port.onmessage?.({data:{version:1,id:port.requests.at(-1)!.id,kind:'sourceBodyRestore',ok:true,result}} as MessageEvent)}
 it('restores original source definitions through the real WASM CAD worker',async()=>{
- const o={...options(),displaySegments:8},before=JSON.stringify(o),client=realClient()
+ const o={...options(),displaySegments:8,faceDisplay:{divisions:4,toleranceUv:1e-8,domainCellsPerFace:10000}},before=JSON.stringify(o),client=realClient()
  const start=performance.now()
  const r=await client.run({kind:'sourceBodyRestore',options:o})
  const restoreElapsedMs=performance.now()-start
@@ -47,6 +47,11 @@ it('restores original source definitions through the real WASM CAD worker',async
  expect(r.sourceBody!.shell).toEqual(o.definition.shell)
  expect(r.edges.map(e=>e.definition)).toEqual(o.definition.shell.pairs.map(p=>p.edge))
  expect(r.edges.every(edge=>edge.displaySegments?.length===8)).toBe(true)
+ expect(r.displayFaces).toHaveLength(r.faceCount!)
+ expect(r.displayFaces!.every(face=>face.tiles.length===16&&face.unresolved.length===0&&face.unresolvedBoxes.length===0)).toBe(true)
+ const incomplete=structuredClone(r);incomplete.displayFaces![0]!.tiles.pop()
+ expect(validSourceBody(sourceBodyExpectation(o),incomplete)).toBe(false)
+
  const broken=structuredClone(r);broken.edges[0]!.displaySegments![0]![0][0]+=1
  expect(validSourceBody(sourceBodyExpectation(o),broken)).toBe(false)
  const missing=structuredClone(r);delete missing.edges[0]!.displaySegments

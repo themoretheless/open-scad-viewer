@@ -8,6 +8,7 @@ export interface SourceBodyOptions {
  definition:SourceBodyDefinition
  endpointSpans:number
  displaySegments?:number
+ faceDisplay?:{divisions:number;toleranceUv:number;domainCellsPerFace:number}
  limits:{
   shell:{exactWork:number;driverCells:number;regions:{region:{pairs:number;regionCells:number;domainCells:number;agreementCells:number};searchCells:number;pointChecks:number;mappingCells:number;driverCells:number;membershipCells:number;controls:number;windingCells:number;steps:number}}
   embedding:{toleranceUv:number;corners:number;spans:number;linearCells:number;exactWork:number;driverCells:number;pairs:{pairs:number;cells:number;domainCells:number;cellsPerPair:number;domainCellsPerPair:number}}
@@ -20,8 +21,13 @@ export interface SourceBodyEdge {
  displaySegments?:[Interval,[[number,number,number],[number,number,number]],[Interval,Interval,Interval]][]|null
  vertices:[number,number];uses:[number[],number[]]
 }
+export interface SourceDisplayFace {
+ index:number;tiles:{uv:[Interval,Interval];corners:[number,number,number][]}[]
+ unresolved:[Interval,Interval][];unresolvedBoxes:[Interval,Interval,Interval][];outside:number;domainCells:number
+}
 export interface SourceBodyResult {
  admitted:boolean;sourceBody:SourceBodyDefinition|null;edges:SourceBodyEdge[]
+ displayFaces?:SourceDisplayFace[]|null
  volume?:Interval;reverseOrientation?:boolean;faceCount?:number;poleCount?:number
  diagnostics:{reason:string;incidence:unknown;embedding:unknown;volume:unknown}
 }
@@ -56,12 +62,16 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
  const segments=options.displaySegments??0
  if(!integer(segments,4096)||segments*s.pairs.length>65536)throw new Error('Source display exceeds transport limits')
+ const face=options.faceDisplay
+ if(face&&(!integer(face.divisions,64)||face.divisions<1||!integer(face.domainCellsPerFace,100000)||face.domainCellsPerFace<1
+  ||!Number.isFinite(face.toleranceUv)||face.toleranceUv<=0||s.regions.length*face.divisions**2>65536
+  ||s.regions.length*face.domainCellsPerFace>1000000))throw new Error('Source face display exceeds transport limits')
  const edges=s.pairs.map(pair=>{
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
  return {definition:key({version:1,shell:s}),faces:s.regions.length,poles:s.poles.length,edges,
-  absoluteError:options.limits.volume.absoluteError,segments}
+  absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {
  try {
@@ -72,6 +82,16 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
    ||r.faceCount!==e.faces||r.poleCount!==e.poles||typeof r.reverseOrientation!=='boolean'
    ||!interval(r.volume)||r.volume[0]<=0||!Number.isFinite(e.absoluteError)||e.absoluteError<=0||r.volume[1]-r.volume[0]>e.absoluteError
    ||r.edges.length!==e.edges.length)return false
+  const rectangle=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(interval)
+  if(e.faceDisplay){
+   const option=e.faceDisplay
+   if(!Array.isArray(r.displayFaces)||r.displayFaces.length!==e.faces||!r.displayFaces.every((face,i)=>face.index===i
+    &&Array.isArray(face.tiles)&&Array.isArray(face.unresolved)&&integer(face.outside,option.divisions**2)
+    &&integer(face.domainCells,option.domainCellsPerFace)&&face.tiles.length+face.unresolved.length+face.outside===option.divisions**2
+    &&Array.isArray(face.unresolvedBoxes)&&face.unresolvedBoxes.length===face.unresolved.length&&face.unresolvedBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval))
+    &&face.unresolved.every(rectangle)&&face.tiles.every(tile=>rectangle(tile.uv)&&Array.isArray(tile.corners)&&tile.corners.length===4
+     &&tile.corners.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite)))))return false
+  }else if(r.displayFaces!=null)return false
   const displayValid=(edge:SourceBodyEdge)=>{
    if(e.segments===0)return edge.displaySegments==null
    const list=edge.displaySegments

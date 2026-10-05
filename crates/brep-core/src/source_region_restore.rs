@@ -214,4 +214,27 @@ pub(crate) fn assert_replay(region: &SourceRegion) {
             .collect::<Vec<_>>()
     };
     assert_eq!(loops(&replay), loops(region));
+    let preview = crate::source_region_display::prepare(region, 4, 1e-8, 10000).unwrap();
+    assert_eq!(
+        preview,
+        crate::source_region_display::prepare(&replay, 4, 1e-8, 10000).unwrap()
+    );
+    assert_eq!(
+        preview.tiles.len() + preview.unresolved.len() + preview.outside,
+        16
+    );
+    assert!(preview.domain_cells <= 10000);
+    assert!(crate::source_region_display::prepare(region, 0, 1e-8, 10000).is_err());
+    assert!(crate::source_region_display::prepare(region, 65, 1e-8, 10000).is_err());
+    assert!(crate::source_region_display::prepare(region, 4, 1e-8, 0).is_err());
+    if region.whole_chart_material() {
+        assert_eq!(preview.tiles.len(), 16);
+        assert!(preview.unresolved.is_empty());
+    } else {
+        assert!(!preview.unresolved.is_empty());
+        let limited = crate::source_region_display::prepare(region, 4, 1e-8, 1).unwrap();
+        assert!(limited.domain_cells <= 1);
+        assert!(limited.tiles.is_empty());
+        assert_eq!(limited.unresolved.len(), 16);
+    }
 }

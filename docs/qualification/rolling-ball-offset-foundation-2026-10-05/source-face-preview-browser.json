@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "edgeCount": 20,
+  "faceTriangles": 1536,
+  "manufacturingRestriction": true,
+  "selectionHandoff": true,
+  "visibilityPersistence": true,
+  "lock": true,
+  "isolation": true,
+  "mouseSelection": true,
+  "keyboardSelection": true,
+  "retry": true,
+  "reload": true,
+  "errors": [],
+  "scope": "Equal-radius native source canal edge display; face preview without geometry editing or mesh qualification"
+}
