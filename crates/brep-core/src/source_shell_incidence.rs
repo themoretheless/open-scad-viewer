@@ -923,7 +923,31 @@ mod tests {
         )
         .unwrap();
         assert!(admitted.geometry.is_some(), "{}", admitted.reason);
-        assert_eq!(admitted.geometry.unwrap().topology().genus, Some(0));
+        let geometry = admitted.geometry.unwrap();
+        assert_eq!(geometry.topology().genus, Some(0));
+        let volume = crate::source_volume::qualify(
+            geometry,
+            crate::source_volume::Limits {
+                axis: 2,
+                origin: 0.,
+                absolute_error: 0.02,
+                tolerance_uv: 1e-8,
+                cells: 10000,
+                spans: 100000,
+                domain_cells: 1000000,
+            },
+        )
+        .unwrap();
+        assert!(
+            volume.body.is_some(),
+            "{} {:?}",
+            volume.reason,
+            volume.signed_bounds
+        );
+        let body = volume.body.unwrap();
+        let bounds = body.volume();
+        assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
+        assert!(!body.reverse_orientation());
     }
     #[test]
     fn chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes() {

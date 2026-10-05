@@ -1465,5 +1465,237 @@ mod tests {
             &cap
         );
         println!("embedded source shell: 8 vertex links, Euler=2, genus=0; all charts and 15 face pairs qualified");
+        let volume_limits = |cells, domain_cells| crate::source_volume::Limits {
+            axis: 2,
+            origin: 0.,
+            absolute_error: 0.02,
+            tolerance_uv: 1e-8,
+            cells,
+            spans: 100000,
+            domain_cells,
+        };
+        let stopped_geometry =
+            crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(24, 15))
+                .unwrap()
+                .geometry
+                .unwrap();
+        let stopped =
+            crate::source_volume::qualify(stopped_geometry, volume_limits(5, 1000000)).unwrap();
+        assert!(stopped.body.is_none());
+        assert!(stopped.signed_bounds.is_none());
+        assert_eq!(stopped.uncertain_face, Some(5));
+        let no_domain_geometry =
+            crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(24, 15))
+                .unwrap()
+                .geometry
+                .unwrap();
+        let stopped = crate::source_volume::qualify(no_domain_geometry, volume_limits(100, 0)).unwrap();
+        assert!(stopped.body.is_none());
+        let bounds = stopped.signed_bounds.unwrap();
+        assert!(bounds[0] <= 0. && bounds[1] >= 0.);
+        let volume = crate::source_volume::qualify(geometry, volume_limits(10000, 1000000)).unwrap();
+        println!(
+            "source volume {:?}; cells {} spans {} domain {} reason {}",
+            volume.signed_bounds, volume.cells, volume.spans, volume.domain_cells, volume.reason
+        );
+        assert!(
+            volume.body.is_some(),
+            "{} {:?}",
+            volume.reason,
+            volume.signed_bounds
+        );
+        let body = volume.body.unwrap();
+        let bounds = body.volume();
+        let analytic = 18995. / 24576.;
+        assert!(bounds[0] <= analytic && analytic <= bounds[1]);
+        assert!(bounds[1] - bounds[0] <= 0.02);
+        assert!(body.reverse_orientation());
+        assert_eq!(
+            body.geometry().shell().regions().unwrap()[5].loops()[0][0].surface(),
+            &cap
+        );
     }
+    #[test]
+    fn rational_wedge_has_certified_source_volume_and_keeps_authored_weights() {
+        let shell = wedge();
+        let geometry = crate::source_shell_geometry::qualify(
+            shell,
+            crate::source_shell_geometry::Limits {
+                tolerance_uv: 1e-8,
+                corners: 1000,
+                spans: 10000,
+                linear_cells: 10000,
+                pairs: crate::face_contacts::Limits {
+                    pairs: 10,
+                    cells: 100000,
+                    domain_cells: 100000,
+                    cells_per_pair: 10000,
+                    domain_cells_per_pair: 10000,
+                },
+                exact_work: 100_000_000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap()
+        .geometry
+        .unwrap();
+        let volume = crate::source_volume::qualify(
+            geometry,
+            crate::source_volume::Limits {
+                axis: 2,
+                origin: 0.,
+                absolute_error: 0.05,
+                tolerance_uv: 1e-8,
+                cells: 10000,
+                spans: 100000,
+                domain_cells: 1000000,
+            },
+        )
+        .unwrap();
+        assert!(
+            volume.body.is_some(),
+            "{} {:?}",
+            volume.reason,
+            volume.signed_bounds
+        );
+        let body = volume.body.unwrap();
+        let bounds = body.volume();
+        // Authored binary64 weight approximates the circular reference; the
+        // certificate encloses the unchanged authored rational definition.
+        let reference = std::f64::consts::PI / 4.;
+        assert!(bounds[0] <= reference && reference <= bounds[1]);
+        assert!(body.reverse_orientation());
+        assert!(body
+            .geometry()
+            .shell()
+            .edges()
+            .iter()
+            .any(|e| e.world().weights.contains(&0.5_f64.sqrt())));
+    }
+
+    #[test]
+    fn original_full_chart_cuboid_volume_is_precise_on_all_flux_axes() {
+        let surfaces = [
+            plane(|u, v| vec![2. * v, 3. * u, 10.]),
+            plane(|u, v| vec![2. * u, 3. * v, 14.]),
+            plane(|u, v| vec![2. * u, 0., 10. + 4. * v]),
+            plane(|u, v| vec![2., 3. * u, 10. + 4. * v]),
+            plane(|u, v| vec![2. * (1. - u), 3., 10. + 4. * v]),
+            plane(|u, v| vec![0., 3. * (1. - u), 10. + 4. * v]),
+        ];
+        let corners = [[2., 3.], [4., 3.], [4., 7.], [2., 7.]];
+        let context = cad_predicates::ToleranceContext::default_valid();
+        let mut regions = Vec::new();
+        let mut pairs = Vec::new();
+        let mut pending = Vec::<(Address, Curve)>::new();
+        for (face, mut s) in surfaces.into_iter().enumerate() {
+            s.knots_u = vec![2., 2., 4., 4.];
+            s.knots_v = vec![3., 3., 7., 7.];
+            let wire = (0..4)
+                .map(|edge| {
+                    let a = corners[edge];
+                    let b = corners[(edge + 1) % 4];
+                    let world = Curve::from_polyline(vec![
+                        s.evaluate(a[0], a[1]).unwrap().point.to_vec(),
+                        s.evaluate(b[0], b[1]).unwrap().point.to_vec(),
+                    ])
+                    .unwrap();
+                    let address = Address {
+                        face,
+                        wire: 0,
+                        edge,
+                    };
+                    if let Some(index) = pending.iter().position(|(_, c)| reversed(c) == world) {
+                        let (other, canonical) = pending.remove(index);
+                        pairs.push(Pair {
+                            uses: [other, address],
+                            world: canonical,
+                            world_reversed: [false, true],
+                            cutters: [None, None],
+                        });
+                    } else {
+                        pending.push((address, world.clone()));
+                    }
+                    Boundary {
+                        curve: world,
+                        pcurve: Curve::from_polyline(vec![a.to_vec(), b.to_vec()]).unwrap(),
+                        reversed: false,
+                    }
+                })
+                .collect::<Vec<_>>();
+            let region = qualify_original_region(
+                &context,
+                &s,
+                &[wire],
+                1e-8,
+                Limits {
+                    pairs: 10000,
+                    region_cells: 10000,
+                    domain_cells: 10000,
+                    agreement_cells: 10000,
+                },
+            )
+            .unwrap()
+            .region
+            .unwrap();
+            assert!(region.whole_chart_material());
+            regions.push(region);
+        }
+        assert!(pending.is_empty());
+        for axis in 0..3 {
+            let shell = source_shell_incidence::assemble_regions(&regions, &pairs, 100_000_000)
+                .unwrap()
+                .shell
+                .unwrap();
+            let geometry = crate::source_shell_geometry::qualify(
+                shell,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv: 1e-8,
+                    corners: 24,
+                    spans: 10000,
+                    linear_cells: 10000,
+                    pairs: crate::face_contacts::Limits {
+                        pairs: 15,
+                        cells: 100000,
+                        domain_cells: 100000,
+                        cells_per_pair: 10000,
+                        domain_cells_per_pair: 10000,
+                    },
+                    exact_work: 100_000_000,
+                    driver_cells: 10000,
+                },
+            )
+            .unwrap()
+            .geometry
+            .unwrap();
+            let volume = crate::source_volume::qualify(
+                geometry,
+                crate::source_volume::Limits {
+                    axis,
+                    origin: 0.,
+                    absolute_error: 1e-8,
+                    tolerance_uv: 1e-8,
+                    cells: 6,
+                    spans: 6,
+                    domain_cells: 0,
+                },
+            )
+            .unwrap();
+            assert!(
+                volume.body.is_some(),
+                "axis {} {} {:?}",
+                axis,
+                volume.reason,
+                volume.signed_bounds
+            );
+            assert_eq!(volume.cells, 6);
+            assert_eq!(volume.domain_cells, 0);
+            let body = volume.body.unwrap();
+            let bounds = body.volume();
+            assert!(bounds[0] <= 24. && 24. <= bounds[1]);
+            assert!(!body.reverse_orientation());
+            assert!(bounds[1] - bounds[0] <= 1e-8);
+        }
+    }
+
 }

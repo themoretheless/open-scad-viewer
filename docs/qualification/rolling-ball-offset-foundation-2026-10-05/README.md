@@ -1444,3 +1444,48 @@ volume; it is not a material Model body, general fillet result or STEP/WASM/UI
 acceptance. Interval volume/orientation, general end transitions, variable
 radii/complex corners, radius/tangency/wall checks and the remaining UI/P0/P2/P3
 work remain open.
+
+
+## Source volume and material orientation
+
+`surface_flux::bound` encloses the divergence-one flux of the unchanged original
+NURBS chart. Physical original-UV derivatives and physical UV area are applied
+once. Every intersected original knot span participates; span exhaustion returns
+no bound. Position, cross product and integration use outward intervals.
+
+`source_volume::qualify` consumes the privately admitted embedded geometry.
+Original winding classifies retained material, including root-valued trims;
+unresolved rectangles retain the full [0,1] material-mask contribution. No
+unclassified area is discarded. Adaptive subdivision replaces a parent only
+when both child bounds are available, and recomputes interval sums along the
+partition tree. A failed refinement preserves the full-cover candidate bounds
+and localizes an uncertain face/UV rectangle. Initial incomplete coverage has
+no candidate total. A requested-width signed interval excluding zero admits a
+native source Body and records whether its global material orientation needs
+reversal. Original surfaces, boundaries, weights and root definitions remain
+unchanged. This is one connected source shell, not compound/cavity admission.
+
+A private original-region proof recognizes exactly four CCW rational straight
+boundaries covering the natural chart rectangle without holes. Only those
+regions can bypass winding integration; cutting regions cannot inherit this
+shortcut. Original boundary partitioning preserves the unchanged material area.
+
+Control cases:
+
+- An outward tetrahedron with a partitioned shared edge encloses volume 1/6.
+- The clipped curved wedge retains its authored cap and encloses the analytical
+  volume 18995/24576 within an interval of width at most 0.02; orientation is inward.
+- A rational wedge retains the authored sqrt(0.5) weights and encloses the pi/4
+  circular reference at requested width 0.05. The certificate applies to the
+  authored binary64 rational definition, not an exact circular replacement.
+- A translated 2 x 3 x 4 cuboid, with non-unit original UV domains, encloses 24
+  to width at most 1e-8 on each flux axis using six cells and no domain queries.
+- Insufficient initial cell budget and missing domain budget refuse body
+  admission; uncertainty is retained instead of being treated as outside.
+
+Validation: 67 selected source B-rep tests and all 651 NURBS tests passed.
+Compressed logs accompany this stage. Volume tolerances on curved material
+regions still require substantial adaptive work; interactive performance is
+not qualified. Concrete Model/STEP/WASM/worker/UI admission, general fillet
+construction and end transitions, differing radii/complex corners,
+whole-interval radius/tangency/wall checks, and P0/P2/P3 remain open.

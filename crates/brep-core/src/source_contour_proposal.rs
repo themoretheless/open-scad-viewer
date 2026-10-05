@@ -271,10 +271,20 @@ pub fn qualify_interior_contact(
 /// Qualified source UV region, not an embedded 3D face or closed solid.
 #[derive(Clone)]
 pub struct SourceRegion {
+    chart_winding: i32,
+    whole_chart: bool,
     loops: Vec<Vec<Fragment>>,
     source_loop_indices: Vec<usize>,
 }
 impl SourceRegion {
+    /// Material orientation relative to the unchanged original UV chart.
+    pub fn chart_winding(&self) -> i32 {
+        self.chart_winding
+    }
+    /// Exact original four-line natural rectangle, with no holes or cuts.
+    pub fn whole_chart_material(&self) -> bool {
+        self.whole_chart
+    }
     pub fn world_wires(&self) -> Result<Vec<crate::source_world_wire::Wire>> {
         self.loops
             .iter()
@@ -331,7 +341,42 @@ pub fn qualify_original_region(
         out.reason = "original-source-region-joins-unproven";
         return Ok(out);
     }
+    let corners = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_v[surface.degree_v],
+        ],
+        [
+            surface.knots_u[surface.control_points.len()],
+            surface.knots_v[surface.degree_v],
+        ],
+        [
+            surface.knots_u[surface.control_points.len()],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    let whole_chart = wires.len() == 1
+        && wires[0].len() == 4
+        && (0..4).any(|start| {
+            wires[0].iter().enumerate().all(|(i, b)| {
+                let c = &b.pcurve;
+                let d = c.domain();
+                c.degree == 1
+                    && !c.periodic
+                    && c.control_points.len() == 2
+                    && c.knots[..2].iter().all(|&t| t == d[0])
+                    && c.knots[2..].iter().all(|&t| t == d[1])
+                    && c.control_points[0] == corners[(start + i) % 4]
+                    && c.control_points[1] == corners[(start + i + 1) % 4]
+            })
+        });
     out.region = Some(SourceRegion {
+        whole_chart,
+        chart_winding: out.audit.region.winding[0].unwrap(),
         loops,
         source_loop_indices: (0..wires.len()).collect(),
     });
@@ -653,6 +698,8 @@ pub fn qualify_linear_region(
             .map(|&i| loops[i].clone())
             .collect::<Vec<_>>();
         out.region = Some(SourceRegion {
+            chart_winding: winding,
+            whole_chart: false,
             loops: qualified.clone(),
             source_loop_indices: retained.clone(),
         });
@@ -796,6 +843,8 @@ pub fn qualify_curved_region(
         .map(|&i| loops[i].clone())
         .collect::<Vec<_>>();
     out.region = Some(SourceRegion {
+        chart_winding: out.interior.proposal.search.search.original.region.winding[0].unwrap(),
+        whole_chart: false,
         loops: qualified.clone(),
         source_loop_indices: retained.clone(),
     });
