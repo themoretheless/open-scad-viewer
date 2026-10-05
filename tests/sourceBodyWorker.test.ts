@@ -54,6 +54,22 @@ it('restores original source definitions through the real WASM CAD worker',async
 
  const broken=structuredClone(r);broken.edges[0]!.displaySegments![0]![0][0]+=1
  expect(validSourceBody(sourceBodyExpectation(o),broken)).toBe(false)
+ const anchors=new Map<number,number[]>()
+ for(const edge of r.edges)for(const end of [0,1] as const){
+  const point=edge.displaySegments![end===0?0:7]![1][end],id=edge.vertices[end]
+  if(anchors.has(id))expect(point).toEqual(anchors.get(id))
+  anchors.set(id,point)
+ }
+ const falseIdentity=structuredClone(r)
+ expect(falseIdentity.edges[0]!.vertices[0]).not.toBe(falseIdentity.edges[0]!.vertices[1])
+ falseIdentity.edges[0]!.vertices[0]=falseIdentity.edges[0]!.vertices[1]
+ expect(validSourceBody(sourceBodyExpectation(o),falseIdentity)).toBe(false)
+ const disconnected=structuredClone(r)
+ disconnected.edges[0]!.displaySegments![0]![1][0][0]+=0.001
+ expect(validSourceBody(sourceBodyExpectation(o),disconnected)).toBe(false)
+ const unbounded=structuredClone(r)
+ unbounded.edges[0]!.displaySegments![0]![2][0]=[1e6,1e6]
+ expect(validSourceBody(sourceBodyExpectation(o),unbounded)).toBe(false)
  const missing=structuredClone(r);delete missing.edges[0]!.displaySegments
  expect(validSourceBody(sourceBodyExpectation(o),missing)).toBe(false)
  expect(()=>sourceBodyExpectation({...o,displaySegments:4097})).toThrow()

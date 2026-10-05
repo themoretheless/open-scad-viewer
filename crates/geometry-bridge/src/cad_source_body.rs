@@ -114,12 +114,15 @@ pub fn restore(v: Value) -> Result<Value> {
         );
     };
     let shell = body.geometry().shell();
+    let boundary_display = if display_segments == 0 { None } else {
+        Some(brep_core::source_boundary_display::prepare(shell, display_segments, max_spans, 100000)?)
+    };
     let edges = (0..shell.edges().len()).map(|index| -> Result<Value> {
         let r = body.edge_restriction(index)?;
         let uses = shell.uses()[index];
         let mut vertices = shell.vertices()[uses[0].face][uses[0].wire][uses[0].edge];
         if shell.edges()[index].reversed()[0] { vertices.reverse(); }
-        let display = if display_segments == 0 { None } else { Some(r.display_segments(display_segments)?.into_iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
+        let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().unwrap().edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
         Ok(json!({"index":index,"displaySegments":display,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
             "uses":uses.map(|a|[a.face,a.wire,a.edge])}))
@@ -287,6 +290,17 @@ mod tests {
                 edge["uses"],
                 json!(shell.uses()[index].map(|a| [a.face, a.wire, a.edge]))
             );
+        }
+        let mut anchors = std::collections::BTreeMap::new();
+        for edge in restored["edges"].as_array().unwrap() {
+            let segments = edge["displaySegments"].as_array().unwrap();
+            for end in 0..2 {
+                let id = edge["vertices"][end].as_u64().unwrap();
+                let point = segments[if end == 0 { 0 } else { segments.len() - 1 }][1][end].clone();
+                if let Some(previous) = anchors.insert(id, point.clone()) {
+                    assert_eq!(previous, point);
+                }
+            }
         }
         let faces = restored["displayFaces"].as_array().unwrap();
         assert_eq!(faces.len(), shell.faces().len());

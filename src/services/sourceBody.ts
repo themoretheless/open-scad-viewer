@@ -6,6 +6,7 @@ export interface SourceBodyDefinition {
 }
 export interface SourceBodyOptions {
  definition:SourceBodyDefinition
+ /** With edge display, bounds total original carrier spans over both ends. */
  endpointSpans:number
  displaySegments?:number
  faceDisplay?:{divisions:number;toleranceUv:number;domainCellsPerFace:number}
@@ -103,10 +104,27 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
     &&(i===0||segment[1][0].every((n,a)=>n===list[i-1]![1][1][a]))
     &&(i!==list.length-1||segment[0][1]===edge.parameterBounds[1][1]))
   }
-  return r.edges.every((edge,i)=>edge.index===i&&key(edge.definition)===e.edges[i]!.definition&&key(edge.uses)===e.edges[i]!.uses
+  const edgesValid=r.edges.every((edge,i)=>edge.index===i&&key(edge.definition)===e.edges[i]!.definition&&key(edge.uses)===e.edges[i]!.uses
    &&Array.isArray(edge.vertices)&&edge.vertices.length===2&&edge.vertices.every(n=>integer(n,2*e.edges.length+e.poles))
    &&Array.isArray(edge.parameterBounds)&&edge.parameterBounds.length===2&&edge.parameterBounds.every(interval)
    &&Array.isArray(edge.endpointBoxes)&&edge.endpointBoxes.length===2&&edge.endpointBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval))&&displayValid(edge))
+  if(!edgesValid)return false
+  const anchors=new Map<number,number[]>()
+  for(const edge of r.edges){
+   if(e.segments===0)continue
+   const segments=edge.displaySegments!
+   for(const segment of segments){
+    if(!segment[1].every(point=>point.every((n,a)=>n>=segment[2][a]![0]&&n<=segment[2][a]![1])))return false
+   }
+   for(const end of [0,1] as const){
+    const point=segments[end===0?0:segments.length-1]![1][end],box=edge.endpointBoxes[end],id=edge.vertices[end]
+    if(!point.every((n,a)=>n>=box[a]![0]&&n<=box[a]![1]))return false
+    const previous=anchors.get(id)
+    if(previous&&!point.every((n,a)=>n===previous[a]))return false
+    anchors.set(id,point)
+   }
+  }
+  return true
  }catch{return false}
 }
 export function restoreSourceBody(options:SourceBodyOptions):SourceBodyResult {

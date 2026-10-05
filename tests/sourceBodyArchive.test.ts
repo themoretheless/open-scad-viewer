@@ -1,6 +1,7 @@
 import {solidDocumentToMeshDocument} from '../src/services/solidBridge'
 import {directBodiesScad} from '../src/services/directBodiesScad'
-import {expect,it} from 'vitest'
+import {beforeAll,expect,it} from 'vitest'
+import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
@@ -10,6 +11,9 @@ import {exportSolidBlenderSnapshot} from '../src/services/solidBlenderExchange'
 import type {SourceBodyOptions} from '../src/services/sourceBody'
 const fixture=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
 const options=():SourceBodyOptions=>{const {op:_op,...o}=structuredClone(fixture);return o}
+// The browser warms this runtime before document operations. Keep cold startup
+// separate from archive/Undo assertions; real-worker tests cover boot and reload.
+beforeAll(async()=>{await warmGeometryKernel()},120000)
 it('retains exact source input bytes across document reload and metadata Undo/Redo',()=>{
  const record=createSourceBodyRecord('source-canal','Native canal',options())
  const document={...emptyDirectDocument(),sourceBodies:[record]},text=serializeDirectDocument(document)

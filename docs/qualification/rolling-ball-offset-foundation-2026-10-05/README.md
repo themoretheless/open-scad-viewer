@@ -2590,10 +2590,57 @@ Original root definitions and parameter ranges remain authoritative. Endpoint
 segment boxes are expanded to contain the common uncertainty enclosure.
 The display representative is explicitly not an exact root or geometry proof.
 
-The root-partitioned closed shell verifies bitwise matching display endpoints
+The root-partitioned closed shell verifies matching display endpoint coordinates
 with 1, 2 and 8 segments, enclosure containment, invalid segment limits and
 complete preview equality after fresh source restoration. A separate numerical
 control covers extreme finite and subnormal bounds. Both targeted tests passed.
 Logs: `source-boundary-display-native.log.gz`,
 `source-boundary-display-anchor.log.gz`. This native API is not yet connected
 to the WASM bridge or UI; closed tessellation and STEP restrictions remain open.
+
+### Coherent endpoints through WASM and worker — 2026-10-06
+
+The source-body bridge now obtains display segments from the native shared
+vertex network. Original restrictions, roots and parameter intervals are kept.
+With edge display, `endpointSpans` limits the total original carrier spans
+over both ends; the display network additionally bounds endpoint work.
+Worker validation requires each displayed point inside its segment box, each
+end inside its original endpoint box, and equal finite coordinates
+for repeated vertex identities. Altered identities, disconnected endpoints
+and invalid segment boxes are refused. These transport checks do not certify
+exact root coordinates, chord error or closed mesh topology.
+
+New shipped WASM: 11,637,190 bytes, SHA-256
+`c79974ab232b5f137d936d5980eb1be71a1c7508fa5f408a2f7eb0364f4db62d`.
+Native bridge test passed (10.61 seconds); all seven source-shell tests passed
+(17.03 seconds), including eight full-cap/pole variants and the root-partition
+control. Vue and MCP TypeScript checks passed. On the newly packaged WASM,
+42 tests across sourceBodyWorker/sourceBodyArchive/sourceBodyDisplay and
+mainSolidWorkerClient passed (5.95 seconds). The real worker restored the
+original 12-face/20-edge capped canal, refused invalid volume work, and loaded
+its document archive. One observed host restore took 1472.64 ms, with
+207.11 ms warmup and 772.89 ms execution; execution includes the adapter and
+native gates, and does not isolate Rust or rendered latency.
+
+The earlier combined UI/archive run on the prior artifact passed 322/323
+tests but timed out the archive/Undo scenario (39.90 seconds, 30-second limit);
+a separate cold retry also timed out (54.04 seconds). Both logs are retained.
+Archive tests now warm the kernel before document operations, matching the
+browser lifecycle; the operation timeout remains 30 seconds. Six archive
+tests passed on the old baseline after warming, and all six also passed in
+the 42-test run on the new artifact. This is a test lifecycle correction,
+not a claim that cold startup or all P0 latency requirements are complete.
+
+Production build and distribution audit passed. Geometry packed chunk:
+3,881,800 bytes (+5,362); all non-streaming assets: 8,160,939 bytes (+6,162).
+Budgets are now 3,882,400 and 8,161,700 respectively; existing worker/UI limits
+remain unchanged. Browser qualification passed pointer/keyboard selection,
+selection handoff, Retry, reload, visibility persistence, locking, isolation
+and the explicit manufacturing restriction; no page errors. The saved
+preview was inspected on the CPU/SVG fallback path.
+
+Browser and real-worker body scope remains the full-source equal-radius
+capped canal. Root-valued boundaries have native closed-shell coverage,
+but root-body browser rendering, exact Model/STEP restriction transport,
+closed tessellation, geometric source editing, general fillets, full wall
+checks, named part acceptance, the 95-command matrix and P2/P3 remain open.
