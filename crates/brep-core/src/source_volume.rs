@@ -27,6 +27,32 @@ impl Body {
     pub fn volume(&self) -> [f64; 2] {
         self.volume
     }
+    /// Check the entire unchanged chart of a selected original body face.
+    /// Complete-chart coverage also covers every retained root-valued trim.
+    pub fn qualify_face_radius(
+        &self,
+        face: usize,
+        centers: &nurbs_core::curve::Curve,
+        radius: &nurbs_core::curve::Curve,
+        tolerance_mm: f64,
+        max_cells: usize,
+        max_work: u64,
+    ) -> Result<nurbs_core::moving_radius::Report> {
+        let source = self.geometry.shell().faces().get(face).ok_or_else(|| {
+            Error::new(
+                "BREP_SOURCE_FACE_INDEX",
+                "Selected source face does not belong to this body",
+            )
+        })?;
+        nurbs_core::moving_radius::qualify(
+            source[0].edges()[0].surface(),
+            centers,
+            radius,
+            tolerance_mm,
+            max_cells,
+            max_work,
+        )
+    }
     /// Inspect a selected original seam of this admitted body. A failed angular
     /// check does not invalidate an intentionally sharp body edge.
     pub fn qualify_edge_tangency(

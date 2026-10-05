@@ -1531,3 +1531,55 @@ Validation: all 72 selected source B-rep tests passed; compressed focused and
 complete logs accompany this stage. No new WASM, worker, STEP or UI acceptance
 is claimed. General transition surfaces/endcaps, variable radius and complex
 corners, radius/wall checks, and the remaining P0/P2/P3 work remain open.
+
+
+## Moving-center radius relation on original NURBS charts
+
+`moving_radius::qualify` bounds |S(u,v)-C(u)|^2-r(u)^2 using correlated
+homogeneous Bernstein products over every original cell. The center curve and
+radius-law curve share the original surface U domain; radius is coordinate zero
+of a two-dimensional law curve with nonnegative authored controls. The common
+U partition includes all original surface, center and law knots. Every original
+V span participates. Original representations and knot domains are unchanged;
+interval section controls are proof machinery, not replacement geometry.
+
+For homogeneous surface (P,W), center (C,A), and radius (R,B), the common
+positive denominator is D=W*A*B. Numerators are (P*A-C*W)*B and R*W*A.
+Their squared difference divided by D squared gives the squared radius residual.
+Outward product Bernstein coefficients preserve parameter correlations.
+Positive denominator coefficients make the rational coefficient quotient hull
+a complete bound. The distance error is bounded by sqrt(max absolute residual),
+and additionally by max absolute residual / lower radius when strictly positive.
+Nonpositive interval denominator coefficients refuse qualification explicitly.
+
+Cells and product coefficient pairs have global budgets. Incomplete coverage
+has no aggregate radius certificate. Complete coverage beyond tolerance retains
+the worst UV cell and aggregate bounds. A private certificate owns the original
+surface, center, law and distance-error upper bound. Degrees above eight per
+input axis leave qualification unproven; total product degree is at most 48.
+This is a radius-distance relation, not regularity, a rolling-ball envelope,
+G1/G2, absence of collisions, or admission of a sewn solid.
+
+`CircularBlendSpan::qualify_radius` uses its existing original support surface,
+center curve and authored cubic law. `Body::qualify_face_radius` binds the check
+to a selected original chart of a source body; complete-chart coverage also
+covers retained root trims. Invalid face indices fail explicitly. A tetrahedron
+face does not acquire an arbitrary sphere-radius certificate.
+
+Regression evidence:
+
+- Original multispan tube and independent center/law knot partitions cover four
+  complete cells on non-unit U/V domains. Certificates preserve all inputs.
+  Insufficient cell/product budgets, displaced centers, negative law controls,
+  and mismatched domains refuse qualification.
+- Both directions of existing constant and variable circular support patches
+  pass full-domain qualification. Positive-radius transitions have distance
+  error below 1.6e-12 mm at requested 1e-9 mm; zero-radius ends have error below
+  9e-7 mm at requested 1e-6 mm. Each varying patch uses 10236 product pairs.
+- Zero-radius distance agreement does not certify a regular tangent plane or
+  sew the degenerate endpoint; those gates remain separate.
+
+Validation: all 653 NURBS tests, 27 circular-blend tests and 72 selected source
+B-rep tests passed. Compressed logs accompany this stage. No STEP/WASM/worker/UI
+integration is claimed. General transition construction, complex corners,
+whole-wall checks, source Model conversion and P0/P2/P3 remain open.

@@ -961,6 +961,23 @@ mod tests {
         assert!(body
             .qualify_edge_tangency(body.geometry().shell().edges().len(), seam_limits())
             .is_err());
+        let center = Curve::from_polyline(vec![vec![0., 0., 0.], vec![0., 0., 0.]]).unwrap();
+        let radius = Curve::from_polyline(vec![vec![1., 0.], vec![1., 0.]]).unwrap();
+        assert!(body
+            .qualify_face_radius(0, &center, &radius, 1e-6, 100, 100_000_000)
+            .unwrap()
+            .certificate
+            .is_none());
+        assert!(body
+            .qualify_face_radius(
+                body.geometry().shell().faces().len(),
+                &center,
+                &radius,
+                1e-6,
+                100,
+                100_000_000
+            )
+            .is_err());
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());

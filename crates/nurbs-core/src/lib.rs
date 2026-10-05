@@ -180,3 +180,5 @@ pub mod curve_surface_lift;
 pub mod curve_point_identity;
 
 pub mod surface_flux;
+
+pub mod moving_radius;

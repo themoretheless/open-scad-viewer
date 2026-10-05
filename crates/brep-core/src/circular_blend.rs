@@ -20,6 +20,30 @@ pub struct CircularBlendBoundary {
 }
 
 impl CircularBlendSpan {
+    /// Qualify the full original support patch against its authored moving
+    /// center and cubic radius law. Does not admit a sewn fillet body.
+    pub fn qualify_radius(
+        &self,
+        tolerance_mm: f64,
+        max_cells: usize,
+        max_work: u64,
+    ) -> nurbs_core::Result<nurbs_core::moving_radius::Report> {
+        let radius = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: self.radius_law.iter().map(|&r| vec![r, 0.]).collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        nurbs_core::moving_radius::qualify(
+            &self.surface,
+            &self.centers,
+            &radius,
+            tolerance_mm,
+            max_cells,
+            max_work,
+        )
+    }
     /// Assemble one open B-rep face. This intentionally has no volume body;
     /// the pole edge retains a full UV boundary while its 3D curve is constant.
     pub fn to_open_sheet(&self, tolerance_mm: f64) -> Result<crate::Model> {
@@ -1733,4 +1757,38 @@ mod tests {
             assert_eq!(original, format!("{source:?}"));
         }
     }
+    #[test]
+    fn moving_radius_relation_covers_full_constant_and_varying_support_patches() {
+        for direction in [-1., 1.] {
+            for span in plane_cylinder_rim(20., 6., 1.25, 0.3, direction * 0.7).unwrap() {
+                let out = span.qualify_radius(1e-7, 100, 100_000_000).unwrap();
+                assert!(
+                    out.certificate.is_some(),
+                    "{} {:?}",
+                    out.reason,
+                    out.error_upper
+                );
+                assert_eq!(out.certificate.unwrap().surface(), &span.surface);
+            }
+            for (a, b) in [(0.5, 1.25), (1.25, 0.5), (0., 1.25), (1.25, 0.)] {
+                let span = plane_cylinder_transition(20., 6., a, b, 0.3, direction * 0.7).unwrap();
+                let before = span.surface.clone();
+                let tolerance = if a == 0. || b == 0. { 1e-6 } else { 1e-9 };
+                let out = span.qualify_radius(tolerance, 100, 100_000_000).unwrap();
+                eprintln!(
+                    "radii {a}->{b} direction {direction}: radius error {:?}, work {}",
+                    out.error_upper, out.work
+                );
+                assert!(
+                    out.certificate.is_some(),
+                    "{} {:?}",
+                    out.reason,
+                    out.error_upper
+                );
+                assert_eq!(span.surface, before);
+                assert_eq!(out.certificate.unwrap().centers(), &span.centers);
+            }
+        }
+    }
+
 }
