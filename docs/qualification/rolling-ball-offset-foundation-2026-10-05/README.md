@@ -2050,3 +2050,30 @@ admission and the broader roadmap.
 Full validation after vertex-contact integration: 885 B-rep library tests pass,
 zero failures and three ignored tests. Compressed source, full B-rep and
 embedding-audit logs accompany this stage.
+
+## Strict separation of original control hulls
+
+`source_hull_separation` proposes a plane from original control centroids, then
+freshly checks plane independence and every original control with exact
+predicates. Each chart must have strictly constant signs, opposite to the other
+chart. A zero or mixed sign refuses the certificate. Positive rational weights
+keep the entire original surface and every retained trimmed subset inside that
+control hull. The private certificate owns both unchanged source regions.
+Centroids and approximate plane construction only propose a candidate; they
+cannot grant admission. This is a sufficient proof, not a complete hull search.
+
+Regressions qualify opposite shaft faces on translated/rotated increasing,
+decreasing and constant positive-radius controls, both sweep directions and
+both face orders. Identical faces, a shared cone pole and exhausted work refuse
+separation. All 86 selected source regressions pass.
+
+The full control audit checks all 120 face pairs. Its first unresolved pair
+advances from [0,8] to [1,5], adjacent spherical angular patches sharing a
+meridian and an additional collapsed pole boundary. The run records 2132 chart
+spans, 981822 exact work and zero driver cells. Embedded geometry remains
+unqualified. Boundary-plus-pole contact, complete embedding, signed volume,
+wall validation, closed Model/STEP/WASM/UI admission and the broader roadmap
+remain unfinished. Compressed logs accompany this stage.
+
+Full validation after hull separation: 887 B-rep library tests pass, zero
+failures and three ignored tests.
