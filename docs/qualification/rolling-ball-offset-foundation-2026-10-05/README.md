@@ -149,3 +149,15 @@ Tangent and speed values are derivatives in millimeters per unit of the original
 - WASM: 11,039,983 bytes; SHA-256 `7c8ab55a3714f572cb5f28556030076d29af134f030501f47c3ec31d16f02061`.
 - Packed geometry chunk: 3,685,512 bytes; production assets: 7,927,322 bytes (+6,225 bytes). Explicit limits are 3,688,000 and 7,930,000 bytes.
 - This certifies center tangent regularity on the declared band. Envelope construction, replacement trims, transitions and solid/UI fillet admission remain open.
+
+## Local constant-radius envelope (native development)
+
+`offset_envelope::certify` constructs an analytic rolling-ball surface over a certified center band. The cross-section parameter is a rational quadratic minor arc; the driving parameter retains the implicit source contact solution. This is not yet a fitted tensor NURBS patch.
+
+For radius `r = abs(dA) = abs(dB) > 0`, contact directions are `U = -sign(dA) nA` and `V = -sign(dB) nB`. Constant-offset contact implies `|U| = |V| = 1` and `U dot C' = V dot C' = 0`. With `D = 1 + U dot V > 0`, relative controls are `U`, `(U + V)/D`, `V`, with weights `1`, `sqrt(D/2)`, `1`. Hence every section lies on the rolling sphere and its plane is perpendicular to `C'`. Both section endpoints are the original support contact points.
+
+Source velocities come from original surface first jets and certified implicit parameter derivatives. Direction velocities are `(S_i' - C')/r`; the middle control and weight are differentiated with outward interval arithmetic. Relative coordinates avoid subtracting large translated world controls. Interval quotient differentiation bounds both surface derivatives. A positive lower bound on `|P_t cross P_s|` certifies local immersion over each entire driving band and arc cell. Endpoint contact tangency follows from the circle's radial directions and the original support normals. This does not certify embeddedness, original trim membership or a final solid.
+
+Arc subdivision retains every failed leaf and covers `[0,1]` without gaps. The budget counts failed parents as well as final leaves and reserves work for all pending leaves. A work stop cannot silently omit an arc section or promote an incomplete result. Near-antipodal contacts, zero/unequal radii, unresolved source jets and irregular centers cannot be admitted. Global thickness, self-intersection, replacement trims, endpoint/corner transitions and finite NURBS fitting with a certified error remain required.
+
+Five new native checks pass: the planar quarter-cylinder envelope with independent analytic image/derivative/area-speed checks; curved cylinder/oblique-plane contact in original and rotated/translated frames; all four signed contact-side combinations in both frames; whole-arc budget refusal; malformed radii/budgets. The combined offset regression filter passes 54 tests. The full-band interval certificate, rather than the finite analytic oracle checks, is the regularity proof. No new WASM/worker/UI envelope operation is published yet.

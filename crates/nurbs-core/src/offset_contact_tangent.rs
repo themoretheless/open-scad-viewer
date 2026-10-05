@@ -82,7 +82,7 @@ fn cross(a: [I; 3], b: [I; 3]) -> Result<[I; 3]> {
 fn divide_scalar(a: I, b: f64) -> Result<I> {
     I::new((a.lo / b).next_down(), (a.hi / b).next_up())
 }
-fn speed(t: [I; 3]) -> Result<I> {
+pub(crate) fn speed(t: [I; 3]) -> Result<I> {
     let scale = t
         .iter()
         .flat_map(|x| [x.lo.abs(), x.hi.abs()])
