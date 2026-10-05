@@ -461,3 +461,26 @@ Contact intersection parameters are still supplied explicitly. Automatic
 root-to-boundary intersection isolation, authoritative exact source endpoint
 representation, generated world/pcurve subinterval alignment and final shell
 assembly remain outstanding. No general fillet or UI command is admitted here.
+
+## Original UV curve crossing isolation
+
+`uv_curve_crossings::isolate` searches the complete original nonperiodic
+2D knot-span product under a shared cell budget. Original interval blossom
+positions and cell-normalized rational derivatives feed a two-variable
+Krawczyk enclosure. Only strict inclusion and an outward contraction norm
+below one admit a unique transverse crossing. Disjoint original position
+enclosures exclude cells. All unvisited or undecided boxes remain explicit;
+coincidence, tangency, domain/knot boundary roots and numeric work stops do not
+become tolerance-based crossing authority. Root intervals retain original
+parameters, including nonunit domains. Midpoint evaluation restores the exact
+source origin removed by homogeneous extraction.
+
+Three focused tests cover nonunit line crossings/exclusions, rational arc
+crossings and a near nonintersecting pair, coincidence and budget exhaustion.
+All 639 NURBS library tests passed (`uv-crossings-nurbs-regression.log.gz`).
+
+This isolates supplied UV curve intersections; it does not solve the implicit
+offset contact system against an original face boundary. Root intervals are
+not exactly representable split parameters or shared world vertices. Boundary
+ownership, original source references, world realization, closed-shell
+admission, WASM and interactive fillet integration remain outstanding.

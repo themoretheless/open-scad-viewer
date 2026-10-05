@@ -12,6 +12,7 @@
 )]
 #![allow(unused_features)]
 pub mod curve;
+pub mod uv_curve_crossings;
 pub mod coons;
 pub mod continuity;
 pub mod framed_sweep;
