@@ -1873,3 +1873,5 @@ pub mod source_shell_geometry;
 pub mod source_volume;
 
 pub mod source_seam_tangency;
+
+pub mod linear_canal;

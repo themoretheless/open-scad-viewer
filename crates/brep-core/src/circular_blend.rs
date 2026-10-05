@@ -389,7 +389,7 @@ fn trimmed_plane(
     open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
 }
 
-fn open_face(
+pub(crate) fn open_face(
     surface: Surface,
     boundaries: [CircularBlendBoundary; 4],
     tolerance_mm: f64,
@@ -457,7 +457,7 @@ fn open_face(
     Ok(model)
 }
 
-fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Result<crate::Model> {
+pub(crate) fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Result<crate::Model> {
     let mut iter = sheets.into_iter();
     let (mut result, reversed) = iter
         .next()
@@ -534,7 +534,7 @@ fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Result<crate::M
     Ok(result)
 }
 
-fn angular_unit(angle: f64) -> [f64; 2] {
+pub(crate) fn angular_unit(angle: f64) -> [f64; 2] {
     let quadrant = angle / std::f64::consts::FRAC_PI_2;
     if quadrant.is_finite() && quadrant.fract() == 0. {
         [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]][quadrant.rem_euclid(4.) as usize]

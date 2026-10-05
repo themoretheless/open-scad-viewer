@@ -1645,3 +1645,53 @@ this stage. Support-face contact, tight angular qualification/performance,
 general fillet construction and sewing, endpoint topology, varying-radius
 rolling-ball geometry and complex corners remain open. STEP/WASM/worker/UI,
 wall checks and the remaining P0/P2/P3 scope are not qualified by this stage.
+
+
+## Authored linear-spine variable-radius sphere envelopes
+
+`brep_core::linear_canal::construct` authors rational support patches for an
+arbitrary translated/rotated straight 3D center spine C and a linear radius law.
+For speed h=|C1-C0|, tangent T and a=(r1-r0)/h, the characteristic sphere circle
+has center C-r*a*T and radius r*sqrt(1-a^2). Accounting for this radius derivative
+avoids the oblique-normal behavior of circles placed directly at C. Increasing
+and decreasing radii are supported; |r1-r0| >= h is rejected. The authored radial
+direction fixes a resolved start direction normal to the spine. Positive and
+negative arcs up to a full turn split into patches of at most pi/2.
+
+This formula authors binary64 NURBS controls; it does not certify its own output.
+Each Span owns unchanged surface, center and law definitions and uses the existing
+moving-radius and moving-envelope gates. Full-domain positive-radius control
+patches qualify at radius tolerance 1e-8 mm and max sine squared 0.01. Native
+radius-error bounds on the rotated controls are at most 5.2e-13 mm. Tight angular
+tolerances and general nonlinear spine/radius laws remain unqualified.
+
+Shared angular endpoints are generated once. Neighbor rails therefore retain
+bit-identical authored controls; they also pass fresh SourceSharedEdge exact
+composition and endpoint admission. Natural chart boundaries use the original
+endpoint row/column definitions. Exact algebraic curve/surface identity verifies
+all four boundaries under the predicate engine's supported MAX_WORK budget.
+Zero-radius ends retain authored pole rows and a degenerate boundary; native
+regular-envelope qualification refuses them under the bounded check.
+
+`Span::to_open_sheet` and `to_open_region` reuse the existing support-sheet Model
+assembly and exact seam matching. Full turns and partial arcs in both directions
+validate. Native Model JSON roundtrips preserve original surface/edge/pcurve
+controls and topology identities exactly. These are open sheets with no bodies,
+not closed fillet results or application Undo/Redo/reload acceptance.
+
+`linear_canal_fixture` emits ten original control cases including poles, both
+radius directions, full turns and partial arcs. `verify-linear-canal-occt.py`
+reuses the existing OCCT NURBS decoder and independently rebuilds/evaluates each
+natural face. On 12915 control samples, every OCCT face is valid, maximum radius
+error is below 5e-15 mm and maximum radial-normal sine squared is below 2.1e-26.
+Pole normal samples are explicitly skipped; the native gate remains unqualified
+there. This independent control evidence does not replace whole-domain native
+proof, native coedge import, closed-body or STEP acceptance. Fixture hash and
+per-case results are recorded in the accompanying OCCT report.
+
+Validation: all four new construction regressions and 72 selected source B-rep
+regressions passed. Compressed logs, original fixtures and the OCCT report
+accompany this stage. End caps/transitions, support-face contact and trimming,
+closed-body admission, general NURBS spines/radius laws and complex corners
+remain open, along with tight qualification/performance, wall checks,
+STEP/WASM/worker/UI acceptance and the remaining P0/P2/P3 scope.
