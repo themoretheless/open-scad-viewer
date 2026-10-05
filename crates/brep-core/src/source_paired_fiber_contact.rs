@@ -341,6 +341,12 @@ mod tests {
             .shell
             .unwrap();
         assert!(
+            crate::source_vertex_contact::certify(&shell, [0, 1], 1000000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
             certify(&shell, [0, 1], 1000000, 10000)
                 .unwrap()
                 .certificate

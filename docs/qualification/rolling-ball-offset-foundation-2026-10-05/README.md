@@ -2012,3 +2012,41 @@ and boundary-plus-pole preimages remain unqualified. Zero-radius rails with an
 additional collapsed boundary need that broader preimage proof. Full embedding,
 volume/orientation, wall validation, closed Model/STEP/WASM/UI and the remaining
 roadmap are still incomplete.
+
+## Original vertex-only supporting-plane contact
+
+`source_vertex_contact` now proposes supporting planes through a source-owned
+common vertex, using the two original control centroids only to choose a plane
+candidate. Exact predicates then independently check every original control.
+The nonzero controls must be strictly on opposite sides. Every zero-sign control
+must be exactly the same world point P. Positive rational basis weights imply
+that each chart's entire plane image is confined to P, including a collapsed
+pole row whose controls all equal P. Thus possible contact is confined to that
+one admitted vertex. A centroid, approximate normal or topology sharing alone
+never produces the private certificate.
+
+Vertex ownership is recomputed from a common immutable shell vertex ID and
+original boundary endpoint expressions. The supported endpoint class requires
+a parameter at an original clamped curve end, mapping to a clamped natural
+surface corner. Original corner controls give the exact world point without
+evaluation rounding. Both face expressions must give the same point. Interior
+parameters, root-valued ends and unsupported nonclamped endpoints grant no
+corner ownership through this method. The certificate privately owns both
+regions, plane, point and original addressed uses.
+
+Native regressions cover vertex-only contacts without a shared edge in all
+eight translated/rotated radius/angular controls, both face orders, exhausted
+work, invalid face pairs, interior-parameter refusal and coincident curved faces.
+The complete control audit still checks all 120 pairs and advances its first
+unresolved pair from [0,5] to [0,8], opposite shaft angular spans. The recorded
+run uses 2204 chart spans, 720058 exact work and zero driver cells. It still
+refuses embedded geometry. All 84 selected source regressions pass.
+
+General root-owned vertices, separated control-hull proof for opposite faces,
+boundary-plus-pole preimages and complete embedding remain unfinished, followed
+by signed volume/material orientation, wall checks, closed Model/STEP/WASM/UI
+admission and the broader roadmap.
+
+Full validation after vertex-contact integration: 885 B-rep library tests pass,
+zero failures and three ignored tests. Compressed source, full B-rep and
+embedding-audit logs accompany this stage.

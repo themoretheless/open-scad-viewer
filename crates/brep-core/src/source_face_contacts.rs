@@ -58,6 +58,7 @@ pub struct PairReport {
     pub fiber: Option<crate::source_fiber_contact::Certificate>,
     pub interior_fiber: Option<crate::source_interior_contact::Certificate>,
     pub paired_fiber: Option<crate::source_paired_fiber_contact::Certificate>,
+    pub vertex_contact: Option<crate::source_vertex_contact::Certificate>,
 }
 pub struct ShellReport {
     pub pairs: Vec<PairReport>,
@@ -210,6 +211,27 @@ fn inspect_impl(
                 return Ok(out);
             }
             if let Some((work, spans, driver, linear)) = allowed_budget {
+                if out.exact_work < work {
+                    let proof = crate::source_vertex_contact::certify(
+                        shell,
+                        [a, b],
+                        work - out.exact_work,
+                    )?;
+                    out.exact_work += proof.exact_work;
+                    if let Some(certificate) = proof.certificate {
+                        out.all_pairs_absence_proven = false;
+                        out.pairs.push(PairReport {
+                            faces: [a, b],
+                            result: None,
+                            allowed: None,
+                            fiber: None,
+                            interior_fiber: None,
+                            paired_fiber: None,
+                            vertex_contact: Some(certificate),
+                        });
+                        continue;
+                    }
+                }
                 if driver > 0 && out.exact_work < work && out.driver_cells < driver {
                     let proof = crate::source_paired_fiber_contact::certify(
                         shell,
@@ -227,6 +249,7 @@ fn inspect_impl(
                             allowed: None,
                             fiber: None,
                             interior_fiber: None,
+                            vertex_contact: None,
                             paired_fiber: Some(certificate),
                         });
                         continue;
@@ -259,6 +282,7 @@ fn inspect_impl(
                                 result: None,
                                 allowed: None,
                                 fiber: Some(certificate),
+                                vertex_contact: None,
                                 paired_fiber: None,
                                 interior_fiber: None,
                             });
@@ -296,6 +320,7 @@ fn inspect_impl(
                                 result: None,
                                 allowed: None,
                                 fiber: None,
+                                vertex_contact: None,
                                 paired_fiber: None,
                                 interior_fiber: Some(certificate),
                             });
@@ -322,6 +347,7 @@ fn inspect_impl(
                             result: None,
                             allowed: Some(certificate),
                             fiber: None,
+                            vertex_contact: None,
                             paired_fiber: None,
                             interior_fiber: None,
                         });
@@ -346,6 +372,7 @@ fn inspect_impl(
                 result: Some(result),
                 allowed: None,
                 fiber: None,
+                vertex_contact: None,
                 paired_fiber: None,
                 interior_fiber: None,
             });
