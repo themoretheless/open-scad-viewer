@@ -1,4 +1,4 @@
-//! Exact intersection locus of a positive tensor Bezier chart and a plane.
+//! Exact intersection locus of a positive clamped NURBS chart and a plane.
 //! This does not establish retained-region ownership or chart injectivity.
 use cad_predicates::Sign;
 use nurbs_core::{surface::Surface, Error, Result};
@@ -27,8 +27,8 @@ pub struct Report {
     pub reason: &'static str,
 }
 /// All poles on one natural boundary must lie exactly in the plane; every
-/// other pole must lie strictly on the same side. Positive Bernstein bases
-/// then make the homogeneous plane numerator nonzero everywhere else,
+/// other pole must lie strictly on the same side. Nonnegative B-spline bases
+/// and partition of unity make the plane numerator nonzero elsewhere,
 /// including the other three chart boundaries. No fitted normals are used.
 pub fn certify(
     surface: &Surface,
@@ -69,13 +69,16 @@ pub fn certify(
         return Ok(out);
     }
     for a in 0..2 {
-        if counts[a] != degrees[a] + 1 || degrees[a] == 0 || degrees[a] > 32 {
+        if degrees[a] == 0 || degrees[a] > 32 {
             return Ok(out);
         }
         let lo = knots[a][degrees[a]];
         let hi = knots[a][counts[a]];
         if lo >= hi
-            || knots[a][..counts[a]].iter().any(|&x| x != lo)
+            || knots[a][..=degrees[a]].iter().any(|&x| x != lo)
+            || knots[a][degrees[a] + 1..counts[a]]
+                .iter()
+                .any(|&x| x <= lo || x >= hi)
             || knots[a][counts[a]..].iter().any(|&x| x != hi)
         {
             return Ok(out);
@@ -175,6 +178,32 @@ mod tests {
             .unwrap()
             .certificate
             .is_some());
+    }
+    #[test]
+    fn original_multispan_chart_and_interior_plane_contact_refusal() {
+        let mut s = curved();
+        // A kinked height profile, with the unchanged rational curved rim.
+        s.knots_u = vec![0., 0., 0.5, 1., 1.];
+        let mut middle = s.control_points[1].clone();
+        for p in &mut middle {
+            p[2] = 0.25;
+        }
+        s.control_points.insert(1, middle);
+        s.weights.insert(1, s.weights[0].clone());
+        let c = certify(&s, PLANE, 0, false, 1_000_000)
+            .unwrap()
+            .certificate
+            .unwrap();
+        assert_eq!(c.surface(), &s);
+        // A whole extra interior row at the plane gives another intersection
+        // fiber at u=.5; it must never be admitted as a natural-edge-only locus.
+        for p in &mut s.control_points[1] {
+            p[2] = 0.;
+        }
+        assert!(certify(&s, PLANE, 0, false, 1_000_000)
+            .unwrap()
+            .certificate
+            .is_none());
     }
     #[test]
     fn extra_zero_opposite_sides_displacement_and_budget_refuse() {

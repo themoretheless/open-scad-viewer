@@ -1000,3 +1000,19 @@ This certificate establishes only the source chart intersection locus. Retained
 region ownership, fresh shared-edge binding, chart injectivity and shell pair
 admission remain separate requirements. Partial/curved allowed-contact
 integration, corner ownership, volume admission and fillet WASM/UI remain open.
+
+## Original multi-span plane fibers
+
+The exact plane fiber gate now accepts original nonperiodic clamped NURBS
+charts with interior knots on either axis, without knot insertion or Bezier
+conversion. Nonnegative B-spline bases and partition of unity give a positive
+contribution from off-boundary poles everywhere except the selected natural
+chart edge; all of those poles have the same strict exact plane sign.
+Clamping is checked on degree+1 endpoint knots, with every interior knot
+strictly inside the natural domain. Positive weights remain required.
+
+All 44 selected source regressions passed
+(`source-plane-fiber-multispan.log.gz`). The new fixture retains the original
+rational curved rim and a two-span kinked height chart. An extra plane contact
+at the interior knot refuses certification. This broadens the chart locus
+proof only; shared retained-region ownership and pair admission remain open.
