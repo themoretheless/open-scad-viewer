@@ -244,6 +244,105 @@ pub fn assemble(
     Ok(out)
 }
 
+/// Replace a prepartitioned source arc, retaining all other boundary definitions.
+/// Limits apply independently to original-face, contour and replacement-face audits.
+pub struct ReplaceBoundary {
+    pub original: Report,
+    pub contour: Option<nurbs_core::offset_face_loops::Report>,
+    pub replacement: Option<Report>,
+}
+pub fn replace_boundary_arc(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    contact: &Boundary,
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<ReplaceBoundary> {
+    // Validate the replacement even when the original cannot be qualified.
+    contact.curve.validate()?;
+    contact.pcurve.validate()?;
+    if contact.curve.control_points[0].len() != 3 || contact.pcurve.control_points[0].len() != 2 {
+        return Err(Error::new(
+            "BREP_FACE_RECIPE_DIMENSION",
+            "Replacement needs a 3D edge and 2D pcurve",
+        ));
+    }
+    let original = assemble(context, surface, wires, tolerance_uv, limits)?;
+    let mut out = ReplaceBoundary {
+        original,
+        contour: None,
+        replacement: None,
+    };
+    if out.original.face.is_none() {
+        return Ok(out);
+    }
+    let uv = wires
+        .iter()
+        .map(|wire| wire.iter().map(|e| e.pcurve.clone()).collect())
+        .collect::<Vec<Vec<Curve>>>();
+    let contour = nurbs_core::offset_face_loops::replace_boundary_arc(
+        &uv,
+        loop_index,
+        arc_start,
+        arc_count,
+        &contact.pcurve,
+        tolerance_uv,
+        nurbs_core::offset_face_loops::Limits {
+            pairs: limits.pairs,
+            cells: limits.region_cells,
+            domain_cells: limits.domain_cells,
+        },
+    )?;
+    if !contour.region_subset_proven {
+        out.contour = Some(contour);
+        return Ok(out);
+    }
+    let mut replacement = wires
+        .iter()
+        .map(|wire| {
+            wire.iter()
+                .map(|e| Boundary {
+                    curve: e.curve.clone(),
+                    pcurve: e.pcurve.clone(),
+                    reversed: e.reversed,
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    replacement[loop_index] = contour
+        .origins
+        .iter()
+        .map(|origin| {
+            let source = match origin {
+                nurbs_core::offset_face_loops::Origin::Contact => contact,
+                nurbs_core::offset_face_loops::Origin::Kept {
+                    loop_index,
+                    curve_index,
+                } => &wires[*loop_index][*curve_index],
+                _ => unreachable!("Boundary-arc replacement creates no connectors"),
+            };
+            Boundary {
+                curve: source.curve.clone(),
+                pcurve: source.pcurve.clone(),
+                reversed: source.reversed,
+            }
+        })
+        .collect();
+    out.replacement = Some(assemble(
+        context,
+        surface,
+        &replacement,
+        tolerance_uv,
+        limits,
+    )?);
+    out.contour = Some(contour);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,6 +451,69 @@ mod tests {
         assert!(!r.report.qualified);
         assert!(r.boundaries.is_none());
         assert_eq!(r.report.pieces.len(), 3);
+    }
+    #[test]
+    fn corner_replacement_preserves_support_and_kept_world_edges() {
+        let (surface, wire) = fixture();
+        let contact = &wire[0][0];
+        let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
+        let original = vec![
+            (0..4)
+                .map(|i| {
+                    let pcurve =
+                        Curve::from_polyline(vec![points[i].clone(), points[(i + 1) % 4].clone()])
+                            .unwrap();
+                    let mut curve = pcurve.clone();
+                    for p in &mut curve.control_points {
+                        p.push(1.);
+                    }
+                    Boundary {
+                        curve,
+                        pcurve,
+                        reversed: false,
+                    }
+                })
+                .collect::<Vec<_>>(),
+        ];
+        let r = replace_boundary_arc(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &original,
+            0,
+            0,
+            2,
+            contact,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.contour.as_ref().unwrap().region_subset_proven);
+        let result = r.replacement.unwrap();
+        let face = result.face.expect(result.reason);
+        assert_eq!(face.edges().len(), 3);
+        assert_eq!(face.face().surface, surface);
+        assert_eq!(face.edges()[1].curve, original[0][2].curve);
+        assert_eq!(face.edges()[2].curve, original[0][3].curve);
+        let mut wrong = Boundary {
+            curve: contact.curve.clone(),
+            pcurve: contact.pcurve.clone(),
+            reversed: false,
+        };
+        wrong.curve.control_points[1][2] += 0.1;
+        let r = replace_boundary_arc(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &original,
+            0,
+            0,
+            2,
+            &wrong,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.contour.as_ref().unwrap().region_subset_proven);
+        assert!(r.replacement.unwrap().face.is_none());
     }
     #[test]
     fn canonical_rational_face_preserves_definitions_and_closed_world_incidence() {
