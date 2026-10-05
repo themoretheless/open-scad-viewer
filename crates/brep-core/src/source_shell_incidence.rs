@@ -945,6 +945,22 @@ mod tests {
             volume.signed_bounds
         );
         let body = volume.body.unwrap();
+        let seam_limits = || crate::source_seam_tangency::Limits {
+            max_sine_squared: 1e-6,
+            cells: 100,
+            curve_spans: 200,
+            normal_spans: 200,
+        };
+        // A valid tetrahedron is intentionally sharp; volume admission must
+        // not silently label its selected shared edge tangent.
+        assert!(body
+            .qualify_edge_tangency(0, seam_limits())
+            .unwrap()
+            .seam
+            .is_none());
+        assert!(body
+            .qualify_edge_tangency(body.geometry().shell().edges().len(), seam_limits())
+            .is_err());
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());

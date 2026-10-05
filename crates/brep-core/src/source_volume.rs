@@ -27,6 +27,21 @@ impl Body {
     pub fn volume(&self) -> [f64; 2] {
         self.volume
     }
+    /// Inspect a selected original seam of this admitted body. A failed angular
+    /// check does not invalidate an intentionally sharp body edge.
+    pub fn qualify_edge_tangency(
+        &self,
+        edge: usize,
+        limits: crate::source_seam_tangency::Limits,
+    ) -> Result<crate::source_seam_tangency::Report> {
+        let source = self.geometry.shell().edges().get(edge).ok_or_else(|| {
+            Error::new(
+                "BREP_SOURCE_SEAM_INDEX",
+                "Selected source edge does not belong to this body",
+            )
+        })?;
+        crate::source_seam_tangency::qualify(source, limits)
+    }
     pub fn reverse_orientation(&self) -> bool {
         self.reverse_orientation
     }

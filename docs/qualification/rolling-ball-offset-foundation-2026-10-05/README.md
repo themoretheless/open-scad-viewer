@@ -1489,3 +1489,45 @@ regions still require substantial adaptive work; interactive performance is
 not qualified. Concrete Model/STEP/WASM/worker/UI admission, general fillet
 construction and end transitions, differing radii/complex corners,
 whole-interval radius/tangency/wall checks, and P0/P2/P3 remain open.
+
+
+## Whole-source seam tangent planes
+
+`source_seam_tangency::qualify` accepts an immutable admitted SharedEdge,
+which already owns both positional source compositions and matching retained
+ends. It covers the outward canonical interval of the actual fragment,
+including root endpoint enclosures, then inversely maps every subinterval to
+both unchanged original pcurves. Full traversal direction is separated from
+forward-source parameter direction. Exact rational affine carrier ranges and
+independent original parameter domains are retained.
+
+Original interval pcurve evaluation yields source UV rectangles. Fragment
+admission independently establishes chart membership, so chart intersections
+retain all actual seam points. `normal_alignment::inspect_pair` checks every
+incident original knot side and transverse derivatives at collapsed UV axes.
+Each admitted cell bounds the sine squared between all possible normal pairs;
+the union of all admitted cells covers the complete source seam. A private Seam
+owns its original SharedEdge, requested tolerance and aggregate angular bound.
+Subdivision, pcurve spans and normal spans have separate global budgets.
+Partial coverage never authorizes a Seam. Failures retain a canonical interval.
+An oblique envelope rejects admission; it is not necessarily a witnessed angular
+break on the exact seam because root enclosures can include unused endpoint tails.
+Antiparallel normals describe the same tangent plane; material orientation is
+handled by shell/body admission. This is tolerance-based tangent-plane (G1)
+qualification, not a fillet radius, second derivative/G2 or regularity proof
+at an excluded singular endpoint.
+
+`Body::qualify_edge_tangency` binds the check to an existing original edge of
+the admitted source body and rejects an invalid edge index. Deliberately sharp
+body edges remain valid bodies and do not automatically receive tangent status.
+
+Five new regressions cover rotating tangent planes on a quadratic world seam,
+a positional seam with a crease, rational root restrictions without changed
+source definitions, reversed original pcurves and partial affine carriers with
+independent domains, and a singular endpoint. Each work-budget exhaustion is
+checked. The admitted root-partitioned tetrahedron additionally refuses tangent
+status for its selected sharp edge and rejects an out-of-body edge index.
+Validation: all 72 selected source B-rep tests passed; compressed focused and
+complete logs accompany this stage. No new WASM, worker, STEP or UI acceptance
+is claimed. General transition surfaces/endcaps, variable radius and complex
+corners, radius/wall checks, and the remaining P0/P2/P3 work remain open.

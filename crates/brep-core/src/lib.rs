@@ -1871,3 +1871,5 @@ pub mod source_vertex_links;
 pub mod source_shell_geometry;
 
 pub mod source_volume;
+
+pub mod source_seam_tangency;
