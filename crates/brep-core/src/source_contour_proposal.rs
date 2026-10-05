@@ -9,6 +9,7 @@ use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
 pub struct Proposal {
     pub search: SourcePointSearch,
     pub candidate_loops: Option<Vec<Vec<Fragment>>>,
+    pub candidate_source_loops: Option<Vec<usize>>,
     pub source_joins_proven: bool,
     pub reason: &'static str,
 }
@@ -55,6 +56,7 @@ pub fn propose(
     let mut out = Proposal {
         search,
         candidate_loops: None,
+        candidate_source_loops: None,
         source_joins_proven: false,
         reason: "source-crossing-search-unqualified",
     };
@@ -138,10 +140,425 @@ pub fn propose(
         return Ok(out);
     }
     out.candidate_loops = Some(loops);
+    out.candidate_source_loops = Some((0..wires.len()).collect());
     out.source_joins_proven = true;
     out.reason = "source-contour-candidate-closed-region-unverified";
     Ok(out)
 }
+pub struct InteriorContact {
+    pub proposal: Proposal,
+    pub driver: Option<nurbs_core::curve_axis_driver::Report>,
+    pub membership: Option<nurbs_core::trim_domain::Classification>,
+    pub only_owned_crossings_proven: bool,
+    pub contact_simple_proven: bool,
+    pub contact_inside_proven: bool,
+    /// Hole placement and replacement winding still need independent proof.
+    pub region_subset_proven: bool,
+    pub reason: &'static str,
+}
+/// Freshly prove a simple contact arc remains inside the original material
+/// region, with its only boundary contacts the two selected endpoint roots.
+/// This does not certify replacement winding or placement of retained holes.
+pub fn qualify_interior_contact(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    contact: &Curve,
+    loop_index: usize,
+    start_edge: usize,
+    end_edge: usize,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_cells: usize,
+    target_width: [f64; 2],
+    max_point_checks: usize,
+    max_mapping_cells: usize,
+    driver_axis: usize,
+    max_driver_cells: usize,
+    max_membership_cells: usize,
+) -> Result<InteriorContact> {
+    if driver_axis >= 2
+        || !(1..=100000).contains(&max_driver_cells)
+        || !(1..=100000).contains(&max_membership_cells)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT_INTERIOR",
+            "Choose a UV driver axis and bounded proof work",
+        ));
+    }
+    let proposal = propose(
+        context,
+        surface,
+        wires,
+        contact,
+        loop_index,
+        start_edge,
+        end_edge,
+        tolerance_uv,
+        limits,
+        max_cells,
+        target_width,
+        max_point_checks,
+        max_mapping_cells,
+    )?;
+    let mut out = InteriorContact {
+        proposal,
+        driver: None,
+        membership: None,
+        only_owned_crossings_proven: false,
+        contact_simple_proven: false,
+        contact_inside_proven: false,
+        region_subset_proven: false,
+        reason: "source-contour-unqualified",
+    };
+    if !out.proposal.source_joins_proven {
+        return Ok(out);
+    }
+    // Complete original span-product search also covers all unaffected holes.
+    // Any additional contact, including one on the removed arc, prevents this
+    // no-crossing authority; unresolved/tangent cells already stop the proposal.
+    if out.proposal.search.points.len() != 2 {
+        out.reason = "source-contact-has-additional-boundary-crossings";
+        return Ok(out);
+    }
+    out.only_owned_crossings_proven = true;
+    let driver = nurbs_core::curve_axis_driver::certify(contact, driver_axis, max_driver_cells)?;
+    out.contact_simple_proven = driver.monotonic_proven;
+    out.driver = Some(driver);
+    if !out.contact_simple_proven {
+        out.reason = "source-contact-simplicity-unproven";
+        return Ok(out);
+    }
+    let fragment = &out.proposal.candidate_loops.as_ref().unwrap()[loop_index][0];
+    let ends = fragment.parameter_bounds();
+    let between = if fragment.reversed() {
+        [ends[1][1], ends[0][0]]
+    } else {
+        [ends[0][1], ends[1][0]]
+    };
+    let t = between[0] * 0.5 + between[1] * 0.5;
+    if !(between[0] < t && t < between[1]) {
+        out.reason = "source-contact-interior-station-unrepresentable";
+        return Ok(out);
+    }
+    let image = nurbs_core::interval_eval::evaluate_interval(
+        contact,
+        nurbs_core::interval_eval::Interval::point(t),
+    )?;
+    let uv = wires
+        .iter()
+        .map(|wire| wire.iter().map(|b| b.pcurve.clone()).collect())
+        .collect::<Vec<Vec<Curve>>>();
+    let domain = nurbs_core::trim_domain::TrimDomain::new(&uv, tolerance_uv)?;
+    let membership = domain.classify(
+        [[image[0].lo, image[0].hi], [image[1].lo, image[1].hi]],
+        max_membership_cells,
+    )?;
+    out.contact_inside_proven = membership.location == nurbs_core::trim_domain::Location::Inside;
+    out.membership = Some(membership);
+    out.reason = if out.contact_inside_proven {
+        "source-contact-arc-inside-original-region"
+    } else {
+        "source-contact-interior-membership-unproven"
+    };
+    // A continuous simple arc cannot leave this original material component
+    // without meeting its boundary. Full original boundary search excludes all
+    // such meetings except the two owned endpoints; one interior witness fixes
+    // the component. This proves arc membership, not replacement-region winding.
+    Ok(out)
+}
+
+/// Qualified source UV region, not an embedded 3D face or closed solid.
+#[derive(Clone)]
+pub struct SourceRegion {
+    loops: Vec<Vec<Fragment>>,
+    source_loop_indices: Vec<usize>,
+}
+impl SourceRegion {
+    pub fn source_loop_indices(&self) -> &[usize] {
+        &self.source_loop_indices
+    }
+    pub fn loops(&self) -> &[Vec<Fragment>] {
+        &self.loops
+    }
+}
+pub struct LinearRegion {
+    pub interior: InteriorContact,
+    pub controls: usize,
+    pub work_stopped: bool,
+    pub kept_side_proven: bool,
+    pub removed_side_proven: bool,
+    pub holes_kept_proven: bool,
+    pub hole_placement_proven: bool,
+    pub removed_holes: Vec<usize>,
+    pub region: Option<SourceRegion>,
+    pub reason: &'static str,
+}
+/// Qualify a straight source contact as an exact half-plane intersection of
+/// the original material region. All retained/removed arcs and holes must have
+/// whole-source side proofs. This does not approximate a curved contact by a line.
+pub fn qualify_linear_region(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    contact: &Curve,
+    loop_index: usize,
+    start_edge: usize,
+    end_edge: usize,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_cells: usize,
+    target_width: [f64; 2],
+    max_point_checks: usize,
+    max_mapping_cells: usize,
+    driver_axis: usize,
+    max_driver_cells: usize,
+    max_membership_cells: usize,
+    max_controls: usize,
+) -> Result<LinearRegion> {
+    use nurbs_core::interval_eval::{self, Interval as I};
+    if !(1..=100000).contains(&max_controls) {
+        return Err(Error::new(
+            "BREP_SOURCE_REGION_WORK",
+            "Bound half-plane source control work",
+        ));
+    }
+    let interior = qualify_interior_contact(
+        context,
+        surface,
+        wires,
+        contact,
+        loop_index,
+        start_edge,
+        end_edge,
+        tolerance_uv,
+        limits,
+        max_cells,
+        target_width,
+        max_point_checks,
+        max_mapping_cells,
+        driver_axis,
+        max_driver_cells,
+        max_membership_cells,
+    )?;
+    let mut out = LinearRegion {
+        interior,
+        controls: 0,
+        work_stopped: false,
+        kept_side_proven: false,
+        removed_side_proven: false,
+        holes_kept_proven: false,
+        hole_placement_proven: false,
+        removed_holes: vec![],
+        region: None,
+        reason: "source-contact-interior-unqualified",
+    };
+    if !out.interior.contact_inside_proven {
+        return Ok(out);
+    }
+    if loop_index != 0 {
+        out.reason = "source-hole-boundary-clipping-unqualified";
+        return Ok(out);
+    }
+    let single_line = |c: &Curve| {
+        let d = c.domain();
+        c.degree == 1
+            && c.control_points.len() == 2
+            && c.knots[..=1].iter().all(|&k| k == d[0])
+            && c.knots[2..].iter().all(|&k| k == d[1])
+    };
+    if !single_line(contact) {
+        out.reason = "source-contact-is-not-an-admitted-line";
+        return Ok(out);
+    }
+    let loops = out.interior.proposal.candidate_loops.as_ref().unwrap();
+    let reversed = loops[0][0].reversed();
+    let a = &contact.control_points[usize::from(reversed)];
+    let b = &contact.control_points[usize::from(!reversed)];
+    let winding = out.interior.proposal.search.search.original.region.winding[0];
+    let Some(winding) = winding.filter(|w| w.abs() == 1) else {
+        out.reason = "source-region-winding-unproven";
+        return Ok(out);
+    };
+    let direction = [
+        I::point(b[0]).sub(I::point(a[0]))?,
+        I::point(b[1]).sub(I::point(a[1]))?,
+    ];
+    let side = |p: [I; 2]| -> Result<I> {
+        direction[0]
+            .mul(p[1].sub(I::point(a[1]))?)?
+            .sub(direction[1].mul(p[0].sub(I::point(a[0]))?)?)?
+            .mul(I::point(winding as f64))
+    };
+    let mut controls = 0;
+    let mut work_stopped = false;
+    let mut prove = |fragment: &Fragment, kept: bool| -> Result<bool> {
+        let accept = |s: I| if kept { s.lo >= 0. } else { s.hi <= 0. };
+        let c = fragment.curve();
+        let d = c.domain();
+        let ends = fragment.endpoints();
+        let full = matches!(ends[0],Endpoint::Parameter(t) if t==d[0])
+            && matches!(ends[1],Endpoint::Parameter(t) if t==d[1]);
+        if full {
+            for p in &c.control_points {
+                if controls == max_controls {
+                    work_stopped = true;
+                    return Ok(false);
+                }
+                controls += 1;
+                if !accept(side([I::point(p[0]), I::point(p[1])])?) {
+                    return Ok(false);
+                }
+            }
+            return Ok(true);
+        }
+        if single_line(c) {
+            for end in ends {
+                match end {
+                    Endpoint::Crossing { point, .. } if point.contact() == contact => continue,
+                    Endpoint::Parameter(t) if *t == d[0] || *t == d[1] => {
+                        if controls == max_controls {
+                            work_stopped = true;
+                            return Ok(false);
+                        }
+                        controls += 1;
+                        let p = &c.control_points[usize::from(*t == d[1])];
+                        if !accept(side([I::point(p[0]), I::point(p[1])])?) {
+                            return Ok(false);
+                        }
+                    }
+                    _ => return Ok(false),
+                }
+            }
+            return Ok(true);
+        }
+        let cost = c.control_points.len();
+        if cost > max_controls - controls {
+            work_stopped = true;
+            return Ok(false);
+        }
+        controls += cost;
+        let bounds = fragment.parameter_bounds();
+        let domain = I::new(
+            bounds[0][0].min(bounds[1][0]),
+            bounds[0][1].max(bounds[1][1]),
+        )?;
+        let image = interval_eval::evaluate_interval(c, domain)?;
+        Ok(accept(side([image[0], image[1]])?))
+    };
+    let mut kept = true;
+    for fragment in &loops[0][1..] {
+        kept &= prove(fragment, true)?;
+        if !kept {
+            break;
+        }
+    }
+    out.kept_side_proven = kept;
+    let original = &wires[0];
+    let p0 = match &loops[0][0].endpoints()[0] {
+        Endpoint::Crossing { point, .. } => point.clone(),
+        _ => unreachable!(),
+    };
+    let p1 = match &loops[0][0].endpoints()[1] {
+        Endpoint::Crossing { point, .. } => point.clone(),
+        _ => unreachable!(),
+    };
+    let head = &original[start_edge].pcurve;
+    let tail = &original[end_edge].pcurve;
+    let removed0 = Fragment::new(
+        surface,
+        head,
+        Endpoint::Crossing {
+            point: p0,
+            role: Role::Boundary,
+        },
+        Endpoint::Parameter(head.domain()[1]),
+    )?;
+    let removed1 = Fragment::new(
+        surface,
+        tail,
+        Endpoint::Parameter(tail.domain()[0]),
+        Endpoint::Crossing {
+            point: p1,
+            role: Role::Boundary,
+        },
+    )?;
+    let mut removed = prove(&removed0, false)? && prove(&removed1, false)?;
+    let mut i = (start_edge + 1) % original.len();
+    while i != end_edge && removed {
+        let c = &original[i].pcurve;
+        let full = Fragment::new(
+            surface,
+            c,
+            Endpoint::Parameter(c.domain()[0]),
+            Endpoint::Parameter(c.domain()[1]),
+        )?;
+        removed &= prove(&full, false)?;
+        i = (i + 1) % original.len();
+    }
+    out.removed_side_proven = removed;
+    let mut holes = true;
+    let mut retained = vec![0];
+    let mut removed_holes = vec![];
+    for (index, hole) in loops.iter().enumerate().skip(1) {
+        let mut on_kept_side = true;
+        for fragment in hole {
+            on_kept_side &= prove(fragment, true)?;
+            if !on_kept_side {
+                break;
+            }
+        }
+        if on_kept_side {
+            retained.push(index);
+            continue;
+        }
+        let mut on_removed_side = true;
+        for fragment in hole {
+            on_removed_side &= prove(fragment, false)?;
+            if !on_removed_side {
+                break;
+            }
+        }
+        if on_removed_side {
+            removed_holes.push(index);
+        } else {
+            holes = false;
+            break;
+        }
+    }
+    out.holes_kept_proven = holes && removed_holes.is_empty();
+    out.hole_placement_proven = holes;
+    out.removed_holes = removed_holes;
+    out.controls = controls;
+    out.work_stopped = work_stopped;
+    if kept && removed && holes {
+        out.interior.region_subset_proven = true;
+        let qualified = retained
+            .iter()
+            .map(|&i| loops[i].clone())
+            .collect::<Vec<_>>();
+        out.region = Some(SourceRegion {
+            loops: qualified.clone(),
+            source_loop_indices: retained.clone(),
+        });
+        out.interior.proposal.candidate_loops = Some(qualified);
+        out.interior.proposal.candidate_source_loops = Some(retained);
+        out.interior.proposal.reason = "source-contour-half-plane-region-qualified";
+        out.reason = "source-half-plane-material-region-qualified";
+    } else {
+        out.reason = if work_stopped {
+            "source-half-plane-work-limit"
+        } else {
+            "source-half-plane-side-unproven"
+        };
+    }
+    // Whole original outer arcs occupy opposite sides, meeting the line only at
+    // the two owned transverse roots. The closed candidate bounds the retained
+    // half-plane intersection. Holes proven on the kept side retain their
+    // definitions; whole holes on the removed side disappear from that region.
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +624,319 @@ mod tests {
         assert_eq!(loops[0][1].curve(), &wire[2].pcurve);
         assert_eq!(loops[0][2].curve(), &wire[3].pcurve);
         assert_eq!(loops[0][3].curve(), &wire[0].pcurve);
+        let interior = qualify_interior_contact(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone()],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+        )
+        .unwrap();
+        assert!(
+            interior.only_owned_crossings_proven
+                && interior.contact_simple_proven
+                && interior.contact_inside_proven
+        );
+        assert!(!interior.region_subset_proven);
+        let hole_points = [
+            vec![0.4, 0.2],
+            vec![0.4, 0.4],
+            vec![0.6, 0.4],
+            vec![0.6, 0.2],
+        ];
+        let hole = (0..4)
+            .map(|i| {
+                let pcurve = Curve::from_polyline(vec![
+                    hole_points[i].clone(),
+                    hole_points[(i + 1) % 4].clone(),
+                ])
+                .unwrap();
+                let mut curve = pcurve.clone();
+                for p in &mut curve.control_points {
+                    p.push(1.);
+                }
+                Boundary {
+                    curve,
+                    pcurve,
+                    reversed: false,
+                }
+            })
+            .collect::<Vec<_>>();
+        let bad = qualify_interior_contact(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), hole.clone()],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+        )
+        .unwrap();
+        assert!(bad.proposal.search.complete);
+        assert_eq!(bad.proposal.search.points.len(), 4);
+        let across_hole = Curve::from_polyline(vec![vec![0.3, 0.3], vec![0.7, 0.3]]).unwrap();
+        let void = qualify_interior_contact(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), hole],
+            &across_hole,
+            1,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+        )
+        .unwrap();
+        assert!(void.only_owned_crossings_proven && void.contact_simple_proven);
+        assert!(!void.contact_inside_proven);
+        assert_eq!(
+            void.membership.as_ref().unwrap().location,
+            nurbs_core::trim_domain::Location::Outside
+        );
+
+        assert!(
+            !bad.only_owned_crossings_proven
+                && !bad.contact_inside_proven
+                && !bad.region_subset_proven
+        );
+
+        let region = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone()],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert!(region.kept_side_proven && region.removed_side_proven && region.holes_kept_proven);
+        assert!(region.interior.region_subset_proven && region.region.is_some());
+        let make_hole = |y0: f64, y1: f64| {
+            let points = [vec![0.4, y0], vec![0.4, y1], vec![0.6, y1], vec![0.6, y0]];
+            (0..4)
+                .map(|i| {
+                    let pcurve =
+                        Curve::from_polyline(vec![points[i].clone(), points[(i + 1) % 4].clone()])
+                            .unwrap();
+                    let mut curve = pcurve.clone();
+                    for p in &mut curve.control_points {
+                        p.push(1.);
+                    }
+                    Boundary {
+                        curve,
+                        pcurve,
+                        reversed: false,
+                    }
+                })
+                .collect::<Vec<_>>()
+        };
+        let kept = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.05, 0.15)],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert!(kept.holes_kept_proven && kept.region.is_some());
+        assert_eq!(kept.region.unwrap().loops().len(), 2);
+        let removed_hole = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.5, 0.7)],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert!(removed_hole.interior.contact_inside_proven);
+        assert!(!removed_hole.holes_kept_proven && removed_hole.hole_placement_proven);
+        assert!(removed_hole.interior.region_subset_proven);
+        assert_eq!(removed_hole.removed_holes, vec![1]);
+        let region = removed_hole.region.unwrap();
+        assert_eq!(region.loops().len(), 1);
+        assert_eq!(region.source_loop_indices(), &[0]);
+        assert_eq!(
+            removed_hole
+                .interior
+                .proposal
+                .candidate_loops
+                .as_ref()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            removed_hole
+                .interior
+                .proposal
+                .candidate_source_loops
+                .as_ref()
+                .unwrap(),
+            &vec![0]
+        );
+        let mixed = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone(), make_hole(0.5, 0.7), make_hole(0.05, 0.15)],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert_eq!(mixed.removed_holes, vec![1]);
+        let region = mixed.region.unwrap();
+        assert_eq!(region.source_loop_indices(), &[0, 2]);
+        assert_eq!(region.loops().len(), 2);
+
+        let limited = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone()],
+            &contact,
+            0,
+            0,
+            2,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1,
+        )
+        .unwrap();
+        assert!(limited.region.is_none() && !limited.interior.region_subset_proven);
+        assert_eq!(limited.controls, 1);
+
+        let mut clockwise = wire.clone();
+        clockwise.reverse();
+        for b in &mut clockwise {
+            b.pcurve.control_points.reverse();
+            b.curve.control_points.reverse();
+        }
+        let clockwise = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[clockwise],
+            &contact,
+            0,
+            1,
+            3,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            0,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert!(clockwise.region.is_none() && !clockwise.interior.region_subset_proven);
+        assert_eq!(
+            clockwise.interior.proposal.search.search.original.reason,
+            "face-region-orientation-invalid"
+        );
+        let vertical = Curve::from_polyline(vec![vec![0.3, -0.2], vec![0.3, 1.2]]).unwrap();
+        let vertical = qualify_linear_region(
+            &ToleranceContext::default_valid(),
+            &s,
+            &[wire.clone()],
+            &vertical,
+            0,
+            3,
+            1,
+            1e-8,
+            limits,
+            10000,
+            [1e-7, 1e-7],
+            16,
+            16,
+            1,
+            1000,
+            10000,
+            1000,
+        )
+        .unwrap();
+        assert!(vertical.region.is_some() && vertical.interior.region_subset_proven);
         let stopped = propose(
             &ToleranceContext::default_valid(),
             &s,

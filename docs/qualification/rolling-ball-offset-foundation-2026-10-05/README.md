@@ -590,3 +590,44 @@ General rational restricted chart membership, full candidate region containment
 and hole/crossing audits, exact world-edge realization, topology/history and
 volume admission, implicit offset boundary roots and WASM/UI fillets remain
 outstanding. No final body or smooth end transition is admitted here.
+
+## Interior contact and qualified straight half-plane source regions
+
+`qualify_interior_contact` freshly builds the source contour, requires complete
+original boundary search with only the two owned transverse endpoint roots,
+proves contact simplicity through an original monotone coordinate, and
+classifies an interval-valued interior station against the complete original
+material region. Continuity and excluded further boundary contacts extend that
+witness to the full open contact arc; owned endpoints belong to its closure.
+An additional hole crossing or a station inside a void cannot admit the arc.
+This arc proof alone does not authorize replacement-region containment.
+
+`qualify_linear_region` adds exact half-plane clipping qualification for a
+single positive rational linear Bezier contact. It does not approximate curved
+contacts. Whole retained and removed original outer arcs must occupy opposite
+sides. Original source control hulls prove complete-curve side membership;
+linear partial edges use original clamped controls and root-expression endpoint
+identity on the contact line. Other restrictions need complete interval image
+side proof. Side arithmetic is outward-rounded and source control work has an
+explicit shared budget/work-stop state. Source face orientation contracts remain
+unchanged: clockwise outer input without a corresponding supported face recipe
+is refused by original face qualification.
+
+Each original hole must have a whole-source kept-side or removed-side proof.
+Kept holes preserve their definitions; wholly discarded holes are removed from
+the qualified UV region. Unresolved placement or a cut intersecting a hole
+prevents admission. Immutable `SourceRegion` contains the qualified source
+loops and their original loop indices. The proposal loop payload and its origin
+map are updated together before region containment is marked proven, so that
+proof cannot refer to the earlier unfiltered hole set. This is UV region
+qualification, not an embedded 3D face or closed volume.
+
+Validation: all 27 selected B-rep source tests passed on final sources
+(`source-region-regression.log.gz`). Extended cases cover interior arc admission,
+extra crossings through a hole, an arc traversing a void, horizontal and vertical
+clipping, retained/removed/mixed holes with original indices preserved, clockwise
+source-contract refusal and shared control-budget exhaustion.
+
+General curved contact region proofs, partial rational side bounds near root
+ends, cut holes, world embedding/exact edge realization, shell/volume admission,
+implicit offset endpoint roots and WASM/UI fillets remain outstanding.
