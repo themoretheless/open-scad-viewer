@@ -1209,3 +1209,40 @@ These fixtures partition existing complete rims. Different geometric coverage
 on a common carrier, iterative retained-region cuts, new cap/corner ownership,
 material volume and general fillet transition/radius/wall/STEP/WASM/UI admission
 remain outstanding.
+
+## Exact source use on different canonical geometric coverage
+
+`rational_bezier_composition_affine_identity` proves
+C(a+(b-a)t)=S(P(t)) with exact numerator/positive-denominator endpoints for a
+and b. The unchanged complete canonical curve is pulled back homogeneously by
+exact polynomial powers and cross products; no divided endpoint, extracted
+curve, rounded control net or reauthored Cartesian vertex is introduced.
+Either affine direction is supported, endpoints must be distinct in [0,1],
+and exact work/layout limits remain explicit. The original full-normalized
+composition API keeps its behavior and shortcuts.
+
+`curve_surface_affine::verify_algebraic` transports original definitions and
+returns formal composition only. `source_affine_use::qualify` binds that fresh
+identity to an immutable Fragment whose actual source-chart membership is
+already proven. MappedUse retains the complete original world curve, original
+UV restriction and exact affine fraction endpoints. Traversal orientation is
+an exact determinant. Canonical parameter bounds are outward intervals only;
+root expressions remain authority and are never converted to fixed vertices.
+
+All 55 selected source tests, all 648 NURBS library tests and all 25 exact
+predicate tests passed (`affine-coverage-source-regression.log.gz`,
+`affine-coverage-nurbs-regression.log.gz`, `affine-coverage-predicates.log.gz`).
+Fixtures cover a closing-line source interval mapping to canonical fractions
+1/6 and 71/96, a degree-two curved subinterval, a nonuniform rational canonical
+curve, reverse source traversal and reverse affine mapping. A retained curved
+fragment with an independently qualified crossing root preserves its complete
+definition and encloses the actual canonical root parameter. Mapping
+displacement, changed rational weights, invalid/zero ranges and exhaustion
+refuse proof. The old full-traversal proof refuses the different-coverage line
+that the explicit affine proof qualifies.
+
+MappedUse is one source-use certificate. It does not yet prove matching
+endpoints between two differently mapped uses, nor authorize shell-pair
+exclusion. Shared-edge/shell admission with those mappings, iterative retained
+region cuts, new closing caps/corners, material volume and general fillet
+transition/radius/wall/STEP/WASM/UI remain outstanding.
