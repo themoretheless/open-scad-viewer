@@ -555,3 +555,35 @@ it('qualifies center tangent regularity through real WASM and worker, including 
  }
 
 },30_000)
+
+it('qualifies local envelopes through the real worker with work stops, invalid input and Retry',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options=planeEnvelopeFixture(),before=structuredClone(options)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetEnvelope',options})
+ expect(r).toMatchObject({envelopeRegularityProven:true,finiteNurbsPatchProven:false,embeddingProven:false,trimMembershipProven:false,topologyAuthority:false})
+ const limited=await client.run({kind:'offsetEnvelope',options:{...options,maxCells:1}})
+ expect(limited).toMatchObject({envelopeRegularityProven:false,visitedCells:1})
+ expect(limited.cells[0].arcParameter).toEqual([0,1])
+ await expect(client.run({kind:'offsetEnvelope',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options}=curvedTangentFixture(rotated)
+  expect((await client.run({kind:'offsetEnvelope',options:{...options,maxCells:511}})).envelopeRegularityProven).toBe(true)
+ }
+ expect(options).toEqual(before)
+},30_000)
+
+it('keeps envelope cancellation final after a genuine successful late worker response',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options=planeEnvelopeFixture(),heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+ const pending=heldClient.run({kind:'offsetEnvelope',options}),rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+ const callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve});heldPort.onmessage=event=>release(event)
+ const event=await captured;expect(event.data.ok).toBe(true);expect(event.data.result.envelopeRegularityProven).toBe(true)
+ heldClient.cancel();callback(event);await rejection
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
+},30_000)

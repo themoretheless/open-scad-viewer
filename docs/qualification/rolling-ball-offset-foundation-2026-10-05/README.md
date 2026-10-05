@@ -160,4 +160,21 @@ Source velocities come from original surface first jets and certified implicit p
 
 Arc subdivision retains every failed leaf and covers `[0,1]` without gaps. The budget counts failed parents as well as final leaves and reserves work for all pending leaves. A work stop cannot silently omit an arc section or promote an incomplete result. Near-antipodal contacts, zero/unequal radii, unresolved source jets and irregular centers cannot be admitted. Global thickness, self-intersection, replacement trims, endpoint/corner transitions and finite NURBS fitting with a certified error remain required.
 
-Five new native checks pass: the planar quarter-cylinder envelope with independent analytic image/derivative/area-speed checks; curved cylinder/oblique-plane contact in original and rotated/translated frames; all four signed contact-side combinations in both frames; whole-arc budget refusal; malformed radii/budgets. The combined offset regression filter passes 54 tests. The full-band interval certificate, rather than the finite analytic oracle checks, is the regularity proof. No new WASM/worker/UI envelope operation is published yet.
+Five new native checks pass: the planar quarter-cylinder envelope with independent analytic image/derivative/area-speed checks; curved cylinder/oblique-plane contact in original and rotated/translated frames; all four signed contact-side combinations in both frames; whole-arc budget refusal; malformed radii/budgets. The combined offset regression filter passes 54 tests. The full-band interval certificate, rather than the finite analytic oracle checks, is the regularity proof. The WASM/worker query is qualified below; no new UI fillet operation is admitted.
+
+### Envelope transport and worker admission
+
+The JSON query `surface_offset_envelope` and typed MainSolid job `offsetEnvelope` expose the local analytic envelope certificate. Response admission reuses the original full-band tangent validator, verifies the requested radius and total cell budget, requires an ordered gap-free arc partition from zero to one, and checks the binary subdivision work identity `visitedCells = 2 * leaves - 1`. Every cell needs finite ordered image/derivative/area-speed intervals. A positive regularity claim requires a positive area-speed lower bound and a derivative cross-product box separated from zero. Missing cells, parallel derivative boxes, zero-inclusive area speed, radius changes, invalid work counts and promoted topology/trim/embedding/finite-patch gates are rejected.
+
+Center derivatives are millimeters per unit of the original driving source parameter; arc derivatives are millimeters per unit of the rational arc parameter. Area speed has units of square millimeters per product of those parameter units. None is a finished-part dimension or volume measure.
+
+Native transport plus offset regression: 55 tests pass. Actual WASM and real-worker checks pass for full arc admission, analytic image/derivative comparisons, curved/rotated contacts, work stops, malformed inputs, Retry, cancellation and genuine successful late-response refusal. The final WASM and real-worker qualification is complete as recorded below.
+
+### Final envelope worker delivery
+
+- 55 native offset regression tests pass, including six envelope/transport checks (five geometric and one JSON query).
+- 112 product tests in ten files pass on the final artifact. Tests include complete arc partition, independent analytic image/derivative/area-speed comparisons, curved and rotated contacts through the real worker, bounded work, malformed input and Retry, actual cancellation followed by a captured successful late response, and rejection of omitted cells and promoted topology.
+- Vue/MCP type checks, production Vite build, distribution/source payload verification and diff checks pass.
+- WASM: 11,056,362 bytes; SHA-256 `ff6d979f30a614cbc0263930c8b3498ac3b5074f98bf3817ca6279189f0c899f`.
+- Packed geometry: 3,689,468 bytes. Assets: 7,933,678 bytes (+6,356 bytes from center tangent delivery). Explicit budgets: 3,692,000 and 7,936,500 bytes.
+- This is an analytic local envelope query through the existing worker. A finite NURBS patch with certified fitting error, replacement source trims, endpoint/corner transitions, embedding/volume checks and UI solid admission remain required. Variable-radius envelopes remain open.

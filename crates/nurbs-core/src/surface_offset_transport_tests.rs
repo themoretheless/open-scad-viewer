@@ -217,3 +217,23 @@ fn offset_contact_tangent_transport_does_not_admit_an_envelope() {
         assert_eq!(r[field], false);
     }
 }
+
+#[test]
+fn offset_envelope_transport_keeps_full_arc_and_topology_gates() {
+    let a=plane();let mut b=a.clone();
+    for row in &mut b.control_points {for p in row {let z=p[1];p[1]=0.5;p[2]=z;}}
+    let mut input=json!({"op":"surface_offset_envelope","a":a,"b":b,"distances":[0.2,0.2],
+        "fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],
+        "secondDomain":[[0.30,0.44],[0.15,0.25]],"maxSpans":2,"maxCells":255});
+    let r=dispatch(input.clone()).unwrap();
+    assert_eq!(r["envelopeRegularityProven"],json!(true));
+    assert_eq!(r["centerTangent"]["centerRegularityProven"],json!(true));
+    for key in ["wholeCurveComplete","finiteNurbsPatchProven","trimMembershipProven","embeddingProven","topologyAuthority"] {
+        assert_eq!(r[key],json!(false));
+    }
+    input["maxCells"]=json!(1);
+    let r=dispatch(input).unwrap();
+    assert_eq!(r["envelopeRegularityProven"],json!(false));
+    assert_eq!(r["visitedCells"],json!(1));
+    assert_eq!(r["cells"][0]["arcParameter"],json!([0.,1.]));
+}

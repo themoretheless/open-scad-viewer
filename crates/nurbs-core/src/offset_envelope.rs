@@ -19,11 +19,27 @@ pub struct Cell {
     pub regular: bool,
 }
 pub struct Report {
+    pub radius: f64,
     pub tangent: Tangent,
     pub cells: Vec<Cell>,
     pub visited: usize,
     pub regular: bool,
     pub reason: &'static str,
+}
+impl Report {
+    pub fn to_value(&self) -> value_codec::Value {
+        use value_codec::json;
+        let cells: Vec<_> = self.cells.iter().map(|c| json!({
+            "arcParameter":c.arc_parameter,"imageIntervalsMm":c.image,
+            "centerDerivativeIntervalsMm":c.center_derivative,"arcDerivativeIntervalsMm":c.arc_derivative,
+            "areaSpeedIntervalMm2":c.area_speed,"regularityProven":c.regular
+        })).collect();
+        json!({"method":"interval-rolling-ball-envelope","scope":"constant-radius-local-contact-band",
+            "radiusMm":self.radius,"centerTangent":self.tangent.to_value(),"cells":cells,
+            "visitedCells":self.visited,"envelopeRegularityProven":self.regular,"reason":self.reason,
+            "wholeCurveComplete":false,"finiteNurbsPatchProven":false,"trimMembershipProven":false,
+            "embeddingProven":false,"topologyAuthority":false})
+    }
 }
 fn vec_i(x: [[f64; 2]; 3]) -> Result<V> {
     Ok([
@@ -152,6 +168,7 @@ pub fn certify(
         max_spans,
     )?;
     let mut out = Report {
+        radius: distances[0].abs(),
         tangent,
         cells: vec![],
         visited: 0,

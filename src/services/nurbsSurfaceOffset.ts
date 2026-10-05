@@ -115,3 +115,19 @@ export interface OffsetContactTangent {
 /** A regular center tangent does not certify a fillet envelope or trims. */
 export const certifyNurbsOffsetContactTangent=(options:OffsetContactBandOptions):OffsetContactTangent=>
  callNurbsRust('surface_offset_contact_tangent',options)
+
+export interface OffsetEnvelopeOptions extends OffsetContactBandOptions {maxCells:number}
+export interface OffsetEnvelopeCell {
+ arcParameter:Interval;imageIntervalsMm:[Interval,Interval,Interval]
+ centerDerivativeIntervalsMm:[Interval,Interval,Interval];arcDerivativeIntervalsMm:[Interval,Interval,Interval]
+ areaSpeedIntervalMm2:Interval;regularityProven:boolean
+}
+export interface OffsetEnvelope {
+ method:'interval-rolling-ball-envelope';scope:'constant-radius-local-contact-band'
+ radiusMm:number;centerTangent:OffsetContactTangent;cells:OffsetEnvelopeCell[];visitedCells:number
+ envelopeRegularityProven:boolean;reason:string
+ wholeCurveComplete:false;finiteNurbsPatchProven:false;trimMembershipProven:false;embeddingProven:false;topologyAuthority:false
+}
+/** Local immersion only; no finite tensor patch, embedding, trims or fillet solid. */
+export const certifyNurbsOffsetEnvelope=(options:OffsetEnvelopeOptions):OffsetEnvelope=>
+ callNurbsRust('surface_offset_envelope',options)
