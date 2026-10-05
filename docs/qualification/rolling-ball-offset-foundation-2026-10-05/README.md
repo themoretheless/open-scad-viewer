@@ -751,3 +751,25 @@ All 32 selected source tests passed (`source-shared-root-equivalence.log.gz`).
 The new case joins independently selected roots across two surfaces. Different
 UV equations, parameter remapping, body assembly and interactive operations
 remain outstanding.
+
+## Common world roots for distinct UV crossing equations
+
+`qualify_with_cutters` supports different original UV equations on two surfaces.
+Each optional canonical crossing curve must be exactly equal to the composition
+of the other UV curve through each original surface. The main canonical edge
+composition also undergoes independent exact identity checks. Original parameter
+domains must match the canonical domains, without canonical reversal.
+
+For root identity, the union of both original parameter selector boxes must
+have a freshly certified unique root in at least one XY/XZ/YZ projection of
+the canonical 3D edge and cutter. Each known source root satisfies those
+projected equations and belongs to that union. Uniqueness therefore proves
+that both roots have identical parameters; mere projection intersections or
+enclosure overlap cannot authorize a shared endpoint. Cutter and main identity
+work share one budget, and at most three projection queries per root are counted.
+
+All 33 selected source tests passed (`source-shared-world-root.log.gz`). The
+new regression uses distinct surface charts with swapped UV axes and different
+UV crossing equations. It refuses absent cutter evidence, a displaced cutter
+and a non-3D canonical edge. General parameter remapping, tangential projected
+roots, body assembly, embedding, end transitions and UI admission remain open.

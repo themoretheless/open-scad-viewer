@@ -1,5 +1,5 @@
 //! Exact canonical world ownership for original source edges with qualified restrictions.
-use crate::source_boundary_fragment::{Endpoint, Fragment};
+use crate::source_boundary_fragment::{Endpoint, Fragment, Role};
 use cad_predicates::BezierIdentity;
 use nurbs_core::{curve::Curve, curve_surface_agreement, Error, Result};
 #[derive(Clone)]
@@ -33,6 +33,17 @@ pub fn qualify(
     world_reversed: [bool; 2],
     max_work: u64,
 ) -> Result<Report> {
+    qualify_with_cutters(world, uses, world_reversed, [None, None], max_work)
+}
+/// Optional canonical crossing curves for endpoints of the first directed use.
+/// Their full source compositions are independently checked before root identity.
+pub fn qualify_with_cutters(
+    world: &Curve,
+    uses: [&Fragment; 2],
+    world_reversed: [bool; 2],
+    cutters: [Option<&Curve>; 2],
+    max_work: u64,
+) -> Result<Report> {
     if max_work == 0 || max_work > 100_000_000 {
         return Err(Error::new(
             "BREP_SOURCE_SHARED_EDGE",
@@ -40,6 +51,12 @@ pub fn qualify(
         ));
     }
     world.validate()?;
+    if world.control_points[0].len() != 3 {
+        return Err(Error::new(
+            "BREP_SOURCE_SHARED_EDGE",
+            "Canonical world edge must be 3D",
+        ));
+    }
     let mut out = Report {
         edge: None,
         work_used: 0,
@@ -55,8 +72,8 @@ pub fn qualify(
         // Exact full-source identity uses normalized traversal. With identical
         // domains and no world reversal, original t is the canonical parameter.
         // Root identity follows original equations and a fresh common-root proof, not
-        // overlapping isolating intervals. Different UV equations need another
-        // root-equivalence proof and remain unqualified here.
+        // overlapping isolating intervals. Different UV equations require
+        // independent canonical cutter identity and projected root uniqueness.
         if world_reversed != [false, false]
             || uses.iter().any(|e| e.curve().domain() != world.domain())
         {
@@ -70,7 +87,17 @@ pub fn qualify(
                     Endpoint::Crossing { point: b, role: br },
                 ) => {
                     if ar != br || a.boundary() != b.boundary() || a.contact() != b.contact() {
-                        false
+                        if let Some(cutter) = cutters[i] {
+                            common_world_root(
+                                world,
+                                cutter,
+                                [(a, *ar), (b, *br)],
+                                &mut out,
+                                max_work,
+                            )?
+                        } else {
+                            false
+                        }
                     } else if a.selector() == b.selector() {
                         true
                     } else {
@@ -143,10 +170,173 @@ pub fn qualify(
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
 }
+// Both known source roots must lie inside a box on which a projection of the
+// canonical 3D crossing equations has exactly one root. Thus projection cannot
+// introduce ambiguity between the two actual roots, even on different charts.
+fn common_world_root(
+    world: &Curve,
+    cutter: &Curve,
+    points: [(&crate::source_contact_point::SourcePoint, Role); 2],
+    out: &mut Report,
+    max_work: u64,
+) -> Result<bool> {
+    let mut ranges = [[[0.; 2]; 2]; 2];
+    for (i, (point, role)) in points.iter().enumerate() {
+        let (main, other, index) = match role {
+            Role::Boundary => (point.boundary(), point.contact(), 0),
+            Role::Contact => (point.contact(), point.boundary(), 1),
+        };
+        if main.domain() != world.domain() || other.domain() != cutter.domain() {
+            return Ok(false);
+        }
+        if out.work_used == max_work {
+            return Ok(false);
+        }
+        let Some(proof) = curve_surface_agreement::verify_exact(
+            cutter,
+            other,
+            point.surface(),
+            false,
+            max_work - out.work_used,
+        )?
+        else {
+            return Ok(false);
+        };
+        out.work_used += proof.work_used;
+        if proof.outcome != BezierIdentity::Equal {
+            return Ok(false);
+        }
+        ranges[i] = [point.selector()[index], point.selector()[1 - index]];
+    }
+    let box_: [[f64; 2]; 2] = std::array::from_fn(|axis| {
+        [
+            ranges[0][axis][0].min(ranges[1][axis][0]),
+            ranges[0][axis][1].max(ranges[1][axis][1]),
+        ]
+    });
+    for axes in [[0, 1], [0, 2], [1, 2]] {
+        let project = |c: &Curve| {
+            let mut p = c.clone();
+            p.control_points = c
+                .control_points
+                .iter()
+                .map(|v| vec![v[axes[0]], v[axes[1]]])
+                .collect();
+            p
+        };
+        out.root_checks += 1;
+        if nurbs_core::uv_curve_crossings::certify_box(&project(world), &project(cutter), box_)?
+            .state
+            == nurbs_core::uv_curve_crossings::State::Unique
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
     use nurbs_core::surface::Surface;
+    #[test]
+    fn different_uv_equations_require_exact_world_cutter_and_unique_world_root() {
+        let s = |swap: bool| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0..2)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| {
+                            if swap {
+                                vec![v as f64, u as f64, 0.]
+                            } else {
+                                vec![u as f64, v as f64, 0.]
+                            }
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let line = |p| Curve::from_polyline(p).unwrap();
+        let p = [
+            line(vec![vec![0., 0.5], vec![1., 0.5]]),
+            line(vec![vec![0.5, 0.], vec![0.5, 1.]]),
+        ];
+        let q = [
+            line(vec![vec![0.5, 0.2], vec![0.5, 0.8]]),
+            line(vec![vec![0.2, 0.5], vec![0.8, 0.5]]),
+        ];
+        let surface = [s(false), s(true)];
+        let roots: Vec<_> = (0..2)
+            .map(|i| {
+                crate::source_contact_point::qualify(&surface[i], &p[i], &q[i], [[0., 1.]; 2], 16)
+                    .unwrap()
+                    .point
+                    .unwrap()
+            })
+            .collect();
+        let a = Fragment::new(
+            &surface[0],
+            &p[0],
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: roots[0].clone(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let b = Fragment::new(
+            &surface[1],
+            &p[1],
+            Endpoint::Crossing {
+                point: roots[1].clone(),
+                role: Role::Boundary,
+            },
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let world = line(vec![vec![0., 0.5, 0.], vec![1., 0.5, 0.]]);
+        let cutter = line(vec![vec![0.5, 0.2, 0.], vec![0.5, 0.8, 0.]]);
+        assert!(qualify_with_cutters(
+            &p[0],
+            [&a, &b],
+            [false, false],
+            [None, Some(&cutter)],
+            1_000_000
+        )
+        .is_err());
+        assert!(qualify(&world, [&a, &b], [false, false], 1_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+        let r = qualify_with_cutters(
+            &world,
+            [&a, &b],
+            [false, false],
+            [None, Some(&cutter)],
+            1_000_000,
+        )
+        .unwrap();
+        assert!(r.edge.is_some(), "{}", r.reason);
+        assert_eq!(r.root_checks, 1);
+        let mut wrong = cutter.clone();
+        wrong.control_points[0][2] = 1e-12;
+        assert!(qualify_with_cutters(
+            &world,
+            [&a, &b],
+            [false, false],
+            [None, Some(&wrong)],
+            1_000_000
+        )
+        .unwrap()
+        .edge
+        .is_none());
+    }
     #[test]
     fn different_surface_charts_share_only_exact_opposite_world_uses() {
         let surface = |z: f64| Surface {
