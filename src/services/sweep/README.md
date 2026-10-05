@@ -1,20 +1,30 @@
 # Loft, sweep and miter integration
 
-The Rust `nurbs-core` kernel owns the rational loft/sweep geometry and predicate algorithms.
-These TypeScript modules adapt kernel calls and assemble evidence for the same
-constructor request:
+Rust owns geometry, constructor orchestration, refinement, section corrections,
+complete-boundary certificate composition, source ownership, Solid admission,
+and validation of claims displayed in the viewport.
 
-- `construction/`: loft and sweep B-rep constructors, streaming, bounded section
-  correction, and constructor-owned boundary certificates.
-- `certificates/`: native audit adapters and complete-boundary evidence composition.
-- `admission/`: recompute Solid evidence on the exact geometry being transferred.
-- `viewport/`: validate the reported seam set before displaying smoothness claims.
+- `crates/nurbs-core`: rational geometry and scoped geometric predicates.
+- `crates/brep-core`: retained topology and boundary audits.
+- `crates/geometry-bridge/src/sweep_pipeline.rs`: same-request construction and
+  certificate composition, native stream snapshots and bounded refinement,
+  private corrected sections, opaque owner capabilities, placement and smoothing.
+- `crates/geometry-bridge/src/sweep_viewport.rs`: validation of display evidence.
+- `crates/modelgraph-runtime/src/profiles.rs`: canonical convex graph loft geometry.
+  Unreferenced TypeScript copies were removed.
 
-`geometry/brep.ts` is the stable public facade. `geometry/brep/core.ts` contains
-other B-rep operations and shared carrier types. Former flat service paths remain
-compatibility re-exports. Internal sweep modules import their concrete owners;
-they do not depend on those compatibility facades. Keep the constructor ownership
-WeakMap in one module: copied or mutated geometry must not inherit a certificate.
+The TypeScript files in this directory carry types and adapt native calls.
+Async generators schedule browser events and observe cancellation between kernel
+calls; they do not choose refinement levels or assemble geometry/certificates.
+The native stream registry retains the source snapshot and owns refinement state.
+An abandoned generator releases its native stream in `finally`.
+
+`geometry/brep.ts` remains the public facade; former flat paths are compatibility
+re-exports. A transport WeakMap holds opaque Rust owner identifiers. The Rust
+registry checks the source geometry and boundary certificate against the privately
+owned values before placement or reconstruction. Copies without a capability,
+modified geometry, and stale certificates are rejected. Finalization releases
+unused native owners; explicit stream release handles cancellation.
 
 Rust certificate entry points are grouped under
 `sweeps::certificates`, `progressive_miter::law_certificates`, and
@@ -31,10 +41,15 @@ claim. Native and WASM suites cover families; they do not each execute every UI 
 Run `node scripts/run-sweep-qualification.mjs list` to inspect selection, or replace
 `list` with `native`, `wasm`, `rush`, `browser`, `step`, or `step-smooth`.
 Browser and STEP targets accept the existing export/output arguments. STEP targets
-export fixtures; `step-smooth` also fills the volume reference using the independent
-existing independent polynomial-generator oracle. OCCT checks still run through
+export fixtures; `step-smooth` also fills the volume reference using the existing
+independent polynomial-generator oracle. OCCT checks still run through
 `scripts/verify-sweep-step-occt.py` against the generated manifest. The STEP exporters
 reject missing, extra, or duplicate catalog fixtures. Their construction recipes,
 volume calculations, and geometric assertions stay outside the selection catalog.
 Browser provenance includes both compatibility facades and implementation sources.
 Historical qualification records remain unchanged.
+
+The legacy `surface_scaled_sweep` and `surface_profile_sweep` operations have no
+implementation in this kernel revision. Their compatibility adapters convert laws
+in Rust and retain the native refusal. They are excluded from the successful
+progressive sweep/miter qualification claim; no substitute geometry is returned.

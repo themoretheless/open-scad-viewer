@@ -11,7 +11,7 @@ for(const target of ['wasm','rush'])for(const file of catalog.suites[target])ass
 const target=process.argv[2]??'list'
 const args=process.argv.slice(3)
 const commands={
- native:catalog.suites.native.filters.map(filter=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p',catalog.suites.native.package,'--lib',filter]),
+ native:[...catalog.suites.native.filters.map(filter=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p',catalog.suites.native.package,'--lib',filter]),...(catalog.suites.native.bridgeTests??[]).map(test=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p','geometry-bridge','--test',test])],
  wasm:[['node_modules/.bin/vitest','run',...catalog.suites.wasm]],
  rush:[['node_modules/.bin/vitest','run',...catalog.suites.rush]],
  browser:[['node','scripts/check-sweep-miter-matrix-browser.mjs',...args]],

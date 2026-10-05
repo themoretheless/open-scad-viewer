@@ -32,7 +32,7 @@ async function collectSources(directory){
 await collectSources('src/services/sweep')
 await collectSources('src/services/geometry/brep')
 report.sourceHashes = Object.fromEntries(await Promise.all([
- ...implementationSources.sort(), 'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/services/geometry/brep.ts',
+ ...implementationSources.sort(), 'crates/geometry-bridge/src/sweep_pipeline.rs', 'crates/geometry-bridge/src/sweep_viewport.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/nurbsConstructors.ts', 'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/services/geometry/brep.ts',
  'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
 ].map(async file => [file, sha(await readFile(file))])))
 const save=()=>writeFile(path.join(output,'matrix.json'),JSON.stringify(report,null,2)+'\n')

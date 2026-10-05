@@ -244,6 +244,10 @@
         "progressive_miter",
         "sweep_section_correction",
         "sweep_seam_set"
+      ],
+      "bridgeTests": [
+        "sweep_pipeline",
+        "loft_generalization"
       ]
     },
     "wasm": [
@@ -253,7 +257,9 @@
       "tests/sweepRetainedDecomposition.test.ts",
       "tests/sweepAffineLattice.test.ts",
       "tests/miterSmoothStationWalls.test.ts",
-      "tests/sweepCurvedGuideMiter.test.ts"
+      "tests/sweepCurvedGuideMiter.test.ts",
+      "tests/nurbsProgressiveMiterWallAudit.test.ts",
+      "tests/sweepViewportEvidence.test.ts"
     ],
     "rush": [
       "tests/modelGraphLoft.test.ts",

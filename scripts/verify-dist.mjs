@@ -92,7 +92,9 @@ const limits = new Map([
 // Expanded native sweep/miter, retained decomposition and authored surface input:
 // local c94f6fca artifact production chunk measured at 3,521,252 bytes.
 // Combined sweep and CAD diagnostics: locally measured 3,647,400 packed bytes.
-const geometryChunkBudget = 3_655_000
+// Rust constructor ownership, native refinement and viewport evidence validation:
+// measured 3,686,058 packed bytes; retain 33,942 bytes of headroom.
+const geometryChunkBudget = 3_720_000
 const jsChunkBudgets = [
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
