@@ -155,3 +155,5 @@ pub mod offset_contact_trims;
 pub mod offset_face_loops;
 
 pub mod offset_patch_boundary;
+
+pub mod curve_partition_agreement;
