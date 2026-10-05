@@ -1,4 +1,4 @@
-//! Exact canonical world ownership for two complete original source edges.
+//! Exact canonical world ownership for original source edges with qualified restrictions.
 use crate::source_boundary_fragment::{Endpoint, Fragment};
 use cad_predicates::BezierIdentity;
 use nurbs_core::{curve::Curve, curve_surface_agreement, Error, Result};
@@ -44,10 +44,36 @@ pub fn qualify(
         work_used: 0,
         reason: "source-restriction-identity-unproven",
     };
-    for edge in uses {
+    let complete = uses.iter().all(|edge| {
         let d = edge.curve().domain();
         let expected = if edge.reversed() { [d[1], d[0]] } else { d };
-        if !(0..2).all(|i| matches!(&edge.endpoints()[i], Endpoint::Parameter(t) if t.to_bits() == expected[i].to_bits())) {
+        (0..2).all(|i| matches!(&edge.endpoints()[i], Endpoint::Parameter(t) if t.to_bits() == expected[i].to_bits()))
+    });
+    if !complete {
+        // Exact full-source identity uses normalized traversal. With identical
+        // domains and no world reversal, original t is the canonical parameter.
+        // Root identity follows identical original equations and selector, not
+        // overlapping isolating intervals. Different UV equations need another
+        // root-equivalence proof and remain unqualified here.
+        if world_reversed != [false, false]
+            || uses.iter().any(|e| e.curve().domain() != world.domain())
+        {
+            return Ok(out);
+        }
+        let same = |a: &Endpoint, b: &Endpoint| match (a, b) {
+            (Endpoint::Parameter(a), Endpoint::Parameter(b)) => a.to_bits() == b.to_bits(),
+            (
+                Endpoint::Crossing { point: a, role: ar },
+                Endpoint::Crossing { point: b, role: br },
+            ) => {
+                ar == br
+                    && a.boundary() == b.boundary()
+                    && a.contact() == b.contact()
+                    && a.selector() == b.selector()
+            }
+            _ => false,
+        };
+        if !(0..2).all(|i| same(&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i])) {
             return Ok(out);
         }
     }
@@ -134,6 +160,51 @@ mod tests {
         let mut shifted = c.clone();
         shifted.control_points[0][2] = 1e-12;
         assert!(qualify(&shifted, [&a, &b], [false, false], 1_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+        let cutter = Curve::from_polyline(vec![vec![0.5, -0.2], vec![0.5, 0.2]]).unwrap();
+        let point = |surface: &Surface| {
+            crate::source_contact_point::qualify(surface, &p, &cutter, [[0., 1.]; 2], 16)
+                .unwrap()
+                .point
+                .unwrap()
+        };
+        let root_a = Endpoint::Crossing {
+            point: point(a.surface()),
+            role: crate::source_boundary_fragment::Role::Boundary,
+        };
+        let root_b = Endpoint::Crossing {
+            point: point(b.surface()),
+            role: crate::source_boundary_fragment::Role::Boundary,
+        };
+        let cut_a = Fragment::new(a.surface(), &p, Endpoint::Parameter(0.), root_a).unwrap();
+        let cut_b = Fragment::new(b.surface(), &p, root_b, Endpoint::Parameter(0.)).unwrap();
+        let shared = qualify(&c, [&cut_a, &cut_b], [false, false], 1_000_000).unwrap();
+        assert!(shared.edge.is_some(), "{}", shared.reason);
+        assert_eq!(
+            shared.edge.unwrap().uses()[0].definition(),
+            cut_a.definition()
+        );
+        let mut other = cutter.clone();
+        other.control_points[0][0] += 1e-12;
+        other.control_points[1][0] += 1e-12;
+        let other =
+            crate::source_contact_point::qualify(b.surface(), &p, &other, [[0., 1.]; 2], 16)
+                .unwrap()
+                .point
+                .unwrap();
+        let mismatch = Fragment::new(
+            b.surface(),
+            &p,
+            Endpoint::Crossing {
+                point: other,
+                role: crate::source_boundary_fragment::Role::Boundary,
+            },
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        assert!(qualify(&c, [&cut_a, &mismatch], [false, false], 1_000_000)
             .unwrap()
             .edge
             .is_none());

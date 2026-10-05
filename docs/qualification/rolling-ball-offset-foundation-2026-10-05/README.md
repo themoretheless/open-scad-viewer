@@ -718,3 +718,21 @@ direction, a 1e-12 world displacement and unsupported partial source restriction
 This gate currently admits complete original natural-domain curves only.
 Root-valued partial restrictions, cross-face root equivalence, assembly into Model
 vertices/edges and embedded closed volume admission remain outstanding.
+
+## Shared restrictions with original root endpoints
+
+The exact shared-edge gate now admits restrictions when both UV sources use
+the canonical world parameter domain without reversal of the world definition.
+Opposite traversal remains mandatory. Fixed endpoint parameters must match
+exactly; crossing endpoints must use the same original boundary/contact
+equations, source role and root selector. Surfaces may differ because each
+full composition is independently proven equal to the canonical world curve.
+The canonical curve stays untrimmed and restrictions retain original endpoints.
+
+All 32 selected source tests passed (`source-shared-restricted-edge.log.gz`).
+The extended case shares a root-valued cut across different source surfaces,
+preserves its source definition and refuses a different root displaced by 1e-12.
+Different UV root equations, affine parameter remapping and reversed canonical
+partial domains still need independent equivalence proofs. No enclosure overlap,
+rounded root parameter or coordinate welding substitutes for these proofs.
+Body assembly, end transitions and interactive fillets remain outstanding.
