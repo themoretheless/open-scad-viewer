@@ -72,6 +72,7 @@ pub struct ChartFace {
     pub linear: Option<nurbs_core::surface_linear_monotonicity::Report>,
     pub quotient: Option<nurbs_core::surface_quotient_injectivity::Report>,
     pub ruled_quotient: Option<nurbs_core::surface_quotient_injectivity::RuledReport>,
+    pub polar_quotient: Option<nurbs_core::surface_quotient_injectivity::PolarReport>,
 }
 impl ChartFace {
     pub fn injectivity_proven(&self) -> bool {
@@ -79,6 +80,7 @@ impl ChartFace {
             || self.linear.as_ref().is_some_and(|r| r.certified)
             || self.quotient.as_ref().is_some_and(|r| r.proven)
             || self.ruled_quotient.as_ref().is_some_and(|r| r.proven)
+            || self.polar_quotient.as_ref().is_some_and(|r| r.proven)
     }
 }
 pub struct ChartReport {
@@ -127,6 +129,7 @@ impl Shell {
             };
             out.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
             let mut ruled_quotient = None;
+            let mut polar_quotient = None;
             let quotient = if !contraction.as_ref().is_some_and(|r| r.proven)
                 && !linear.as_ref().is_some_and(|r| r.certified)
                 && max_spans - out.spans >= 16
@@ -182,6 +185,17 @@ impl Shell {
                         out.spans += ruled.cells;
                         ruled_quotient = Some(ruled);
                     }
+                    if !proof.proven && surface.degree_u >= 2 && max_spans - out.spans >= 256 {
+                        let polar =
+                            nurbs_core::surface_quotient_injectivity::certify_polar_source_frame(
+                                surface,
+                                ends[0],
+                                16,
+                                max_spans - out.spans,
+                            )?;
+                        out.spans += polar.cells;
+                        polar_quotient = Some(polar);
+                    }
                     Some(proof)
                 } else {
                     None
@@ -195,6 +209,7 @@ impl Shell {
                 linear,
                 quotient,
                 ruled_quotient,
+                polar_quotient,
             };
             out.all_injective &= result.injectivity_proven();
             out.faces.push(result);
@@ -699,11 +714,26 @@ mod tests {
                     );
                 } else {
                     assert!(
-                        !face.injectivity_proven(),
-                        "sphere cap still needs a polar proof"
+                        face.polar_quotient.as_ref().is_some_and(|q| q.proven),
+                        "sphere cap: {:?}",
+                        face.polar_quotient
                     );
                 }
             }
+            assert!(
+                charts.all_injective,
+                "unproven faces: {:?}",
+                charts
+                    .faces
+                    .iter()
+                    .filter(|f| !f.injectivity_proven())
+                    .map(|f| (
+                        f.face,
+                        f.contraction.as_ref().map(|r| r.reason),
+                        f.linear.as_ref().map(|r| r.certified)
+                    ))
+                    .collect::<Vec<_>>()
+            );
             let limited = shell.inspect_face_charts(1, 0).unwrap();
             assert!(!limited.all_injective && limited.spans <= 1);
 

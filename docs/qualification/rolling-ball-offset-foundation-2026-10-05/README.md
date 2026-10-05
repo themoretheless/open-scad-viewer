@@ -1873,3 +1873,41 @@ of cross-face embedding, material orientation, volume, walls or body admission.
 Validation: the complete NURBS library suite passes 660 tests and the selected
 source B-rep suite passes 77 tests, with zero failures. Compressed logs accompany
 this stage. No new WASM, worker, UI or STEP acceptance is claimed.
+
+## Polar blowup proof for sphere endpoint charts
+
+The native quotient audit now supports a second sufficient theorem on the
+unchanged original chart. After translating by its exactly constant pole row,
+the homogeneous position numerator has an exact factor u. The factor is removed
+algebraically, giving S-P=u D/W. Fixed source-defined functionals construct
+F=f.(S-P), G=(g.D)/(h.D). The F frame uses far-row endpoints; the direction
+frame uses the adjacent-row endpoints. All expressions and polynomial products
+are enclosed with outward Bernstein interval arithmetic, including the exact
+source-frame expressions. No geometry is rescaled, trimmed, sampled or snapped.
+
+Every cell proves W>0 and h.D>0. Global derivative bounds establish F_u>=a>0,
+G_v>=b>0, |F_v|<=e and |G_u|<=c with a*b-e*c>0. For two points with equal F,G,
+component differences along rectangle segments give a|du|<=e|dv| and
+b|dv|<=c|du|, forcing du=dv=0. Thus the extended map is globally injective.
+For u>0 the actual world image determines F,G; F(0,v)=0 and F_u>0 also separate
+every nonpole point from the pole. Only the complete collapsed boundary is
+identified in the original world image. This is a whole-domain sufficient proof.
+
+The bounded supported class is single clamped original spans, U degree 2..8
+and V degree 1..8 with positive weights. Complete shared chart budgets include
+all proof cells. Incomplete work, nonpositive denominator or an unresolved
+dominance margin admits nothing. Existing diagnostics are retained beside the
+new polar report; immutable source ownership is required before shell dispatch.
+
+All eight translated/rotated endpoint assemblies now prove every original
+chart injective, including sphere caps, cone poles and ordinary shaft/cap faces.
+Their previous incidence and vertex-link checks still pass. Native regressions
+also cover nonunit domains, reversed pole ends, folds, repeated directions,
+perturbed pole rows and exhausted work. The complete NURBS library passes
+662 tests; 77 selected source tests and the final all-chart regression pass.
+Compressed logs accompany this stage.
+
+Per-chart injectivity and closed oriented incidence do not prove cross-face
+embedding. Full retained face-contact coverage, qualified material regions,
+orientation/volume, wall validation and closed Model/STEP/WASM/UI admission
+remain unfinished, along with general nonlinear blend laws and complex corners.
