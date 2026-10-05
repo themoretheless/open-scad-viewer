@@ -72,6 +72,56 @@ fn projection(p: &[f64], q: &[f64], direction: [f64; 2]) -> Result<I> {
 // controls except the one common endpoint must lie on a strict half-plane;
 // a whole span supported only at that endpoint would violate injectivity.
 fn single_endpoint_separation(a: &Curve, b: &Curve, join: &[f64]) -> Result<bool> {
+    // A clamped rational Bezier has positive interior Bernstein factors.
+    // Controls on the separating plane are allowed when at least one is
+    // strict and every non-shared endpoint is strict. This admits tangent
+    // quarter-arcs without admitting a second boundary contact.
+    for axis in 0..2 {
+        for positive in [true, false] {
+            let side = |p: &[f64]| {
+                if positive {
+                    p[axis] > join[axis]
+                } else {
+                    p[axis] < join[axis]
+                }
+            };
+            let closed_side = |p: &[f64]| {
+                if positive {
+                    p[axis] >= join[axis]
+                } else {
+                    p[axis] <= join[axis]
+                }
+            };
+            let opposite = |p: &[f64]| {
+                if positive {
+                    p[axis] <= join[axis]
+                } else {
+                    p[axis] >= join[axis]
+                }
+            };
+            let strict = |c: &Curve| {
+                let n = c.control_points.len();
+                let bezier = !c.periodic
+                    && n == c.degree + 1
+                    && c.knots[..=c.degree].iter().all(|k| *k == c.domain()[0])
+                    && c.knots[n..].iter().all(|k| *k == c.domain()[1]);
+                bezier
+                    && c.control_points.iter().all(|p| closed_side(p))
+                    && c.control_points.iter().any(|p| side(p))
+                    && [
+                        c.control_points.first().unwrap(),
+                        c.control_points.last().unwrap(),
+                    ]
+                    .iter()
+                    .all(|p| p.as_slice() == join || side(p))
+            };
+            if (strict(a) && b.control_points.iter().all(|p| opposite(p)))
+                || (strict(b) && a.control_points.iter().all(|p| opposite(p)))
+            {
+                return Ok(true);
+            }
+        }
+    }
     let mut directions = vec![[1., 0.], [0., 1.]];
     let neighbor = |c: &Curve| -> Option<[f64; 2]> {
         let p = if c.control_points[0].as_slice() == join {
@@ -139,6 +189,54 @@ pub fn splice(
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
+    splice_impl(
+        loops,
+        loop_index,
+        arc_start,
+        arc_count,
+        contact,
+        tolerance_uv,
+        limits,
+        false,
+    )
+}
+/// Replace a prepartitioned corner arc whose exact endpoints equal the new
+/// contact endpoints. Two distinct removed curves supply endpoint ownership.
+/// No connector, partial-edge trim or world face is manufactured here.
+pub fn replace_boundary_arc(
+    loops: &[Vec<Curve>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    contact: &Curve,
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report> {
+    check(
+        arc_count >= 2,
+        "Boundary contact replacement needs two distinct endpoint curves",
+    )?;
+    splice_impl(
+        loops,
+        loop_index,
+        arc_start,
+        arc_count,
+        contact,
+        tolerance_uv,
+        limits,
+        true,
+    )
+}
+fn splice_impl(
+    loops: &[Vec<Curve>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    contact: &Curve,
+    tolerance_uv: f64,
+    limits: Limits,
+    boundary_contact: bool,
+) -> Result<Report> {
     check(
         loop_index < loops.len()
             && arc_start < loops[loop_index].len()
@@ -202,7 +300,11 @@ pub fn splice(
         out.reason = "contact-endpoint-unproven";
         return Ok(out);
     };
-    if start == inner_start || end == inner_end {
+    if if boundary_contact {
+        start != inner_start || end != inner_end
+    } else {
+        start == inner_start || end == inner_end
+    } {
         out.reason = "boundary-contact-endpoint-unqualified";
         return Ok(out);
     }
@@ -213,7 +315,16 @@ pub fn splice(
         return Ok(out);
     }
     let domain = TrimDomain::new(loops, tolerance_uv)?;
-    let mut pending = vec![(contact.domain(), 0usize)];
+    let drive = contact.domain();
+    let middle = drive[0] * 0.5 + drive[1] * 0.5;
+    let mut pending = vec![(
+        if boundary_contact {
+            [middle, middle]
+        } else {
+            drive
+        },
+        0usize,
+    )];
     while let Some((interval, depth)) = pending.pop() {
         // Count every visited parent, even when classification stops early.
         if limits.domain_cells - out.domain_cells < 2 {
@@ -243,17 +354,25 @@ pub fn splice(
         pending.push(([mid, interval[1]], depth + 1));
         pending.push(([interval[0], mid], depth + 1));
     }
-    let path = vec![
-        connector(start.clone(), inner_start),
-        contact.clone(),
-        connector(inner_end, end.clone()),
-    ];
+    let path = if boundary_contact {
+        vec![contact.clone()]
+    } else {
+        vec![
+            connector(start.clone(), inner_start),
+            contact.clone(),
+            connector(inner_end, end.clone()),
+        ]
+    };
     let mut replacement = path.clone();
-    out.origins = vec![
-        Origin::StartConnector,
-        Origin::Contact,
-        Origin::EndConnector,
-    ];
+    out.origins = if boundary_contact {
+        vec![Origin::Contact]
+    } else {
+        vec![
+            Origin::StartConnector,
+            Origin::Contact,
+            Origin::EndConnector,
+        ]
+    };
     for &i in &ordered[arc_count..] {
         replacement.push(old[i].clone());
         out.origins.push(Origin::Kept {
@@ -305,7 +424,7 @@ pub fn splice(
             out.removed_pair_checks += 1;
             let join = if pi == 0 && ai == 0 {
                 Some(&start)
-            } else if pi == 2 && ai == arc_count - 1 {
+            } else if pi == path.len() - 1 && ai == arc_count - 1 {
                 Some(&end)
             } else {
                 None
@@ -330,7 +449,9 @@ pub fn splice(
             }
         }
     }
-    // The contact is inside and each endpoint connector has an interior end.
+    // The contact has a certified interior witness and cannot cross any old
+    // boundary except its allowed endpoints. Interior-connector mode additionally
+    // certifies every contact point inside. Each connector has an interior end.
     // No connector can leave that component without a proven-excluded crossing.
     // Equal winding at retained curves selects the original material side.
     out.region_subset_proven = true;
@@ -493,6 +614,33 @@ mod tests {
                 }
             )
             .is_err()
+        );
+    }
+    #[test]
+    fn tangent_rational_corner_arc_replaces_two_original_boundary_edges() {
+        let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
+        let outer = (0..4)
+            .map(|i| connector(points[i].clone(), points[(i + 1) % 4].clone()))
+            .collect::<Vec<_>>();
+        let p = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![points[0].clone(), points[1].clone(), points[2].clone()],
+            weights: vec![1., 0.5f64.sqrt(), 1.],
+            periodic: false,
+        };
+        let r = replace_boundary_arc(&[outer.clone()], 0, 0, 2, &p, 1e-8, limits()).unwrap();
+        assert!(r.region_subset_proven, "{}", r.reason);
+        assert_eq!(r.origins[0], Origin::Contact);
+        let new = &r.loops.as_ref().unwrap()[0];
+        assert_eq!(new, &vec![p.clone(), outer[2].clone(), outer[3].clone()]);
+        assert_eq!(r.removed_pair_checks, 2);
+        let mut wrong = p;
+        wrong.control_points[0][0] = 0.9;
+        assert!(
+            !replace_boundary_arc(&[outer], 0, 0, 2, &wrong, 1e-8, limits())
+                .unwrap()
+                .region_subset_proven
         );
     }
 }

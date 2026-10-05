@@ -1834,3 +1834,5 @@ pub mod affine_lattice;
 pub mod sweep_retained;
 
 pub mod miter_seams;
+
+pub mod offset_end_boundary;
