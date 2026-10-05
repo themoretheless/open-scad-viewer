@@ -291,6 +291,97 @@ pub fn propose_section(
         max_spans,
     )
 }
+pub struct PathReport {
+    pub driver: nurbs_core::curve_axis_driver::Report,
+    pub path: Option<nurbs_core::offset_contact_path::Report>,
+    pub reason: &'static str,
+}
+/// Prove a source-chart coordinate driver and then a continuous offset path.
+/// The requested coordinate interval must stay within the original pcurve's
+/// endpoint extent. Signed material side, original trim membership and fillet
+/// topology are not inferred from this source-coordinate path.
+pub fn propose_path(
+    prepared: &PreparedEdge,
+    axis: usize,
+    drive: [f64; 2],
+    distances: [f64; 2],
+    driver_cells: usize,
+    limits: nurbs_core::offset_contact_path::Limits,
+) -> Result<PathReport> {
+    if axis >= 2 || !drive.iter().all(|x| x.is_finite()) || drive[0] >= drive[1] {
+        return Err(Error::new(
+            "BREP_OFFSET_EDGE_DRIVER",
+            "Choose a finite positive source-coordinate interval",
+        ));
+    }
+    let first = prepared.supports[0].selected_pcurve();
+    let driver = nurbs_core::curve_axis_driver::certify(first, axis, driver_cells)?;
+    if !driver.monotonic_proven {
+        return Ok(PathReport {
+            driver,
+            path: None,
+            reason: "original-pcurve-driver-unresolved",
+        });
+    }
+    if drive[0] < driver.axis_extent[0] || drive[1] > driver.axis_extent[1] {
+        return Err(Error::new(
+            "BREP_OFFSET_EDGE_DRIVER",
+            "Requested interval exceeds the original edge's source-coordinate extent",
+        ));
+    }
+    let mut ends = [[[0.; 2]; 2]; 2];
+    for (end, pair) in ends.iter_mut().enumerate() {
+        let first_end = if driver.increasing { end } else { 1 - end };
+        let first_point = if first_end == 0 {
+            &first.control_points[0]
+        } else {
+            first.control_points.last().unwrap()
+        };
+        pair[0] = [first_point[0], first_point[1]];
+        let canonical_end = if prepared.supports[0].selected_reversed() {
+            1 - first_end
+        } else {
+            first_end
+        };
+        let second_end = if prepared.supports[1].selected_reversed() {
+            1 - canonical_end
+        } else {
+            canonical_end
+        };
+        let second = prepared.supports[1].selected_pcurve();
+        let point = second.evaluate(second.domain()[second_end])?.point;
+        pair[1] = [point[0], point[1]];
+    }
+    let seeds = drive.map(|x| {
+        let fraction =
+            (x - driver.axis_extent[0]) / (driver.axis_extent[1] - driver.axis_extent[0]);
+        let mut seed = std::array::from_fn(|side| {
+            std::array::from_fn(|k| {
+                ends[0][side][k] * (1. - fraction) + ends[1][side][k] * fraction
+            })
+        });
+        seed[0][axis] = x;
+        seed
+    });
+    let path = nurbs_core::offset_contact_path::certify(
+        [
+            &prepared.supports[0].face.face().surface,
+            &prepared.supports[1].face.face().surface,
+        ],
+        distances,
+        axis,
+        drive,
+        seeds,
+        limits,
+    )?;
+    let reason = path.reason;
+    Ok(PathReport {
+        driver,
+        path: Some(path),
+        reason,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,6 +473,27 @@ mod tests {
             "{}",
             section.reason
         );
+        let path = propose_path(
+            &prepared,
+            section.fixed_axis,
+            [0.2, 0.8],
+            distances,
+            63,
+            nurbs_core::offset_contact_path::Limits {
+                cells: 255,
+                spans: 16,
+                iterations: 8,
+                numerical_tolerance_mm: 1e-8,
+                padding_fraction: 0.01,
+            },
+        )
+        .unwrap();
+        assert!(path.driver.monotonic_proven);
+        assert!(
+            path.path.as_ref().unwrap().continuous_path_proven,
+            "{}",
+            path.reason
+        );
     }
     #[test]
     fn automatic_box_edge_stations_find_certified_centers_after_rotation() {
@@ -421,6 +533,28 @@ mod tests {
                 section.reason
             );
             assert!(section.iterations <= 8 && section.line_search_evaluations <= 96);
+            let path = propose_path(
+                &prepared,
+                section.fixed_axis,
+                [0.2, 0.8],
+                distances,
+                16,
+                nurbs_core::offset_contact_path::Limits {
+                    cells: 63,
+                    spans: 16,
+                    iterations: 8,
+                    numerical_tolerance_mm: 1e-8,
+                    padding_fraction: 0.01,
+                },
+            )
+            .unwrap();
+            assert!(path.driver.monotonic_proven);
+            assert!(
+                path.path.as_ref().unwrap().continuous_path_proven,
+                "edge {}: {}",
+                edge,
+                path.reason
+            );
         }
     }
     #[test]

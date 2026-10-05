@@ -163,3 +163,7 @@ pub mod boundary_partition;
 pub mod contact_normal_agreement;
 
 pub mod offset_contact_predictor;
+
+pub mod offset_contact_path;
+
+pub mod curve_axis_driver;

@@ -1,7 +1,7 @@
 //! Existence certificates for isolated roots of a surface/surface section.
 //! One parameter of the first surface is fixed. A certificate proves a contact
 //! point, not completeness of a 4D intersection curve or B-rep trim membership.
-use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
+use crate::{check, distance_bounds::Interval as I, surface::Surface, Result};
 #[derive(Clone, Debug)]
 pub struct Witness {
     pub first_uv: [[f64; 2]; 2],
@@ -80,6 +80,18 @@ pub(crate) fn section_krawczyk(
     jac: [[I; 3]; 3],
     f: [I; 3],
 ) -> Result<SectionVerdict> {
+    section_krawczyk_parameterized(domain, jac, f, None)
+}
+/// f is enclosed at the driving midpoint. The optional derivative encloses
+/// dF/dt over the entire driving interval, with outward t-midpoint displacement.
+/// Preconditioning that derivative before multiplying the scalar displacement
+/// preserves its shared parameter dependency in all residual coordinates.
+pub(crate) fn section_krawczyk_parameterized(
+    domain: [[f64; 2]; 3],
+    jac: [[I; 3]; 3],
+    f: [I; 3],
+    driving: Option<([I; 3], I)>,
+) -> Result<SectionVerdict> {
     let Some(y) = inverse(jac.map(|r| r.map(|v| v.lo * 0.5 + v.hi * 0.5))) else {
         return Ok(SectionVerdict::Unresolved);
     };
@@ -93,6 +105,13 @@ pub(crate) fn section_krawczyk(
         let mut row = I::point(0.);
         for j in 0..3 {
             image[i] = image[i].sub(I::point(y[i][j]).mul(f[j])?)?;
+        }
+        if let Some((derivative, displacement)) = driving {
+            let mut slope = I::point(0.);
+            for j in 0..3 {
+                slope = slope.add(I::point(y[i][j]).mul(derivative[j])?)?;
+            }
+            image[i] = image[i].sub(slope.mul(displacement)?)?;
         }
         for k in 0..3 {
             let mut residual = I::point(if i == k { 1. } else { 0. });

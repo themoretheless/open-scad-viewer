@@ -481,7 +481,9 @@ fn certify_contact_box(
     second: [[f64; 2]; 2],
     max_spans: usize,
 ) -> Result<crate::surface_contact::Verdict> {
-    use crate::surface_contact::{SectionVerdict, Verdict, Witness, section_krawczyk};
+    use crate::surface_contact::{
+        section_krawczyk_parameterized, SectionVerdict, Verdict, Witness,
+    };
     check(
         fixed_axis < 2 && fixed_interval.iter().all(|v| v.is_finite()),
         "Choose a finite fixed offset parameter",
@@ -530,6 +532,8 @@ fn certify_contact_box(
     }
     let mut first_center = first;
     first_center[free] = [center[0]; 2];
+    let driving_midpoint = fixed_interval[0] * 0.5 + fixed_interval[1] * 0.5;
+    first_center[fixed_axis] = [driving_midpoint; 2];
     let ac = bounds(surfaces[0], first_center, distances[0], max_spans)?;
     let bc = bounds(
         surfaces[1],
@@ -544,14 +548,26 @@ fn certify_contact_box(
     for k in 0..3 {
         residual[k] = I::new(ac[k][0], ac[k][1])?.sub(I::new(bc[k][0], bc[k][1])?)?;
     }
-    let (parameters, contraction_upper) = match section_krawczyk(domain, jac, residual)? {
-        SectionVerdict::Excluded => return Ok(Verdict::Excluded),
-        SectionVerdict::Unresolved => return Ok(Verdict::Unresolved),
-        SectionVerdict::Unique {
-            parameters,
-            contraction_upper,
-        } => (parameters, contraction_upper),
+    let driving = if fixed_interval[0] < fixed_interval[1] {
+        Some((
+            std::array::from_fn(|k| I {
+                lo: a[fixed_axis][k][0],
+                hi: a[fixed_axis][k][1],
+            }),
+            I::new(fixed_interval[0], fixed_interval[1])?.sub(I::point(driving_midpoint))?,
+        ))
+    } else {
+        None
     };
+    let (parameters, contraction_upper) =
+        match section_krawczyk_parameterized(domain, jac, residual, driving)? {
+            SectionVerdict::Excluded => return Ok(Verdict::Excluded),
+            SectionVerdict::Unresolved => return Ok(Verdict::Unresolved),
+            SectionVerdict::Unique {
+                parameters,
+                contraction_upper,
+            } => (parameters, contraction_upper),
+        };
     first[free] = parameters[0];
     let second = [parameters[1], parameters[2]];
     let a = bounds(surfaces[0], first, distances[0], max_spans)?.image;
