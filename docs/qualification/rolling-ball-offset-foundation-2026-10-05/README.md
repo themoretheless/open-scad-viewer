@@ -303,3 +303,11 @@ Validation: four native partition tests passed; `cargo check -p brep-core --test
 `boundary_partition::split` maps ordered forward traversal fractions into the original world and UV parameter domains. Reversed world edges pair pieces in reverse order while retaining their canonical definitions and reversal metadata. Independent full-interval source partition checks and world-to-surface lift checks are required for every pair; exact candidate endpoint joins are a separate gate. Work exhaustion retains all candidate pairs and omitted reports without qualification. Rounded parameter mapping is a proposal, not exact identity. No B-rep mutation, persistent identity assignment, WASM query or UI operation is admitted by this report.
 
 Two native tests passed: forward/reversed ownership on distinct nonunit domains; wrong lift and shared lift-budget exhaustion. `cargo check -p brep-core --tests` passed with existing warnings. Logs: `boundary-partition-native.log.gz`, `boundary-partition-brep-check.log.gz`.
+
+## Partitioned boundaries in face recipes (native)
+
+`trimmed_face_recipe::split_boundary` exposes candidate contour boundaries only after source partition agreement, candidate world/UV joins, source lift and bit-identical original world endpoints. The final face assembly independently rechecks the complete region, winding, world joins and every lift. No shell mutation or persistent source-edge identity assignment is performed.
+
+A rational quarter-arc regression exposed different endpoint bits from independent original trims, despite successful source and lift agreement. Partitioning now first refines one shared curve at all cuts, then extracts pieces. This is a numeric proposal: every piece is still qualified against the original definition. No endpoint snapping or tolerance growth is used. Shared refinement can refuse the existing control-point resource limit.
+
+Five face-recipe tests and eight partition-related native tests passed. The rational split reconstructs a five-edge face on the unchanged support surface; wrong lifts retain reports but expose no usable boundaries. B-rep/test compilation passed with existing warnings. Logs: `split-face-recipe-native.log.gz`, `shared-partition-native.log.gz`, `split-face-recipe-check.log.gz`. The initial failed diagnostic is retained in `split-face-recipe-diagnostic.log.gz`.

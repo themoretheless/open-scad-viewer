@@ -177,6 +177,17 @@ pub fn partition(
     let mut breaks = vec![d[0]];
     breaks.extend_from_slice(cuts);
     breaks.push(d[1]);
+    // Refine one shared proposal before extracting pieces. Independent trims
+    // can round the same rational endpoint differently. No endpoint is snapped:
+    // every piece comes from the same refined definition and is subsequently
+    // checked against the original, never against the rounded proposal alone.
+    let mut proposal = original.clone();
+    for &cut in cuts {
+        let multiplicity = proposal.knots.iter().filter(|&&k| k == cut).count();
+        if multiplicity < proposal.degree {
+            proposal = proposal.insert(cut, proposal.degree - multiplicity)?;
+        }
+    }
     let mut out = Partition {
         pieces: vec![],
         visited: 0,
@@ -184,7 +195,7 @@ pub fn partition(
         endpoint_joins_exact: true,
     };
     for interval in breaks.windows(2) {
-        let curve = original.trim(interval[0], interval[1])?;
+        let curve = proposal.trim(interval[0], interval[1])?;
         check(
             curve.domain() == [interval[0], interval[1]],
             "Partition candidate changed original parameter endpoints",

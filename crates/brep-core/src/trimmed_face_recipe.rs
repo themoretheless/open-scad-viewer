@@ -13,6 +13,51 @@ pub struct Boundary {
     pub pcurve: Curve,
     pub reversed: bool,
 }
+/// Partition candidates become usable contour edges only after all checks.
+/// Source boundary identities and shell incidence still belong to the caller.
+pub struct SplitBoundary {
+    pub report: nurbs_core::boundary_partition::Report,
+    pub boundaries: Option<Vec<Boundary>>,
+}
+pub fn split_boundary(
+    context: &ToleranceContext,
+    surface: &Surface,
+    boundary: &Boundary,
+    cuts: &[f64],
+    tolerance_uv: f64,
+    partition_cells: usize,
+    agreement_cells: usize,
+) -> Result<SplitBoundary> {
+    let report = nurbs_core::boundary_partition::split(
+        &boundary.curve,
+        &boundary.pcurve,
+        surface,
+        boundary.reversed,
+        cuts,
+        context.spatial_bounds().on_mm,
+        tolerance_uv,
+        partition_cells,
+        agreement_cells,
+    )?;
+    let candidates = report
+        .pieces
+        .iter()
+        .map(|p| Boundary {
+            curve: p.curve.clone(),
+            pcurve: p.pcurve.clone(),
+            reversed: p.reversed,
+        })
+        .collect::<Vec<_>>();
+    let same = |a: [f64; 3], b: [f64; 3]| a.map(f64::to_bits) == b.map(f64::to_bits);
+    let endpoints_preserved = oriented(boundary)
+        .zip(candidates.first().and_then(oriented))
+        .zip(candidates.last().and_then(oriented))
+        .is_some_and(|((original, first), last)| {
+            same(original[0], first[0]) && same(original[1], last[1])
+        });
+    let boundaries = (report.qualified && endpoints_preserved).then_some(candidates);
+    Ok(SplitBoundary { report, boundaries })
+}
 #[derive(Clone, Copy)]
 pub struct Limits {
     pub pairs: usize,
@@ -251,6 +296,62 @@ mod tests {
             })
             .collect();
         (surface, vec![wire])
+    }
+    #[test]
+    fn split_rational_boundary_can_be_reassembled_without_changing_surface() {
+        let (surface, mut wires) = fixture();
+        let context = ToleranceContext::default_valid();
+        let split = split_boundary(
+            &context,
+            &surface,
+            &wires[0][0],
+            &[0.25, 0.75],
+            1e-8,
+            100000,
+            100000,
+        )
+        .unwrap();
+        assert!(
+            split.report.qualified,
+            "world={} uv={} joins={}/{} visited={}/{} lift={:?}",
+            split.report.world.geometry_preserved,
+            split.report.uv.geometry_preserved,
+            split.report.world.endpoint_joins_exact,
+            split.report.uv.endpoint_joins_exact,
+            split.report.world.visited,
+            split.report.uv.visited,
+            split
+                .report
+                .pieces
+                .iter()
+                .map(|p| p.agreement.as_ref().map(|a| (a.status, a.cells)))
+                .collect::<Vec<_>>()
+        );
+        let boundaries = split.boundaries.unwrap();
+        assert_eq!(boundaries.len(), 3);
+        wires[0].splice(0..1, boundaries);
+        let r = assemble(&context, &surface, &wires, 1e-8, limits()).unwrap();
+        let face = r.face.expect(r.reason);
+        assert_eq!(face.edges().len(), 5);
+        assert_eq!(face.face().surface, surface);
+    }
+    #[test]
+    fn unqualified_split_does_not_expose_usable_boundaries() {
+        let (surface, mut wires) = fixture();
+        wires[0][0].curve.control_points[1][2] += 0.1;
+        let r = split_boundary(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires[0][0],
+            &[0.25, 0.75],
+            1e-8,
+            100000,
+            1,
+        )
+        .unwrap();
+        assert!(!r.report.qualified);
+        assert!(r.boundaries.is_none());
+        assert_eq!(r.report.pieces.len(), 3);
     }
     #[test]
     fn canonical_rational_face_preserves_definitions_and_closed_world_incidence() {
