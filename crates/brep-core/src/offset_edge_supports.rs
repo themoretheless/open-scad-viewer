@@ -426,14 +426,7 @@ pub fn propose_trimmed_path(
             reason: "original-pcurve-driver-unresolved",
         });
     };
-    let loops: [Vec<Vec<Curve>>; 2] = std::array::from_fn(|side| {
-        prepared.supports[side]
-            .face
-            .loops()
-            .iter()
-            .map(|wire| wire.coedges.iter().map(|c| c.pcurve.clone()).collect())
-            .collect()
-    });
+    let loops = original_loops(prepared);
     let contact = nurbs_core::offset_path_trims::certify(
         [
             &prepared.supports[0].face.face().surface,
@@ -455,6 +448,63 @@ pub fn propose_trimmed_path(
     })
 }
 
+fn original_loops(prepared: &PreparedEdge) -> [Vec<Vec<Curve>>; 2] {
+    std::array::from_fn(|side| {
+        prepared.supports[side]
+            .face
+            .loops()
+            .iter()
+            .map(|wire| wire.coedges.iter().map(|c| c.pcurve.clone()).collect())
+            .collect()
+    })
+}
+pub struct PcurveReport {
+    pub driver: nurbs_core::curve_axis_driver::Report,
+    pub pcurves: Option<nurbs_core::offset_path_pcurves::Report>,
+    pub reason: &'static str,
+}
+/// Generate shared UV contact pieces against fresh immutable original supports.
+/// Full UV branch and trim checks qualify only an approximation in source
+/// parameter units, not world coedge identity, radius, G1 or fillet topology.
+pub fn propose_source_pcurves(
+    prepared: &PreparedEdge,
+    axis: usize,
+    drive: [f64; 2],
+    distances: [f64; 2],
+    driver_cells: usize,
+    tolerance_uv: f64,
+    limits: nurbs_core::offset_path_pcurves::Limits,
+) -> Result<PcurveReport> {
+    let DriverSeeds { driver, seeds } = driver_seeds(prepared, axis, drive, driver_cells)?;
+    let Some(seeds) = seeds else {
+        return Ok(PcurveReport {
+            driver,
+            pcurves: None,
+            reason: "original-pcurve-driver-unresolved",
+        });
+    };
+    let loops = original_loops(prepared);
+    let pcurves = nurbs_core::offset_path_pcurves::propose(
+        [
+            &prepared.supports[0].face.face().surface,
+            &prepared.supports[1].face.face().surface,
+        ],
+        [&loops[0], &loops[1]],
+        distances,
+        axis,
+        drive,
+        seeds,
+        tolerance_uv,
+        limits,
+    )?;
+    let reason = pcurves.reason;
+    Ok(PcurveReport {
+        driver,
+        pcurves: Some(pcurves),
+        reason,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -464,6 +514,29 @@ mod tests {
             region_cells: 100000,
             domain_cells: 100000,
             agreement_cells: 100000,
+        }
+    }
+    fn pcurve_limits() -> nurbs_core::offset_path_pcurves::Limits {
+        nurbs_core::offset_path_pcurves::Limits {
+            trims: nurbs_core::offset_path_trims::Limits {
+                path: nurbs_core::offset_contact_path::Limits {
+                    cells: 255,
+                    spans: 16,
+                    iterations: 8,
+                    numerical_tolerance_mm: 1e-8,
+                    padding_fraction: 0.01,
+                },
+                membership_cells: 255,
+                region_pairs: 10000,
+                region_cells: 10000,
+                domain_cells: 100000,
+            },
+            proposal_cells: 1023,
+            correspondence_cells: 8192,
+            cells_per_side: 1,
+            station_queries: 8192,
+            station_refinements: 4,
+            domain_cells: 100000,
         }
     }
     #[test]
@@ -598,6 +671,21 @@ mod tests {
             "{}",
             trimmed.reason
         );
+        let pc = propose_source_pcurves(
+            &prepared,
+            section.fixed_axis,
+            [0.2, 0.8],
+            distances,
+            63,
+            1e-4,
+            pcurve_limits(),
+        )
+        .unwrap();
+        assert!(
+            pc.pcurves.as_ref().unwrap().source_pcurves_proven,
+            "{}",
+            pc.reason
+        );
     }
     #[test]
     fn automatic_box_edge_stations_find_certified_centers_after_rotation() {
@@ -653,6 +741,23 @@ mod tests {
             )
             .unwrap();
             assert!(path.driver.monotonic_proven);
+            let pc = propose_source_pcurves(
+                &prepared,
+                section.fixed_axis,
+                [0.2, 0.8],
+                distances,
+                16,
+                1e-5,
+                pcurve_limits(),
+            )
+            .unwrap();
+            assert!(
+                pc.pcurves.as_ref().unwrap().source_pcurves_proven,
+                "edge {}: {}",
+                edge,
+                pc.reason
+            );
+
             let trimmed = propose_trimmed_path(
                 &prepared,
                 section.fixed_axis,
