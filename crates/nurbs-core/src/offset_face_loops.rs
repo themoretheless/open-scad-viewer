@@ -3,12 +3,12 @@
 //! requires complete original/new audits and no return to the removed boundary.
 //! This builds UV contours, not world end transitions or a sewn B-rep solid.
 use crate::{
-    Result, check,
+    check,
     curve::Curve,
     curve_distance, curve_surface_agreement as bounds,
     distance_bounds::Interval as I,
     trim_domain::{Location, TrimDomain},
-    trim_region_audit as audit,
+    trim_region_audit as audit, Result,
 };
 #[derive(Clone, Copy)]
 pub struct Limits {
@@ -20,6 +20,9 @@ pub struct Limits {
 pub enum Origin {
     StartConnector,
     Contact,
+    ContactPiece {
+        index: usize,
+    },
     EndConnector,
     Kept {
         loop_index: usize,
@@ -194,7 +197,7 @@ pub fn splice(
         loop_index,
         arc_start,
         arc_count,
-        contact,
+        std::slice::from_ref(contact),
         tolerance_uv,
         limits,
         false,
@@ -221,7 +224,33 @@ pub fn replace_boundary_arc(
         loop_index,
         arc_start,
         arc_count,
-        contact,
+        std::slice::from_ref(contact),
+        tolerance_uv,
+        limits,
+        true,
+    )
+}
+/// Replace an original arc by an ordered piecewise contact without connectors.
+/// Every shared contact endpoint must be identical in the source chart.
+pub fn replace_boundary_path(
+    loops: &[Vec<Curve>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    contacts: &[Curve],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report> {
+    check(
+        arc_count >= 2,
+        "Boundary contact replacement needs two distinct endpoint curves",
+    )?;
+    splice_impl(
+        loops,
+        loop_index,
+        arc_start,
+        arc_count,
+        contacts,
         tolerance_uv,
         limits,
         true,
@@ -232,7 +261,7 @@ fn splice_impl(
     loop_index: usize,
     arc_start: usize,
     arc_count: usize,
-    contact: &Curve,
+    contacts: &[Curve],
     tolerance_uv: f64,
     limits: Limits,
     boundary_contact: bool,
@@ -250,13 +279,26 @@ fn splice_impl(
             && (1..=1000000).contains(&limits.domain_cells),
         "Source face loop replacement needs bounded positive work",
     )?;
-    for c in loops.iter().flatten().chain(std::iter::once(contact)) {
+    check(
+        !contacts.is_empty() && (boundary_contact || contacts.len() == 1),
+        "Contact path must be nonempty",
+    )?;
+    for c in loops.iter().flatten().chain(contacts.iter()) {
         c.validate()?;
         check(
             c.control_points[0].len() == 2,
             "Source face contours must be two-dimensional",
         )?;
     }
+    for pair in contacts.windows(2) {
+        check(
+            endpoint(&pair[0], true)
+                .zip(endpoint(&pair[1], false))
+                .is_some_and(|(a, b)| a.iter().zip(&b).all(|(x, y)| x.to_bits() == y.to_bits())),
+            "Contact path endpoints must be identical",
+        )?;
+    }
+    let contact = &contacts[0];
     let original = audit::inspect(
         loops,
         tolerance_uv,
@@ -296,7 +338,7 @@ fn splice_impl(
         out.reason = "contact-endpoint-unproven";
         return Ok(out);
     };
-    let Some(inner_end) = endpoint(contact, true) else {
+    let Some(inner_end) = endpoint(contacts.last().unwrap(), true) else {
         out.reason = "contact-endpoint-unproven";
         return Ok(out);
     };
@@ -315,47 +357,49 @@ fn splice_impl(
         return Ok(out);
     }
     let domain = TrimDomain::new(loops, tolerance_uv)?;
-    let drive = contact.domain();
-    let middle = drive[0] * 0.5 + drive[1] * 0.5;
-    let mut pending = vec![(
-        if boundary_contact {
-            [middle, middle]
-        } else {
-            drive
-        },
-        0usize,
-    )];
-    while let Some((interval, depth)) = pending.pop() {
-        // Count every visited parent, even when classification stops early.
-        if limits.domain_cells - out.domain_cells < 2 {
-            out.reason = "loop-work-limit";
-            return Ok(out);
-        }
-        out.domain_cells += 1;
-        let image = bounds::curve_bounds(contact, I::new(interval[0], interval[1])?)?;
-        let membership = domain.classify(
-            [[image[0].lo, image[0].hi], [image[1].lo, image[1].hi]],
-            (limits.domain_cells - out.domain_cells).min(100000),
-        )?;
-        out.domain_cells += membership.cells;
-        match membership.location {
-            Location::Inside => continue,
-            Location::Outside => {
-                out.reason = "contact-not-inside-original-region";
+    for contact in contacts {
+        let drive = contact.domain();
+        let middle = drive[0] * 0.5 + drive[1] * 0.5;
+        let mut pending = vec![(
+            if boundary_contact {
+                [middle, middle]
+            } else {
+                drive
+            },
+            0usize,
+        )];
+        while let Some((interval, depth)) = pending.pop() {
+            // Count every visited parent, even when classification stops early.
+            if limits.domain_cells - out.domain_cells < 2 {
+                out.reason = "loop-work-limit";
                 return Ok(out);
             }
-            Location::Unresolved => {}
+            out.domain_cells += 1;
+            let image = bounds::curve_bounds(contact, I::new(interval[0], interval[1])?)?;
+            let membership = domain.classify(
+                [[image[0].lo, image[0].hi], [image[1].lo, image[1].hi]],
+                (limits.domain_cells - out.domain_cells).min(100000),
+            )?;
+            out.domain_cells += membership.cells;
+            match membership.location {
+                Location::Inside => continue,
+                Location::Outside => {
+                    out.reason = "contact-not-inside-original-region";
+                    return Ok(out);
+                }
+                Location::Unresolved => {}
+            }
+            let mid = interval[0] * 0.5 + interval[1] * 0.5;
+            if depth == 32 || mid <= interval[0] || mid >= interval[1] {
+                out.reason = "contact-region-membership-unproven";
+                return Ok(out);
+            }
+            pending.push(([mid, interval[1]], depth + 1));
+            pending.push(([interval[0], mid], depth + 1));
         }
-        let mid = interval[0] * 0.5 + interval[1] * 0.5;
-        if depth == 32 || mid <= interval[0] || mid >= interval[1] {
-            out.reason = "contact-region-membership-unproven";
-            return Ok(out);
-        }
-        pending.push(([mid, interval[1]], depth + 1));
-        pending.push(([interval[0], mid], depth + 1));
     }
     let path = if boundary_contact {
-        vec![contact.clone()]
+        contacts.to_vec()
     } else {
         vec![
             connector(start.clone(), inner_start),
@@ -365,7 +409,13 @@ fn splice_impl(
     };
     let mut replacement = path.clone();
     out.origins = if boundary_contact {
-        vec![Origin::Contact]
+        if contacts.len() == 1 {
+            vec![Origin::Contact]
+        } else {
+            (0..contacts.len())
+                .map(|index| Origin::ContactPiece { index })
+                .collect()
+        }
     } else {
         vec![
             Origin::StartConnector,
@@ -599,22 +649,20 @@ mod tests {
     fn malformed_contact_is_not_hidden_by_exhausted_audit_budget() {
         let mut p = contact();
         p.weights[1] = -1.;
-        assert!(
-            splice(
-                &[square()],
-                0,
-                0,
-                1,
-                &p,
-                1e-8,
-                Limits {
-                    pairs: 1,
-                    cells: 1,
-                    domain_cells: 1
-                }
-            )
-            .is_err()
-        );
+        assert!(splice(
+            &[square()],
+            0,
+            0,
+            1,
+            &p,
+            1e-8,
+            Limits {
+                pairs: 1,
+                cells: 1,
+                domain_cells: 1
+            }
+        )
+        .is_err());
     }
     #[test]
     fn tangent_rational_corner_arc_replaces_two_original_boundary_edges() {
@@ -642,5 +690,37 @@ mod tests {
                 .unwrap()
                 .region_subset_proven
         );
+    }
+    #[test]
+    fn piecewise_contact_keeps_original_edges_and_rejects_disconnected_path() {
+        let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
+        let outer = (0..4)
+            .map(|i| connector(points[i].clone(), points[(i + 1) % 4].clone()))
+            .collect::<Vec<_>>();
+        let path = vec![
+            connector(points[0].clone(), vec![0.5, 0.5]),
+            connector(vec![0.5, 0.5], points[2].clone()),
+        ];
+        let r = replace_boundary_path(&[outer.clone()], 0, 0, 2, &path, 1e-8, limits()).unwrap();
+        assert!(r.region_subset_proven, "{}", r.reason);
+        assert_eq!(
+            r.origins[..2],
+            [
+                Origin::ContactPiece { index: 0 },
+                Origin::ContactPiece { index: 1 }
+            ]
+        );
+        assert_eq!(
+            r.loops.unwrap()[0],
+            vec![
+                path[0].clone(),
+                path[1].clone(),
+                outer[2].clone(),
+                outer[3].clone()
+            ]
+        );
+        let mut broken = path;
+        broken[1].control_points[0][0] = 0.5000000000000001;
+        assert!(replace_boundary_path(&[outer], 0, 0, 2, &broken, 1e-8, limits()).is_err());
     }
 }

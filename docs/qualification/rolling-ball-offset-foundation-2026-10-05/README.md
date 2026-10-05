@@ -420,3 +420,24 @@ Eighty-six offset regression tests passed. New cases cover full planar branch/me
 The complete NURBS kernel passed 635 tests. Five B-rep tests passed, including world contacts on all twelve rotated cuboid edges, the original rational circular edge, an intentionally tighter contact tolerance and insufficient world-lift work while source pcurves remain qualified. The 23-test curve/surface subset additionally checks unchanged rational subinterval definitions, reversed/nonunit mapping, adaptive rational 3D lifts, complete work-stop coverage and a weighted clamped endpoint at the original surface domain boundary. B-rep/test compilation and diff whitespace checks passed. Logs: `world-contact-nurbs-regression.log.gz`, `offset-edge-world-contacts-native.log.gz`, `offset-edge-world-contacts-check.log.gz`.
 
 Rotated cuboid fixtures request lift tolerance 1e-7 mm and contact tolerance 1e-5 mm; the rational fixture requests lift tolerance 1e-5 mm and contact tolerance 1e-3 mm with source UV tolerance 1e-4. A 1e-10 mm contact request retains successful lifts but refuses the combined positional gate. No new WASM/worker/UI query, source-face replacement, owned endpoint admission, exact coedge identity, radius/tangent/wall guarantee or modified closed fillet body is claimed.
+
+## Piecewise source-face boundary replacement
+
+`offset_face_loops::replace_boundary_path` and
+`trimmed_face_recipe::replace_boundary_path` accept an ordered contact chain.
+Every internal UV endpoint must be bit-identical; contacts retain individual
+source addresses, while retained boundary definitions remain unchanged. Original
+and replacement region audits, every removed-boundary separation, original
+surface/world agreement and exact world incidence remain required. Work budgets
+are shared across the full contact chain. No connectors are manufactured.
+
+Validation: 7 NURBS contour tests and 6 B-rep face recipe tests passed. The new
+case exercises a two-piece planar contact, rejects a sub-tolerance UV gap and
+rejects a world curve leaving the source surface. Existing rational corner,
+hole, wrapped arc, work-stop and boundary partition regressions remain green.
+Logs: `contact-path-nurbs.log.gz`, `contact-path-brep.log.gz`.
+
+This admits a supplied, already endpoint-owned chain replacing a prepartitioned
+arc. Automatic partition of adjacent original edges, generated contact-to-world
+subinterval alignment, smooth end transitions, general sewn solids and UI/WASM
+integration are still outstanding. This is not general fillet admission.

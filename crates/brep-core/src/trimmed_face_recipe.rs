@@ -3,10 +3,11 @@
 use crate::{Coedge, Edge, Face, Loop, Vertex};
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{
-    Error, Result, curve::Curve, curve_surface_agreement as agreement, surface::Surface,
-    trim_region_audit,
+    curve::Curve, curve_surface_agreement as agreement, surface::Surface, trim_region_audit, Error,
+    Result,
 };
 
+#[derive(Clone)]
 pub struct Boundary {
     pub curve: Curve,
     /// Forward UV traversal of the face loop, regardless of edge reversal.
@@ -263,14 +264,48 @@ pub fn replace_boundary_arc(
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<ReplaceBoundary> {
-    // Validate the replacement even when the original cannot be qualified.
-    contact.curve.validate()?;
-    contact.pcurve.validate()?;
-    if contact.curve.control_points[0].len() != 3 || contact.pcurve.control_points[0].len() != 2 {
+    replace_boundary_path(
+        context,
+        surface,
+        wires,
+        loop_index,
+        arc_start,
+        arc_count,
+        std::slice::from_ref(contact),
+        tolerance_uv,
+        limits,
+    )
+}
+/// Replace an original boundary arc by a piecewise world/pcurve contact path.
+/// No joining curves, vertex welding or solid admission is performed.
+pub fn replace_boundary_path(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    loop_index: usize,
+    arc_start: usize,
+    arc_count: usize,
+    contacts: &[Boundary],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<ReplaceBoundary> {
+    if contacts.is_empty() {
         return Err(Error::new(
-            "BREP_FACE_RECIPE_DIMENSION",
-            "Replacement needs a 3D edge and 2D pcurve",
+            "BREP_FACE_RECIPE_CONTACT",
+            "Replacement path must be nonempty",
         ));
+    }
+    // Validate the replacement even when the original cannot be qualified.
+    for contact in contacts {
+        contact.curve.validate()?;
+        contact.pcurve.validate()?;
+        if contact.curve.control_points[0].len() != 3 || contact.pcurve.control_points[0].len() != 2
+        {
+            return Err(Error::new(
+                "BREP_FACE_RECIPE_DIMENSION",
+                "Replacement needs a 3D edge and 2D pcurve",
+            ));
+        }
     }
     let original = assemble(context, surface, wires, tolerance_uv, limits)?;
     let mut out = ReplaceBoundary {
@@ -285,12 +320,15 @@ pub fn replace_boundary_arc(
         .iter()
         .map(|wire| wire.iter().map(|e| e.pcurve.clone()).collect())
         .collect::<Vec<Vec<Curve>>>();
-    let contour = nurbs_core::offset_face_loops::replace_boundary_arc(
+    let contour = nurbs_core::offset_face_loops::replace_boundary_path(
         &uv,
         loop_index,
         arc_start,
         arc_count,
-        &contact.pcurve,
+        &contacts
+            .iter()
+            .map(|c| c.pcurve.clone())
+            .collect::<Vec<_>>(),
         tolerance_uv,
         nurbs_core::offset_face_loops::Limits {
             pairs: limits.pairs,
@@ -319,7 +357,8 @@ pub fn replace_boundary_arc(
         .iter()
         .map(|origin| {
             let source = match origin {
-                nurbs_core::offset_face_loops::Origin::Contact => contact,
+                nurbs_core::offset_face_loops::Origin::Contact => &contacts[0],
+                nurbs_core::offset_face_loops::Origin::ContactPiece { index } => &contacts[*index],
                 nurbs_core::offset_face_loops::Origin::Kept {
                     loop_index,
                     curve_index,
@@ -458,24 +497,22 @@ mod tests {
         let (surface, wire) = fixture();
         let contact = &wire[0][0];
         let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
-        let original = vec![
-            (0..4)
-                .map(|i| {
-                    let pcurve =
-                        Curve::from_polyline(vec![points[i].clone(), points[(i + 1) % 4].clone()])
-                            .unwrap();
-                    let mut curve = pcurve.clone();
-                    for p in &mut curve.control_points {
-                        p.push(1.);
-                    }
-                    Boundary {
-                        curve,
-                        pcurve,
-                        reversed: false,
-                    }
-                })
-                .collect::<Vec<_>>(),
-        ];
+        let original = vec![(0..4)
+            .map(|i| {
+                let pcurve =
+                    Curve::from_polyline(vec![points[i].clone(), points[(i + 1) % 4].clone()])
+                        .unwrap();
+                let mut curve = pcurve.clone();
+                for p in &mut curve.control_points {
+                    p.push(1.);
+                }
+                Boundary {
+                    curve,
+                    pcurve,
+                    reversed: false,
+                }
+            })
+            .collect::<Vec<_>>()];
         let r = replace_boundary_arc(
             &ToleranceContext::default_valid(),
             &surface,
@@ -495,6 +532,57 @@ mod tests {
         assert_eq!(face.face().surface, surface);
         assert_eq!(face.edges()[1].curve, original[0][2].curve);
         assert_eq!(face.edges()[2].curve, original[0][3].curve);
+        let path = [
+            [vec![1., 0.], vec![0.5, 0.5]],
+            [vec![0.5, 0.5], vec![0., 1.]],
+        ]
+        .into_iter()
+        .map(|points| {
+            let pcurve = Curve::from_polyline(points.to_vec()).unwrap();
+            let mut curve = pcurve.clone();
+            for point in &mut curve.control_points {
+                point.push(1.);
+            }
+            Boundary {
+                curve,
+                pcurve,
+                reversed: false,
+            }
+        })
+        .collect::<Vec<_>>();
+        let r = replace_boundary_path(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &original,
+            0,
+            0,
+            2,
+            &path,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.contour.as_ref().unwrap().region_subset_proven);
+        let face = r.replacement.unwrap().face.unwrap();
+        assert_eq!(face.edges().len(), 4);
+        assert_eq!(face.edges()[0].curve, path[0].curve);
+        assert_eq!(face.edges()[1].curve, path[1].curve);
+        assert_eq!(face.edges()[2].curve, original[0][2].curve);
+        let mut bad_path = path.clone();
+        bad_path[1].curve.control_points[1][2] += 0.1;
+        let r = replace_boundary_path(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &original,
+            0,
+            0,
+            2,
+            &bad_path,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.replacement.unwrap().face.is_none());
         let mut wrong = Boundary {
             curve: contact.curve.clone(),
             pcurve: contact.pcurve.clone(),
@@ -540,12 +628,10 @@ mod tests {
         }
         assert!(face.loops()[0].coedges[1].reversed);
         assert_eq!(face.edges()[1].vertices, [2, 1]);
-        assert!(
-            report
-                .agreements
-                .iter()
-                .all(|r| r.status == agreement::Status::WithinTolerance)
-        );
+        assert!(report
+            .agreements
+            .iter()
+            .all(|r| r.status == agreement::Status::WithinTolerance));
     }
     #[test]
     fn world_gap_and_wrong_source_lift_never_produce_a_face() {
@@ -584,15 +670,13 @@ mod tests {
             domain_cells: 1,
             agreement_cells: 1,
         };
-        assert!(
-            assemble(
-                &ToleranceContext::default_valid(),
-                &surface,
-                &wires,
-                1e-8,
-                work
-            )
-            .is_err()
-        );
+        assert!(assemble(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            1e-8,
+            work
+        )
+        .is_err());
     }
 }
