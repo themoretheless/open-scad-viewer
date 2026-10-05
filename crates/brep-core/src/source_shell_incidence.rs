@@ -282,6 +282,91 @@ mod tests {
         assert!(assemble(&faces, &pairs, 100_000_000).is_err());
     }
     #[test]
+    fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
+        use crate::source_boundary_fragment::Role;
+        let (mut faces, mut pairs) = tetrahedron();
+        let old = pairs.remove(0);
+        for (i, address) in old.uses.iter().enumerate() {
+            let edge = &faces[address.face][address.wire].edges()[address.edge];
+            let c = edge.curve();
+            let t = if i == 0 { 0.25 } else { 0.75 };
+            let a = &c.control_points[0];
+            let b = &c.control_points[1];
+            let point = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+            let normal = [-(b[1] - a[1]), b[0] - a[0]];
+            let cutter = Curve::from_polyline(vec![
+                vec![point[0] - normal[0], point[1] - normal[1]],
+                vec![point[0] + normal[0], point[1] + normal[1]],
+            ])
+            .unwrap();
+            let p =
+                crate::source_contact_point::qualify(edge.surface(), c, &cutter, [[0., 1.]; 2], 16)
+                    .unwrap()
+                    .point
+                    .unwrap();
+            let parts = edge.split_at(&p, Role::Boundary).unwrap();
+            assert_eq!(parts[0].curve(), c);
+            assert_eq!(parts[1].curve(), c);
+            let mut edges = faces[address.face][address.wire].edges().to_vec();
+            edges.splice(address.edge..address.edge + 1, parts);
+            faces[address.face][address.wire] = Wire::new(&edges).unwrap();
+        }
+        for pair in &mut pairs {
+            for address in &mut pair.uses {
+                for split in old.uses {
+                    if address.face == split.face
+                        && address.wire == split.wire
+                        && address.edge > split.edge
+                    {
+                        address.edge += 1;
+                    }
+                }
+            }
+        }
+        let [a, b] = old.uses;
+        pairs.push(Pair {
+            uses: [
+                a,
+                Address {
+                    edge: b.edge + 1,
+                    ..b
+                },
+            ],
+            world: old.world.clone(),
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        pairs.push(Pair {
+            uses: [
+                Address {
+                    edge: a.edge + 1,
+                    ..a
+                },
+                b,
+            ],
+            world: old.world,
+            world_reversed: old.world_reversed,
+            cutters: [None, None],
+        });
+        let r = assemble(&faces, &pairs, 100_000_000).unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        let shell = r.shell.unwrap();
+        assert_eq!(shell.edges().len(), 7);
+        let owners: std::collections::BTreeSet<_> = shell
+            .vertices()
+            .iter()
+            .flatten()
+            .flatten()
+            .flatten()
+            .copied()
+            .collect();
+        assert_eq!(owners.len(), 5);
+        for pair in shell.uses() {
+            let vertex = |a: Address| shell.vertices()[a.face][a.wire][a.edge];
+            assert_eq!(vertex(pair[0]), [vertex(pair[1])[1], vertex(pair[1])[0]]);
+        }
+    }
+    #[test]
     fn disconnected_closed_components_and_exhausted_work_are_not_a_shell() {
         let (mut faces, mut pairs) = tetrahedron();
         let stopped = assemble(&faces, &pairs, 1).unwrap();

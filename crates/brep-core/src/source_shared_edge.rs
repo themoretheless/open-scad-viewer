@@ -70,24 +70,35 @@ pub fn qualify_with_cutters(
     });
     if !complete {
         // Exact full-source identity uses normalized traversal. With identical
-        // domains and no world reversal, original t is the canonical parameter.
-        // Root identity follows original equations and a fresh common-root proof, not
+        // domains, reversal is an exact reflection of normalized traversal.
+        // Root identity follows exact equations and a fresh common-root proof, not
         // overlapping isolating intervals. Different UV equations require
         // independent canonical cutter identity and projected root uniqueness.
-        if world_reversed != [false, false]
-            || uses.iter().any(|e| e.curve().domain() != world.domain())
-        {
+        if uses.iter().any(|e| e.curve().domain() != world.domain()) {
             return Ok(out);
         }
         for i in 0..2 {
             let same = match (&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i]) {
-                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => a.to_bits() == b.to_bits(),
+                (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
+                    if world_reversed[0] == world_reversed[1] {
+                        a.to_bits() == b.to_bits()
+                    } else {
+                        same_reflected_parameter(*a, *b, world.domain(), &mut out, max_work)?
+                    }
+                }
                 (
                     Endpoint::Crossing { point: a, role: ar },
                     Endpoint::Crossing { point: b, role: br },
                 ) => {
-                    if ar != br || a.boundary() != b.boundary() || a.contact() != b.contact() {
+                    if world_reversed[0] != world_reversed[1]
+                        || ar != br
+                        || a.boundary() != b.boundary()
+                        || a.contact() != b.contact()
+                    {
                         if let Some(cutter) = cutters[i] {
+                            if world_reversed != [false, false] {
+                                return Ok(out);
+                            }
                             common_world_root(
                                 world,
                                 cutter,
@@ -96,7 +107,12 @@ pub fn qualify_with_cutters(
                                 max_work,
                             )?
                         } else {
-                            same_linear_parameter([(a, *ar), (b, *br)], &mut out, max_work)?
+                            same_linear_parameter(
+                                [(a, *ar), (b, *br)],
+                                world_reversed,
+                                &mut out,
+                                max_work,
+                            )?
                         }
                     } else if a.selector() == b.selector() {
                         true
@@ -170,10 +186,61 @@ pub fn qualify_with_cutters(
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
 }
+fn same_reflected_parameter(
+    a: f64,
+    b: f64,
+    domain: [f64; 2],
+    out: &mut Report,
+    max_work: u64,
+) -> Result<bool> {
+    use cad_predicates::{
+        AuthoredScalar, Limits, ParameterIdentity, PredicateContext, SourceArena, ToleranceContext,
+    };
+    if out.work_used == max_work {
+        return Ok(false);
+    }
+    let arena = SourceArena::authored(
+        "source-reflected-parameter",
+        1,
+        [a, b, domain[0], domain[1]]
+            .iter()
+            .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect(),
+    )
+    .map_err(|_| {
+        Error::new(
+            "BREP_SOURCE_SHARED_EDGE",
+            "Invalid reflected parameter source",
+        )
+    })?;
+    let tol = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(
+        &arena,
+        &tol,
+        Limits {
+            max_work: (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+            ..Limits::default()
+        },
+        None,
+    );
+    let r = cad_predicates::reflected_parameter_identity(
+        &mut ctx,
+        std::array::from_fn(|i| arena.leaf(i).unwrap()),
+    )
+    .map_err(|_| {
+        Error::new(
+            "BREP_SOURCE_SHARED_EDGE",
+            "Invalid reflected parameter request",
+        )
+    })?;
+    out.work_used += r.work_used;
+    Ok(r.outcome == ParameterIdentity::Equal)
+}
 // For transverse original linear Beziers, the UV equations themselves give
 // an exact rational parameter. Comparing fractions does not round either root.
 fn same_linear_parameter(
     points: [(&crate::source_contact_point::SourcePoint, Role); 2],
+    reversed: [bool; 2],
     out: &mut Report,
     max_work: u64,
 ) -> Result<bool> {
@@ -235,12 +302,13 @@ fn same_linear_parameter(
         None,
     );
     let proof =
-        cad_predicates::line_crossing_parameter_identity(&mut ctx, main, cutter).map_err(|_| {
-            Error::new(
-                "BREP_SOURCE_SHARED_EDGE",
-                "Invalid exact root identity request",
-            )
-        })?;
+        cad_predicates::line_crossing_parameter_identity_oriented(&mut ctx, main, cutter, reversed)
+            .map_err(|_| {
+                Error::new(
+                    "BREP_SOURCE_SHARED_EDGE",
+                    "Invalid exact root identity request",
+                )
+            })?;
     out.work_used += proof.work_used;
     Ok(proof.outcome == ParameterIdentity::Equal)
 }

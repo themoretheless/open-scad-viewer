@@ -21,6 +21,14 @@ pub fn line_crossing_parameter_identity(
     main: [[[LeafRef; 3]; 2]; 2],
     cutter: [[[LeafRef; 2]; 2]; 2],
 ) -> Result<ParameterDecision, InputError> {
+    line_crossing_parameter_identity_oriented(ctx, main, cutter, [false, false])
+}
+pub fn line_crossing_parameter_identity_oriented(
+    ctx: &mut PredicateContext<'_>,
+    main: [[[LeafRef; 3]; 2]; 2],
+    cutter: [[[LeafRef; 2]; 2]; 2],
+    reversed: [bool; 2],
+) -> Result<ParameterDecision, InputError> {
     let refs: Vec<_> = (0..2)
         .flat_map(|i| {
             main[i]
@@ -62,6 +70,11 @@ pub fn line_crossing_parameter_identity(
             if denominator.sign() == Sign::Zero {
                 return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
             }
+            let numerator = if reversed[i] {
+                denominator.sub(&numerator, ctx)?
+            } else {
+                numerator
+            };
             ratios.push((numerator, denominator));
         }
         let difference = ratios[0]
@@ -70,6 +83,31 @@ pub fn line_crossing_parameter_identity(
             .sub(&ratios[1].0.mul(&ratios[0].1, ctx)?, ctx)?;
         ctx.charge(0)?;
         Ok(if difference.sign() == Sign::Zero {
+            ParameterIdentity::Equal
+        } else {
+            ParameterIdentity::Different
+        })
+    })();
+    Ok(ParameterDecision {
+        outcome: computed.unwrap_or_else(ParameterIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+/// Compare a reflected pair without forming rounded (lo + hi - t).
+pub fn reflected_parameter_identity(
+    ctx: &mut PredicateContext<'_>,
+    values: [LeafRef; 4],
+) -> Result<ParameterDecision, InputError> {
+    let values = values
+        .iter()
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    let computed = (|| -> Result<ParameterIdentity, Reason> {
+        let v = exact_inputs(&values, ctx)?;
+        let diff = v[0].add(&v[1], ctx)?.sub(&v[2], ctx)?.sub(&v[3], ctx)?;
+        ctx.charge(0)?;
+        Ok(if diff.sign() == Sign::Zero {
             ParameterIdentity::Equal
         } else {
             ParameterIdentity::Different
@@ -140,6 +178,28 @@ mod tests {
         line_crossing_parameter_identity(&mut ctx, main, cutter)
             .unwrap()
             .outcome
+    }
+    #[test]
+    fn reflected_parameters_are_compared_without_rounding_the_sum() {
+        let check = |a: f64, b: f64| {
+            let arena = SourceArena::authored(
+                "reflect",
+                1,
+                [a, b, 0., 1.]
+                    .iter()
+                    .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+                    .collect(),
+            )
+            .unwrap();
+            let tol = ToleranceContext::default_valid();
+            let mut ctx = PredicateContext::new(&arena, &tol, Limits::default(), None);
+            reflected_parameter_identity(&mut ctx, std::array::from_fn(|i| arena.leaf(i).unwrap()))
+                .unwrap()
+                .outcome
+        };
+        assert_eq!(check(0.25, 0.75), ParameterIdentity::Equal);
+        assert_eq!(check(0.25, 0.75 + 1e-12), ParameterIdentity::Different);
+        assert_eq!(check(0.1, 0.9), ParameterIdentity::Different);
     }
     #[test]
     fn root_identity_is_exact_and_tracks_rational_parameter_not_chord_fraction() {

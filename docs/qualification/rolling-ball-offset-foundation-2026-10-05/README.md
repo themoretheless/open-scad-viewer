@@ -823,3 +823,26 @@ rational parameter from chord fraction, prove a dyadic weighted equality, refuse
 a rounded 2/3 identity and cover invalid weights/work exhaustion. General
 nonlinear root equivalence, parameter remapping, trimmed shell realization,
 embedding/volume, end transitions and UI admission remain open.
+
+## Root-partitioned shell with opposite canonical traversal
+
+Shared restrictions now support opposite canonical direction for transverse
+original linear crossings. The exact parameter predicate reflects the root
+fraction n/d to (d-n)/d before cross multiplication. Fixed endpoints use an
+exact authored sum test a+b=domain_start+domain_end, never rounded subtraction.
+Original source domains must still match the canonical domain; general affine
+remapping and reflected nonlinear root equivalence remain unproven.
+
+A tetrahedron fixture splits one shared original edge at independent source
+roots on its two adjacent non-coplanar faces (parameters 1/4 and 3/4). Original
+curve definitions remain unchanged. The shell assembler requalifies both
+restricted pairs and produces seven canonical edge restrictions and five shared
+vertex owners with opposite use incidence throughout. No Cartesian root or
+rounded Curve::trim is introduced.
+
+All 38 selected B-rep source tests and all 24 exact predicate tests passed
+(`source-reflected-root.log.gz`, `reflected-root-predicates.log.gz`). Exact fixed
+parameter tests distinguish 1/4+3/4 from a tiny displacement and from the rounded
+Binary64 sum 0.1+0.9. This validates partitioned source incidence, not geometric
+volume admission or a complete fillet body. Trimmed face embedding, curved root
+equivalence, end transitions, full fillet checks and WASM/UI remain open.
