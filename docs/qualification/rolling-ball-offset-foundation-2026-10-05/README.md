@@ -178,3 +178,17 @@ Native transport plus offset regression: 55 tests pass. Actual WASM and real-wor
 - WASM: 11,056,362 bytes; SHA-256 `ff6d979f30a614cbc0263930c8b3498ac3b5074f98bf3817ca6279189f0c899f`.
 - Packed geometry: 3,689,468 bytes. Assets: 7,933,678 bytes (+6,356 bytes from center tangent delivery). Explicit budgets: 3,692,000 and 7,936,500 bytes.
 - This is an analytic local envelope query through the existing worker. A finite NURBS patch with certified fitting error, replacement source trims, endpoint/corner transitions, embedding/volume checks and UI solid admission remain required. Variable-radius envelopes remain open.
+
+## Finite rational patch proposal and uniform error qualification (native)
+
+`offset_envelope_fit::propose` builds a finite degree-(1,2) rational tensor surface from two isolated contact sections. The enclosed center midpoints and floating normals only propose its endpoint control rows. They do not establish an exact fit, radius, source tangency or final topology.
+
+`offset_envelope_fit::certify` validates the authored candidate and the two original carriers, requires natural candidate domains equal to the driving source interval and arc `[0,1]`, and requires candidate C1 continuity over the complete rectangle. It qualifies the actual rational surface against the implicit rolling-ball envelope in the same pointwise parameter correspondence.
+
+For each complete rectangle, source and candidate interval jets enclose both derivatives of their difference. A one-ULP driving band and a single arc parameter enclose an exact contact-root anchor; the candidate anchor uses an original-tensor interval point bound, not a floating sample. The mean-value theorem then bounds every difference component by the anchor residual plus the two interval derivative differences multiplied by parameter displacement intervals. An outward norm upper bound establishes the requested millimeter tolerance. Both the candidate and envelope also require positive local immersion bounds. A positive anchor-error lower bound above tolerance disproves the candidate.
+
+Subdivision keeps all failed leaves and reserves work for every pending leaf. Total outer cells, including failed parents, are bounded by `max_cells`; at most two envelope oracle queries are used per evaluated cell, each with the declared incident-span limit. Split scores are heuristics only, not proofs. Incomplete work retains the original full rectangle coverage and never receives a fit certificate. Unqualified periodic endpoints, insufficient knot continuity and mismatched candidate domains cannot be admitted.
+
+Four new checks pass: a planar quarter-cylinder patch with uniform `1e-4 mm` error qualification; a curved cylinder/oblique-plane contact with uniform `1e-3 mm` error qualification in original and rotated/translated frames; candidate modification/work-stop refusal; and domain/continuity admission. Independent analytic sphere-radius checks inspect the final authored curved NURBS as a regression oracle. The full interval comparison, rather than those finite evaluations, supplies the fit proof. The combined offset filter passes 59 tests.
+
+This is native delivery. The finite-patch query is not yet exposed in WASM/worker/UI. Adaptive multi-patch fitting, endpoint tangent tolerance, replacement source trims, stitching, transitions, embedding, volume/thickness qualification and final solid admission remain open. Constant-radius fitting does not establish varying-radius support.

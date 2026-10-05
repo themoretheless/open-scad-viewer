@@ -148,6 +148,38 @@ pub fn certify(
     max_spans: usize,
     max_cells: usize,
 ) -> Result<Report> {
+    certify_arc(
+        surfaces,
+        distances,
+        fixed_axis,
+        fixed_interval,
+        first_other,
+        second,
+        max_spans,
+        [0., 1.],
+        max_cells,
+    )
+}
+/// Internal rectangle oracle for fitting; a point arc parameter is permitted.
+/// Returned cells cover only `arc_range`, never an implied whole arc.
+pub(crate) fn certify_arc(
+    surfaces: [&Surface; 2],
+    distances: [f64; 2],
+    fixed_axis: usize,
+    fixed_interval: [f64; 2],
+    first_other: [f64; 2],
+    second: [[f64; 2]; 2],
+    max_spans: usize,
+    arc_range: [f64; 2],
+    max_cells: usize,
+) -> Result<Report> {
+    check(
+        arc_range.iter().all(|x| x.is_finite())
+            && arc_range[0] >= 0.
+            && arc_range[1] <= 1.
+            && arc_range[0] <= arc_range[1],
+        "Envelope arc range must lie in [0,1]",
+    )?;
     check(
         distances.iter().all(|d| d.is_finite())
             && distances[0] != 0.
@@ -252,7 +284,7 @@ pub fn certify(
         weights: [I::point(1.), w, I::point(1.)],
         weight_velocities: [I::point(0.), wt, I::point(0.)],
     };
-    let mut pending = vec![[0., 1.]];
+    let mut pending = vec![arc_range];
     while let Some(range) = pending.pop() {
         let cell = arc.cell(range)?;
         out.visited += 1;

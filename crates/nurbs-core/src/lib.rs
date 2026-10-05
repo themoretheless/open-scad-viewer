@@ -145,3 +145,5 @@ pub mod offset_source_boundary;
 pub mod offset_contact_tangent;
 
 pub mod offset_envelope;
+
+pub mod offset_envelope_fit;

@@ -32,7 +32,7 @@ impl Report {
             "trimMembershipProven":false,"topologyAuthority":false})
     }
 }
-fn differentiable(s: &Surface, d: [[f64; 2]; 2], order: usize) -> bool {
+pub(crate) fn differentiable(s: &Surface, d: [[f64; 2]; 2], order: usize) -> bool {
     let degrees = [s.degree_u, s.degree_v];
     let knots = [&s.knots_u, &s.knots_v];
     let counts = [s.control_points.len(), s.control_points[0].len()];
