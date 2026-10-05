@@ -669,3 +669,18 @@ This stage qualifies source UV material regions only. Cut-hole boundaries,
 non-monotone general contact simplicity, exact world-edge and vertex realization,
 3D embedding, end transitions, shell/volume admission and WASM/UI fillets remain
 outstanding.
+
+## Original world-expression enclosure
+
+`Fragment::world_enclosure` maps the complete original UV restriction through
+its original surface, retaining both uncertain root caps. It produces outward
+world bounds for S(C(t)); it does not trim or fit a Cartesian curve. Original
+curve spans and active surface span products share a bounded work allowance.
+Exhaustion returns no world box and an explicit incomplete state. Chart clipping
+uses the independently proven fragment membership. Reversing traversal preserves
+the same enclosure.
+
+All 5 fragment tests passed (`source-fragment-world-enclosure.log.gz`), including
+root-point enclosure containment, orientation invariance and mapping-budget
+exhaustion. Exact Model edge/vertex ownership, embedding and volume admission
+still require implementation.

@@ -21,6 +21,11 @@ pub struct Fragment {
     parameter_bounds: [[f64; 2]; 2],
     reversed: bool,
 }
+pub struct WorldEnclosure {
+    pub world_box: Option<[[f64; 2]; 3]>,
+    pub cells: usize,
+    pub complete: bool,
+}
 fn error(message: &str) -> Error {
     Error::new("BREP_SOURCE_FRAGMENT", message)
 }
@@ -203,6 +208,84 @@ impl Fragment {
     pub fn reversed(&self) -> bool {
         self.reversed
     }
+    /// Enclose the original world expression S(C(t)), including uncertain root
+    /// caps. This does not manufacture a Cartesian curve or admit a Model edge.
+    pub fn world_enclosure(&self, max_cells: usize) -> Result<WorldEnclosure> {
+        use nurbs_core::interval_eval::{self, Interval as I};
+        if !(1..=100000).contains(&max_cells) {
+            return Err(error("Choose bounded source world mapping work"));
+        }
+        let range = [
+            self.parameter_bounds[0][0].min(self.parameter_bounds[1][0]),
+            self.parameter_bounds[0][1].max(self.parameter_bounds[1][1]),
+        ];
+        let spans = |knots: &[f64], degree: usize, n: usize, r: [f64; 2]| {
+            (degree..n)
+                .filter(|&i| knots[i] < knots[i + 1] && knots[i] <= r[1] && knots[i + 1] >= r[0])
+                .count()
+        };
+        let mut cells = spans(
+            &self.curve.knots,
+            self.curve.degree,
+            self.curve.control_points.len(),
+            range,
+        );
+        let stopped = |cells| WorldEnclosure {
+            world_box: None,
+            cells,
+            complete: false,
+        };
+        if cells > max_cells {
+            return Ok(stopped(0));
+        }
+        let uv = interval_eval::evaluate_interval(&self.curve, I::new(range[0], range[1])?)?;
+        let chart = [
+            [
+                self.surface.knots_u[self.surface.degree_u],
+                self.surface.knots_u[self.surface.control_points.len()],
+            ],
+            [
+                self.surface.knots_v[self.surface.degree_v],
+                self.surface.knots_v[self.surface.control_points[0].len()],
+            ],
+        ];
+        // Fragment construction independently proved complete chart membership.
+        // Clip only the outward enclosure, never the original source expression.
+        let uv: [I; 2] = std::array::from_fn(|i| I {
+            lo: uv[i].lo.max(chart[i][0]),
+            hi: uv[i].hi.min(chart[i][1]),
+        });
+        if uv.iter().any(|i| i.lo > i.hi) {
+            return Err(error(
+                "Source world enclosure is inconsistent with chart proof",
+            ));
+        }
+        let count = spans(
+            &self.surface.knots_u,
+            self.surface.degree_u,
+            self.surface.control_points.len(),
+            [uv[0].lo, uv[0].hi],
+        )
+        .checked_mul(spans(
+            &self.surface.knots_v,
+            self.surface.degree_v,
+            self.surface.control_points[0].len(),
+            [uv[1].lo, uv[1].hi],
+        ));
+        let Some(count) = count else {
+            return Ok(stopped(cells));
+        };
+        if count > max_cells - cells {
+            return Ok(stopped(cells));
+        }
+        cells += count;
+        let world = interval_eval::evaluate_surface_interval(&self.surface, uv[0], uv[1])?;
+        Ok(WorldEnclosure {
+            world_box: Some(std::array::from_fn(|i| [world[i].lo, world[i].hi])),
+            cells,
+            complete: true,
+        })
+    }
     pub fn split_at(&self, point: &SourcePoint, role: Role) -> Result<[Self; 2]> {
         let end = Endpoint::Crossing {
             point: point.clone(),
@@ -371,6 +454,35 @@ mod tests {
         let reversed = reversed.split_at(&p, Role::Boundary).unwrap();
         assert!(reversed[0].reversed() && reversed[0].joins(&reversed[1]));
         assert!(full.split_at(&p, Role::Contact).is_err());
+    }
+    #[test]
+    fn original_world_mapping_keeps_root_caps_and_accounts_for_work() {
+        let (s, a, _, p) = fixture();
+        let f = Fragment::new(
+            &s,
+            &a,
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: p.clone(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let r = f.world_enclosure(16).unwrap();
+        assert!(r.complete);
+        let bounds = r.world_box.unwrap();
+        for axis in 0..3 {
+            assert!(bounds[axis][0] <= p.world_box()[axis][0]);
+            assert!(bounds[axis][1] >= p.world_box()[axis][1]);
+        }
+        assert_eq!(r.cells, 2);
+        let stopped = f.world_enclosure(1).unwrap();
+        assert!(!stopped.complete && stopped.world_box.is_none());
+        assert_eq!(stopped.cells, 1);
+        assert!(f.world_enclosure(0).is_err());
+        let reverse =
+            Fragment::new(&s, &a, f.endpoints()[1].clone(), f.endpoints()[0].clone()).unwrap();
+        assert_eq!(reverse.world_enclosure(16).unwrap().world_box, Some(bounds));
     }
     #[test]
     fn restored_fragment_rechecks_source_binding_and_root_order() {
