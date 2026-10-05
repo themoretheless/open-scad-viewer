@@ -2565,3 +2565,19 @@ span/endpoint limits, and identical network after fresh shell restoration.
 This does not yet qualify a root-valued closed body network, weld a display
 mesh, establish chord tolerances, or enable editing. WASM/UI transport is not
 connected and the shipped WASM is unchanged for this native-only step.
+
+### Root-partition boundary network — 2026-10-06
+
+The existing four-face closed tetrahedral source shell splits one shared edge
+using independent UV root recipes on neighboring faces. The new network checks
+five vertex identities, fourteen canonical ends and fourteen carrier spans.
+The degree-two split vertex lies strictly inside both original parameter domains;
+its common enclosure is contained in both original endpoint enclosures.
+Thirteen-span and thirteen-end budgets refuse this fourteen-work fixture.
+The source-shell replay helper now compares the complete network after fresh
+JSON definition restoration, including this root-partition control.
+
+Targeted native test: 1 passed, 8.20 seconds, log
+`source-root-boundary-network.log.gz`. This qualifies endpoint aggregation for
+this closed shell, not general curved fillet bodies, volume, closed tessellation,
+root-valued Model/STEP transport, or browser rendering of partial faces.

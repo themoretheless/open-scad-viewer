@@ -1211,6 +1211,29 @@ mod tests {
         let shell = r.shell.unwrap();
         crate::source_shell_restore::assert_replay(&shell);
         assert_eq!(shell.regions().unwrap().len(), 4);
+        let network = crate::source_boundary_network::inspect(&shell, 14, 14).unwrap();
+        assert_eq!(network.vertices.len(), 5);
+        assert_eq!(network.endpoints, 14);
+        assert_eq!(network.spans, 14);
+        let root_vertex = network.vertices.iter().find(|v| v.ends.len() == 2).unwrap();
+        assert!(root_vertex.poles.is_empty());
+        // Both halves keep their original carrier and independent root recipes.
+        // The shared vertex enclosure must be inside each canonical end box.
+        for [edge, end] in &root_vertex.ends {
+            let restriction = crate::source_edge_restriction::Restriction::from_edge(
+                &shell.edges()[*edge],
+            );
+            let parameter = restriction.parameter_bounds().unwrap()[*end];
+            let domain = restriction.edge().world().domain();
+            assert!(parameter[0] > domain[0] && parameter[1] < domain[1]);
+            let bounds = restriction.endpoint_boxes(2).unwrap()[*end];
+            for axis in 0..3 {
+                assert!(root_vertex.bounds[axis][0] >= bounds[axis][0]);
+                assert!(root_vertex.bounds[axis][1] <= bounds[axis][1]);
+            }
+        }
+        assert!(crate::source_boundary_network::inspect(&shell, 13, 14).is_err());
+        assert!(crate::source_boundary_network::inspect(&shell, 14, 13).is_err());
         let topology = crate::source_vertex_links::inspect(&shell, 14).unwrap();
         assert!(topology.all_manifold);
         assert_eq!(topology.links.len(), 5);

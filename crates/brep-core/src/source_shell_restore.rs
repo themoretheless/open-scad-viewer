@@ -176,6 +176,10 @@ pub(crate) fn assert_replay(shell: &Shell) {
     assert_eq!(replay.definition().unwrap(), definition);
     assert_eq!(replay.vertices(), shell.vertices());
     assert_eq!(replay.uses(), shell.uses());
+    assert_eq!(
+        crate::source_boundary_network::inspect(&replay, 100000, 100000).unwrap(),
+        crate::source_boundary_network::inspect(shell, 100000, 100000).unwrap()
+    );
     for region in shell.regions().unwrap() {
         source_region_restore::assert_replay(region);
     }
