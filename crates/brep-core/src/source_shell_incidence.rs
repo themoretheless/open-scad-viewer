@@ -1485,6 +1485,26 @@ mod tests {
             volume.signed_bounds
         );
         let body = volume.body.unwrap();
+        assert!(crate::source_body_model::convert(&body, 1e-7).is_err());
+        let source_model = crate::source_body_topology::convert(&body, 1e-7, 14, 14).unwrap();
+        assert_eq!(source_model.definition(), &body.definition().unwrap());
+        let indexed = source_model.topology();
+        assert_eq!(indexed.vertices.len(), 5);
+        assert_eq!(indexed.edges.len(), 7);
+        for (i,edge) in indexed.edges.iter().enumerate() {
+            let crate::source_body_topology::Carrier::Edge(restriction) = &edge.curve else { panic!("Unexpected pole"); };
+            assert_eq!(restriction.definition(), body.edge_restriction(i).unwrap().definition());
+        }
+        for (face,wires) in body.geometry().shell().faces().iter().enumerate() {
+            for (wire,source) in wires.iter().enumerate() {
+                let loop_index = if wire == 0 { indexed.faces[face].outer } else { indexed.faces[face].holes[wire-1] };
+                for (edge,fragment) in source.edges().iter().enumerate() {
+                    assert_eq!(indexed.loops[loop_index].coedges[edge].pcurve.definition(), fragment.definition());
+                }
+            }
+        }
+        assert!(crate::source_body_topology::convert(&body, 0., 14, 14).is_err());
+        assert!(crate::source_body_topology::convert(&body, 1e-7, 13, 14).is_err());
         let seam_limits = || crate::source_seam_tangency::Limits {
             max_sine_squared: 1e-6,
             cells: 100,

@@ -308,6 +308,25 @@ mod tests {
             assert_eq!(face["tiles"].as_array().unwrap().len(), 16);
             assert!(face["unresolved"].as_array().unwrap().is_empty());
         }
+        let fresh = brep_core::source_body_restore::restore(
+            restored["sourceBody"].clone(), limits(&config(50000)).unwrap(),
+        ).unwrap();
+        let source_model = brep_core::source_body_topology::convert(fresh.body().unwrap(), 1e-7, 10000, 10000).unwrap();
+        assert_eq!(source_model.definition(), &restored["sourceBody"]);
+        let topology = source_model.topology();
+        assert_eq!(topology.edges.len(), shell.edges().len()+shell.poles().len());
+        assert_eq!(topology.edges.iter().filter(|e| e.degenerate).count(), shell.poles().len());
+        for edge in &topology.edges {
+            match &edge.curve {
+                brep_core::source_body_topology::Carrier::Edge(_) => assert!(!edge.degenerate),
+                brep_core::source_body_topology::Carrier::Pole(pole) => {
+                    assert!(edge.degenerate);
+                    assert_eq!(edge.vertices[0], edge.vertices[1]);
+                    let bounds = topology.vertices[edge.vertices[0]].point.bounds;
+                    assert_eq!(bounds, pole.point().map(|p| [p,p]));
+                }
+            }
+        }
         let oracle = 2. * std::f64::consts::PI / 3.;
         assert!(
             restored["volume"][0].as_f64().unwrap() <= oracle

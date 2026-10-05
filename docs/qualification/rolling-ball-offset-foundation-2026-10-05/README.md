@@ -2644,3 +2644,30 @@ capped canal. Root-valued boundaries have native closed-shell coverage,
 but root-body browser rendering, exact Model/STEP restriction transport,
 closed tessellation, geometric source editing, general fillets, full wall
 checks, named part acceptance, the 95-command matrix and P2/P3 remain open.
+
+### Exact source restrictions on indexed topology — 2026-10-06
+
+`source_body_topology::convert` projects a privately admitted Body onto the
+existing generic `brep_topology::Model`, with original canonical Restrictions
+or CollapsedBoundaries as carriers, original directed Fragments as pcurves,
+and source vertex identities with interval enclosures. No numerical root
+coordinate is selected. Edge direction and common vertex ownership are checked
+and the indexed closed topology is validated. The projection is immutable;
+edited generic copies do not authorize new geometry. Persistence uses the
+original Body definition and must replay native admission when restored.
+
+The native root-partitioned tetrahedral Body preserves all seven original edge
+restrictions, every pcurve definition, five vertex identities and the original
+Body definition. Invalid tolerance/span work refuses. The coordinate-based
+Model converter still explicitly refuses this root-valued Body. Targeted
+native test passed (1.69 seconds), `source-exact-topology-root.log.gz`.
+The source-body bridge's native test restores its Body again, projects its
+indexed topology, and verifies every pole carrier remains a degenerate edge
+with one vertex and the exact collapsed point enclosure. It passed
+(10.43 seconds), `source-exact-topology-poles.log.gz`.
+
+This is native restriction storage on the shared topology library. It does
+not enable root-valued coordinate-Model editing or STEP export, closed mesh
+tessellation, new fillet construction, or root-body browser acceptance. No
+production dispatcher or UI uses this new native projection yet; the shipped
+WASM remains the previously qualified c79974ab artifact.
