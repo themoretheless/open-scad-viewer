@@ -161,7 +161,10 @@ pub fn qualify_with_cutters(
             out.reason = "source-edge-identity-work-limit";
             return Ok(out);
         }
-        let Some(proof) = curve_surface_agreement::verify_exact(
+        // Fragment construction independently proves its whole restriction in
+        // the positive-weight source chart. Formal homogeneous identity then
+        // proves equality there, without requiring the unused UV tails inside.
+        let Some(proof) = curve_surface_agreement::verify_exact_algebraic(
             world,
             edge.curve(),
             edge.surface(),
@@ -334,7 +337,7 @@ fn common_world_root(
         if out.work_used == max_work {
             return Ok(false);
         }
-        let Some(proof) = curve_surface_agreement::verify_exact(
+        let Some(proof) = curve_surface_agreement::verify_exact_algebraic(
             cutter,
             other,
             point.surface(),
@@ -380,6 +383,96 @@ fn common_world_root(
 mod tests {
     use super::*;
     use nurbs_core::surface::Surface;
+    #[test]
+    fn root_valued_rational_restriction_uses_original_composition_without_extrapolated_chart_admission(
+    ) {
+        let surface = |vertical: bool| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![
+                    if vertical {
+                        vec![0., 0., -0.5]
+                    } else {
+                        vec![0., -0.5, 0.]
+                    },
+                    if vertical {
+                        vec![0., 0., 0.5]
+                    } else {
+                        vec![0., 0.5, 0.]
+                    },
+                ],
+                vec![
+                    if vertical {
+                        vec![1., 0., -0.5]
+                    } else {
+                        vec![1., -0.5, 0.]
+                    },
+                    if vertical {
+                        vec![1., 0., 0.5]
+                    } else {
+                        vec![1., 0.5, 0.]
+                    },
+                ],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let surfaces = [surface(false), surface(true)];
+        let mut p = Curve::from_polyline(vec![vec![-0.25, 0.5], vec![1.25, 0.5]]).unwrap();
+        p.weights[1] = 0.75;
+        let mut world =
+            Curve::from_polyline(vec![vec![-0.25, 0., 0.], vec![1.25, 0., 0.]]).unwrap();
+        world.weights = p.weights.clone();
+        let ends = |s: &Surface| -> Vec<Endpoint> {
+            [(0.125, [0.2, 0.4]), (0.875, [0.7, 0.9])]
+                .iter()
+                .map(|&(u, selector)| {
+                    let boundary = Curve::from_polyline(vec![vec![u, 0.], vec![u, 1.]]).unwrap();
+                    let r = crate::source_contact_point::qualify(
+                        s,
+                        &boundary,
+                        &p,
+                        [[0.4, 0.6], selector],
+                        16,
+                    )
+                    .unwrap();
+                    assert!(r.point.is_some(), "{}", r.reason);
+                    Endpoint::Crossing {
+                        point: r.point.unwrap(),
+                        role: Role::Contact,
+                    }
+                })
+                .collect()
+        };
+        let ea = ends(&surfaces[0]);
+        let eb = ends(&surfaces[1]);
+        let a = Fragment::new(&surfaces[0], &p, ea[0].clone(), ea[1].clone()).unwrap();
+        let b = Fragment::new(&surfaces[1], &p, eb[1].clone(), eb[0].clone()).unwrap();
+        assert!(
+            curve_surface_agreement::verify_exact(&world, &p, &surfaces[0], false, 1_000_000)
+                .unwrap()
+                .is_none()
+        );
+        let r = qualify(&world, [&a, &b], [false, false], 1_000_000).unwrap();
+        assert!(r.edge.is_some(), "{}", r.reason);
+        assert_eq!(r.edge.unwrap().uses()[0].definition(), a.definition());
+        assert!(Fragment::new(
+            &surfaces[0],
+            &p,
+            Endpoint::Parameter(0.),
+            Endpoint::Parameter(1.)
+        )
+        .is_err());
+        world.control_points[0][2] += 1e-12;
+        assert!(qualify(&world, [&a, &b], [false, false], 1_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+    }
     #[test]
     fn adjacent_non_coplanar_faces_have_exact_common_root_without_shared_cutter() {
         let surface = |vertical: bool| Surface {

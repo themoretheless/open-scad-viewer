@@ -215,6 +215,24 @@ pub fn verify_on(
 /// A returned decision distinguishes exact equality, difference and work limits.
 pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work: u64)
     -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    verify_exact_impl(c,p,s,reversed,max_work,true)
+}
+/// Homogeneous cross-product identity of a formal Bezier composition. This
+/// report proves neither denominator positivity nor source chart membership.
+/// A geometry caller must independently prove the actual restriction in-chart.
+pub struct AlgebraicCompositionIdentity {
+    pub outcome: cad_predicates::BezierIdentity,
+    pub work_used: u64,
+    pub context: cad_predicates::ContextIdentity,
+}
+pub fn verify_exact_algebraic(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64)
+    -> Result<Option<AlgebraicCompositionIdentity>> {
+    Ok(verify_exact_impl(c,p,s,reversed,max_work,false)?.map(|r|AlgebraicCompositionIdentity {
+        outcome:r.outcome,work_used:r.work_used,context:r.context,
+    }))
+}
+fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,require_chart:bool)
+    -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     use cad_predicates::{AuthoredScalar, Limits, PredicateContext, SourceArena, ToleranceContext};
     c.validate()?;p.validate()?;s.validate()?;
     check(c.control_points[0].len()==3 && p.control_points[0].len()==2,"Agreement needs a 3D curve and 2D pcurve")?;
@@ -230,7 +248,7 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
     let domain=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
     // Positive rational weights put the entire pcurve in its control hull.
-    if p.control_points.iter().any(|v|(0..2).any(|k|v[k]<domain[k][0]||v[k]>domain[k][1])) {return Ok(None);}
+    if require_chart && p.control_points.iter().any(|v|(0..2).any(|k|v[k]<domain[k][0]||v[k]>domain[k][1])) {return Ok(None);}
     if p.degree==1&&p.weights[0]==p.weights[1] {
         for fixed in 0..2 {for end in 0..2 {
             let free=1-fixed;let a=&p.control_points[0];let b=&p.control_points[1];
@@ -324,6 +342,24 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn formal_composition_does_not_claim_full_chart_membership() {
+        use cad_predicates::BezierIdentity;
+        let s=Surface {degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,1.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let mut p=Curve::from_polyline(vec![vec![-0.25,0.5],vec![1.25,0.5]]).unwrap();
+        p.weights[1]=0.75;
+        let mut c=Curve::from_polyline(vec![vec![-0.25,0.5,-0.125],vec![1.25,0.5,0.625]]).unwrap();
+        c.weights=p.weights.clone();
+        assert!(verify_exact(&c,&p,&s,false,1_000_000).unwrap().is_none());
+        assert_eq!(verify_exact_algebraic(&c,&p,&s,false,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        c.control_points.reverse();c.weights.reverse();
+        assert_eq!(verify_exact_algebraic(&c,&p,&s,true,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        c.control_points[0][2]+=1e-12;
+        assert_eq!(verify_exact_algebraic(&c,&p,&s,true,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        assert!(matches!(verify_exact_algebraic(&c,&p,&s,true,0).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
+    }
     #[test]
     fn tensor_boundary_identity_preserves_domains_reversal_weights_and_limits() {
         use cad_predicates::BezierIdentity;

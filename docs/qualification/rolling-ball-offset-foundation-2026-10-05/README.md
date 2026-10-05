@@ -951,3 +951,31 @@ Exact/chart exhaustion yields no allowed certificate and falls back to an
 unresolved search. Curved shared boundaries, partial line coverage, tangencies,
 neighborhood embedding, material volume and general fillet transitions remain
 outstanding. This pair audit is not a whole-volume certificate.
+
+## Exact source composition on retained chart restrictions
+
+`verify_exact_algebraic` exposes a distinct report for homogeneous cross-product
+identity of a formal tensor Bezier composition. It does not prove chart
+membership or denominator positivity. The existing `verify_exact` full-chart
+API retains its original control-hull membership requirement and behavior.
+
+The source shared-edge gate can use the formal identity after immutable
+Fragment construction has independently proven the complete actual restriction
+inside the positive-weight source chart. Identity then proves equality on that
+restriction, without requiring unused original UV tails inside the chart.
+Source crossing points similarly prove their actual UV point belongs to the
+chart before canonical cutter identity is used. Neither source curve is trimmed
+or replaced; root-valued endpoints retain their original definitions.
+
+All 41 selected B-rep source tests and all 644 NURBS library tests passed
+(`source-restricted-composition-regression.log.gz`,
+`restricted-composition-nurbs-regression.log.gz`). A nonuniform rational line
+with source controls beyond the chart shares a root-valued retained restriction
+between orthogonal surfaces. Its complete original UV curve remains inadmissible
+as a chart fragment; a displaced world curve refuses equality. A bilinear graph
+case separately verifies formal identity, reversal, mismatch and work refusal
+while full-chart identity remains unproven for the outside source definition.
+
+Multiple original knot spans, general parameter remapping, partial/curved allowed
+contacts, exact corner ownership, volume admission and general fillet
+transitions/WASM/UI remain outstanding.
