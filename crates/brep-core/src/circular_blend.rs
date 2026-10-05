@@ -13,6 +13,13 @@ pub struct CircularBlendSpan {
     cylinder_radius: f64,
 }
 
+/// Radius-stage diagnostics are retained after its private proof is transferred
+/// into normal qualification. A successful envelope owns both original proofs.
+pub struct CircularEnvelopeReport {
+    pub radius: nurbs_core::moving_radius::Report,
+    pub normals: Option<nurbs_core::moving_envelope::Report>,
+}
+
 pub struct CircularBlendBoundary {
     pub curve: Curve,
     pub pcurve: Curve,
@@ -43,6 +50,23 @@ impl CircularBlendSpan {
             max_cells,
             max_work,
         )
+    }
+    /// Recheck radial/normal agreement on the original support after a fresh
+    /// whole-patch radius check. The two qualification stages have separate budgets.
+    pub fn qualify_envelope(
+        &self,
+        tolerance_mm: f64,
+        radius_cells: usize,
+        radius_work: u64,
+        limits: nurbs_core::moving_envelope::Limits,
+    ) -> nurbs_core::Result<CircularEnvelopeReport> {
+        let mut radius = self.qualify_radius(tolerance_mm, radius_cells, radius_work)?;
+        let normals = radius
+            .certificate
+            .take()
+            .map(|proof| nurbs_core::moving_envelope::qualify(proof, limits))
+            .transpose()?;
+        Ok(CircularEnvelopeReport { radius, normals })
     }
     /// Assemble one open B-rep face. This intentionally has no volume body;
     /// the pole edge retains a full UV boundary while its 3D curve is constant.
@@ -1788,6 +1812,77 @@ mod tests {
                 assert_eq!(span.surface, before);
                 assert_eq!(out.certificate.unwrap().centers(), &span.centers);
             }
+        }
+    }
+
+    #[test]
+    fn constant_rim_envelope_and_varying_section_have_distinct_normal_admission() {
+        let limits = || nurbs_core::moving_envelope::Limits {
+            max_sine_squared: 0.02,
+            cells: 100000,
+            surface_spans: 100000,
+            center_spans: 100000,
+            radial_work: 100_000_000,
+        };
+        for direction in [-1., 1.] {
+            let span = plane_cylinder_rim(20., 6., 1.25, 0.3, direction * 0.7)
+                .unwrap()
+                .remove(0);
+            let report = span
+                .qualify_envelope(1e-7, 100, 100_000_000, limits())
+                .unwrap()
+                .normals
+                .unwrap();
+            eprintln!(
+                "constant rim envelope direction {direction}: {} cells {} accepted {}",
+                report.reason, report.cells, report.accepted_cells
+            );
+            assert!(
+                report.envelope.is_some(),
+                "{} {:?}",
+                report.reason,
+                report.uncertain_uv
+            );
+            assert_eq!(report.envelope.unwrap().radius().surface(), &span.surface);
+            let stopped = span.qualify_envelope(1e-7, 100, 1, limits()).unwrap();
+            assert!(stopped.normals.is_none());
+            assert_eq!(stopped.radius.reason, "moving-radius-work-limit");
+            assert!(stopped.radius.uncertain_uv.is_some());
+            let transition =
+                plane_cylinder_transition(20., 6., 0.5, 1.25, 0.3, direction * 0.7).unwrap();
+            let p = transition.surface.evaluate(0.5, 0.5).unwrap();
+            let normal = p.unit_normal().unwrap();
+            let c = transition.centers.evaluate(0.5).unwrap().point;
+            let radial = (0..3).map(|k| p.point[k] - c[k]).collect::<Vec<_>>();
+            let length = radial.iter().map(|x| x * x).sum::<f64>().sqrt();
+            let dot = (0..3).map(|k| normal[k] * radial[k] / length).sum::<f64>();
+            let sine_squared = 1. - dot * dot;
+            eprintln!("varying section midpoint sine squared {sine_squared}");
+            let mut strict = limits();
+            strict.max_sine_squared = 1e-4;
+            assert!(sine_squared > strict.max_sine_squared);
+            let report = transition
+                .qualify_envelope(1e-9, 100, 100_000_000, strict)
+                .unwrap()
+                .normals
+                .unwrap();
+            eprintln!(
+                "varying section envelope direction {direction}: {} cells {}",
+                report.reason, report.cells
+            );
+            assert!(report.envelope.is_none());
+            assert_eq!(report.reason, "moving-envelope-angular-break");
+            assert!(report.uncertain_uv.is_some());
+            let pole = plane_cylinder_transition(20., 6., 0., 1.25, 0.3, direction * 0.7).unwrap();
+            let mut short = limits();
+            short.cells = 32;
+            let report = pole
+                .qualify_envelope(1e-6, 100, 100_000_000, short)
+                .unwrap()
+                .normals
+                .unwrap();
+            assert!(report.envelope.is_none());
+            assert!(report.uncertain_uv.is_some());
         }
     }
 

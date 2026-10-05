@@ -283,6 +283,94 @@ pub fn qualify(
     }
     Ok(out)
 }
+/// Correlated displacement hull on a positive rectangle of continuous original
+/// charts. This is internal proof machinery for moving-envelope qualification.
+pub(crate) fn radial_box(
+    s: &Surface,
+    c: &Curve,
+    uv: [[f64; 2]; 2],
+    max_work: u64,
+    max_center_spans: usize,
+) -> Result<(Option<[I; 3]>, u64, usize)> {
+    let mut work = 0;
+    let mut center_spans = 0;
+    let mut cuts = vec![uv[0][0], uv[0][1]];
+    cuts.extend(
+        s.knots_u
+            .iter()
+            .chain(&c.knots)
+            .copied()
+            .filter(|&x| uv[0][0] < x && x < uv[0][1]),
+    );
+    cuts.sort_by(f64::total_cmp);
+    cuts.dedup();
+    let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for u in cuts.windows(2) {
+        for v in s.degree_v..s.control_points[0].len() {
+            let section = [
+                [u[0], u[1]],
+                [uv[1][0].max(s.knots_v[v]), uv[1][1].min(s.knots_v[v + 1])],
+            ];
+            if section[1][0] >= section[1][1] {
+                continue;
+            }
+            if center_spans == max_center_spans {
+                return Ok((None, work, center_spans));
+            }
+            center_spans += 1;
+            let su = span(&s.knots_u, s.degree_u, s.control_points.len(), section[0]);
+            let cu = span(&c.knots, c.degree, c.control_points.len(), section[0]);
+            let origin = &c.control_points[cu - c.degree];
+            let mut net = crate::curve_surface_composition::surface_net_on(s, [su, v], section)?;
+            for row in &mut net {
+                for h in row {
+                    for k in 0..3 {
+                        h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
+                    }
+                }
+            }
+            let center = curve_net(c, cu, section[0], origin)?;
+            let sp = |k| {
+                net.iter()
+                    .map(|row| row.iter().map(|h| h[k]).collect())
+                    .collect::<Poly>()
+            };
+            let cp = |k| center.iter().map(|h| vec![h[k]]).collect::<Poly>();
+            macro_rules! product {
+                ($a:expr,$b:expr) => {
+                    match mul(&$a, &$b, &mut work, max_work)? {
+                        Some(p) => p,
+                        None => return Ok((None, work, center_spans)),
+                    }
+                };
+            }
+            let denominator = product!(sp(3), cp(3));
+            for k in 0..3 {
+                let delta = sub(product!(sp(k), cp(3)), &product!(cp(k), sp(3)))?;
+                for (row, other) in delta.iter().zip(&denominator) {
+                    for (a, b) in row.iter().zip(other) {
+                        if b.lo <= 0. {
+                            return Ok((None, work, center_spans));
+                        }
+                        let q = a.div(*b)?;
+                        bounds[k][0] = bounds[k][0].min(q.lo);
+                        bounds[k][1] = bounds[k][1].max(q.hi);
+                    }
+                }
+            }
+        }
+    }
+    Ok((
+        Some([
+            I::new(bounds[0][0], bounds[0][1])?,
+            I::new(bounds[1][0], bounds[1][1])?,
+            I::new(bounds[2][0], bounds[2][1])?,
+        ]),
+        work,
+        center_spans,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1583,3 +1583,65 @@ Validation: all 653 NURBS tests, 27 circular-blend tests and 72 selected source
 B-rep tests passed. Compressed logs accompany this stage. No STEP/WASM/worker/UI
 integration is claimed. General transition construction, complex corners,
 whole-wall checks, source Model conversion and P0/P2/P3 remain open.
+
+
+## Moving radial/normal envelope qualification
+
+`moving_envelope::qualify` consumes a private whole-chart moving-radius
+certificate. Fresh original physical derivative bounds enclose both incident
+knot sides. Surface normals are compared to S(u,v)-C(u), with positive normal
+and radial norm lower bounds required. Original source definitions are immutable
+and already pass native C0 knot validation. Singular normals and zero radial
+vectors cannot receive a regular envelope certificate.
+
+`moving_radius::radial_box` preserves the common-U correlation in the displacement:
+(P*A-C*W)/(W*A), with outward homogeneous Bernstein products on the union of
+original surface/center knots. This avoids widening the displacement by treating
+the surface and center as unrelated Cartesian boxes. The positive coefficient
+quotient hull covers every original displacement, including closed cell edges.
+These interval controls are proof machinery and never replace source geometry.
+
+Every accepted full rectangle encloses the sine squared between its radial
+vectors and surface normals. Adaptive subdivision replaces unresolved rectangles
+with two full-cover children; breadth-first work helps find local breaks. A
+successful private Envelope owns the original radius certificate, aggregate
+angular bound and requested tolerance. No partial accepted subset authorizes it.
+Subdivision, derivative spans, center sections and radial-product work have
+separate global budgets. Failure retains a source UV rectangle.
+
+A fresh interval evaluation at the chart midpoint may produce a rigorous
+counterexample with angular lower bound above tolerance. This rejection records
+the point UV and angular interval. A midpoint can never authorize success;
+acceptance still requires complete original-chart coverage. Opposite normal
+orientation is allowed because the gate checks tangent planes; material
+orientation and inside/outside ownership remain separate body checks.
+
+`CircularBlendSpan::qualify_envelope` first recomputes its whole original radius
+relation, then checks normal agreement. Its combined report preserves radius
+error/budget/localization diagnostics when the radius stage fails. When its
+private radius certificate is transferred to normal qualification, the radius
+report retains numerical diagnostics and a successful Envelope owns the proof.
+
+Regression evidence:
+
+- An original rational cylindrical patch passes full chart coverage; a varying
+  cone has a valid radius relation but a proven angular violation. Cell, surface
+  span, center section and radial product budget exhaustion never authorize it.
+  Disconnected original knot definitions are rejected before the radius pipeline.
+- Existing constant rim patches in both directions pass complete coverage at
+  max sine squared 0.02: 3364/11162 queries, 1682/5581 accepted rectangles.
+  This coarse angular gate does not qualify tight tolerances or interactive
+  performance for general patches.
+- The existing variable section has midpoint sine squared about 0.00111246.
+  At max sine squared 0.0001, the native interval point query proves violation
+  in one query in both directions. The independently evaluated midpoint is a
+  regression reference; the authority is the outward angular lower bound.
+- Zero-radius end transitions remain unqualified under the bounded regular
+  envelope check; radius agreement does not authorize their singular topology.
+
+Validation: all 657 NURBS tests, 72 selected source B-rep tests and the complete
+constant/variable/pole envelope regression passed. Compressed logs accompany
+this stage. Support-face contact, tight angular qualification/performance,
+general fillet construction and sewing, endpoint topology, varying-radius
+rolling-ball geometry and complex corners remain open. STEP/WASM/worker/UI,
+wall checks and the remaining P0/P2/P3 scope are not qualified by this stage.
