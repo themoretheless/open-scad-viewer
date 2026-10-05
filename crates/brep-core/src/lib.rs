@@ -1842,6 +1842,7 @@ pub mod source_contact_point;
 pub mod source_boundary_fragment;
 pub mod source_contour_proposal;
 pub mod source_contour_winding;
+pub mod source_world_wire;
 
 pub mod trimmed_shell_recipe;
 

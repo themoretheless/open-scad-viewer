@@ -684,3 +684,21 @@ All 5 fragment tests passed (`source-fragment-world-enclosure.log.gz`), includin
 root-point enclosure containment, orientation invariance and mapping-budget
 exhaustion. Exact Model edge/vertex ownership, embedding and volume admission
 still require implementation.
+
+## Source-composed world wire incidence
+
+Qualified source regions now expose immutable world wires whose edges retain
+the original surface, UV curve and root-valued endpoints. Directed edge vertex
+indices are assigned only after every original source join, including closure,
+is proven. World enclosure overlap cannot establish vertex ownership. Mapping
+work is shared over the wire; an incomplete prefix carries the first uncertain
+edge address and never claims complete geometry.
+
+All 31 selected source tests passed (`source-world-wire-regression.log.gz`).
+Integrated nonuniform rational clipping with a retained hole preserves contact
+definitions and maps both closed wires. A 1e-12 source endpoint gap is refused;
+shared mapping exhaustion retains the completed prefix.
+
+These wires retain exact surface-composed expressions and local incidence;
+they are not yet concrete Model edges, cross-face canonical ownership, embedded
+faces or volume admission. STEP realization and interactive fillets remain open.

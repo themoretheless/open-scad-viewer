@@ -275,6 +275,9 @@ pub struct SourceRegion {
     source_loop_indices: Vec<usize>,
 }
 impl SourceRegion {
+    pub fn world_wires(&self) -> Result<Vec<crate::source_world_wire::Wire>> {
+        self.loops.iter().map(|edges| crate::source_world_wire::Wire::new(edges)).collect()
+    }
     pub fn source_loop_indices(&self) -> &[usize] {
         &self.source_loop_indices
     }
@@ -1143,6 +1146,13 @@ mod tests {
             rational_region.interior.reason
         );
         assert_eq!(rational_region.removed_holes, vec![2]);
+        let world_wires = rational_region.region.as_ref().unwrap().world_wires().unwrap();
+        assert_eq!(world_wires.len(), 2);
+        for wire in &world_wires {
+            assert!(wire.world_mapping(1000).unwrap().complete);
+            assert_eq!(wire.vertices().last().unwrap()[1], 0);
+        }
+        assert_eq!(world_wires[0].edges()[0].curve(), &rational);
         assert_eq!(
             rational_region.region.as_ref().unwrap().loops()[0][0].curve(),
             &rational
