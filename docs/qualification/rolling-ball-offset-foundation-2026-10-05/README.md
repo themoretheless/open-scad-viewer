@@ -1400,3 +1400,47 @@ shell's different-face contact audit; vertex-link manifold qualification,
 outward material orientation and volume admission, general end transitions,
 variable radii/corners, radius/tangency/wall checks, STEP acceptance and WASM/UI
 remain open. General B-rep self-intersection support is not claimed.
+
+
+## Vertex links and fresh embedded-shell geometry admission
+
+`source_vertex_links::inspect` builds every vertex link from immutable source
+corner incidence and paired canonical edge endpoints. Each link must be one
+connected cycle, including parallel link edges at a degree-two partition
+vertex. Disconnected cycles, open/branched links and exhausted corner work
+refuse this proof. Original source vertex owners remain unchanged. For qualified
+bounded material regions, the face contribution to Euler characteristic is one
+minus its retained hole count; a connected oriented closed shell requires an
+even characteristic at most two. The report records its genus and uncertain
+vertex. Raw wire shells have no qualified region/genus authority.
+
+`source_shell_geometry::qualify` owns the immutable source shell and recomputes
+vertex links, whole-original chart injectivity and every different-face contact.
+The latter checks require a complete matrix, no pending pair and every pair
+qualified. Chart and contact span/oblique work share budgets. Corner, exact and
+driver limits are explicit; the caller supplies the positive UV classification
+tolerance. Cached public diagnostic booleans and caller certificates cannot
+authorize admission. The resulting geometry privately owns its source payload
+and fresh evidence, with read-only access. Failed checks retain an uncertain
+vertex, face or pending pair for localization.
+
+The six-face capped curved wedge qualifies with eight vertex cycles, twelve
+shared edges, Euler characteristic two and genus zero. Its original charts and
+all fifteen different-face pairs are freshly qualified again at admission.
+A root-partitioned tetrahedron also qualifies; its extra degree-two vertex and
+edge preserve Euler characteristic two and genus zero. Raw wire incidence is
+rejected by geometry admission. A face with an exact polynomial fold retains
+its exact triangle boundary and qualifies the original UV material domain, but
+geometry admission rejects its non-injective original chart and identifies
+face zero before any different-face checks. A twenty-three-corner budget or a
+fourteen-pair budget refuses the capped shell and localizes unfinished work.
+
+Validation: 65 selected native source B-rep tests passed. The final formatted
+cap fixture separately passed and logs all vertex/chart/pair admission gates.
+The folded-face regression passed separately and again in the final selected
+suite, including face localization. Compressed logs accompany this stage.
+Embedded-shell geometry admission precedes material orientation and signed
+volume; it is not a material Model body, general fillet result or STEP/WASM/UI
+acceptance. Interval volume/orientation, general end transitions, variable
+radii/complex corners, radius/tangency/wall checks and the remaining UI/P0/P2/P3
+work remain open.

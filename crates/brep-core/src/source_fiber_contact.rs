@@ -1407,5 +1407,63 @@ mod tests {
             .shell
             .is_none()
         );
+
+        let geometry_limits = |corners, pair_count| crate::source_shell_geometry::Limits {
+            tolerance_uv: 1e-8,
+            corners,
+            spans: 10000,
+            linear_cells: 10000,
+            pairs: crate::face_contacts::Limits {
+                pairs: pair_count,
+                cells: 100000,
+                domain_cells: 100000,
+                cells_per_pair: 5000,
+                domain_cells_per_pair: 10000,
+            },
+            exact_work: 100_000_000,
+            driver_cells: 10000,
+        };
+        let fresh_shell = || {
+            source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &regions,
+                &pairs,
+                &[],
+                &maps,
+                &witnesses,
+                100_000_000,
+                0,
+            )
+            .unwrap()
+            .shell
+            .unwrap()
+        };
+        let mut invalid = geometry_limits(24, 15);
+        invalid.tolerance_uv = f64::NAN;
+        assert!(crate::source_shell_geometry::qualify(fresh_shell(), invalid).is_err());
+        let stopped =
+            crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(23, 15)).unwrap();
+        assert!(stopped.geometry.is_none());
+        assert_eq!(stopped.corners, 23);
+        assert!(stopped.uncertain_vertex.is_some());
+        let stopped =
+            crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(24, 14)).unwrap();
+        assert!(stopped.geometry.is_none());
+        assert_eq!(stopped.pairs, 14);
+        assert_eq!(stopped.next_pair, Some([4, 5]));
+        let qualified = crate::source_shell_geometry::qualify(shell, geometry_limits(24, 15)).unwrap();
+        assert!(qualified.geometry.is_some(), "{}", qualified.reason);
+        let geometry = qualified.geometry.unwrap();
+        assert_eq!(geometry.topology().links.len(), 8);
+        assert!(geometry.topology().links.iter().all(|v| v.cycle.len() == 3));
+        assert_eq!(geometry.topology().euler_characteristic, Some(2));
+        assert_eq!(geometry.topology().genus, Some(0));
+        assert!(geometry.charts().all_injective);
+        assert!(geometry.contacts().all_pairs_qualified);
+        assert_eq!(geometry.contacts().pairs.len(), 15);
+        assert_eq!(
+            geometry.shell().regions().unwrap()[5].loops()[0][0].surface(),
+            &cap
+        );
+        println!("embedded source shell: 8 vertex links, Euler=2, genus=0; all charts and 15 face pairs qualified");
     }
 }

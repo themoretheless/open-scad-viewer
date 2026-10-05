@@ -528,6 +528,16 @@ mod tests {
         );
         let shell = report.shell.unwrap();
         assert_eq!(shell.edges().len(), 6);
+        let topology = crate::source_vertex_links::inspect(&shell, 12).unwrap();
+        assert!(topology.all_manifold);
+        assert_eq!(topology.links.len(), 4);
+        assert!(topology.links.iter().all(|v| v.cycle.len() == 3));
+        assert!(topology.euler_characteristic.is_none());
+        assert!(
+            !crate::source_vertex_links::inspect(&shell, 11)
+                .unwrap()
+                .all_manifold
+        );
         assert!(crate::source_allowed_contact::certify(&shell, [0, 1], 100_000_000, 2).is_err());
         assert!(
             crate::source_fiber_contact::certify(&shell, [0, 1], 100_000_000, 2, 10000).is_err()
@@ -548,6 +558,25 @@ mod tests {
         assert!(assemble(&faces, &pairs[..5], 100_000_000).is_err());
         pairs[1].uses[0] = pairs[0].uses[0];
         assert!(assemble(&faces, &pairs, 100_000_000).is_err());
+        assert!(crate::source_shell_geometry::qualify(
+            shell,
+            crate::source_shell_geometry::Limits {
+                tolerance_uv: 1e-8,
+                corners: 12,
+                spans: 100,
+                linear_cells: 100,
+                pairs: crate::face_contacts::Limits {
+                    pairs: 6,
+                    cells: 1000,
+                    domain_cells: 1000,
+                    cells_per_pair: 100,
+                    domain_cells_per_pair: 100
+                },
+                exact_work: 100_000_000,
+                driver_cells: 100,
+            }
+        )
+        .is_err());
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
@@ -691,6 +720,15 @@ mod tests {
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
         assert_eq!(shell.regions().unwrap().len(), 4);
+        let topology = crate::source_vertex_links::inspect(&shell, 14).unwrap();
+        assert!(topology.all_manifold);
+        assert_eq!(topology.links.len(), 5);
+        assert_eq!(topology.euler_characteristic, Some(2));
+        assert_eq!(topology.genus, Some(0));
+        assert_eq!(
+            topology.links.iter().filter(|v| v.cycle.len() == 2).count(),
+            1
+        );
         for a in 0..4 {
             for b in a + 1..4 {
                 let contact =
@@ -865,6 +903,27 @@ mod tests {
             let vertex = |a: Address| shell.vertices()[a.face][a.wire][a.edge];
             assert_eq!(vertex(pair[0]), [vertex(pair[1])[1], vertex(pair[1])[0]]);
         }
+        let admitted = crate::source_shell_geometry::qualify(
+            shell,
+            crate::source_shell_geometry::Limits {
+                tolerance_uv: 1e-8,
+                corners: 14,
+                spans: 1000,
+                linear_cells: 1000,
+                pairs: crate::face_contacts::Limits {
+                    pairs: 6,
+                    cells: 10000,
+                    domain_cells: 10000,
+                    cells_per_pair: 1000,
+                    domain_cells_per_pair: 1000,
+                },
+                exact_work: 100_000_000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap();
+        assert!(admitted.geometry.is_some(), "{}", admitted.reason);
+        assert_eq!(admitted.geometry.unwrap().topology().genus, Some(0));
     }
     #[test]
     fn chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes() {
@@ -937,6 +996,80 @@ mod tests {
         assert!(!charts.all_injective);
         assert!(!charts.faces[0].injectivity_proven());
         assert!(charts.faces[1..].iter().all(|f| f.injectivity_proven()));
+        let context = cad_predicates::ToleranceContext::default_valid();
+        let regions = faces
+            .iter()
+            .enumerate()
+            .map(|(face, wires)| {
+                let boundaries = wires
+                    .iter()
+                    .enumerate()
+                    .map(|(wire, w)| {
+                        w.edges()
+                            .iter()
+                            .enumerate()
+                            .map(|(edge, e)| {
+                                let address = Address { face, wire, edge };
+                                let p = pairs.iter().find(|p| p.uses.contains(&address)).unwrap();
+                                let index = p.uses.iter().position(|a| *a == address).unwrap();
+                                let mut world = p.world.clone();
+                                if p.world_reversed[index] {
+                                    world.control_points.reverse();
+                                    world.weights.reverse();
+                                }
+                                crate::trimmed_face_recipe::Boundary {
+                                    curve: world,
+                                    pcurve: e.curve().clone(),
+                                    reversed: false,
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+                let r = crate::source_contour_proposal::qualify_original_region(
+                    &context,
+                    wires[0].edges()[0].surface(),
+                    &boundaries,
+                    1e-8,
+                    crate::trimmed_face_recipe::Limits {
+                        pairs: 10000,
+                        region_cells: 10000,
+                        domain_cells: 10000,
+                        agreement_cells: 10000,
+                    },
+                )
+                .unwrap();
+                assert!(r.region.is_some(), "face {} {}", face, r.reason);
+                r.region.unwrap()
+            })
+            .collect::<Vec<_>>();
+        let shell = assemble_regions(&regions, &pairs, 100_000_000)
+            .unwrap()
+            .shell
+            .unwrap();
+        let admission = crate::source_shell_geometry::qualify(
+            shell,
+            crate::source_shell_geometry::Limits {
+                tolerance_uv: 1e-8,
+                corners: 12,
+                spans: 1000,
+                linear_cells: 0,
+                pairs: crate::face_contacts::Limits {
+                    pairs: 6,
+                    cells: 10000,
+                    domain_cells: 10000,
+                    cells_per_pair: 1000,
+                    domain_cells_per_pair: 1000,
+                },
+                exact_work: 100_000_000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap();
+        assert!(admission.geometry.is_none());
+        assert_eq!(admission.reason, "source-shell-chart-injectivity-unproven");
+        assert_eq!(admission.pairs, 0);
+        assert_eq!(admission.uncertain_face, Some(0));
     }
     #[test]
     fn disconnected_closed_components_and_exhausted_work_are_not_a_shell() {

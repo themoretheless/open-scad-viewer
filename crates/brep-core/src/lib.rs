@@ -1865,3 +1865,7 @@ pub mod source_interior_fiber;
 pub mod source_interior_boundary;
 
 pub mod source_interior_contact;
+
+pub mod source_vertex_links;
+
+pub mod source_shell_geometry;
