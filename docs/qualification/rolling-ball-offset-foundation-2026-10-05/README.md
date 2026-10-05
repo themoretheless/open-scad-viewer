@@ -2304,3 +2304,29 @@ an interactive latency claim.
 
 Full `cargo test -p brep-core` completed successfully: 995 passing tests across unit, integration and documentation targets; three ignored.
 Compressed focused and full logs accompany this stage.
+
+## Canonical root restriction storage (2026-10-06)
+
+`source_edge_restriction::Restriction` retains a privately qualified shared
+world carrier, both original pcurves and their fixed/root-valued endpoint
+expressions, including exact rational affine mapping proposals. JSON restores
+the original shared-edge identity and endpoint gates before constructing the
+restriction. No rounded root parameter or Cartesian vertex is stored.
+
+The two directed uses are transported into increasing canonical parameter order
+using outward interval arithmetic. Proven common endpoint enclosures are
+intersected; disjoint bounds are an error. Endpoint boxes evaluate the unchanged
+canonical world curve over those bounds with an explicit knot-span work limit.
+`Body::edge_restriction` selects this representation by body-owned edge index.
+
+Direct nonunit-domain and mapped nonlinear-root/fixed-end controls require the
+known common point `[0.609375, 0.859375, 0]` inside the endpoint enclosure.
+Root-partitioned curved rims preserve their original carriers and root
+expressions after byte-level JSON replay. This is exact restriction storage
+for later document/STEP integration, not conventional Model/STEP export of
+root trims. That integration and the remainder of the roadmap remain open.
+
+Validation: the initial source-focused run passed 92 tests; the final full
+B-rep library run, including strengthened analytic endpoint checks, passed
+894 tests with zero failures and three ignored (278.94 seconds). Compressed
+logs are stored with this stage.

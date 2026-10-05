@@ -793,6 +793,14 @@ mod tests {
         assert_eq!(r.root_checks, 1);
         assert!(r.driver_cells > 0);
         let e = r.edge.unwrap();
+        crate::source_edge_restriction::assert_replay(&e);
+        let restriction = crate::source_edge_restriction::Restriction::from_edge(&e);
+        let b = restriction.parameter_bounds().unwrap()[1];
+        assert!(b[0] <= 0.0 && 0.0 <= b[1]);
+        let b = restriction.endpoint_boxes(100).unwrap()[1];
+        for (axis, expected) in [0.609375, 0.859375, 0.].into_iter().enumerate() {
+            assert!(b[axis][0] <= expected && expected <= b[axis][1]);
+        }
         let restore = |definition, work| crate::source_shared_edge_restore::restore(definition,
             crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:work,driver_cells:10000}).unwrap();
         let restored = restore(e.definition(),100_000_000).edge.unwrap();

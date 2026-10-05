@@ -576,6 +576,7 @@ mod tests {
         );
         let c = r.certificate.unwrap();
         assert_eq!(c.edges().len(), 2);
+        for edge in c.edges() { crate::source_edge_restriction::assert_replay(edge); }
         assert!(c.edges().iter().all(|e| e.world() == &original));
         assert!(c
             .edges()

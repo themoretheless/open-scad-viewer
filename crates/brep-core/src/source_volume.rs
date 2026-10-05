@@ -57,6 +57,14 @@ impl Body {
             max_work,
         )
     }
+    /// Select an exact root-valued canonical restriction from this body.
+    /// The original carrier and endpoint expressions are retained unchanged.
+    pub fn edge_restriction(&self, edge: usize) -> Result<crate::source_edge_restriction::Restriction> {
+        let edge = self.geometry.shell().edges().get(edge).ok_or_else(|| {
+            Error::new("BREP_SOURCE_SEAM_INDEX", "Selected source edge does not belong to this body")
+        })?;
+        Ok(crate::source_edge_restriction::Restriction::from_edge(edge))
+    }
     /// Inspect a selected original seam of this admitted body. A failed angular
     /// check does not invalidate an intentionally sharp body edge.
     pub fn qualify_edge_tangency(

@@ -595,6 +595,14 @@ mod tests {
         .unwrap();
         assert!(report.edge.is_some(), "{}", report.reason);
         let edge = report.edge.unwrap();
+        crate::source_edge_restriction::assert_replay(&edge);
+        let restriction = crate::source_edge_restriction::Restriction::from_edge(&edge);
+        let b = restriction.parameter_bounds().unwrap()[1];
+        assert!(b[0] <= 0.625 && 0.625 <= b[1]);
+        let b = restriction.endpoint_boxes(100).unwrap()[1];
+        for (axis, expected) in [0.609375, 0.859375, 0.].into_iter().enumerate() {
+            assert!(b[axis][0] <= expected && expected <= b[axis][1]);
+        }
         let restore = |value| crate::source_shared_edge_restore::restore(value,
             crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100_000_000,driver_cells:10000}).unwrap();
         let restored=restore(edge.definition()).edge.unwrap();
