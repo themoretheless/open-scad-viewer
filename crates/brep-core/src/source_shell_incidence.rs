@@ -71,12 +71,14 @@ pub struct ChartFace {
     pub contraction: Option<nurbs_core::surface_injectivity::Report>,
     pub linear: Option<nurbs_core::surface_linear_monotonicity::Report>,
     pub quotient: Option<nurbs_core::surface_quotient_injectivity::Report>,
+    pub ruled_quotient: Option<nurbs_core::surface_quotient_injectivity::RuledReport>,
 }
 impl ChartFace {
     pub fn injectivity_proven(&self) -> bool {
         self.contraction.as_ref().is_some_and(|r| r.proven)
             || self.linear.as_ref().is_some_and(|r| r.certified)
             || self.quotient.as_ref().is_some_and(|r| r.proven)
+            || self.ruled_quotient.as_ref().is_some_and(|r| r.proven)
     }
 }
 pub struct ChartReport {
@@ -124,9 +126,10 @@ impl Shell {
                 None
             };
             out.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
+            let mut ruled_quotient = None;
             let quotient = if !contraction.as_ref().is_some_and(|r| r.proven)
                 && !linear.as_ref().is_some_and(|r| r.certified)
-                && max_spans - out.spans >= 256
+                && max_spans - out.spans >= 16
             {
                 let u = [
                     surface.knots_u[surface.degree_u],
@@ -168,6 +171,17 @@ impl Shell {
                         max_spans - out.spans,
                     )?;
                     out.spans += proof.cells;
+                    if !proof.proven && surface.degree_u == 1 && max_spans - out.spans >= 16 {
+                        let ruled =
+                            nurbs_core::surface_quotient_injectivity::certify_ruled_source_frame(
+                                surface,
+                                ends[0],
+                                16,
+                                max_spans - out.spans,
+                            )?;
+                        out.spans += ruled.cells;
+                        ruled_quotient = Some(ruled);
+                    }
                     Some(proof)
                 } else {
                     None
@@ -180,6 +194,7 @@ impl Shell {
                 contraction,
                 linear,
                 quotient,
+                ruled_quotient,
             };
             out.all_injective &= result.injectivity_proven();
             out.faces.push(result);
@@ -676,10 +691,18 @@ mod tests {
             for (address, _) in shell.poles() {
                 let face = &charts.faces[address.face];
                 assert!(face.quotient.is_some(), "missing pole diagnostic");
-                assert!(
-                    !face.injectivity_proven(),
-                    "current cap class still needs a polar proof"
-                );
+                if shell.faces()[address.face][0].edges()[0].surface().degree_u == 1 {
+                    assert!(
+                        face.ruled_quotient.as_ref().is_some_and(|q| q.proven),
+                        "{:?}",
+                        face.ruled_quotient
+                    );
+                } else {
+                    assert!(
+                        !face.injectivity_proven(),
+                        "sphere cap still needs a polar proof"
+                    );
+                }
             }
             let limited = shell.inspect_face_charts(1, 0).unwrap();
             assert!(!limited.all_injective && limited.spans <= 1);

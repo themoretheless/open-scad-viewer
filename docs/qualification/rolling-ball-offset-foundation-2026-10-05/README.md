@@ -1840,3 +1840,36 @@ cap parameterization provides. These are conservative proof failures, not
 detected folds. The required polar-chart theorem remains unfinished; cap body
 admission stays disabled. Existing vertex-link certificates remain valid, and
 full face-contact, material/volume, STEP/WASM/UI and broader roadmap work remain.
+
+## Ruled polar charts: original ray-direction quotient
+
+A new native sufficient theorem covers a degree-one U chart with one constant
+control row. With normalized U measured away from that pole, its unchanged
+original rational image is P + u V(v)/((1-u)A(v)+uB(v)), where A and B are the
+positive weight sums of the pole and far rows. Along a fixed ray the scalar
+u/((1-u)A+uB) has derivative A/denominator² > 0.
+
+Two fixed source-defined linear functionals h and g give the direction ratio
+g(V)/h(V). Original rational Bernstein coefficient bounds prove h(V)>0 and
+a single strict sign of g' h - g h' over the complete V domain. Thus different
+V parameters cannot share a ray, no nonpole parameter reaches the pole, and
+the radial monotonicity proves global injectivity modulo the complete pole
+boundary. The source frame is formed from original far-row endpoint directions;
+interval arithmetic covers that exact expression without modifying geometry.
+Every subdivision contributes; an incomplete budget produces no proof.
+
+The bounded supported class uses single clamped original spans, degree V <= 8,
+positive weights and original natural domains. Independent pole/far-row weights
+and nonunit domains are covered. Tests include both pole ends, a fold, repeated
+rays, a 1e-12 perturbation of the constant row and exhausted work.
+
+Source-shell chart audits retain the earlier quotient diagnostic and a separate
+ruled report, recomputed from immutable original charts under the shared budget.
+The zero-radius cone ends in all translated/rotated cap controls now qualify in
+both angular directions. Sphere caps remain explicitly unproven and still
+require a general polar-chart theorem. A successful cone chart is not a proof
+of cross-face embedding, material orientation, volume, walls or body admission.
+
+Validation: the complete NURBS library suite passes 660 tests and the selected
+source B-rep suite passes 77 tests, with zero failures. Compressed logs accompany
+this stage. No new WASM, worker, UI or STEP acceptance is claimed.
