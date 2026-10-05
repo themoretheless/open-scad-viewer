@@ -1246,3 +1246,31 @@ endpoints between two differently mapped uses, nor authorize shell-pair
 exclusion. Shared-edge/shell admission with those mappings, iterative retained
 region cuts, new closing caps/corners, material volume and general fillet
 transition/radius/wall/STEP/WASM/UI remain outstanding.
+
+
+## Mapped shared edges and closed source incidence
+
+The following stage supersedes the preceding single-use limitation. Native
+`source_mapped_edge::qualify` now freshly verifies both original compositions
+and their affine fractional maps before comparing retained endpoints. Fixed
+parameters and linear UV root fractions are compared with exact expansions.
+Mixed root/fixed and nonlinear root pairs require fresh plane membership and
+unique canonical world-plane root proofs. Original root definitions, source
+curves, surfaces and maps remain stored; no rounded root replacement is used.
+
+Shell assembly accepts uniquely indexed raw affine map inputs, rechecks each
+pair under shared exact/driver budgets and retains the maps in its shared
+edges. Cutter hints with mapped pairs are explicitly unsupported and rejected.
+Whole-carrier allowed-contact proofs now refuse partial canonical coverage.
+
+A five-face polynomial wedge closes with extended straight canonical carriers
+and exact one-third/two-thirds source coverage; all ten face pairs qualify via
+actual boundary fibers. The legacy full-traversal admission refuses this
+fixture. Displaced maps, duplicate map addresses, displaced fixed/root ends
+and exhausted budgets refuse admission. This proves source incidence and
+contact qualification for the tested classes, not material volume or a fillet
+body. General root identities, iterative region cuts, closing caps, complex
+corners, radius/wall qualification, STEP acceptance and WASM/UI remain open.
+
+Validation: 58 selected source B-rep tests, 648 NURBS tests and 25 exact
+predicate tests passed. Compressed native test logs accompany this stage.

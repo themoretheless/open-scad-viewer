@@ -7,6 +7,7 @@ pub struct SharedEdge {
     world: Curve,
     uses: [Fragment; 2],
     reversed: [bool; 2],
+    ranges: Option<[[[f64; 2]; 2]; 2]>,
 }
 impl SharedEdge {
     pub fn world(&self) -> &Curve {
@@ -14,6 +15,24 @@ impl SharedEdge {
     }
     pub fn uses(&self) -> &[Fragment; 2] {
         &self.uses
+    }
+    pub fn ranges(&self) -> Option<[[[f64; 2]; 2]; 2]> {
+        self.ranges
+    }
+    pub fn covers_complete_canonical_source(&self) -> bool {
+        self.ranges.is_none_or(|ranges| {
+            ranges.iter().all(|r| {
+                (r[0][0] == 0. && r[1][0] == r[1][1]) || (r[1][0] == 0. && r[0][0] == r[0][1])
+            })
+        })
+    }
+    pub(crate) fn from_mapped(uses: [crate::source_affine_use::MappedUse; 2]) -> Self {
+        Self {
+            world: uses[0].world().clone(),
+            uses: [uses[0].fragment().clone(), uses[1].fragment().clone()],
+            reversed: [uses[0].reversed(), uses[1].reversed()],
+            ranges: Some([uses[0].range(), uses[1].range()]),
+        }
     }
     pub fn reversed(&self) -> [bool; 2] {
         self.reversed
@@ -307,11 +326,12 @@ fn qualify_impl(
         world: world.clone(),
         uses: [uses[0].clone(), uses[1].clone()],
         reversed: effective,
+        ranges: None,
     });
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
 }
-fn common_plane_root(
+pub(crate) fn common_plane_root(
     world: &Curve,
     plane: [[f64; 3]; 3],
     points: [(&crate::source_contact_point::SourcePoint, Role); 2],
@@ -327,7 +347,7 @@ fn common_plane_root(
     }
     unique_world_plane(world, plane, out, max_work, max_driver_cells)
 }
-fn source_point_cut_plane(
+pub(crate) fn source_point_cut_plane(
     point: &crate::source_contact_point::SourcePoint,
     role: Role,
     plane: [[f64; 3]; 3],
@@ -386,7 +406,7 @@ fn common_plane_fixed_root(
     }
     unique_world_plane(world, plane, out, max_work, max_driver_cells)
 }
-fn unique_world_plane(
+pub(crate) fn unique_world_plane(
     world: &Curve,
     plane: [[f64; 3]; 3],
     out: &mut Report,

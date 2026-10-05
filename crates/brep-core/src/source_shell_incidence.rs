@@ -24,6 +24,11 @@ pub struct RootPlanes {
     pub pair: usize,
     pub planes: [Option<[[f64; 3]; 3]>; 2],
 }
+/// Original-use affine ranges on a canonical carrier; rechecked during assembly.
+pub struct AffineMaps {
+    pub pair: usize,
+    pub ranges: [[[f64; 2]; 2]; 2],
+}
 pub struct Shell {
     faces: Vec<Vec<Wire>>,
     edges: Vec<SharedEdge>,
@@ -154,6 +159,16 @@ pub fn assemble_regions_with_root_planes(
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
+    assemble_regions_with_maps(regions, pairs, planes, &[], max_work, max_driver_cells)
+}
+pub fn assemble_regions_with_maps(
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    maps: &[AffineMaps],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
     if regions.len() < 2 || regions.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
         return Err(error(
             "Choose bounded qualified regions and exact shell work",
@@ -163,7 +178,7 @@ pub fn assemble_regions_with_root_planes(
         .iter()
         .map(|r| r.world_wires())
         .collect::<Result<Vec<_>>>()?;
-    let mut report = assemble_with_root_planes(&faces, pairs, planes, max_work, max_driver_cells)?;
+    let mut report = assemble_with_maps(&faces, pairs, planes, maps, max_work, max_driver_cells)?;
     if let Some(shell) = report.shell.as_mut() {
         shell.regions = Some(regions.to_vec());
     }
@@ -178,6 +193,16 @@ pub fn assemble_with_root_planes(
     faces: &[Vec<Wire>],
     pairs: &[Pair],
     planes: &[RootPlanes],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
+    assemble_with_maps(faces, pairs, planes, &[], max_work, max_driver_cells)
+}
+pub fn assemble_with_maps(
+    faces: &[Vec<Wire>],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    maps: &[AffineMaps],
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
@@ -229,6 +254,21 @@ pub fn assemble_with_root_planes(
             ));
         }
     }
+    let mut mapped = BTreeMap::new();
+    for spec in maps {
+        if spec.pair >= pairs.len()
+            || mapped.insert(spec.pair, spec.ranges).is_some()
+            || spec
+                .ranges
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|v| !v.is_finite())
+            || pairs[spec.pair].cutters.iter().any(Option::is_some)
+        {
+            return Err(error("Affine maps need unique valid pair addresses, finite fractions and no cutter hints"));
+        }
+    }
     let lookup = |a: Address| -> Result<usize> {
         let wire = faces
             .get(a.face)
@@ -270,15 +310,26 @@ pub fn assemble_with_root_planes(
             return Ok(out);
         }
         let sources = p.uses.map(|a| &faces[a.face][a.wire].edges()[a.edge]);
-        let report = source_shared_edge::qualify_with_cutters_and_planes(
-            &p.world,
-            sources,
-            p.world_reversed,
-            [p.cutters[0].as_ref(), p.cutters[1].as_ref()],
-            supplied.get(&i).copied().unwrap_or([None, None]),
-            max_work - out.work_used,
-            max_driver_cells - out.driver_cells,
-        )?;
+        let report = if let Some(ranges) = mapped.get(&i) {
+            crate::source_mapped_edge::qualify(
+                &p.world,
+                sources,
+                *ranges,
+                supplied.get(&i).copied().unwrap_or([None, None]),
+                max_work - out.work_used,
+                max_driver_cells - out.driver_cells,
+            )?
+        } else {
+            source_shared_edge::qualify_with_cutters_and_planes(
+                &p.world,
+                sources,
+                p.world_reversed,
+                [p.cutters[0].as_ref(), p.cutters[1].as_ref()],
+                supplied.get(&i).copied().unwrap_or([None, None]),
+                max_work - out.work_used,
+                max_driver_cells - out.driver_cells,
+            )?
+        };
         out.work_used += report.work_used;
         out.root_checks += report.root_checks;
         out.driver_cells += report.driver_cells;

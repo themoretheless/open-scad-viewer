@@ -197,6 +197,25 @@ pub fn verify_curve_point(
     reversed: bool,
     max_work: u64,
 ) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    verify_point_impl(curve, plane, parameter, reversed, None, max_work)
+}
+pub fn verify_curve_point_affine(
+    curve: &Curve,
+    plane: [[f64; 3]; 3],
+    parameter: [f64; 3],
+    range: [[f64; 2]; 2],
+    max_work: u64,
+) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    verify_point_impl(curve, plane, parameter, false, Some(range), max_work)
+}
+fn verify_point_impl(
+    curve: &Curve,
+    plane: [[f64; 3]; 3],
+    parameter: [f64; 3],
+    reversed: bool,
+    range: Option<[[f64; 2]; 2]>,
+    max_work: u64,
+) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     curve.validate()?;
     if curve.control_points[0].len() != 3
         || plane
@@ -204,6 +223,7 @@ pub fn verify_curve_point(
             .flatten()
             .chain(parameter.iter())
             .any(|v| !v.is_finite())
+        || range.iter().flatten().flatten().any(|v| !v.is_finite())
         || max_work > cad_predicates::MAX_WORK
     {
         return Err(Error::new(
@@ -229,6 +249,9 @@ pub fn verify_curve_point(
     }
     values.extend(plane.iter().flatten().copied());
     values.extend(parameter);
+    if let Some(range) = range {
+        values.extend(range.iter().flatten().copied());
+    }
     let source = SourceArena::authored(
         "original-curve-plane-point",
         1,
@@ -256,6 +279,7 @@ pub fn verify_curve_point(
         .collect();
     let plane = std::array::from_fn(|_| std::array::from_fn(|_| leaf()));
     let parameter = std::array::from_fn(|_| leaf());
+    let range = range.map(|_| std::array::from_fn(|_| std::array::from_fn(|_| leaf())));
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(
         &source,
@@ -266,14 +290,22 @@ pub fn verify_curve_point(
         },
         None,
     );
-    cad_predicates::rational_bezier_plane_point_identity(&mut ctx, &cc, plane, parameter, reversed)
-        .map(Some)
-        .map_err(|_| {
-            Error::new(
-                "NURBS_INVALID_INPUT",
-                "Invalid exact curve point identity request",
-            )
-        })
+    (if let Some(range) = range {
+        cad_predicates::rational_bezier_plane_point_affine_identity(
+            &mut ctx, &cc, plane, parameter, range,
+        )
+    } else {
+        cad_predicates::rational_bezier_plane_point_identity(
+            &mut ctx, &cc, plane, parameter, reversed,
+        )
+    })
+    .map(Some)
+    .map_err(|_| {
+        Error::new(
+            "NURBS_INVALID_INPUT",
+            "Invalid exact curve point identity request",
+        )
+    })
 }
 #[cfg(test)]
 mod point_tests {
@@ -298,6 +330,27 @@ mod point_tests {
                 BezierIdentity::Equal
             );
         }
+        assert_eq!(
+            verify_curve_point_affine(&c, plane, [3., 3., 7.], [[1., 3.], [1., 1.]], 1_000_000)
+                .unwrap()
+                .unwrap()
+                .outcome,
+            BezierIdentity::Equal
+        );
+        assert_eq!(
+            verify_curve_point_affine(&c, plane, [4., 3., 7.], [[1., 3.], [1., 1.]], 1_000_000)
+                .unwrap()
+                .unwrap()
+                .outcome,
+            BezierIdentity::Different
+        );
+        assert!(matches!(
+            verify_curve_point_affine(&c, plane, [3., 3., 7.], [[1., 3.], [1., 3.]], 1_000_000)
+                .unwrap()
+                .unwrap()
+                .outcome,
+            BezierIdentity::Indeterminate(_)
+        ));
         // At q=1/4 the exact rational coordinate is 2/5; Binary64 0.4
         // cannot substitute for it as an exact authored plane coordinate.
         let rounded = [[0.4, 0., 0.], [0.4, 1., 0.], [0.4, 0., 1.]];

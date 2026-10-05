@@ -29,6 +29,24 @@ pub fn line_crossing_parameter_identity_oriented(
     cutter: [[[LeafRef; 2]; 2]; 2],
     reversed: [bool; 2],
 ) -> Result<ParameterDecision, InputError> {
+    line_parameter_impl(ctx, main, cutter, reversed, None)
+}
+/// Compare original linear crossing parameters after exact affine carrier maps.
+pub fn line_crossing_parameter_identity_affine(
+    ctx: &mut PredicateContext<'_>,
+    main: [[[LeafRef; 3]; 2]; 2],
+    cutter: [[[LeafRef; 2]; 2]; 2],
+    ranges: [[[LeafRef; 2]; 2]; 2],
+) -> Result<ParameterDecision, InputError> {
+    line_parameter_impl(ctx, main, cutter, [false, false], Some(ranges))
+}
+fn line_parameter_impl(
+    ctx: &mut PredicateContext<'_>,
+    main: [[[LeafRef; 3]; 2]; 2],
+    cutter: [[[LeafRef; 2]; 2]; 2],
+    reversed: [bool; 2],
+    ranges: Option<[[[LeafRef; 2]; 2]; 2]>,
+) -> Result<ParameterDecision, InputError> {
     let refs: Vec<_> = (0..2)
         .flat_map(|i| {
             main[i]
@@ -37,19 +55,20 @@ pub fn line_crossing_parameter_identity_oriented(
                 .chain(cutter[i].iter().flatten())
                 .copied()
         })
+        .chain(ranges.iter().flatten().flatten().flatten().copied())
         .collect();
     let values = refs
         .iter()
         .map(|&r| ctx.resolve(r).cloned())
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
     let computed = (|| -> Result<ParameterIdentity, Reason> {
-        let v = exact_inputs(&values, ctx)?;
+        let all = exact_inputs(&values, ctx)?;
         let cross = |a: &[Expansion; 2], b: &[Expansion; 2], ctx: &mut PredicateContext<'_>| {
             a[0].mul(&b[1], ctx)?.sub(&a[1].mul(&b[0], ctx)?, ctx)
         };
         let mut ratios = Vec::new();
         for i in 0..2 {
-            let v = &v[10 * i..10 * i + 10];
+            let v = &all[10 * i..10 * i + 10];
             if v[2].sign() != Sign::Positive || v[5].sign() != Sign::Positive {
                 return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
             }
@@ -75,7 +94,17 @@ pub fn line_crossing_parameter_identity_oriented(
             } else {
                 numerator
             };
-            ratios.push((numerator, denominator));
+            let ratio = if ranges.is_some() {
+                let Some(r) =
+                    affine_fraction(&numerator, &denominator, &all[20 + 4 * i..24 + 4 * i], ctx)?
+                else {
+                    return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+                };
+                r
+            } else {
+                (numerator, denominator)
+            };
+            ratios.push(ratio);
         }
         let difference = ratios[0]
             .0
@@ -345,4 +374,92 @@ mod normalized_tests {
             ParameterIdentity::Indeterminate(_)
         ));
     }
+}
+
+// Exact normalized fraction composed with an affine rational-endpoint map.
+pub(crate) fn affine_fraction(
+    n: &Expansion,
+    d: &Expansion,
+    range: &[Expansion],
+    ctx: &mut PredicateContext<'_>,
+) -> Result<Option<(Expansion, Expansion)>, Reason> {
+    if d.sign() == Sign::Zero {
+        return Ok(None);
+    }
+    let (n, d) = if d.sign() == Sign::Negative {
+        (
+            Expansion::scalar(0.).sub(n, ctx)?,
+            Expansion::scalar(0.).sub(d, ctx)?,
+        )
+    } else {
+        (n.clone(), d.clone())
+    };
+    if n.sign() == Sign::Negative || d.sub(&n, ctx)?.sign() == Sign::Negative {
+        return Ok(None);
+    }
+    for i in 0..2 {
+        if range[2 * i + 1].sign() != Sign::Positive
+            || range[2 * i].sign() == Sign::Negative
+            || range[2 * i + 1].sub(&range[2 * i], ctx)?.sign() == Sign::Negative
+        {
+            return Ok(None);
+        }
+    }
+    let a = range[0].mul(&range[3], ctx)?;
+    let b = range[2].mul(&range[1], ctx)?;
+    if b.sub(&a, ctx)?.sign() == Sign::Zero {
+        return Ok(None);
+    }
+    let numerator = a.mul(&d.sub(&n, ctx)?, ctx)?.add(&b.mul(&n, ctx)?, ctx)?;
+    let denominator = range[1].mul(&range[3], ctx)?.mul(&d, ctx)?;
+    Ok(Some((numerator, denominator)))
+}
+/// Fixed parameters from two original domains, each with its own exact map.
+pub fn affine_parameter_identity(
+    ctx: &mut PredicateContext<'_>,
+    parameters: [[LeafRef; 3]; 2],
+    ranges: [[[LeafRef; 2]; 2]; 2],
+) -> Result<ParameterDecision, InputError> {
+    let values = parameters
+        .iter()
+        .flatten()
+        .chain(ranges.iter().flatten().flatten())
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    let computed = (|| -> Result<ParameterIdentity, Reason> {
+        let v = exact_inputs(&values, ctx)?;
+        let mut ratios = Vec::new();
+        for i in 0..2 {
+            let row = &v[3 * i..3 * i + 3];
+            let width = row[2].sub(&row[1], ctx)?;
+            if width.sign() != Sign::Positive {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            }
+            let Some(r) = affine_fraction(
+                &row[0].sub(&row[1], ctx)?,
+                &width,
+                &v[6 + 4 * i..10 + 4 * i],
+                ctx,
+            )?
+            else {
+                return Ok(ParameterIdentity::Indeterminate(Reason::MissingProof));
+            };
+            ratios.push(r);
+        }
+        let delta = ratios[0]
+            .0
+            .mul(&ratios[1].1, ctx)?
+            .sub(&ratios[1].0.mul(&ratios[0].1, ctx)?, ctx)?;
+        ctx.charge(0)?;
+        Ok(if delta.sign() == Sign::Zero {
+            ParameterIdentity::Equal
+        } else {
+            ParameterIdentity::Different
+        })
+    })();
+    Ok(ParameterDecision {
+        outcome: computed.unwrap_or_else(ParameterIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
 }

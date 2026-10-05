@@ -1851,6 +1851,7 @@ pub mod source_plane_fiber;
 pub mod source_fiber_boundary;
 pub mod source_fiber_contact;
 pub mod source_affine_use;
+pub mod source_mapped_edge;
 
 pub mod trimmed_shell_recipe;
 

@@ -357,16 +357,28 @@ pub fn rational_bezier_plane_point_identity(
     ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
     parameter:[LeafRef;3],reversed:bool,
 ) -> Result<BezierIdentityDecision,InputError> {
+    plane_point_impl(ctx,curve,plane,parameter,reversed,None)
+}
+pub fn rational_bezier_plane_point_affine_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],range:[[LeafRef;2];2],
+) ->Result<BezierIdentityDecision,InputError> {
+    plane_point_impl(ctx,curve,plane,parameter,false,Some(range))
+}
+fn plane_point_impl(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],reversed:bool,range:Option<[[LeafRef;2];2]>,
+) ->Result<BezierIdentityDecision,InputError> {
     if !(2..=33).contains(&curve.len()) {
         return Err(InputError::InvalidInput("Plane point curve degree exceeds supported bounds"));
     }
-    let refs:Vec<_>=curve.iter().flatten().chain(plane.iter().flatten()).chain(parameter.iter()).copied().collect();
+    let refs:Vec<_>=curve.iter().flatten().chain(plane.iter().flatten()).chain(parameter.iter()).chain(range.iter().flatten().flatten()).copied().collect();
     let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
     let result=(|| -> Result<BezierIdentity,Reason> {
         ctx.charge(values.len() as u64)?;
         let v=exact_inputs(&values,ctx)?;
         let points=&v[..4*curve.len()];let anchors=&v[4*curve.len()..4*curve.len()+9];
-        let parameter=&v[4*curve.len()+9..];
+        let parameter=&v[4*curve.len()+9..4*curve.len()+12];
         if points.chunks_exact(4).any(|p|p[3].sign()!=Sign::Positive) {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         }
@@ -381,7 +393,12 @@ pub fn rational_bezier_plane_point_identity(
         let normal=(0..3).map(|k|a[(k+1)%3].mul(&b[(k+2)%3],ctx)?.sub(&a[(k+2)%3].mul(&b[(k+1)%3],ctx)?,ctx)).collect::<Result<Vec<_>,_>>()?;
         if normal.iter().all(|x|x.sign()==Sign::Zero) { return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)); }
         let degree=curve.len()-1;
-        let (numerator,complement)=if reversed {(high,low)} else {(low,high)};
+        let (numerator,complement)=if range.is_some() {
+            let width=low.add(&high,ctx)?;
+            let Some((n,d))=crate::line_crossing_parameter::affine_fraction(&low,&width,&v[4*curve.len()+12..],ctx)? else {
+                return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+            };let complement=d.sub(&n,ctx)?;(n,complement)
+        } else if reversed {(high,low)} else {(low,high)};
         let mut powers=vec![Expansion::scalar(1.)];let mut complements=vec![Expansion::scalar(1.)];
         for i in 1..=degree {powers.push(powers[i-1].mul(&numerator,ctx)?);complements.push(complements[i-1].mul(&complement,ctx)?);}
         let mut total=Expansion::scalar(0.);

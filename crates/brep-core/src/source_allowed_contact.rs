@@ -114,6 +114,7 @@ pub(crate) fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[
     Ok(None)
 }
 fn complete(shell: &Shell, indices: &[usize], face: usize) -> bool {
+    if indices.iter().any(|&i|!shell.edges()[i].covers_complete_canonical_source()) {return false;}
     let mut addresses = indices
         .iter()
         .filter_map(|&i| shell.uses()[i].iter().find(|a| a.face == face).copied())

@@ -3,6 +3,7 @@
 use crate::{source_allowed_contact, source_boundary_fragment::Fragment};
 use cad_predicates::{BezierIdentity, Sign};
 use nurbs_core::{curve::Curve, interval_eval::Interval as I, Error, Result};
+#[derive(Clone)]
 pub struct MappedUse {
     world: Curve,
     fragment: Fragment,
