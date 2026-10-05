@@ -237,3 +237,21 @@ fn offset_envelope_transport_keeps_full_arc_and_topology_gates() {
     assert_eq!(r["visitedCells"],json!(1));
     assert_eq!(r["cells"][0]["arcParameter"],json!([0.,1.]));
 }
+
+#[test]
+fn finite_envelope_transport_binds_candidate_and_complete_partition() {
+    let a=plane();let mut b=a.clone();for row in &mut b.control_points {for p in row {let z=p[1];p[1]=0.5;p[2]=z;}}
+    let mut input=json!({"op":"surface_offset_envelope_fit","a":a,"b":b,"distances":[0.2,0.2],"fixedAxis":0,
+        "fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],"secondDomain":[[0.30,0.44],[0.15,0.25]],
+        "maxSpans":2,"maxCells":2047,"toleranceMm":1e-4});
+    let r=dispatch(input.clone()).unwrap();
+    assert_eq!(r["candidateSource"],json!("section-proposal"));
+    assert_eq!(r["qualification"]["finiteNurbsPatchProven"],json!(true));
+    assert!(!r["candidateSurface"].is_null());
+    assert_eq!(r["qualification"]["partition"][0]["domain"],json!([[0.35,0.39],[0.,1.]]));
+    for k in ["wholeCurveComplete","tangentToleranceProven","trimMembershipProven","embeddingProven","topologyAuthority"] {assert_eq!(r[k],json!(false));assert_eq!(r["qualification"][k],json!(false));}
+    input["candidate"]=r["candidateSurface"].clone();input["maxCells"]=json!(1);
+    let r=dispatch(input).unwrap();assert_eq!(r["candidateSource"],json!("authored"));
+    assert_eq!(r["proposalSections"],json!(0));assert_eq!(r["qualification"]["finiteNurbsPatchProven"],json!(false));
+    assert_eq!(r["qualification"]["partition"][0]["leaf"],json!(0));
+}

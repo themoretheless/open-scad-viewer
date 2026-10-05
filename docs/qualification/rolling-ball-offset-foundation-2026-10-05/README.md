@@ -191,4 +191,21 @@ Subdivision keeps all failed leaves and reserves work for every pending leaf. To
 
 Four new checks pass: a planar quarter-cylinder patch with uniform `1e-4 mm` error qualification; a curved cylinder/oblique-plane contact with uniform `1e-3 mm` error qualification in original and rotated/translated frames; candidate modification/work-stop refusal; and domain/continuity admission. Independent analytic sphere-radius checks inspect the final authored curved NURBS as a regression oracle. The full interval comparison, rather than those finite evaluations, supplies the fit proof. The combined offset filter passes 59 tests.
 
-This is native delivery. The finite-patch query is not yet exposed in WASM/worker/UI. Adaptive multi-patch fitting, endpoint tangent tolerance, replacement source trims, stitching, transitions, embedding, volume/thickness qualification and final solid admission remain open. Constant-radius fitting does not establish varying-radius support.
+This is native delivery. The finite-patch query is now exposed in WASM/worker as recorded below; final UI solid admission remains open. Adaptive multi-patch fitting, endpoint tangent tolerance, replacement source trims, stitching, transitions, embedding, volume/thickness qualification and final solid admission remain open. Constant-radius fitting does not establish varying-radius support.
+
+### Finite patch transport and partition admission
+
+The `surface_offset_envelope_fit` operation either qualifies an authored candidate or proposes an endpoint patch and qualifies it against the original supports. The actual surface remains beside its report. Authored candidates are preserved and compared against the request snapshot; proposals are structurally bounded degree-(1,2) patches. The declared proposal section count is two (or zero for authored patches); fit oracle work is counted separately by `envelopeQueries`. A failed contact-section proposal returns no candidate or qualification.
+
+Each evaluated fit rectangle is represented by a partition node. Internal nodes contain an axis and two child references; leaves reference exactly one final error cell. The worker validator reconstructs every midpoint split, requires exact child domains, rejects repeated/cyclic/orphan nodes and duplicate/missing leaves, and checks the full requested root rectangle. This establishes coverage without relying on area sums or sampled addresses. Validation uses linear traversal and bounded work counters. Fit success requires all leaf error bounds within the requested tolerance and both immersion flags; finite-patch and approximation flags must agree. Trim, tangent tolerance, embedding, whole-curve and solid topology gates remain false.
+
+Native transport plus offset regression passes 60 tests. Vue/MCP type checks and artifact/real-worker checks pass. Qualified cases include full qualification, authored snapshot immutability, source mismatch, bounded work, Retry, curved/rotated contacts, cancellation and captured successful late responses, as well as corrupted trees and promoted gates.
+
+### Final finite patch worker delivery
+
+- 60 native offset regression tests pass, including the finite candidate/partition transport case.
+- 120 product tests in eleven files pass on the final artifact. Actual worker tests qualify planar and curved/rotated finite candidates, preserve an authored candidate despite post-dispatch input mutation, reject a modified patch, retain full-domain work stops, exercise Retry and refuse a captured successful reply after cancellation. Corrupted trees, missing/cyclic nodes, changed domains, malformed surfaces and promoted gates cannot be admitted.
+- Vue/MCP type checks, Vite production build, distribution/source payload verification and diff checks pass.
+- WASM: 11,074,670 bytes; SHA-256 `21959d18cb126d1b303a334e4c81bfb76be08c26cd9f5e82b97d79cb0ad62773`.
+- Packed geometry: 3,694,954 bytes. Production assets: 7,944,599 bytes (+10,921 bytes from analytic envelope delivery). Explicit limits: 3,698,000 and 7,947,500 bytes.
+- A qualified finite patch is now available through the existing worker. Adaptive multi-patch fitting, source contact trim curves and face clipping, stitching, endpoint/corner transitions, variable radii, tangent tolerances, embedding/volume/thickness checks and final UI solid admission remain required.

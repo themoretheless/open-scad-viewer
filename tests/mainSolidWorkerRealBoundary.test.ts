@@ -587,3 +587,37 @@ it('keeps envelope cancellation final after a genuine successful late worker res
  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
  expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
 },30_000)
+
+it('qualifies actual finite envelope patches in the real worker with authored candidates and Retry',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options={...planeEnvelopeFixture(),toleranceMm:1e-3,maxCells:511},before=structuredClone(options)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetEnvelopeFit',options})
+ expect(r.qualification!.finiteNurbsPatchProven).toBe(true)
+ const authored={...options,candidate:r.candidateSurface!},saved=structuredClone(authored)
+ const pending=client.run({kind:'offsetEnvelopeFit',options:authored});authored.candidate.controlPoints[0][0][2]+=.01
+ const restored=await pending;expect(restored.qualification!.finiteNurbsPatchProven).toBe(true);expect(restored.candidateSurface).toEqual(saved.candidate)
+ const mismatch=await client.run({kind:'offsetEnvelopeFit',options:authored})
+ expect(mismatch.qualification).toMatchObject({finiteNurbsPatchProven:false,reason:'candidate-mismatch'})
+ const limited=await client.run({kind:'offsetEnvelopeFit',options:{...options,maxCells:1}})
+ expect(limited.qualification).toMatchObject({finiteNurbsPatchProven:false,visitedCells:1})
+ await expect(client.run({kind:'offsetEnvelopeFit',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetEnvelopeFit',options})).qualification!.finiteNurbsPatchProven).toBe(true)
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ for(const rotated of [false,true]){
+  const {options}=curvedTangentFixture(rotated)
+  const r=await client.run({kind:'offsetEnvelopeFit',options:{...options,toleranceMm:1e-3,maxCells:511}})
+  expect(r.qualification!.finiteNurbsPatchProven).toBe(true)
+ }
+ expect(options).toEqual(before)
+},60_000)
+
+it('refuses a captured successful finite-patch response after cancellation',async()=>{
+ const {planeEnvelopeFixture}=await import('./fixtures/offset-envelope')
+ const options={...planeEnvelopeFixture(),toleranceMm:1e-3,maxCells:511},heldPort=realWorker(),client=new MainSolidWorkerClient(()=>heldPort);clients.push(client)
+ const pending=client.run({kind:'offsetEnvelopeFit',options}),rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'}),callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve});heldPort.onmessage=event=>release(event)
+ const event=await captured;expect(event.data.ok).toBe(true);expect(event.data.result.qualification.finiteNurbsPatchProven).toBe(true)
+ client.cancel();callback(event);await rejection
+},30_000)

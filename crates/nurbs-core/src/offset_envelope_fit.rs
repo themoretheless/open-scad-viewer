@@ -14,12 +14,105 @@ pub struct Cell {
     pub candidate_regular: bool,
     pub admitted: bool,
 }
+#[derive(Debug)]
+pub struct PartitionNode {
+    pub domain: [[f64; 2]; 2],
+    pub split_axis: Option<usize>,
+    pub children: Option<[usize; 2]>,
+    pub leaf: Option<usize>,
+}
+impl PartitionNode {
+    fn new(domain: [[f64; 2]; 2]) -> Self {
+        Self {
+            domain,
+            split_axis: None,
+            children: None,
+            leaf: None,
+        }
+    }
+}
 pub struct Report {
+    pub partition: Vec<PartitionNode>,
     pub cells: Vec<Cell>,
     pub visited: usize,
     pub envelope_queries: usize,
     pub approximation_proven: bool,
     pub reason: &'static str,
+}
+impl Report {
+    pub fn to_value(&self) -> value_codec::Value {
+        use value_codec::json;
+        let cells: Vec<_> = self
+            .cells
+            .iter()
+            .map(|c| {
+                json!({"domain":c.domain,"errorUpperMm":c.error_upper_mm,
+            "anchorErrorIntervalMm":c.anchor_error_mm,"envelopeRegularityProven":c.envelope_regular,
+            "candidateRegularityProven":c.candidate_regular,"admitted":c.admitted})
+            })
+            .collect();
+        let partition:Vec<_>=self.partition.iter().map(|n|json!({"domain":n.domain,"splitAxis":n.split_axis,"children":n.children,"leaf":n.leaf})).collect();
+        json!({"method":"interval-envelope-patch-fit","scope":"pointwise-original-parameter-rectangle",
+            "cells":cells,"partition":partition,"visitedCells":self.visited,"envelopeQueries":self.envelope_queries,
+            "approximationWithinToleranceProven":self.approximation_proven,"finiteNurbsPatchProven":self.approximation_proven,
+            "reason":self.reason,"wholeCurveComplete":false,"tangentToleranceProven":false,
+            "trimMembershipProven":false,"embeddingProven":false,"topologyAuthority":false})
+    }
+}
+/// Transport delivery keeps the actual candidate beside its qualification.
+/// A proposal is never promoted to a fillet solid, including on a successful fit.
+pub fn deliver(
+    candidate: Option<&Surface>,
+    surfaces: [&Surface; 2],
+    distances: [f64; 2],
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<value_codec::Value> {
+    use value_codec::json;
+    validate(surfaces, distances, axis, drive, free, second, spans)?;
+    check(
+        tolerance.is_finite() && tolerance > 0.,
+        "Choose a positive finite envelope fit tolerance",
+    )?;
+    check(
+        max_cells > 0 && max_cells <= 1_000_000,
+        "Envelope fit cell budget must be between 1 and 1000000",
+    )?;
+    let source = if candidate.is_some() {
+        "authored"
+    } else {
+        "section-proposal"
+    };
+    let proposed;
+    let candidate = if let Some(c) = candidate {
+        Some(c)
+    } else {
+        proposed = propose(surfaces, distances, axis, drive, free, second, spans)?;
+        proposed.as_ref()
+    };
+    let qualification = if let Some(c) = candidate {
+        Some(certify(
+            c, surfaces, distances, axis, drive, free, second, spans, tolerance, max_cells,
+        )?)
+    } else {
+        None
+    };
+    let reason = qualification
+        .as_ref()
+        .map(|q| q.reason)
+        .unwrap_or("proposal-contact-unresolved");
+    Ok(
+        json!({"method":"interval-offset-finite-patch","scope":"constant-radius-contact-band",
+        "radiusMm":distances[0].abs(),"candidateSource":source,"proposalSections":if source=="authored"{0}else{2},
+        "candidateSurface":candidate,"qualification":qualification.as_ref().map(|q|q.to_value()),"reason":reason,
+        "wholeCurveComplete":false,"tangentToleranceProven":false,"trimMembershipProven":false,
+        "embeddingProven":false,"topologyAuthority":false}),
+    )
 }
 fn intervals(x: [[f64; 2]; 3]) -> Result<[I; 3]> {
     Ok([
@@ -105,15 +198,16 @@ pub fn certify(
     )?;
     let smooth = offset_contact_tangent::differentiable(candidate, natural, 1);
     let mut out = Report {
+        partition: vec![PartitionNode::new(natural)],
         cells: vec![],
         visited: 0,
         envelope_queries: 0,
         approximation_proven: false,
         reason: "fit-work-limit",
     };
-    let mut pending = vec![natural];
+    let mut pending = vec![(natural, 0)];
     let mut mismatch = false;
-    while let Some(domain) = pending.pop() {
+    while let Some((domain, node)) = pending.pop() {
         out.visited += 1;
         let mut cell = Cell {
             domain,
@@ -207,9 +301,15 @@ pub fn certify(
             let mut right = domain;
             left[split_axis][1] = mid;
             right[split_axis][0] = mid;
-            pending.push(right);
-            pending.push(left);
+            let child = out.partition.len();
+            out.partition[node].split_axis = Some(split_axis);
+            out.partition[node].children = Some([child, child + 1]);
+            out.partition.push(PartitionNode::new(left));
+            out.partition.push(PartitionNode::new(right));
+            pending.push((right, child + 1));
+            pending.push((left, child));
         } else {
+            out.partition[node].leaf = Some(out.cells.len());
             out.cells.push(cell);
         }
     }
