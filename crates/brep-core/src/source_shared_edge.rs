@@ -96,7 +96,7 @@ pub fn qualify_with_cutters(
                                 max_work,
                             )?
                         } else {
-                            false
+                            same_linear_parameter([(a, *ar), (b, *br)], &mut out, max_work)?
                         }
                     } else if a.selector() == b.selector() {
                         true
@@ -170,6 +170,80 @@ pub fn qualify_with_cutters(
     out.reason = "source-shared-world-edge-qualified";
     Ok(out)
 }
+// For transverse original linear Beziers, the UV equations themselves give
+// an exact rational parameter. Comparing fractions does not round either root.
+fn same_linear_parameter(
+    points: [(&crate::source_contact_point::SourcePoint, Role); 2],
+    out: &mut Report,
+    max_work: u64,
+) -> Result<bool> {
+    use cad_predicates::{
+        AuthoredScalar, Limits, ParameterIdentity, PredicateContext, SourceArena, ToleranceContext,
+    };
+    let line = |c: &Curve| {
+        let d = c.domain();
+        c.degree == 1
+            && c.control_points.len() == 2
+            && c.knots[..2].iter().all(|&t| t == d[0])
+            && c.knots[2..].iter().all(|&t| t == d[1])
+    };
+    let mut values = Vec::new();
+    for (point, role) in points {
+        let (main, other) = match role {
+            Role::Boundary => (point.boundary(), point.contact()),
+            Role::Contact => (point.contact(), point.boundary()),
+        };
+        if !line(main) || !line(other) {
+            return Ok(false);
+        }
+        for (p, w) in main.control_points.iter().zip(&main.weights) {
+            values.extend(p.iter().copied());
+            values.push(*w);
+        }
+        for p in &other.control_points {
+            values.extend(p.iter().copied());
+        }
+    }
+    if out.work_used == max_work {
+        return Ok(false);
+    }
+    let arena = SourceArena::authored(
+        "source-crossing-parameter",
+        1,
+        values
+            .iter()
+            .map(|v: &f64| AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect(),
+    )
+    .map_err(|_| Error::new("BREP_SOURCE_SHARED_EDGE", "Invalid exact root source"))?;
+    let main = std::array::from_fn(|i| {
+        std::array::from_fn(|j| std::array::from_fn(|k| arena.leaf(10 * i + 3 * j + k).unwrap()))
+    });
+    let cutter = std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            std::array::from_fn(|k| arena.leaf(10 * i + 6 + 2 * j + k).unwrap())
+        })
+    });
+    let tol = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(
+        &arena,
+        &tol,
+        Limits {
+            max_work: (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+            ..Limits::default()
+        },
+        None,
+    );
+    let proof =
+        cad_predicates::line_crossing_parameter_identity(&mut ctx, main, cutter).map_err(|_| {
+            Error::new(
+                "BREP_SOURCE_SHARED_EDGE",
+                "Invalid exact root identity request",
+            )
+        })?;
+    out.work_used += proof.work_used;
+    Ok(proof.outcome == ParameterIdentity::Equal)
+}
 // Both known source roots must lie inside a box on which a projection of the
 // canonical 3D crossing equations has exactly one root. Thus projection cannot
 // introduce ambiguity between the two actual roots, even on different charts.
@@ -238,6 +312,97 @@ fn common_world_root(
 mod tests {
     use super::*;
     use nurbs_core::surface::Surface;
+    #[test]
+    fn adjacent_non_coplanar_faces_have_exact_common_root_without_shared_cutter() {
+        let surface = |vertical: bool| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![
+                    vec![0., 0., 0.],
+                    if vertical {
+                        vec![0., 0., 1.]
+                    } else {
+                        vec![0., 1., 0.]
+                    },
+                ],
+                vec![
+                    vec![1., 0., 0.],
+                    if vertical {
+                        vec![1., 0., 1.]
+                    } else {
+                        vec![1., 1., 0.]
+                    },
+                ],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let p = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
+        let cutter = |x: f64, extent: f64| {
+            Curve::from_polyline(vec![vec![x, -extent], vec![x, extent]]).unwrap()
+        };
+        let q = [cutter(0.5, 0.2), cutter(0.5, 0.3)];
+        let surfaces = [surface(false), surface(true)];
+        let points: Vec<_> = (0..2)
+            .map(|i| {
+                crate::source_contact_point::qualify(&surfaces[i], &p, &q[i], [[0., 1.]; 2], 16)
+                    .unwrap()
+                    .point
+                    .unwrap()
+            })
+            .collect();
+        let a = Fragment::new(
+            &surfaces[0],
+            &p,
+            Endpoint::Parameter(0.),
+            Endpoint::Crossing {
+                point: points[0].clone(),
+                role: Role::Boundary,
+            },
+        )
+        .unwrap();
+        let b = Fragment::new(
+            &surfaces[1],
+            &p,
+            Endpoint::Crossing {
+                point: points[1].clone(),
+                role: Role::Boundary,
+            },
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        let world = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
+        let r = qualify(&world, [&a, &b], [false, false], 1_000_000).unwrap();
+        assert!(r.edge.is_some(), "{}", r.reason);
+        let other = crate::source_contact_point::qualify(
+            &surfaces[1],
+            &p,
+            &cutter(0.5 + 1e-12, 0.3),
+            [[0., 1.]; 2],
+            16,
+        )
+        .unwrap()
+        .point
+        .unwrap();
+        let b = Fragment::new(
+            &surfaces[1],
+            &p,
+            Endpoint::Crossing {
+                point: other,
+                role: Role::Boundary,
+            },
+            Endpoint::Parameter(0.),
+        )
+        .unwrap();
+        assert!(qualify(&world, [&a, &b], [false, false], 1_000_000)
+            .unwrap()
+            .edge
+            .is_none());
+    }
     #[test]
     fn different_uv_equations_require_exact_world_cutter_and_unique_world_root() {
         let s = |swap: bool| Surface {
@@ -313,7 +478,7 @@ mod tests {
         assert!(qualify(&world, [&a, &b], [false, false], 1_000_000)
             .unwrap()
             .edge
-            .is_none());
+            .is_some());
         let r = qualify_with_cutters(
             &world,
             [&a, &b],

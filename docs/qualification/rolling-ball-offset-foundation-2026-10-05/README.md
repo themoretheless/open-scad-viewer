@@ -798,3 +798,28 @@ This is closed oriented incidence, not embedded/material volume qualification.
 Face geometry, vertex-neighborhood embedding, self-intersections, retained
 wall/radius/tangency, automatic end transitions, Model realization, STEP and
 WASM/UI admission remain outstanding.
+
+## Exact linear crossing parameter across non-coplanar faces
+
+`line_crossing_parameter_identity` compares original transverse rational linear
+Bezier intersection parameters using exact expansion arithmetic over authored
+UV controls and positive main weights. The Cartesian chord fraction n/d maps
+to original normalized parameter n*w0/(d*w1+(w0-w1)*n). Cross multiplication
+proves parameter equality without computing or rounding a root. Zero transverse
+determinants, invalid weights and arithmetic/resource uncertainty refuse proof.
+
+The shared-edge gate uses this proof for different original linear UV equations
+when no canonical cutter is supplied. This supports adjacent non-coplanar
+surfaces whose local crossing curves are different 3D curves. Full world-edge
+composition identity and matching original/canonical parameter domains remain
+mandatory. Explicit supplied cutter evidence continues to be checked by the
+existing world-root route.
+
+All 37 selected B-rep source tests and all 23 predicate library tests passed
+(`source-linear-root-identity.log.gz`, `line-root-predicates-regression.log.gz`).
+The new B-rep fixture joins root cuts across orthogonal planes with different
+local cutters and refuses a 1e-12 parameter change. Predicate cases distinguish
+rational parameter from chord fraction, prove a dyadic weighted equality, refuse
+a rounded 2/3 identity and cover invalid weights/work exhaustion. General
+nonlinear root equivalence, parameter remapping, trimmed shell realization,
+embedding/volume, end transitions and UI admission remain open.
