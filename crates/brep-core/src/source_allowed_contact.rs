@@ -89,7 +89,7 @@ pub(crate) fn independent(a: [f64; 3], b: [f64; 3], c: [f64; 3], used: &mut u64,
     }
     Ok(false)
 }
-fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[[f64; 3]; 3]>> {
+pub(crate) fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[[f64; 3]; 3]>> {
     let poles = s
         .control_points
         .iter()

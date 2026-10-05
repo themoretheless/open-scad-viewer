@@ -1849,6 +1849,7 @@ pub mod source_face_contacts;
 pub mod source_allowed_contact;
 pub mod source_plane_fiber;
 pub mod source_fiber_boundary;
+pub mod source_fiber_contact;
 
 pub mod trimmed_shell_recipe;
 

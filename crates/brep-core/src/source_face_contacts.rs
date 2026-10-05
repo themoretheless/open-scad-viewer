@@ -55,6 +55,7 @@ pub struct PairReport {
     pub faces: [usize; 2],
     pub result: Option<surface_contact_search::Report>,
     pub allowed: Option<crate::source_allowed_contact::Certificate>,
+    pub fiber: Option<crate::source_fiber_contact::Certificate>,
 }
 pub struct ShellReport {
     pub pairs: Vec<PairReport>,
@@ -66,6 +67,7 @@ pub struct ShellReport {
     pub all_pairs_qualified: bool,
     pub exact_work: u64,
     pub spans: usize,
+    pub driver_cells: usize,
 }
 /// Adjacent pairs are included: topology sharing does not exclude extra contact.
 pub fn inspect_shell(
@@ -93,14 +95,40 @@ pub fn inspect_shell_with_allowed(
         shell,
         tolerance_uv,
         limits,
-        Some((max_exact_work, max_spans)),
+        Some((max_exact_work, max_spans, 0)),
+    )
+}
+/// Recompute natural-boundary ownership before the general contact search.
+/// Shared budgets cover both face orientations and all fallback proofs.
+pub fn inspect_shell_with_boundary_fibers(
+    shell: &crate::source_shell_incidence::Shell,
+    tolerance_uv: f64,
+    limits: crate::face_contacts::Limits,
+    max_exact_work: u64,
+    max_spans: usize,
+    max_driver_cells: usize,
+) -> Result<ShellReport> {
+    if !(1..=100_000_000).contains(&max_exact_work)
+        || !(1..=100000).contains(&max_spans)
+        || !(1..=100000).contains(&max_driver_cells)
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Bound source fiber qualification work",
+        ));
+    }
+    inspect_impl(
+        shell,
+        tolerance_uv,
+        limits,
+        Some((max_exact_work, max_spans, max_driver_cells)),
     )
 }
 fn inspect_impl(
     shell: &crate::source_shell_incidence::Shell,
     tolerance_uv: f64,
     limits: crate::face_contacts::Limits,
-    allowed_budget: Option<(u64, usize)>,
+    allowed_budget: Option<(u64, usize, usize)>,
 ) -> Result<ShellReport> {
     if !(1..=100000).contains(&limits.pairs)
         || !(1..=1000000).contains(&limits.cells)
@@ -132,6 +160,7 @@ fn inspect_impl(
         all_pairs_qualified: true,
         exact_work: 0,
         spans: 0,
+        driver_cells: 0,
     };
     for a in 0..n {
         for b in a + 1..n {
@@ -144,7 +173,40 @@ fn inspect_impl(
                 out.all_pairs_qualified = false;
                 return Ok(out);
             }
-            if let Some((work, spans)) = allowed_budget {
+            if let Some((work, spans, driver)) = allowed_budget {
+                if driver > 0 {
+                    for faces in [[a, b], [b, a]] {
+                        if out.exact_work == work
+                            || out.spans == spans
+                            || out.driver_cells == driver
+                        {
+                            break;
+                        }
+                        let proof = crate::source_fiber_contact::certify(
+                            shell,
+                            faces,
+                            work - out.exact_work,
+                            spans - out.spans,
+                            driver - out.driver_cells,
+                        )?;
+                        out.exact_work += proof.exact_work;
+                        out.spans += proof.spans;
+                        out.driver_cells += proof.driver_cells;
+                        if let Some(certificate) = proof.certificate {
+                            out.all_pairs_absence_proven = false;
+                            out.pairs.push(PairReport {
+                                faces: [a, b],
+                                result: None,
+                                allowed: None,
+                                fiber: Some(certificate),
+                            });
+                            break;
+                        }
+                    }
+                    if out.pairs.last().is_some_and(|p| p.faces == [a, b]) {
+                        continue;
+                    }
+                }
                 if out.exact_work < work && out.spans < spans {
                     let proof = crate::source_allowed_contact::certify(
                         shell,
@@ -160,6 +222,7 @@ fn inspect_impl(
                             faces: [a, b],
                             result: None,
                             allowed: Some(certificate),
+                            fiber: None,
                         });
                         continue;
                     }
@@ -181,6 +244,7 @@ fn inspect_impl(
                 faces: [a, b],
                 result: Some(result),
                 allowed: None,
+                fiber: None,
             });
         }
     }

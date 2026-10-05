@@ -1035,3 +1035,30 @@ Tests cover full fiber paths, endpoint-only contact in either traversal, a
 interior restriction of that same original curve. Shared ownership and complete
 retained-region/pair admission remain outstanding; these locus reports alone
 never authorize skipping a surface intersection search.
+
+## Shared ownership of retained natural-fiber contacts
+
+`source_fiber_contact::certify` recomputes both source-chart contraction proofs,
+exact planarity of the first face and a natural plane fiber on the second. Every
+retained boundary fragment is independently classified against that fiber.
+Entire fiber fragments must have exact shared-edge partners on the first face;
+potential endpoint contacts must join such a partner through the qualified
+original wire. These immutable shared edges come from fresh native shell
+assembly, including root-valued source restrictions, rather than caller labels
+or proximity. The certificate retains both source regions and shared edges.
+Unlike the previous full-line gate, this argument does not require natural
+start-to-end coverage of the canonical world curve.
+
+`inspect_shell_with_boundary_fibers` recomputes proofs in both face orientations
+under shared exact/chart/driver budgets. Unproven pairs try the existing exact
+full-line proof and then source-domain intersection search. Pair reports expose
+fiber certificates separately; absence and allowed contact remain distinct.
+
+All 45 selected source regressions passed (`source-fiber-contact.log.gz`).
+The root-partitioned tetrahedron exercises exact shared-fragment ownership and
+complete six-pair audit without geometry search. Raw incidence without qualified
+regions is refused; exact exhaustion falls back to an unresolved contact search.
+The standalone rational curved-fiber and fragment tests remain part of this run.
+A partial curved nonplanar shell fixture and chart injectivity beyond contraction
+remain to qualify. General corner ownership, neighborhood embedding, material
+volume, fillet transitions/radius/walls and WASM/UI admission remain open.

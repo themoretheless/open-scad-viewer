@@ -359,6 +359,7 @@ mod tests {
         let shell = report.shell.unwrap();
         assert_eq!(shell.edges().len(), 6);
         assert!(crate::source_allowed_contact::certify(&shell, [0, 1], 100_000_000, 2).is_err());
+        assert!(crate::source_fiber_contact::certify(&shell,[0,1],100_000_000,2,10000).is_err());
         let owners: std::collections::BTreeSet<_> = shell
             .vertices()
             .iter()
@@ -530,6 +531,37 @@ mod tests {
                 );
             }
         }
+        let mut fiber_pairs = 0;
+        for a in 0..4 {
+            for b in 0..4 {
+                if a == b { continue; }
+                let r = crate::source_fiber_contact::certify(&shell,[a,b],100_000_000,2,10000).unwrap();
+                if let Some(c) = r.certificate {
+                    fiber_pairs += 1;
+                    assert_eq!(c.faces(),[a,b]);
+                    assert!(!c.edges().is_empty());
+                    assert_eq!(c.regions()[1].loops().len(),regions[b].loops().len());
+                    assert_eq!(c.fiber().surface(),regions[b].loops()[0][0].surface());
+                }
+            }
+        }
+        assert!(fiber_pairs > 0);
+        let fiber_audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
+            &shell,1e-8,crate::face_contacts::Limits {pairs:6,cells:1,domain_cells:1,cells_per_pair:1,domain_cells_per_pair:1},
+            100_000_000,128,10000).unwrap();
+        assert!(fiber_audit.all_pairs_qualified);
+        assert_eq!(fiber_audit.pairs.len(),6);
+        assert!(fiber_audit.pairs.iter().any(|p|p.fiber.is_some()));
+        assert_eq!(fiber_audit.cells,0);
+        let exhausted = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
+            &shell,1e-8,crate::face_contacts::Limits {pairs:6,cells:1,domain_cells:1,cells_per_pair:1,domain_cells_per_pair:1},
+            1,128,10000).unwrap();
+        assert!(!exhausted.all_pairs_qualified);
+        assert!(exhausted.pairs.iter().all(|p|p.fiber.is_none()));
+        assert!(exhausted.pairs[0].result.is_some());
+
+        assert!(crate::source_fiber_contact::certify(&shell,[0,1],1,2,100).unwrap().certificate.is_none());
+        assert!(crate::source_fiber_contact::certify(&shell,[0,1],100_000_000,1,100).unwrap().certificate.is_none());
         let allowed = crate::source_face_contacts::inspect_shell_with_allowed(
             &shell,
             1e-8,
