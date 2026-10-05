@@ -1985,3 +1985,30 @@ remain unfinished.
 Full validation after paired-fiber integration: 882 B-rep library tests pass,
 zero failures and three ignored tests. Compressed source, full B-rep and
 embedding-audit logs accompany this stage.
+
+## Straight source rails: owned pole plane proposals
+
+Paired-fiber contact now also proposes planes for a two-control world rail.
+The first two anchors remain its unchanged canonical source controls. Third
+anchors come from privately qualified collapsed-boundary world points in the
+source shell. Bit-identical anchors are deduplicated and the proposal count is
+limited to 64 per shared rail. A source-owned anchor only proposes a plane: both
+original natural preimages, strict opposite-side control signs and all retained
+fiber ownership are freshly checked under the same exact/driver budgets.
+Degenerate or unsuitable proposals grant no certificate.
+
+All four shaft neighbor rails qualify on six translated/rotated controls:
+increasing, decreasing and constant positive radius, with both angular sweep
+directions. Every pair also qualifies in the reversed face order. One-unit
+exact work still refuses admission. Previous curved-seam and coincident-face
+refusal regressions remain green. All 82 selected source tests and three
+paired-fiber tests pass; compressed logs accompany this stage.
+
+The full 120-pair control audit advances from unresolved pair [0,4] to [0,5],
+where the shaft meets an adjacent endpoint patch at a vertex without a shared
+edge. The recorded run uses 2286 chart spans, 344563 exact work and zero driver
+cells, and still refuses embedded geometry. General isolated vertex/pole contact
+and boundary-plus-pole preimages remain unqualified. Zero-radius rails with an
+additional collapsed boundary need that broader preimage proof. Full embedding,
+volume/orientation, wall validation, closed Model/STEP/WASM/UI and the remaining
+roadmap are still incomplete.
