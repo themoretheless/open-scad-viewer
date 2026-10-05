@@ -276,13 +276,93 @@ pub struct SourceRegion {
 }
 impl SourceRegion {
     pub fn world_wires(&self) -> Result<Vec<crate::source_world_wire::Wire>> {
-        self.loops.iter().map(|edges| crate::source_world_wire::Wire::new(edges)).collect()
+        self.loops
+            .iter()
+            .map(|edges| crate::source_world_wire::Wire::new(edges))
+            .collect()
     }
     pub fn source_loop_indices(&self) -> &[usize] {
         &self.source_loop_indices
     }
     pub fn loops(&self) -> &[Vec<Fragment>] {
         &self.loops
+    }
+}
+pub struct OriginalRegion {
+    pub audit: trimmed_face_recipe::Report,
+    pub region: Option<SourceRegion>,
+    pub reason: &'static str,
+}
+/// Original UV material region, independently audited before source ownership.
+pub fn qualify_original_region(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<OriginalRegion> {
+    let audit = trimmed_face_recipe::assemble(context, surface, wires, tolerance_uv, limits)?;
+    let mut out = OriginalRegion {
+        audit,
+        region: None,
+        reason: "original-source-region-unqualified",
+    };
+    if out.audit.face.is_none() {
+        return Ok(out);
+    }
+    let loops = wires
+        .iter()
+        .map(|wire| {
+            wire.iter()
+                .map(|b| {
+                    Fragment::new(
+                        surface,
+                        &b.pcurve,
+                        Endpoint::Parameter(b.pcurve.domain()[0]),
+                        Endpoint::Parameter(b.pcurve.domain()[1]),
+                    )
+                })
+                .collect::<Result<Vec<_>>>()
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if loops.iter().any(|wire| {
+        wire.is_empty() || (0..wire.len()).any(|i| !wire[i].joins(&wire[(i + 1) % wire.len()]))
+    }) {
+        out.reason = "original-source-region-joins-unproven";
+        return Ok(out);
+    }
+    out.region = Some(SourceRegion {
+        loops,
+        source_loop_indices: (0..wires.len()).collect(),
+    });
+    out.reason = "original-source-region-qualified";
+    Ok(out)
+}
+impl SourceRegion {
+    /// Splitting one existing restriction preserves the exact UV region. Both
+    /// children keep the same original curve, with a shared qualified source root.
+    pub fn split_boundary(
+        &self,
+        loop_index: usize,
+        edge_index: usize,
+        point: &crate::source_contact_point::SourcePoint,
+        role: Role,
+    ) -> Result<Self> {
+        let edge = self
+            .loops
+            .get(loop_index)
+            .and_then(|w| w.get(edge_index))
+            .ok_or_else(|| Error::new("BREP_SOURCE_REGION", "Unknown source boundary address"))?;
+        let parts = edge.split_at(point, role)?;
+        let mut out = self.clone();
+        out.loops[loop_index].splice(edge_index..edge_index + 1, parts);
+        if out.loops[loop_index].len() > 256 {
+            return Err(Error::new(
+                "BREP_SOURCE_REGION",
+                "Source boundary partition work limit",
+            ));
+        }
+        Ok(out)
     }
 }
 pub struct LinearRegion {
@@ -1146,7 +1226,12 @@ mod tests {
             rational_region.interior.reason
         );
         assert_eq!(rational_region.removed_holes, vec![2]);
-        let world_wires = rational_region.region.as_ref().unwrap().world_wires().unwrap();
+        let world_wires = rational_region
+            .region
+            .as_ref()
+            .unwrap()
+            .world_wires()
+            .unwrap();
         assert_eq!(world_wires.len(), 2);
         for wire in &world_wires {
             assert!(wire.world_mapping(1000).unwrap().complete);

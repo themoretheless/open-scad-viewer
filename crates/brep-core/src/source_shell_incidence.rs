@@ -23,8 +23,12 @@ pub struct Shell {
     edges: Vec<SharedEdge>,
     uses: Vec<[Address; 2]>,
     vertices: Vec<Vec<Vec<[usize; 2]>>>,
+    regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
 }
 impl Shell {
+    pub fn regions(&self) -> Option<&[crate::source_contour_proposal::SourceRegion]> {
+        self.regions.as_deref()
+    }
     pub fn faces(&self) -> &[Vec<Wire>] {
         &self.faces
     }
@@ -126,6 +130,28 @@ fn join(parent: &mut [usize], a: usize, b: usize) {
     let a = root(parent, a);
     let b = root(parent, b);
     parent[b] = a;
+}
+/// Assemble only immutable qualified original/replacement UV regions.
+/// Their source loop payloads become the exact wire payload being paired.
+pub fn assemble_regions(
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    pairs: &[Pair],
+    max_work: u64,
+) -> Result<Report> {
+    if regions.len() < 2 || regions.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
+        return Err(error(
+            "Choose bounded qualified regions and exact shell work",
+        ));
+    }
+    let faces = regions
+        .iter()
+        .map(|r| r.world_wires())
+        .collect::<Result<Vec<_>>>()?;
+    let mut report = assemble(&faces, pairs, max_work)?;
+    if let Some(shell) = report.shell.as_mut() {
+        shell.regions = Some(regions.to_vec());
+    }
+    Ok(report)
 }
 /// Recheck every canonical pair. Each directed use must appear exactly once.
 /// Source joins own local vertices; exact opposite pairs own cross-face vertices.
@@ -247,6 +273,7 @@ pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Re
         .collect();
     out.shell = Some(Shell {
         faces: faces.to_vec(),
+        regions: None,
         edges,
         uses: pairs.iter().map(|p| p.uses).collect(),
         vertices,
@@ -352,6 +379,71 @@ mod tests {
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
         use crate::source_boundary_fragment::Role;
         let (mut faces, mut pairs) = tetrahedron();
+        let context = cad_predicates::ToleranceContext::default_valid();
+        let mut regions = faces
+            .iter()
+            .map(|face| {
+                let surface = face[0].edges()[0].surface();
+                let boundaries = face
+                    .iter()
+                    .map(|wire| {
+                        wire.edges()
+                            .iter()
+                            .map(|e| {
+                                let c = e.curve();
+                                let a = &c.control_points[0];
+                                let b = &c.control_points[1];
+                                crate::trimmed_face_recipe::Boundary {
+                                    curve: Curve::from_polyline(vec![
+                                        surface.evaluate(a[0], a[1]).unwrap().point.to_vec(),
+                                        surface.evaluate(b[0], b[1]).unwrap().point.to_vec(),
+                                    ])
+                                    .unwrap(),
+                                    pcurve: c.clone(),
+                                    reversed: false,
+                                }
+                            })
+                            .collect()
+                    })
+                    .collect::<Vec<Vec<_>>>();
+                let report = crate::source_contour_proposal::qualify_original_region(
+                    &context,
+                    surface,
+                    &boundaries,
+                    1e-8,
+                    crate::trimmed_face_recipe::Limits {
+                        pairs: 1000,
+                        region_cells: 10000,
+                        domain_cells: 10000,
+                        agreement_cells: 10000,
+                    },
+                )
+                .unwrap();
+                let mut damaged = boundaries.clone();
+                damaged[0][0].curve.control_points[0][0] += 1e-3;
+                let refused = crate::source_contour_proposal::qualify_original_region(
+                    &context,
+                    surface,
+                    &damaged,
+                    1e-8,
+                    crate::trimmed_face_recipe::Limits {
+                        pairs: 1000,
+                        region_cells: 10000,
+                        domain_cells: 10000,
+                        agreement_cells: 10000,
+                    },
+                )
+                .unwrap();
+                assert!(refused.region.is_none());
+                assert!(
+                    report.region.is_some(),
+                    "{} / {}",
+                    report.reason,
+                    report.audit.reason
+                );
+                report.region.unwrap()
+            })
+            .collect::<Vec<_>>();
         let old = pairs.remove(0);
         for (i, address) in old.uses.iter().enumerate() {
             let edge = &faces[address.face][address.wire].edges()[address.edge];
@@ -371,6 +463,12 @@ mod tests {
                     .unwrap()
                     .point
                     .unwrap();
+            assert!(regions[address.face]
+                .split_boundary(address.wire, address.edge, &p, Role::Contact)
+                .is_err());
+            regions[address.face] = regions[address.face]
+                .split_boundary(address.wire, address.edge, &p, Role::Boundary)
+                .unwrap();
             let parts = edge.split_at(&p, Role::Boundary).unwrap();
             assert_eq!(parts[0].curve(), c);
             assert_eq!(parts[1].curve(), c);
@@ -415,9 +513,20 @@ mod tests {
             world_reversed: old.world_reversed,
             cutters: [None, None],
         });
-        let r = assemble(&faces, &pairs, 100_000_000).unwrap();
+        let r = assemble_regions(&regions, &pairs, 100_000_000).unwrap();
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
+        assert_eq!(shell.regions().unwrap().len(), 4);
+        assert!(shell.inspect_face_charts(4, 0).unwrap().all_injective);
+        for (face, region) in shell.regions().unwrap().iter().enumerate() {
+            assert_eq!(region.source_loop_indices(), &[0]);
+            for (i, edge) in region.loops()[0].iter().enumerate() {
+                assert_eq!(
+                    edge.definition(),
+                    shell.faces()[face][0].edges()[i].definition()
+                );
+            }
+        }
         assert_eq!(shell.edges().len(), 7);
         let owners: std::collections::BTreeSet<_> = shell
             .vertices()

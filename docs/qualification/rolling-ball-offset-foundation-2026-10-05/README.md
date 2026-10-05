@@ -868,3 +868,26 @@ preventing a boundary-only success claim from becoming geometric authority.
 Cross-face contacts, complete original trim-region qualification, neighborhood
 embedding, material volume, fillet radius/tangency/walls, transitions and
 WASM/UI admission remain outstanding.
+
+## Qualified UV regions retained in source shell assembly
+
+`qualify_original_region` independently audits original material loops and
+world/pcurve agreement through the existing face recipe, then requires exact
+source-expression joins before creating an immutable SourceRegion. A damaged
+world boundary cannot acquire region authority. `SourceRegion::split_boundary`
+partitions one qualified source restriction at a bound root, preserving its
+original curve and UV region; wrong source roles and invalid addresses refuse.
+
+`assemble_regions` builds paired wires directly from these immutable regions
+and retains the same qualified region snapshots in the resulting source shell.
+Raw wire incidence continues to carry no region qualification. Region loops,
+original loop indices and the exact paired wire payload cannot diverge. All
+canonical edge checks and chart injectivity requirements remain independent.
+
+All 39 selected source tests passed (`source-qualified-region-shell.log.gz`).
+The root-partitioned tetrahedron now qualifies all original face regions, splits
+two adjacent restrictions, assembles the qualified regions, checks their payload
+identity and proves all original charts injective. Damaged world curves and a
+wrong crossing role refuse. This combines qualified UV regions with exact closed
+incidence and chart injectivity; cross-face contacts, material/volume admission,
+fillet transitions and WASM/UI remain outstanding.
