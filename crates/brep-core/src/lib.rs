@@ -1838,3 +1838,5 @@ pub mod miter_seams;
 pub mod offset_end_boundary;
 
 pub mod trimmed_face_recipe;
+
+pub mod trimmed_shell_recipe;
