@@ -441,3 +441,23 @@ This admits a supplied, already endpoint-owned chain replacing a prepartitioned
 arc. Automatic partition of adjacent original edges, generated contact-to-world
 subinterval alignment, smooth end transitions, general sewn solids and UI/WASM
 integration are still outstanding. This is not general fillet admission.
+
+## Original endpoint-edge partition and contact replacement
+
+`trimmed_face_recipe::partition_and_replace_path` partitions two distinct
+original boundary edges at supplied forward pcurve fractions and replaces the
+cyclic arc between those cuts. Each coupled world/pcurve partition is freshly
+qualified against its original definitions and surface. Original face audit,
+expanded contour audit and final face audit remain independent requirements.
+Reversal metadata is retained; no world vertex welding or endpoint snapping is
+performed. Reports retain both partition results and all available face audits.
+Limits apply per audit/partition phase, not as one aggregate operation budget.
+
+Seven face-recipe tests passed (`source-cut-replacement.log.gz`), including
+reversed canonical source edges, wrapped cyclic arcs, unchanged retained whole
+edges and rejection of a sub-tolerance world endpoint mismatch.
+
+Contact intersection parameters are still supplied explicitly. Automatic
+root-to-boundary intersection isolation, authoritative exact source endpoint
+representation, generated world/pcurve subinterval alignment and final shell
+assembly remain outstanding. No general fillet or UI command is admitted here.

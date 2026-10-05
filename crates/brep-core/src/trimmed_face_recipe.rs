@@ -383,6 +383,112 @@ pub fn replace_boundary_path(
     Ok(out)
 }
 
+/// Result retains every fresh audit, including partition failures.
+pub struct PartitionedReplacement {
+    pub original: Report,
+    pub splits: Vec<SplitBoundary>,
+    pub replacement: Option<ReplaceBoundary>,
+}
+/// Split two distinct original edges at forward pcurve fractions, then replace
+/// the cyclic arc between those cuts. Parameters are supplied, not solved here.
+/// Limits apply separately to source audit, each partition and replacement.
+pub fn partition_and_replace_path(
+    context: &ToleranceContext,
+    surface: &Surface,
+    wires: &[Vec<Boundary>],
+    loop_index: usize,
+    start_edge: usize,
+    start_fraction: f64,
+    end_edge: usize,
+    end_fraction: f64,
+    contacts: &[Boundary],
+    tolerance_uv: f64,
+    partition_cells: usize,
+    limits: Limits,
+) -> Result<PartitionedReplacement> {
+    if loop_index >= wires.len()
+        || start_edge == end_edge
+        || start_edge >= wires[loop_index].len()
+        || end_edge >= wires[loop_index].len()
+        || ![start_fraction, end_fraction]
+            .iter()
+            .all(|x| x.is_finite() && *x > 0. && *x < 1.)
+        || contacts.is_empty()
+    {
+        return Err(Error::new(
+            "BREP_FACE_RECIPE_PARTITION",
+            "Choose distinct original edges and interior contact fractions",
+        ));
+    }
+    // Validate every proposal before any early return caused by audit budgets.
+    for c in contacts {
+        c.curve.validate()?;
+        c.pcurve.validate()?;
+        if c.curve.control_points[0].len() != 3 || c.pcurve.control_points[0].len() != 2 {
+            return Err(Error::new(
+                "BREP_FACE_RECIPE_DIMENSION",
+                "Replacement needs a 3D edge and 2D pcurve",
+            ));
+        }
+    }
+    let start = split_boundary(
+        context,
+        surface,
+        &wires[loop_index][start_edge],
+        &[start_fraction],
+        tolerance_uv,
+        partition_cells,
+        limits.agreement_cells,
+    )?;
+    let end = split_boundary(
+        context,
+        surface,
+        &wires[loop_index][end_edge],
+        &[end_fraction],
+        tolerance_uv,
+        partition_cells,
+        limits.agreement_cells,
+    )?;
+    let original = assemble(context, surface, wires, tolerance_uv, limits)?;
+    let mut out = PartitionedReplacement {
+        original,
+        splits: vec![start, end],
+        replacement: None,
+    };
+    if out.original.face.is_none() || out.splits.iter().any(|s| s.boundaries.is_none()) {
+        return Ok(out);
+    }
+    let mut expanded = wires.to_vec();
+    let mut wire = vec![];
+    let mut begin = 0;
+    let mut finish = 0;
+    for (i, boundary) in wires[loop_index].iter().enumerate() {
+        if i == start_edge {
+            begin = wire.len() + 1;
+            wire.extend(out.splits[0].boundaries.as_ref().unwrap().iter().cloned());
+        } else if i == end_edge {
+            finish = wire.len();
+            wire.extend(out.splits[1].boundaries.as_ref().unwrap().iter().cloned());
+        } else {
+            wire.push(boundary.clone());
+        }
+    }
+    let count = (finish + wire.len() - begin) % wire.len() + 1;
+    expanded[loop_index] = wire;
+    out.replacement = Some(replace_boundary_path(
+        context,
+        surface,
+        &expanded,
+        loop_index,
+        begin,
+        count,
+        contacts,
+        tolerance_uv,
+        limits,
+    )?);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,5 +784,86 @@ mod tests {
             work
         )
         .is_err());
+    }
+    #[test]
+    fn source_endpoint_partitions_feed_face_replacement_with_reversed_world_edge() {
+        let (surface, _) = fixture();
+        let points = [vec![1., 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]];
+        let make = |points: Vec<Vec<f64>>| {
+            let pcurve = Curve::from_polyline(points).unwrap();
+            let mut curve = pcurve.clone();
+            for p in &mut curve.control_points {
+                p.push(1.);
+            }
+            Boundary {
+                curve,
+                pcurve,
+                reversed: false,
+            }
+        };
+        let mut wires = vec![(0..4)
+            .map(|i| make(vec![points[i].clone(), points[(i + 1) % 4].clone()]))
+            .collect::<Vec<_>>()];
+        wires[0][0].curve.control_points.reverse();
+        wires[0][0].reversed = true;
+        let contact = make(vec![vec![1., 0.5], vec![0.5, 1.]]);
+        let r = partition_and_replace_path(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            0,
+            0,
+            0.5,
+            1,
+            0.5,
+            &[contact.clone()],
+            1e-8,
+            100000,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.splits.iter().all(|s| s.report.qualified));
+        let face = r.replacement.unwrap().replacement.unwrap().face.unwrap();
+        assert_eq!(face.edges().len(), 5);
+        assert_eq!(face.face().surface, surface);
+        assert_eq!(face.edges()[0].curve, contact.curve);
+        assert_eq!(face.edges()[2].curve, wires[0][2].curve);
+        let wrapped = make(vec![vec![0.5, 0.], vec![1., 0.5]]);
+        let r = partition_and_replace_path(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            0,
+            3,
+            0.5,
+            0,
+            0.5,
+            &[wrapped.clone()],
+            1e-8,
+            100000,
+            limits(),
+        )
+        .unwrap();
+        let face = r.replacement.unwrap().replacement.unwrap().face.unwrap();
+        assert_eq!(face.edges().len(), 5);
+        assert_eq!(face.edges()[0].curve, wrapped.curve);
+        let mut wrong = contact;
+        wrong.curve.control_points[0][0] -= 1e-9;
+        let r = partition_and_replace_path(
+            &ToleranceContext::default_valid(),
+            &surface,
+            &wires,
+            0,
+            0,
+            0.5,
+            1,
+            0.5,
+            &[wrong],
+            1e-8,
+            100000,
+            limits(),
+        )
+        .unwrap();
+        assert!(r.replacement.unwrap().replacement.unwrap().face.is_none());
     }
 }
