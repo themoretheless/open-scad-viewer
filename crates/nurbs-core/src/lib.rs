@@ -161,3 +161,5 @@ pub mod curve_partition_agreement;
 pub mod boundary_partition;
 
 pub mod contact_normal_agreement;
+
+pub mod offset_contact_predictor;

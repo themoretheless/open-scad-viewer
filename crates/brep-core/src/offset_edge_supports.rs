@@ -1,8 +1,8 @@
 //! Immutable original support faces for one authored B-rep edge.
 //! Full face audits precede preparation; no fillet or topology edit is admitted.
 use crate::{
-    Error, Model, Result, TopoId,
     trimmed_face_recipe::{self, Boundary, Limits, QualifiedFace},
+    Error, Model, Result, TopoId,
 };
 use cad_predicates::ToleranceContext;
 use nurbs_core::curve::Curve;
@@ -221,6 +221,76 @@ pub fn prepare(
     out.reason = "original-edge-supports-qualified";
     Ok(out)
 }
+/// A world-edge station proposes a section using its original forward/reversed
+/// source pcurves. Axis choice is local and numerical, not a whole-edge driver proof.
+/// Signed distances are explicit; source ownership alone does not prove material side.
+pub fn propose_section(
+    prepared: &PreparedEdge,
+    fraction: f64,
+    distances: [f64; 2],
+    numerical_tolerance_mm: f64,
+    max_iterations: usize,
+    padding_fraction: f64,
+    max_spans: usize,
+) -> Result<nurbs_core::offset_contact_predictor::Report> {
+    if !fraction.is_finite() || !(0. ..=1.).contains(&fraction) {
+        return Err(Error::new(
+            "BREP_OFFSET_EDGE_STATION",
+            "Choose an edge station fraction in [0,1]",
+        ));
+    }
+    let mut seeds = [[0.; 2]; 2];
+    let mut derivative = None;
+    for (side, support) in prepared.supports.iter().enumerate() {
+        let curve = support.selected_pcurve();
+        let d = curve.domain();
+        let t = if support.selected_reversed() {
+            1. - fraction
+        } else {
+            fraction
+        };
+        let value = curve.evaluate(d[0] + (d[1] - d[0]) * t)?;
+        seeds[side] = [value.point[0], value.point[1]];
+        if side == 0 {
+            derivative = value.d1;
+        }
+    }
+    let derivative = derivative.ok_or_else(|| {
+        Error::new(
+            "BREP_OFFSET_EDGE_DRIVER",
+            "Source pcurve tangent is unavailable at this station",
+        )
+    })?;
+    let surface = &prepared.supports[0].face.face().surface;
+    let widths = [
+        surface.knots_u[surface.control_points.len()] - surface.knots_u[surface.degree_u],
+        surface.knots_v[surface.control_points[0].len()] - surface.knots_v[surface.degree_v],
+    ];
+    let scores = [
+        derivative[0].abs() / widths[0],
+        derivative[1].abs() / widths[1],
+    ];
+    if !scores.iter().all(|x| x.is_finite()) || scores.iter().all(|x| *x == 0.) {
+        return Err(Error::new(
+            "BREP_OFFSET_EDGE_DRIVER",
+            "Source pcurve has no regular numerical driving coordinate at this station",
+        ));
+    }
+    let axis = usize::from(scores[1] > scores[0]);
+    nurbs_core::offset_contact_predictor::propose(
+        [
+            &prepared.supports[0].face.face().surface,
+            &prepared.supports[1].face.face().surface,
+        ],
+        distances,
+        seeds,
+        axis,
+        numerical_tolerance_mm,
+        max_iterations,
+        padding_fraction,
+        max_spans,
+    )
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,23 +352,152 @@ mod tests {
         let report = prepare(&source, edge, 1e-8, limits()).unwrap();
         let prepared = report.prepared.expect(report.reason);
         assert_eq!(prepared.curve(), &source.edges[edge].curve);
-        assert!(
-            prepared
-                .supports()
-                .iter()
-                .any(|s| s.face().face().surface.degree_u == 2)
-        );
-        assert!(
-            prepared
-                .supports()
-                .iter()
-                .any(|s| s.face().face().surface.degree_u == 1)
-        );
+        assert!(prepared
+            .supports()
+            .iter()
+            .any(|s| s.face().face().surface.degree_u == 2));
+        assert!(prepared
+            .supports()
+            .iter()
+            .any(|s| s.face().face().surface.degree_u == 1));
         assert!(report.support_audits.iter().all(|r| {
             r.agreements
                 .iter()
                 .all(|a| a.status == nurbs_core::curve_surface_agreement::Status::WithinTolerance)
         }));
+        let distances = std::array::from_fn(|i| {
+            if prepared.supports()[i].face_reversed() {
+                0.2
+            } else {
+                -0.2
+            }
+        });
+        let section = propose_section(&prepared, 0.5, distances, 1e-8, 8, 1e-3, 16).unwrap();
+        assert!(section.residual_mm <= 1e-8);
+        assert!(
+            matches!(
+                section.certificate,
+                Some(nurbs_core::surface_contact::Verdict::Witness(_))
+            ),
+            "{}",
+            section.reason
+        );
+    }
+    #[test]
+    fn automatic_box_edge_stations_find_certified_centers_after_rotation() {
+        let base = crate::cuboid([0., 0., 0.], [2., 3., 4.]).unwrap();
+        let c = 0.6;
+        let t = 0.8;
+        let source = crate::transform::affine(
+            &base,
+            [
+                [c, -t, 0., 5.],
+                [t, c, 0., -3.],
+                [0., 0., 1., 2.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        for edge in 0..source.edges.len() {
+            let prepared = prepare(&source, edge, 1e-8, limits())
+                .unwrap()
+                .prepared
+                .unwrap();
+            let distances = std::array::from_fn(|i| {
+                if prepared.supports()[i].face_reversed() {
+                    0.2
+                } else {
+                    -0.2
+                }
+            });
+            let section = propose_section(&prepared, 0.5, distances, 1e-8, 8, 1e-3, 16).unwrap();
+            assert!(section.residual_mm <= 1e-8);
+            assert!(
+                matches!(
+                    section.certificate,
+                    Some(nurbs_core::surface_contact::Verdict::Witness(_))
+                ),
+                "{}",
+                section.reason
+            );
+            assert!(section.iterations <= 8 && section.line_search_evaluations <= 96);
+        }
+    }
+    #[test]
+    fn numerical_center_does_not_gain_authority_when_interval_work_stops() {
+        // C2 cubic carrier with two incident spans at the driving station.
+        let line = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 0.5, 1., 1., 1., 1.],
+            control_points: vec![
+                vec![0., 0.],
+                vec![1. / 3., 0.],
+                vec![1., 0.],
+                vec![5. / 3., 0.],
+                vec![2., 0.],
+            ],
+            weights: vec![1.; 5],
+            periodic: false,
+        };
+        let points = [vec![2., 0.], vec![2., 3.], vec![0., 3.], vec![0., 0.]];
+        let mut profile = vec![line];
+        profile.extend(
+            points
+                .windows(2)
+                .map(|p| Curve::from_polyline(p.to_vec()).unwrap()),
+        );
+        let mut source = crate::prism::extrude(&[profile], 0., 4.).unwrap();
+        // Extrusion splits profile spans into separate side faces. Retain a
+        // multispan affine cap carrier so the root tube actually crosses a knot.
+        for face in &mut source.faces {
+            let surface = &mut face.surface;
+            let z = surface.control_points[0][0][2];
+            if surface.control_points.iter().flatten().all(|p| p[2] == z) {
+                surface.degree_u = 3;
+                surface.knots_u = vec![0., 0., 0., 0., 0.25, 1., 1., 1., 1.];
+                surface.control_points = [0., 1. / 12., 5. / 12., 0.75, 1.]
+                    .map(|u| vec![vec![2. * u, 0., z], vec![2. * u, 3., z]])
+                    .to_vec();
+                surface.weights = vec![vec![1.; 2]; 5];
+            }
+        }
+        let edge = source
+            .edges
+            .iter()
+            .position(|e| e.curve.degree == 3)
+            .unwrap();
+        let prepared = prepare(&source, edge, 1e-8, limits())
+            .unwrap()
+            .prepared
+            .unwrap();
+        let distances = std::array::from_fn(|i| {
+            if prepared.supports()[i].face_reversed() {
+                0.2
+            } else {
+                -0.2
+            }
+        });
+        let section = propose_section(&prepared, 0.5, distances, 1e-8, 8, 1e-3, 1).unwrap();
+        assert!(section.residual_mm <= 1e-8);
+        assert!(
+            matches!(
+                section.certificate,
+                Some(nurbs_core::surface_contact::Verdict::Unresolved)
+            ),
+            "{}: {:?}",
+            section.reason,
+            section.certificate
+        );
+        let sufficient = propose_section(&prepared, 0.5, distances, 1e-8, 8, 1e-3, 16).unwrap();
+        assert!(
+            matches!(
+                sufficient.certificate,
+                Some(nurbs_core::surface_contact::Verdict::Witness(_))
+            ),
+            "{}",
+            sufficient.reason
+        );
+        assert!(propose_section(&prepared, -0.1, distances, 1e-8, 8, 1e-3, 16).is_err());
     }
     #[test]
     fn face_work_stop_and_missing_material_ownership_cannot_prepare_an_edge() {
