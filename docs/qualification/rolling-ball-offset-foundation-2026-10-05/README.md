@@ -2133,3 +2133,41 @@ require work.
 Full validation after pole-contact admission: 891 B-rep library tests pass,
 zero failures and three ignored tests. Compressed focused, embedding and full
 B-rep logs accompany this stage.
+
+## Native capped canal body and certified flux refinement
+
+`linear_canal_body::qualify` now rebuilds original regions and incidence, then
+chart injectivity and every face-pair contact, and finally signed volume. Each
+private source payload moves to the next gate; diagnostic flags never admit
+a body. Reports preserve stage work and refusal locations. A successful result
+owns `source_volume::Body`; it does not authorize a conventional Model, STEP
+export or WASM/UI operation. Per-face region budgets and separate incidence,
+embedding and volume budgets remain explicit.
+
+Original surface flux now intersects its previous enclosure with a certified
+midpoint Taylor integral. Rational jets through total order three bound the
+flux Hessian by the product rule. Integrated absolute remainder bounds are
+Muu*hu^2/24 + Muv*hu*hv/16 + Mvv*hv^2/24 in normalized original knot coordinates.
+The midpoint is outward enclosed, derivatives retain the original source net,
+and interval widths apply original knot scaling exactly once. No sampled
+quadrature or analytic canal formula supplies certificate authority.
+
+Independent polynomial integrals on nonunit knot domains confirm enclosure,
+orientation reversal and improved subdivision convergence. Previous rational
+and multispan flux regressions remain covered. The translated/rotated increasing
+radius canal confirms all 120 face pairs, then volume
+[37.52914969854688, 37.77914345395185] mm^3 with width below 0.25 mm^3, using
+46834 volume cells/spans. Independent axial frustum and spherical segment
+integrals give 37.645933842430814 mm^3 inside that interval. The original signed
+interval is negative, so the private body records orientation reversal. A
+one-cell volume budget refuses the body after successful embedding.
+
+The focused native factory test passes. This control is still expensive and
+its 0.25 mm^3 width does not establish tight metrology or interactive latency.
+Other radius/pose controls, walls, tangent normals at poles, arbitrary fillet
+trims/corners, closed Model/STEP/WASM/UI integration and the full roadmap remain
+unfinished.
+
+Full validation: all 663 NURBS library tests and 892 B-rep library tests pass;
+B-rep has three ignored tests and zero failures. Compressed focused and full
+logs accompany this stage.

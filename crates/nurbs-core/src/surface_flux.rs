@@ -1,5 +1,5 @@
 //! Outward flux bounds for F_axis = S_axis - origin, whose divergence is one.
-use crate::{check, interval_eval::Interval as I, surface::Surface, Result};
+use crate::{Result, check, interval_eval::Interval as I, surface::Surface};
 pub struct Bound {
     pub density: [f64; 2],
     pub integral: [f64; 2],
@@ -7,6 +7,98 @@ pub struct Bound {
 pub struct Report {
     pub bound: Option<Bound>,
     pub spans: usize,
+}
+fn magnitude(x: I) -> f64 {
+    x.lo.abs().max(x.hi.abs())
+}
+// Derivatives in normalized original knot coordinates. Product rule keeps
+// the original rational chart; only the integration enclosure is tightened.
+fn flux_derivative(
+    j: &crate::surface_measure::jets::Jets,
+    axis: usize,
+    offset: I,
+    derivative: [usize; 2],
+) -> Result<I> {
+    let mut result = I::point(0.);
+    for a in 0..=derivative[0] {
+        for b in 0..=derivative[1] {
+            for c in 0..=derivative[0] - a {
+                for d in 0..=derivative[1] - b {
+                    let e = derivative[0] - a - c;
+                    let f = derivative[1] - b - d;
+                    let factorial = |n: usize| if n == 2 { 2. } else { 1. };
+                    let coefficient = factorial(derivative[0]) * factorial(derivative[1])
+                        / (factorial(a)
+                            * factorial(c)
+                            * factorial(e)
+                            * factorial(b)
+                            * factorial(d)
+                            * factorial(f));
+                    let mut position = j[a][b][axis];
+                    if a + b == 0 {
+                        position = position.add(offset)?;
+                    }
+                    let k = (axis + 1) % 3;
+                    let l = (axis + 2) % 3;
+                    let normal = j[c + 1][d][k]
+                        .mul(j[e][f + 1][l])?
+                        .sub(j[c + 1][d][l].mul(j[e][f + 1][k])?)?;
+                    result = result.add(position.mul(normal)?.mul(I::point(coefficient))?)?;
+                }
+            }
+        }
+    }
+    Ok(result)
+}
+fn taylor_integral(
+    s: &Surface,
+    span: [usize; 2],
+    section: [[f64; 2]; 2],
+    axis: usize,
+    origin: f64,
+) -> Result<I> {
+    let full = std::array::from_fn::<_, 2, _>(|a| {
+        let knots = if a == 0 { &s.knots_u } else { &s.knots_v };
+        I::point(knots[span[a] + 1]).sub(I::point(knots[span[a]]))
+    });
+    let full = [full[0].clone()?, full[1].clone()?];
+    let mut widths = [I::point(0.); 2];
+    let mut midpoint = [[0.; 2]; 2];
+    for a in 0..2 {
+        widths[a] = I::point(section[a][1])
+            .sub(I::point(section[a][0]))?
+            .div(full[a])?;
+        let m = I::point(section[a][0])
+            .add(I::point(section[a][1]))?
+            .div(I::point(2.))?;
+        midpoint[a] = [m.lo.max(section[a][0]), m.hi.min(section[a][1])];
+    }
+    let jets = crate::surface_measure::jets::calculate_partial_stable(s, span, section, [None; 2])?;
+    let center =
+        crate::surface_measure::jets::calculate_partial_stable(s, span, midpoint, [None; 2])?;
+    let offset = I::point(s.control_points[span[0] - s.degree_u][span[1] - s.degree_v][axis])
+        .sub(I::point(origin))?;
+    let f = flux_derivative(&center, axis, offset, [0, 0])?;
+    let hessian = [[2, 0], [1, 1], [0, 2]].map(|d| flux_derivative(&jets, axis, offset, d));
+    let error = I::point(magnitude(hessian[0].clone()?))
+        .mul(widths[0])?
+        .mul(widths[0])?
+        .div(I::point(24.))?
+        .add(
+            I::point(magnitude(hessian[1].clone()?))
+                .mul(widths[0])?
+                .mul(widths[1])?
+                .div(I::point(16.))?,
+        )?
+        .add(
+            I::point(magnitude(hessian[2].clone()?))
+                .mul(widths[1])?
+                .mul(widths[1])?
+                .div(I::point(24.))?,
+        )?;
+    f.add(I::new(-error.hi, error.hi)?)?
+        .mul(widths[0])?
+        .mul(widths[1])
 }
 /// Derivatives are with respect to the original surface parameters. Physical
 /// UV section area is applied exactly once, including non-unit knot domains.
@@ -72,7 +164,9 @@ pub fn bound(
             let area = I::point(section[0][1])
                 .sub(I::point(section[0][0]))?
                 .mul(I::point(section[1][1]).sub(I::point(section[1][0]))?)?;
-            total = total.add(f.mul(area)?)?;
+            let coarse = f.mul(area)?;
+            let refined = taylor_integral(s, indices, section, axis, origin)?;
+            total = total.add(coarse.intersect(refined.lo, refined.hi)?)?;
             density[0] = density[0].min(f.lo);
             density[1] = density[1].max(f.hi);
         }
@@ -104,6 +198,55 @@ mod tests {
         }
     }
     #[test]
+    fn taylor_bounds_enclose_independent_polynomial_integrals_on_nonunit_domains() {
+        let mut s = crate::polynomial::graph(
+            [0., 1., 0., 1.],
+            &[
+                vec![0., 0., 0., 1.],
+                vec![0.; 4],
+                vec![0., 0., 1., 0.],
+                vec![2., 0., 0., 0.],
+            ],
+        )
+        .unwrap();
+        s.knots_u.iter_mut().for_each(|x| *x = 2. + 3. * *x);
+        s.knots_v.iter_mut().for_each(|x| *x = -4. + 2. * *x);
+        let expected = 31. / 36.;
+        let integrate = |n: usize| {
+            let mut total = I::point(0.);
+            for u in 0..n {
+                for v in 0..n {
+                    let section = [
+                        [
+                            2. + 3. * u as f64 / n as f64,
+                            2. + 3. * (u + 1) as f64 / n as f64,
+                        ],
+                        [
+                            -4. + 2. * v as f64 / n as f64,
+                            -4. + 2. * (v + 1) as f64 / n as f64,
+                        ],
+                    ];
+                    let value = bound(&s, section, 2, 0., 1).unwrap().bound.unwrap();
+                    total = total
+                        .add(I::new(value.integral[0], value.integral[1]).unwrap())
+                        .unwrap();
+                }
+            }
+            assert!(total.lo <= expected && expected <= total.hi, "{total:?}");
+            total.hi - total.lo
+        };
+        let coarse = integrate(4);
+        let fine = integrate(8);
+        assert!(fine < coarse / 2.);
+        let mut reversed = s.clone();
+        reversed.control_points.reverse();
+        let value = bound(&reversed, [[2., 5.], [-4., -2.]], 2, 0., 1)
+            .unwrap()
+            .bound
+            .unwrap();
+        assert!(value.integral[0] <= -expected && -expected <= value.integral[1]);
+    }
+    #[test]
     fn original_domain_area_and_flux_orientation_are_not_normalized_twice() {
         let s = plane();
         let r = bound(&s, [[2., 4.], [3., 7.]], 2, 0., 10)
@@ -124,10 +267,12 @@ mod tests {
             .bound
             .unwrap();
         assert!(r.integral[0] <= -30. && -30. <= r.integral[1]);
-        assert!(bound(&s, [[2., 4.], [3., 7.]], 2, 0., 0)
-            .unwrap()
-            .bound
-            .is_none());
+        assert!(
+            bound(&s, [[2., 4.], [3., 7.]], 2, 0., 0)
+                .unwrap()
+                .bound
+                .is_none()
+        );
         assert!(bound(&s, [[2., 4.], [3., 7.]], 3, 0., 10).is_err());
     }
     #[test]
@@ -141,10 +286,12 @@ mod tests {
         assert_eq!(r.spans, 2);
         let r = r.bound.unwrap();
         assert!(r.integral[0] <= 30. && 30. <= r.integral[1]);
-        assert!(bound(&s, [[2., 4.], [3., 7.]], 2, 0., 1)
-            .unwrap()
-            .bound
-            .is_none());
+        assert!(
+            bound(&s, [[2., 4.], [3., 7.]], 2, 0., 1)
+                .unwrap()
+                .bound
+                .is_none()
+        );
         let mut s = plane();
         s.weights = vec![vec![1., 2.], vec![3., 6.]];
         let r = bound(&s, [[2., 4.], [3., 7.]], 2, 0., 10)
