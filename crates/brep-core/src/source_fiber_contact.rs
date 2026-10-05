@@ -1046,4 +1046,340 @@ mod tests {
             &regions, &pairs, &[], &maps, 100_000_000, 10000).is_err());
     }
 
+    #[test]
+    fn root_clipped_curved_wedge_closes_with_new_planar_cap() {
+        use crate::source_boundary_fragment::{Endpoint, Role};
+        use source_shell_incidence::{Address, AffineMaps, RootCandidates};
+        let (original, old_pairs) = wedge_regions(1.);
+        let context = cad_predicates::ToleranceContext::default_valid();
+        let limits = Limits {
+            pairs: 10000,
+            region_cells: 10000,
+            domain_cells: 10000,
+            agreement_cells: 10000,
+        };
+        let mut wires = Vec::new();
+        for (face, r) in original.iter().enumerate() {
+            let wire = r.loops()[0]
+                .iter()
+                .enumerate()
+                .map(|(edge, f)| {
+                    let address = Address {
+                        face,
+                        wire: 0,
+                        edge,
+                    };
+                    let p = old_pairs
+                        .iter()
+                        .find(|p| p.uses.contains(&address))
+                        .unwrap();
+                    let use_index = p.uses.iter().position(|a| *a == address).unwrap();
+                    Boundary {
+                        curve: if p.world_reversed[use_index] {
+                            reversed(&p.world)
+                        } else {
+                            p.world.clone()
+                        },
+                        pcurve: f.curve().clone(),
+                        reversed: false,
+                    }
+                })
+                .collect::<Vec<_>>();
+            wires.push(wire);
+        }
+        let k = 0.859375;
+        let contacts = [
+            Curve::from_polyline(vec![vec![1.25, k], vec![-0.75, k]]).unwrap(),
+            Curve::from_polyline(vec![vec![k, -0.75], vec![k, 1.25]]).unwrap(),
+            Curve::from_polyline(vec![vec![1.25, 0.625], vec![-0.75, 0.625]]).unwrap(),
+            Curve::from_polyline(vec![vec![k, -0.75], vec![k, 1.25]]).unwrap(),
+        ];
+        let cut_edges = [(0, 1, 0), (2, 0, 1), (1, 3, 0), (0, 2, 1)];
+        let mut regions = original.clone();
+        for face in 0..4 {
+            let (start, end, driver) = cut_edges[face];
+            let r = crate::source_contour_proposal::qualify_linear_region(
+                &context,
+                original[face].loops()[0][0].surface(),
+                &[wires[face].clone()],
+                &contacts[face],
+                0,
+                start,
+                end,
+                1e-8,
+                limits,
+                10000,
+                [1e-8; 2],
+                32,
+                10000,
+                driver,
+                10000,
+                10000,
+                10000,
+            )
+            .unwrap();
+            assert!(
+                r.region.is_some(),
+                "face {} {} / {} kept {} removed {}",
+                face,
+                r.reason,
+                r.interior.reason,
+                r.kept_side_proven,
+                r.removed_side_proven
+            );
+            if face < 2 {
+                assert!(r.driver_cells > 1);
+            }
+            if face == 0 {
+                let arc = r.region.as_ref().unwrap().loops()[0]
+                    .iter()
+                    .find(|f| f.curve().degree == 2)
+                    .unwrap();
+                assert!(
+                    crate::source_halfplane_side::prove(arc, &contacts[0], 1, true, 1)
+                        .unwrap()
+                        .proven
+                );
+                assert!(
+                    !crate::source_halfplane_side::prove(arc, &contacts[0], 1, false, 1)
+                        .unwrap()
+                        .proven
+                );
+                assert!(
+                    !crate::source_halfplane_side::prove(arc, &contacts[0], 1, true, 0)
+                        .unwrap()
+                        .proven
+                );
+                let opposite = crate::source_boundary_fragment::Fragment::new(
+                    arc.surface(),
+                    arc.curve(),
+                    arc.endpoints()[1].clone(),
+                    arc.endpoints()[0].clone(),
+                )
+                .unwrap();
+                assert!(
+                    crate::source_halfplane_side::prove(&opposite, &contacts[0], 1, true, 1)
+                        .unwrap()
+                        .proven
+                );
+                assert!(
+                    !crate::source_halfplane_side::prove(arc, &contacts[1], 1, true, 100)
+                        .unwrap()
+                        .proven
+                );
+            }
+            regions[face] = r.region.unwrap();
+        }
+        let cap = plane(|u, v| vec![0.609375 * u, k, v]);
+        let corners = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+        let cap_wire = (0..4)
+            .map(|i| {
+                let a = corners[i];
+                let b = corners[(i + 1) % 4];
+                Boundary {
+                    curve: Curve::from_polyline(vec![
+                        vec![0.609375 * a[0], k, a[1]],
+                        vec![0.609375 * b[0], k, b[1]],
+                    ])
+                    .unwrap(),
+                    pcurve: Curve::from_polyline(vec![a.to_vec(), b.to_vec()]).unwrap(),
+                    reversed: false,
+                }
+            })
+            .collect::<Vec<_>>();
+        regions.push(
+            qualify_original_region(&context, &cap, &[cap_wire.clone()], 1e-8, limits)
+                .unwrap()
+                .region
+                .unwrap(),
+        );
+        let contact_world = [
+            Curve::from_polyline(vec![vec![1.25, k, 0.], vec![-0.75, k, 0.]]).unwrap(),
+            Curve::from_polyline(vec![vec![-0.75, k, 1.], vec![1.25, k, 1.]]).unwrap(),
+            Curve::from_polyline(vec![vec![0.609375, k, 1.25], vec![0.609375, k, -0.75]]).unwrap(),
+            Curve::from_polyline(vec![vec![0., k, -0.75], vec![0., k, 1.25]]).unwrap(),
+        ];
+        let candidate = |face: usize, e: &Endpoint| -> Option<[f64; 2]> {
+            let Endpoint::Crossing { point, .. } = e else {
+                return None;
+            };
+            let old = wires[face]
+                .iter()
+                .position(|b| &b.pcurve == point.boundary())
+                .unwrap();
+            Some(match (face, old) {
+                (0, 0) => [0.625, 0.3203125],
+                (0, 1) => [0.140625, 0.625],
+                (1, 2) => [0.859375, 0.375],
+                (1, 0) => [0.375, 0.6796875],
+                (2, 1) => [0.625, 0.125],
+                (2, 3) => [0.375, 0.625],
+                (3, 0) => [0.859375, 0.375],
+                (3, 2) => [0.140625, 0.875],
+                _ => panic!("unexpected root"),
+            })
+        };
+        let mut pending = Vec::<(Address, Curve, [Vec<f64>; 2], [Option<[f64; 2]>; 2])>::new();
+        let mut pairs = Vec::new();
+        let mut maps = Vec::new();
+        let mut witnesses = Vec::new();
+        for (face, r) in regions.iter().enumerate() {
+            for (edge, f) in r.loops()[0].iter().enumerate() {
+                let address = Address {
+                    face,
+                    wire: 0,
+                    edge,
+                };
+                let world = if face == 5 {
+                    cap_wire[edge].curve.clone()
+                } else if face < 4 && f.curve() == &contacts[face] {
+                    contact_world[face].clone()
+                } else {
+                    wires[face]
+                        .iter()
+                        .find(|b| &b.pcurve == f.curve())
+                        .unwrap()
+                        .curve
+                        .clone()
+                };
+                let candidates = std::array::from_fn(|i| candidate(face, &f.endpoints()[i]));
+                // Only fixture pairing suggestions use evaluated positions. Every
+                // proposed pair and original root witness is rechecked below.
+                let ends = std::array::from_fn(|i| {
+                    let t = match &f.endpoints()[i] {
+                        Endpoint::Parameter(t) => *t,
+                        Endpoint::Crossing { role, .. } => {
+                            candidates[i].unwrap()[if *role == Role::Boundary { 0 } else { 1 }]
+                        }
+                    };
+                    let uv = f.curve().evaluate(t).unwrap().point;
+                    f.surface().evaluate(uv[0], uv[1]).unwrap().point.to_vec()
+                });
+                if let Some(index) = pending
+                    .iter()
+                    .position(|(_, _, e, _)| e[0] == ends[1] && e[1] == ends[0])
+                {
+                    let (other, canonical, _, other_candidates) = pending.remove(index);
+                    let range = if world == canonical {
+                        [[0., 1.], [1., 1.]]
+                    } else if world == reversed(&canonical) {
+                        [[1., 1.], [0., 1.]]
+                    } else {
+                        assert_eq!(canonical.degree, 1);
+                        assert_eq!(world.degree, 1);
+                        let a = &canonical.control_points[0];
+                        let b = &canonical.control_points[1];
+                        let axis = (0..3).find(|&k| a[k] != b[k]).unwrap();
+                        let denominator = b[axis] - a[axis];
+                        std::array::from_fn(|i| {
+                            let n = world.control_points[i][axis] - a[axis];
+                            if denominator > 0. {
+                                [n, denominator]
+                            } else {
+                                [-n, -denominator]
+                            }
+                        })
+                    };
+                    let pair = pairs.len();
+                    pairs.push(Pair {
+                        uses: [other, address],
+                        world: canonical,
+                        world_reversed: [false, true],
+                        cutters: [None, None],
+                    });
+                    maps.push(AffineMaps {
+                        pair,
+                        ranges: [[[0., 1.], [1., 1.]], range],
+                    });
+                    witnesses.push(RootCandidates {
+                        pair,
+                        candidates: [other_candidates, candidates],
+                    });
+                } else {
+                    pending.push((address, world, ends, candidates));
+                }
+            }
+        }
+        assert!(
+            pending.is_empty(),
+            "unpaired uses {:?}",
+            pending
+                .iter()
+                .map(|(a, _, e, _)| (a, e))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(pairs.len(), 12);
+        let r = source_shell_incidence::assemble_regions_with_endpoint_inputs(
+            &regions,
+            &pairs,
+            &[],
+            &maps,
+            &witnesses,
+            100_000_000,
+            0,
+        )
+        .unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        let shell = r.shell.unwrap();
+        assert_eq!(shell.faces().len(), 6);
+        assert_eq!(shell.edges().len(), 12);
+        assert!(shell
+            .edges()
+            .iter()
+            .flat_map(|e| e.uses())
+            .flat_map(|f| f.endpoints())
+            .any(|e| matches!(e, Endpoint::Crossing { .. })));
+        assert_eq!(shell.regions().unwrap()[5].loops()[0][0].surface(), &cap);
+        let audit=crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
+            &shell,1e-8,crate::face_contacts::Limits {
+                pairs:15,cells:100000,domain_cells:100000,
+                cells_per_pair:5000,domain_cells_per_pair:10000,
+            },100_000_000,10000,10000,10000).unwrap();
+        assert_eq!(audit.pairs.len(),15);
+        assert!(!audit.all_pairs_qualified);
+        let cap_side=audit.pairs.iter().find(|p|p.faces==[2,5]).unwrap();
+        assert!(cap_side.fiber.is_none() && cap_side.allowed.is_none());
+        println!("new cap: {} face pairs checked; complete contact qualification = {}; interior side/cap fiber remains unqualified",audit.pairs.len(),audit.all_pairs_qualified);
+        assert!(
+            source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &regions,
+                &pairs,
+                &[],
+                &maps,
+                &witnesses,
+                1,
+                0
+            )
+            .unwrap()
+            .shell
+            .is_none()
+        );
+        let displaced_cap = plane(|u, v| vec![0.609375 * u, k + 1e-12, v]);
+        let mut displaced_wire = cap_wire.clone();
+        for b in &mut displaced_wire {
+            for p in &mut b.curve.control_points {
+                p[1] += 1e-12;
+            }
+        }
+        let mut displaced = regions.clone();
+        displaced[5] =
+            qualify_original_region(&context, &displaced_cap, &[displaced_wire], 1e-8, limits)
+                .unwrap()
+                .region
+                .unwrap();
+        assert!(
+            source_shell_incidence::assemble_regions_with_endpoint_inputs(
+                &displaced,
+                &pairs,
+                &[],
+                &maps,
+                &witnesses,
+                100_000_000,
+                0
+            )
+            .unwrap()
+            .shell
+            .is_none()
+        );
+    }
 }

@@ -377,6 +377,7 @@ impl SourceRegion {
 pub struct LinearRegion {
     pub interior: InteriorContact,
     pub controls: usize,
+    pub driver_cells: usize,
     pub work_stopped: bool,
     pub kept_side_proven: bool,
     pub removed_side_proven: bool,
@@ -436,6 +437,7 @@ pub fn qualify_linear_region(
     let mut out = LinearRegion {
         interior,
         controls: 0,
+        driver_cells: 0,
         work_stopped: false,
         kept_side_proven: false,
         removed_side_proven: false,
@@ -483,6 +485,7 @@ pub fn qualify_linear_region(
             .mul(I::point(winding as f64))
     };
     let mut controls = 0;
+    let mut driver_cells = out.interior.driver.as_ref().map_or(0, |r| r.visited);
     let mut work_stopped = false;
     let mut prove = |fragment: &Fragment, kept: bool| -> Result<bool> {
         let accept = |s: I| if kept { s.lo >= 0. } else { s.hi <= 0. };
@@ -530,6 +533,25 @@ pub fn qualify_linear_region(
             return Ok(false);
         }
         controls += cost;
+        if driver_cells < max_driver_cells {
+            // A source-owned root lies exactly on this original line. Strict
+            // monotonicity decides its entire retained/removed side even when
+            // an outward root enclosure straddles the line.
+            // Orientation is expressed by winding, preserving source ownership.
+            let r = crate::source_halfplane_side::prove(
+                fragment,
+                contact,
+                if reversed { -winding } else { winding },
+                kept,
+                max_driver_cells - driver_cells,
+            )?;
+            driver_cells += r.driver_cells;
+            if r.proven {
+                return Ok(true);
+            }
+        } else {
+            work_stopped = true;
+        }
         let bounds = fragment.parameter_bounds();
         let domain = I::new(
             bounds[0][0].min(bounds[1][0]),
@@ -622,6 +644,7 @@ pub fn qualify_linear_region(
     out.hole_placement_proven = holes;
     out.removed_holes = removed_holes;
     out.controls = controls;
+    out.driver_cells = driver_cells;
     out.work_stopped = work_stopped;
     if kept && removed && holes {
         out.interior.region_subset_proven = true;

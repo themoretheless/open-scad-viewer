@@ -1309,3 +1309,42 @@ this stage. This establishes additional source endpoint admission; it does not
 construct a new cap, material volume or general fillet body. Iterative retained
 region cuts, end transitions, variable radii/corners, global radius/wall and
 self-intersection qualification, STEP acceptance and WASM/UI remain open.
+
+
+## Root-aware half-plane sides and a new closing cap
+
+Native `source_halfplane_side::prove` uses an immutable original UV crossing
+on an axis-aligned source line, the original retained endpoint order and strict
+whole-original coordinate monotonicity to prove the side of a curved fragment.
+This avoids treating an outward root box straddling the line as evidence that
+the actual fragment crosses it. It keeps the original root expression, curve
+and contact unchanged. A fresh monotonicity proof is required; wrong source
+ownership, the opposite requested side and exhausted driver work refuse this
+proof. Non-axis-aligned contacts retain the existing interval path.
+
+`qualify_linear_region` incorporates this gate and shares driver work between
+the interior contact proof and all retained/removed curved-side checks. The
+new report records that work separately from source controls. Existing interval
+and line proofs remain available.
+
+A polynomial curved wedge is now cut on four of its five original faces and
+closed with a newly authored planar cap. Native qualification proves each
+retained half-plane region from the original boundaries, then assembles six
+source faces with twelve exact shared edges. The fixture uses the original
+root expressions and exact raw endpoint witnesses plus affine maps for the
+long closing-line carriers. Evaluated endpoints propose fixture pair addresses
+only; shell admission independently rechecks all source compositions, maps and
+root identities. Reversing a fragment preserves the side proof. A cap shifted
+by 1e-12 and exhausted assembly work refuse admission. Orientation closes
+consistently with the original wedge fixture; outward material orientation and
+volume are not certified.
+
+Validation: 61 selected source B-rep tests passed. The final closing-cap contact
+audit passed separately and visits all fifteen face pairs. Complete contact
+qualification remains false: the cap/curved-side seam lies inside the original
+surface chart and is not covered by the existing natural-boundary fiber gate.
+The regression explicitly prevents reporting this shell as fully qualified.
+Compressed logs accompany both checks. This is a source-shell closing cap,
+not a general fillet end transition or admitted Model volume. Interior fiber
+ownership/contact qualification, volume, variable radii/complex corners,
+radius/tangency/walls, STEP acceptance and WASM/UI remain open.
