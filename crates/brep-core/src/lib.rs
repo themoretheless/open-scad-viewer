@@ -1846,6 +1846,7 @@ pub mod source_world_wire;
 pub mod source_shared_edge;
 pub mod source_shell_incidence;
 pub mod source_face_contacts;
+pub mod source_allowed_contact;
 
 pub mod trimmed_shell_recipe;
 

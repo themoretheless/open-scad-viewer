@@ -358,6 +358,7 @@ mod tests {
         );
         let shell = report.shell.unwrap();
         assert_eq!(shell.edges().len(), 6);
+        assert!(crate::source_allowed_contact::certify(&shell, [0, 1], 100_000_000, 2).is_err());
         let owners: std::collections::BTreeSet<_> = shell
             .vertices()
             .iter()
@@ -517,6 +518,65 @@ mod tests {
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
         assert_eq!(shell.regions().unwrap().len(), 4);
+        for a in 0..4 {
+            for b in a + 1..4 {
+                let contact =
+                    crate::source_allowed_contact::certify(&shell, [a, b], 100_000_000, 2).unwrap();
+                assert!(
+                    contact.certificate.is_some(),
+                    "{} faces {:?}",
+                    contact.reason,
+                    [a, b]
+                );
+            }
+        }
+        let allowed = crate::source_face_contacts::inspect_shell_with_allowed(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 6,
+                cells: 1,
+                domain_cells: 1,
+                cells_per_pair: 1,
+                domain_cells_per_pair: 1,
+            },
+            100_000_000,
+            12,
+        )
+        .unwrap();
+        assert!(allowed.all_pairs_qualified);
+        assert!(!allowed.all_pairs_absence_proven);
+        assert_eq!(allowed.pairs.len(), 6);
+        assert_eq!(allowed.cells, 0);
+        assert!(allowed
+            .pairs
+            .iter()
+            .all(|p| p.allowed.is_some() && p.result.is_none()));
+        let limited = crate::source_face_contacts::inspect_shell_with_allowed(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 1,
+                cells: 1,
+                domain_cells: 1,
+                cells_per_pair: 1,
+                domain_cells_per_pair: 1,
+            },
+            1,
+            1,
+        )
+        .unwrap();
+        assert!(!limited.all_pairs_qualified);
+        assert!(limited.pairs[0].allowed.is_none());
+        assert!(limited.pairs[0]
+            .result
+            .as_ref()
+            .is_some_and(|r| !r.absence_proven));
+        let stopped = crate::source_allowed_contact::certify(&shell, [0, 1], 1, 2).unwrap();
+        assert!(stopped.certificate.is_none() && stopped.exact_work <= 1);
+        let stopped =
+            crate::source_allowed_contact::certify(&shell, [0, 1], 100_000_000, 1).unwrap();
+        assert!(stopped.certificate.is_none());
         assert!(shell.inspect_face_charts(4, 0).unwrap().all_injective);
         let pairs = crate::source_face_contacts::inspect_shell(
             &shell,
@@ -535,7 +595,12 @@ mod tests {
         assert_eq!(pairs.pairs[0].faces, [0, 1]);
         assert_eq!(pairs.next_pair, Some([0, 2]));
         assert!(!pairs.all_pairs_absence_proven);
-        assert!(!pairs.pairs[0].result.unresolved.is_empty());
+        assert!(!pairs.pairs[0]
+            .result
+            .as_ref()
+            .unwrap()
+            .unresolved
+            .is_empty());
         for (face, region) in shell.regions().unwrap().iter().enumerate() {
             assert_eq!(region.source_loop_indices(), &[0]);
             for (i, edge) in region.loops()[0].iter().enumerate() {

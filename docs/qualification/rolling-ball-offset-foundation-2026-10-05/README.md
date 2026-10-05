@@ -920,3 +920,34 @@ This stage searches interior contact and absence. Complete classification of
 allowed shared boundary contacts, tangencies, neighborhood embedding, material
 volume and fillet transitions/radius/tangency/walls remain open. General fillet
 WASM/UI and STEP admission are still outstanding.
+
+## Exact allowed contact on complete shared straight boundaries
+
+`source_allowed_contact::certify` recomputes chart injectivity, exact planarity
+of both original positive-weight surface control nets and an exact supporting
+plane over canonical boundary control hulls. Qualified planar material regions
+lie in their original outer boundary hulls. Compatible one-sided supports
+restrict possible contact to zero-support controls; a verified zero-support hull
+on the complete shared line confines every contact to that owned boundary.
+No geometric tolerance or adjacency label authorizes pair exclusion.
+
+All shared fragments of the same original canonical line must form a complete
+source restriction chain on both faces, from natural start to natural end, with
+exact source joins. This includes root-valued partition chains without rounding
+endpoints. The immutable certificate retains both original qualified regions,
+shared edge expressions and supporting plane. Exact predicate work and chart
+spans are bounded; uncertainty yields no certificate.
+
+`inspect_shell_with_allowed` recomputes these certificates internally with
+shared budgets. Other pairs retain the original-region contact search and its
+unresolved cells. Reports distinguish absence from allowed common-boundary
+contact and record whether every pair has one of those proofs. Caller-supplied
+certificates are never consumed.
+
+All 40 selected source tests passed (`source-allowed-line-regression.log.gz`).
+All six pairs of a root-partitioned tetrahedron qualify by exact boundary
+contact, including the split shared line. Raw unqualified regions are refused.
+Exact/chart exhaustion yields no allowed certificate and falls back to an
+unresolved search. Curved shared boundaries, partial line coverage, tangencies,
+neighborhood embedding, material volume and general fillet transitions remain
+outstanding. This pair audit is not a whole-volume certificate.

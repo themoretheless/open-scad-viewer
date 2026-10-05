@@ -53,7 +53,8 @@ pub fn search(
 }
 pub struct PairReport {
     pub faces: [usize; 2],
-    pub result: surface_contact_search::Report,
+    pub result: Option<surface_contact_search::Report>,
+    pub allowed: Option<crate::source_allowed_contact::Certificate>,
 }
 pub struct ShellReport {
     pub pairs: Vec<PairReport>,
@@ -62,12 +63,44 @@ pub struct ShellReport {
     pub cells: usize,
     pub domain_cells: usize,
     pub all_pairs_absence_proven: bool,
+    pub all_pairs_qualified: bool,
+    pub exact_work: u64,
+    pub spans: usize,
 }
 /// Adjacent pairs are included: topology sharing does not exclude extra contact.
 pub fn inspect_shell(
     shell: &crate::source_shell_incidence::Shell,
     tolerance_uv: f64,
     limits: crate::face_contacts::Limits,
+) -> Result<ShellReport> {
+    inspect_impl(shell, tolerance_uv, limits, None)
+}
+/// Native recomputation of allowed contacts; no caller certificates are accepted.
+pub fn inspect_shell_with_allowed(
+    shell: &crate::source_shell_incidence::Shell,
+    tolerance_uv: f64,
+    limits: crate::face_contacts::Limits,
+    max_exact_work: u64,
+    max_spans: usize,
+) -> Result<ShellReport> {
+    if !(1..=100_000_000).contains(&max_exact_work) || !(1..=100000).contains(&max_spans) {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Bound exact allowed-contact work",
+        ));
+    }
+    inspect_impl(
+        shell,
+        tolerance_uv,
+        limits,
+        Some((max_exact_work, max_spans)),
+    )
+}
+fn inspect_impl(
+    shell: &crate::source_shell_incidence::Shell,
+    tolerance_uv: f64,
+    limits: crate::face_contacts::Limits,
+    allowed_budget: Option<(u64, usize)>,
 ) -> Result<ShellReport> {
     if !(1..=100000).contains(&limits.pairs)
         || !(1..=1000000).contains(&limits.cells)
@@ -96,6 +129,9 @@ pub fn inspect_shell(
         cells: 0,
         domain_cells: 0,
         all_pairs_absence_proven: true,
+        all_pairs_qualified: true,
+        exact_work: 0,
+        spans: 0,
     };
     for a in 0..n {
         for b in a + 1..n {
@@ -105,7 +141,29 @@ pub fn inspect_shell(
             {
                 out.next_pair = Some([a, b]);
                 out.all_pairs_absence_proven = false;
+                out.all_pairs_qualified = false;
                 return Ok(out);
+            }
+            if let Some((work, spans)) = allowed_budget {
+                if out.exact_work < work && out.spans < spans {
+                    let proof = crate::source_allowed_contact::certify(
+                        shell,
+                        [a, b],
+                        work - out.exact_work,
+                        spans - out.spans,
+                    )?;
+                    out.exact_work += proof.exact_work;
+                    out.spans += proof.spans;
+                    if let Some(certificate) = proof.certificate {
+                        out.all_pairs_absence_proven = false;
+                        out.pairs.push(PairReport {
+                            faces: [a, b],
+                            result: None,
+                            allowed: Some(certificate),
+                        });
+                        continue;
+                    }
+                }
             }
             let result = search(
                 [&regions[a], &regions[b]],
@@ -118,9 +176,11 @@ pub fn inspect_shell(
             out.cells += result.cells;
             out.domain_cells += result.domain_cells;
             out.all_pairs_absence_proven &= result.absence_proven;
+            out.all_pairs_qualified &= result.absence_proven;
             out.pairs.push(PairReport {
                 faces: [a, b],
-                result,
+                result: Some(result),
+                allowed: None,
             });
         }
     }
