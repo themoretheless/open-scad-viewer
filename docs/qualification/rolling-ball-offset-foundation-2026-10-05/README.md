@@ -95,3 +95,28 @@ The existing MainSolid worker now accepts `trimmedOffsetContactBand`. Its respon
 - WASM: 11,014,718 bytes; SHA-256 `9a19dd762b2971925a79d8d954b61c23b1d8934cafdfbed55be10d0643e30af6`.
 - Packed geometry chunk: 3,677,712 bytes. Production assets: 7,914,653 bytes (+7,007 from band delivery). Explicit limits move to 3,679,000 and 7,917,000 bytes.
 - No replacement trim, envelope patch, endpoint transition or UI fillet command is admitted.
+
+## Original spatial coedge admission
+
+`offset_source_boundary::certify` links each authored UV trim curve to exactly one original spatial coedge, including its traversal reversal. Both surfaces and every original UV/world curve are validated before an early contact or trim rejection. Region admission remains a separate prerequisite. Every coedge must pass either exact authored curve/surface identity or conservative full-parameter agreement within the declared millimeter tolerance.
+
+The existing exact identity predicate supports a single Bezier chart. Unsupported multispan representations, exact inequality and exact work stops can use the existing interval agreement verifier; this never promotes tolerance agreement to exact identity. All exact predicates share `maxExactWork`, and all tolerance queries share `maxAgreementCells`. A mismatch has an enclosed distance witness and original normalized pcurve parameter. A work stop retains explicit total/checked coedge counts and cannot certify the whole source boundary.
+
+Five new native checks pass: full-boundary exact agreement with both traversal directions, tolerance-only agreement for a small authored departure, a mismatch on the second support, multispan rational contours, out-of-domain refusal, bounded work, missing coedges and malformed second operands despite otherwise excluded carriers. Seventeen existing curve/surface agreement regression checks pass, including periodic seams, arbitrary parameter domains and surface knot crossings. The JSON operation, typed adapter and product tests are prepared. The final WASM and existing MainSolid worker are qualified by the checks below. Current UI fillet admission remains open.
+
+Results explicitly distinguish `worldCoedgeIdentityProven` from `worldBoundaryWithinToleranceProven`. Neither creates replacement trims, constructs a rolling-ball envelope or admits a solid topology. General centerline completeness, the envelope, endpoint/corner transitions and volume qualification remain required.
+
+### Source boundary worker admission
+
+The existing MainSolid worker accepts `offsetSourceBoundary`. Its expectation snapshots the ordered side/loop/curve addresses and trim query dimensions. Admission checks every audit against that order, validates shared exact/tolerance work totals, and requires all original coedges before accepting a whole-boundary claim. Exact equality, tolerance-only agreement, mismatch and unvisited work remain distinct. Mismatch witnesses must have a positive lower distance bound above the requested tolerance. A promoted topology flag, omitted audit, wrong source address or inconsistent total is rejected.
+
+Vue/MCP type checks pass. Prepared product/real-worker tests cover exact admission, source mismatch, tolerance-only admission with no exact budget, shared-work exhaustion, missing input coedges and Retry. The final WASM build passes these artifact and real-worker checks.
+
+### Final source boundary delivery
+
+- 5 new native checks and 17 existing curve/surface agreement checks passed.
+- 100 product tests across nine files passed, including the real worker, exact/tolerance distinction, spatial mismatch, bounded work, missing inputs and Retry.
+- Vue/MCP type checks, Vite production build, package verification and diff checks passed.
+- WASM: 11,027,460 bytes; SHA-256 `9b1c0a16a65c6cb075d0f076f9c923509ca5729b59a229312f2e777183624013`.
+- Packed geometry chunk: 3,681,036 bytes; total production assets: 7,921,097 bytes (+6,444 bytes from trim admission). Explicit limits move to 3,683,000 and 7,924,000 bytes.
+- This verifies original source boundaries. Replacement trims, a rolling-ball envelope, corner/end transitions, global volume qualification and UI fillet admission remain required.

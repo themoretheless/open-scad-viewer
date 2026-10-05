@@ -2,7 +2,7 @@ import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidPro
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
+import {certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
 beforeAll(async()=>{await warmGeometryKernel()})
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 function contains(bounds:number[][],point:number[]){point.forEach((x,k)=>{expect(bounds[k][0]).toBeLessThanOrEqual(x);expect(bounds[k][1]).toBeGreaterThanOrEqual(x)})}
@@ -77,4 +77,31 @@ it('admits the entire offset band on authored trims and rejects contact inside a
  expect(crossing).toMatchObject({trimMembershipProven:false,reason:'contact-trim-unresolved'})
  const cap=certifyTrimmedNurbsOffsetContactBand({...options,maxPairs:1,maxCells:1,maxDomainCells:1})
  expect(cap.trimMembershipProven).toBe(false);expect(cap.pairs).toBeLessThanOrEqual(1);expect(cap.cells).toBeLessThanOrEqual(1);expect(cap.domainCells).toBeLessThanOrEqual(1)
+})
+
+it('links every source spatial coedge while keeping exact identity and tolerance agreement separate',()=>{
+ const a=plane(),b=plane();for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const p=[[0,0],[1,0],[1,1],[0,1]],outer=p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ const world=(side:number)=>outer.map(c=>({world:{...c,controlPoints:c.controlPoints.map(uv=>side===0?[uv[0],uv[1],0]:[uv[0],.5,uv[1]])},reversed:false}))
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],firstCoedges:[world(0)],secondCoedges:[world(1)],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000,toleranceMm:1e-5,maxExactWork:1000000,maxAgreementCells:10000}
+ const before=structuredClone(options),r=certifyNurbsOffsetSourceBoundary(options)
+ expect(r).toMatchObject({worldCoedgeIdentityProven:true,worldBoundaryWithinToleranceProven:true,checkedCoedges:8,totalCoedges:8,topologyAuthority:false,wholeCurveComplete:false})
+ expect(options).toEqual(before)
+ const expected=mainSolidExpectation({kind:'offsetSourceBoundary',options})
+ expect(mainSolidResult(expected,r)).toBe(true)
+ expect(mainSolidResult(expected,{...r,topologyAuthority:true})).toBe(false)
+ expect(mainSolidResult(expected,{...r,audits:r.audits.slice(0,-1)})).toBe(false)
+ expect(mainSolidResult(expected,{...r,exactWork:r.exactWork+1})).toBe(false)
+ expect(mainSolidResult(expected,{...r,audits:[{...r.audits[0],side:1},...r.audits.slice(1)]})).toBe(false)
+ const changed=structuredClone(options);changed.secondCoedges[0][0].world.controlPoints[0][1]=.501
+ expect(certifyNurbsOffsetSourceBoundary(changed)).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'spatial-boundary-mismatch'})
+ const limited=certifyNurbsOffsetSourceBoundary({...options,maxExactWork:0,maxAgreementCells:1})
+ expect(limited).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'boundary-work-limit'})
+ expect(limited.checkedCoedges).toBeLessThan(limited.totalCoedges)
+ expect(mainSolidResult(expected,limited)).toBe(false)
+ const limitedExpected=mainSolidExpectation({kind:'offsetSourceBoundary',options:{...options,maxExactWork:0,maxAgreementCells:1}})
+ expect(mainSolidResult(limitedExpected,limited)).toBe(true)
+ expect(mainSolidResult(limitedExpected,{...limited,worldBoundaryWithinToleranceProven:true})).toBe(false)
+ expect(certifyNurbsOffsetSourceBoundary({...options,maxExactWork:0})).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:true})
+ expect(()=>certifyNurbsOffsetSourceBoundary({...options,secondCoedges:[]})).toThrow()
 })

@@ -87,3 +87,19 @@ export interface TrimmedOffsetContactBand {
 /** Requires the entire contact band inside both audited authored UV regions. */
 export const certifyTrimmedNurbsOffsetContactBand=(options:TrimmedOffsetContactBandOptions):TrimmedOffsetContactBand=>
  callNurbsRust('surface_offset_trimmed_contact_band',options)
+
+export interface OffsetSourceBoundaryOptions extends TrimmedOffsetContactBandOptions {
+ firstCoedges:{world:NurbsCurve;reversed:boolean}[][];secondCoedges:{world:NurbsCurve;reversed:boolean}[][]
+ toleranceMm:number;maxExactWork:number;maxAgreementCells:number
+}
+export interface OffsetSourceBoundary {
+ method:'offset-source-boundary-admission';scope:'original-trims-and-spatial-coedges'
+ trim:TrimmedOffsetContactBand;worldCoedgeIdentityProven:boolean;worldBoundaryWithinToleranceProven:boolean
+ reason:string;totalCoedges:number;checkedCoedges:number;exactWork:number;agreementCells:number
+ toleranceMm:number;maxExactWork:number;maxAgreementCells:number
+ topologyAuthority:false;wholeCurveComplete:false
+ audits:{side:number;loop:number;curve:number;exactStatus:'equal'|'different'|'unresolved'|'unsupported';agreementStatus:'exact'|'within-tolerance'|'mismatch'|'unresolved';exactWork:number;cells:number;witnessParameter:number|null;witnessDistanceMm:[number,number]|null}[]
+}
+/** Source coedge agreement does not construct replacement trims or a solid. */
+export const certifyNurbsOffsetSourceBoundary=(options:OffsetSourceBoundaryOptions):OffsetSourceBoundary=>
+ callNurbsRust('surface_offset_source_boundary',options)

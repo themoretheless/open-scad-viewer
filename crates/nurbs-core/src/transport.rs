@@ -798,6 +798,18 @@ pub fn dispatch(v: Value) -> Result<Value> {
             "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
         );
     }
+    if op == "surface_offset_source_boundary" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;
+        let second_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"secondLoops")?;
+        let first_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(&v,"firstCoedges")?;
+        let second_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(&v,"secondCoedges")?;
+        return Ok(crate::offset_source_boundary::certify([&a,&b],[&first_loops,&second_loops],[&first_world,&second_world],
+            field(&v,"distances")?,field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?,field(&v,"toleranceUv")?,
+            crate::trimmed_offset_contact::Limits{max_pairs:field(&v,"maxPairs")?,max_cells:field(&v,"maxCells")?,max_domain_cells:field(&v,"maxDomainCells")?},
+            field(&v,"toleranceMm")?,field(&v,"maxExactWork")?,field(&v,"maxAgreementCells")?)?.to_value());
+    }
     if op == "surface_offset_trimmed_contact_band" {
         let a: Surface = field(&v,"a")?;
         let b: Surface = field(&v,"b")?;

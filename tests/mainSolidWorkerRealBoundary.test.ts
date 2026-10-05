@@ -504,3 +504,24 @@ it('admits a trimmed offset contact band through real WASM and worker with holes
  expect((await client.run({kind:'trimmedOffsetContactBand',options})).trimMembershipProven).toBe(true)
  expect(options).toEqual(before)
 },30_000)
+
+it('links original source coedges through real WASM and worker without promoting tolerance agreement',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const p=[[0,0],[1,0],[1,1],[0,1]],outer=p.map((point,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[point,p[(i+1)%4]],weights:[1,1],periodic:false}))
+ const world=(side:number)=>outer.map(c=>({world:{...c,controlPoints:c.controlPoints.map(uv=>side===0?[uv[0],uv[1],0]:[uv[0],.5,uv[1]])},reversed:false}))
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2,firstLoops:[outer],secondLoops:[outer],firstCoedges:[world(0)],secondCoedges:[world(1)],toleranceUv:1e-7,maxPairs:10000,maxCells:10000,maxDomainCells:100000,toleranceMm:1e-5,maxExactWork:1000000,maxAgreementCells:10000}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const r=await client.run({kind:'offsetSourceBoundary',options})
+ expect(r).toMatchObject({worldCoedgeIdentityProven:true,worldBoundaryWithinToleranceProven:true,checkedCoedges:8,totalCoedges:8,topologyAuthority:false})
+ const changed=structuredClone(options);changed.secondCoedges[0][0].world.controlPoints[0][1]=.501
+ const mismatch=await client.run({kind:'offsetSourceBoundary',options:changed})
+ expect(mismatch).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'spatial-boundary-mismatch'})
+ const tolerance=await client.run({kind:'offsetSourceBoundary',options:{...options,maxExactWork:0}})
+ expect(tolerance).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:true})
+ const cap=await client.run({kind:'offsetSourceBoundary',options:{...options,maxExactWork:0,maxAgreementCells:1}})
+ expect(cap).toMatchObject({worldCoedgeIdentityProven:false,worldBoundaryWithinToleranceProven:false,reason:'boundary-work-limit'})
+ await expect(client.run({kind:'offsetSourceBoundary',options:{...options,secondCoedges:[]}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetSourceBoundary',options})).worldCoedgeIdentityProven).toBe(true)
+ expect(options).toEqual(before)
+},30_000)

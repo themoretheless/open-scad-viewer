@@ -1,4 +1,4 @@
-import type {OffsetContactBandOptions,OffsetContactBand,TrimmedOffsetContactBandOptions,TrimmedOffsetContactBand} from './nurbsSurfaceOffset'
+import type {OffsetContactBandOptions,OffsetContactBand,TrimmedOffsetContactBandOptions,TrimmedOffsetContactBand,OffsetSourceBoundaryOptions,OffsetSourceBoundary} from './nurbsSurfaceOffset'
 import {wholeWallExpectation,validWholeWall,type WholeWallOptions,type WholeWallResult} from './solidWholeWall'
 import {materialWallExpectation,validMaterialWall,type MaterialWallOptions,type MaterialWallResult} from './solidMaterialWall'
 import {materialExpectation,validMaterial,type MaterialOptions,type MaterialSegment,type MaterialChord} from './solidMaterialVolume'
@@ -56,6 +56,7 @@ import {isNominalLatticeGraph, type LatticeGraphMesh, type NominalLatticeGraph} 
 import type {LighteningOptions} from './solidLightening'
 
 export type MainSolidJob =
+  | {kind:'offsetSourceBoundary';options:OffsetSourceBoundaryOptions}
   | {kind:'trimmedOffsetContactBand';options:TrimmedOffsetContactBandOptions}
   | {kind:'offsetContactBand';options:OffsetContactBandOptions}
   | {kind:'sketchSnaps';sketch:DirectSketch}
@@ -113,7 +114,7 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+export interface MainSolidResults {offsetSourceBoundary:OffsetSourceBoundary;trimmedOffsetContactBand:TrimmedOffsetContactBand;offsetContactBand:OffsetContactBand;wholeWall:WholeWallResult;materialWall:MaterialWallResult;materialSegment:MaterialSegment;materialChord:MaterialChord;partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -147,6 +148,7 @@ function distanceWitnessConsistent(points:number[][],bounds:number[][][],lo:numb
 export type MainSolidExpectation =
   | {kind:'offsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]]}
   | {kind:'trimmedOffsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]];maxPairs:number;maxCells:number;maxDomainCells:number;loopCounts:[number,number]}
+  | {kind:'offsetSourceBoundary';trim:{kind:'trimmedOffsetContactBand';fixedAxis:0|1;domains:[[[number,number],[number,number]],[[number,number],[number,number]]];maxPairs:number;maxCells:number;maxDomainCells:number;loopCounts:[number,number]};addresses:[number,number,number][];toleranceMm:number;maxExactWork:number;maxAgreementCells:number}
   | {kind:'partialAnnularPreview';id:string;bodyIdentity:string|undefined}
   | {kind:'trimmedCurveOffset';createdId:string;fillRule:'nonzero'|'evenodd';toleranceMm:number;intersectionToleranceMm:number}
   | {kind:'displayMesh';triangles:number}
@@ -177,7 +179,7 @@ export type MainSolidExpectation =
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
+  | {kind:Exclude<MainSolidJob['kind'],'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'|'wholeWall'|'materialWall'|'materialSegment'|'materialChord'|'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='partialAnnularPreview')return {kind:job.kind,id:job.body.id,bodyIdentity:job.body.brep?.topologyIds?.bodies[0]}
   if(job.kind==='profileIntersections')return {kind:job.kind,loops:structuredClone(job.loops),options:{...job.options}}
@@ -192,6 +194,11 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
   if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
   if(job.kind==='faceDistance'){const o=job.options;return {kind:job.kind,domains:[o.a.faces[o.faceA]?.surface,o.b.faces[o.faceB]?.surface].map(s=>s?[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]:[]),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
+  if(job.kind==='offsetSourceBoundary') {
+    const o=job.options,trim=mainSolidExpectation({kind:'trimmedOffsetContactBand',options:o})
+    if(trim.kind!=='trimmedOffsetContactBand')throw Error('Invalid boundary expectation')
+    return {kind:job.kind,trim,addresses:[o.firstLoops,o.secondLoops].flatMap((loops,side)=>loops.flatMap((loop,li)=>loop.map((_,ci)=>[side,li,ci] as [number,number,number]))),toleranceMm:o.toleranceMm,maxExactWork:o.maxExactWork,maxAgreementCells:o.maxAgreementCells}
+  }
   if(job.kind==='trimmedOffsetContactBand') {
     const o=job.options,band=mainSolidExpectation({kind:'offsetContactBand',options:o})
     if(band.kind!=='offsetContactBand')throw Error('Invalid contact expectation')
@@ -226,6 +233,43 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
   if (!value || typeof value!=='object') return false
+  if(job.kind==='offsetSourceBoundary') {
+    const v=value as OffsetSourceBoundary,count=(n:unknown,max:number)=>Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=max
+    if(v.method!=='offset-source-boundary-admission'||v.scope!=='original-trims-and-spatial-coedges'
+      ||v.topologyAuthority!==false||v.wholeCurveComplete!==false||!mainSolidResult(job.trim,v.trim)
+      ||typeof v.worldCoedgeIdentityProven!=='boolean'||typeof v.worldBoundaryWithinToleranceProven!=='boolean'
+      ||v.toleranceMm!==job.toleranceMm||v.maxExactWork!==job.maxExactWork||v.maxAgreementCells!==job.maxAgreementCells
+      ||v.totalCoedges!==job.addresses.length||!count(v.checkedCoedges,v.totalCoedges)
+      ||!count(v.exactWork,job.maxExactWork)||!count(v.agreementCells,job.maxAgreementCells)
+      ||!Array.isArray(v.audits)||v.audits.length>v.totalCoedges)return false
+    if(!v.audits.every((a,i)=>{
+      if(!a||a.side!==job.addresses[i][0]||a.loop!==job.addresses[i][1]||a.curve!==job.addresses[i][2]
+        ||!['equal','different','unresolved','unsupported'].includes(a.exactStatus)
+        ||!count(a.exactWork,job.maxExactWork)||!count(a.cells,job.maxAgreementCells))return false
+      if(a.agreementStatus==='exact')return a.exactStatus==='equal'&&a.cells===0&&a.witnessParameter===null&&a.witnessDistanceMm===null
+      if(a.exactStatus==='equal')return false
+      if(a.agreementStatus==='mismatch')return a.cells>0&&finite(a.witnessParameter)&&a.witnessParameter!>=0&&a.witnessParameter!<=1
+        &&arrayOf(a.witnessDistanceMm,2,finite)&&a.witnessDistanceMm![0]>job.toleranceMm&&a.witnessDistanceMm![1]>=a.witnessDistanceMm![0]
+      return ['within-tolerance','unresolved'].includes(a.agreementStatus)&&a.witnessParameter===null&&a.witnessDistanceMm===null
+        &&(a.agreementStatus!=='within-tolerance'||a.cells>0)
+    }))return false
+    if(v.exactWork!==v.audits.reduce((n,a)=>n+a.exactWork,0)||v.agreementCells!==v.audits.reduce((n,a)=>n+a.cells,0))return false
+    const accepted=(a:OffsetSourceBoundary['audits'][number])=>a.agreementStatus==='exact'||a.agreementStatus==='within-tolerance'
+    if(v.worldBoundaryWithinToleranceProven){
+      const allExact=v.audits.every(a=>a.exactStatus==='equal')
+      return v.trim.trimMembershipProven&&v.checkedCoedges===v.totalCoedges&&v.audits.length===v.totalCoedges
+        &&v.audits.every(accepted)&&v.worldCoedgeIdentityProven===allExact
+        &&v.reason===(allExact?'exact-source-boundaries':'source-boundaries-within-tolerance')
+    }
+    if(v.worldCoedgeIdentityProven)return false
+    if(!v.trim.trimMembershipProven)return v.reason==='contact-not-admitted-on-trims'&&v.checkedCoedges===0&&v.audits.length===0
+    if(!v.audits.length||!v.audits.slice(0,-1).every(accepted))return false
+    const last=v.audits.at(-1)!
+    if(v.reason==='boundary-work-limit')return last.agreementStatus==='unresolved'&&last.cells===0
+      &&v.agreementCells===job.maxAgreementCells&&v.checkedCoedges===v.audits.length-1
+    return v.checkedCoedges===v.audits.length&&((v.reason==='spatial-boundary-mismatch'&&last.agreementStatus==='mismatch')
+      ||(v.reason==='spatial-boundary-unresolved'&&last.agreementStatus==='unresolved'))
+  }
   if(job.kind==='trimmedOffsetContactBand') {
     const v=value as TrimmedOffsetContactBand,unique=v.contactStatus==='continuous-branch'
     if(v.method!=='interval-offset-band-trim-admission'||v.scope!=='audited-original-uv-regions'

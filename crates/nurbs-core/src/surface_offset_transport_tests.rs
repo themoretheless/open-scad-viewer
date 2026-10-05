@@ -143,3 +143,52 @@ fn trimmed_offset_band_transport_requires_whole_domain_membership() {
     invalid["secondLoops"][0][0]["weights"] = json!([0., 1.]);
     assert!(dispatch(invalid).is_err());
 }
+
+#[test]
+fn offset_source_boundary_transport_requires_all_original_spatial_coedges() {
+    let a = plane();
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            let z = p[1];
+            p[1] = 0.5;
+            p[2] = z
+        }
+    }
+    let p = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+    let uv=(0..4).map(|i|json!({"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[p[i],p[(i+1)%4]],"weights":[1.,1.],"periodic":false})).collect::<Vec<_>>();
+    let world = |side: usize| {
+        uv.iter()
+            .enumerate()
+            .map(|(i, c)| {
+                let mut c = c.clone();
+                let lift = |uv: [f64; 2]| {
+                    if side == 0 {
+                        [uv[0], uv[1], 0.]
+                    } else {
+                        [uv[0], 0.5, uv[1]]
+                    }
+                };
+                c["controlPoints"] = json!([lift(p[i]), lift(p[(i + 1) % 4])]);
+                json!({"world":c,"reversed":false})
+            })
+            .collect::<Vec<_>>()
+    };
+    let request = json!({"op":"surface_offset_source_boundary","a":a,"b":b,"distances":[0.2,0.2],"fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],"secondDomain":[[0.30,0.44],[0.15,0.25]],"maxSpans":2,"firstLoops":[uv],"secondLoops":[uv],"firstCoedges":[world(0)],"secondCoedges":[world(1)],"toleranceUv":1e-7,"maxPairs":10000,"maxCells":10000,"maxDomainCells":100000,"toleranceMm":1e-5,"maxExactWork":1000000,"maxAgreementCells":10000});
+    let r = dispatch(request.clone()).unwrap();
+    assert_eq!(r["worldCoedgeIdentityProven"], true);
+    assert_eq!(r["checkedCoedges"], 8);
+    assert_eq!(r["topologyAuthority"], false);
+    let mut changed = request.clone();
+    changed["secondCoedges"][0][0]["world"]["controlPoints"][0][1] = json!(0.501);
+    let r = dispatch(changed).unwrap();
+    assert_eq!(r["worldBoundaryWithinToleranceProven"], false);
+    assert_eq!(r["reason"], "spatial-boundary-mismatch");
+    let mut missing = request.clone();
+    missing["secondCoedges"] = json!([]);
+    assert!(dispatch(missing).is_err());
+    let mut hidden = request;
+    hidden["firstOther"] = json!([0.75, 0.85]);
+    hidden["secondCoedges"][0][0]["world"]["weights"] = json!([0., 1.]);
+    assert!(dispatch(hidden).is_err());
+}
