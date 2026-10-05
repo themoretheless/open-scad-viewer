@@ -2410,3 +2410,35 @@ The report stores actual timings, volume enclosure and artifact identity.
 Editor document persistence, scene preview/selection/error highlighting,
 root-valued Body cases through WASM, root restrictions in conventional
 Model/STEP, crash/multi-tab acceptance and the remaining roadmap are still open.
+
+## Native source inputs in the existing document (2026-10-06)
+
+`DirectDocument.sourceBodies` stores identified source input records alongside
+the existing body/sketch/curve/surface collections. MGV1 binary data is carried
+as canonical base64 inside document JSON; this preserves signed zero and source
+expressions without saving admission booleans or approximate display geometry.
+The collection shares the 200-independent-object limit and global identity
+namespace. Legacy documents omit the optional field and retain their shape.
+
+Every source record is decoded and freshly qualified through Rust during
+document validation, including the existing real `restoreDocument` worker.
+Native refusal and malformed archive failures include the source object ID and
+`CAD_SOURCE_BODY_RESTORE`. Ordinary history snapshots retain the encoded bytes
+and source object identities. Saved success fields never skip native admission.
+STEP assembly and Blender mesh snapshot exports explicitly refuse the source
+collection until their geometry transfer is implemented, instead of dropping
+those objects from an otherwise successful whole-scene export.
+
+Validation: 114 tests across ten document/history/worker/interchange suites pass.
+After error localization, nine archive/real-worker tests pass again. Coverage
+includes document serialization/reload, metadata-only Undo/Redo, signed zero,
+corrupted archive data, duplicate IDs, native work exhaustion, real document
+worker load and explicit whole-scene exchange refusal. Vue/MCP TypeScript,
+production build and packed/raw distribution audit pass. The measured asset
+total is 8,136,343 bytes with an 8,138,000-byte named budget; WASM is unchanged.
+
+`source-body-document.json.gz` is a persisted native-authored control for the
+next scene integration stage. This proves source input retention and fresh
+loading of that control. It does not prove twenty geometry edits, source-aware
+scene preview/selection, full error highlighting, general root-body acceptance,
+STEP transfer, crash/multi-tab acceptance or completion of the roadmap.

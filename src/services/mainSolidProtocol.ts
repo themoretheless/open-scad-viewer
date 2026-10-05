@@ -1,3 +1,4 @@
+import {isSourceBodyRecordPayload} from './sourceBodyArchive'
 import {sourceBodyExpectation,validSourceBody,type SourceBodyOptions,type SourceBodyResult} from './sourceBody'
 import {contactQualificationExpectation,validContactQualification,type OffsetContactQualificationOptions,type OffsetContactQualification,type ContactQualificationExpectation} from './nurbsOffsetContactQualification'
 import {envelopeFitExpectation,validEnvelopeFit,type OffsetEnvelopeFitOptions,type OffsetEnvelopeFit,type EnvelopeFitExpectation} from './nurbsOffsetEnvelopeFit'
@@ -774,6 +775,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     && (v.displayMeshOnly===undefined || v.displayMeshOnly===true))
   const v=value as DirectDocument
   return v.version===1 && Array.isArray(v.sketches) && Array.isArray(v.bodies)
+    && (v.sourceBodies===undefined||(Array.isArray(v.sourceBodies)&&v.sourceBodies.length<=200&&v.sourceBodies.every(isSourceBodyRecordPayload)))
 }
 
 /** Validate bounded provenance before accepting a worker report. No mechanics in TS. */

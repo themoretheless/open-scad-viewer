@@ -1,3 +1,5 @@
+import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
+import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {afterEach,expect,it} from 'vitest'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
@@ -76,3 +78,13 @@ it('aborts a source restore and permits retry in a fresh worker',async()=>{
  controller.abort();expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
  const retried=client.run({kind:'sourceBodyRestore',options:options()});reply(ports[1]!,denied);expect(await retried).toEqual(denied)
 })
+
+it('loads a source archive through the real document worker and rejects saved false admission',async()=>{
+ const record=createSourceBodyRecord('source-archive','Source archive',options())
+ const document={...emptyDirectDocument(),sourceBodies:[record]},client=realClient()
+ const loaded=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
+ expect(loaded.sourceBodies).toEqual([record])
+ const low=options();low.limits.volume.cells=1
+ const invalid={...emptyDirectDocument(),sourceBodies:[{...createSourceBodyRecord('bad-source','Bad source',low),admitted:true}]}
+ await expect(client.run({kind:'restoreDocument',text:serializeDirectDocument(invalid)})).rejects.toMatchObject({code:'CAD_SOURCE_BODY_RESTORE',message:expect.stringContaining('bad-source')})
+},30000)

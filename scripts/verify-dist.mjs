@@ -359,6 +359,7 @@ for (const [name, artifact, compression] of [
 // Finite patch adapter and linear partition validation: measured 7,944,599 asset bytes.
 // Contact qualification worker adapter and report validation: measured 7,963,849 asset bytes.
 // Source Body restoration, exhaustive CAD job registry and request binding: 8,130,274 asset bytes.
-const totalBudget = 8_132_000
+// Native source Body archive, document reload and explicit exchange refusal: 8,136,343 asset bytes.
+const totalBudget = 8_138_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
