@@ -7,7 +7,7 @@ use crate::{
     curve_surface_agreement as agreement,
     distance_bounds::Interval,
     offset_contact_pcurve as uv, offset_envelope_fit as fit,
-    surface::{Axis, Surface},
+    surface::Surface,
     trim_domain::{Classification, Location, TrimDomain},
     trimmed_offset_contact as trimmed,
 };
@@ -55,20 +55,16 @@ impl Report {
 /// returned world curve has the original U knots, weights and traversal.
 fn boundaries(candidate: &Surface) -> Result<Option<[Curve; 2]>> {
     candidate.validate()?;
-    let p = candidate.degree_v;
+    let Some(boundary) = crate::offset_patch_boundary::extract(candidate)? else {
+        return Ok(None);
+    };
     let n = candidate.control_points[0].len();
-    let k = &candidate.knots_v;
-    if candidate.periodic_v
-        || k[p] != 0.
-        || k[n] != 1.
-        || !k[..=p].iter().all(|x| *x == 0.)
-        || !k[n..].iter().all(|x| *x == 1.)
-    {
+    if candidate.knots_v[candidate.degree_v] != 0. || candidate.knots_v[n] != 1. {
         return Ok(None);
     }
     Ok(Some([
-        candidate.iso(Axis::V, 0.)?,
-        candidate.iso(Axis::V, 1.)?,
+        boundary.coedges[0].curve.clone(),
+        boundary.coedges[2].curve.clone(),
     ]))
 }
 /// Fits and contact curves all refer to the same original driving parameter.
