@@ -846,3 +846,25 @@ parameter tests distinguish 1/4+3/4 from a tiny displacement and from the rounde
 Binary64 sum 0.1+0.9. This validates partitioned source incidence, not geometric
 volume admission or a complete fillet body. Trimmed face embedding, curved root
 equivalence, end transitions, full fillet checks and WASM/UI remain open.
+
+## Original face-chart injectivity in source shells
+
+`Shell::inspect_face_charts` reuses the native whole-chart contraction and
+optional oblique linear monotonicity kernels directly on the retained original
+surfaces. Shared independent span/cell budgets cover all faces, with explicit
+missing reports when exhausted. Whole-chart injectivity implies injectivity
+of each retained UV subset; failure of this sufficient proof is unresolved,
+not a positive self-intersection diagnosis. Face addresses and both native
+reports remain available. This check does not compare different faces.
+
+All 39 selected B-rep source tests passed (`source-shell-chart-regression.log.gz`).
+The ordinary tetrahedron proves all four charts; a one-span budget leaves
+remaining faces unproven. A degree-two polynomial bubble preserves all three
+original triangle boundary curves exactly but folds the interior. Two distinct
+interior UV positions evaluate to the same point in that synthetic fixture.
+Exact shell incidence still closes, while whole-chart injectivity is unproven,
+preventing a boundary-only success claim from becoming geometric authority.
+
+Cross-face contacts, complete original trim-region qualification, neighborhood
+embedding, material volume, fillet radius/tangency/walls, transitions and
+WASM/UI admission remain outstanding.

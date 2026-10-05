@@ -38,6 +38,73 @@ impl Shell {
         &self.vertices
     }
 }
+pub struct ChartFace {
+    pub face: usize,
+    pub contraction: Option<nurbs_core::surface_injectivity::Report>,
+    pub linear: Option<nurbs_core::surface_linear_monotonicity::Report>,
+}
+impl ChartFace {
+    pub fn injectivity_proven(&self) -> bool {
+        self.contraction.as_ref().is_some_and(|r| r.proven)
+            || self.linear.as_ref().is_some_and(|r| r.certified)
+    }
+}
+pub struct ChartReport {
+    pub all_injective: bool,
+    pub spans: usize,
+    pub linear_cells: usize,
+    pub faces: Vec<ChartFace>,
+}
+impl Shell {
+    /// Prove whole original charts injective, hence any retained source subset.
+    /// Does not classify contacts between different faces or certify a volume.
+    pub fn inspect_face_charts(
+        &self,
+        max_spans: usize,
+        max_linear_cells: usize,
+    ) -> Result<ChartReport> {
+        if !(1..=100000).contains(&max_spans) || max_linear_cells > 100000 {
+            return Err(error("Choose bounded source chart work"));
+        }
+        let mut out = ChartReport {
+            all_injective: true,
+            spans: 0,
+            linear_cells: 0,
+            faces: Vec::new(),
+        };
+        for (face, wires) in self.faces.iter().enumerate() {
+            let surface = wires[0].edges()[0].surface();
+            let contraction = if out.spans < max_spans {
+                Some(nurbs_core::surface_injectivity::certify_contraction(
+                    surface,
+                    max_spans - out.spans,
+                )?)
+            } else {
+                None
+            };
+            out.spans += contraction.as_ref().map_or(0, |r| r.spans);
+            let linear = if !contraction.as_ref().is_some_and(|r| r.proven)
+                && out.linear_cells < max_linear_cells
+            {
+                Some(nurbs_core::surface_linear_monotonicity::inspect_candidate(
+                    surface,
+                    max_linear_cells - out.linear_cells,
+                )?)
+            } else {
+                None
+            };
+            out.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
+            let result = ChartFace {
+                face,
+                contraction,
+                linear,
+            };
+            out.all_injective &= result.injectivity_proven();
+            out.faces.push(result);
+        }
+        Ok(out)
+    }
+}
 pub struct Report {
     pub shell: Option<Shell>,
     pub work_used: u64,
@@ -365,6 +432,78 @@ mod tests {
             let vertex = |a: Address| shell.vertices()[a.face][a.wire][a.edge];
             assert_eq!(vertex(pair[0]), [vertex(pair[1])[1], vertex(pair[1])[0]]);
         }
+    }
+    #[test]
+    fn chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes() {
+        let (mut faces, pairs) = tetrahedron();
+        let shell = assemble(&faces, &pairs, 100_000_000)
+            .unwrap()
+            .shell
+            .unwrap();
+        let charts = shell.inspect_face_charts(4, 0).unwrap();
+        assert!(charts.all_injective);
+        assert_eq!(charts.spans, 4);
+        let stopped = shell.inspect_face_charts(1, 0).unwrap();
+        assert!(!stopped.all_injective);
+        assert_eq!(stopped.spans, 1);
+        assert_eq!(stopped.faces.len(), 4);
+        assert!(stopped.faces[1].contraction.is_none());
+        let s = faces[0][0].edges()[0].surface();
+        let a = &s.control_points[0][0];
+        let b = &s.control_points[1][0];
+        let c = &s.control_points[0][1];
+        // Affine face plus exact polynomial bubble 16*u*v*(1-u-v)
+        // in its u direction. All three original triangle boundaries stay
+        // unchanged while an interior directional derivative changes sign.
+        let controls = (0..3)
+            .map(|i| {
+                (0..3)
+                    .map(|j| {
+                        let u = i as f64 / 2.;
+                        let v = j as f64 / 2.;
+                        let delta = 16.
+                            * (u * v - if i == 2 { v } else { 0. } - if j == 2 { u } else { 0. });
+                        (0..3)
+                            .map(|k| a[k] + (u + delta) * (b[k] - a[k]) + v * (c[k] - a[k]))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let folded = Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points: controls,
+            weights: vec![vec![1.; 3]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        assert_eq!(
+            folded.evaluate(0.375, 0.25).unwrap().point,
+            folded.evaluate(0.625, 0.25).unwrap().point
+        );
+        let edges: Vec<_> = faces[0][0]
+            .edges()
+            .iter()
+            .map(|e| {
+                Fragment::new(
+                    &folded,
+                    e.curve(),
+                    e.endpoints()[0].clone(),
+                    e.endpoints()[1].clone(),
+                )
+                .unwrap()
+            })
+            .collect();
+        faces[0][0] = Wire::new(&edges).unwrap();
+        let r = assemble(&faces, &pairs, 100_000_000).unwrap();
+        assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
+        let charts = r.shell.unwrap().inspect_face_charts(4, 0).unwrap();
+        assert!(!charts.all_injective);
+        assert!(!charts.faces[0].injectivity_proven());
+        assert!(charts.faces[1..].iter().all(|f| f.injectivity_proven()));
     }
     #[test]
     fn disconnected_closed_components_and_exhausted_work_are_not_a_shell() {
