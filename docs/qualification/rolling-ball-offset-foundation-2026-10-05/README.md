@@ -514,3 +514,40 @@ These are supplied curve crossings, not implicit offset-to-boundary roots.
 They do not authorize midpoint split parameters, rounded shared vertices,
 closed shells, WASM/UI fillets or general endpoint transitions. An exact source
 endpoint representation and contact/world alignment remain required.
+
+## Immutable original source-expression contact points
+
+`source_contact_point::SourcePoint` privately owns original surface and both
+original UV curve definitions plus a unique-root selector. Its geometric point
+is the source surface evaluated at that exact crossing, rather than a rounded
+Cartesian vertex. Cached root/UV/world interval enclosures are immutable.
+Definitions persist original sources and selector only; `restore` freshly
+rechecks the selector using `uv_curve_crossings::certify_box` and rebuilds all
+bounds. Imported claims or bounds do not authorize a point.
+
+Surface mapping requires independently proven chart membership: the complete
+original boundary Cartesian control hull must lie inside the nonperiodic
+source chart. Positive rational basis membership justifies intersecting outward
+UV enclosures with that chart. Otherwise mapping stays unqualified. Active
+surface-span products are counted before world interval evaluation.
+
+`locate_source_contact_points` connects these expressions to freshly qualified
+original face-boundary search addresses. Search, fresh point checks and mapping
+use explicit separate phase budgets; point checks and mapping each have one
+shared budget across all roots. A work stop preserves every root address with
+no fabricated point. Point selector requalification currently uses the original
+isolating cell, so its cached bounds may be wider than refined search bounds.
+
+Validation: 6 original crossing tests, 2 source-point tests and 8 face recipe
+tests passed. Source-point roundtrip reconstructs the same source definition
+and bounds; forged readiness/bounds are ignored; changing a selector to a
+root-free box produces no point. Unproven chart membership refuses world
+mapping. Face tests map two original roots and preserve the unmapped second
+root when the shared mapping budget ends. Logs: `source-box-crossings.log.gz`,
+`source-contact-point.log.gz`, `source-points-face.log.gz`.
+
+This source-expression point is not yet a `Model` vertex. It supplies neither
+exact world-edge/source-surface identity nor equivalence of different source
+expressions. Boundary fragments with root-valued endpoints, stable topology
+ownership, serialization in document history, shell/volume admission and
+WASM/UI integration remain outstanding. No general fillet is admitted here.

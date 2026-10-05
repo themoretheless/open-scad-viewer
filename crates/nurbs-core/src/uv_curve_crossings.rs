@@ -96,6 +96,39 @@ fn classify(
     }
     Ok((State::Unique, Some(root)))
 }
+/// Freshly certify one original span box. Supplied state/enclosures are ignored.
+pub fn certify_box(a: &Curve, b: &Curve, parameters: [[f64; 2]; 2]) -> Result<Cell> {
+    let mut spans = [0; 2];
+    for (i, c) in [a, b].iter().enumerate() {
+        c.validate()?;
+        check(
+            c.control_points[0].len() == 2 && !c.periodic,
+            "Crossing certification needs original nonperiodic UV curves",
+        )?;
+        check(
+            parameters[i].iter().all(|x| x.is_finite()) && parameters[i][0] < parameters[i][1],
+            "Crossing box must have positive finite widths",
+        )?;
+        spans[i] = (c.degree..c.control_points.len())
+            .find(|&j| {
+                c.knots[j] < c.knots[j + 1]
+                    && parameters[i][0] >= c.knots[j]
+                    && parameters[i][1] <= c.knots[j + 1]
+            })
+            .ok_or_else(|| {
+                crate::Error::new(
+                    "NURBS_CROSSING_BOX",
+                    "Crossing box must lie in one original knot span",
+                )
+            })?;
+    }
+    let (state, root) = classify(a, b, spans[0], spans[1], parameters)?;
+    Ok(Cell {
+        parameters,
+        root,
+        state,
+    })
+}
 /// Search the complete original span product. Every unvisited cell is retained.
 /// Only strict Krawczyk inclusion plus contraction admits a unique crossing.
 pub fn isolate(a: &Curve, b: &Curve, max_cells: usize) -> Result<Report> {
@@ -228,7 +261,8 @@ fn isolate_impl(
                 }
             }
             root = Some(current);
-            out.precision_proven &= (0..2).all(|i| (current[i][1] - current[i][0]).next_up() <= target[i]);
+            out.precision_proven &=
+                (0..2).all(|i| (current[i][1] - current[i][0]).next_up() <= target[i]);
         }
         out.complete &= state != State::Unresolved;
         out.cells.push(Cell {
@@ -332,5 +366,20 @@ mod tests {
         assert!(roots[0].iter().all(|x| x[1] - x[0] <= 1e-8));
         let expected = (1_f64 - 0.3 * 0.3).sqrt();
         assert!(roots[0][1][0] <= expected && expected <= roots[0][1][1]);
+    }
+    #[test]
+    fn supplied_boxes_are_rechecked_against_original_spans() {
+        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 1.]]).unwrap();
+        let b = Curve::from_polyline(vec![vec![0., 1.], vec![1., 0.]]).unwrap();
+        assert_eq!(
+            certify_box(&a, &b, [[0., 1.]; 2]).unwrap().state,
+            State::Unique
+        );
+        assert_eq!(
+            certify_box(&a, &b, [[0., 0.25]; 2]).unwrap().state,
+            State::Excluded
+        );
+        assert!(certify_box(&a, &b, [[-0.1, 1.], [0., 1.]]).is_err());
+        assert!(certify_box(&a, &b, [[0.5, 0.5], [0., 1.]]).is_err());
     }
 }
