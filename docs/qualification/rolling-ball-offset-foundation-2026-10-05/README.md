@@ -979,3 +979,24 @@ while full-chart identity remains unproven for the outside source definition.
 Multiple original knot spans, general parameter remapping, partial/curved allowed
 contacts, exact corner ownership, volume admission and general fillet
 transitions/WASM/UI remain outstanding.
+
+## Exact plane intersection on a natural source chart boundary
+
+`source_plane_fiber::certify` binds an immutable original positive-weight
+single tensor Bezier surface and an exact nondegenerate plane. Every control
+pole on the requested natural boundary lies exactly in the plane; every other
+pole lies strictly on the same side. Positivity of Bernstein bases proves the
+entire plane preimage is that natural boundary, including all chart corners.
+No sampled normals, rounded coefficients or distance tolerances authorize this
+claim. Unsupported layouts, additional zero poles, opposite signs, degenerate
+planes and exhausted exact work return no certificate.
+
+All 43 selected B-rep source regressions passed
+(`source-plane-fiber-regression.log.gz`). Tests cover a nonuniform rational
+curved boundary, both chart axes, lower and upper ends, displacement by 1e-12,
+additional possible contacts and budget refusal.
+
+This certificate establishes only the source chart intersection locus. Retained
+region ownership, fresh shared-edge binding, chart injectivity and shell pair
+admission remain separate requirements. Partial/curved allowed-contact
+integration, corner ownership, volume admission and fillet WASM/UI remain open.

@@ -36,7 +36,7 @@ pub struct Report {
     pub spans: usize,
     pub reason: &'static str,
 }
-fn orient(
+pub(crate) fn orient(
     points: &[[f64; 3]],
     axes: Option<[usize; 2]>,
     used: &mut u64,
@@ -79,7 +79,7 @@ fn orient(
         _ => None,
     })
 }
-fn independent(a: [f64; 3], b: [f64; 3], c: [f64; 3], used: &mut u64, budget: u64) -> Result<bool> {
+pub(crate) fn independent(a: [f64; 3], b: [f64; 3], c: [f64; 3], used: &mut u64, budget: u64) -> Result<bool> {
     for axes in [[0, 1], [0, 2], [1, 2]] {
         match orient(&[a, b, c], Some(axes), used, budget)? {
             Some(Sign::Zero) => {}
