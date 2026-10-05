@@ -1944,3 +1944,44 @@ Compressed logs include the full contact audit and its remaining obstruction.
 The next required native proof is paired curved boundary contact ownership.
 Full embedding, orientation/volume, thickness, conventional closed Model, STEP,
 WASM/worker/UI and the rest of the roadmap remain unfinished.
+
+## Paired curved natural-boundary contact ownership
+
+`source_paired_fiber_contact` now proves supported contact between two original
+curved faces. A plane candidate comes from original controls of an independently
+qualified shared world curve. Each original surface separately recomputes its
+complete plane preimage as a single natural chart boundary. Every remaining
+control lies strictly on one side, with exact predicates; the two certified
+sides must be opposite. Positive rational bases therefore exclude any contact
+away from those fibers. No fitted normal, spatial tolerance or adjacency flag
+is authority for this separation.
+
+Every retained boundary restriction is independently classified against its
+owned fiber. Entire fragments must be exactly shared edge uses; possible fiber
+endpoints must belong to those shared uses. The private certificate owns both
+source regions, both freshly admitted plane fibers and the canonical shared
+edges. Root restrictions remain original payloads. Incomplete identity or
+driver work grants no certificate. Current plane proposals require at least
+three world-curve controls; supported noncollinear curved seams qualify.
+
+The complete native face matrix and embedded-shell gate recognize this owned
+certificate. The translated/rotated 16-face capped control still audits all
+120 pairs. Its first unresolved pair advances from [0,1] (shaft/sphere endpoint)
+to [0,4] (neighboring shaft angular spans). The bounded embedding run spends
+2304 chart spans, 297090 exact work and zero driver cells. It still refuses
+body geometry, so this is progress toward embedding rather than full admission.
+
+Native regressions cover the sphere/shaft join in all eight radius/angular
+control cases and both face orders, a one-unit exact-work refusal and two
+coincident curved source charts with all boundaries paired. The coincident
+faces are refused because their certified sides cannot be opposite. All 81
+selected source regressions pass. Existing planar-fiber proofs remain available.
+
+Straight shared rails, pole-only contact and boundary-plus-pole plane preimages
+remain unsupported by this new paired method. Full embedding, volume/material
+orientation, wall qualification and conventional Model/STEP/WASM/UI admission
+remain unfinished.
+
+Full validation after paired-fiber integration: 882 B-rep library tests pass,
+zero failures and three ignored tests. Compressed source, full B-rep and
+embedding-audit logs accompany this stage.

@@ -124,6 +124,7 @@ pub fn qualify(shell: Shell, limits: Limits) -> Result<Report> {
             p.allowed.is_none()
                 && p.fiber.is_none()
                 && p.interior_fiber.is_none()
+                && p.paired_fiber.is_none()
                 && !p.result.as_ref().is_some_and(|r| r.absence_proven)
         })
         .map(|p| p.faces)

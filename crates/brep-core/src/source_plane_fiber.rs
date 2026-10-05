@@ -1,15 +1,20 @@
 //! Exact intersection locus of a positive clamped NURBS chart and a plane.
 //! This does not establish retained-region ownership or chart injectivity.
 use cad_predicates::Sign;
-use nurbs_core::{surface::Surface, Error, Result};
+use nurbs_core::{Error, Result, surface::Surface};
 
+#[derive(Clone)]
 pub struct Certificate {
     surface: Surface,
     plane: [[f64; 3]; 3],
     axis: usize,
     upper: bool,
+    side: Sign,
 }
 impl Certificate {
+    pub fn side(&self) -> Sign {
+        self.side
+    }
     pub fn surface(&self) -> &Surface {
         &self.surface
     }
@@ -125,6 +130,7 @@ pub fn certify(
         plane,
         axis,
         upper,
+        side: side.expect("at least one nonboundary control"),
     });
     out.reason = "source-fiber-proven";
     Ok(out)
@@ -159,10 +165,12 @@ mod tests {
         assert_eq!(c.boundary(), (0, false));
         assert_eq!(c.plane(), PLANE);
         let top = [[0., 0., 1.], [1., 0., 1.], [0., 1., 1.]];
-        assert!(certify(&s, top, 0, true, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_some());
+        assert!(
+            certify(&s, top, 0, true, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_some()
+        );
         let mut transposed = s.clone();
         transposed.degree_u = s.degree_v;
         transposed.degree_v = s.degree_u;
@@ -174,10 +182,12 @@ mod tests {
         transposed.weights = (0..3)
             .map(|v| (0..2).map(|u| s.weights[u][v]).collect())
             .collect();
-        assert!(certify(&transposed, PLANE, 1, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_some());
+        assert!(
+            certify(&transposed, PLANE, 1, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_some()
+        );
     }
     #[test]
     fn original_multispan_chart_and_interior_plane_contact_refusal() {
@@ -200,39 +210,51 @@ mod tests {
         for p in &mut s.control_points[1] {
             p[2] = 0.;
         }
-        assert!(certify(&s, PLANE, 0, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
+        assert!(
+            certify(&s, PLANE, 0, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
     }
     #[test]
     fn extra_zero_opposite_sides_displacement_and_budget_refuse() {
         let s = curved();
         let mut extra = s.clone();
         extra.control_points[1][0][2] = 0.;
-        assert!(certify(&extra, PLANE, 0, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
+        assert!(
+            certify(&extra, PLANE, 0, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
         let mut mixed = s.clone();
         mixed.control_points[1][0][2] = -1.;
-        assert!(certify(&mixed, PLANE, 0, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
+        assert!(
+            certify(&mixed, PLANE, 0, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
         let mut displaced = s.clone();
         displaced.control_points[0][1][2] = 1e-12;
-        assert!(certify(&displaced, PLANE, 0, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
-        assert!(certify(&s, PLANE, 0, false, 1)
-            .unwrap()
-            .certificate
-            .is_none());
-        assert!(certify(&s, [[0.; 3]; 3], 0, false, 1_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
+        assert!(
+            certify(&displaced, PLANE, 0, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
+            certify(&s, PLANE, 0, false, 1)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
+            certify(&s, [[0.; 3]; 3], 0, false, 1_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
     }
 }
