@@ -1730,3 +1730,30 @@ wall-coverage acceptance remains open. Native pole quotient topology, injectivit
 at poles, complete face-contact/embedding and source-body admission remain
 unfinished, as do general curved-spine blends, complex corners, STEP, WASM,
 worker/UI and application acceptance.
+
+## Whole-wall coverage: retain original-chart lower bounds
+
+The enclosure regression previously consumed all 10000 distance subdivision
+cells while refining early face pairs; later pairs contributed zero even when
+their original control hulls were separated. Each inspected original chart now
+retains its Cartesian control hull within the existing control-work budget.
+Positive rational weights enclose the full chart in that hull, so the distance
+between hulls is a lower bound for any retained trimmed subset. Outward interval
+distance arithmetic is reused. Missing control work preserves a zero bound.
+
+Every enumerated pair retains this lower bound even after refinement work ends.
+Refinement is skipped only when that bound already meets the requested width
+against the independently qualified material-chord upper witness and normal
+check. Curved self-pairs, missing pairs and unfinished normal/control checks
+continue to prohibit admission. No distance samples replace whole-face coverage.
+
+The open enclosure wall/floor regression now passes at 1e-5 mm width around
+1.4 mm thickness. A translated box with reversed face order also qualifies at
+1e-5 mm width around 10 mm with distance budgets of one cell and one domain
+cell, using zero refinement cells. General curved-wall coverage, thin-spot
+search and complete product acceptance remain open.
+
+Validation after the control-hull fix: the complete B-rep library suite passes
+873 tests, with zero failures and three ignored tests. The compressed full-suite
+log is retained. This supersedes the wall-coverage failure recorded in the
+preceding cap stage; it does not expand admission to general curved walls.
