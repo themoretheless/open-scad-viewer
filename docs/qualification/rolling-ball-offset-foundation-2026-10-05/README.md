@@ -551,3 +551,42 @@ exact world-edge/source-surface identity nor equivalence of different source
 expressions. Boundary fragments with root-valued endpoints, stable topology
 ownership, serialization in document history, shell/volume admission and
 WASM/UI integration remain outstanding. No general fillet is admitted here.
+
+## Root-valued source restrictions and automatic contour proposal
+
+`source_boundary_fragment::Fragment` stores the unchanged original UV curve and
+surface with ordered parameter or source-crossing endpoints. Restrictions and
+splits retain those source expressions; no rounded `Curve::trim` definitions
+or Cartesian endpoint welding are generated. Endpoint roles must bind to the
+exact source surface/curve; interval separation proves traversal order. Source
+curve/surface knot continuity is required. Crossing joins use a shared original
+source-point definition, including cross-curve joins through the same crossing.
+Natural clamped endpoint joins use exact UV controls on the same source surface.
+Restoration requalifies root endpoints with one shared mapping budget and
+recomputes source binding, order and chart membership.
+
+Chart membership uses the full original control hull or a restricted original
+interval image. A single positive rational linear Bezier restriction additionally
+uses the convex source chart and certified endpoint membership; this admits a
+clipped straight contact whose untrimmed source extends beyond the chart. Two
+inside endpoints do not admit a nonlinear arc that leaves the chart.
+
+`source_contour_proposal::propose` freshly searches/maps contact crossings,
+selects one root on each chosen original endpoint edge and builds the cyclic
+replacement as source fragments. It finds both parameters automatically and
+preserves original curve definitions, holes and the retained cyclic arc. Exact
+source joins are checked around every contour. The output is explicitly only
+a closed source-expression contour candidate, not a qualified replacement face.
+
+Validation: 27 selected B-rep source tests passed on final sources
+(`source-fragments-regression.log.gz`). New cases cover shared root split ends,
+reversed traversal, cross-curve joining, source-definition preservation and
+roundtrip, rejection of forged source binding/order and nonlinear chart escape.
+The integrated planar case automatically clips a straight contact against two
+original edges, preserves all retained source curves and rejects incomplete
+search budgets.
+
+General rational restricted chart membership, full candidate region containment
+and hole/crossing audits, exact world-edge realization, topology/history and
+volume admission, implicit offset boundary roots and WASM/UI fillets remain
+outstanding. No final body or smooth end transition is admitted here.
