@@ -68,6 +68,7 @@ pub struct ShellReport {
     pub exact_work: u64,
     pub spans: usize,
     pub driver_cells: usize,
+    pub linear_cells: usize,
 }
 /// Adjacent pairs are included: topology sharing does not exclude extra contact.
 pub fn inspect_shell(
@@ -95,7 +96,7 @@ pub fn inspect_shell_with_allowed(
         shell,
         tolerance_uv,
         limits,
-        Some((max_exact_work, max_spans, 0)),
+        Some((max_exact_work, max_spans, 0, 0)),
     )
 }
 /// Recompute natural-boundary ownership before the general contact search.
@@ -121,14 +122,46 @@ pub fn inspect_shell_with_boundary_fibers(
         shell,
         tolerance_uv,
         limits,
-        Some((max_exact_work, max_spans, max_driver_cells)),
+        Some((max_exact_work, max_spans, max_driver_cells, 0)),
+    )
+}
+/// Natural fiber ownership with a separate budget for oblique chart proofs.
+pub fn inspect_shell_with_boundary_fibers_and_chart_work(
+    shell: &crate::source_shell_incidence::Shell,
+    tolerance_uv: f64,
+    limits: crate::face_contacts::Limits,
+    max_exact_work: u64,
+    max_spans: usize,
+    max_driver_cells: usize,
+    max_linear_cells: usize,
+) -> Result<ShellReport> {
+    if !(1..=100_000_000).contains(&max_exact_work)
+        || !(1..=100000).contains(&max_spans)
+        || !(1..=100000).contains(&max_driver_cells)
+        || max_linear_cells > 100000
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Bound source fiber and chart work",
+        ));
+    }
+    inspect_impl(
+        shell,
+        tolerance_uv,
+        limits,
+        Some((
+            max_exact_work,
+            max_spans,
+            max_driver_cells,
+            max_linear_cells,
+        )),
     )
 }
 fn inspect_impl(
     shell: &crate::source_shell_incidence::Shell,
     tolerance_uv: f64,
     limits: crate::face_contacts::Limits,
-    allowed_budget: Option<(u64, usize, usize)>,
+    allowed_budget: Option<(u64, usize, usize, usize)>,
 ) -> Result<ShellReport> {
     if !(1..=100000).contains(&limits.pairs)
         || !(1..=1000000).contains(&limits.cells)
@@ -161,6 +194,7 @@ fn inspect_impl(
         exact_work: 0,
         spans: 0,
         driver_cells: 0,
+        linear_cells: 0,
     };
     for a in 0..n {
         for b in a + 1..n {
@@ -173,7 +207,7 @@ fn inspect_impl(
                 out.all_pairs_qualified = false;
                 return Ok(out);
             }
-            if let Some((work, spans, driver)) = allowed_budget {
+            if let Some((work, spans, driver, linear)) = allowed_budget {
                 if driver > 0 {
                     for faces in [[a, b], [b, a]] {
                         if out.exact_work == work
@@ -182,16 +216,18 @@ fn inspect_impl(
                         {
                             break;
                         }
-                        let proof = crate::source_fiber_contact::certify(
+                        let proof = crate::source_fiber_contact::certify_with_linear_chart(
                             shell,
                             faces,
                             work - out.exact_work,
                             spans - out.spans,
                             driver - out.driver_cells,
+                            linear - out.linear_cells,
                         )?;
                         out.exact_work += proof.exact_work;
                         out.spans += proof.spans;
                         out.driver_cells += proof.driver_cells;
+                        out.linear_cells += proof.linear_cells;
                         if let Some(certificate) = proof.certificate {
                             out.all_pairs_absence_proven = false;
                             out.pairs.push(PairReport {

@@ -1062,3 +1062,30 @@ The standalone rational curved-fiber and fragment tests remain part of this run.
 A partial curved nonplanar shell fixture and chart injectivity beyond contraction
 remain to qualify. General corner ownership, neighborhood embedding, material
 volume, fillet transitions/radius/walls and WASM/UI admission remain open.
+
+## Curved canonical rims with root-valued adjacent-face restrictions
+
+`certify_with_linear_chart` and
+`inspect_shell_with_boundary_fibers_and_chart_work` permit a fresh whole-chart
+oblique injectivity proof when coordinate contraction is unproven. Its cell
+budget and consumed work are separate from exact predicates, chart spans and
+source-coordinate driver work, shared across pairs and both orientations.
+The previous APIs retain contraction-only behavior.
+
+All 47 selected B-rep source regressions passed
+(`source-curved-fiber-regression.log.gz`). A closed five-face rational wedge
+exercises a planar cap, nonplanar rational rim and complete ten-pair audit.
+A closed six-face rational curved strip splits a common degree-two world rim
+at independently qualified UV roots on its planar cap and nonplanar side.
+Both opposite restrictions preserve the complete original canonical curve and
+retain their root-valued endpoint expressions. Exact fiber ownership admits
+both fragments after fresh chart qualification. A one-cell oblique budget
+refuses qualification; displacing the canonical rim by 1e-12 refuses shell
+assembly. No sampled or rounded vertex substitutes are used.
+
+These fixtures partition a complete original rim; they do not yet qualify a
+body clipped to only part of that rim. Nonlinear UV parameter root equivalence,
+general parameter remapping, exact corner ownership, neighborhood embedding,
+material volume and fillet transition/radius/wall/STEP/WASM/UI admission remain
+open. Rational source identity is not an exact-circle assertion for the rounded
+binary weight used by these fixtures.
