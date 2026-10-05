@@ -702,3 +702,19 @@ shared mapping exhaustion retains the completed prefix.
 These wires retain exact surface-composed expressions and local incidence;
 they are not yet concrete Model edges, cross-face canonical ownership, embedded
 faces or volume admission. STEP realization and interactive fillets remain open.
+
+## Exact canonical world edge across original surface charts
+
+`source_shared_edge::qualify` independently proves each complete original UV
+edge composition equal to one canonical world curve using exact Bezier identity
+with a shared work budget. Effective traversals must be opposite. The immutable
+result retains both original fragments and the canonical world definition.
+Caller keys, certificates and enclosure proximity cannot authorize ownership.
+
+All 32 selected source tests passed (`source-shared-world-edge.log.gz`). The
+new regression joins boundaries of two distinct surface charts and refuses same
+direction, a 1e-12 world displacement and unsupported partial source restrictions.
+
+This gate currently admits complete original natural-domain curves only.
+Root-valued partial restrictions, cross-face root equivalence, assembly into Model
+vertices/edges and embedded closed volume admission remain outstanding.
