@@ -659,6 +659,7 @@ mod tests {
             .unwrap();
             let model = crate::linear_canal::to_capped_region(&spans, 1e-7).unwrap();
             let mut faces = Vec::new();
+            let mut regions = Vec::new();
             let mut poles = Vec::new();
             let mut pending = BTreeMap::new();
             let mut pairs = Vec::new();
@@ -696,12 +697,55 @@ mod tests {
                         pending.insert(use_.edge, (a, use_.reversed));
                     }
                 }
+                let boundaries = model.loops[f.outer]
+                    .coedges
+                    .iter()
+                    .map(|use_| crate::trimmed_face_recipe::Boundary {
+                        curve: model.edges[use_.edge].curve.clone(),
+                        pcurve: use_.pcurve.clone(),
+                        reversed: use_.reversed,
+                    })
+                    .collect::<Vec<_>>();
+                let qualified = crate::source_contour_proposal::qualify_original_region(
+                    &cad_predicates::ToleranceContext::default_valid(),
+                    &f.surface,
+                    &[boundaries],
+                    1e-8,
+                    crate::trimmed_face_recipe::Limits {
+                        pairs: 10000,
+                        region_cells: 10000,
+                        domain_cells: 10000,
+                        agreement_cells: 10000,
+                    },
+                )
+                .unwrap();
+                regions.push(qualified.region.expect(qualified.reason));
                 faces.push(vec![Wire::new(&fragments).unwrap()]);
             }
             assert!(pending.is_empty());
-            let report = assemble_with_poles(&faces, &pairs, &poles, 100_000_000).unwrap();
+            let report =
+                assemble_regions_with_poles(&regions, &pairs, &poles, 100_000_000).unwrap();
             let shell = report.shell.expect(report.reason);
             assert_eq!(shell.poles().len(), poles.len());
+            assert!(shell.regions().is_some());
+            let authored = crate::linear_canal::to_capped_source_shell(
+                &spans,
+                1e-7,
+                1e-8,
+                crate::trimmed_face_recipe::Limits {
+                    pairs: 10000,
+                    region_cells: 10000,
+                    domain_cells: 10000,
+                    agreement_cells: 10000,
+                },
+                100_000_000,
+            )
+            .unwrap()
+            .shell
+            .unwrap();
+            assert_eq!(authored.vertices(), shell.vertices());
+            assert_eq!(authored.uses(), shell.uses());
+
             let charts = shell.inspect_face_charts(100000, 100000).unwrap();
             for (address, _) in shell.poles() {
                 let face = &charts.faces[address.face];
@@ -738,6 +782,8 @@ mod tests {
             assert!(!limited.all_injective && limited.spans <= 1);
 
             let links = crate::source_vertex_links::inspect(&shell, 100000).unwrap();
+            assert_eq!(links.euler_characteristic, Some(2));
+            assert_eq!(links.genus, Some(0));
             assert!(
                 links.all_manifold,
                 "{} {:?}",

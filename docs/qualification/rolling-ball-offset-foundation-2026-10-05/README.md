@@ -1911,3 +1911,36 @@ Per-chart injectivity and closed oriented incidence do not prove cross-face
 embedding. Full retained face-contact coverage, qualified material regions,
 orientation/volume, wall validation and closed Model/STEP/WASM/UI admission
 remain unfinished, along with general nonlinear blend laws and complex corners.
+
+## Qualified capped source assembly and complete contact audit entrypoint
+
+`linear_canal::to_capped_source_shell` now builds a native source-shell candidate
+from the authored support spans. It reconstructs and audits each original UV
+material region, retains original surface/pcurve definitions, recomputes every
+ordinary shared edge and contracts only independently qualified pole boundaries.
+Region limits apply per face; original span count is bounded to 1..64 and exact
+shell work is shared. Missing ordinary partners, open angular cuts, empty input
+and invalid exact work are refused. This is an original-support factory, not a
+conversion of rounded trims or a body/export admission.
+
+All eight full-turn control cases retain qualified material regions. Their
+source vertex-link audits now report Euler characteristic two and genus zero,
+as well as a single cycle at each vertex. Independently constructing regions
+in the regression and calling the production factory yield identical source
+use addresses and vertex ownership. Every original chart remains injective.
+
+The complete embedded-source geometry pipeline now executes on a 16-face
+translated/rotated capped control. It inspects all 120 different-face pairs and
+refuses geometry admission with
+`source-shell-different-face-contacts-unproven`, localized to faces [0,1], the
+shaft and a sphere endpoint patch. The recorded bounded run uses 2367 chart
+spans, 23766 exact work and zero driver cells. Existing boundary fiber proofs
+require a planar participant, so this two-curved-face seam remains unresolved.
+Topology sharing and per-face injectivity do not prune or approve that pair.
+This regression intentionally verifies refusal; it is not a body acceptance test.
+
+Validation: all eight linear-canal tests and 79 selected source regressions pass.
+Compressed logs include the full contact audit and its remaining obstruction.
+The next required native proof is paired curved boundary contact ownership.
+Full embedding, orientation/volume, thickness, conventional closed Model, STEP,
+WASM/worker/UI and the rest of the roadmap remain unfinished.

@@ -206,6 +206,87 @@ pub fn to_capped_region(spans: &[Span], tolerance_mm: f64) -> Result<Model> {
     crate::circular_blend::assemble_support_sheets(sheets)
 }
 
+/// Recompute qualified original UV regions, ordinary edge ownership and pole
+/// contractions for the authored capped supports. No body or embedding claim.
+/// Region limits apply per face; exact shell work is shared across all uses.
+pub fn to_capped_source_shell(
+    spans: &[Span],
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    region_limits: crate::trimmed_face_recipe::Limits,
+    max_exact_work: u64,
+) -> Result<crate::source_shell_incidence::Report> {
+    use crate::source_shell_incidence::{Address, Pair, Pole};
+    use std::collections::BTreeMap;
+    if spans.is_empty() || spans.len() > 64 || !(1..=100_000_000).contains(&max_exact_work) {
+        return Err(invalid("Choose 1..64 authored canal spans"));
+    }
+    let model = to_capped_region(spans, tolerance_mm)?;
+    let mut regions = Vec::new();
+    let mut pairs = Vec::new();
+    let mut poles = Vec::new();
+    let mut pending = BTreeMap::new();
+    for (face, f) in model.faces.iter().enumerate() {
+        let mut boundaries = Vec::new();
+        for (edge, use_) in model.loops[f.outer].coedges.iter().enumerate() {
+            let a = Address {
+                face,
+                wire: 0,
+                edge,
+            };
+            let world = &model.edges[use_.edge];
+            boundaries.push(crate::trimmed_face_recipe::Boundary {
+                curve: world.curve.clone(),
+                pcurve: use_.pcurve.clone(),
+                reversed: use_.reversed,
+            });
+            if world.degenerate {
+                poles.push(Pole {
+                    use_: a,
+                    point: model.vertices[world.vertices[0]].point,
+                });
+            } else if let Some((other, reversed)) = pending.remove(&use_.edge) {
+                pairs.push(Pair {
+                    uses: [other, a],
+                    world: world.curve.clone(),
+                    world_reversed: [reversed, use_.reversed],
+                    cutters: [None, None],
+                });
+            } else {
+                pending.insert(use_.edge, (a, use_.reversed));
+            }
+        }
+        let r = crate::source_contour_proposal::qualify_original_region(
+            &cad_predicates::ToleranceContext::default_valid(),
+            &f.surface,
+            &[boundaries],
+            tolerance_uv,
+            crate::trimmed_face_recipe::Limits {
+                pairs: region_limits.pairs,
+                region_cells: region_limits.region_cells,
+                domain_cells: region_limits.domain_cells,
+                agreement_cells: region_limits.agreement_cells,
+            },
+        )?;
+        let Some(region) = r.region else {
+            return Err(invalid(format!("Source face {face}: {}", r.reason)));
+        };
+        regions.push(region);
+    }
+    if !pending.is_empty() {
+        return Err(invalid(
+            "Capped source supports retain unpaired ordinary edges",
+        ));
+    }
+    crate::source_shell_incidence::assemble_regions_with_poles(
+        &regions,
+        &pairs,
+        &poles,
+        max_exact_work,
+    )
+    .map_err(|e| crate::Error::new(e.code, e.message))
+}
+
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     (0..3).map(|k| a[k] * b[k]).sum()
 }
@@ -331,6 +412,81 @@ pub fn to_open_region(spans: &[Span], tolerance_mm: f64) -> Result<Model> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn capped_source_embedding_does_not_skip_unproven_neighbor_contacts() {
+        let spans = construct(
+            [[10., -7., 5.], [13., -3., 17.]],
+            [0.5, 1.25],
+            [1., 0., 0.],
+            std::f64::consts::TAU,
+        )
+        .unwrap();
+        let shell = to_capped_source_shell(
+            &spans,
+            1e-7,
+            1e-8,
+            crate::trimmed_face_recipe::Limits {
+                pairs: 10000,
+                region_cells: 10000,
+                domain_cells: 10000,
+                agreement_cells: 10000,
+            },
+            100_000_000,
+        )
+        .unwrap()
+        .shell
+        .unwrap();
+        let face_count = shell.faces().len();
+        let audit = crate::source_shell_geometry::qualify(
+            shell,
+            crate::source_shell_geometry::Limits {
+                tolerance_uv: 1e-8,
+                corners: 10000,
+                spans: 20000,
+                linear_cells: 10000,
+                pairs: crate::face_contacts::Limits {
+                    pairs: 10000,
+                    cells: 10000,
+                    domain_cells: 100000,
+                    cells_per_pair: 32,
+                    domain_cells_per_pair: 512,
+                },
+                exact_work: 10000000,
+                driver_cells: 10000,
+            },
+        )
+        .unwrap();
+        eprintln!(
+            "capped source embedding: {} next={:?} pairs={}/{} spans={} driver={} exact={}",
+            audit.reason,
+            audit.next_pair,
+            audit.pairs,
+            face_count * (face_count - 1) / 2,
+            audit.spans,
+            audit.driver_cells,
+            audit.exact_work
+        );
+        assert!(audit.geometry.is_none());
+        assert_eq!(
+            audit.reason,
+            "source-shell-different-face-contacts-unproven"
+        );
+        assert!(audit.next_pair.is_some());
+        assert!(audit.pairs > 0 && audit.pairs <= face_count * (face_count - 1) / 2);
+    }
+    #[test]
+    fn capped_source_factory_rejects_open_angular_boundaries_and_invalid_work() {
+        let spans = construct([[0.; 3], [0., 0., 8.]], [0.5, 1.], [1., 0., 0.], 0.7).unwrap();
+        let limits = || crate::trimmed_face_recipe::Limits {
+            pairs: 10000,
+            region_cells: 10000,
+            domain_cells: 10000,
+            agreement_cells: 10000,
+        };
+        assert!(to_capped_source_shell(&spans, 1e-7, 1e-8, limits(), 1000000).is_err());
+        assert!(to_capped_source_shell(&spans, 1e-7, 1e-8, limits(), 0).is_err());
+        assert!(to_capped_source_shell(&[], 1e-7, 1e-8, limits(), 1000000).is_err());
+    }
     fn limits() -> nurbs_core::moving_envelope::Limits {
         nurbs_core::moving_envelope::Limits {
             max_sine_squared: 0.01,
