@@ -76,9 +76,31 @@ pub fn inspect(shell: &Shell, max_corners: usize) -> Result<Report> {
             }
         }
     }
+    let poles = shell
+        .poles()
+        .iter()
+        .map(|(a, _)| (a.face, a.wire, a.edge))
+        .collect::<BTreeSet<_>>();
     for (face, wires) in shell.faces().iter().enumerate() {
         for (wire, w) in wires.iter().enumerate() {
+            if (0..w.edges().len()).all(|edge| poles.contains(&(face, wire, edge))) {
+                out.reason = "source-vertex-link-collapsed-wire";
+                return Ok(out);
+            }
             for edge in 0..w.edges().len() {
+                if poles.contains(&(face, wire, edge)) {
+                    if out.corners == max_corners {
+                        out.reason = "source-vertex-link-work-limit";
+                        return Ok(out);
+                    }
+                    out.corners += 1;
+                    if shell.vertices()[face][wire][edge][0]
+                        != shell.vertices()[face][wire][edge][1]
+                    {
+                        return Ok(out);
+                    }
+                    continue;
+                }
                 let vertex = shell.vertices()[face][wire][edge][0];
                 out.uncertain_vertex = Some(vertex);
                 if out.corners == max_corners {
@@ -86,7 +108,10 @@ pub fn inspect(shell: &Shell, max_corners: usize) -> Result<Report> {
                     return Ok(out);
                 }
                 out.corners += 1;
-                let prev = (edge + w.edges().len() - 1) % w.edges().len();
+                let mut prev = (edge + w.edges().len() - 1) % w.edges().len();
+                while poles.contains(&(face, wire, prev)) {
+                    prev = (prev + w.edges().len() - 1) % w.edges().len();
+                }
                 if shell.vertices()[face][wire][prev][1] != vertex {
                     return Ok(out);
                 }

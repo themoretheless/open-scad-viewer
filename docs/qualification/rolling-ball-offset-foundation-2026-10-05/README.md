@@ -1781,3 +1781,36 @@ This first ownership gate does not yet contract shell incidence, certify a
 vertex-link cycle, prove chart injectivity modulo poles, complete face-contact
 coverage or authorize a native closed body. Those checks remain required before
 Model/STEP/WASM/UI admission.
+
+## Source shell incidence modulo exact collapsed boundaries
+
+Source shell assembly now accepts addressed world-point candidates for collapsed
+boundaries alongside ordinary opposite edge pairs. It recomputes original
+composition identity under the same global exact-work budget, owns each private
+collapsed-boundary certificate and contracts only that use's two local vertices.
+Cross-face ownership still propagates through freshly qualified ordinary pairs;
+world-coordinate equality alone never merges disconnected chart uses. Every use
+must be accounted for exactly once. Missing, duplicate, wrongly addressed or
+inaccurate pole inputs and exhausted identity work cannot produce a shell.
+Root-plane, affine-map and root-witness inputs remain available in the combined
+assembly entrypoint. The qualified-region entrypoint retains source regions.
+
+Vertex-link inspection skips proven collapsed boundary segments when connecting
+consecutive ordinary edge ends. It checks contracted endpoint ownership and
+charges all original corners to the budget. Entirely collapsed wires are
+rejected. Every surviving vertex must have exactly one connected two-regular
+link cycle; neither boundary contraction nor valence alone proves that cycle.
+
+Eight full-turn control assemblies cover both angular directions, increasing
+and decreasing endpoint radii and zero-radius shaft endpoints, in a translated
+rotated frame. All ordinary edges are paired, native pole contractions qualify,
+and every vertex link is one cycle. Their raw disk-chart incidence has Euler
+characteristic two. A pole candidate perturbed by 1e-12 mm is refused; omitted
+uses, duplicate pole addresses and a one-unit exact-work budget are also refused.
+All 76 selected source regressions and six final shell regressions pass.
+
+This qualifies oriented topological incidence and vertex links only. Whole-chart
+injectivity modulo poles, full original-face contact coverage, embedded geometry,
+material orientation, volume, wall checks and closed Model/STEP/WASM/UI admission
+remain required. The raw control assemblies do not carry qualified material
+regions or a native body certificate.

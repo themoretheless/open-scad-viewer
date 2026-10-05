@@ -4,7 +4,7 @@ use crate::{
     source_shared_edge::{self, SharedEdge},
     source_world_wire::Wire,
 };
-use nurbs_core::{curve::Curve, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve};
 use std::collections::BTreeMap;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Address {
@@ -34,7 +34,12 @@ pub struct RootCandidates {
     pub pair: usize,
     pub candidates: [[Option<[f64; 2]>; 2]; 2],
 }
+pub struct Pole {
+    pub use_: Address,
+    pub point: [f64; 3],
+}
 pub struct Shell {
+    poles: Vec<(Address, crate::source_collapsed_boundary::CollapsedBoundary)>,
     faces: Vec<Vec<Wire>>,
     edges: Vec<SharedEdge>,
     uses: Vec<[Address; 2]>,
@@ -42,6 +47,9 @@ pub struct Shell {
     regions: Option<Vec<crate::source_contour_proposal::SourceRegion>>,
 }
 impl Shell {
+    pub fn poles(&self) -> &[(Address, crate::source_collapsed_boundary::CollapsedBoundary)] {
+        &self.poles
+    }
     pub fn regions(&self) -> Option<&[crate::source_contour_proposal::SourceRegion]> {
         self.regions.as_deref()
     }
@@ -216,6 +224,28 @@ pub fn assemble_regions_with_endpoint_inputs(
     }
     Ok(report)
 }
+/// Qualified original regions retain their material ownership through pole contraction.
+pub fn assemble_regions_with_poles(
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    pairs: &[Pair],
+    poles: &[Pole],
+    max_work: u64,
+) -> Result<Report> {
+    if regions.len() < 2 || regions.len() > 4096 || max_work == 0 || max_work > 100_000_000 {
+        return Err(error(
+            "Choose bounded qualified regions and exact shell work",
+        ));
+    }
+    let faces = regions
+        .iter()
+        .map(|r| r.world_wires())
+        .collect::<Result<Vec<_>>>()?;
+    let mut report = assemble_with_poles(&faces, pairs, poles, max_work)?;
+    if let Some(shell) = report.shell.as_mut() {
+        shell.regions = Some(regions.to_vec());
+    }
+    Ok(report)
+}
 /// Recheck every canonical pair. Each directed use must appear exactly once.
 /// Source joins own local vertices; exact opposite pairs own cross-face vertices.
 pub fn assemble(faces: &[Vec<Wire>], pairs: &[Pair], max_work: u64) -> Result<Report> {
@@ -249,6 +279,37 @@ pub fn assemble_with_endpoint_inputs(
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<Report> {
+    assemble_with_pole_inputs(
+        faces,
+        pairs,
+        planes,
+        maps,
+        candidates,
+        &[],
+        max_work,
+        max_driver_cells,
+    )
+}
+/// Contract only independently qualified original collapsed boundaries.
+/// Ordinary edges still require exactly one opposite partner.
+pub fn assemble_with_poles(
+    faces: &[Vec<Wire>],
+    pairs: &[Pair],
+    poles: &[Pole],
+    max_work: u64,
+) -> Result<Report> {
+    assemble_with_pole_inputs(faces, pairs, &[], &[], &[], poles, max_work, 0)
+}
+pub fn assemble_with_pole_inputs(
+    faces: &[Vec<Wire>],
+    pairs: &[Pair],
+    planes: &[RootPlanes],
+    maps: &[AffineMaps],
+    candidates: &[RootCandidates],
+    poles: &[Pole],
+    max_work: u64,
+    max_driver_cells: usize,
+) -> Result<Report> {
     if faces.len() < 2
         || faces.len() > 4096
         || max_work == 0
@@ -277,7 +338,12 @@ pub fn assemble_with_endpoint_inputs(
         }
         offsets.push(starts);
     }
-    if pairs.len().checked_mul(2) != Some(total) {
+    if pairs
+        .len()
+        .checked_mul(2)
+        .and_then(|n| n.checked_add(poles.len()))
+        != Some(total)
+    {
         return Err(error("Every directed source edge requires one partner"));
     }
     let mut supplied = BTreeMap::new();
@@ -309,7 +375,9 @@ pub fn assemble_with_endpoint_inputs(
                 .any(|v| !v.is_finite())
             || pairs[spec.pair].cutters.iter().any(Option::is_some)
         {
-            return Err(error("Affine maps need unique valid pair addresses, finite fractions and no cutter hints"));
+            return Err(error(
+                "Affine maps need unique valid pair addresses, finite fractions and no cutter hints",
+            ));
         }
     }
     let mut witnessed = BTreeMap::new();
@@ -325,7 +393,9 @@ pub fn assemble_with_endpoint_inputs(
                 .any(|v| !v.is_finite())
             || pairs[spec.pair].cutters.iter().any(Option::is_some)
         {
-            return Err(error("Root witnesses need unique valid addresses, finite original parameters and no cutter hints"));
+            return Err(error(
+                "Root witnesses need unique valid addresses, finite original parameters and no cutter hints",
+            ));
         }
     }
     let lookup = |a: Address| -> Result<usize> {
@@ -351,6 +421,13 @@ pub fn assemble_with_endpoint_inputs(
             seen[i] = true;
         }
     }
+    for pole in poles {
+        let i = lookup(pole.use_)?;
+        if seen[i] {
+            return Err(error("Source pole use claimed more than once"));
+        }
+        seen[i] = true;
+    }
     let mut out = Report {
         shell: None,
         work_used: 0,
@@ -362,6 +439,32 @@ pub fn assemble_with_endpoint_inputs(
     let mut parent: Vec<_> = (0..total).collect();
     let mut face_parent: Vec<_> = (0..faces.len()).collect();
     let mut edges = Vec::new();
+    let mut qualified_poles = Vec::new();
+    for pole in poles {
+        if out.work_used == max_work {
+            out.reason = "source-shell-pole-work-limit";
+            return Ok(out);
+        }
+        let a = pole.use_;
+        let source = &faces[a.face][a.wire].edges()[a.edge];
+        let report = crate::source_collapsed_boundary::qualify(
+            source,
+            pole.point,
+            (max_work - out.work_used).min(cad_predicates::MAX_WORK),
+        )?;
+        out.work_used += report.work_used;
+        let Some(proof) = report.boundary else {
+            out.reason = report.reason;
+            return Ok(out);
+        };
+        let vertices = faces[a.face][a.wire].vertices()[a.edge];
+        join(
+            &mut parent,
+            offsets[a.face][a.wire] + vertices[0],
+            offsets[a.face][a.wire] + vertices[1],
+        );
+        qualified_poles.push((a, proof));
+    }
     for (i, p) in pairs.iter().enumerate() {
         if out.work_used == max_work {
             out.uncertain_pair = Some(i);
@@ -442,6 +545,7 @@ pub fn assemble_with_endpoint_inputs(
         })
         .collect();
     out.shell = Some(Shell {
+        poles: qualified_poles,
         faces: faces.to_vec(),
         regions: None,
         edges,
@@ -456,6 +560,100 @@ mod tests {
     use super::*;
     use crate::source_boundary_fragment::{Endpoint, Fragment};
     use nurbs_core::surface::Surface;
+    #[test]
+    fn full_turn_caps_contract_poles_and_have_one_vertex_link_cycle() {
+        for (radii, sweep) in [[0.5, 1.25], [1.25, 0.5], [0., 1.], [1., 0.]]
+            .into_iter()
+            .flat_map(|r| [std::f64::consts::TAU, -std::f64::consts::TAU].map(|s| (r, s)))
+        {
+            let spans = crate::linear_canal::construct(
+                [[10., -7., 5.], [13., -3., 17.]],
+                radii,
+                [1., 0., 0.],
+                sweep,
+            )
+            .unwrap();
+            let model = crate::linear_canal::to_capped_region(&spans, 1e-7).unwrap();
+            let mut faces = Vec::new();
+            let mut poles = Vec::new();
+            let mut pending = BTreeMap::new();
+            let mut pairs = Vec::new();
+            for (face, f) in model.faces.iter().enumerate() {
+                let mut fragments = Vec::new();
+                for (edge, use_) in model.loops[f.outer].coedges.iter().enumerate() {
+                    let a = Address {
+                        face,
+                        wire: 0,
+                        edge,
+                    };
+                    fragments.push(
+                        Fragment::new(
+                            &f.surface,
+                            &use_.pcurve,
+                            Endpoint::Parameter(0.),
+                            Endpoint::Parameter(1.),
+                        )
+                        .unwrap(),
+                    );
+                    let world = &model.edges[use_.edge];
+                    if world.degenerate {
+                        poles.push(Pole {
+                            use_: a,
+                            point: model.vertices[world.vertices[0]].point,
+                        });
+                    } else if let Some((other, reversed)) = pending.remove(&use_.edge) {
+                        pairs.push(Pair {
+                            uses: [other, a],
+                            world: world.curve.clone(),
+                            world_reversed: [reversed, use_.reversed],
+                            cutters: [None, None],
+                        });
+                    } else {
+                        pending.insert(use_.edge, (a, use_.reversed));
+                    }
+                }
+                faces.push(vec![Wire::new(&fragments).unwrap()]);
+            }
+            assert!(pending.is_empty());
+            let report = assemble_with_poles(&faces, &pairs, &poles, 100_000_000).unwrap();
+            let shell = report.shell.expect(report.reason);
+            assert_eq!(shell.poles().len(), poles.len());
+            let links = crate::source_vertex_links::inspect(&shell, 100000).unwrap();
+            assert!(
+                links.all_manifold,
+                "{} {:?}",
+                links.reason, links.uncertain_vertex
+            );
+            assert_eq!(
+                links.links.len() as i64 - shell.edges().len() as i64 + faces.len() as i64,
+                2
+            );
+            assert!(
+                assemble_with_poles(&faces, &pairs, &poles, 1)
+                    .unwrap()
+                    .shell
+                    .is_none()
+            );
+            assert!(assemble_with_poles(&faces, &pairs, &poles[1..], 100_000_000).is_err());
+            let mut duplicate = poles
+                .iter()
+                .map(|p| Pole {
+                    use_: p.use_,
+                    point: p.point,
+                })
+                .collect::<Vec<_>>();
+            duplicate[1].use_ = duplicate[0].use_;
+            assert!(assemble_with_poles(&faces, &pairs, &duplicate, 100_000_000).is_err());
+            let mut bad = poles;
+            bad[0].point[0] += 1e-12;
+            assert!(
+                assemble_with_poles(&faces, &pairs, &bad, 100_000_000)
+                    .unwrap()
+                    .shell
+                    .is_none()
+            );
+        }
+    }
     fn tetrahedron() -> (Vec<Vec<Wire>>, Vec<Pair>) {
         let points = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
         let triangles = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [2, 0, 3]];
@@ -558,25 +756,27 @@ mod tests {
         assert!(assemble(&faces, &pairs[..5], 100_000_000).is_err());
         pairs[1].uses[0] = pairs[0].uses[0];
         assert!(assemble(&faces, &pairs, 100_000_000).is_err());
-        assert!(crate::source_shell_geometry::qualify(
-            shell,
-            crate::source_shell_geometry::Limits {
-                tolerance_uv: 1e-8,
-                corners: 12,
-                spans: 100,
-                linear_cells: 100,
-                pairs: crate::face_contacts::Limits {
-                    pairs: 6,
-                    cells: 1000,
-                    domain_cells: 1000,
-                    cells_per_pair: 100,
-                    domain_cells_per_pair: 100
-                },
-                exact_work: 100_000_000,
-                driver_cells: 100,
-            }
-        )
-        .is_err());
+        assert!(
+            crate::source_shell_geometry::qualify(
+                shell,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv: 1e-8,
+                    corners: 12,
+                    spans: 100,
+                    linear_cells: 100,
+                    pairs: crate::face_contacts::Limits {
+                        pairs: 6,
+                        cells: 1000,
+                        domain_cells: 1000,
+                        cells_per_pair: 100,
+                        domain_cells_per_pair: 100
+                    },
+                    exact_work: 100_000_000,
+                    driver_cells: 100,
+                }
+            )
+            .is_err()
+        );
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
@@ -666,9 +866,11 @@ mod tests {
                     .unwrap()
                     .point
                     .unwrap();
-            assert!(regions[address.face]
-                .split_boundary(address.wire, address.edge, &p, Role::Contact)
-                .is_err());
+            assert!(
+                regions[address.face]
+                    .split_boundary(address.wire, address.edge, &p, Role::Contact)
+                    .is_err()
+            );
             regions[address.face] = regions[address.face]
                 .split_boundary(address.wire, address.edge, &p, Role::Boundary)
                 .unwrap();
@@ -827,10 +1029,12 @@ mod tests {
         assert!(!allowed.all_pairs_absence_proven);
         assert_eq!(allowed.pairs.len(), 6);
         assert_eq!(allowed.cells, 0);
-        assert!(allowed
-            .pairs
-            .iter()
-            .all(|p| p.allowed.is_some() && p.result.is_none()));
+        assert!(
+            allowed
+                .pairs
+                .iter()
+                .all(|p| p.allowed.is_some() && p.result.is_none())
+        );
         let limited = crate::source_face_contacts::inspect_shell_with_allowed(
             &shell,
             1e-8,
@@ -847,10 +1051,12 @@ mod tests {
         .unwrap();
         assert!(!limited.all_pairs_qualified);
         assert!(limited.pairs[0].allowed.is_none());
-        assert!(limited.pairs[0]
-            .result
-            .as_ref()
-            .is_some_and(|r| !r.absence_proven));
+        assert!(
+            limited.pairs[0]
+                .result
+                .as_ref()
+                .is_some_and(|r| !r.absence_proven)
+        );
         let stopped = crate::source_allowed_contact::certify(&shell, [0, 1], 1, 2).unwrap();
         assert!(stopped.certificate.is_none() && stopped.exact_work <= 1);
         let stopped =
@@ -874,12 +1080,14 @@ mod tests {
         assert_eq!(pairs.pairs[0].faces, [0, 1]);
         assert_eq!(pairs.next_pair, Some([0, 2]));
         assert!(!pairs.all_pairs_absence_proven);
-        assert!(!pairs.pairs[0]
-            .result
-            .as_ref()
-            .unwrap()
-            .unresolved
-            .is_empty());
+        assert!(
+            !pairs.pairs[0]
+                .result
+                .as_ref()
+                .unwrap()
+                .unresolved
+                .is_empty()
+        );
         for (face, region) in shell.regions().unwrap().iter().enumerate() {
             assert_eq!(region.source_loop_indices(), &[0]);
             for (i, edge) in region.loops()[0].iter().enumerate() {
@@ -953,23 +1161,26 @@ mod tests {
         };
         // A valid tetrahedron is intentionally sharp; volume admission must
         // not silently label its selected shared edge tangent.
-        assert!(body
-            .qualify_edge_tangency(0, seam_limits())
-            .unwrap()
-            .seam
-            .is_none());
-        assert!(body
-            .qualify_edge_tangency(body.geometry().shell().edges().len(), seam_limits())
-            .is_err());
+        assert!(
+            body.qualify_edge_tangency(0, seam_limits())
+                .unwrap()
+                .seam
+                .is_none()
+        );
+        assert!(
+            body.qualify_edge_tangency(body.geometry().shell().edges().len(), seam_limits())
+                .is_err()
+        );
         let center = Curve::from_polyline(vec![vec![0., 0., 0.], vec![0., 0., 0.]]).unwrap();
         let radius = Curve::from_polyline(vec![vec![1., 0.], vec![1., 0.]]).unwrap();
-        assert!(body
-            .qualify_face_radius(0, &center, &radius, 1e-6, 100, 100_000_000)
-            .unwrap()
-            .certificate
-            .is_none());
-        assert!(body
-            .qualify_face_radius(
+        assert!(
+            body.qualify_face_radius(0, &center, &radius, 1e-6, 100, 100_000_000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
+            body.qualify_face_radius(
                 body.geometry().shell().faces().len(),
                 &center,
                 &radius,
@@ -977,7 +1188,8 @@ mod tests {
                 100,
                 100_000_000
             )
-            .is_err());
+            .is_err()
+        );
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
