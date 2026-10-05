@@ -21,6 +21,55 @@ impl ClosedBoundary {
         &self.model
     }
 }
+/// Fresh immutable geometry audit of the same assembled boundary snapshot.
+/// A work stop retains the candidate and diagnostics without solid authority.
+pub struct VolumeReport {
+    candidate: ClosedBoundary,
+    report: crate::volume_validity::Report,
+}
+pub struct QualifiedVolume {
+    model: Model,
+    certificate: crate::volume_validity::Report,
+}
+impl QualifiedVolume {
+    pub fn model(&self) -> &Model {
+        &self.model
+    }
+    pub fn certificate(&self) -> &crate::volume_validity::Report {
+        &self.certificate
+    }
+}
+impl VolumeReport {
+    pub fn candidate(&self) -> &ClosedBoundary {
+        &self.candidate
+    }
+    pub fn report(&self) -> &crate::volume_validity::Report {
+        &self.report
+    }
+    pub fn into_qualified(self) -> std::result::Result<QualifiedVolume, Self> {
+        if !self.report.proven {
+            return Err(self);
+        }
+        Ok(QualifiedVolume {
+            model: self.candidate.model,
+            certificate: self.report,
+        })
+    }
+}
+impl ClosedBoundary {
+    pub fn audit_volume(
+        self,
+        tolerance_uv: f64,
+        limits: crate::volume_validity::Limits,
+    ) -> Result<VolumeReport> {
+        let report = crate::volume_validity::inspect(&self.model, tolerance_uv, limits)?;
+        Ok(VolumeReport {
+            candidate: self,
+            report,
+        })
+    }
+}
+
 fn refuse(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
@@ -455,5 +504,153 @@ mod tests {
                 .code,
             "BREP_SHELL_RECIPE_CURVE"
         );
+    }
+    fn volume_limits() -> crate::volume_validity::Limits {
+        crate::volume_validity::Limits {
+            boundary: crate::boundary_embedding::Limits {
+                exact_work: 1000000,
+                trim_pairs: 10000,
+                trim_cells: 100000,
+                trim_domain_cells: 1000000,
+                spans: 1000,
+                contacts: crate::face_contacts::Limits {
+                    pairs: 10000,
+                    cells: 100000,
+                    domain_cells: 1000000,
+                    cells_per_pair: 1000,
+                    domain_cells_per_pair: 10000,
+                },
+            },
+            nesting_pairs: 100,
+            nesting_cells: 100000,
+            nesting_domain_cells: 1000000,
+            orientation_cells: 100000,
+            orientation_domain_cells: 1000000,
+            orientation_spans: 100,
+        }
+    }
+    #[test]
+    fn assembled_boundary_gains_volume_authority_only_after_fresh_geometric_audit() {
+        let (source, context, fragments, keys) = fixture();
+        let placements = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, face)| Placement {
+                face,
+                reversed: source.shells[0].faces[i].reversed,
+                edge_keys: &keys[i],
+            })
+            .collect::<Vec<_>>();
+        let boundary = assemble(&context, &placements, &[&source]).unwrap();
+        let before = boundary.model().clone();
+        let audit = boundary.audit_volume(1e-8, volume_limits()).unwrap();
+        assert!(audit.report().proven);
+        assert!(audit.report().boundary.intersections.absence_proven);
+        let solid = audit
+            .into_qualified()
+            .ok()
+            .expect("fresh full volume proof");
+        assert_eq!(solid.model(), &before);
+        assert!(solid.certificate().boundary.agreement.all_equal);
+    }
+    #[test]
+    fn work_stop_keeps_the_closed_candidate_without_promoting_volume() {
+        let (source, context, fragments, keys) = fixture();
+        let placements = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, face)| Placement {
+                face,
+                reversed: source.shells[0].faces[i].reversed,
+                edge_keys: &keys[i],
+            })
+            .collect::<Vec<_>>();
+        let boundary = assemble(&context, &placements, &[&source]).unwrap();
+        let before = boundary.model().clone();
+        let mut limits = volume_limits();
+        limits.boundary.contacts.pairs = 1;
+        let audit = boundary.audit_volume(1e-8, limits).unwrap();
+        assert!(!audit.report().proven);
+        let refused = audit
+            .into_qualified()
+            .err()
+            .expect("incomplete work is not a solid proof");
+        assert_eq!(refused.candidate().model(), &before);
+        assert!(refused.report().nesting.is_none());
+    }
+    #[test]
+    fn globally_inverted_closed_incidence_cannot_gain_material_volume_authority() {
+        let (source, context, fragments, keys) = fixture();
+        let placements = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, face)| Placement {
+                face,
+                reversed: !source.shells[0].faces[i].reversed,
+                edge_keys: &keys[i],
+            })
+            .collect::<Vec<_>>();
+        let boundary = assemble(&context, &placements, &[&source]).unwrap();
+        let audit = boundary.audit_volume(1e-8, volume_limits()).unwrap();
+        assert!(!audit.report().proven);
+        assert!(audit.report().boundary.proven);
+        assert!(
+            audit
+                .report()
+                .orientations
+                .iter()
+                .any(|o| o.outward == Some(false))
+        );
+        assert!(audit.into_qualified().is_err());
+    }
+    #[test]
+    fn rational_curved_closed_boundary_receives_full_volume_qualification() {
+        use nurbs_core::curve::Curve;
+        let arc = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+            weights: vec![1., 0.5f64.sqrt(), 1.],
+            periodic: false,
+        };
+        let wire = vec![
+            arc,
+            Curve::from_polyline(vec![vec![0., 1.], vec![0., 0.]]).unwrap(),
+            Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap(),
+        ];
+        let (source, context, fragments, keys) =
+            from_source(crate::prism::extrude(&[wire], 0., 2.).unwrap());
+        let placements = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, face)| Placement {
+                face,
+                reversed: source.shells[0].faces[i].reversed,
+                edge_keys: &keys[i],
+            })
+            .collect::<Vec<_>>();
+        let boundary = assemble(&context, &placements, &[&source]).unwrap();
+        let audit = boundary.audit_volume(1e-8, volume_limits()).unwrap();
+        let r = audit.report();
+        println!(
+            "curved shell: exact={} joins={} trim={} charts={} pairs={} boundary={} volume={}",
+            r.boundary.agreement.all_equal,
+            r.boundary.agreement.all_joins_exact,
+            r.boundary.trim.all_valid,
+            r.boundary.intersections.faces.all_faces_injective,
+            r.boundary.intersections.pairs.all_pairs_classified,
+            r.boundary.proven,
+            r.proven
+        );
+        for p in &r.boundary.intersections.pairs.pairs {
+            if p.boundary.is_none() && !p.hull_disjoint {
+                println!("curved pair {:?}: {}", p.faces, p.reason);
+            }
+        }
+        assert!(
+            r.proven,
+            "curved control boundary requires complete geometric qualification"
+        );
+        assert!(audit.into_qualified().is_ok());
     }
 }
