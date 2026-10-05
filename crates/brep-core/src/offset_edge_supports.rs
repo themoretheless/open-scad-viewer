@@ -296,18 +296,16 @@ pub struct PathReport {
     pub path: Option<nurbs_core::offset_contact_path::Report>,
     pub reason: &'static str,
 }
-/// Prove a source-chart coordinate driver and then a continuous offset path.
-/// The requested coordinate interval must stay within the original pcurve's
-/// endpoint extent. Signed material side, original trim membership and fillet
-/// topology are not inferred from this source-coordinate path.
-pub fn propose_path(
+struct DriverSeeds {
+    driver: nurbs_core::curve_axis_driver::Report,
+    seeds: Option<[[[f64; 2]; 2]; 2]>,
+}
+fn driver_seeds(
     prepared: &PreparedEdge,
     axis: usize,
     drive: [f64; 2],
-    distances: [f64; 2],
     driver_cells: usize,
-    limits: nurbs_core::offset_contact_path::Limits,
-) -> Result<PathReport> {
+) -> Result<DriverSeeds> {
     if axis >= 2 || !drive.iter().all(|x| x.is_finite()) || drive[0] >= drive[1] {
         return Err(Error::new(
             "BREP_OFFSET_EDGE_DRIVER",
@@ -317,10 +315,9 @@ pub fn propose_path(
     let first = prepared.supports[0].selected_pcurve();
     let driver = nurbs_core::curve_axis_driver::certify(first, axis, driver_cells)?;
     if !driver.monotonic_proven {
-        return Ok(PathReport {
+        return Ok(DriverSeeds {
             driver,
-            path: None,
-            reason: "original-pcurve-driver-unresolved",
+            seeds: None,
         });
     }
     if drive[0] < driver.axis_extent[0] || drive[1] > driver.axis_extent[1] {
@@ -363,6 +360,29 @@ pub fn propose_path(
         seed[0][axis] = x;
         seed
     });
+    Ok(DriverSeeds {
+        driver,
+        seeds: Some(seeds),
+    })
+}
+/// Prove an original source-coordinate driver and a connected offset path.
+/// This does not infer material side, trimmed membership or fillet topology.
+pub fn propose_path(
+    prepared: &PreparedEdge,
+    axis: usize,
+    drive: [f64; 2],
+    distances: [f64; 2],
+    driver_cells: usize,
+    limits: nurbs_core::offset_contact_path::Limits,
+) -> Result<PathReport> {
+    let DriverSeeds { driver, seeds } = driver_seeds(prepared, axis, drive, driver_cells)?;
+    let Some(seeds) = seeds else {
+        return Ok(PathReport {
+            driver,
+            path: None,
+            reason: "original-pcurve-driver-unresolved",
+        });
+    };
     let path = nurbs_core::offset_contact_path::certify(
         [
             &prepared.supports[0].face.face().surface,
@@ -378,6 +398,59 @@ pub fn propose_path(
     Ok(PathReport {
         driver,
         path: Some(path),
+        reason,
+    })
+}
+
+pub struct TrimmedPathReport {
+    pub driver: nurbs_core::curve_axis_driver::Report,
+    pub contact: Option<nurbs_core::offset_path_trims::Report>,
+    pub reason: &'static str,
+}
+/// Fresh driver, connected root and full membership checks on both unchanged
+/// original face regions. This does not construct replacement trims or a solid.
+pub fn propose_trimmed_path(
+    prepared: &PreparedEdge,
+    axis: usize,
+    drive: [f64; 2],
+    distances: [f64; 2],
+    driver_cells: usize,
+    tolerance_uv: f64,
+    limits: nurbs_core::offset_path_trims::Limits,
+) -> Result<TrimmedPathReport> {
+    let DriverSeeds { driver, seeds } = driver_seeds(prepared, axis, drive, driver_cells)?;
+    let Some(seeds) = seeds else {
+        return Ok(TrimmedPathReport {
+            driver,
+            contact: None,
+            reason: "original-pcurve-driver-unresolved",
+        });
+    };
+    let loops: [Vec<Vec<Curve>>; 2] = std::array::from_fn(|side| {
+        prepared.supports[side]
+            .face
+            .loops()
+            .iter()
+            .map(|wire| wire.coedges.iter().map(|c| c.pcurve.clone()).collect())
+            .collect()
+    });
+    let contact = nurbs_core::offset_path_trims::certify(
+        [
+            &prepared.supports[0].face.face().surface,
+            &prepared.supports[1].face.face().surface,
+        ],
+        [&loops[0], &loops[1]],
+        distances,
+        axis,
+        drive,
+        seeds,
+        tolerance_uv,
+        limits,
+    )?;
+    let reason = contact.reason;
+    Ok(TrimmedPathReport {
+        driver,
+        contact: Some(contact),
         reason,
     })
 }
@@ -494,6 +567,37 @@ mod tests {
             "{}",
             path.reason
         );
+        let trimmed = propose_trimmed_path(
+            &prepared,
+            section.fixed_axis,
+            [0.2, 0.8],
+            distances,
+            63,
+            1e-8,
+            nurbs_core::offset_path_trims::Limits {
+                path: nurbs_core::offset_contact_path::Limits {
+                    cells: 255,
+                    spans: 16,
+                    iterations: 8,
+                    numerical_tolerance_mm: 1e-8,
+                    padding_fraction: 0.01,
+                },
+                membership_cells: 255,
+                region_pairs: 10000,
+                region_cells: 10000,
+                domain_cells: 100000,
+            },
+        )
+        .unwrap();
+        assert!(
+            trimmed
+                .contact
+                .as_ref()
+                .unwrap()
+                .trimmed_continuous_path_proven,
+            "{}",
+            trimmed.reason
+        );
     }
     #[test]
     fn automatic_box_edge_stations_find_certified_centers_after_rotation() {
@@ -549,6 +653,39 @@ mod tests {
             )
             .unwrap();
             assert!(path.driver.monotonic_proven);
+            let trimmed = propose_trimmed_path(
+                &prepared,
+                section.fixed_axis,
+                [0.2, 0.8],
+                distances,
+                16,
+                1e-8,
+                nurbs_core::offset_path_trims::Limits {
+                    path: nurbs_core::offset_contact_path::Limits {
+                        cells: 63,
+                        spans: 16,
+                        iterations: 8,
+                        numerical_tolerance_mm: 1e-8,
+                        padding_fraction: 0.01,
+                    },
+                    membership_cells: 127,
+                    region_pairs: 10000,
+                    region_cells: 10000,
+                    domain_cells: 100000,
+                },
+            )
+            .unwrap();
+            assert!(
+                trimmed
+                    .contact
+                    .as_ref()
+                    .unwrap()
+                    .trimmed_continuous_path_proven,
+                "edge {}: {}",
+                edge,
+                trimmed.reason
+            );
+
             assert!(
                 path.path.as_ref().unwrap().continuous_path_proven,
                 "edge {}: {}",
