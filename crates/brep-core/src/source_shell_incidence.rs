@@ -70,11 +70,13 @@ pub struct ChartFace {
     pub face: usize,
     pub contraction: Option<nurbs_core::surface_injectivity::Report>,
     pub linear: Option<nurbs_core::surface_linear_monotonicity::Report>,
+    pub quotient: Option<nurbs_core::surface_quotient_injectivity::Report>,
 }
 impl ChartFace {
     pub fn injectivity_proven(&self) -> bool {
         self.contraction.as_ref().is_some_and(|r| r.proven)
             || self.linear.as_ref().is_some_and(|r| r.certified)
+            || self.quotient.as_ref().is_some_and(|r| r.proven)
     }
 }
 pub struct ChartReport {
@@ -122,10 +124,62 @@ impl Shell {
                 None
             };
             out.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
+            let quotient = if !contraction.as_ref().is_some_and(|r| r.proven)
+                && !linear.as_ref().is_some_and(|r| r.certified)
+                && max_spans - out.spans >= 256
+            {
+                let u = [
+                    surface.knots_u[surface.degree_u],
+                    surface.knots_u[surface.control_points.len()],
+                ];
+                let v = [
+                    surface.knots_v[surface.degree_v],
+                    surface.knots_v[surface.control_points[0].len()],
+                ];
+                let mut ends = Vec::new();
+                for (address, pole) in &self.poles {
+                    if address.face != face {
+                        continue;
+                    }
+                    let source = pole.source();
+                    let curve = source.curve();
+                    let bounds = source.parameter_bounds();
+                    let domain = curve.domain();
+                    let full = bounds.iter().any(|b| *b == [domain[0]; 2])
+                        && bounds.iter().any(|b| *b == [domain[1]; 2]);
+                    if !full || curve.degree != 1 || curve.control_points.len() != 2 {
+                        continue;
+                    }
+                    let a = &curve.control_points[0];
+                    let b = &curve.control_points[1];
+                    if a[0] == b[0]
+                        && ((a[1] == v[0] && b[1] == v[1]) || (a[1] == v[1] && b[1] == v[0]))
+                    {
+                        if let Some(end) = u.iter().position(|x| *x == a[0]) {
+                            ends.push(end);
+                        }
+                    }
+                }
+                if ends.len() == 1 {
+                    let proof = nurbs_core::surface_quotient_injectivity::certify_source_frame(
+                        surface,
+                        ends[0],
+                        16,
+                        max_spans - out.spans,
+                    )?;
+                    out.spans += proof.cells;
+                    Some(proof)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
             let result = ChartFace {
                 face,
                 contraction,
                 linear,
+                quotient,
             };
             out.all_injective &= result.injectivity_proven();
             out.faces.push(result);
@@ -618,6 +672,18 @@ mod tests {
             let report = assemble_with_poles(&faces, &pairs, &poles, 100_000_000).unwrap();
             let shell = report.shell.expect(report.reason);
             assert_eq!(shell.poles().len(), poles.len());
+            let charts = shell.inspect_face_charts(100000, 100000).unwrap();
+            for (address, _) in shell.poles() {
+                let face = &charts.faces[address.face];
+                assert!(face.quotient.is_some(), "missing pole diagnostic");
+                assert!(
+                    !face.injectivity_proven(),
+                    "current cap class still needs a polar proof"
+                );
+            }
+            let limited = shell.inspect_face_charts(1, 0).unwrap();
+            assert!(!limited.all_injective && limited.spans <= 1);
+
             let links = crate::source_vertex_links::inspect(&shell, 100000).unwrap();
             assert!(
                 links.all_manifold,
@@ -653,6 +719,113 @@ mod tests {
                     .is_none()
             );
         }
+    }
+    #[test]
+    fn qualified_source_pole_enables_the_existing_weighted_quotient_proof() {
+        let surface = Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 0., 0.]],
+                vec![vec![0.5, 0., 0.], vec![0.5, 0., 0.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let corners = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+        let curves = [
+            surface.iso(nurbs_core::surface::Axis::V, 0.).unwrap(),
+            surface.iso(nurbs_core::surface::Axis::U, 1.).unwrap(),
+            surface
+                .iso(nurbs_core::surface::Axis::V, 1.)
+                .unwrap()
+                .reverse()
+                .unwrap(),
+            surface
+                .iso(nurbs_core::surface::Axis::U, 0.)
+                .unwrap()
+                .reverse()
+                .unwrap(),
+        ];
+        let uv = (0..4)
+            .map(|i| {
+                Curve::from_polyline(vec![corners[i].to_vec(), corners[(i + 1) % 4].to_vec()])
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        let fragment = |c: &Curve| {
+            Fragment::new(
+                &surface,
+                c,
+                Endpoint::Parameter(0.),
+                Endpoint::Parameter(1.),
+            )
+            .unwrap()
+        };
+        let a = uv.iter().map(fragment).collect::<Vec<_>>();
+        let b = uv
+            .iter()
+            .rev()
+            .map(|c| fragment(&c.reverse().unwrap()))
+            .collect::<Vec<_>>();
+        let faces = vec![vec![Wire::new(&a).unwrap()], vec![Wire::new(&b).unwrap()]];
+        let pairs = (0..3)
+            .map(|edge| Pair {
+                uses: [
+                    Address {
+                        face: 0,
+                        wire: 0,
+                        edge,
+                    },
+                    Address {
+                        face: 1,
+                        wire: 0,
+                        edge: 3 - edge,
+                    },
+                ],
+                world: curves[edge].clone(),
+                world_reversed: [false, true],
+                cutters: [None, None],
+            })
+            .collect::<Vec<_>>();
+        let poles = [
+            Pole {
+                use_: Address {
+                    face: 0,
+                    wire: 0,
+                    edge: 3,
+                },
+                point: [0.; 3],
+            },
+            Pole {
+                use_: Address {
+                    face: 1,
+                    wire: 0,
+                    edge: 0,
+                },
+                point: [0.; 3],
+            },
+        ];
+        let shell = assemble_with_poles(&faces, &pairs, &poles, 1000000)
+            .unwrap()
+            .shell
+            .unwrap();
+        let charts = shell.inspect_face_charts(1000, 0).unwrap();
+        assert!(charts.all_injective);
+        assert!(
+            charts
+                .faces
+                .iter()
+                .all(|f| f.quotient.as_ref().is_some_and(|q| q.proven))
+        );
+        assert!(charts.spans <= 1000 && charts.spans >= 512);
+        assert!(!shell.inspect_face_charts(255, 0).unwrap().all_injective);
+        // These two charts overlap; per-face injectivity is not embedding.
+        assert!(shell.regions().is_none());
     }
     fn tetrahedron() -> (Vec<Vec<Wire>>, Vec<Pair>) {
         let points = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];

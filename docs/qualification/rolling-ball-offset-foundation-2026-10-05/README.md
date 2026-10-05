@@ -1814,3 +1814,29 @@ injectivity modulo poles, full original-face contact coverage, embedded geometry
 material orientation, volume, wall checks and closed Model/STEP/WASM/UI admission
 remain required. The raw control assemblies do not carry qualified material
 regions or a native body certificate.
+
+## Source chart audit dispatches owned pole quotient checks
+
+The source-shell chart audit now retains a separate quotient-injectivity report
+for a face whose single exact pole use covers a complete natural U boundary.
+The immutable collapsed-boundary owner supplies the original source definition;
+partial restrictions, unsupported layouts and multiple qualifying pole uses do
+not authorize quotient dispatch. The existing whole-chart weighted dominance
+check is recomputed under the shared chart budget. A successful private shell
+geometry audit can therefore use a freshly proven quotient chart, while a public
+diagnostic or caller pole flag cannot grant admission.
+
+A supported control S(u,v)=(u,u²v,0) qualifies through its owned pole boundary;
+its reversed chart also qualifies, and a sub-256-cell budget remains unproven.
+The two coincident control faces deliberately do not constitute embedded
+geometry: these checks establish per-face injectivity only. All 77 selected
+source regressions and seven shell regressions pass.
+
+On all eight sphere/cone endpoint control assemblies the pole chart reports are
+retained but do not prove injectivity. Sphere caps report weighted-order-not-proven;
+the degree-one cone pole layout is unsupported by this source-frame theorem.
+The present theorem requires stronger vanishing orders than the ordinary polar
+cap parameterization provides. These are conservative proof failures, not
+detected folds. The required polar-chart theorem remains unfinished; cap body
+admission stays disabled. Existing vertex-link certificates remain valid, and
+full face-contact, material/volume, STEP/WASM/UI and broader roadmap work remain.
