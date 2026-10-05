@@ -1330,16 +1330,42 @@ mod tests {
             .flat_map(|f| f.endpoints())
             .any(|e| matches!(e, Endpoint::Crossing { .. })));
         assert_eq!(shell.regions().unwrap()[5].loops()[0][0].surface(), &cap);
-        let audit=crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
-            &shell,1e-8,crate::face_contacts::Limits {
-                pairs:15,cells:100000,domain_cells:100000,
-                cells_per_pair:5000,domain_cells_per_pair:10000,
-            },100_000_000,10000,10000,10000).unwrap();
-        assert_eq!(audit.pairs.len(),15);
-        assert!(!audit.all_pairs_qualified);
-        let cap_side=audit.pairs.iter().find(|p|p.faces==[2,5]).unwrap();
+        let audit = crate::source_face_contacts::inspect_shell_with_boundary_fibers_and_chart_work(
+            &shell,
+            1e-8,
+            crate::face_contacts::Limits {
+                pairs: 15,
+                cells: 100000,
+                domain_cells: 100000,
+                cells_per_pair: 5000,
+                domain_cells_per_pair: 10000,
+            },
+            100_000_000,
+            10000,
+            10000,
+            10000,
+        )
+        .unwrap();
+        assert_eq!(audit.pairs.len(), 15);
+        assert!(audit.all_pairs_qualified);
+        let cap_side = audit.pairs.iter().find(|p| p.faces == [2, 5]).unwrap();
         assert!(cap_side.fiber.is_none() && cap_side.allowed.is_none());
-        println!("new cap: {} face pairs checked; complete contact qualification = {}; interior side/cap fiber remains unqualified",audit.pairs.len(),audit.all_pairs_qualified);
+        let contact = cap_side.interior_fiber.as_ref().unwrap();
+        assert_eq!(contact.faces(), [5, 2]);
+        assert_eq!(contact.fiber().coordinate(), (1, 0.625));
+        assert_eq!(contact.edges().len(), 1);
+        assert!(crate::source_interior_contact::certify_with_linear_chart(
+            &shell,
+            [5, 2],
+            100_000_000,
+            10000,
+            1,
+            10000
+        )
+        .unwrap()
+        .certificate
+        .is_none());
+        println!("new cap: {} face pairs checked; complete contact qualification = {}; interior side/cap fiber qualified",audit.pairs.len(),audit.all_pairs_qualified);
         assert!(
             source_shell_incidence::assemble_regions_with_endpoint_inputs(
                 &regions,

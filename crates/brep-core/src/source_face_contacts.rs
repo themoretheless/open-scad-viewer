@@ -56,6 +56,7 @@ pub struct PairReport {
     pub result: Option<surface_contact_search::Report>,
     pub allowed: Option<crate::source_allowed_contact::Certificate>,
     pub fiber: Option<crate::source_fiber_contact::Certificate>,
+    pub interior_fiber: Option<crate::source_interior_contact::Certificate>,
 }
 pub struct ShellReport {
     pub pairs: Vec<PairReport>,
@@ -99,7 +100,7 @@ pub fn inspect_shell_with_allowed(
         Some((max_exact_work, max_spans, 0, 0)),
     )
 }
-/// Recompute natural-boundary ownership before the general contact search.
+/// Recompute natural and supported interior fiber ownership before contact search.
 /// Shared budgets cover both face orientations and all fallback proofs.
 pub fn inspect_shell_with_boundary_fibers(
     shell: &crate::source_shell_incidence::Shell,
@@ -125,7 +126,7 @@ pub fn inspect_shell_with_boundary_fibers(
         Some((max_exact_work, max_spans, max_driver_cells, 0)),
     )
 }
-/// Natural fiber ownership with a separate budget for oblique chart proofs.
+/// Source fiber ownership with a separate budget for oblique chart proofs.
 pub fn inspect_shell_with_boundary_fibers_and_chart_work(
     shell: &crate::source_shell_incidence::Shell,
     tolerance_uv: f64,
@@ -235,6 +236,43 @@ fn inspect_impl(
                                 result: None,
                                 allowed: None,
                                 fiber: Some(certificate),
+                                interior_fiber: None,
+                            });
+                            break;
+                        }
+                    }
+                    if out.pairs.last().is_some_and(|p| p.faces == [a, b]) {
+                        continue;
+                    }
+                }
+                if driver > 0 {
+                    for faces in [[a, b], [b, a]] {
+                        if out.exact_work == work
+                            || out.spans == spans
+                            || out.driver_cells == driver
+                        {
+                            break;
+                        }
+                        let proof = crate::source_interior_contact::certify_with_linear_chart(
+                            shell,
+                            faces,
+                            work - out.exact_work,
+                            spans - out.spans,
+                            driver - out.driver_cells,
+                            linear - out.linear_cells,
+                        )?;
+                        out.exact_work += proof.exact_work;
+                        out.spans += proof.spans;
+                        out.driver_cells += proof.driver_cells;
+                        out.linear_cells += proof.linear_cells;
+                        if let Some(certificate) = proof.certificate {
+                            out.all_pairs_absence_proven = false;
+                            out.pairs.push(PairReport {
+                                faces: [a, b],
+                                result: None,
+                                allowed: None,
+                                fiber: None,
+                                interior_fiber: Some(certificate),
                             });
                             break;
                         }
@@ -259,6 +297,7 @@ fn inspect_impl(
                             result: None,
                             allowed: Some(certificate),
                             fiber: None,
+                            interior_fiber: None,
                         });
                         continue;
                     }
@@ -281,6 +320,7 @@ fn inspect_impl(
                 result: Some(result),
                 allowed: None,
                 fiber: None,
+                interior_fiber: None,
             });
         }
     }

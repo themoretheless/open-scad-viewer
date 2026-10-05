@@ -1348,3 +1348,55 @@ Compressed logs accompany both checks. This is a source-shell closing cap,
 not a general fillet end transition or admitted Model volume. Interior fiber
 ownership/contact qualification, volume, variable radii/complex corners,
 radius/tangency/walls, STEP acceptance and WASM/UI remain open.
+
+
+## Supported interior plane fibers and complete cap contact audit
+
+This stage supersedes the preceding cap/curved-side contact limitation for the
+qualified source class. `source_interior_fiber::certify` checks unchanged
+positive clamped tensor-product source charts. Identical original weights and
+one world-coordinate pole across the other tensor axis make that coordinate
+independent of the other parameter. An exact original rational curve/plane
+point identity at an interior authored UV level, plus strict whole-original
+coordinate monotonicity, proves that the complete plane preimage is exactly
+that UV coordinate line. No extracted/fitted curve, divided point or rounded
+root is admitted. The current plane is aligned with a world coordinate axis;
+the varying original curve must have the single-span layout supported by the
+exact point gate. Other planes/layouts remain unproven. Both UV axes and
+independent original parameter domains are qualified in regression fixtures.
+
+`source_interior_boundary::inspect` reports the entire fragment, possible
+endpoint contacts, absence or unresolved work, together with a proven support
+side. Original positive Bernstein hulls and source-owned implicit roots with
+fresh strict monotonicity are sufficient gates. A fragment crossing the level,
+a folded curve crossing it twice, or an interior tangency cannot be excluded
+from endpoints alone. Changed source ownership and driver exhaustion refuse
+proof.
+
+`source_interior_contact::certify_with_linear_chart` freshly checks both chart
+injectivity proofs, planarity, the complete original fiber, one common support
+side for every retained region boundary, and exact shared ownership of every
+possible fiber contact. Extrema of a linear UV coordinate on a bounded qualified
+material region lie on its boundary: common support excludes interior contact,
+so the admitted locus consists only of the checked source-owned boundaries.
+Caller certificates are not accepted. Native shell contact inspection invokes
+this gate after natural fibers, sharing exact, span, driver and oblique-chart
+budgets across all face orientations and pairs. Reports retain an immutable
+interior-fiber certificate separately from natural-boundary certificates.
+
+The six-face root-clipped wedge and its new planar cap now qualify all fifteen
+face pairs. The previously unresolved cap/curved-side pair obtains a fresh
+interior v=0.625 fiber certificate with one exact shared source edge. Original
+root definitions, retained fragments and affine coverage maps remain unchanged.
+Polynomial and rational positive-weight charts pass; a plane or level shifted
+by 1e-12, mismatched tensor poles/weights, an additional plane root, degenerate
+planes and exhausted budgets refuse proof. The capped fixture also refuses its
+interior contact certificate with only one driver cell available.
+
+Validation: 64 selected native source B-rep tests passed. The final formatted
+cap fixture separately passed and logs complete qualification of all fifteen
+pairs. Compressed native logs accompany this stage. This proves the tested
+shell's different-face contact audit; vertex-link manifold qualification,
+outward material orientation and volume admission, general end transitions,
+variable radii/corners, radius/tangency/wall checks, STEP acceptance and WASM/UI
+remain open. General B-rep self-intersection support is not claimed.
