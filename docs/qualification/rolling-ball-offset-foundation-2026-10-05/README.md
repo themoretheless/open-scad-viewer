@@ -2077,3 +2077,27 @@ remain unfinished. Compressed logs accompany this stage.
 
 Full validation after hull separation: 887 B-rep library tests pass, zero
 failures and three ignored tests.
+
+## Boundary-plus-pole plane image foundation
+
+`source_pole_plane_image` separately certifies the plane image of an original
+single positive rational Bezier chart. All controls on the chosen natural
+boundary must be exactly coplanar. Transverse endpoint rows may additionally
+be coplanar only if every original control in that row equals one world point.
+Every remaining control must have the same strict exact sign. Interior
+Bernstein positivity confines the plane image to the chosen boundary and
+those collapsed points. Nonconstant zero rows, displaced controls, mixed signs,
+unsupported layouts and exhausted work refuse certification. The old
+`source_plane_fiber` complete-single-preimage contract remains unchanged.
+
+Three focused tests pass. Original spherical patches qualify eight meridians
+per control on six translated/rotated increasing, decreasing and constant
+positive-radius controls with both sweep directions and opposite plane sides.
+All 89 selected source regressions pass. Compressed logs accompany the stage.
+
+This certificate establishes the geometric image only. It is not yet wired
+into shell contact admission: retained main-boundary ownership and extra pole
+ownership must be freshly checked against immutable shared edges and shell
+vertex identities. The full embedding audit therefore still refuses pair
+[1,5]. General root-trim ownership, full embedding and the remaining roadmap
+are unfinished. No new full-library or WASM/UI acceptance is claimed here.
