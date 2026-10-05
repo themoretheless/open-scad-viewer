@@ -230,6 +230,121 @@ pub fn certify(
     out.reason = "contact-trim-curves-qualified";
     Ok(out)
 }
+/// Additional independent work per each of the two contact boundaries.
+#[derive(Clone, Copy)]
+pub struct TangentLimits {
+    pub position_cells: usize,
+    pub normal_cells: usize,
+    pub normal_spans: usize,
+}
+pub struct TangentReport {
+    pub contacts: Report,
+    pub tangent_planes: Vec<crate::contact_normal_agreement::Report>,
+    pub contact_curves_and_tangent_planes_proven: bool,
+    pub reason: &'static str,
+}
+/// Fresh fit, original UV branch/trim and contact-angle checks on one snapshot.
+/// This admits contact geometry only, never a replacement face or fillet solid.
+pub fn certify_with_tangency(
+    candidate: &Surface,
+    pcurves: [&Curve; 2],
+    surfaces: [&Surface; 2],
+    loops: [&[Vec<Curve>]; 2],
+    distances: [f64; 2],
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    limits: Limits,
+    max_sine_squared: f64,
+    tangent_limits: TangentLimits,
+) -> Result<TangentReport> {
+    check(
+        max_sine_squared.is_finite()
+            && (0. ..1.).contains(&max_sine_squared)
+            && [
+                tangent_limits.position_cells,
+                tangent_limits.normal_cells,
+                tangent_limits.normal_spans,
+            ]
+            .iter()
+            .all(|n| (1..=100000).contains(n)),
+        "Contact tangency needs squared-sine tolerance in [0,1) and bounded positive work",
+    )?;
+    // Normal qualification needs nonperiodic pcurves, checked before fit refusal.
+    for pcurve in pcurves {
+        pcurve.validate()?;
+        check(
+            !pcurve.periodic,
+            "Contact tangency needs nonperiodic source pcurves",
+        )?;
+    }
+    let contacts = certify(
+        candidate,
+        pcurves,
+        surfaces,
+        loops,
+        distances,
+        axis,
+        drive,
+        free,
+        second,
+        spans,
+        tolerance_mm,
+        tolerance_uv,
+        limits,
+    )?;
+    let mut out = TangentReport {
+        contacts,
+        tangent_planes: vec![],
+        contact_curves_and_tangent_planes_proven: false,
+        reason: "contact-trim-curves-unqualified",
+    };
+    if !out.contacts.contact_trim_curves_proven {
+        return Ok(out);
+    }
+    let boundary = crate::offset_patch_boundary::extract(candidate)?
+        .expect("Qualified contact curves have clamped patch boundaries");
+    for side in 0..2 {
+        let edge = &boundary.coedges[if side == 0 { 0 } else { 2 }];
+        // Keep canonical world traversal, independent of patch coedge reversal.
+        let patch_pcurve = Curve {
+            degree: 1,
+            knots: vec![drive[0], drive[0], drive[1], drive[1]],
+            control_points: vec![
+                vec![drive[0], edge.fixed_parameter],
+                vec![drive[1], edge.fixed_parameter],
+            ],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let r = crate::contact_normal_agreement::certify(
+            &edge.curve,
+            [surfaces[side], candidate],
+            [pcurves[side], &patch_pcurve],
+            [false, false],
+            tolerance_mm,
+            max_sine_squared,
+            tangent_limits.position_cells,
+            tangent_limits.normal_cells,
+            tangent_limits.normal_spans,
+        )?;
+        out.tangent_planes.push(r);
+    }
+    out.contact_curves_and_tangent_planes_proven = out
+        .tangent_planes
+        .iter()
+        .all(|r| r.positions_proven && r.tangent_planes_proven);
+    out.reason = if out.contact_curves_and_tangent_planes_proven {
+        "contact-tangent-planes-qualified"
+    } else {
+        "contact-tangent-planes-unqualified"
+    };
+    Ok(out)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,6 +454,47 @@ mod tests {
         let r = query(&c, [&pc[0], &pc[1]], [&a, &b], [&loops, &loops], limits());
         assert!(r.contact_trim_curves_proven, "{}", r.reason);
         assert!(r.patch_boundary_identity);
+        let tangent = |normal_spans| {
+            certify_with_tangency(
+                &c,
+                [&pc[0], &pc[1]],
+                [&a, &b],
+                [&loops, &loops],
+                [0.2, 0.2],
+                0,
+                [0.35, 0.39],
+                [0.25, 0.35],
+                [[0.30, 0.44], [0.15, 0.25]],
+                2,
+                1e-3,
+                1e-6,
+                limits(),
+                1e-10,
+                TangentLimits {
+                    position_cells: 10000,
+                    normal_cells: 1000,
+                    normal_spans,
+                },
+            )
+            .unwrap()
+        };
+        let qualified = tangent(10000);
+        assert!(
+            qualified.contact_curves_and_tangent_planes_proven,
+            "{}",
+            qualified.reason
+        );
+        assert_eq!(qualified.tangent_planes.len(), 2);
+        let stopped = tangent(1);
+        assert!(stopped.contacts.contact_trim_curves_proven);
+        assert!(!stopped.contact_curves_and_tangent_planes_proven);
+        assert!(
+            stopped
+                .tangent_planes
+                .iter()
+                .all(|r| !r.tangent_planes_proven)
+        );
+
         let value = r.to_value();
         for key in [
             "originalWorldBoundaryIdentityProven",
