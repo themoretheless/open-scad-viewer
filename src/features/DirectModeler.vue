@@ -2137,7 +2137,7 @@ async function qualifySourceWall(scan=false,coverage=false){
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
-   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,adaptiveSelf:{planeControls:1000000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})
@@ -3672,7 +3672,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               {{ sourceWallCoverageResult.wholeWallQualified?label('По всем граням подтверждён нижний порог толщины для отрезков, почти перпендикулярных граням.','The lower thickness threshold for near-normal chords is qualified across all faces.'):label('Толщина всей стенки не подтверждена. Проверьте выделенные грани; часть пар требует дополнительной диагностики.','Whole-wall thickness is unproven. Inspect highlighted faces; some pairs need further diagnostics.') }}
               {{ sourceWallCoverageResult.lowerMm }} {{ sourceWallCoverageResult.lowerMm!==null?label('мм','mm'):'' }} · {{ sourceWallCoverageResult.pairs.length }}/{{ sourceWallCoverageResult.totalPairs }}
               <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(false,true)">{{ label('Повторить проверку всей стенки','Retry whole wall') }}</button>
-              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallCoverageResult.reason }} · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('непроверенных пар','unproven pairs') }}</details>
+              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallCoverageResult.reason }} · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('непроверенных пар','unproven pairs') }}
+                <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
+                  · {{ label('Проверка внутри граней','Within-face coverage') }}:
+                  {{ sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>f.qualified).length }}/{{ sourceWallCoverageResult.adaptiveSelf.faces.length }}
+                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('областей требуют проверки','regions require checking') }}
+                </span>
+              </details>
             </span>
             <span v-if="sourceWallScanResult" role="status" data-source-wall-scan-result="true">
               {{ sourceWallScanResult.thinFound?label('Найден тонкий участок.','A thin region was found.'):label('Тонкий участок в проверенных пробах не найден.','No thin region was found in tested proposals.') }}

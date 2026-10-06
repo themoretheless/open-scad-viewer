@@ -405,8 +405,9 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
 it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const pairs of [1,378]){
+ for(const [pairs,adaptive] of [[1,false],[378,false],[378,true]] as const){
   const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096}}:{}),
    limits:{pairs,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
@@ -415,9 +416,18 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   expect(coverage.enumerationComplete).toBe(pairs===378)
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
-   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(258)
-   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(657)
+   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(adaptive?256:258)
+   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(adaptive?653:657)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
+  }
+  if(adaptive){
+   const a=coverage.adaptiveSelf!;expect(a.faces).toHaveLength(27)
+   expect(a.faces.filter(f=>f.qualified)).toHaveLength(16)
+   expect(a.cells).toBe(5760);expect(a.spans).toBe(21010)
+   expect(a.allSelfPairsQualified).toBe(false)
+   expect(coverage.pairs.filter(p=>p.reason==='source-wall-self-certified')).toHaveLength(16)
+   const wrong=structuredClone(r);wrong.wallCoverage!.adaptiveSelf!.faces[0].face=99
+   expect(validSourceBody(sourceBodyExpectation(options),wrong)).toBe(false)
   }
   const forged=structuredClone(r);forged.wallCoverage!.wholeWallQualified=true;forged.wallCoverage!.lowerMm=5.99
   expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
@@ -432,7 +442,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
 
 it('cancels continuous coverage on threshold changes and ignores its late reply',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const wallCoverage={minimumMm:5.99,limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
+ const wallCoverage={minimumMm:5.99,adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
  const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
  const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage:{...wallCoverage,minimumMm:6.01}}})
@@ -450,10 +460,11 @@ it('qualifies the original cuboid whole-wall threshold through real WASM worker'
  const definition=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',import.meta.url))).toString())
  const client=realClient(),results=[],started=performance.now()
  for(const [minimumMm,pairs,qualified] of [[9.99,21,true],[10.01,21,false],[9.99,20,false]] as const){
-  const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,
+  const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,adaptiveSelf:{planeControls:10000,cells:1,spans:1,cellsPerFace:1,spansPerFace:1},
    limits:{pairs,planeControls:10000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options:o})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  expect(r.wallCoverage!.adaptiveSelf!.allSelfPairsQualified).toBe(true)
   const coverage=r.wallCoverage!;expect(coverage.wholeWallQualified).toBe(qualified)
   expect(coverage.totalPairs).toBe(21);expect(coverage.pairs).toHaveLength(pairs)
   expect(coverage.lowerMm).toBe(qualified?minimumMm:null)

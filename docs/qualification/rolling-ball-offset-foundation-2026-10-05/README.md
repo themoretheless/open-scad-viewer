@@ -4706,3 +4706,39 @@ Adaptive transport additionally requires every enumerated diagonal with a
 qualified private self-face diagnostic to carry source-wall-self-certified.
 A contradictory fallback reason refuses even when all public booleans agree.
 Six transport regressions pass with this composition-consistency guard.
+
+
+## Adaptive UI regression before packaged-worker acceptance
+
+The new interface requests adaptive self work with shared/per-face budgets
+and displays qualified face and pending region counts in result details.
+All 317 existing DirectModeler UI tests pass in 86.07 seconds; the worker
+transport cancellation/retry/late-reply test passes with adaptive options.
+Vue and MCP type checks pass. These tests do not establish new packaged
+WASM or browser behavior: compilation has completed, but optimization and
+packaging remain live. Real-worker annular/cuboid tests have been extended
+and must run against the completed artifact before integration is accepted.
+
+
+## Packaged adaptive real-worker acceptance
+
+Packaging completed successfully: optimized geometry WASM SHA-256
+a0c58afae5436f12c9023b91c75d2b1c46c3449e96a027e69ced385ef0ca2526,
+11915604 bytes. All 26 worker/transport tests pass in 23.91 seconds. Original
+annular adaptive report matches native results: 16/27 self faces, 5760 cells,
+21010 spans, 256 unresolved total pairs and 653 normal spans; whole-wall proof
+remains refused. Legacy requests retain their prior 258 unresolved pairs.
+Original cuboid adaptive requests retain positive 9.99 mm, negative 10.01 mm
+and truncated 20/21 pair outcomes. Wrong face ownership, forged whole-wall
+flags and changed-threshold late reports refuse. Logs and exact reports retain
+the tested artifact hash. Production packaging and browser acceptance remain
+open; general material thickness and the full goal are incomplete.
+
+
+Production compile succeeds. Initial artifact verification rejects measured
+size growth; only affected named budgets were adjusted, preserving margins:
+geometry 3974484 + 608, DirectModeler 437076 + 511, mainSolid.worker 167304 + 123,
+asset total 8295587 + 761 bytes. Final verification passes all 151 artifacts:
+8295587 asset + 15211996 raw WASM = 23507583 total bytes. Source identity and
+unique packed module gates remain enabled. Browser acceptance, deployment
+and push are not claimed.
