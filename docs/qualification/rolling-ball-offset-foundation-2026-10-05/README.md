@@ -4810,3 +4810,12 @@ and root interval are retained. Changing the world middle Z control by 1e-12
 refuses shared-edge admission. Test passes; no rounded fitted replacement is
 used. This qualifies that noncoplanar curved-support fixture, not arbitrary
 rational NURBS supports, mixed-radius corners or closed fillet-body acceptance.
+
+
+The distinct curved-support root fixture now additionally uses nonunit original
+NURBS U-row weights [1,2,1] on both support charts and the canonical world
+curve. Fresh source contact isolation preserves the same t=1/sqrt(2) end,
+opposite traversal and original definitions; damaged world Z control refuses
+for both polynomial and rational cases. Test passes in 0.01 seconds. This
+extends one explicitly constructed rational fixture, not arbitrary NURBS
+restriction, whole fillet Body, mixed-radius corners or full P0 acceptance.
