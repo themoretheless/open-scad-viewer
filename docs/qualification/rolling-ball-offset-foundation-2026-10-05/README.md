@@ -4281,3 +4281,17 @@ witness is claimed at 7 mm despite the known 6 mm wall. Grid-3 discovery
 still returns that thin wall. Invalid threshold/grid/attempt requests are
 rejected; partial one-attempt search remains explicitly incomplete. Combined
 native regression passes in 21.65 seconds. Terminal log retained.
+
+
+## Automatic wall scan native bridge
+
+Optional wallScan requests validate positive threshold/UV tolerance and
+bounded grid/attempt/material work before restoring a body. The response
+echoes the request, reports thinFound from the private chord certificate,
+serializes the best original witness and bounded attempt/refusal/face counts.
+proposalsExhausted concerns only the finite grid; wholeWallQualified remains
+false. A valid one-attempt native dispatch confirms partial scan counters
+and no whole-wall claim; zero-attempt input is rejected before body restore.
+The complete source-body dispatch regression passes in 23.84 seconds.
+Terminal evidence retained. This change is native bridge only; TS response
+validation, packaged WASM/worker and UI scan controls remain pending.

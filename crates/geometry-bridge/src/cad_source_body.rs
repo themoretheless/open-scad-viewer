@@ -145,6 +145,17 @@ pub fn restore(v: Value) -> Result<Value> {
         }
         Some((groups,minimum,tolerance,uv,grid,attempts,brep_core::source_material_wall::Limits{gap,chord}))
     };
+    let scan_request=if v["wallScan"].is_null(){None}else{
+        let o=&v["wallScan"];
+        let minimum:f64=field(o,"minimumMm")?;let uv:f64=field(o,"toleranceUv")?;
+        let grid:usize=field(o,"grid")?;let attempts:usize=field(o,"maxAttempts")?;
+        let w=&o["limits"];
+        let work=brep_core::source_material_chord::Limits{cells:field(w,"cells")?,domain_cells:field(w,"domainCells")?,normal_spans:field(w,"normalSpans")?,max_sine_squared:field(w,"maxSineSquared")?};
+        if [minimum,uv].iter().any(|x|!x.is_finite()||*x<=0.)||!(1..=8).contains(&grid)||!(1..=256).contains(&attempts)
+            ||!(1..=1000000).contains(&work.cells)||!(1..=8000000).contains(&work.domain_cells)||!(1..=100000).contains(&work.normal_spans)
+            ||!work.max_sine_squared.is_finite()||!(0. ..1.).contains(&work.max_sine_squared){return Err(super::input("Choose positive scan threshold and bounded original material work"));}
+        Some((minimum,uv,grid,attempts,work))
+    };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
         "incidence":{"work":report.incidence.work_used,"rootChecks":report.incidence.root_checks,
@@ -178,6 +189,16 @@ pub fn restore(v: Value) -> Result<Value> {
             "clearance":{"reason":r.clearance.reason,"cells":r.clearance.cells,"spans":r.clearance.spans,
                 "uncertainFaces":r.clearance.uncertain_faces,"uncertainUv":r.clearance.uncertain_uv},
             "search":{"attempts":r.search.attempts,"refused":r.search.refused,"candidatesExhausted":r.search.candidates_exhausted}}))
+    }).transpose()?;
+    let wall_scan=scan_request.map(|(minimum,uv,grid,attempts,work)|->Result<Value>{
+        let r=brep_core::source_wall_scan::search(body,minimum,grid,attempts,uv,work)?;
+        let witness=r.best().map(|c|{
+            let endpoints=c.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));
+            json!({"line":c.line(),"lengthMm":c.length_mm(),"endpoints":endpoints})
+        });
+        Ok(json!({"request":v["wallScan"],"thinFound":r.thin_witness().is_some(),"witness":witness,
+            "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
+            "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
         Value::Null
@@ -235,7 +256,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,
+        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
@@ -400,6 +421,17 @@ mod tests {
                 "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
                 "wallQualification":bad})).is_err());
         }
+        let scan_option=json!({"minimumMm":7.,"toleranceUv":1e-7,"grid":1,"maxAttempts":1,
+            "limits":{"cells":100,"domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
+        let scanned=super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),
+            "limits":config(50000),"endpointSpans":10000,"wallScan":scan_option.clone()})).unwrap();
+        let scan=&scanned["wallScan"];assert_eq!(scan["request"],scan_option);
+        assert_eq!(scan["wholeWallQualified"],json!(false));assert_eq!(scan["proposalsExhausted"],json!(false));
+        assert_eq!(scan["attempts"],json!(1));assert_eq!(scan["facesVisited"],json!(1));
+        let bad_scan=json!({"minimumMm":7.,"toleranceUv":1e-7,"grid":3,"maxAttempts":0,
+            "limits":{"cells":100,"domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
+        assert!(super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),
+            "limits":config(1),"endpointSpans":10000,"wallScan":bad_scan})).is_err());
         let mut bad=wall_option.clone();bad["limits"]["cells"]=json!(0);
         assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
             "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
