@@ -3566,3 +3566,24 @@ The final annular Body radius/seam regression passes. Middle rail bounds
 remain unchanged; endpoint preflight adds two cells to each accepted rail.
 The four collapsed-end rails report canonical 0 or 1 in one or two cells.
 Both final terminal logs are retained. WASM/UI packaging remains pending.
+
+
+## Selected source seam bridge and worker response contract
+
+Source Body restoration accepts an optional seamQualification request for
+one original owned edge. Native limits and edge index are validated before
+restoration, including when restoration cannot admit the Body. After fresh
+Body admission, the original seam qualifier reports qualified status,
+angular bounds only with its private certificate, reason, bounded work
+and uncertain canonical interval. A sharp or unresolved seam does not
+invalidate the independently admitted Body. The exact request is echoed.
+
+The worker response gate requires the matching edge and all request limits;
+missing or unsolicited seam results, over-budget work, invalid uncertainty
+intervals, an unsupported reason and false success bounds refuse. Native
+JSON dispatch test passes, including invalid edge and zero-budget requests.
+Ten worker tests pass; new seam responses there are explicit transport-only
+fixtures against the previous packaged WASM, not proof of a new WASM path.
+Direct vue-tsc --noEmit passes. The npm pretypecheck build is still in
+progress at this checkpoint. Generated WASM, real new seam worker execution
+and localized UI interaction remain to be qualified separately.

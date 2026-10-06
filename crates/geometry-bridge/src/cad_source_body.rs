@@ -100,6 +100,27 @@ pub fn restore(v: Value) -> Result<Value> {
     if !(1..=100000).contains(&max_spans) {
         return Err(super::input("Choose endpointSpans in 1..100000"));
     }
+    let seam_request = if v["seamQualification"].is_null() {
+        None
+    } else {
+        let option = &v["seamQualification"];
+        let edge: usize = field(option, "edge")?;
+        let work = &option["limits"];
+        let seam_limits = brep_core::source_seam_tangency::Limits {
+            max_sine_squared: field(work, "maxSineSquared")?,
+            cells: field(work, "cells")?,
+            curve_spans: field(work, "curveSpans")?,
+            normal_spans: field(work, "normalSpans")?,
+        };
+        if edge >= edge_count || !seam_limits.max_sine_squared.is_finite()
+            || !(0. ..1.).contains(&seam_limits.max_sine_squared)
+            || [seam_limits.cells, seam_limits.curve_spans, seam_limits.normal_spans]
+                .iter().any(|n| !(1..=100000).contains(n))
+        {
+            return Err(super::input("Choose an owned source edge and bounded seam qualification limits"));
+        }
+        Some((edge, seam_limits))
+    };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
         "incidence":{"work":report.incidence.work_used,"rootChecks":report.incidence.root_checks,
@@ -113,6 +134,14 @@ pub fn restore(v: Value) -> Result<Value> {
             json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}),
         );
     };
+    let seam_qualification = seam_request.map(|(edge, work)| -> Result<Value> {
+        let r = body.qualify_edge_tangency(edge, work)?;
+        Ok(json!({"request":v["seamQualification"],"qualified":r.seam.is_some(),
+            "sineSquaredBounds":r.seam.as_ref().map(|s|s.sine_squared_bounds()),
+            "reason":r.reason,"cells":r.cells,"curveSpans":r.curve_spans,
+            "normalSpans":r.normal_spans,"acceptedCells":r.accepted_cells,
+            "uncertainCanonical":r.uncertain_canonical}))
+    }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
         Value::Null
     } else {
@@ -169,7 +198,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,
+        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
@@ -292,6 +321,30 @@ mod tests {
             json!("source-volume-initial-work-limit")
         );
         let restored = run(50000);
+        let seam_option = json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":100,"curveSpans":100,"normalSpans":100}});
+        let checked = super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "seamQualification":seam_option.clone()})).unwrap();
+        assert_eq!(checked["admitted"], json!(true));
+        let seam = &checked["seamQualification"];
+        assert_eq!(seam["request"], seam_option);
+        assert!(seam["qualified"].as_bool().is_some());
+        assert!(seam["reason"].as_str().unwrap().starts_with("source-seam-"));
+        assert!(seam["cells"].as_u64().unwrap() <= 100);
+        assert!(seam["normalSpans"].as_u64().unwrap() <= 100);
+        if seam["qualified"] == json!(true) {
+            assert!(seam["uncertainCanonical"].is_null());
+            assert!(seam["sineSquaredBounds"].as_array().is_some());
+        } else {
+            assert!(seam["sineSquaredBounds"].is_null());
+        }
+        for bad in [json!({"edge":999999,"limits":seam_option["limits"]}),
+            json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":0,"curveSpans":100,"normalSpans":100}})] {
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+                "seamQualification":bad})).is_err());
+        }
+
         if let Some(path) = std::env::var_os("CAD_SOURCE_BODY_FIXTURE_OUTPUT") {
             let request = json!({"op":"cad_source_body_restore","definition":definition.clone(),"limits":config(50000),"endpointSpans":10000});
             std::fs::write(path, value_codec::to_string(&request).unwrap()).unwrap();

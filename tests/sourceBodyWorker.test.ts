@@ -45,6 +45,22 @@ it('restores original source definitions through the real WASM CAD worker',async
  const r=await client.run({kind:'sourceBodyRestore',options:o})
  const restoreElapsedMs=performance.now()-start
  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+ // Transport-only fixtures: the packaged WASM does not yet expose seam qualification.
+ const seamRequest={edge:0,limits:{maxSineSquared:1e-6,cells:100,curveSpans:100,normalSpans:100}}
+ const seamOptions={...o,seamQualification:seamRequest},seamExpected=sourceBodyExpectation(seamOptions)
+ const checked:SourceBodyResult={...r,seamQualification:{request:seamRequest,qualified:false,sineSquaredBounds:null,
+  reason:'source-seam-endpoint-normal-unresolved',cells:1,curveSpans:2,normalSpans:2,acceptedCells:0,uncertainCanonical:[0,0]}}
+ expect(validSourceBody(seamExpected,checked)).toBe(true)
+ expect(validSourceBody(sourceBodyExpectation(o),checked)).toBe(false)
+ expect(validSourceBody(seamExpected,r)).toBe(false)
+ for(const patch of [{request:{...seamRequest,edge:1}},{cells:101},{uncertainCanonical:[-1,0]},
+  {qualified:true},{sineSquaredBounds:[0,1e-7]},{reason:'source-seam-tangent-planes-qualified'}]){
+  expect(validSourceBody(seamExpected,{...checked,seamQualification:{...checked.seamQualification,...patch}})).toBe(false)
+ }
+ const qualified={...checked,seamQualification:{...checked.seamQualification!,qualified:true,
+  reason:'source-seam-tangent-planes-qualified',sineSquaredBounds:[0,1e-7],uncertainCanonical:null}}
+ expect(validSourceBody(seamExpected,qualified)).toBe(true)
+ expect(validSourceBody(seamExpected,{...qualified,seamQualification:{...qualified.seamQualification,sineSquaredBounds:[0,1e-5]}})).toBe(false)
  expect(r.sourceBody!.shell).toEqual(o.definition.shell)
  expect(r.edges.map(e=>e.definition)).toEqual(o.definition.shell.pairs.map(p=>p.edge))
  expect(r.edges.every(edge=>edge.displaySegments?.length===8)).toBe(true)
