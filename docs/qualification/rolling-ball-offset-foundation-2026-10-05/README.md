@@ -4096,3 +4096,31 @@ minimum to 5.99 mm and checking with Enter qualifies the 6 mm wall interval
 [5.999999999999997,6.0000000000000036] and clears all error boxes.
 This browser run uses the previous packaged WASM flat-wall implementation;
 the cavity/radial WASM rebuild and its new worker test are still pending.
+
+
+## Pending cavity worker acceptance
+
+The real-worker regression now requests the original annular cylinder wall
+at 14.5 mm, requires a converged interval containing 15 mm, and separately
+requires refusal at 16 mm while retaining successful material chord search
+as diagnostic evidence. This worker scenario is pending the live WASM
+optimization, not yet recorded as passing. The four seam/wall transport
+tests pass (2.83 seconds); vue-tsc passes. Logs retained.
+
+
+## Packaged cavity wall worker and browser acceptance
+
+The pending cavity scenario above now passes against packaged geometry WASM
+ae5efa61db3cd4c89929d2622ba5f2499d5b9e939f7a45a34caead2522958037
+(11,882,048 bytes). All 19 source-body/seam/wall tests pass in 18.29 seconds,
+including successful 15 mm selected annular cylinder walls, refusal at
+16 mm, cancellation/retry and stale result transport guards. The build
+completed successfully. Terminal logs and exact worker results retained.
+
+After reloading isolated port 5188, original edge 6 and opposing cylinder
+face unions were selected through the UI. Checking with Enter confirms
+[14.999999999999902,15.000000000000671] mm with 54 candidates; screenshot
+retained. This verifies packaged cavity parity and tight radial bounds
+through WASM/worker/UI. It does not establish automatic whole-body wall
+coverage, adaptive discovery of every thin region, or general fillets.
+The native search_and_refine helper is still not exposed by the bridge.

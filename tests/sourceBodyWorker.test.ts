@@ -329,3 +329,27 @@ it('discards late wall results when opposing groups change and permits retry',as
  const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}})
  reply(ports[2]!,denied);expect(await retry).toEqual(denied)
 })
+
+it('qualifies curved annular cavity walls through original WASM worker',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request
+ const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallQualification:{
+  groups:[[2,7,12,16,20,24],[3,8,13,17,21,25]],minimumMm:14.5,toleranceMm:0.02,toleranceUv:1e-7,
+  grid:3,maxAttempts:54,limits:{gapCells:10000,gapSpans:20000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
+ const client=realClient(),started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options})
+ expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
+ const wall=r.wallQualification!;expect(wall.qualified).toBe(true);expect(wall.converged).toBe(true)
+ expect(wall.intervalMm![0]).toBeLessThanOrEqual(15);expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(15)
+ expect(wall.intervalMm![1]-wall.intervalMm![0]).toBeLessThan(1e-5)
+ expect(wall.search.attempts).toBe(54);expect(wall.search.refused).toBe(0)
+ expect(wall.clearance.cells).toBe(36);expect(wall.clearance.spans).toBe(72)
+ const tooThick:SourceBodyOptions={...options,wallQualification:{...options.wallQualification!,minimumMm:16}}
+ const refused=await client.run({kind:'sourceBodyRestore',options:tooThick})
+ expect(refused.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(tooThick),refused)).toBe(true)
+ expect(refused.wallQualification!.qualified).toBe(false);expect(refused.wallQualification!.converged).toBe(false)
+ expect(refused.wallQualification!.intervalMm).toBeNull();expect(refused.wallQualification!.reason).toBe('source-wall-clearance-unproven')
+ expect(refused.wallQualification!.search.attempts).toBe(54);expect(refused.wallQualification!.search.refused).toBe(0)
+ if(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  elapsedMs:performance.now()-started,wall,refusedWall:refused.wallQualification,scope:'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.'},null,2)+'\n')
+},120000)
