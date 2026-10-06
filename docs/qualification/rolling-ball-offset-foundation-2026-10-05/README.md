@@ -4582,3 +4582,26 @@ matches the native maxSineSquared contract. It does not claim unrestricted
 physical wall thickness at arbitrary trimmed boundaries or sharp vertices.
 The full objective still requires general wall qualification. Direct vue-tsc
 passes; log retained. Intrinsic-exclusion packaging remains running.
+
+
+## Packaged intrinsic-exclusion worker and production acceptance
+
+Completed WASM build SHA256 dd8b9a8f4d3614bc11dd5c4d042315124ec9e4e72479d3ddf4f187990955a523,
+11,904,622 bytes. All 30 source worker/coverage/scan/wall tests pass in
+21.06 seconds, including original annular 258 unresolved pairs with 657
+normal spans and original cuboid positive/negative/incomplete coverage.
+Exact worker JSON and terminal build/test logs retained.
+
+Production compilation passes; initial named chunk and total-budget refusals
+are retained. Only measured limits are updated: geometry 3,971,664 +608,
+mainSolid worker 165,863 +123, DirectModeler 436,539 +511, asset total
+8,289,348 +761 bytes. Final verifier passes 151 artifacts, retaining source
+identity and unique packed module checks: 8,289,348 asset + 15,201,014 raw
+WASM = 23,490,362 total bytes. No deployment is claimed.
+
+Browser 5188 after reload: keyboard Check whole wall at 5.99 mm with no
+selected sides reports 378/378 pairs and 257 unproven pairs at the larger
+UI budget, down from 259 before intrinsic exclusions. Explicit refusal and
+normal-chord scope remain visible; screenshot retained. General wall
+qualification, sharp/trimmed boundary cases and remaining fillet/P0/P2/P3
+requirements remain open.
