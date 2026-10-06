@@ -4236,3 +4236,15 @@ zero and offers Retry. Both actual browser screenshots are retained. This
 qualifies selected-wall rendering and stale-result clearing on parameter
 change; full wall coverage and all-command P0 acceptance remain open.
 The new production build is still running its prebuild geometry stage.
+
+
+## Original material witness production distribution
+
+Completed geometry prebuild retains witness WASM identity
+87e8b144b19441e9a115e8443ff393cee93959adce4ae40fb237cc9b93b5f556.
+Production compilation succeeds. Initial size refusal retained in build log.
+Measured chunks: geometry 3,965,654 bytes, worker 162,376, DirectModeler
+431,890; total assets 8,271,725. Only these measured budgets and total are
+updated, retaining respective margins 608,123,511,761 bytes. Final
+151-artifact verification passes with packed/source identity gates intact.
+This is local production validation, not deployment or push.
