@@ -3680,3 +3680,23 @@ remain explicit preview coverage limits, not admitted material triangles.
 A browser STEP download observation timed out with no captured file;
 no browser STEP export success is claimed at this checkpoint. Existing
 native/OCCT pole STEP evidence remains separately scoped.
+
+
+## Annular browser STEP, cancellation and reload
+
+The in-app download event observer misses the browser export, but actual
+Downloads files Annular_transition.step and Annular_transition (1).step
+exist and both hash to ed039ea999e56d778679198607d879f91a28bf3b488bdc2e10312865af7bc756.
+The second browser file is independently read by OCCT and passes all
+original annular topology, bidirectional pole, extent and volume checks:
+one valid solid, 27 faces, 55 edges, 26 vertices, two degenerate edges;
+pole error 0 mm, maximum bounds error 1.0000001182675078e-7 mm,
+volume difference from independent coefficient quadrature
+1.6279982446576469e-6 mm3. Actual downloaded bytes and report retained.
+
+Another browser export followed immediately by Cancel returns the panel
+to idle and leaves exactly the same two matching STEP files, with no new
+download. After browser reload, the annular source Body freshly restores,
+all 53 shared edges are selectable and edge 6 can be selected again.
+Screenshots retained. This confirms this fixture's export/cancel/reload
+path, not geometric editing, Undo/Redo, crash or multi-tab acceptance.
