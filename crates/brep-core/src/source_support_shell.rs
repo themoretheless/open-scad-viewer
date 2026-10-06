@@ -188,6 +188,22 @@ mod tests {
         let curved_proof=curved_gap.certificate.expect("all original cylindrical inner/outer pairs need clearance");
         assert!(curved_proof.lower_mm()>=14.5&&curved_proof.lower_mm()<=15.);
         assert!(curved_gap.cells>36&&curved_gap.cells<=10000&&curved_gap.spans<=20000);
+        let outside_segment=crate::source_material_segment::inspect_boundary(
+            &body,[30.,30.,1.],[0.,0.,1.],1e-7,10000,10000).unwrap();
+        assert!(outside_segment.boundary_free);
+        assert!(outside_segment.contacts.is_empty() && outside_segment.unresolved.is_empty());
+        let crossing_segment=crate::source_material_segment::inspect_boundary(
+            &body,[10.,2.,-1.],[0.,0.,8.],1e-7,10000,10000).unwrap();
+        eprintln!("original source segment contacts={} unresolved={} cells={} domains={}",
+            crossing_segment.contacts.len(),crossing_segment.unresolved.len(),
+            crossing_segment.cells,crossing_segment.domain_cells);
+        assert!(!crossing_segment.boundary_free);
+        assert_eq!(crossing_segment.contacts.len(),2);
+        assert!(crossing_segment.unresolved.is_empty());
+        assert!(crossing_segment.contacts[0].parameter[1] < crossing_segment.contacts[1].parameter[0]
+            || crossing_segment.contacts[1].parameter[1] < crossing_segment.contacts[0].parameter[0]);
+        assert!(crate::source_material_segment::inspect_boundary(
+            &body,[0.;3],[0.;3],1e-7,10000,10000).is_err());
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();

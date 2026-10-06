@@ -3771,3 +3771,24 @@ This remains separation of complete source surface chart supersets, not
 material wall thickness. A source-domain boundary audit, interior material
 chord and normal alignment are still required. No new WASM or UI coverage
 is claimed for the gap module.
+
+
+## Original source finite segment boundary audit
+
+`source_material_segment::inspect_boundary` now audits an immutable admitted
+Body directly. It isolates intersections on each original rational surface
+and classifies retained root-ended source contours with original winding.
+No conversion to Model, mesh or rounded trim endpoints is used. Work budgets,
+trim uncertainty and closed-segment endpoint bands remain explicit refusals.
+The public diagnostic report is not a material certificate.
+
+On the original annular Body, segment origin [10,2,-1], direction [0,0,8]
+has exactly two disjoint interior boundary root intervals, no unresolved
+regions, 27 geometry cells and 112 contour cells. An exterior segment
+[30,30,1]+t[0,0,1] is boundary-free; zero direction rejects. The combined
+Body/radius/seam test passes; its complete terminal log is retained.
+
+Boundary-free exterior segments illustrate why this report does not prove
+material membership. Outside seed qualification, parity, normal alignment
+and a private source material chord certificate remain required before
+wall thickness admission; saved diagnostic fields cannot authorize them.
