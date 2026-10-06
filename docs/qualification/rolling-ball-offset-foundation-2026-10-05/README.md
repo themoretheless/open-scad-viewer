@@ -4371,3 +4371,21 @@ proposals, and shows one original measurement with endpoints on native
 faces 18 and 15. Finite-proposal completion and unproven whole-wall safety
 are both visible. Screenshot retained. Production verification for this
 new packaged module and browser scan Retry/Cancel acceptance remain pending.
+
+
+## Automatic scan production and browser Retry/Cancel
+
+Production compilation succeeds. Initial named-size refusal retained.
+Measured geometry/worker/DirectModeler chunks are 3,967,174/163,831/434,313
+bytes. Only their budgets and total assets are updated, preserving margins
+608/123/511 and 761 bytes. Final verifier passes 151 artifacts: 8,278,566
+assets + 15,187,331 raw WASM = 23,465,897 total bytes; identity gates retained.
+
+Browser 5188: Retry search with Enter starts pending work. The first separate
+cancel action arrived after a quick successful result and found no pending
+Cancel control. A fresh retry followed immediately by Cancel click cancels
+active work; overlay and scan-result counts both become zero. Starting
+Find thin regions with Enter afterward again reports the 6 mm wall and
+243 completed proposals. Cancellation and retry screenshots retained.
+These checks validate the finite original scan feature, not continuous
+whole-wall safety. This is local validation; no deployment or push claimed.
