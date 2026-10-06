@@ -3816,3 +3816,29 @@ This is a local normal chord certificate. The conservative exterior hull
 seed may refuse valid starts in concavities. General outside-seed parity,
 complete wall coverage and automatic thin-region search remain open, as do
 bridge/WASM/UI integration of this source chord and clearance calculation.
+
+
+## Whole selected source wall union minimum bounds
+
+`source_material_wall::qualify` recomputes full selected face-pair clearance
+and a normal material chord on the same immutable Body. Its private
+certificate owns both proofs, verifies endpoint membership in opposite
+selected groups and retains the interval for the minimum admitted normal
+material chord length between those groups. Clearance alone cannot issue
+this certificate. Convergence requires outward-rounded interval width no
+larger than the requested positive millimetre tolerance.
+
+All bottom/top source face pairs of the annular Body give minimum bounds
+[5.999999999999997,6.0000000000000036] mm and convergence at 0.02 mm.
+The same interval does not claim convergence at 1e-16 mm. Using a valid
+vertical material chord for outer/inner cylindrical groups refuses with
+`source-wall-candidate-outside-groups`. Body identity is asserted. The
+complete combined Body/radius/seam test passes; terminal log is retained.
+The initial test incorrectly expected a wider interval from a looser
+threshold: the full rectangle bound remains tight independently of that
+threshold. That failed log is retained and the tolerance test is corrected.
+
+Scope remains the explicit groups and stated endpoint angle tolerance.
+This does not enumerate every body wall or automatically find candidates.
+Automatic whole-body wall coverage, thin-region search and source bridge,
+WASM and UI integration remain required.

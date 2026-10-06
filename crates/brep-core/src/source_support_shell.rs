@@ -223,6 +223,21 @@ mod tests {
             eprintln!("source chord refusal {}",denied.reason);
             assert!(denied.certificate.is_none());
         }
+        for (groups,minimum,tolerance,expected) in [([&bottom[..],&top[..]],5.99,0.02,true),
+            ([&bottom[..],&top[..]],5.,1e-16,false),
+            ([&[2,7,12,16,20,24][..],&[3,8,13,17,21,25][..]],14.5,0.02,false)] {
+            let wall=crate::source_material_wall::qualify(&body,groups,minimum,tolerance,
+                [10.,2.,-1.],[0.,0.,8.],1e-7,
+                crate::source_material_wall::Limits{
+                    gap:crate::source_face_gap::Limits{cells:10000,spans:20000},
+                    chord:crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}}).unwrap();
+            eprintln!("source wall {} interval={:?} converged={}",wall.reason,
+                wall.certificate.as_ref().map(|c|c.interval_mm()),wall.converged);
+            assert_eq!(wall.converged,expected);
+            if minimum==14.5 {assert!(wall.certificate.is_none());}
+            else {let proof=wall.certificate.unwrap();assert!(std::ptr::eq(proof.body(),&body));
+                assert!(proof.interval_mm()[0]<=6. && proof.interval_mm()[1]>=6.);}
+        }
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();
