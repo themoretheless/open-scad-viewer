@@ -2979,3 +2979,30 @@ in place of unavailable IndexedMapOfShape/Bnd_Box::Limits bindings.
 This is independent STEP evidence for one qualified quadratic-shear Body,
 not general curved fillets, named-part acceptance, geometric Undo/Redo,
 closed mesh admission, general P0 or P2/P3 completion.
+
+
+### Root-trim STEP through packaged WASM and worker
+
+The optional sourceBodyRestore stepExchange request freshly restores the Body,
+then runs native endpoint/trim gates and serializes original carriers. Work
+exhaustion returns a preparation refusal while the independently admitted
+Body stays available. Request options, tolerance, result counts and bounded
+output are checked by transport; unsolicited or mismatched exchange results
+refuse. Changing a request cancels the old worker and ignores its late response.
+No new editor export action or geometric editing admission is introduced.
+
+Packaged WASM: bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f,
+11744484 bytes. All 48 worker/client/archive/display tests passed (11.84 s).
+The curved STEP scenario including success and work refusal took 1618.05 ms
+host elapsed; it does not isolate Rust or rendering latency. Native endpoint
+error upper bound was 1.550495842828071e-14 mm. Independent OCCT reading the
+worker-produced STEP confirms valid B-rep, one solid, four faces, seven edges,
+five vertices, analytic vertex coordinates within 1e-7 mm, and volume
+0.16666666666666663 mm³. This remains one quadratic-shear control model.
+
+Vue and MCP type checks passed. Production distribution audit passed for
+151 artifacts: 8197363 asset bytes plus 15040876 raw WASM bytes. Packed
+geometry grew 16692 bytes to 3915708 and worker grew 998 to 157735. Asset total
+grew 18688 bytes; budgets preserve the previous bounded margins. New UI
+export, named-part acceptance, general fillets, geometric Undo/Redo, P0 and
+P2/P3 remain unqualified.

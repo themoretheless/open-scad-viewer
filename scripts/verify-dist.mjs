@@ -105,12 +105,13 @@ const limits = new Map([
 // Exact normalized UV chart equations: measured 3,887,392 bytes, +5,592.
 // Rational main chart identity: measured 3,889,012 bytes, +1,620.
 // Fresh inverse shear contact admission: measured 3,899,016 bytes, +10,004.
-const geometryChunkBudget = 3_899_624
+// Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
+const geometryChunkBudget = 3_916_316
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 156_860], // Inverse shear request binding: measured 156737 bytes, +260; retained 123-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 157_858], // Source STEP transport: measured 157735 bytes (+998); retain 123-byte margin. Inverse shear request binding: measured 156737 bytes, +260; retained 123-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -370,6 +371,6 @@ for (const [name, artifact, compression] of [
 // Exact normalized UV chart equations: measured 8,166,531 asset bytes.
 // Rational main chart identity: measured 8,168,151 asset bytes.
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
-const totalBudget = 8_179_436
+const totalBudget = 8_198_124
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

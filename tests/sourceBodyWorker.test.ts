@@ -192,3 +192,48 @@ it.each([
  if(documentOutput)writeFileSync(documentOutput,serializeDirectDocument(document))
  if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
 },120000)
+
+it('exchanges original curved root carriers through real WASM and worker STEP gates',async()=>{
+ const fixture=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-curved-shear-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...source}=fixture
+ const o:SourceBodyOptions={...source,displaySegments:0,faceDisplay:undefined,stepExchange:{toleranceMm:1e-7,trimWork:100000,
+  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:14,endpoints:14}}}
+ const before=JSON.stringify(o),client=realClient(),start=performance.now()
+ const r=await client.run({kind:'sourceBodyRestore',options:o})
+ expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+ const step=r.stepExchange
+ expect(step?.prepared).toBe(true)
+ if(!step?.prepared)throw new Error('Missing native STEP candidate')
+ expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
+ expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
+ expect(step.text).toContain('TRIMMED_CURVE');expect(step.text).toContain('MANIFOLD_SOLID_BREP')
+ if(process.env.CAD_SOURCE_WORKER_STEP_OUTPUT)writeFileSync(process.env.CAD_SOURCE_WORKER_STEP_OUTPUT,step.text)
+ const wrong=structuredClone(r);wrong.stepExchange!.request.toleranceMm=1e-5
+ expect(validSourceBody(sourceBodyExpectation(o),wrong)).toBe(false)
+ expect(validSourceBody(sourceBodyExpectation({...o,stepExchange:undefined}),r)).toBe(false)
+ const missing=structuredClone(r);delete missing.stepExchange
+ expect(validSourceBody(sourceBodyExpectation(o),missing)).toBe(false)
+ const low=structuredClone(o);low.stepExchange!.limits.exactWork=1
+ const refusal=await client.run({kind:'sourceBodyRestore',options:low})
+ expect(refusal.admitted).toBe(true);expect(refusal.stepExchange?.prepared).toBe(false)
+ expect(validSourceBody(sourceBodyExpectation(low),refusal)).toBe(true)
+ expect(JSON.stringify(o)).toBe(before)
+ if(process.env.CAD_SOURCE_WORKER_STEP_REPORT){
+  const wasm=readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))
+  writeFileSync(process.env.CAD_SOURCE_WORKER_STEP_REPORT,JSON.stringify({passed:true,wasmBytes:wasm.length,wasmSha256:createHash('sha256').update(wasm).digest('hex'),scenarioElapsedMs:performance.now()-start,endpointErrorUpper:step.endpointErrorUpper,counts:{vertices:step.vertices,edges:step.edges,faces:step.faces},scope:'Fresh native Body restore and original carrier STEP through real worker; one quadratic-shear control body, no general editing or UI export admission.'},null,2)+'\n')
+ }
+},120000)
+
+it('cancels a changed STEP request and rejects the late worker response',async()=>{
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const o:SourceBodyOptions={...options(),stepExchange:{toleranceMm:1e-7,trimWork:100000,
+  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:1000,endpoints:1000}}}
+ const first=client.run({kind:'sourceBodyRestore',options:o}).catch(e=>e.code),late=ports[0]!.onmessage!
+ const changed=structuredClone(o);changed.stepExchange!.toleranceMm=1e-6
+ const second=client.run({kind:'sourceBodyRestore',options:changed})
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ changed.stepExchange!.toleranceMm=1
+ expect((ports[1]!.requests[0]!.job as {options:SourceBodyOptions}).options.stepExchange!.toleranceMm).toBe(1e-6)
+ late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
+ reply(ports[1]!,denied);expect(await second).toEqual(denied)
+})

@@ -5,7 +5,14 @@ export interface SourceBodyDefinition {
  inverseShear?:{axes:[number,number];coefficient:number}
  shell:{version:1;regions:unknown[];pairs:{uses:[number[],number[]];edge:unknown}[];poles:unknown[]}
 }
+export interface SourceStepOptions {
+ toleranceMm:number;trimWork:number
+ limits:{rootChecks:number;mappingCells:number;replayMappingPerUse:number;exactWork:number;driverCells:number;spans:number;endpoints:number}
+}
+export type SourceStepResult = {prepared:false;request:SourceStepOptions;text:null;reason:'source-step-preparation-unproven'}
+ | {prepared:true;request:SourceStepOptions;text:string;endpointErrorUpper:number;vertices:number;edges:number;faces:number}
 export interface SourceBodyOptions {
+ stepExchange?:SourceStepOptions
  definition:SourceBodyDefinition
  /** With edge display, bounds total original carrier spans over both ends. */
  endpointSpans:number
@@ -29,6 +36,7 @@ export interface SourceDisplayFace {
 }
 export interface SourceBodyResult {
  admitted:boolean;sourceBody:SourceBodyDefinition|null;edges:SourceBodyEdge[]
+ stepExchange?:SourceStepResult|null
  displayFaces?:SourceDisplayFace[]|null
  volume?:Interval;reverseOrientation?:boolean;faceCount?:number;poleCount?:number
  diagnostics:{reason:string;incidence:unknown;embedding:unknown;volume:unknown}
@@ -62,6 +70,13 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
  if(d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
   ||!Array.isArray(s.pairs)||s.pairs.length>524288||!Array.isArray(s.poles)||s.poles.length>1000000
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
+ const step=options.stepExchange
+ if(step){
+  const limits=step.limits
+  if(!Number.isFinite(step.toleranceMm)||step.toleranceMm<=0||!integer(step.trimWork,10_000_000)||step.trimWork<1
+   ||!limits||!integer(limits.exactWork,100_000_000)||limits.exactWork<1||!integer(limits.driverCells,100000)
+   ||!['rootChecks','mappingCells','replayMappingPerUse','spans','endpoints'].every(k=>integer(limits[k as keyof typeof limits],100000)&&limits[k as keyof typeof limits]>=1))throw new Error('Invalid source STEP exchange limits')
+ }
  const inverse=d.inverseShear
  if(inverse&&(!Array.isArray(inverse.axes)||inverse.axes.length!==2||!inverse.axes.every(n=>integer(n,2))
   ||inverse.axes[0]===inverse.axes[1]||!Number.isFinite(inverse.coefficient)))throw new Error('Invalid inverse shear recipe')
@@ -75,18 +90,27 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
- return {definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
+ return {stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
   absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {
  try {
   const r=value as SourceBodyResult
   if(!r||typeof r.admitted!=='boolean'||!Array.isArray(r.edges)||typeof r.diagnostics?.reason!=='string')return false
-  if(!r.admitted)return r.sourceBody===null&&r.edges.length===0&&r.diagnostics.reason.startsWith('source-')&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
+  if(!r.admitted)return r.stepExchange==null&&r.sourceBody===null&&r.edges.length===0&&r.diagnostics.reason.startsWith('source-')&&r.diagnostics.reason!=='source-volume-and-orientation-qualified'
   if(r.diagnostics.reason!=='source-volume-and-orientation-qualified'||!r.sourceBody||key(r.sourceBody)!==e.definition
    ||r.faceCount!==e.faces||r.poleCount!==e.poles||typeof r.reverseOrientation!=='boolean'
    ||!interval(r.volume)||r.volume[0]<=0||!Number.isFinite(e.absoluteError)||e.absoluteError<=0||r.volume[1]-r.volume[0]>e.absoluteError
    ||r.edges.length!==e.edges.length)return false
+  const step=r.stepExchange
+  if(e.stepExchange){
+   if(!step||key(step.request)!==e.stepExchange||typeof step.prepared!=='boolean')return false
+   if(step.prepared){
+    if(typeof step.text!=='string'||step.text.length>32*1024*1024||!step.text.startsWith('ISO-10303-21;\n')||!step.text.endsWith('END-ISO-10303-21;\n')
+     ||!Number.isFinite(step.endpointErrorUpper)||step.endpointErrorUpper<0||step.endpointErrorUpper>e.stepTolerance!
+     ||step.edges!==e.edges.length||step.faces!==e.faces||!integer(step.vertices,2*e.edges.length+e.poles)||step.vertices<1)return false
+   }else if(step.text!==null||step.reason!=='source-step-preparation-unproven')return false
+  }else if(step!=null)return false
   const rectangle=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(interval)
   if(e.faceDisplay){
    const option=e.faceDisplay

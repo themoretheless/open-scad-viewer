@@ -113,6 +113,30 @@ pub fn restore(v: Value) -> Result<Value> {
             json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}),
         );
     };
+    let step_exchange = if v["stepExchange"].is_null() {
+        Value::Null
+    } else {
+        let option = &v["stepExchange"];
+        let tolerance: f64 = field(option,"toleranceMm")?;
+        let work = &option["limits"];
+        let candidate = brep_core::source_exchange_step::prepare(body,tolerance,
+            brep_core::source_exchange_endpoints::Limits {
+                root_checks:field(work,"rootChecks")?,
+                mapping_cells:field(work,"mappingCells")?,
+                replay_mapping_per_use:field(work,"replayMappingPerUse")?,
+                exact_work:field(work,"exactWork")?,
+                driver_cells:field(work,"driverCells")?,
+                spans:field(work,"spans")?,
+                endpoints:field(work,"endpoints")?,
+            },field(option,"trimWork")?)?;
+        match candidate {
+            Some(c) => json!({"prepared":true,"request":option,"text":c.text,
+                "endpointErrorUpper":c.endpoint_error_upper,"vertices":c.vertices,
+                "edges":c.edges,"faces":c.faces}),
+            None => json!({"prepared":false,"request":option,"text":null,
+                "reason":"source-step-preparation-unproven"}),
+        }
+    };
     let shell = body.geometry().shell();
     let boundary_display = if display_segments == 0 { None } else {
         Some(brep_core::source_boundary_display::prepare(shell, display_segments, max_spans, 100000)?)
@@ -145,7 +169,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,
+        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
