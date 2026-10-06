@@ -4420,3 +4420,20 @@ retained gap certificates are checked. A 10.01 mm threshold refuses admission
 (186 cells); truncating to 20 pairs also refuses admission. The targeted test
 passes in 0.05 seconds. This establishes the native planar success path only;
 curved self pairs, WASM transport and whole-wall UI remain open.
+
+
+## Native bridge continuous wall coverage
+
+cad_source_body_restore accepts optional wallCoverage with positive minimumMm
+and bounded pairs/planeControls/normalSpans/gapCells/gapSpans/maxSineSquared.
+Validation precedes original-body restoration. Only a freshly constructed
+private original coverage certificate can set wholeWallQualified and lowerMm.
+The response binds the request and reports every inspected pair, reasons,
+enumeration completeness and shared work counts. Missing or unresolved pairs
+leave lowerMm null. This field remains separate from finite wallScan results.
+
+The combined native dispatch regression passes in 27.39 seconds, checking
+partial enumeration refusal, null lower bound, request binding and six invalid
+work-limit cases before restoration. Log retained. This bridge addition is
+not yet included in packaged WASM or TS/worker/UI, and does not prove general
+curved self-face coverage.

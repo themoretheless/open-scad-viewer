@@ -156,6 +156,23 @@ pub fn restore(v: Value) -> Result<Value> {
             ||!work.max_sine_squared.is_finite()||!(0. ..1.).contains(&work.max_sine_squared){return Err(super::input("Choose positive scan threshold and bounded original material work"));}
         Some((minimum,uv,grid,attempts,work))
     };
+    let coverage_request=if v["wallCoverage"].is_null(){None}else{
+        let o=&v["wallCoverage"];let w=&o["limits"];
+        let minimum:f64=field(o,"minimumMm")?;
+        let work=brep_core::source_wall_coverage::Limits {
+            pairs:field(w,"pairs")?,plane_controls:field(w,"planeControls")?,
+            normal_spans:field(w,"normalSpans")?,
+            gap:brep_core::source_face_gap::Limits{cells:field(w,"gapCells")?,spans:field(w,"gapSpans")?},
+            max_sine_squared:field(w,"maxSineSquared")?,
+        };
+        if !minimum.is_finite()||minimum<=0.||!(1..=100000).contains(&work.pairs)
+            ||!(1..=1000000).contains(&work.plane_controls)
+            ||[work.normal_spans,work.gap.cells,work.gap.spans].iter().any(|n|!(1..=100000).contains(n))
+            ||!work.max_sine_squared.is_finite()||!(0. ..1.).contains(&work.max_sine_squared) {
+            return Err(super::input("Choose positive whole-wall threshold and bounded continuous work"));
+        }
+        Some((minimum,work))
+    };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
         "incidence":{"work":report.incidence.work_used,"rootChecks":report.incidence.root_checks,
@@ -199,6 +216,15 @@ pub fn restore(v: Value) -> Result<Value> {
         Ok(json!({"request":v["wallScan"],"thinFound":r.thin_witness().is_some(),"witness":witness,
             "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
+    }).transpose()?;
+    let wall_coverage=coverage_request.map(|(minimum,work)|->Result<Value>{
+        let r=brep_core::source_wall_coverage::qualify(body,minimum,work)?;
+        Ok(json!({"request":v["wallCoverage"],"wholeWallQualified":r.certificate.is_some(),
+            "lowerMm":r.certificate.as_ref().map(|c|c.minimum_mm()),
+            "enumerationComplete":r.enumeration_complete,"totalPairs":r.total_pairs,
+            "pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>(),
+            "planeControls":r.plane_controls,"normalSpans":r.normal_spans,
+            "cells":r.cells,"spans":r.spans,"reason":r.reason}))
     }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
         Value::Null
@@ -256,7 +282,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,
+        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,"wallCoverage":wall_coverage,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
@@ -420,6 +446,25 @@ mod tests {
             assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
                 "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
                 "wallQualification":bad})).is_err());
+        }
+        let coverage_option=json!({"minimumMm":0.1,"limits":{"pairs":1,"planeControls":1000,
+            "normalSpans":100,"gapCells":100,"gapSpans":100,"maxSineSquared":1e-6}});
+        let covered=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallCoverage":coverage_option.clone()})).unwrap();
+        let coverage=&covered["wallCoverage"];
+        assert_eq!(coverage["request"],coverage_option);
+        assert_eq!(coverage["wholeWallQualified"],json!(false));
+        assert_eq!(coverage["enumerationComplete"],json!(false));
+        assert!(coverage["lowerMm"].is_null());
+        assert_eq!(coverage["pairs"].as_array().unwrap().len(),1);
+        for (key,value) in [("pairs",json!(0)),("planeControls",json!(1000001)),
+            ("normalSpans",json!(0)),("gapCells",json!(0)),("gapSpans",json!(100001)),
+            ("maxSineSquared",json!(1.))] {
+            let mut bad=coverage_option.clone();bad["limits"][key]=value;
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+                "wallCoverage":bad})).is_err());
         }
         let scan_option=json!({"minimumMm":7.,"toleranceUv":1e-7,"grid":1,"maxAttempts":1,
             "limits":{"cells":100,"domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
