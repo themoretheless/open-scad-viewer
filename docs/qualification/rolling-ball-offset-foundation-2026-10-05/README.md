@@ -3727,3 +3727,25 @@ minimum whole-wall thickness: curved transition faces are not in these
 groups. Interior material chord, normal alignment, whole-wall coverage,
 source bridge/UI integration and new packaging for this module remain
 to be developed and qualified. The last packaged WASM is unchanged.
+
+
+## Curved original cylindrical face union clearance
+
+The annular test now covers all 36 pairs of original outer cylinder faces
+[2,7,12,16,20,24] and inner cylinder faces [3,8,13,17,21,25].
+A 14.5 mm lower clearance certificate succeeds with 5344 cells and
+10688 original span visits within unchanged 10000/20000 limits. The
+combined Body/radius/seam test passes in 15.18 s.
+
+The first scheduler exhausted 10000 cells/20000 spans on pair [7,3],
+subdividing both extrusion heights along with transverse coordinates.
+For original charts with identical XY controls and weights across each
+V row and overlapping Z boxes, subdivision now prefers U. Every
+rectangle retains full original V coverage; the same 3D interval bound
+remains the sole acceptance condition. This preference is conservative
+and may still refuse difficult cases. It does not certify material chords.
+A rational weight-change regression shows XY varies with V despite
+identical XY controls, so the preference stays disabled. It passes.
+Both failed initial and successful final terminal logs are retained.
+Curved fillet transition faces, whole-wall thickness, interior material
+coverage and this new gap module's WASM/UI qualification remain open.

@@ -42,6 +42,18 @@ fn domain(s: &Surface) -> [[f64; 2]; 2] {
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ]
 }
+// With identical XY controls and weights across each V row, the projected
+// source image is independent of V. Prefer splitting U while Z boxes overlap;
+// full V coverage is retained in every evaluated rectangle and certificate.
+fn xy_independent_v(s: &Surface) -> bool {
+    s.control_points
+        .iter()
+        .zip(&s.weights)
+        .all(|(row, weights)| {
+            row.iter().all(|p| p[0] == row[0][0] && p[1] == row[0][1])
+                && weights.iter().all(|w| *w == weights[0])
+        })
+}
 fn spans(s: &Surface, d: [[f64; 2]; 2]) -> usize {
     let count = |k: &[f64], degree: usize, n: usize, r: [f64; 2]| {
         (degree..n)
@@ -114,8 +126,12 @@ pub fn qualify<'a>(
                     lower = lower.min(bound);
                     continue;
                 }
+                let projected = surfaces.iter().all(|s| xy_independent_v(s))
+                    && boxes[0][2][0] <= boxes[1][2][1]
+                    && boxes[1][2][0] <= boxes[0][2][1];
                 let (side, axis) = (0..2)
                     .flat_map(|side| (0..2).map(move |axis| (side, axis)))
+                    .filter(|&(_, axis)| !projected || axis == 0)
                     .max_by(|&(s, a), &(t, b)| {
                         let width = |(s, a): (usize, usize)| {
                             (uv[s][a][1] - uv[s][a][0]) / (natural[s][a][1] - natural[s][a][0])
@@ -147,4 +163,31 @@ pub fn qualify<'a>(
     out.uncertain_uv = None;
     out.reason = "source-face-gap-qualified";
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rational_weight_change_keeps_transverse_parameter_active() {
+        let mut s = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 0., 2.]],
+                vec![vec![1., 0., 0.], vec![1., 0., 2.]],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        assert!(xy_independent_v(&s));
+        s.weights[1][1] = 2.;
+        assert!(!xy_independent_v(&s));
+        let a = s.evaluate(0.5, 0.).unwrap().point;
+        let b = s.evaluate(0.5, 1.).unwrap().point;
+        assert!((a[0] - b[0]).abs() > 0.1);
+    }
 }

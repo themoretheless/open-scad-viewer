@@ -181,6 +181,13 @@ mod tests {
             crate::source_face_gap::Limits{cells:1,spans:1}).unwrap().certificate.is_none());
         assert!(crate::source_face_gap::qualify(&body,[&bottom,&bottom],5.99,
             crate::source_face_gap::Limits{cells:1000,spans:2000}).is_err());
+        let curved_gap=crate::source_face_gap::qualify(&body,
+            [&[2,7,12,16,20,24],&[3,8,13,17,21,25]],14.5,
+            crate::source_face_gap::Limits{cells:10000,spans:20000}).unwrap();
+        eprintln!("original annular curved gap {} cells={} spans={} uncertain={:?}",curved_gap.reason,curved_gap.cells,curved_gap.spans,curved_gap.uncertain_faces);
+        let curved_proof=curved_gap.certificate.expect("all original cylindrical inner/outer pairs need clearance");
+        assert!(curved_proof.lower_mm()>=14.5&&curved_proof.lower_mm()<=15.);
+        assert!(curved_gap.cells>36&&curved_gap.cells<=10000&&curved_gap.spans<=20000);
         let q=std::f64::consts::FRAC_PI_2;
         let spans=[
             crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),
