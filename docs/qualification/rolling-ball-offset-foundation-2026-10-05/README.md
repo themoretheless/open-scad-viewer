@@ -3889,3 +3889,28 @@ Body/radius/seam regression passes; terminal log retained.
 This closes automatic candidate-to-bound composition for explicit groups.
 It does not identify all opposing body wall regions, prove coverage of
 every wall, or qualify bridge/WASM/worker/UI transport. Those remain open.
+
+
+## Source wall qualification native bridge
+
+`cad_source_body_restore` accepts optional `wallQualification`: original
+face groups, minimumMm, toleranceMm, toleranceUv, grid, maxAttempts and
+explicit gap/search/normal work limits. Owned, unique, nonempty disjoint
+groups and every tolerance and budget are validated before Body admission.
+After fresh original Body restoration, native automatic minimum bounds
+are recomputed and the response echoes the exact request. It reports
+qualified, converged, intervalMm, lower-clearance reason/work/uncertainty
+and search attempt/refusal/exhaustion counts. Failed wall qualification
+has a null interval; it does not invalidate an otherwise admitted Body.
+
+The real native dispatcher regression verifies refusal on a one-cell
+adjacent-face gap request, matching request identity, null interval and
+false convergence, bounded work counts, and early errors for overlapping,
+empty or foreign groups and zero geometry cells even when restoration
+would otherwise refuse. The existing edge-address/seam/STEP restoration
+regression passes together with these assertions; terminal log retained.
+
+This proves native API behavior. Positive annular native thickness is
+qualified separately above. Current packaged WASM, TypeScript transport,
+worker cancellation/late results and new UI have not yet been qualified
+for this option; no browser wall-thickness completion is claimed.
