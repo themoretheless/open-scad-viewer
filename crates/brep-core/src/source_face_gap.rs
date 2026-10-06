@@ -126,12 +126,12 @@ pub fn qualify<'a>(
                     lower = lower.min(bound);
                     continue;
                 }
-                let projected = surfaces.iter().all(|s| xy_independent_v(s))
-                    && boxes[0][2][0] <= boxes[1][2][1]
-                    && boxes[1][2][0] <= boxes[0][2][1];
+                let overlapping_z =
+                    boxes[0][2][0] <= boxes[1][2][1] && boxes[1][2][0] <= boxes[0][2][1];
+                let projected = surfaces.map(|s| overlapping_z && xy_independent_v(s));
                 let (side, axis) = (0..2)
                     .flat_map(|side| (0..2).map(move |axis| (side, axis)))
-                    .filter(|&(_, axis)| !projected || axis == 0)
+                    .filter(|&(side, axis)| !projected[side] || axis == 0)
                     .max_by(|&(s, a), &(t, b)| {
                         let width = |(s, a): (usize, usize)| {
                             (uv[s][a][1] - uv[s][a][0]) / (natural[s][a][1] - natural[s][a][0])

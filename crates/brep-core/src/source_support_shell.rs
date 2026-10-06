@@ -188,6 +188,13 @@ mod tests {
         let curved_proof=curved_gap.certificate.expect("all original cylindrical inner/outer pairs need clearance");
         assert!(curved_proof.lower_mm()>=14.5&&curved_proof.lower_mm()<=15.);
         assert!(curved_gap.cells>36&&curved_gap.cells<=10000&&curved_gap.spans<=20000);
+        let blended_gap=crate::source_face_gap::qualify(&body,
+            [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
+            crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();
+        eprintln!("original annular blend wall gap {} cells={} spans={} uncertain={:?}",blended_gap.reason,blended_gap.cells,blended_gap.spans,blended_gap.uncertain_faces);
+        let blended_proof=blended_gap.certificate.expect("all original transition/cylinder versus inner wall pairs need clearance");
+        assert!(blended_proof.lower_mm()>=13.5&&blended_proof.lower_mm()<=13.75);
+        assert!(blended_gap.cells>54&&blended_gap.cells<=50000&&blended_gap.spans<=100000);
         let q=std::f64::consts::FRAC_PI_2;
         let spans=[
             crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),

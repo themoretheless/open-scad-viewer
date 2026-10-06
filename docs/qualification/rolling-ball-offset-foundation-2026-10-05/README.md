@@ -3749,3 +3749,25 @@ identical XY controls, so the preference stays disabled. It passes.
 Both failed initial and successful final terminal logs are retained.
 Curved fillet transition faces, whole-wall thickness, interior material
 coverage and this new gap module's WASM/UI qualification remain open.
+
+
+## Original blend and transition face clearance
+
+The source gap scheduler now chooses subdivision axes per surface. An
+original chart whose XY controls and rational weights are identical across
+V retains full V coverage when Z boxes overlap, even if the other chart
+needs both parameters. Acceptance still uses the unchanged complete 3D
+rectangle enclosure; this changes scheduling only. The rational weight
+regression passes and keeps V active when weights vary.
+
+The admitted annular Body test now covers all 54 pairs of outer/blend faces
+[0,2,5,7,10,12,16,20,24] versus inner faces [3,8,13,17,21,25].
+A 13.5 mm lower clearance is qualified with 12262 cells and 24524 original
+span visits, within 50000/100000 limits. This includes the three original
+transition surfaces. The combined original Body/radius/seam test passes
+in 25.80 seconds. Terminal logs are retained alongside this record.
+
+This remains separation of complete source surface chart supersets, not
+material wall thickness. A source-domain boundary audit, interior material
+chord and normal alignment are still required. No new WASM or UI coverage
+is claimed for the gap module.
