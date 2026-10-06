@@ -20,6 +20,7 @@ pub struct Certificate<'a> {
     max_sine_squared: f64,
     gaps: Vec<source_face_gap::Certificate<'a>>,
     self_chords: Vec<nurbs_core::surface_self_chord::Certificate<'a>>,
+    adaptive_self: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
 }
 impl<'a> Certificate<'a> {
     pub fn body(&self) -> &'a Body {
@@ -30,6 +31,11 @@ impl<'a> Certificate<'a> {
     }
     pub fn max_sine_squared(&self) -> f64 {
         self.max_sine_squared
+    }
+    pub fn adaptive_self_certificates(
+        &self,
+    ) -> &[crate::source_wall_self_coverage::FaceCertificate<'a>] {
+        &self.adaptive_self
     }
     pub fn self_chord_certificates(&self) -> &[nurbs_core::surface_self_chord::Certificate<'a>] {
         &self.self_chords
@@ -59,6 +65,17 @@ fn domain(s: &nurbs_core::surface::Surface) -> [[f64; 2]; 2] {
 /// walls, cavities, same-face pairs and root-ended trim regions. Exclusions and
 /// distance bounds use complete original charts as conservative supersets.
 pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Report<'a>> {
+    qualify_with_self_facts(body, minimum_mm, limits, Vec::new())
+}
+/// Reuses only owned private self-face facts for this immutable Body. Public
+/// reports cannot supply proof. Higher thresholds or broader angle requests
+/// cannot be covered by a stale or narrower certificate.
+pub fn qualify_with_self_facts<'a>(
+    body: &'a Body,
+    minimum_mm: f64,
+    limits: Limits,
+    facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+) -> Result<Report<'a>> {
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.
         || !(1..=100000).contains(&limits.pairs)
@@ -75,6 +92,20 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
         ));
     }
     let regions = body.geometry().shell().regions().unwrap();
+    let mut owned = std::collections::BTreeSet::new();
+    for fact in &facts {
+        if !std::ptr::eq(fact.body(), body)
+            || fact.face() >= regions.len()
+            || !owned.insert(fact.face())
+            || fact.minimum_mm() < minimum_mm
+            || fact.max_sine_squared() < limits.max_sine_squared
+        {
+            return Err(Error::new(
+                "BREP_SOURCE_SELF_WALL_FACT",
+                "Use unique owned self-face facts covering the requested threshold and angle",
+            ));
+        }
+    }
     let surfaces: Vec<_> = regions.iter().map(|r| r.loops()[0][0].surface()).collect();
     let total_pairs = surfaces
         .len()
@@ -119,7 +150,10 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
                 proven: false,
             };
             if a == b {
-                if planes[a].is_some() && limits.max_sine_squared < 1. {
+                if owned.contains(&a) {
+                    pair.reason = "source-wall-self-certified";
+                    pair.proven = true;
+                } else if planes[a].is_some() && limits.max_sine_squared < 1. {
                     pair.reason = "source-wall-planar-self-excluded";
                     pair.proven = true;
                 } else {
@@ -188,6 +222,7 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
             max_sine_squared: limits.max_sine_squared,
             gaps,
             self_chords,
+            adaptive_self: facts,
         });
         out.reason = "source-whole-wall-lower-qualified";
     } else if !out.enumeration_complete {

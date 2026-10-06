@@ -4651,3 +4651,27 @@ thin material wall. Logs retained.
 This native surface certificate is not yet integrated into original Body wall
 coverage, transport or packaged WASM. It does not resolve all annular self
 pairs, prove material interior ownership, or complete general thickness.
+
+
+## Original Body adaptive self-wall facts and composition
+
+Private face certificates now bind adaptive original-chart self-pair coverage
+to the immutable admitted Body, face, minimum threshold and normal-angle scope.
+Independent per-face work caps also respect shared cell/span/control budgets.
+Public diagnostics cannot change the original expected face count or provide
+proof. Whole-wall composition consumes only unique private facts from the same
+Body whose threshold and angle cover the request; distinct face pairs continue
+through their existing independent checks. A successful global certificate
+retains the private facts.
+
+Original annular native test: 16/27 faces qualify, using 5760 cells and 21010
+spans, with 691 pending self regions. Composition enumerates all 378 pairs:
+256 remain unresolved, with 1000 gap cells and 653 normal spans. Consequently
+no whole-wall certificate is issued. Native annular composition passes in
+32.28 seconds. Original 10 x 20 x 30 cuboid passes at 9.99 mm and retains all
+six self-face facts; requests at 10.01 mm or a broader normal-angle scope reject
+stale facts. Cuboid test passes in 0.06 seconds. Terminal logs are retained.
+
+This checkpoint is native only. Packaged WASM, worker and UI still use the
+earlier whole-chart self exclusion. General material thickness, unresolved
+cross-face/trim/pole regions and the full fillet/P0/P2/P3 acceptance remain open.

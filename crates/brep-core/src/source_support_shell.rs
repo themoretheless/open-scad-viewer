@@ -180,6 +180,18 @@ mod tests {
                 assert!(!certificate.gap_certificates().is_empty());
             }
         }
+        for (minimum,angle,accepted) in [(9.99,1e-6,true),(10.01,1e-6,false),(9.99,2e-6,false)] {
+            let self_facts=crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,
+                crate::source_wall_self_coverage::Limits{plane_controls:10000,cells:1,spans:1,cells_per_face:1,spans_per_face:1}).unwrap();
+            assert!(self_facts.all_self_pairs_qualified());assert_eq!(self_facts.certificates().len(),6);
+            let result=crate::source_wall_coverage::qualify_with_self_facts(&body,minimum,
+                crate::source_wall_coverage::Limits{pairs:21,plane_controls:10000,normal_spans:10000,
+                    gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:angle},self_facts.into_certificates());
+            if accepted {
+                let report=result.unwrap();let proof=report.certificate.expect("original self facts plus distinct gaps qualify the cuboid");
+                assert_eq!(proof.adaptive_self_certificates().len(),6);assert!(std::ptr::eq(proof.body(),&body));
+            } else {assert_eq!(result.err().expect("stale threshold or angle must refuse").code,"BREP_SOURCE_SELF_WALL_FACT");}
+        }
     }
     #[test]
     fn admitted_annular_body_checks_original_radius_patches() {
@@ -357,6 +369,34 @@ mod tests {
             assert!(coverage.certificate.is_none());assert!(coverage.cells<=1000&&coverage.spans<=2000&&coverage.normal_spans<=1000);
             if pair_budget==378 {assert!(coverage.pairs.iter().any(|p|p.faces[0]==p.faces[1]&&!p.proven));}
         }
+        let self_coverage=crate::source_wall_self_coverage::qualify(&body,5.99,1e-6,
+            crate::source_wall_self_coverage::Limits{plane_controls:10000,cells:10000,spans:100000,cells_per_face:512,spans_per_face:4096}).unwrap();
+        eprintln!("original adaptive self coverage qualified={}/{} cells={} spans={} pending={}",
+            self_coverage.certificates().len(),self_coverage.faces.len(),self_coverage.cells,self_coverage.spans,
+            self_coverage.faces.iter().map(|f|f.pending).sum::<usize>());
+        assert_eq!(self_coverage.faces.len(),27);
+        assert!(self_coverage.certificates().len()>=14);
+        assert!(self_coverage.cells<=10000&&self_coverage.spans<=100000&&self_coverage.plane_controls<=10000);
+        for (i,face) in self_coverage.faces.iter().enumerate() {
+            assert_eq!(face.face,i);assert!(face.cells<=512&&face.spans<=4096);
+            assert_eq!(face.qualified,face.pending==0);assert_eq!(face.qualified,face.uncertain.is_none());
+        }
+        for c in self_coverage.certificates() {
+            assert!(std::ptr::eq(c.body(),&body));assert_eq!(c.minimum_mm(),5.99);assert_eq!(c.max_sine_squared(),1e-6);
+            if let Some(proof)=c.adaptive() {assert!(std::ptr::eq(proof.surface(),body.geometry().shell().regions().unwrap()[c.face()].loops()[0][0].surface()));}
+        }
+        assert!(!self_coverage.all_self_pairs_qualified());
+        let mut self_coverage=self_coverage;
+        self_coverage.faces.retain(|f|f.qualified);
+        assert!(!self_coverage.all_self_pairs_qualified(),"public diagnostics cannot change original face coverage");
+        let reused=crate::source_wall_coverage::qualify_with_self_facts(&body,5.99,
+            crate::source_wall_coverage::Limits{pairs:378,plane_controls:10000,normal_spans:1000,
+                gap:crate::source_face_gap::Limits{cells:1000,spans:2000},max_sine_squared:1e-6},self_coverage.into_certificates()).unwrap();
+        eprintln!("original reused adaptive wall pairs={} unresolved={} cells={} normals={}",
+            reused.pairs.len(),reused.pairs.iter().filter(|p|!p.proven).count(),reused.cells,reused.normal_spans);
+        assert!(reused.enumeration_complete);assert!(reused.certificate.is_none());
+        assert_eq!(reused.pairs.iter().filter(|p|p.reason=="source-wall-self-certified").count(),16);
+        assert!(reused.pairs.iter().filter(|p|!p.proven).count()<=256);
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,
             [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,
