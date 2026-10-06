@@ -1112,6 +1112,11 @@ mod tests {
                 let proof=cad_predicates::quadratic_shear_chart_identity(&mut predicate,refs,
                     arena.leaf(27).unwrap(),0,2).unwrap();
                 assert_eq!(proof.outcome,cad_predicates::ParameterIdentity::Equal);
+                let inverse=crate::source_inverse_shear::qualify(&surface,[0,2],0.25,100000).unwrap();
+                let certificate=inverse.certificate.expect(inverse.reason);
+                assert_eq!(certificate.source(),&surface);
+                assert_eq!(certificate.inverse().degree_u,1);
+                assert_eq!(certificate.inverse().degree_v,1);
                 for wire in face {
                     let edges=wire.edges().iter().map(|e|Fragment::new(&surface,e.curve(),
                         Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap()).collect::<Vec<_>>();

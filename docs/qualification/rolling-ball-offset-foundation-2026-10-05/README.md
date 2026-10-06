@@ -2789,3 +2789,24 @@ Selection, Retry, reload, hiding persistence, locking and isolation passed with
 no page errors. CPU/SVG screenshot was inspected; no WebGPU claim. The curved
 closed-shell fixture remains refused pending contacts, so this replay does not
 qualify that fixture or general curved Body editing.
+
+### Exact affine inverse chart construction — native stage
+
+`source_inverse_shear::qualify` validates a clamped biquadratic source layout,
+constant positive weights, distinct driver/height axes, finite coefficient and
+bounded exact work. It proposes affine inverse corners, then separately proves
+the complete shear equation and exact equality of each proposed corner to the
+original expression. No rounded inverse point becomes authority. Private
+certificate storage retains the original surface, exact accepted inverse
+surface, axes and coefficient. Original knot domains are retained.
+
+A nonuniform-weight source, damaged interior coefficient, wrong shear and work
+exhaustion refuse. An independent corner test proves that subtracting a rounded
+0.1 cubed does not produce an exact zero inverse coordinate. All four curved
+shell charts accept the exact inverse; Body contacts remain refused at [0,2].
+Native inverse-chart and curved-shell tests passed; all 29 predicate tests
+passed. This API is not connected to shell contact admission or WASM. Next work
+is fresh source region/root transport and contact admission through the common
+bijective shear. The previously qualified 6791d7bf WASM is unchanged.
+
+Inverse-chart regression suites: nine shell tests passed (12.23 s), nine shared-edge tests passed (0.01 s).

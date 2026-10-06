@@ -108,10 +108,95 @@ pub fn quadratic_shear_chart_identity(
         context: ctx.identity(),
     })
 }
+/// Exact equality of proposed inverse corner coordinates to the original expression.
+/// The chart identity predicate must separately prove the full coefficient relation.
+pub fn quadratic_shear_inverse_corners(
+    ctx: &mut PredicateContext<'_>,
+    original: [[LeafRef; 3]; 4],
+    inverse: [[LeafRef; 3]; 4],
+    coefficient: LeafRef,
+    driver: usize,
+    height: usize,
+) -> Result<ParameterDecision, InputError> {
+    if driver > 2 || height > 2 || driver == height {
+        return Err(InputError::InvalidInput(
+            "Choose distinct shear coordinate axes",
+        ));
+    }
+    let mut values = original
+        .iter()
+        .flatten()
+        .chain(inverse.iter().flatten())
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    values.push(ctx.resolve(coefficient)?.clone());
+    let checked = (|| -> Result<ParameterIdentity, Reason> {
+        let v = exact_inputs(&values, ctx)?;
+        for corner in 0..4 {
+            for axis in 0..3 {
+                let source = &v[3 * corner + axis];
+                let expected = if axis == height {
+                    let d = &v[3 * corner + driver];
+                    source.sub(&v[24].mul(&d.mul(d, ctx)?, ctx)?, ctx)?
+                } else {
+                    source.clone()
+                };
+                if expected.sub(&v[12 + 3 * corner + axis], ctx)?.sign() != Sign::Zero {
+                    return Ok(ParameterIdentity::Different);
+                }
+            }
+        }
+        Ok(ParameterIdentity::Equal)
+    })();
+    Ok(ParameterDecision {
+        outcome: checked.unwrap_or_else(ParameterIdentity::Indeterminate),
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn rounded_inverse_corner_is_not_an_exact_source_coordinate() {
+        let x = 0.1f64;
+        let coefficient = 0.1f64;
+        let rounded = coefficient * x * x;
+        let mut values = Vec::new();
+        for _ in 0..4 {
+            values.extend([x, 0., rounded]);
+        }
+        for _ in 0..4 {
+            values.extend([x, 0., 0.]);
+        }
+        values.push(coefficient);
+        let arena = SourceArena::authored(
+            "rounded-inverse-corner",
+            1,
+            values
+                .iter()
+                .map(|v| AuthoredScalar::Binary64Bits(v.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let original =
+            std::array::from_fn(|i| std::array::from_fn(|k| arena.leaf(3 * i + k).unwrap()));
+        let inverse =
+            std::array::from_fn(|i| std::array::from_fn(|k| arena.leaf(12 + 3 * i + k).unwrap()));
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+        let r = quadratic_shear_inverse_corners(
+            &mut ctx,
+            original,
+            inverse,
+            arena.leaf(24).unwrap(),
+            0,
+            2,
+        )
+        .unwrap();
+        assert_eq!(r.outcome, ParameterIdentity::Different);
+    }
     #[test]
     fn inverse_shear_identity_checks_every_coefficient_and_work() {
         let check = |damage: f64, budget: u64| {
