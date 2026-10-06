@@ -27,6 +27,16 @@ pub struct CircularBlendBoundary {
 }
 
 impl CircularBlendSpan {
+    /// Original cubic radius coefficients for independent body-face admission.
+    pub fn radius_curve(&self) -> Curve {
+        Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: self.radius_law.iter().map(|&r| vec![r, 0.]).collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        }
+    }
     /// Qualify the full original support patch against its authored moving
     /// center and cubic radius law. Does not admit a sewn fillet body.
     pub fn qualify_radius(
@@ -35,13 +45,7 @@ impl CircularBlendSpan {
         max_cells: usize,
         max_work: u64,
     ) -> nurbs_core::Result<nurbs_core::moving_radius::Report> {
-        let radius = Curve {
-            degree: 3,
-            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-            control_points: self.radius_law.iter().map(|&r| vec![r, 0.]).collect(),
-            weights: vec![1.; 4],
-            periodic: false,
-        };
+        let radius = self.radius_curve();
         nurbs_core::moving_radius::qualify(
             &self.surface,
             &self.centers,

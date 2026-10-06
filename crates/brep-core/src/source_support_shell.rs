@@ -148,6 +148,60 @@ mod tests {
         }
     }
     #[test]
+    fn admitted_annular_body_checks_original_radius_patches() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let q=std::f64::consts::FRAC_PI_2;
+        let spans=[
+            crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),
+            crate::circular_blend::plane_cylinder_rim(20.,6.,1.25,q/4.,q/2.).unwrap().remove(0),
+            crate::circular_blend::plane_cylinder_transition(20.,6.,1.25,0.,q*0.75,q/4.).unwrap(),
+        ];
+        for (face,span) in [0,5,10].into_iter().zip(spans) {
+            let actual=body.geometry().shell().faces()[face][0].edges()[0].surface();
+            let mut centers=span.centers.clone();let mut law=span.radius_curve();
+            if actual!=&span.surface {
+                let mut reversed=span.surface.clone();reversed.control_points.reverse();reversed.weights.reverse();
+                assert_eq!(actual,&reversed,"original face {face} must match the authored parameter orientation");
+                centers=centers.reverse().unwrap();law=law.reverse().unwrap();
+            }
+            let tolerance=if face==5 {1e-9}else{1e-6};
+            let r=body.qualify_face_radius(face,&centers,&law,tolerance,100,100_000_000).unwrap();
+            eprintln!("original body radius face={face} reason={} bound={:?} work={}",r.reason,r.error_upper,r.work);
+            let certificate=r.certificate.expect("original body patch radius needs full-domain certificate");
+            assert_eq!(certificate.surface(),actual);
+            assert!(body.qualify_face_radius(face,&centers,&law,tolerance,100,1).unwrap().certificate.is_none());
+            let mut wrong=law.clone();wrong.control_points[0][0]+=0.1;
+            assert!(body.qualify_face_radius(face,&centers,&wrong,tolerance,100,100_000_000).unwrap().certificate.is_none());
+        }
+        for neighbor in [6,7] {
+            let edge=body.geometry().shell().uses().iter().position(|uses|uses.iter().all(|a|[5,neighbor].contains(&a.face))).unwrap();
+            let r=body.qualify_edge_tangency(edge,crate::source_seam_tangency::Limits {
+                max_sine_squared:1e-6,cells:100000,curve_spans:100000,normal_spans:100000,
+            }).unwrap();
+            eprintln!("original middle seam edge={edge} neighbor={neighbor} reason={} cells={} normals={}",r.reason,r.cells,r.normal_spans);
+            let certificate=r.seam.expect("middle fillet rails need full interval G1");
+            assert!(certificate.sine_squared_bounds()[1]<=1e-6);
+            eprintln!("original middle seam edge={edge} sine2={:?}",certificate.sine_squared_bounds());
+            assert!(body.qualify_edge_tangency(edge,crate::source_seam_tangency::Limits {
+                max_sine_squared:1e-6,cells:1,curve_spans:1,normal_spans:1,
+            }).unwrap().seam.is_none());
+        }
+        for faces in [[0,1],[0,2],[10,11],[10,12]] {
+            let edge=body.geometry().shell().uses().iter().position(|uses|uses.iter().all(|a|faces.contains(&a.face))).unwrap();
+            let r=body.qualify_edge_tangency(edge,crate::source_seam_tangency::Limits {
+                max_sine_squared:1e-6,cells:1024,curve_spans:2048,normal_spans:2048,
+            }).unwrap();
+            eprintln!("original pole seam edge={edge} faces={faces:?} reason={} cells={} uncertain={:?}",r.reason,r.cells,r.uncertain_canonical);
+            assert!(r.seam.is_none(),"collapsed endpoint must not acquire a regular G1 certificate");
+            assert!(r.uncertain_canonical.is_some());
+        }
+    }
+    #[test]
     fn original_annular_poles_are_preserved_in_step_exchange() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();

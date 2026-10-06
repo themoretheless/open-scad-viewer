@@ -3519,3 +3519,31 @@ edge count = original shared carriers + pole count. Ten existing worker
 compatibility tests pass against the unchanged packaged WASM; they do not
 qualify this new native pole path in WASM or the browser. Fillet/wall
 qualification, new WASM/UI, named-part and full P0 acceptance remain open.
+
+
+## Original admitted body radius and regular middle seams
+
+The annular Body fixture now checks the actual original faces 0, 5 and 10
+against the authored center curves and cubic radius laws. The exposed
+CircularBlendSpan radius_curve returns those same original coefficients;
+existing authoring qualification uses it without changing geometry. Exact
+source surface equality, including reversed U orientation on the exit
+face, is required before qualification. Whole-domain radius error upper
+bounds are 5.610988272093926e-7, 3.622329271863914e-13 and
+8.407770510685909e-7 mm respectively. A corrupted radius coefficient
+(+0.1 mm) and work budget 1 refuse certificates on each face.
+
+Both original middle rails have fresh whole-interval regular tangent-plane
+certificates: edge 6 sine-squared upper 2.3404439736769268e-26, and edge 8
+upper 4.7060135238022814e-7. Budget 1 refuses both. Four transition rails
+with collapsed endpoints refuse regular G1 certificates and report an
+uncertain canonical interval under the stated bounded work. Work or
+resolution exhaustion is not a proof of a geometric defect. No endpoint
+limit tangency or regular pole tangent plane is claimed.
+
+The combined original Body test passes in 22.05 s; all five native seam
+regressions pass, including crease rejection, singular endpoint refusal,
+root endpoints and reversed partial carriers. Existing moving-radius
+authoring regression passes. Terminal logs are retained. This does not
+qualify general fillets, complete wall thickness, packaged WASM/UI,
+named-part acceptance or the remaining P0/P2/P3 scope.
