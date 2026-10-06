@@ -4688,3 +4688,16 @@ and counted work. Missing adaptiveSelf preserves previous behavior. Native
 JSON dispatch regression passes, including one-cell/span refusal and invalid
 zero values for every adaptive budget. Packaged WASM and TS/UI admission for
 this optional field remain pending; no browser acceptance is claimed here.
+
+
+## Adaptive source-wall transport admission
+
+TS now accepts bounded optional adaptiveSelf requests and checks original
+request binding, canonical face indices, per-face/global work, exact aggregate
+counts, qualified/pending/uncertain consistency, bounded finite ordered pending
+rectangles and explicit native reasons. source-wall-self-certified is accepted
+only for a proven diagonal whose adaptive face result qualifies. Unrequested
+or malformed adaptive results refuse; no proof algorithm moves into TS.
+Six transport regressions pass, including forged ownership/counts, missing
+reports, invalid budgets and unresolved rectangular refusal. vue-tsc passes.
+New packaged WASM, worker/UI acceptance and general whole-wall proof remain open.
