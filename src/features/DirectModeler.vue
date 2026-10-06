@@ -2084,9 +2084,12 @@ function toggleSourceWallFace(face:number){
  groups[side]=groups[side].includes(face)?groups[side].filter(f=>f!==face):[...groups[side],face].sort((a,b)=>a-b)
  groups[other]=groups[other].filter(f=>f!==face);sourceWallGroups.value=groups
 }
+function sourceWallFaceUncertain(body:string,face:number){
+ return sourceWallOpen.value && body===selectedSourceBody.value?.id && !!sourceWallResult.value?.clearance.uncertainFaces?.includes(face)
+}
 function sourceWallFaceFill(body:string,face:number){
  if(!sourceWallOpen.value||body!==selectedSourceBody.value?.id)return '#77b8b0'
- if(sourceWallResult.value?.clearance.uncertainFaces?.includes(face))return '#ff9977'
+ if(sourceWallFaceUncertain(body,face))return '#ff9977'
  return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
 }
 const sourceWallMessage=computed(()=>{
@@ -3807,7 +3810,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d'" data-source-face-preview="true" :pointer-events="sourceWallOpen && sourceWallMenuOpen?'auto':'none'">
                 <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" :data-source-body="face.body" :data-source-face="face.face" :fill="sourceWallFaceFill(face.body,face.face)" fill-opacity=".25" stroke="none" @pointerdown.stop @click.stop="face.body===selectedSourceBody?.id && toggleSourceWallFace(face.face)" />
-                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" fill="none" stroke="#ff9977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" :data-source-wall-error="sourceWallFaceUncertain(box.body,box.face)?'true':undefined" fill="none" :stroke="sourceWallFaceUncertain(box.body,box.face)?'#ff4c4c':'#ff9977'" :stroke-width="sourceWallFaceUncertain(box.body,box.face)?3:1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
               </g>
               <g v-if="pane==='3d'" data-source-endpoint-enclosures="true" pointer-events="none">
                 <rect v-for="box in sourceDisplayEndpointBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" fill="none" stroke="#ffc977" stroke-width="2" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"><title>{{ label('Интервал конца: ','Endpoint enclosure: ')+box.bounds }}</title></rect>

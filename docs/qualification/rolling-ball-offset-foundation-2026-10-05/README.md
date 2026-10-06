@@ -4080,3 +4080,19 @@ These changes remain native-only. Packaged WASM and browser still use
 the previous gap implementation and two-crossing chords; rebuilding and
 qualifying the cavity/refined path through worker/UI remains necessary.
 This is selected cylinder-wall proof, not whole-body wall coverage.
+
+
+## Wall error localization and retry in the new interface
+
+All 317 DirectModeler UI regression tests pass (78.34 seconds); vue-tsc
+passes after the localization change. Browser acceptance on isolated port
+5188 requests a 7 mm wall from the original annular bottom/top groups.
+The refusal marks 20 original unresolved face boxes in red, on native
+faces 1 and 4. These are coarse source-face uncertainty regions, not
+certified world-space locations of the failed UV roots. Screenshots retained.
+
+Retry with Enter starts a new request; Cancel interrupts it. Changing the
+minimum to 5.99 mm and checking with Enter qualifies the 6 mm wall interval
+[5.999999999999997,6.0000000000000036] and clears all error boxes.
+This browser run uses the previous packaged WASM flat-wall implementation;
+the cavity/radial WASM rebuild and its new worker test are still pending.
