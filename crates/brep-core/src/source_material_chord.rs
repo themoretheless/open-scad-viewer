@@ -43,6 +43,42 @@ pub fn qualify<'a>(
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report<'a>> {
+    qualify_impl(body, origin, direction, tolerance_uv, limits, None)
+}
+/// Complete outside-seeded crossing parity permits multiple material intervals
+/// separated by cavities. Only an entering/exiting pair in the requested groups
+/// can supply a certificate; every crossing remains in the fresh boundary audit.
+pub fn qualify_between<'a>(
+    body: &'a Body,
+    groups: [&[usize]; 2],
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report<'a>> {
+    let count = body.geometry().shell().faces().len();
+    if groups.iter().any(|g| {
+        g.is_empty()
+            || g.iter()
+                .enumerate()
+                .any(|(i, f)| *f >= count || g[..i].contains(f))
+    }) || groups[0].iter().any(|f| groups[1].contains(f))
+    {
+        return Err(Error::new(
+            "BREP_SOURCE_CHORD_GROUPS",
+            "Choose disjoint owned original face groups",
+        ));
+    }
+    qualify_impl(body, origin, direction, tolerance_uv, limits, Some(groups))
+}
+fn qualify_impl<'a>(
+    body: &'a Body,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    limits: Limits,
+    groups: Option<[&[usize]; 2]>,
+) -> Result<Report<'a>> {
     if !(1..=100000).contains(&limits.normal_spans)
         || !limits.max_sine_squared.is_finite()
         || !(0. ..1.).contains(&limits.max_sine_squared)
@@ -87,24 +123,48 @@ pub fn qualify<'a>(
         out.reason = "boundary-unresolved";
         return Ok(out);
     }
-    if out.boundary.contacts.len() != 2 {
+    if out.boundary.contacts.len() < 2
+        || out.boundary.contacts.len() % 2 != 0
+        || (groups.is_none() && out.boundary.contacts.len() != 2)
+    {
         out.reason = "requires-two-crossings";
         return Ok(out);
     }
     out.boundary
         .contacts
         .sort_by(|a, b| a.parameter[0].total_cmp(&b.parameter[0]));
-    let a = &out.boundary.contacts[0];
-    let b = &out.boundary.contacts[1];
-    if a.parameter[1] >= b.parameter[0] {
+    if out
+        .boundary
+        .contacts
+        .windows(2)
+        .any(|w| w[0].parameter[1] >= w[1].parameter[0])
+    {
         out.reason = "overlapping-root-intervals";
         return Ok(out);
     }
+    let pair = if let Some(g) = groups {
+        (0..out.boundary.contacts.len()).step_by(2).find(|&i| {
+            let f = [
+                out.boundary.contacts[i].face,
+                out.boundary.contacts[i + 1].face,
+            ];
+            g[0].contains(&f[0]) && g[1].contains(&f[1])
+                || g[0].contains(&f[1]) && g[1].contains(&f[0])
+        })
+    } else {
+        Some(0)
+    };
+    let Some(pair) = pair else {
+        out.reason = "material-pair-outside-groups";
+        return Ok(out);
+    };
+    let a = &out.boundary.contacts[pair];
+    let b = &out.boundary.contacts[pair + 1];
     let faces = [a.face, b.face];
     let mut points = Vec::new();
     let mut spans = 0;
     for i in 0..2 {
-        let c = &out.boundary.contacts[i];
+        let c = &out.boundary.contacts[pair + i];
         let s = regions[c.face].loops()[0][0].surface();
         points.push(rectangle_bounds(s, c.uv)?);
         if spans == limits.normal_spans {

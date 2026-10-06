@@ -99,8 +99,9 @@ pub fn search<'a>(
                     out.refused += 1;
                     continue;
                 }
-                let r = source_material_chord::qualify(
+                let r = source_material_chord::qualify_between(
                     body,
+                    groups,
                     origin,
                     direction,
                     tolerance_uv,

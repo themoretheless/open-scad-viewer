@@ -4019,3 +4019,29 @@ unique packed payload and source identity: 8265356 asset bytes plus
 rejection and successful terminal logs are retained. This is distribution
 size/integrity proof; it does not qualify full wall coverage, runtime
 latency distributions, geometric editing or the remaining full goal.
+
+
+## Original curved wall chords around cavities
+
+`source_material_chord::qualify_between` retains complete outside-seeded
+boundary root coverage and sorts every crossing. All root intervals must
+be disjoint and the complete crossing count positive and even. Only pairs
+[0,1], [2,3], etc represent material; an adjacent exit/entry pair through
+a cavity cannot certify a chord. A material pair must connect the selected
+original groups and pass both original normal bounds. The two-crossing
+legacy entrypoint keeps its prior refusal semantics. Search now uses the
+new selected-group admission for multiple intervals.
+
+On [25,5,3]+t[-50,-10,0], original annular Body has four roots and admits
+a radial material chord [14.999999997461057,15.000000002538947] mm.
+Selecting the second/third crossing faces instead refuses with
+material-pair-outside-groups. Automatic outer/inner cylinder group search
+qualifies 54/54 candidates and bounds the selected minimum normal chord
+by [14.500044115597925,15.000000000000671] mm, converged at the requested
+0.6 mm tolerance. This is not an exact 15 mm minimum claim. The complete
+combined original Body/radius/seam regression passes in 36.05 seconds.
+
+Full body wall coverage and tighter automatic adaptive bounds remain
+open. This new multi-interval source logic is native-only in this commit;
+the currently packaged WASM still uses the previous two-crossing chord
+implementation. Browser/WASM cavity qualification requires a new rebuild.

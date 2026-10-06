@@ -262,6 +262,29 @@ mod tests {
                 assert!(proof.interval_mm()[0]<=6. && proof.interval_mm()[1]>=6.);}
             else {assert!(automatic.search.best.is_some(),"witness alone must not admit minimum thickness");}
         }
+        let radial=crate::source_material_chord::qualify_between(&body,
+            [&[2,7,12,16,20,24],&[3,8,13,17,21,25]],[25.,5.,3.],[-50.,-10.,0.],1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        eprintln!("source cavity radial chord {} contacts={} length={:?}",radial.reason,radial.boundary.contacts.len(),
+            radial.certificate.as_ref().map(|c|c.length_mm()));
+        assert_eq!(radial.boundary.contacts.len(),4);
+        let proof=radial.certificate.expect("original annular radial material interval around cavity");
+        assert!(proof.length_mm()[0]<=15. && proof.length_mm()[1]>=15.);
+        assert!(proof.length_mm()[1]-proof.length_mm()[0]<1e-5);
+        let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
+        let cavity=crate::source_material_chord::qualify_between(&body,
+            [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        assert!(cavity.certificate.is_none());assert_eq!(cavity.reason,"material-pair-outside-groups");
+        let automatic_radial=crate::source_material_wall::search_and_qualify(&body,
+            [&[2,7,12,16,20,24],&[3,8,13,17,21,25]],14.5,0.6,1e-7,3,54,
+            crate::source_material_wall::Limits{gap:crate::source_face_gap::Limits{cells:10000,spans:20000},
+                chord:crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}}).unwrap();
+        eprintln!("source automatic radial wall {} attempts={} refused={} interval={:?}",automatic_radial.reason,
+            automatic_radial.search.attempts,automatic_radial.search.refused,automatic_radial.certificate.as_ref().map(|c|c.interval_mm()));
+        assert!(automatic_radial.converged);
+        let proof=automatic_radial.certificate.expect("automatically found curved cavity wall");
+        assert!(proof.interval_mm()[0]<=15. && proof.interval_mm()[1]>=15.);
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();
