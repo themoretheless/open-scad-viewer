@@ -3642,3 +3642,23 @@ b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea,
 This qualifies the specified new WASM/worker cases, not general fillets,
 whole-wall diagnostics, complete browser acceptance or named-part chains.
 Full distribution size budget remains to be measured after this rebuild.
+
+
+## New packaged WASM browser and distribution checkpoint
+
+After reload on isolated Vite 5188, persisted source canal restores and
+edge 0 is selected by Enter. The actual browser worker returns
+source-seam-tangent-planes-qualified; UI displays whole-edge confirmation,
+sine-squared upper 9.978209658498833e-7 and 8013 cells. Screenshot retained.
+This is source canal browser evidence; annular pole diagnostics are proved
+in the real WASM worker suite but still need their own browser acceptance.
+
+Vite production build passes. Initial size verification flags growth.
+Measured DirectModeler 423231 bytes, source worker 158944 bytes, packed
+geometry 3953416 bytes and non-streamed asset total 8243477 bytes.
+Budgets are updated to these measured values plus the previous respective
+511, 123, 608 and 761-byte margins. Other artifact limits and packed/native
+identity checks remain enforced. Final verify-dist passes on 151 artifacts:
+8243477 asset bytes plus 15144041 raw WASM bytes = 23387518 total bytes.
+General geometry, pole limit tangency, wall checks, named-part and full
+P0/P2/P3 acceptance remain open. No root runtime 5175 change or push here.
