@@ -3141,3 +3141,42 @@ returns 45 zeros (57,210 operations), consistent with extrusion rank deficiency.
 The native actual-model regression passes; native authoring at the transition
 endpoint now needs correction and renewed original-geometry qualification.
 WASM/UI remain unchanged and whole annular contact/body remains unproven.
+
+## Transition authoring correction and renewed original qualification
+
+Independent weighted accumulation/division split the cylinder-side XY
+columns. Copying contact XY alone still left seven positive projected
+Jacobian coefficients. The transition constructor now copies the original
+contact rail into the middle meridian column and moves each nonzero internal
+XY coordinate 16 representable steps toward zero. Endpoint and collapsed
+rows, contact rail, centers and weights stay unchanged. This is a rounding
+scale authoring perturbation; it does not claim exact analytic tangency.
+Fresh radius and normal qualification remain necessary. No loaded original
+Surface is rewritten by the projection predicate or its wrapper.
+
+The control annulus now has 77 negative and 13 zero Jacobian coefficients;
+its strict interior XY orientation certificate owns the original corrected
+Surface (9,111,713 charged operations). Eight varying-radius transition
+cases, both directions with end radii 0/1.25 and 0.5/1.25, pass exact interior
+orientation. One reverse transition exhausted a row context, so bounded
+coefficient queries were added: an exhausted row's work remains charged,
+individual coefficients use the same immutable arena, and the aggregate cap
+remains 100,000,000. Missing coefficients never issue a chart certificate.
+Whole/row/coefficient results match on an independent curved rational test.
+All 80 cad-predicates tests pass.
+
+Radius qualification passes both directions and all four end-radius pairs.
+Nonzero-end upper errors are below 1.59e-12 mm against a 1e-9 tolerance;
+zero-end cases retain their existing 1e-6 tolerance (upper bounds below
+8.99e-7 mm). These are whole-patch certificate bounds, not sampled radii.
+Eight existing transition regressions pass, including full-interval seam
+normal coverage (38,798 and 46,894 checked normal spans), pole incidence and
+explicit refusal of regular G1 at the collapsed tip. That batch's new
+orientation case initially failed on its row work cap; after coefficient
+refinement the eight-case orientation test passes separately (1.92 s).
+
+Annular incidence and transition/top-plane contact still pass. Whole source
+geometry still refuses at transition/cylinder pair [0,2] (87.67 s test run).
+Projection orientation alone does not prove projected boundary simplicity,
+containment, cross-face contact ownership or an annular Body. None of these
+new native changes are packaged in WASM or browser qualified yet.

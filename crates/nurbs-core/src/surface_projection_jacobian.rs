@@ -123,8 +123,46 @@ pub fn certify(surface: &Surface, axes: [usize; 2], max_work: u64) -> Result<Rep
         match decision.signs {
             Some(mut rows) => signs.push(rows.remove(0)),
             None => {
-                exact_reason = decision.reason;
-                break;
+                if decision.reason != Some(cad_predicates::Reason::ResourceLimit)
+                    || work >= max_work
+                {
+                    exact_reason = decision.reason;
+                    break;
+                }
+                let mut coefficients = Vec::new();
+                for column in 0..3 * surface.degree_v {
+                    let remaining = max_work.saturating_sub(work).min(cad_predicates::MAX_WORK);
+                    let mut ctx = PredicateContext::new(
+                        &arena,
+                        &tolerance,
+                        Limits {
+                            max_work: remaining,
+                            ..Limits::default()
+                        },
+                        None,
+                    );
+                    let d = cad_predicates::rational_surface_projected_jacobian_coefficient(
+                        &mut ctx,
+                        &leaves,
+                        axes,
+                        [row, column],
+                    )
+                    .map_err(|_| numeric_err("Projection coefficient admission failed"))?;
+                    work = work
+                        .checked_add(d.work_used)
+                        .ok_or_else(|| numeric_err("Projection work overflow"))?;
+                    match d.signs {
+                        Some(s) => coefficients.push(s[0][0]),
+                        None => {
+                            exact_reason = d.reason;
+                            break;
+                        }
+                    }
+                }
+                if coefficients.len() != 3 * surface.degree_v {
+                    break;
+                }
+                signs.push(coefficients);
             }
         }
     }

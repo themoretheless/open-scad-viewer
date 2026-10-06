@@ -131,7 +131,7 @@ mod tests {
         }
     }
     #[test]
-    fn original_annular_projection_boundary_reversal_and_wall_rank_deficiency() {
+    fn original_annular_projection_orientation_and_wall_rank_deficiency() {
         let model = crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         for face in [0,2] {
             let surface = &model.faces[face].surface;
@@ -146,13 +146,12 @@ mod tests {
             });
             eprintln!("original annular face {face}: {} work={} exact={:?} signs={counts:?}",report.reason,report.exact_work,report.exact_reason);
             if face==0 {
-                assert!(report.certificate.is_none());
-                assert!(report.signs.is_some());
-                assert_eq!(counts,Some([65,14,11]));
-                assert_eq!(report.opposite_v_boundary_signs,Some([cad_predicates::Sign::Negative,cad_predicates::Sign::Positive]));
-                eprintln!("transition grid {:?}",report.signs);
+                let certificate=report.certificate.as_ref().expect("corrected original transition needs orientation proof");
+                assert_eq!(certificate.orientation(),cad_predicates::Sign::Negative);
+                assert_eq!(certificate.surface(),surface);
+                assert_eq!(counts,Some([77,13,0]));
+                assert_eq!(report.opposite_v_boundary_signs,None);
                 assert!(nurbs_core::surface_projection_jacobian::certify(surface,[0,1],1).unwrap().certificate.is_none());
-                assert!(report.exact_work > 0);
             } else {
                 assert!(report.signs.is_some(),"{}",report.reason);
                 assert!(report.signs.as_ref().unwrap().iter().flatten().all(|s| *s==cad_predicates::Sign::Zero));

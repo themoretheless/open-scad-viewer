@@ -63,7 +63,7 @@ fn derivative(p: &Poly, axis: usize, ctx: &mut PredicateContext<'_>) -> Result<P
 fn mul(
     a: &Poly,
     b: &Poly,
-    selected_row: Option<usize>,
+    selected_cell: [Option<usize>; 2],
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Poly, Reason> {
     let (p, q, r, s) = (a.len() - 1, a[0].len() - 1, b.len() - 1, b[0].len() - 1);
@@ -77,7 +77,10 @@ fn mul(
             }
             for (k, row) in b.iter().enumerate() {
                 for (l, y) in row.iter().enumerate() {
-                    if selected_row.is_some_and(|row| i + k != row) || y.sign() == Sign::Zero {
+                    if selected_cell[0].is_some_and(|row| i + k != row)
+                        || selected_cell[1].is_some_and(|column| j + l != column)
+                        || y.sign() == Sign::Zero
+                    {
                         continue;
                     }
                     let scale = choose(p, i) * choose(q, j) * choose(r, k) * choose(s, l);
@@ -107,6 +110,7 @@ fn compute(
     surface: &[Vec<[LeafRef; 4]>],
     axes: [usize; 2],
     row: Option<usize>,
+    column: Option<usize>,
 ) -> Result<Decision, InputError> {
     if !(2..=9).contains(&surface.len())
         || !(2..=9).contains(&surface[0].len())
@@ -115,6 +119,7 @@ fn compute(
         || axes[1] > 2
         || axes[0] == axes[1]
         || row.is_some_and(|r| r >= 3 * (surface.len() - 1))
+        || column.is_some_and(|c| c >= 3 * (surface[0].len() - 1))
     {
         return Err(InputError::InvalidInput("Invalid projected surface chart"));
     }
@@ -160,11 +165,11 @@ fn compute(
             let a = (axis + 1) % 3;
             let b = (axis + 2) % 3;
             let minors = difference(
-                mul(&u[a], &v[b], None, ctx)?,
-                mul(&u[b], &v[a], None, ctx)?,
+                mul(&u[a], &v[b], [None, None], ctx)?,
+                mul(&u[b], &v[a], [None, None], ctx)?,
                 ctx,
             )?;
-            let term = mul(&h[axis], &minors, row, ctx)?;
+            let term = mul(&h[axis], &minors, [row, column], ctx)?;
             for (i, row) in term.iter().enumerate() {
                 for (j, value) in row.iter().enumerate() {
                     determinant[i][j] = determinant[i][j].add(value, ctx)?;
@@ -174,7 +179,13 @@ fn compute(
         let selected = row.map_or(&determinant[..], |r| &determinant[r..r + 1]);
         let signs = selected
             .iter()
-            .map(|row| row.iter().map(Expansion::sign).collect())
+            .map(|row| {
+                column
+                    .map_or(&row[..], |c| &row[c..c + 1])
+                    .iter()
+                    .map(Expansion::sign)
+                    .collect()
+            })
             .collect();
         ctx.charge(0)?;
         Ok(signs)
@@ -197,7 +208,7 @@ pub fn rational_surface_projected_jacobian(
     surface: &[Vec<[LeafRef; 4]>],
     axes: [usize; 2],
 ) -> Result<Decision, InputError> {
-    compute(ctx, surface, axes, None)
+    compute(ctx, surface, axes, None, None)
 }
 /// One original Bernstein coefficient row. The caller must check every row
 /// of the same immutable chart before claiming interior orientation.
@@ -207,9 +218,18 @@ pub fn rational_surface_projected_jacobian_row(
     axes: [usize; 2],
     row: usize,
 ) -> Result<Decision, InputError> {
-    compute(ctx, surface, axes, Some(row))
+    compute(ctx, surface, axes, Some(row), None)
 }
 
+/// One exact coefficient, for bounded refinement of an exhausted row query.
+pub fn rational_surface_projected_jacobian_coefficient(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    axes: [usize; 2],
+    index: [usize; 2],
+) -> Result<Decision, InputError> {
+    compute(ctx, surface, axes, Some(index[0]), Some(index[1]))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,6 +243,15 @@ mod tests {
         axes: [usize; 2],
         work: u64,
         row: Option<usize>,
+    ) -> Decision {
+        check_cell(points, axes, work, row, None)
+    }
+    fn check_cell(
+        points: Vec<Vec<[f64; 4]>>,
+        axes: [usize; 2],
+        work: u64,
+        row: Option<usize>,
+        column: Option<usize>,
     ) -> Decision {
         let arena = SourceArena::authored(
             "projected-jacobian-test",
@@ -257,11 +286,19 @@ mod tests {
             },
             None,
         );
-        match row {
-            Some(row) => {
+        match (row, column) {
+            (Some(row), Some(column)) => rational_surface_projected_jacobian_coefficient(
+                &mut ctx,
+                &leaves,
+                axes,
+                [row, column],
+            )
+            .unwrap(),
+            (Some(row), None) => {
                 rational_surface_projected_jacobian_row(&mut ctx, &leaves, axes, row).unwrap()
             }
-            None => rational_surface_projected_jacobian(&mut ctx, &leaves, axes).unwrap(),
+            (None, None) => rational_surface_projected_jacobian(&mut ctx, &leaves, axes).unwrap(),
+            _ => unreachable!(),
         }
     }
     fn has_orientation(d: &Decision, wanted: Sign) -> bool {
@@ -285,8 +322,16 @@ mod tests {
                 check_row(p.clone(), [0, 1], 1_000_000, Some(row))
                     .signs
                     .unwrap(),
-                vec![expected]
+                vec![expected.clone()]
             );
+            for (column, sign) in expected.into_iter().enumerate() {
+                assert_eq!(
+                    check_cell(p.clone(), [0, 1], 1_000_000, Some(row), Some(column))
+                        .signs
+                        .unwrap(),
+                    vec![vec![sign]]
+                );
+            }
         }
     }
     #[test]
