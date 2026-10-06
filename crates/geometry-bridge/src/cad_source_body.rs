@@ -168,8 +168,13 @@ pub fn restore(v: Value) -> Result<Value> {
     }).transpose()?;
     let wall_qualification=wall_request.map(|(groups,minimum,tolerance,uv,grid,attempts,work)|->Result<Value>{
         let r=brep_core::source_material_wall::search_and_qualify(body,[&groups[0],&groups[1]],minimum,tolerance,uv,grid,attempts,work)?;
+        let witness=r.certificate.as_ref().map(|c| {
+            let chord=c.chord();
+            let endpoints=chord.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));
+            json!({"line":chord.line(),"lengthMm":chord.length_mm(),"endpoints":endpoints})
+        });
         Ok(json!({"request":v["wallQualification"],"qualified":r.certificate.is_some(),"converged":r.converged,
-            "intervalMm":r.certificate.as_ref().map(|c|c.interval_mm()),"reason":r.reason,
+            "intervalMm":r.certificate.as_ref().map(|c|c.interval_mm()),"reason":r.reason,"witness":witness,
             "clearance":{"reason":r.clearance.reason,"cells":r.clearance.cells,"spans":r.clearance.spans,
                 "uncertainFaces":r.clearance.uncertain_faces,"uncertainUv":r.clearance.uncertain_uv},
             "search":{"attempts":r.search.attempts,"refused":r.search.refused,"candidatesExhausted":r.search.candidates_exhausted}}))
@@ -386,7 +391,7 @@ mod tests {
         let wall=&checked_wall["wallQualification"];
         assert_eq!(wall["request"],wall_option);
         assert_eq!(wall["qualified"],json!(false));assert_eq!(wall["converged"],json!(false));
-        assert!(wall["intervalMm"].is_null());
+        assert!(wall["intervalMm"].is_null());assert!(wall["witness"].is_null());
         assert!(wall["clearance"]["cells"].as_u64().unwrap()<=1);
         assert!(wall["search"]["attempts"].as_u64().unwrap()<=1);
         for bad_groups in [json!([[0],[0]]),json!([[999999],[1]]),json!([[],[1]])] {

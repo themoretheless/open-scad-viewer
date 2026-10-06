@@ -34,3 +34,20 @@ it('rejects invalid groups and search work before dispatch',()=>{
   const bad=option();mutate(bad);expect(()=>wallExpectation(bad,2)).toThrow()
  }
 })
+
+it('validates original endpoint witnesses and rejects foreign faces or malformed coordinates',()=>{
+ const e=option(),r=reply(e)
+ r.witness={line:[[0,0,-1],[0,0,8]],lengthMm:[5.99,6.01],endpoints:[
+  {face:0,parameter:[0.124,0.126],uv:[[0.4,0.6],[0.4,0.6]],worldMm:[[0,0],[0,0],[-0.01,0.01]]},
+  {face:1,parameter:[0.874,0.876],uv:[[0.4,0.6],[0.4,0.6]],worldMm:[[0,0],[0,0],[5.99,6.01]]}]}
+ expect(validWall(e,r,key)).toBe(true)
+ for(const mutate of [(x:SourceWallResult)=>{x.witness!.endpoints[0].face=9},
+  (x:SourceWallResult)=>{x.witness!.endpoints[1].parameter=[0.1,0.2]},
+  (x:SourceWallResult)=>{x.witness!.endpoints[0].worldMm[0]=[NaN,1]},
+  (x:SourceWallResult)=>{x.witness!.endpoints[0].uv[0]=[1,0]},
+  (x:SourceWallResult)=>{x.witness!.line[1]=[0,0,0]},
+  (x:SourceWallResult)=>{x.witness!.lengthMm=[5.99,7]}]){
+  const bad=structuredClone(r);mutate(bad);expect(validWall(e,bad,key)).toBe(false)
+ }
+ r.qualified=false;expect(validWall(e,r,key)).toBe(false)
+})

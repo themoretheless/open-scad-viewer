@@ -4151,3 +4151,19 @@ These boxes enclose endpoints; they are not exact point coordinates. This
 addition is native-only: the bridge, packaged WASM and UI do not yet expose
 this witness. Existing packaged cavity thickness qualification is unchanged.
 The terminal native log is retained.
+
+
+## Material witness bridge and transport
+
+The original chord witness is serialized only from a private admitted wall
+certificate: authored line, length interval and two face/parameter/UV/world
+enclosures. Refused walls serialize a null witness. The source-body native
+dispatch regression passes and checks the null refusal witness. Five seam
+and wall transport tests pass; vue-tsc passes. Transport rejects foreign
+faces, unordered roots, malformed enclosures, zero direction and inconsistent
+upper lengths. Geometry admission remains in Rust.
+
+Witness is optional for compatibility with the previous packaged module;
+missing witness gives no scene measurement. This bridge change is not yet
+packaged in WASM, and a positive real-worker witness run and UI rendering
+remain pending. Terminal evidence retained.

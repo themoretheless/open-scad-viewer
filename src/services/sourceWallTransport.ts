@@ -3,7 +3,13 @@ export interface SourceWallOptions {
  groups:[number[],number[]];minimumMm:number;toleranceMm:number;toleranceUv:number;grid:number;maxAttempts:number
  limits:{gapCells:number;gapSpans:number;cells:number;domainCells:number;normalSpans:number;maxSineSquared:number}
 }
+export interface SourceWallWitness {
+ line:[[number,number,number],[number,number,number]];lengthMm:[number,number]
+ endpoints:[{face:number;parameter:[number,number];uv:[[number,number],[number,number]];worldMm:[[number,number],[number,number],[number,number]]},
+ {face:number;parameter:[number,number];uv:[[number,number],[number,number]];worldMm:[[number,number],[number,number],[number,number]]}]
+}
 export interface SourceWallResult {
+ witness?:SourceWallWitness|null
  request:SourceWallOptions;qualified:boolean;converged:boolean;intervalMm:[number,number]|null;reason:string
  clearance:{reason:string;cells:number;spans:number;uncertainFaces:[number,number]|null;uncertainUv:[[number[],number[]],[number[],number[]]]|null}
  search:{attempts:number;refused:number;candidatesExhausted:boolean}
@@ -37,6 +43,18 @@ export function validWall(e:SourceWallOptions|undefined,r:SourceWallResult|null|
    ||!Array.isArray(c.uncertainFaces)||c.uncertainFaces.length!==2
    ||!e.groups.every((g,i)=>g.includes(c.uncertainFaces![i]!))
    ||!Array.isArray(c.uncertainUv)||c.uncertainUv.length!==2||!c.uncertainUv.every(q=>Array.isArray(q)&&q.length===2&&q.every(interval)))return false
+ }
+ if(r.witness!=null){
+  const w=r.witness
+  if(!r.qualified||!interval(w.lengthMm)||w.lengthMm[0]<0||!interval(r.intervalMm)||w.lengthMm[1]!==r.intervalMm[1]
+   ||!Array.isArray(w.line)||w.line.length!==2||!w.line.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))
+   ||w.line[1].every(n=>n===0)||!Array.isArray(w.endpoints)||w.endpoints.length!==2)return false
+  const [a,b]=w.endpoints
+  if(!w.endpoints.every(p=>p&&count(p.face,Number.MAX_SAFE_INTEGER)&&interval(p.parameter)&&p.parameter[0]>=0&&p.parameter[1]<=1
+   &&Array.isArray(p.uv)&&p.uv.length===2&&p.uv.every(interval)
+   &&Array.isArray(p.worldMm)&&p.worldMm.length===3&&p.worldMm.every(interval))
+   ||a.parameter[1]>=b.parameter[0]
+   ||!(e.groups[0].includes(a.face)&&e.groups[1].includes(b.face)||e.groups[1].includes(a.face)&&e.groups[0].includes(b.face)))return false
  }
  if(r.qualified)return r.reason==='source-wall-searched-thickness-bounds-qualified'&&c.reason==='source-face-gap-qualified'
   &&s.attempts>s.refused&&interval(r.intervalMm)&&r.intervalMm[0]>=e.minimumMm
