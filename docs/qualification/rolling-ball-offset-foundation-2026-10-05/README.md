@@ -3867,3 +3867,25 @@ finite proposal grid was visited. Work is bounded by max_attempts times
 per-candidate limits. Adaptive refinement, coverage of every body wall and
 combining searched witnesses with certified lower bounds remain open.
 No bridge, WASM or UI integration is claimed for this new module.
+
+
+## Automatic selected wall thickness bounds
+
+`source_material_wall::search_and_qualify` combines fresh whole selected
+face-pair clearance and automatic original normal material chord search.
+It verifies the immutable Body identity and opposing group membership,
+then owns both private certificates and returns a bounded minimum normal
+material chord interval. Proposal exhaustion does not replace lower-bound
+coverage. Positive interval convergence uses outward-rounded width.
+
+The original annular bottom/top unions qualify automatically at 0.02 mm
+with interval [5.999999999999997,6.0000000000000036] mm using a 3x3 grid
+and 54 proposals. A one-cell clearance budget refuses the combined
+certificate even though the same search independently finds a valid chord;
+the report retains this witness and marks convergence false. Tests assert
+both admission and refusal and original Body identity. The combined
+Body/radius/seam regression passes; terminal log retained.
+
+This closes automatic candidate-to-bound composition for explicit groups.
+It does not identify all opposing body wall regions, prove coverage of
+every wall, or qualify bridge/WASM/worker/UI transport. Those remain open.

@@ -251,6 +251,17 @@ mod tests {
         assert_eq!(limited.attempts,1);assert!(!limited.candidates_exhausted);
         assert!(crate::source_wall_search::search(&body,[&bottom,&bottom],3,1,1e-7,
             crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).is_err());
+        for (cells,expected) in [(1000,true),(1,false)] {
+            let automatic=crate::source_material_wall::search_and_qualify(&body,[&bottom,&top],5.99,0.02,1e-7,3,54,
+                crate::source_material_wall::Limits{gap:crate::source_face_gap::Limits{cells,spans:2000},
+                    chord:crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}}).unwrap();
+            eprintln!("source automatic wall {} converged={} interval={:?}",automatic.reason,
+                automatic.converged,automatic.certificate.as_ref().map(|c|c.interval_mm()));
+            assert_eq!(automatic.converged,expected);assert_eq!(automatic.certificate.is_some(),expected);
+            if let Some(proof)=automatic.certificate {assert!(std::ptr::eq(proof.body(),&body));
+                assert!(proof.interval_mm()[0]<=6. && proof.interval_mm()[1]>=6.);}
+            else {assert!(automatic.search.best.is_some(),"witness alone must not admit minimum thickness");}
+        }
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();

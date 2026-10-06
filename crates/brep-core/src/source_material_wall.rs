@@ -92,3 +92,80 @@ pub fn qualify<'a>(
         candidate,
     })
 }
+
+pub struct SearchReport<'a> {
+    pub certificate: Option<Certificate<'a>>,
+    pub converged: bool,
+    pub reason: &'static str,
+    pub clearance: source_face_gap::Report<'a>,
+    pub search: crate::source_wall_search::Report<'a>,
+}
+/// Automatic upper witness search plus complete lower coverage of the supplied
+/// unions. Exhausting a finite search does not itself prove a global minimum;
+/// only the full source pair bound supplies the lower certificate.
+pub fn search_and_qualify<'a>(
+    body: &'a Body,
+    groups: [&[usize]; 2],
+    minimum_mm: f64,
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    grid: usize,
+    max_attempts: usize,
+    limits: Limits,
+) -> Result<SearchReport<'a>> {
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
+        return Err(Error::new(
+            "BREP_SOURCE_WALL_TOLERANCE",
+            "Choose a finite positive thickness interval tolerance",
+        ));
+    }
+    let mut clearance = source_face_gap::qualify(body, groups, minimum_mm, limits.gap)?;
+    let mut search = crate::source_wall_search::search(
+        body,
+        groups,
+        grid,
+        max_attempts,
+        tolerance_uv,
+        limits.chord,
+    )?;
+    let mut certificate = None;
+    let mut reason = "source-wall-clearance-unproven";
+    if let Some(gap) = clearance.certificate.as_ref() {
+        reason = "source-wall-search-witness-unproven";
+        if let Some(chord) = search.best.as_ref() {
+            let f = chord.faces();
+            if !std::ptr::eq(gap.body(), chord.body())
+                || !(groups[0].contains(&f[0]) && groups[1].contains(&f[1])
+                    || groups[0].contains(&f[1]) && groups[1].contains(&f[0]))
+            {
+                return Err(Error::new(
+                    "BREP_SOURCE_WALL_INCONSISTENT",
+                    "Search witness must belong to the same original body and opposing groups",
+                ));
+            }
+            let interval_mm = [gap.lower_mm(), chord.length_mm()[1]];
+            if interval_mm[0] > interval_mm[1] {
+                return Err(Error::new(
+                    "BREP_SOURCE_WALL_INCONSISTENT",
+                    "Original material bounds are inconsistent",
+                ));
+            }
+            certificate = Some(Certificate {
+                gap: clearance.certificate.take().unwrap(),
+                chord: search.best.take().unwrap(),
+                interval_mm,
+            });
+            reason = "source-wall-searched-thickness-bounds-qualified";
+        }
+    }
+    let converged = certificate
+        .as_ref()
+        .is_some_and(|c| (c.interval_mm[1] - c.interval_mm[0]).next_up() <= tolerance_mm);
+    Ok(SearchReport {
+        certificate,
+        converged,
+        reason,
+        clearance,
+        search,
+    })
+}
