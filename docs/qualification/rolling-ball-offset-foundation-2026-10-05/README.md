@@ -4204,3 +4204,18 @@ against independent analytic circles of radii 20 and 5 mm along the authored
 The combined annular body/radius/seam native regression passes in 18.91
 seconds. Terminal log retained. This changes tests only and does not require
 restarting the currently live witness WASM optimization.
+
+
+## Packaged original material witness worker acceptance
+
+WASM build completes: SHA256 87e8b144b19441e9a115e8443ff393cee93959adce4ae40fb237cc9b93b5f556,
+11,884,998 bytes. All 20 source-body/seam/wall worker/transport tests pass
+in 31.14 seconds, including positive original endpoint enclosures, foreign
+face rejection, null witness on the 16 mm refusal and stale successful
+witness rejection. Terminal results and exact worker JSON retained.
+
+An initial test started after optimization but before packaging finished;
+raw/packed identities were temporarily inconsistent and the artifact gate
+correctly refused nine real-worker loads. The failure log is retained.
+Only the completed build is accepted. Browser measurement overlay acceptance
+and production distribution validation remain pending for this new module.

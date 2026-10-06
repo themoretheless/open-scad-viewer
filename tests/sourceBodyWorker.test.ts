@@ -343,11 +343,19 @@ it('qualifies curved annular cavity walls through original WASM worker',async()=
  expect(wall.intervalMm![1]-wall.intervalMm![0]).toBeLessThan(1e-5)
  expect(wall.search.attempts).toBe(54);expect(wall.search.refused).toBe(0)
  expect(wall.clearance.cells).toBe(36);expect(wall.clearance.spans).toBe(72)
+ expect(wall.witness).toBeTruthy();expect(wall.witness!.lengthMm[1]).toBe(wall.intervalMm![1])
+ expect(wall.witness!.endpoints).toHaveLength(2)
+ expect(wall.witness!.endpoints.every(e=>e.worldMm.length===3&&e.worldMm.every(q=>q.every(Number.isFinite)))).toBe(true)
+ const corrupted=structuredClone(r);corrupted.wallQualification!.witness!.endpoints[0].face=0
+ expect(validSourceBody(sourceBodyExpectation(options),corrupted)).toBe(false)
  const tooThick:SourceBodyOptions={...options,wallQualification:{...options.wallQualification!,minimumMm:16}}
  const refused=await client.run({kind:'sourceBodyRestore',options:tooThick})
  expect(refused.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(tooThick),refused)).toBe(true)
  expect(refused.wallQualification!.qualified).toBe(false);expect(refused.wallQualification!.converged).toBe(false)
  expect(refused.wallQualification!.intervalMm).toBeNull();expect(refused.wallQualification!.reason).toBe('source-wall-clearance-unproven')
+ expect(refused.wallQualification!.witness).toBeNull()
+ const staleWitness=structuredClone(refused);staleWitness.wallQualification!.witness=structuredClone(wall.witness!)
+ expect(validSourceBody(sourceBodyExpectation(tooThick),staleWitness)).toBe(false)
  expect(refused.wallQualification!.search.attempts).toBe(54);expect(refused.wallQualification!.search.refused).toBe(0)
  if(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CAVITY_WALL_WORKER_REPORT,JSON.stringify({
   wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
