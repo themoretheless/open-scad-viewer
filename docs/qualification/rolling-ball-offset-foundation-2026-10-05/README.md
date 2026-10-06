@@ -4484,3 +4484,13 @@ A real worker test now covers positive 9.99 mm, negative 10.01 mm and incomplete
 20/21 pair cases on this fixture. This test has not run yet because the existing
 geometry optimization/packaging process is still live; no duplicate build was
 started. Annular continuous worker acceptance also remains pending.
+
+
+## Coverage highlight lookup
+
+Unproven original face IDs are collected in a Vue computed Set when the
+coverage result changes. Rendering each face uses Set membership rather
+than rescanning every pair; incomplete enumeration still marks all faces
+uncertain. This removes a repeated pair traversal by inspection, without
+a measured FPS claim. Direct vue-tsc passes; log retained. Packaging session
+remains live, so real worker and browser acceptance are still pending.

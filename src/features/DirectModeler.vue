@@ -2088,9 +2088,14 @@ function toggleSourceWallFace(face:number){
  groups[side]=groups[side].includes(face)?groups[side].filter(f=>f!==face):[...groups[side],face].sort((a,b)=>a-b)
  groups[other]=groups[other].filter(f=>f!==face);sourceWallGroups.value=groups
 }
+const sourceWallUnprovenFaces=computed(()=>{
+ const faces=new Set<number>()
+ for(const pair of sourceWallCoverageResult.value?.pairs??[])if(!pair.proven){faces.add(pair.faces[0]);faces.add(pair.faces[1])}
+ return faces
+})
 function sourceWallFaceUncertain(body:string,face:number){
  return sourceWallOpen.value && body===selectedSourceBody.value?.id && (!!sourceWallResult.value?.clearance.uncertainFaces?.includes(face)
-  ||!!(sourceWallCoverageResult.value&&(!sourceWallCoverageResult.value.enumerationComplete||sourceWallCoverageResult.value.pairs.some(p=>!p.proven&&p.faces.includes(face))))
+  ||!!(sourceWallCoverageResult.value&&(!sourceWallCoverageResult.value.enumerationComplete||sourceWallUnprovenFaces.value.has(face)))
   ||!!(sourceWallScanResult.value?.thinFound&&sourceWallScanResult.value.witness?.endpoints.some(e=>e.face===face)))
 }
 function sourceWallFaceFill(body:string,face:number){
