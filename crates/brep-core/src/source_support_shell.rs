@@ -192,6 +192,23 @@ mod tests {
                 assert_eq!(proof.adaptive_self_certificates().len(),6);assert!(std::ptr::eq(proof.body(),&body));
             } else {assert_eq!(result.err().expect("stale threshold or angle must refuse").code,"BREP_SOURCE_SELF_WALL_FACT");}
         }
+        let twin_shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let twin_geometry=crate::source_shell_geometry::qualify(twin_shell,geometry_limits()).unwrap().geometry.unwrap();
+        let twin=crate::source_volume::qualify(twin_geometry,crate::source_volume::Limits{
+            axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        assert!(!std::ptr::eq(&body,&twin));
+        for wrong_owner in [true,false] {
+            let make_facts=||crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,
+                crate::source_wall_self_coverage::Limits{plane_controls:10000,cells:1,spans:1,cells_per_face:1,spans_per_face:1}).unwrap().into_certificates();
+            let mut facts=make_facts();
+            if !wrong_owner {facts.push(make_facts().remove(0));}
+            let target=if wrong_owner {&twin}else{&body};
+            let result=crate::source_wall_coverage::qualify_with_self_facts(target,9.99,
+                crate::source_wall_coverage::Limits{pairs:21,plane_controls:10000,normal_spans:10000,
+                    gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:1e-6},facts);
+            assert_eq!(result.err().expect("identical geometry does not grant Body identity; repeated face facts refuse").code,"BREP_SOURCE_SELF_WALL_FACT");
+        }
     }
     #[test]
     fn admitted_annular_body_checks_original_radius_patches() {

@@ -4778,3 +4778,9 @@ cuboid positive, threshold refusal and partial enumeration regression passes
 in 0.07 seconds. These durations are regression evidence, not a speed benchmark.
 Worker exact expectations now target 255 adaptive / 257 legacy unresolved pairs
 and await a fresh package. Remaining full-wall and geometry requirements stay open.
+
+Native private-fact ownership regression now independently admits an
+identical second cuboid Body. Certificates from the first refuse against the
+second despite identical geometry; duplicate private facts for the same face
+also refuse. Existing positive/stale-threshold/angle cases pass: 0.11 seconds.
+Only test code changes; the in-progress WASM scheduler build is not restarted.
