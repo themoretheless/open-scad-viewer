@@ -4784,3 +4784,17 @@ identical second cuboid Body. Certificates from the first refuse against the
 second despite identical geometry; duplicate private facts for the same face
 also refuse. Existing positive/stale-threshold/angle cases pass: 0.11 seconds.
 Only test code changes; the in-progress WASM scheduler build is not restarted.
+
+
+## Current original shared-edge qualification audit
+
+All nine source_shared_edge native regressions pass in 0.02 seconds. Inspected
+coverage includes original rational restrictions with root ends, different
+original parameter domains, mixed fixed/root endpoints, adjacent noncoplanar
+charts, different UV cutter equations and a rational curved world carrier
+across reflected planar charts. Distinct world-plane roots and unqualified
+world/cutter identity are refused. This evidence goes beyond complete source
+edge coincidence but remains the listed fixtures: the curved-carrier fixture
+uses planar support charts. It does not establish arbitrary NURBS support
+charts, all shared trimmed restrictions, general complex corners, or closed
+fillet-body and named-part acceptance. No broad completion is inferred.
