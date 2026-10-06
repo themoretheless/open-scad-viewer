@@ -3225,3 +3225,43 @@ Next: match the ruled wall's entire original projected trace to the Jordan
 boundary and bind remaining fibers/poles to shared source identities.
 Transition/cylinder contact [0,2], whole annular Body/volume, full fillet
 acceptance and new WASM/UI integration remain unproven.
+
+## Original transition / ruled-cylinder contact ownership
+
+Added a private source contact certificate for a complete original curved
+material chart with a Jordan projection and an adjacent positive-weight
+clamped ruled Bezier wall. Original wall XY (or XZ/YZ) coordinates and weights
+must agree exactly between its two linear-axis control columns. Its entire
+projected trace must match a natural boundary's original coefficients and
+weights, forward or reversed. No analytic-circle substitution, fitted rail,
+coordinate welding, tolerance identity or sampled contact admission occurs.
+
+The Jordan certificate excludes interior projection images from that trace;
+boundary simplicity confines boundary preimages to the matched natural edge
+and explicitly collapsed boundaries. Each collapsed boundary must be truly
+constant in original XYZ coefficients and must own an original shell pole
+with the same shared-edge endpoint identity. Original source fragments on
+the contact boundary must own shared shell uses; possible endpoint contacts
+must own the same original vertex IDs. Chart injectivity remains the
+separate shell geometry gate. Arbitrary trimmed curved material charts and
+nonmatching/multispan ruled traces remain unproven in this certificate.
+
+Actual annular faces [0,2] now qualify in 12,488,524 charged operations.
+Reversed face order also qualifies; work=1 and wrong neighbor [0,3] refuse.
+A one-ULP projected coordinate or wall-column weight change prevents trace
+admission. Changing only extrusion Z preserves the projected trace but
+does not bypass independently required original shared carriers. These
+positive/negative native tests pass (0.38 s and 0.01 s).
+
+Integrated the immutable certificate into native pair diagnostics and shell
+geometry admission. Whole annular geometry passes [0,2] and now reports the
+next unproven pair [0,6], the transition and neighboring trimmed top plane.
+The updated full gate regression passes (45.95 s); its initial assertion
+expecting old [0,2] failed and is retained as advancement evidence.
+No whole annular Geometry, Body or volume certificate is issued.
+
+Existing native regressions pass: irrational-root flat body/topology
+(1.70 s), curved root/body/inverse-contact/volume replay (11.77 s), and capped
+body with independent analytic cap/frustum volume enclosure (66.71 s).
+These are test runtimes, not performance comparisons. Packaged WASM, UI,
+independent STEP reader and named-part acceptance were not refreshed here.

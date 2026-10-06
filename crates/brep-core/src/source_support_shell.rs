@@ -131,6 +131,22 @@ mod tests {
         }
     }
     #[test]
+    fn original_annular_transition_cylinder_contact_is_owned() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let proof=crate::source_ruled_projection_contact::certify(&shell,[0,2],1e-8,100_000_000,100000).unwrap();
+        eprintln!("original annular ruled contact: {} work={} driver={}",proof.reason,proof.exact_work,proof.driver_cells);
+        assert!(proof.certificate.is_some(),"{}",proof.reason);
+        let certificate=proof.certificate.unwrap();
+        assert_eq!(certificate.faces(),[0,2]);
+        assert_eq!(certificate.projection().surface(),shell.regions().unwrap()[0].loops()[0][0].surface());
+        assert!(!certificate.edges().is_empty());
+        assert!(crate::source_ruled_projection_contact::certify(&shell,[0,2],1e-8,1,100000).unwrap().certificate.is_none());
+        assert!(crate::source_ruled_projection_contact::certify(&shell,[0,3],1e-8,100_000_000,100000).unwrap().certificate.is_none());
+        let reverse=crate::source_ruled_projection_contact::certify(&shell,[2,0],1e-8,100_000_000,100000).unwrap();
+        assert_eq!(reverse.certificate.unwrap().faces(),[2,0]);
+    }
+    #[test]
     fn canonical_original_annular_transition_has_jordan_projection() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -170,7 +186,7 @@ mod tests {
         }
     }
     #[test]
-    fn annular_incidence_and_planar_contact_pass_while_cylinder_contact_refuses() {
+    fn annular_incidence_and_support_contacts_advance_to_next_unproven_pair() {
         let model =
             crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
         let report = prepare(&model, limits());
@@ -222,7 +238,7 @@ mod tests {
                     geometry.reason,
                     "source-shell-different-face-contacts-unproven"
                 );
-                assert_eq!(geometry.next_pair, Some([0, 2]));
+                assert_eq!(geometry.next_pair, Some([0, 6]));
             }
             Err(e) => panic!("annular source support: {}: {}", e.code, e.message),
         }
