@@ -184,3 +184,5 @@ pub mod surface_flux;
 pub mod moving_radius;
 
 pub mod moving_envelope;
+
+pub mod surface_projection_jacobian;

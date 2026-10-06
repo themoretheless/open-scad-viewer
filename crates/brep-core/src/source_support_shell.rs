@@ -131,6 +131,32 @@ mod tests {
         }
     }
     #[test]
+    fn original_annular_projection_budget_refusal_and_wall_rank_deficiency() {
+        let model = crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        for face in [0,2] {
+            let surface = &model.faces[face].surface;
+            let report = nurbs_core::surface_projection_jacobian::certify(surface,[0,1],1_000_000).unwrap();
+            let counts = report.signs.as_ref().map(|rows| {
+                let mut counts=[0usize;3];
+                for s in rows.iter().flatten() { counts[match s {
+                    cad_predicates::Sign::Negative=>0,
+                    cad_predicates::Sign::Zero=>1,
+                    cad_predicates::Sign::Positive=>2,
+                }]+=1; } counts
+            });
+            eprintln!("original annular face {face}: {} work={} exact={:?} signs={counts:?}",report.reason,report.exact_work,report.exact_reason);
+            if face==0 {
+                assert!(report.certificate.is_none());
+                assert!(report.signs.is_none());
+                assert!(report.exact_work > 0);
+            } else {
+                assert!(report.signs.is_some(),"{}",report.reason);
+                assert!(report.signs.as_ref().unwrap().iter().flatten().all(|s| *s==cad_predicates::Sign::Zero));
+                assert!(report.certificate.is_none());
+            }
+        }
+    }
+    #[test]
     fn annular_incidence_and_planar_contact_pass_while_cylinder_contact_refuses() {
         let model =
             crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();

@@ -397,3 +397,6 @@ pub use bezier_point_identity::*;
 
 mod quadratic_shear_identity;
 pub use quadratic_shear_identity::*;
+
+mod projected_surface_jacobian;
+pub use projected_surface_jacobian::*;

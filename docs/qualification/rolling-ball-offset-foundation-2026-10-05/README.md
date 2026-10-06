@@ -3085,3 +3085,35 @@ This is a native source stage. The packaged WASM/UI artifact remains
 bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f;
 these new contact/assembly capabilities have not been packaged or browser
 qualified. Earlier UI STEP evidence applies to its earlier control class.
+
+## Exact projected Jacobian predicate
+
+Added a native original-coefficient predicate for positive-weight rational
+Bezier charts of degrees 1..8. It forms the homogeneous projected Jacobian
+numerator using exact expansion arithmetic and returns signs of its tensor
+Bernstein coefficients. Conversion uses common positive integer denominators;
+no rounded division or sampled derivatives decide orientation. A consistent
+nonzero sign, with zero coefficients allowed, proves strict orientation on the
+open chart. Work exhaustion returns no signs.
+
+Five regression cases pass: plane and reversed axes, collapsed boundary with
+flat endpoint, an interior fold with both signs, nonuniform rational weights
+and work refusal, and a rank-deficient projection. The full cad-predicates
+suite passes. This predicate does not prove global injectivity, simple
+boundaries, cross-face contact ownership, tangency, or a closed fillet body.
+The annular transition/cylinder contact [0,2] remains unresolved. No new WASM
+artifact or browser qualification is claimed for this stage.
+
+The NURBS wrapper owns an immutable original Surface in each issued certificate
+and validates clamped knots, dimension, weights, periodic flags, axes, and the
+actual cad-predicates work cap (1,000,000). Two wrapper regressions pass.
+Power-to-Bernstein common denominators now use exact integer LCM factors; the
+full cad-predicates suite passes after this change.
+
+Actual original annulus: face 0 refuses with ResourceLimit at 999,994 charged
+operations; no orientation certificate is issued. Face 2 returns 45 zero
+coefficients (10,777 operations), as expected for the XY projection of its
+ruled extrusion. The explicit refusal/rank regression passes (0.09 s). This
+is evidence of an unresolved computation limit, not successful annular
+geometry qualification. The transition/cylinder proof still requires a more
+efficient exact determinant and independent boundary ownership/injectivity.
