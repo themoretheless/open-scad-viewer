@@ -4558,3 +4558,17 @@ Real-worker annular expectations are updated to the measured native result.
 This integration is not in the currently packaged 6b19a5e1 module; another
 completed build and real-worker run are required before claiming WASM/UI
 acceptance of these additional curved-face exclusions.
+
+
+## Coverage proof-reason transport checks
+
+The validator now checks native pair reasons against diagonal/distinct pair
+class and proven status. Same-face successes allow exact planar or continuous
+curved exclusions; distinct successes allow coplanarity, normal separation
+or original gap qualification. Unproven reasons cannot accompany a proven
+flag, and unknown reason strings are rejected. These remain transport checks;
+Rust certificates remain the source of geometry authority.
+Ten coverage/scan/wall transport tests pass in 173 ms, including mismatched
+class, unresolved-success flags and invented exclusions. Direct vue-tsc passes.
+The ongoing intrinsic-exclusion WASM build is still live; these checks do not
+claim the latest native integration has completed packaged worker acceptance.

@@ -31,6 +31,11 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
   const p=r.pairs[index]
   if(!p||!Array.isArray(p.faces)||p.faces.length!==2||p.faces[0]!==a||p.faces[1]!==b
    ||typeof p.proven!=='boolean'||typeof p.reason!=='string'||!p.reason.startsWith('source-'))return false
+  const allowed=a===b
+   ?p.proven?['source-wall-planar-self-excluded','source-wall-curved-self-excluded']:['source-wall-curved-self-unproven']
+   :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded','source-face-gap-qualified']
+    :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit']
+  if(!allowed.includes(p.reason))return false
   all=all&&p.proven
  }
  const qualified=r.enumerationComplete&&all
