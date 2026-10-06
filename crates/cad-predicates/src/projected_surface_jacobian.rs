@@ -60,7 +60,7 @@ fn derivative(p: &Poly, axis: usize, ctx: &mut PredicateContext<'_>) -> Result<P
     }
     Ok(out)
 }
-fn mul(
+pub(crate) fn mul(
     a: &Poly,
     b: &Poly,
     selected_cell: [Option<usize>; 2],

@@ -131,6 +131,16 @@ mod tests {
         }
     }
     #[test]
+    fn canonical_original_annular_transition_has_jordan_projection() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let surface=shell.regions().unwrap()[0].loops()[0][0].surface();
+        let report=nurbs_core::surface_projected_jordan::certify(surface,[0,1],1e-8,100_000_000,100000).unwrap();
+        eprintln!("canonical original annular Jordan: {} work={} cells={}",report.reason,report.exact_work,report.boundary_cells);
+        assert!(report.certificate.is_some(),"{}",report.reason);
+        assert_eq!(report.certificate.unwrap().surface(),surface);
+    }
+    #[test]
     fn original_annular_projection_orientation_and_wall_rank_deficiency() {
         let model = crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         for face in [0,2] {

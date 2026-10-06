@@ -1281,6 +1281,41 @@ mod tests {
     }
 
     #[test]
+    fn original_transition_projected_cusp_has_quadratic_separator() {
+        let span=plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_6).unwrap();
+        let project=|c:&Curve| {
+            let mut c=c.clone();for p in &mut c.control_points {p.truncate(2);} c
+        };
+        let curves=[project(&span.plane_contact),project(&span.cylinder_contact)];
+        let join=&curves[0].control_points[0];
+        let t=&curves[0].control_points[1];
+        let tangent=[t[0]-join[0],t[1]-join[1]];
+        let ratio=|curve:&Curve,u:f64| {
+            let p=curve.evaluate(u).unwrap().point;
+            let delta=[p[0]-join[0],p[1]-join[1]];
+            let l=tangent[0]*delta[1]-tangent[1]*delta[0];
+            let b=tangent[0]*delta[0]+tangent[1]*delta[1];
+            l/(b*b)
+        };
+        let mut work=0;let mut proven=false;
+        for u in [0.1,0.25,0.5,0.75,0.9] {
+            let beta=(ratio(&curves[0],u)+ratio(&curves[1],u))*0.5;
+            let r=nurbs_core::curve_quadratic_separator::certify([&curves[0],&curves[1]],[0,0],1,beta,1_000_000).unwrap();
+            work+=r.exact_work;
+            eprintln!("original projected cusp beta={beta} work={} sides={:?}",r.exact_work,r.certificate.as_ref().map(|c|c.sides()));
+            if r.certificate.is_some() {proven=true;break;}
+        }
+        assert!(proven,"original cusp quadratic separation unproven; work={work}");
+        let jordan=nurbs_core::surface_projected_jordan::certify(&span.surface,[0,1],1e-8,100_000_000,100000).unwrap();
+        eprintln!("original projected Jordan: {} work={} cells={}",jordan.reason,jordan.exact_work,jordan.boundary_cells);
+        assert!(jordan.certificate.is_some(),"{}",jordan.reason);
+        let certificate=jordan.certificate.unwrap();
+        assert_eq!(certificate.surface(),&span.surface);
+        assert_eq!(certificate.collapsed_boundaries(),&[3]);
+        assert_eq!(certificate.boundary().len(),3);
+        assert_eq!(certificate.separators().len(),1);
+    }
+    #[test]
     fn transition_rounding_correction_preserves_interior_projection_orientation() {
         for direction in [-1.,1.] {
             for (a,b) in [(0.,1.25),(1.25,0.),(0.5,1.25),(1.25,0.5)] {

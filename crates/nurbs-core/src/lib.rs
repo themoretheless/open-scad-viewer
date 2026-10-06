@@ -186,3 +186,7 @@ pub mod moving_radius;
 pub mod moving_envelope;
 
 pub mod surface_projection_jacobian;
+
+pub mod curve_quadratic_separator;
+
+pub mod surface_projected_jordan;

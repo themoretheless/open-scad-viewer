@@ -400,3 +400,6 @@ pub use quadratic_shear_identity::*;
 
 mod projected_surface_jacobian;
 pub use projected_surface_jacobian::*;
+
+mod quadratic_curve_separator;
+pub use quadratic_curve_separator::*;

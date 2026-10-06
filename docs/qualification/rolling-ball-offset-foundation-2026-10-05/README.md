@@ -3180,3 +3180,48 @@ geometry still refuses at transition/cylinder pair [0,2] (87.67 s test run).
 Projection orientation alone does not prove projected boundary simplicity,
 containment, cross-face contact ownership or an annular Body. None of these
 new native changes are packaged in WASM or browser qualified yet.
+
+## Original tangent cusp separation and projected Jordan chart
+
+Added exact Bernstein signs for the quadratic functional
+cross(T-J,P-J) - beta*dot(T-J,P-J)^2 on two original rational UV Bezier
+curves. J and T are original control coordinates; beta is a proposed finite
+separator coefficient. Native curve evaluation only proposes beta; every
+original polynomial coefficient supplies the actual decision. Positive
+weights and strict opposite coefficient signs exclude any common interior
+point. Shared endpoint coefficients must vanish exactly and the other
+endpoint coefficients must have strict opposite signs. The immutable
+certificate owns both original curves and its source frame/beta. It does
+not prove individual curve injectivity. Wrong beta, changed controls,
+coincident curves, a 1e-12 endpoint gap and exhausted work refuse. Two native
+separator tests pass, including rational weights and reversed carriers.
+
+The projected Jordan chart extracts original natural boundary coefficients
+by selecting XYZ axes, preserving weights, reversing coefficient order
+where needed, and using normalized Bezier parameters. Constant projected
+boundaries are recorded explicitly. Every retained boundary curve must be
+individually injective and every pair separated, with exact joins. Existing
+sufficient simplicity proofs are reused; tangent-adjacent pairs may use
+the new quadratic separator under the remaining aggregate exact budget.
+No incomplete pair list, partial signs, or sampled geometry grants a chart.
+
+Strict interior Jacobian orientation plus a simple Jordan boundary implies
+global interior projection injectivity: the boundary degree is +/-1 inside
+and zero outside; every interior preimage has the same local degree.
+Openness excludes interior images on the Jordan boundary. This proves an
+interior chart property; collapsed projected boundaries still need original
+3D pole/contact ownership before any cross-face or Body admission.
+
+Actual transition cusp (R=20, H=6, radii 0->1.25, sweep pi/6): beta
+0.01969084457822929 gives strict opposite sides in 166,612 charged operations.
+The complete projected Jordan certificate passes in 8,948,517 operations.
+The canonical original annular source region's transition also passes in
+12,488,524 operations (0.26 s test runtime). Its copied input Surface is
+retained in the immutable certificate. Square and collapsed-triangle
+regressions pass; folded charts and low work refuse. The full 80-test
+cad-predicates suite passes.
+
+Next: match the ruled wall's entire original projected trace to the Jordan
+boundary and bind remaining fibers/poles to shared source identities.
+Transition/cylinder contact [0,2], whole annular Body/volume, full fillet
+acceptance and new WASM/UI integration remain unproven.
