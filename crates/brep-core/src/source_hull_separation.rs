@@ -27,7 +27,7 @@ pub struct Report {
     pub exact_work: u64,
     pub reason: &'static str,
 }
-/// Centroids propose a plane only. Fresh exact strict signs of every original
+/// Centroids and coordinate gaps propose planes only. Fresh strict signs of every original
 /// control prove the separation, and positive weights enclose every trimmed
 /// region in its original control hull. Unsuccessful guesses are unresolved.
 pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
@@ -122,74 +122,121 @@ fn certify_points(
         let count = points.len() as f64;
         std::array::from_fn::<_, 3, _>(|k| points.iter().map(|p| p[k] / count).sum::<f64>())
     });
-    let mut normal = std::array::from_fn::<_, 3, _>(|k| centers[0][k] - centers[1][k]);
-    let scale = normal.iter().map(|v| v.abs()).fold(0_f64, f64::max);
-    if scale == 0. || !scale.is_finite() {
-        return Ok(out);
+    let mut proposals = Vec::new();
+    let centroid_plane = (|| {
+        let mut normal = std::array::from_fn::<_, 3, _>(|k| centers[0][k] - centers[1][k]);
+        let scale = normal.iter().map(|v| v.abs()).fold(0_f64, f64::max);
+        if scale == 0. || !scale.is_finite() {
+            return None;
+        }
+        for x in &mut normal {
+            *x /= scale;
+        }
+        let axis = (0..3)
+            .min_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
+            .unwrap();
+        let mut basis = [0.; 3];
+        basis[axis] = 1.;
+        let cross = |a: [f64; 3], b: [f64; 3]| {
+            [
+                a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0],
+            ]
+        };
+        let x = cross(normal, basis);
+        let y = cross(normal, x);
+        let point = std::array::from_fn::<_, 3, _>(|k| centers[0][k] * 0.5 + centers[1][k] * 0.5);
+        let plane = [
+            point,
+            std::array::from_fn(|k| point[k] + x[k]),
+            std::array::from_fn(|k| point[k] + y[k]),
+        ];
+        if plane.iter().flatten().any(|v| !v.is_finite()) {
+            return None;
+        }
+        Some(plane)
+    })();
+    if let Some(plane) = centroid_plane {
+        proposals.push(plane);
     }
-    for x in &mut normal {
-        *x /= scale;
-    }
-    let axis = (0..3)
-        .min_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
-        .unwrap();
-    let mut basis = [0.; 3];
-    basis[axis] = 1.;
-    let cross = |a: [f64; 3], b: [f64; 3]| {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
-    };
-    let x = cross(normal, basis);
-    let y = cross(normal, x);
-    let point = std::array::from_fn::<_, 3, _>(|k| centers[0][k] * 0.5 + centers[1][k] * 0.5);
-    let plane = [
-        point,
-        std::array::from_fn(|k| point[k] + x[k]),
-        std::array::from_fn(|k| point[k] + y[k]),
-    ];
-    if plane.iter().flatten().any(|v| !v.is_finite()) {
-        return Ok(out);
-    }
-    if !crate::source_allowed_contact::independent(
-        plane[0],
-        plane[1],
-        plane[2],
-        &mut out.exact_work,
-        max_work,
-    )? {
-        return Ok(out);
-    }
-    let mut sides = [None; 2];
-    for (slot, points) in points.iter().enumerate() {
-        for p in points {
-            let Some(sign) = crate::source_allowed_contact::orient(
-                &[plane[0], plane[1], plane[2], *p],
-                None,
-                &mut out.exact_work,
-                max_work,
-            )?
-            else {
-                out.reason = "source-hull-work-limit";
-                return Ok(out);
-            };
-            if sign == Sign::Zero || sides[slot].is_some_and(|s| s != sign) {
-                out.reason = "source-hull-strict-side-unproven";
-                return Ok(out);
+    // Coordinate gaps propose additional planes. Midpoints are never proof:
+    // every original/enclosed control must freshly pass exact strict signs.
+    for axis in 0..3 {
+        let bounds = points.each_ref().map(|ps| {
+            ps.iter().fold([f64::INFINITY, f64::NEG_INFINITY], |b, p| {
+                [b[0].min(p[axis]), b[1].max(p[axis])]
+            })
+        });
+        let gap = if bounds[0][1] < bounds[1][0] {
+            Some([bounds[0][1], bounds[1][0]])
+        } else if bounds[1][1] < bounds[0][0] {
+            Some([bounds[1][1], bounds[0][0]])
+        } else {
+            None
+        };
+        if let Some([lo, hi]) = gap {
+            let mid = lo * 0.5 + hi * 0.5;
+            if !mid.is_finite() {
+                continue;
             }
-            sides[slot] = Some(sign);
+            let mut p = [0.; 3];
+            p[axis] = mid;
+            let mut q = p;
+            q[(axis + 1) % 3] = 1.;
+            let mut r = p;
+            r[(axis + 2) % 3] = 1.;
+            proposals.push([p, q, r]);
         }
     }
-    if sides[0] != sides[1] {
-        out.certificate = Some(Certificate {
-            regions: [regions[0].clone(), regions[1].clone()],
-            plane,
-            sides: sides.map(Option::unwrap),
-            material_hulls,
-        });
-        out.reason = "source-hull-disjoint-qualified";
+    for plane in proposals {
+        if !crate::source_allowed_contact::independent(
+            plane[0],
+            plane[1],
+            plane[2],
+            &mut out.exact_work,
+            max_work,
+        )? {
+            if out.exact_work == max_work {
+                return Ok(out);
+            }
+            continue;
+        }
+        let mut sides = [None; 2];
+        let mut valid = true;
+        for (slot, points) in points.iter().enumerate() {
+            for p in points {
+                let Some(sign) = crate::source_allowed_contact::orient(
+                    &[plane[0], plane[1], plane[2], *p],
+                    None,
+                    &mut out.exact_work,
+                    max_work,
+                )?
+                else {
+                    out.reason = "source-hull-work-limit";
+                    return Ok(out);
+                };
+                if sign == Sign::Zero || sides[slot].is_some_and(|s| s != sign) {
+                    out.reason = "source-hull-strict-side-unproven";
+                    valid = false;
+                    break;
+                }
+                sides[slot] = Some(sign);
+            }
+            if !valid {
+                break;
+            }
+        }
+        if valid && sides[0] != sides[1] {
+            out.certificate = Some(Certificate {
+                regions: [regions[0].clone(), regions[1].clone()],
+                plane,
+                sides: sides.map(Option::unwrap),
+                material_hulls,
+            });
+            out.reason = "source-hull-disjoint-qualified";
+            return Ok(out);
+        }
     }
     Ok(out)
 }
@@ -220,6 +267,30 @@ mod tests {
         .unwrap()
         .shell
         .unwrap()
+    }
+    #[test]
+    fn rounded_midpoint_cannot_admit_a_zero_contact_sign() {
+        // Isolate the exact proposal admission with original binary inputs.
+        // Synthetic point hulls exercise rounding, not shell qualification.
+        let shell = shell([1., 1.], std::f64::consts::TAU);
+        let regions = shell.regions().unwrap();
+        let refs = [&regions[0], &regions[1]];
+        let one = 1_f64;
+        let adjacent = f64::from_bits(one.to_bits() + 1);
+        let separated = f64::from_bits(one.to_bits() + 2);
+        let test = |x, budget| {
+            certify_points(
+                refs,
+                [vec![[one, 0., 0.]], vec![[x, 0., 0.]]],
+                [None, None],
+                budget,
+            )
+            .unwrap()
+        };
+        assert!(test(adjacent, 1000000).certificate.is_none());
+        assert!(test(one, 1000000).certificate.is_none());
+        assert!(test(separated, 1000000).certificate.is_some());
+        assert!(test(separated, 1).certificate.is_none());
     }
     #[test]
     fn strict_original_hulls_separate_opposite_rotated_shaft_faces() {

@@ -3351,3 +3351,32 @@ and named-part STEP acceptance remain unproven.
 Final optimized full-gate regression passes at [1,13]. Curved root/body/
 contact/volume replay also passes; its contact work is 674,285 operations.
 These local test runs do not establish performance improvements.
+
+
+## Coordinate proposals with fresh strict hull admission
+
+Annular pair [1,13] is a trimmed top material region and a distant inner
+wall. Their original/enclosed controls have a strict X gap, but the previous
+centroid-normal candidate intersected the material hull. Native strict
+separation now tries the original centroid candidate followed by at most
+three coordinate-gap midpoint planes. Bounds and rounded midpoints propose
+planes only; exact independence and fresh strict signs of every original
+or privately certified enclosure control remain necessary. Failed candidates
+and work exhaustion do not authorize separation. All candidates share one
+remaining exact-work budget and successful certificates retain original
+regions and any planar material enclosure authority.
+
+Actual [1,13] qualifies in 10,900 charged operations; reversed order also
+qualifies, and work=1 refuses. Synthetic point-hull admission tests show
+that adjacent representable values whose rounded midpoint reaches an
+endpoint refuse, coincident points refuse, and a two-step gap with a strict
+representable midpoint can qualify. These isolate numeric admission rather
+than asserting synthetic shell validity. Original rotated shaft and shared
+cone-pole regressions pass, as does irrational-root closed body/topology.
+The full annular gate advances through all face-1 pairs to [2,4]; the initial
+stale assertion failure is retained. Complete annular Body/volume and new
+WASM/UI/named-part acceptance remain outstanding.
+
+Final full annular gate regression passes at [2,4] (19.93 s), as does curved
+root/body/contact/volume replay (23.35 s). These concurrent local runtimes
+are not controlled performance comparisons.
