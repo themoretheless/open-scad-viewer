@@ -7,6 +7,8 @@
 mod arithmetic;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
+mod line_chart_identity;
+pub use line_chart_identity::*;
 mod line_crossing_parameter;
 pub use line_crossing_parameter::*;
 mod bezier_identity;

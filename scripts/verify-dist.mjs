@@ -102,7 +102,8 @@ const limits = new Map([
 // Full contact trim/tangent qualification and delivery: measured 3,708,032 bytes.
 // Fresh source Body replay, exact root restrictions and volume admission: 3,871,336 bytes.
 // Coherent native source boundary endpoints: measured 3,881,800 bytes, +5,362.
-const geometryChunkBudget = 3_882_400
+// Exact normalized UV chart equations: measured 3,887,392 bytes, +5,592.
+const geometryChunkBudget = 3_888_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
@@ -364,6 +365,7 @@ for (const [name, artifact, compression] of [
 // Native source edge preview: measured total 8145420 asset bytes.
 // Native source face preview: measured 8154777 total asset bytes; kernel 3876438, worker 156077.
 // Coherent boundary display and worker validation: measured 8,160,939 bytes.
-const totalBudget = 8_161_700
+// Exact normalized UV chart equations: measured 8,166,531 asset bytes.
+const totalBudget = 8_167_292
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

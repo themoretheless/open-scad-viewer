@@ -1856,6 +1856,7 @@ pub mod source_contour_proposal;
 pub mod source_region_restore;
 pub mod source_contour_winding;
 pub mod source_world_wire;
+mod source_line_chart_root;
 pub mod source_shared_edge;
 pub mod source_shared_edge_restore;
 pub mod source_edge_restriction;

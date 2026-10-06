@@ -2671,3 +2671,44 @@ not enable root-valued coordinate-Model editing or STEP export, closed mesh
 tessellation, new fillet construction, or root-body browser acceptance. No
 production dispatcher or UI uses this new native projection yet; the shipped
 WASM remains the previously qualified c79974ab artifact.
+
+### Irrational roots across distinct UV charts — 2026-10-06
+
+Original affine UV line carriers and rational Bezier cutters of equal degree
+now have a sufficient exact chart equation identity predicate. Expansion
+arithmetic compares original control and weight leaves after chart normalization;
+no reconstructed floating root becomes authority. A fresh union-selector unique
+root query prevents identical equations with different selected roots from merging.
+Unsupported nonlinear main curves, multispan cutters and unequal degrees still refuse.
+
+A planar tetrahedral Body with a shared edge split at sqrt(1/2) passes fresh
+shell, contact, injectivity and volume admission. All seven restrictions, five
+vertex identities and original recipes survive native topology and archive replay.
+Negative two-root selection, reversal, shifted parameter domains, mixed input roles
+and work exhaustion are covered. Native suites: 26 predicates, eight shells,
+eight shared edges, and the selected-root test passed.
+
+Fresh WASM SHA-256: 108c9616d6e55aae99d4b291d3cc83c5a8f347fb2ddbaa6579016a3e356f1ce1.
+43 worker/archive/display/client tests passed. Irrational Body restore measured
+722.72 ms host elapsed; the full archive/history scenario measured 4114.61 ms.
+These are single-run host measurements, not isolated Rust latency or performance
+qualification. Metadata Undo/Redo and original recipe reload passed; geometric
+edits and the 20-edit acceptance remain open. Vue and MCP type checks passed.
+Distribution audit: 151 artifacts, 8,166,531 asset bytes plus 14,951,533 raw WASM
+bytes. The packed geometry chunk grew 5,592 bytes to 3,887,392; size budgets were
+adjusted by this measured growth while retaining bounded headroom.
+
+The existing full-cap browser scenario passed with 20 edges and 1536 triangles.
+The first irrational browser run reached mouse/keyboard selection but its harness
+waited for a horizontal SVG polyline to have positive area; the wait now checks
+attachment, with actual mouse selection still asserted. Failure evidence is retained.
+
+This qualifies straight world carriers with nonlinear UV cutters on planar faces.
+General NURBS carriers, root-valued STEP/closed mesh, fillet bodies, whole-wall
+checks, named part acceptance, the full P0 matrix and P2/P3 remain open.
+
+The corrected irrational browser scenario passed: seven edges, 80 display
+triangles and 132 explicitly unresolved face rectangles. Mouse and keyboard
+selection, Retry, reload, visibility persistence, locking, isolation, selection
+handoff and manufacturing restriction passed with no page errors. Screenshot
+was inspected in the CPU/SVG fallback; this is not WebGPU qualification.

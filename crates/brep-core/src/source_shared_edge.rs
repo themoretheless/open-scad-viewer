@@ -220,7 +220,18 @@ fn qualify_impl(
                                 &mut out,
                                 max_work,
                             )?;
-                            if same {
+                            let (chart_same, work, checks) = if same {
+                                (false, 0, 0)
+                            } else {
+                                crate::source_line_chart_root::same(
+                                    [(a, *ar), (b, *br)],
+                                    world_reversed,
+                                    max_work - out.work_used,
+                                )?
+                            };
+                            out.work_used += work;
+                            out.root_checks += checks;
+                            if same || chart_same {
                                 true
                             } else if let Some(plane) = planes[i] {
                                 common_plane_root(

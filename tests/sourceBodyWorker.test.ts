@@ -1,5 +1,6 @@
 import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
-import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
@@ -116,3 +117,39 @@ it('loads a source archive through the real document worker and rejects saved fa
  const invalid={...emptyDirectDocument(),sourceBodies:[{...createSourceBodyRecord('bad-source','Bad source',low),admitted:true}]}
  await expect(client.run({kind:'restoreDocument',text:serializeDirectDocument(invalid)})).rejects.toMatchObject({code:'CAD_SOURCE_BODY_RESTORE',message:expect.stringContaining('bad-source')})
 },30000)
+
+it('restores irrational endpoint recipes through WASM, preview and archive history',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-irrational-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request as SourceBodyOptions & {op:string}
+ const options={...base,displaySegments:8,faceDisplay:{divisions:8,toleranceUv:1e-8,domainCellsPerFace:10000}},client=realClient()
+ const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options}),restoreElapsedMs=performance.now()-started
+ expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
+ expect(r.edges).toHaveLength(7);expect(r.faceCount).toBe(4)
+ expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
+ const ends=new Map<number,[number,0|1][]>()
+ for(const edge of r.edges)for(const end of [0,1] as const){const id=edge.vertices[end];ends.set(id,[...(ends.get(id)??[]),[edge.index,end]])}
+ expect(ends.size).toBe(5)
+ const split=[...ends.values()].filter(list=>list.length===2);expect(split).toHaveLength(1)
+ let anchor:number[]|undefined
+ for(const [index,end] of split[0]!){
+  const edge=r.edges[index]!,range=edge.parameterBounds[end]
+  expect(range[0]).toBeGreaterThan(0);expect(range[1]).toBeLessThan(1);expect(range[0]).toBeLessThan(range[1])
+  expect(range[0]).toBeLessThanOrEqual(Math.SQRT1_2);expect(range[1]).toBeGreaterThanOrEqual(Math.SQRT1_2)
+  const point=edge.displaySegments![end===0?0:7]![1][end]
+  if(anchor)expect(point).toEqual(anchor);anchor=point
+ }
+ expect(r.displayFaces!.some(face=>face.tiles.length>0)).toBe(true)
+ expect(r.displayFaces!.some(face=>face.unresolved.length>0)).toBe(true)
+ const record=createSourceBodyRecord('source-irrational-root','Irrational root tetrahedron',base)
+ const document={...emptyDirectDocument(),sourceBodies:[record]}
+ const loaded=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
+ expect(loaded.sourceBodies).toEqual([record])
+ await warmGeometryKernel()
+ const history=new DirectHistory(document),renamed=history.document
+ renamed.sourceBodies![0]!.name='Renamed irrational root';history.commit(renamed)
+ expect(history.undo().sourceBodies).toEqual([record])
+ expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
+ expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(record.source)
+ if(process.env.CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT)writeFileSync(process.env.CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT,serializeDirectDocument(document))
+ if(process.env.CAD_IRRATIONAL_BODY_WORKER_REPORT)writeFileSync(process.env.CAD_IRRATIONAL_BODY_WORKER_REPORT,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope:'Irrational split on a straight shared carrier of a planar tetrahedral Body; no geometric editing or closed mesh proof.'},null,2)+'\n')
+},120000)

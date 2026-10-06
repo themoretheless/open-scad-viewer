@@ -1068,6 +1068,13 @@ mod tests {
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
+        root_partition_control(false);
+    }
+    #[test]
+    fn irrational_root_partition_preserves_closed_body_and_exact_source_topology() {
+        root_partition_control(true);
+    }
+    fn root_partition_control(irrational: bool) {
         use crate::source_boundary_fragment::Role;
         let (mut faces, mut pairs) = tetrahedron();
         let context = cad_predicates::ToleranceContext::default_valid();
@@ -1144,16 +1151,32 @@ mod tests {
             let b = &c.control_points[1];
             let point = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
             let normal = [-(b[1] - a[1]), b[0] - a[0]];
-            let cutter = Curve::from_polyline(vec![
-                vec![point[0] - normal[0], point[1] - normal[1]],
-                vec![point[0] + normal[0], point[1] + normal[1]],
-            ])
-            .unwrap();
-            let p =
-                crate::source_contact_point::qualify(edge.surface(), c, &cutter, [[0., 1.]; 2], 16)
-                    .unwrap()
-                    .point
-                    .unwrap();
+            let cutter = if irrational {
+                // q(t)=a+d*t+n*(t²-1/2), reflected along d on the other use.
+                // The boundary root is sqrt(1/2), or 1-sqrt(1/2), not a
+                // floating point authored parameter. All controls are dyadic.
+                let controls = [(if i == 0 { 0. } else { 1. }, -0.5),
+                    (0.5, -0.5), (if i == 0 { 1. } else { 0. }, 0.5)]
+                    .map(|(along,across)| (0..2).map(|axis|
+                        a[axis]+along*(b[axis]-a[axis])+across*normal[axis]
+                    ).collect());
+                Curve { periodic:false,degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:controls.to_vec(),weights:vec![1.;3] }
+            } else {
+                Curve::from_polyline(vec![
+                    vec![point[0] - normal[0], point[1] - normal[1]],
+                    vec![point[0] + normal[0], point[1] + normal[1]],
+                ]).unwrap()
+            };
+            if irrational {
+                let broad = crate::source_contact_point::qualify(edge.surface(), c, &cutter, [[0.,1.];2], 10000).unwrap();
+                assert!(broad.point.is_none());
+            }
+            let selector = if irrational {
+                [if i == 0 { [0.7,0.71] } else { [0.29,0.3] }, [0.7,0.71]]
+            } else { [[0.,1.];2] };
+            let point_report = crate::source_contact_point::qualify(edge.surface(), c, &cutter, selector, 10000).unwrap();
+            let p = point_report.point.expect(point_report.reason);
             assert!(
                 regions[address.face]
                     .split_boundary(address.wire, address.edge, &p, Role::Contact)
@@ -1246,6 +1269,12 @@ mod tests {
             let parameter = restriction.parameter_bounds().unwrap()[*end];
             let domain = restriction.edge().world().domain();
             assert!(parameter[0] > domain[0] && parameter[1] < domain[1]);
+            if irrational {
+                assert!(parameter[0] < parameter[1]);
+                assert!(restriction.edge().uses().iter().any(|fragment|
+                    fragment.endpoints().iter().any(|endpoint|
+                        matches!(endpoint, crate::source_boundary_fragment::Endpoint::Crossing { .. }))));
+            }
             let bounds = restriction.endpoint_boxes(2).unwrap()[*end];
             for axis in 0..3 {
                 assert!(root_vertex.bounds[axis][0] >= bounds[axis][0]);
@@ -1545,6 +1574,14 @@ mod tests {
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
+        if irrational {
+            if let Some(path) = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_OUTPUT") {
+                let template = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_TEMPLATE").unwrap();
+                let mut request: value_codec::Value = value_codec::from_str(&std::fs::read_to_string(template).unwrap()).unwrap();
+                request["definition"] = body.definition().unwrap();
+                std::fs::write(path, value_codec::to_string(&request).unwrap()).unwrap();
+            }
+        }
     }
     #[test]
     fn chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes() {
