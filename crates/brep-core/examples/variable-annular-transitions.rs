@@ -6,6 +6,7 @@ use brep_core::{
 
 fn main() {
     let directory = std::env::args().nth(1).expect("output directory");
+    let diagnostics = std::env::args().nth(2).as_deref() == Some("diagnostics");
     std::fs::create_dir_all(&directory).unwrap();
     let mut cases = Vec::new();
     for radii in [[0.5, 1.25], [1.25, 0.5]] {
@@ -33,6 +34,47 @@ fn main() {
                     "toleranceMm": tolerance, "work": report.work,
                 }));
             }
+            let mut seam_checks = Vec::new();
+            if diagnostics {
+                for faces in [[0, 5], [5, 10]] {
+                    let edge = model.loops[model.faces[faces[0]].outer]
+                        .coedges
+                        .iter()
+                        .find(|a| {
+                            model.loops[model.faces[faces[1]].outer]
+                                .coedges
+                                .iter()
+                                .any(|b| a.edge == b.edge)
+                        })
+                        .unwrap()
+                        .edge;
+                    let r = brep_core::edge_tangency::inspect(
+                        &model,
+                        edge,
+                        brep_core::edge_tangency::Limits {
+                            tolerance_mm: 1e-7,
+                            max_sine_squared: 1e-4,
+                            agreement_cells: 256,
+                            normal_cells: 10000,
+                            normal_spans: 20000,
+                        },
+                    )
+                    .unwrap();
+                    seam_checks.push(value_codec::json!({
+                        "edge": edge, "faces": r.faces,
+                        "positionsProven": r.contact.positions_proven,
+                        "tangentPlanesProven": r.contact.tangent_planes_proven,
+                        "visited": r.contact.visited, "spans": r.contact.spans,
+                        "toleranceMm": 1e-7, "maxSineSquared": 1e-4,
+                        "cells": r.contact.cells.iter().map(|c| value_codec::json!({
+                            "interval": c.interval,
+                            "aligned": c.normals.as_ref().and_then(|n| n.aligned),
+                            "sineSquaredInterval": c.normals.as_ref().and_then(|n| n.sine_squared_interval),
+                            "reason": c.normals.as_ref().map(|n| n.reason),
+                        })).collect::<Vec<_>>(),
+                    }));
+                }
+            }
             let name = format!("case-{}", cases.len());
             let (step, _, _) = export_step_v9(&model).unwrap();
             std::fs::write(format!("{directory}/{name}.step"), step).unwrap();
@@ -46,6 +88,7 @@ fn main() {
                 "parameters": [20., 5., 6.], "bodyCount": topology.body_count,
                 "boundaryEdgeCount": topology.boundary_edge_count,
                 "faces": model.faces.len(), "radiusChecks": radius_checks,
+                "seamChecks": seam_checks,
             }));
         }
     }

@@ -23,6 +23,7 @@ pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
+pub mod edge_tangency;
 pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
