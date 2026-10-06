@@ -72,7 +72,7 @@ fn restrict_hull(
     }
     Ok(hull)
 }
-fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<[[I; 2]; 3]> {
+pub(crate) fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<[[I; 2]; 3]> {
     let [u, v] = indices;
     let (p, q) = (s.degree_u, s.degree_v);
     let span = [

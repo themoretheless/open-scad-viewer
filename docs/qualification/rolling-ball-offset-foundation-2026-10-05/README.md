@@ -4516,3 +4516,23 @@ actions; direct vue-tsc passes. This is local acceptance, not deployment.
 The newly authored surface_self_chord native algorithm is not in this compiled
 module and is not yet used by source wall coverage. Production size verification
 for this packaged change remains pending.
+
+
+## Continuous intrinsic self-chord exclusion foundation
+
+New native surface_self_chord uses original rational derivative interval hulls
+over every knot rectangle. A uniformly nonsingular coordinate minor bounds
+all chord lengths from below relative to parameter displacement. The global
+derivative variation bounds normal/chord cosine from above via integration
+along the parameter segment. A strict comparison with the requested angle
+threshold constructs a private source-bound certificate excluding all aligned
+self chords, including arbitrarily close pairs. No UV-distance division,
+sampling-based admission or rounded replacement control net is used.
+
+Three tests pass: a curved polynomial graph admits full-chart exclusion;
+strong curvature and singular projection refuse; missing spans refuse; an
+invalid discontinuous surface returns an input error. Independent analytic
+parabola chords, including a reversed coordinate, lie below the certificate
+bound as an auxiliary oracle only. Five original normal-alignment regressions
+pass. This is a sufficient-condition foundation, not a full general NURBS
+solution; it is not yet wired into original wall coverage or packaged WASM.

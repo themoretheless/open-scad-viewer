@@ -190,3 +190,5 @@ pub mod surface_projection_jacobian;
 pub mod curve_quadratic_separator;
 
 pub mod surface_projected_jordan;
+
+pub mod surface_self_chord;
