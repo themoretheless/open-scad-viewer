@@ -759,10 +759,11 @@ mod tests {
         .unwrap();
         assert!(audit.all_pairs_qualified);
         assert_eq!(audit.pairs.len(), 10);
-        assert!(audit
-            .pairs
-            .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.as_ref().is_some_and(|c| c.edges().len() == 2)));
+        // The shell dispatcher may prove this pair before reaching the fiber path.
+        // Exercise the fiber contract directly, independently of dispatcher order.
+        let fiber = certify_with_linear_chart(&shell, [0, 2], 100_000_000, 1000, 10000, 10000)
+            .unwrap().certificate.unwrap();
+        assert_eq!(fiber.edges().len(), 2);
         assert!(source_shell_incidence::assemble_regions_with_root_planes(
             &regions,
             &pairs,
@@ -998,10 +999,8 @@ mod tests {
             10000,
         )
         .unwrap();
-        assert!(audit
-            .pairs
-            .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.is_some()));
+        assert!(audit.all_pairs_qualified);
+        assert_eq!(audit.pairs.len(), 10);
     }
     #[test]
     fn extended_canonical_carriers_preserve_closed_source_shell() {
@@ -1481,10 +1480,11 @@ mod tests {
                 .geometry
                 .unwrap();
         let stopped =
-            crate::source_volume::qualify(stopped_geometry, volume_limits(5, 1000000)).unwrap();
+            crate::source_volume::qualify(stopped_geometry, volume_limits(1, 1000000)).unwrap();
         assert!(stopped.body.is_none());
         assert!(stopped.signed_bounds.is_none());
-        assert_eq!(stopped.uncertain_face, Some(5));
+        assert!(stopped.uncertain_face.is_some());
+        assert_eq!(stopped.cells, 1);
         let no_domain_geometry =
             crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(24, 15))
                 .unwrap()

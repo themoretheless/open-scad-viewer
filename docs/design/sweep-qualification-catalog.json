@@ -234,6 +234,18 @@
       "weight-half",
       "weight-one",
       "weight-two"
+    ],
+    "scalar": [
+      {
+        "file": "scaled_sweep.step",
+        "operation": "surface_scaled_sweep",
+        "scope": "Different rational path/scale weights; capped square."
+      },
+      {
+        "file": "profile_sweep.step",
+        "operation": "surface_profile_sweep",
+        "scope": "Accepted RMF scaled square; native and OCCT round-trip."
+      }
     ]
   },
   "suites": {

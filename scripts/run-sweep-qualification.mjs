@@ -16,6 +16,7 @@ const commands={
  rush:[['node_modules/.bin/vitest','run',...catalog.suites.rush]],
  browser:[['node','scripts/check-sweep-miter-matrix-browser.mjs',...args]],
  step:[['node','--import','tsx','scripts/export-sweep-step-oracle.mts',...args]],
+ 'scalar-step':[['node','--import','tsx','scripts/export-scalar-sweep-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-scalar-sweep-step-occt.py',args[0]??'/tmp/scalar-sweep-step']],
  'step-smooth':[['node','--import','tsx','scripts/export-smooth-station-step-oracle.mts',...args],['python3','scripts/reference-sweep-generator-volume.py',args[0]??'/tmp/sweep-smooth-station-step']],
 }
 if(target==='list')console.log(JSON.stringify({browser:catalog.browser.solid.length,step:catalog.step.baseline.length,smooth:catalog.step.smooth.length,commands},null,2))

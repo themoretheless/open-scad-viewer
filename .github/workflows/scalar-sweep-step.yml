@@ -1,0 +1,40 @@
+name: Scalar sweep independent STEP
+on:
+  pull_request:
+    paths:
+      - 'crates/nurbs-core/**'
+      - 'crates/brep-core/**'
+      - 'crates/geometry-bridge/**'
+      - 'scripts/export-scalar-sweep-step.mts'
+      - 'scripts/verify-scalar-sweep-step-occt.py'
+      - '.github/workflows/scalar-sweep-step.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'crates/nurbs-core/**'
+      - 'crates/brep-core/**'
+      - 'scripts/*scalar-sweep-step*'
+      - '.github/workflows/scalar-sweep-step.yml'
+jobs:
+  round-trip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - run: npm ci
+      - run: npm run build:geometry
+      - run: python -m pip install cadquery-ocp==8.0.1.0.0
+      - run: node --import tsx scripts/export-scalar-sweep-step.mts output/qualification/scalar-sweep-step
+      - run: python scripts/verify-scalar-sweep-step-occt.py output/qualification/scalar-sweep-step
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scalar-sweep-step
+          path: output/qualification/scalar-sweep-step
