@@ -3380,3 +3380,46 @@ WASM/UI/named-part acceptance remain outstanding.
 Final full annular gate regression passes at [2,4] (19.93 s), as does curved
 root/body/contact/volume replay (23.35 s). These concurrent local runtimes
 are not controlled performance comparisons.
+
+
+## Whole original annular embedded geometry admission
+
+The original [2,4] outer-wall/bottom contact already qualified independently
+via the existing natural plane-image proof (14,659 exact operations, zero
+classified driver cells), including reversed order and work=1 refusal.
+Scheduling diagnostics identified the integrated failure: [1,23] consumed
+all 100,000 driver cells in heavy fiber guesses before the cheaper exact
+shared-line proof ran. Later independently supported contacts were skipped
+because the global driver budget had already been exhausted.
+
+The native pair scheduler now attempts exact shared-line contact and the
+natural plane-image/owned ruled-projection proofs before the heavier paired
+fiber and chart guesses. All failed attempts remain charged; the original
+100,000 driver and 100,000,000 exact-work limits are unchanged. No caller
+flags, topology-only exclusions, samples or increased budgets authorize
+contacts. Private shell geometry separately recomputes vertex links and
+chart injectivity before accepting the original pair certificates.
+
+The actual 27-face annular fixture now issues
+`source-shell-embedded-geometry-qualified`, with no uncertain face/pair:
+all 351 pairs qualify, 28,005,677 exact operations, 712 spans, 48 driver cells
+and 2,337 linear cells. It does not use an inverse-shear proposal. The initial
+assertion expecting incomplete geometry failed; retained logs show this
+advancement. The rewritten full-gate regression passes (1.98 s).
+This is original embedded shell Geometry, not a volume/orientation Body
+certificate. Full interval fillet/radius/tangency/wall qualification,
+independent STEP/named-part acceptance and packaged WASM/UI remain separate.
+
+Four natural plane-image positive/negative regressions and the root-clipped
+contact search regression pass. The flat-root integrated audit originally
+expected a fiber certificate; scheduling now selects exact shared-line
+certificates first. Its direct fiber checks remain and the audit now requires
+an original shared-line certificate on every pair. The old failure log is
+retained; this changes scheduling assertions rather than root geometry.
+
+Final bounded annular geometry regression passes. Flat irrational-root
+body/topology replay passes (3.16 s); curved root/body/contact/volume replay
+passes (15.23 s). Capped body independent analytic volume and fresh restore
+regression passes (88.44 s); its interval [37.52914969854688,37.77914345395185]
+contains the independent value 37.645933842430814. These concurrent local
+test runtimes are not performance comparisons or annular volume evidence.

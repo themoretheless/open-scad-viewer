@@ -1590,7 +1590,9 @@ mod tests {
         .unwrap();
         assert!(fiber_audit.all_pairs_qualified);
         assert_eq!(fiber_audit.pairs.len(), 6);
-        assert!(fiber_audit.pairs.iter().any(|p| p.fiber.is_some()));
+        // The scheduler now selects the already proven shared-line proof
+        // before fiber guesses; the direct fiber assertions above remain.
+        assert!(fiber_audit.pairs.iter().all(|p| p.allowed.is_some()));
         assert_eq!(fiber_audit.cells, 0);
         let exhausted = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
             &shell,

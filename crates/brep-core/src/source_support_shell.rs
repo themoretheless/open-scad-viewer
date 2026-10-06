@@ -131,6 +131,17 @@ mod tests {
         }
     }
     #[test]
+    fn annular_outer_wall_bottom_contact() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let r=crate::source_pole_planar_contact::certify(&shell,[2,4],100_000_000,100000).unwrap();
+        eprintln!("wall/bottom {} work={} driver={}",r.reason,r.exact_work,r.driver_cells);
+
+        assert!(r.certificate.is_some(),"{}",r.reason);
+        assert!(crate::source_pole_planar_contact::certify(&shell,[4,2],100_000_000,100000).unwrap().certificate.is_some());
+        assert!(crate::source_pole_planar_contact::certify(&shell,[2,4],1,100000).unwrap().certificate.is_none());
+    }
+    #[test]
     fn annular_top_and_distant_inner_wall_separation() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -256,7 +267,7 @@ mod tests {
         }
     }
     #[test]
-    fn annular_incidence_and_support_contacts_advance_to_next_unproven_pair() {
+    fn annular_incidence_and_support_contacts_qualify_embedded_geometry() {
         let model =
             crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
         let report = prepare(&model, limits());
@@ -303,12 +314,15 @@ mod tests {
                     "annular source geometry: {} face={:?} pair={:?}",
                     geometry.reason, geometry.uncertain_face, geometry.next_pair
                 );
-                assert!(geometry.geometry.is_none());
-                assert_eq!(
-                    geometry.reason,
-                    "source-shell-different-face-contacts-unproven"
-                );
-                assert_eq!(geometry.next_pair, Some([2, 4]));
+                eprintln!("annular resources exact={} spans={} driver={} linear={} pairs={}",geometry.exact_work,geometry.spans,geometry.driver_cells,geometry.linear_cells,geometry.pairs);
+                assert!(geometry.exact_work<=100_000_000 && geometry.driver_cells<=100000);
+                assert_eq!(geometry.reason,"source-shell-embedded-geometry-qualified");
+                assert_eq!(geometry.next_pair,None);
+                let geometry=geometry.geometry.expect("all original annular contacts must qualify");
+                assert!(geometry.contacts().all_pairs_qualified);
+                assert_eq!(geometry.contacts().pairs.len(),351);
+                assert_eq!(geometry.contacts().total_pairs,351);
+                assert!(geometry.inverse_shear().is_none());
             }
             Err(e) => panic!("annular source support: {}: {}", e.code, e.message),
         }
