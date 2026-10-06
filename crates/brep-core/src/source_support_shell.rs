@@ -395,6 +395,13 @@ mod tests {
         eprintln!("original reused adaptive wall pairs={} unresolved={} cells={} normals={}",
             reused.pairs.len(),reused.pairs.iter().filter(|p|!p.proven).count(),reused.cells,reused.normal_spans);
         assert!(reused.enumeration_complete);assert!(reused.certificate.is_none());
+        for pair in &reused.pairs {
+            let adjacent=body.geometry().shell().uses().iter().any(|u|
+                (u[0].face==pair.faces[0]&&u[1].face==pair.faces[1])||
+                (u[1].face==pair.faces[0]&&u[0].face==pair.faces[1]));
+            if adjacent {assert!(!pair.reason.starts_with("source-face-gap-"),"shared-boundary pairs cannot consume clearance subdivision");}
+        }
+
         assert_eq!(reused.pairs.iter().filter(|p|p.reason=="source-wall-self-certified").count(),16);
         assert!(reused.pairs.iter().filter(|p|!p.proven).count()<=256);
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];

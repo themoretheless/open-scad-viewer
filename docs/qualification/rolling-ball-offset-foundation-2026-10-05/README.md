@@ -4768,3 +4768,13 @@ legacy unresolved pairs decrease from 258 to 257; adaptive composition from
 still refuse. This latest scheduler change is native only; packaged WASM,
 worker exact expectations and browser currently correspond to the previous
 checkpoint. Cuboid regression and final package acceptance remain pending.
+
+
+Shared-boundary scheduling now builds one canonical adjacency index from
+admitted source edge uses instead of scanning all edges for every face pair.
+Annular regression also asserts that shared-boundary pairs never carry a gap
+subdivision reason. It passes in 32.73 seconds with 255 adaptive unproven pairs;
+cuboid positive, threshold refusal and partial enumeration regression passes
+in 0.07 seconds. These durations are regression evidence, not a speed benchmark.
+Worker exact expectations now target 255 adaptive / 257 legacy unresolved pairs
+and await a fresh package. Remaining full-wall and geometry requirements stay open.

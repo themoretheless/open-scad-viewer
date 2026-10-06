@@ -136,6 +136,11 @@ pub fn qualify_with_self_facts<'a>(
             p
         })
         .collect();
+    let adjacency: std::collections::BTreeSet<_> = body.geometry().shell().uses().iter()
+        .map(|uses| {
+            let [a, b] = uses.map(|u| u.face);
+            [a.min(b), a.max(b)]
+        }).collect();
     let necessary = geometry::necessary_normal_sine(limits.max_sine_squared)?;
     let mut gaps = Vec::new();
     let mut self_chords = Vec::new();
@@ -197,10 +202,7 @@ pub fn qualify_with_self_facts<'a>(
                 // unresolved unless normal exclusion already succeeded; reserve
                 // gap subdivision for distinct faces without shared edge uses.
                 // This scheduling exclusion is never a thickness certificate.
-                let adjacent = body.geometry().shell().uses().iter().any(|uses| {
-                    (uses[0].face == a && uses[1].face == b)
-                        || (uses[0].face == b && uses[1].face == a)
-                });
+                let adjacent = adjacency.contains(&[a, b]);
                 if !pair.proven && !adjacent && out.cells < limits.gap.cells && out.spans < limits.gap.spans {
                     let r = source_face_gap::qualify(
                         body,
