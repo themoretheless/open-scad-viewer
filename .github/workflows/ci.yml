@@ -58,6 +58,8 @@ jobs:
             crates/target
           key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
+      - run: npm run test:architecture
+      - run: npm run audit:architecture
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
