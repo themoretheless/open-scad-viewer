@@ -3842,3 +3842,28 @@ Scope remains the explicit groups and stated endpoint angle tolerance.
 This does not enumerate every body wall or automatically find candidates.
 Automatic whole-body wall coverage, thin-region search and source bridge,
 WASM and UI integration remain required.
+
+
+## Automatic original normal chord proposal search
+
+`source_wall_search::search` generates finite lines from sampled original
+chart points and normals with an exterior reach proposal. Every accepted
+result independently recomputes source exterior membership, full boundary
+root isolation, source trim membership and both endpoint normal bounds.
+Only private normal material chord certificates are retained. The shortest
+certified upper witness is returned; samples never certify geometry.
+
+The original annular bottom/top groups with a 3x3 grid across six bottom
+charts produce 54 attempts, 36 refusals and 18 certified candidates. The
+best length interval is [5.999999999999997,6.0000000000000036] mm. The
+initial one-point grid refused all six proposals; its failed acceptance
+expectation and terminal log are retained. The final regression also checks
+a one-attempt cap does not claim candidate exhaustion and overlapping
+groups reject. The combined Body/radius/seam test passes in 18.37 seconds.
+
+This search supplies automatic upper witnesses, not global minimum proof
+or absence of thin regions. `candidates_exhausted` means only the requested
+finite proposal grid was visited. Work is bounded by max_attempts times
+per-candidate limits. Adaptive refinement, coverage of every body wall and
+combining searched witnesses with certified lower bounds remain open.
+No bridge, WASM or UI integration is claimed for this new module.

@@ -238,6 +238,19 @@ mod tests {
             else {let proof=wall.certificate.unwrap();assert!(std::ptr::eq(proof.body(),&body));
                 assert!(proof.interval_mm()[0]<=6. && proof.interval_mm()[1]>=6.);}
         }
+        let search=crate::source_wall_search::search(&body,[&bottom,&top],3,54,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        eprintln!("source wall search attempts={} refused={} exhausted={} best={:?}",
+            search.attempts,search.refused,search.candidates_exhausted,search.best.as_ref().map(|c|c.length_mm()));
+        assert_eq!(search.attempts,54);assert!(search.candidates_exhausted);
+        let best=search.best.expect("automatic original annular axial material chord");
+        assert!(best.length_mm()[0]<=6. && best.length_mm()[1]>=6.);
+        assert!(best.length_mm()[1]-best.length_mm()[0]<1e-5);
+        let limited=crate::source_wall_search::search(&body,[&bottom,&top],3,1,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        assert_eq!(limited.attempts,1);assert!(!limited.candidates_exhausted);
+        assert!(crate::source_wall_search::search(&body,[&bottom,&bottom],3,1,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).is_err());
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();
