@@ -282,3 +282,50 @@ it('qualifies the annular middle rail and localizes its collapsed endpoint throu
   }
  }
 },240000)
+
+it('certifies automatically searched annular wall thickness through real WASM worker',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request
+ const client=realClient(),started=performance.now(),results=[]
+ for(const gapCells of [1000,1]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallQualification:{
+   groups:[[4,9,14,18,22,26],[1,6,11,15,19,23]],minimumMm:5.99,toleranceMm:0.02,toleranceUv:1e-7,
+   grid:3,maxAttempts:54,limits:{gapCells,gapSpans:2000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
+  const before=JSON.stringify(o),r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(JSON.stringify(o)).toBe(before);expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const wall=r.wallQualification!;expect(wall.request).toEqual(o.wallQualification)
+  expect(wall.search.attempts).toBe(54);expect(wall.search.refused).toBeLessThan(54)
+  if(gapCells===1000){
+   expect(wall.qualified).toBe(true);expect(wall.converged).toBe(true)
+   expect(wall.intervalMm![0]).toBeLessThanOrEqual(6);expect(wall.intervalMm![1]).toBeGreaterThanOrEqual(6)
+   expect(wall.intervalMm![1]-wall.intervalMm![0]).toBeLessThan(1e-5)
+  }else{
+   expect(wall.qualified).toBe(false);expect(wall.converged).toBe(false);expect(wall.intervalMm).toBeNull()
+   expect(wall.reason).toBe('source-wall-clearance-unproven')
+  }
+  const changed=structuredClone(r);changed.wallQualification!.request.groups[0][0]=3
+  expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)
+  results.push(wall)
+ }
+ if(process.env.CAD_SOURCE_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  elapsedMs:performance.now()-started,results,scope:'Selected annular flat face groups only; no full body wall coverage or UI proof.'},null,2)+'\n')
+},120000)
+
+it('discards late wall results when opposing groups change and permits retry',async()=>{
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const wall={groups:[[0],[1]] as [number[],number[]],minimumMm:0.1,toleranceMm:0.02,toleranceUv:1e-7,
+  grid:3,maxAttempts:9,limits:{gapCells:1000,gapSpans:2000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}}).catch(e=>e.code)
+ const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
+ const second=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:{...wall,groups:[[0],[2]]}}})
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
+ reply(ports[1]!,denied);expect(await second).toEqual(denied)
+ const controller=new AbortController()
+ const aborted=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}},{signal:controller.signal}).catch(e=>e.code)
+ controller.abort();expect(await aborted).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
+ const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallQualification:wall}})
+ reply(ports[2]!,denied);expect(await retry).toEqual(denied)
+})

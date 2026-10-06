@@ -3937,3 +3937,66 @@ Complete terminal logs are retained.
 
 New WASM packaging, positive native wall option through the real worker,
 cancellation/late-response wall scenarios and UI controls remain required.
+
+
+## Source wall panel selection acceptance, new WASM pending
+
+The new panel offers explicit opposing face sets, minimum/tolerance fields,
+localized result/refusal, Retry and Cancel. Request generations and sync
+watchers cancel and clear on body/document/panel/input changes; Esc and
+unmount cancel the worker. Selected source face tiles show side A blue
+and side B purple; unresolved clearance faces use orange. This color is
+selection state, not geometry admission.
+
+Browser 5188 on the annular document verifies side A [5,10,15,19,23,27]
+and side B [2,7,12,16,20,24] (one-based UI labels), selection by mouse
+and Enter, enabling calculation only after both selections, and moving
+face 5 between sides removes it from the opposite set. DOM shows twenty
+preview polygons in each side color. The retained screenshot shows the
+corrected field layout. The draft panel passes vue-tsc. A controlled
+worker-port test passes group-change supersession, discarded late result,
+AbortSignal cancellation and retry with a fresh worker.
+
+The new real WASM annular thickness test is prepared but not yet run:
+packaging/optimization is still live. No positive browser wall interval,
+UI Retry/native cancellation or new packaged WASM completion is claimed.
+
+
+### File menu Escape cancellation
+
+Browser testing found File menu Escape consumes the event before the
+workspace handler. closeFileMenu now explicitly cancels pending source
+wall, seam and STEP workers before closing. Selection is retained for
+retry. On annular UI sides [5] and [2], the real browser enters the wall
+pending state, pressing Escape on its Cancel button closes the menu, and
+reopening shows an enabled calculation button without pending/error. This
+checks real worker cancellation while using the prior packaged WASM; it
+does not prove new native wall results. Screenshot retained, vue-tsc passes.
+The new optimized WASM build remains live; positive wall worker test is
+still pending that artifact.
+
+
+## New packaged WASM and positive wall browser acceptance
+
+The completed build optimizes 13399375 to 11872215 bytes. Packaged SHA256
+86ab0caa2618730830b58aa38b079471322e48df7f8f2a66efe9e33ca1c3f552.
+All 18 source Body worker/wall/seam transport tests pass in 15.93 seconds.
+The real worker annular automatic wall scenario takes 1541.54 ms for both
+success and refusal runs combined on this machine (single observation,
+not a performance qualification). Bottom/top groups qualify 6 mm bounds
+[5.999999999999997,6.0000000000000036], with 36 clearance cells/72 spans,
+54 proposals and explicit budget-refusal with null interval on one gap cell.
+Request group substitution rejects; transport cancellation/retry tests pass.
+
+Browser 5188 now shows the same confirmed wall interval through the new
+UI and packaged kernel. Both face sides were selected with mouse/Enter.
+A scene triangle click selects face 6 after stopping the background
+pointerdown selection reset; normal scene interaction remains active when
+the panel/menu is closed. Closing File normally also cancels a pending
+wall request; Escape cancellation was qualified above. vue-tsc passes.
+Terminal build/tests, exact worker JSON and positive UI screenshot retained.
+
+This proves explicit selected flat wall groups through WASM/worker/UI.
+Whole-body wall discovery, adaptive thin-region coverage, measured chord
+scene coordinates, full command matrix and arbitrary fillet geometry are
+still open. Production bundle size verification remains a separate gate.

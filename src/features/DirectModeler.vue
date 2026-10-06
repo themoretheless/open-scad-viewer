@@ -2,6 +2,7 @@
 import {SourceBodyDisplay} from '../services/sourceBodyDisplay'
 import {sourceBodyRecordOptions} from '../services/sourceBodyArchive'
 import type {SourceBodyResult,SourceSeamResult} from '../services/sourceBody'
+import type {SourceWallResult} from '../services/sourceWallTransport'
 
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
@@ -1361,7 +1362,7 @@ const sourceDisplayEdges=computed(()=>(document.value.sourceBodies??[]).filter(i
  (sourceDisplayResults.value[item.id]?.edges??[]).map(edge=>({key:item.id+':'+edge.index,body:item.id,name:item.name,index:edge.index,selectable:objectSelectable(item.id),
   points:(edge.displaySegments??[]).flatMap((segment,i)=>i===0?segment[1]:[segment[1][1]]).map(p=>project(p,'3d').join(',')).join(' ')}))))
 const sourceDisplayFaces=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).flatMap(([id,result])=>
- (result.displayFaces??[]).flatMap(face=>face.tiles.flatMap((tile,i)=>[[0,1,2],[0,2,3]].map((indexes,k)=>({key:id+':'+face.index+':'+i+':'+k,
+ (result.displayFaces??[]).flatMap(face=>face.tiles.flatMap((tile,i)=>[[0,1,2],[0,2,3]].map((indexes,k)=>({key:id+':'+face.index+':'+i+':'+k,body:id,face:face.index,
  points:indexes.map(index=>project(tile.corners[index]!,'3d').join(',')).join(' '),
  depth:indexes.reduce((sum,index)=>sum+projectDirectPoint(tile.corners[index]! as Vec3,camera.value)[2],0)/3}))))).sort((a,b)=>a.depth-b.depth))
 const sourceUnresolvedCount=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).reduce((sum,[,result])=>sum+(result.displayFaces??[]).reduce((n,face)=>n+face.unresolved.length,0),0))
@@ -1853,6 +1854,9 @@ function closeFileMenu(e:KeyboardEvent) {
  const menu=e.currentTarget as HTMLDetailsElement
  if(!menu.open)return
  e.preventDefault();e.stopPropagation()
+ if(sourceWallPending.value)cancelSourceWall()
+ if(sourceSeamPending.value)cancelSourceSeam()
+ if(sourceStepPending.value)cancelSourceStep()
  menu.open=false
  menu.querySelector('summary')?.focus()
 }
@@ -2054,6 +2058,60 @@ async function qualifySourceSeam(){
   sourceSeamResult.value=result.seamQualification
  }catch(e){if(generation===sourceSeamGeneration)sourceSeamError.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===sourceSeamGeneration)sourceSeamPending.value=false}
+}
+const sourceWallWorker=createSolidPreviewWorker(),sourceWallPending=ref(false),sourceWallError=ref('')
+const sourceWallResult=shallowRef<SourceWallResult|null>(null),sourceWallOpen=ref(false),sourceWallMenuOpen=ref(false)
+const sourceWallGroups=ref<[number[],number[]]>([[],[]]),sourceWallSide=ref<0|1>(0)
+const sourceWallMinimum=ref(1),sourceWallTolerance=ref(0.02)
+let sourceWallGeneration=0
+function cancelSourceWall(){sourceWallGeneration++;sourceWallWorker.cancel();sourceWallPending.value=false}
+watch(()=>[document.value,props.open,selectedSourceBody.value],()=>{
+ cancelSourceWall();sourceWallResult.value=null;sourceWallError.value='';sourceWallGroups.value=[[],[]]
+},{flush:'sync'})
+watch(()=>[sourceWallGroups.value,sourceWallMinimum.value,sourceWallTolerance.value,sourceWallOpen.value],()=>{
+ cancelSourceWall();sourceWallResult.value=null;sourceWallError.value=''
+},{deep:true,flush:'sync'})
+onUnmounted(()=>{cancelSourceWall();sourceWallWorker.dispose()})
+const sourceWallFaces=computed(()=>Array.from({length:sourceDisplayResults.value[selectedSourceBody.value?.id??'']?.faceCount??0},(_,i)=>i))
+function sourceWallFileMenuToggle(e:Event){
+ sourceWallMenuOpen.value=(e.currentTarget as HTMLDetailsElement).open
+ if(!sourceWallMenuOpen.value && sourceWallPending.value)cancelSourceWall()
+}
+function toggleSourceWallFace(face:number){
+ if(!selectedSourceBody.value||!objectSelectable(selectedSourceBody.value.id))return
+ const side=sourceWallSide.value,other=side===0?1:0
+ const groups:[number[],number[]]=[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]]
+ groups[side]=groups[side].includes(face)?groups[side].filter(f=>f!==face):[...groups[side],face].sort((a,b)=>a-b)
+ groups[other]=groups[other].filter(f=>f!==face);sourceWallGroups.value=groups
+}
+function sourceWallFaceFill(body:string,face:number){
+ if(!sourceWallOpen.value||body!==selectedSourceBody.value?.id)return '#77b8b0'
+ if(sourceWallResult.value?.clearance.uncertainFaces?.includes(face))return '#ff9977'
+ return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
+}
+const sourceWallMessage=computed(()=>{
+ const r=sourceWallResult.value;if(!r)return ''
+ if(r.qualified)return r.converged?label('Толщина между выбранными сторонами подтверждена.','Thickness between the selected sides is qualified.'):
+  label('Интервал толщины подтверждён, но заданный допуск ещё не достигнут.','Thickness bounds are qualified; the requested tolerance is not reached.')
+ return r.reason==='source-wall-clearance-unproven'?label('Нижняя граница не подтверждена. Проверьте выделенные грани и выбор противоположных сторон.','The lower bound is unproven. Inspect highlighted faces and choose opposing sides.'):
+  label('Допустимый участок материала не найден. Уточните выбор сторон; отсутствие тонких участков не подтверждено.','No qualified material chord was found. Refine the side selection; absence of thin regions is unproven.')
+})
+async function qualifySourceWall(){
+ cancelSourceWall();sourceWallResult.value=null;sourceWallError.value=''
+ const record=selectedSourceBody.value,source=document.value,generation=sourceWallGeneration
+ if(!record||!props.open||!sourceWallOpen.value||restoringDraft.value||!objectSelectable(record.id)||sourceWallGroups.value.some(g=>!g.length))return
+ sourceWallPending.value=true
+ try{
+  const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
+   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
+   wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
+    toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+    limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}})
+  if(generation!==sourceWallGeneration||document.value!==source||selectedSourceBody.value!==record||!props.open||!sourceWallOpen.value||restoreDisposed)return
+  if(!result.admitted||!result.wallQualification)throw Error(result.diagnostics.reason)
+  sourceWallResult.value=result.wallQualification
+ }catch(e){if(generation===sourceWallGeneration)sourceWallError.value=e instanceof Error?e.message:String(e)}
+ finally{if(generation===sourceWallGeneration)sourceWallPending.value=false}
 }
 let sourceStepGeneration=0
 function cancelSourceStep(){sourceStepGeneration++;sourceStepWorker.cancel();sourceStepPending.value=false}
@@ -3111,7 +3169,7 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
-  if (e.key === 'Escape') { e.preventDefault(); cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
+  if (e.key === 'Escape') { e.preventDefault(); cancelSourceWall();cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
     if ((e.target as HTMLElement).closest?.('button, summary, a[href], select')) return
@@ -3543,7 +3601,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <svg v-else-if="saveError" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
-      <details class="file-menu" @keydown.esc="closeFileMenu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+      <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
@@ -3561,6 +3619,28 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <span v-if="sourceSeamPending" role="status">{{ label('Проверяю касательность…','Checking tangency…') }} <button type="button" @click="cancelSourceSeam">{{ label('Отмена','Cancel tangency') }}</button></span>
           <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
           <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
+          <details class="source-wall-panel" :open="sourceWallOpen" @toggle="sourceWallOpen=($event.target as HTMLDetailsElement).open">
+            <summary>{{ label('Толщина исходного тела','Source body wall thickness') }}</summary>
+            <p>{{ label('Выберите две противоположные стороны стенки. Проверка относится только к выбранным граням.','Choose two opposing wall sides. Qualification covers only the selected faces.') }}</p>
+            <button type="button" :aria-pressed="sourceWallSide===0" @click="sourceWallSide=0">{{ label('Первая сторона','First side') }}</button>
+            <button type="button" :aria-pressed="sourceWallSide===1" @click="sourceWallSide=1">{{ label('Вторая сторона','Second side') }}</button>
+            <div class="source-wall-face-grid" role="group" :aria-label="label('Грани стенки','Wall faces')">
+              <button v-for="face in sourceWallFaces" :key="face" type="button" :aria-pressed="sourceWallGroups[sourceWallSide].includes(face)"
+                :style="{borderColor:sourceWallFaceFill(selectedSourceBody?.id??'',face)}" @click="toggleSourceWallFace(face)">{{ label('Грань ','Face ') }}{{ face+1 }}</button>
+            </div>
+            <p>{{ label('Первая сторона','First side') }}: {{ sourceWallGroups[0].map(f=>f+1).join(', ') || '—' }} · {{ label('Вторая сторона','Second side') }}: {{ sourceWallGroups[1].map(f=>f+1).join(', ') || '—' }}</p>
+            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" /></label>
+            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" /></label>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall">{{ label('Проверить толщину','Check source wall thickness') }}</button>
+            <span v-if="sourceWallPending" role="status">{{ label('Проверяю толщину…','Checking wall thickness…') }} <button type="button" @click="cancelSourceWall">{{ label('Отмена','Cancel wall thickness') }}</button></span>
+            <span v-if="sourceWallResult" :role="sourceWallResult.qualified?'status':'alert'">{{ sourceWallMessage }}
+              <span v-if="sourceWallResult.intervalMm">{{ sourceWallResult.intervalMm[0] }}–{{ sourceWallResult.intervalMm[1] }} {{ label('мм','mm') }}</span>
+              <button v-if="!sourceWallResult.converged" type="button" :disabled="sourceWallPending" @click="qualifySourceWall">{{ label('Повторить','Retry wall thickness') }}</button>
+              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallResult.reason }} · {{ sourceWallResult.search.attempts }} · {{ sourceWallResult.clearance.uncertainUv }}</details>
+            </span>
+            <span v-if="sourceWallError" role="alert">{{ label('Расчёт не завершён. Проверьте стороны и числовые параметры, затем повторите.','Calculation failed. Check side selection and numeric values, then retry.') }}
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall">{{ label('Повторить','Retry wall thickness') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallError }}</details></span>
+          </details>
           <label>{{ label('Допуск STEP, мм','STEP tolerance, mm') }} <input aria-label="STEP tolerance, mm" v-model.number="sourceStepTolerance" type="number" min="1e-12" step="any" /></label>
           <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceStepPending" @click="exportSourceStep">{{ label('STEP выбранного исходного тела','Export selected source body STEP') }}</button>
           <span v-if="sourceStepPending" role="status">{{ label('Готовлю STEP…','Preparing STEP…') }} <button type="button" @click="cancelSourceStep">{{ label('Отмена','Cancel STEP') }}</button></span>
@@ -3725,8 +3805,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
-              <g v-if="pane==='3d'" data-source-face-preview="true" pointer-events="none">
-                <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" fill="#77b8b0" fill-opacity=".25" stroke="none" />
+              <g v-if="pane==='3d'" data-source-face-preview="true" :pointer-events="sourceWallOpen && sourceWallMenuOpen?'auto':'none'">
+                <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" :data-source-body="face.body" :data-source-face="face.face" :fill="sourceWallFaceFill(face.body,face.face)" fill-opacity=".25" stroke="none" @pointerdown.stop @click.stop="face.body===selectedSourceBody?.id && toggleSourceWallFace(face.face)" />
                 <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" fill="none" stroke="#ff9977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
               </g>
               <g v-if="pane==='3d'" data-source-endpoint-enclosures="true" pointer-events="none">
@@ -4460,6 +4540,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0;gap:8px;padding:10px}
  .canvas-viewport{min-height:120px}
 }
+ .source-wall-panel>label{display:grid;gap:4px;margin:8px 0}.source-wall-panel>label>input{width:100%;box-sizing:border-box}
+ .source-wall-face-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:8px 0}
+ .source-wall-face-grid>button{min-width:0;padding:4px}.source-wall-panel [role=alert],.source-wall-panel [role=status]{display:block;margin:8px 0;overflow-wrap:anywhere}
 </style>
 
 <style scoped>
