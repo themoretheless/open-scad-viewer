@@ -1933,3 +1933,5 @@ pub mod source_material_segment;
 pub mod source_material_chord;
 pub mod source_material_wall;
 pub mod source_wall_search;
+
+pub mod source_wall_scan;

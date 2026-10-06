@@ -4248,3 +4248,26 @@ Measured chunks: geometry 3,965,654 bytes, worker 162,376, DirectModeler
 updated, retaining respective margins 608,123,511,761 bytes. Final
 151-artifact verification passes with packed/source identity gates intact.
 This is local production validation, not deployment or push.
+
+
+## Automatic original all-face thin-wall witness scan
+
+Native source_wall_scan visits original faces, proposes normal lines against
+all other faces and admits each candidate through fresh immutable material
+chord proof. One global attempt budget (1..256) bounds the finite scan;
+cell/domain/normal limits apply per proposal. The best private certificate
+can supply a local thin witness only when its upper length is strictly
+below the requested minimum. No absence or global minimum certificate is
+returned from proposal exhaustion.
+
+On the annular original body, grid 3 visits all 27 faces in 243 attempts,
+134 refused, and discovers the 6 mm wall interval
+[5.999999999999997,6.0000000000000036], below 7 mm. A one-attempt run remains
+explicitly incomplete. Combined native body/radius/seam regression passes
+in 20.37 seconds. Grid 1 initially finds only 15 mm and misses 6 mm despite
+visiting all faces; its failed expectation log is preserved as evidence
+that grid exhaustion does not prove safety.
+
+This is native-only automatic witness discovery. Full continuous whole-wall
+coverage, adaptive thin-region search, bridge/WASM/UI integration remain
+open; current packaged WASM does not expose this scanner.

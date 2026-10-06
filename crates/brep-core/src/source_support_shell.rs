@@ -296,6 +296,15 @@ mod tests {
             assert!(end.parameter[0]-1e-11<=expected_t && expected_t<=end.parameter[1]+1e-11);
         }
 
+        let scan=crate::source_wall_scan::search(&body,7.,3,243,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        eprintln!("original all-face wall scan attempts={} refused={} visited={} exhausted={} best={:?}",scan.attempts,scan.refused,scan.faces_visited,scan.proposals_exhausted,scan.best().map(|c|c.length_mm()));
+        assert_eq!(scan.attempts,243);assert_eq!(scan.faces_visited,27);assert!(scan.proposals_exhausted);
+        let thin=scan.thin_witness().expect("automatic native scan must find the 6 mm wall");
+        assert!(thin.length_mm()[1]<7.);assert!(std::ptr::eq(thin.body(),&body));
+        let limited_scan=crate::source_wall_scan::search(&body,1.,1,1,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        assert_eq!(limited_scan.attempts,1);assert!(!limited_scan.proposals_exhausted);assert!(limited_scan.thin_witness().is_none());
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,
             [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,
