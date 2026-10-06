@@ -3700,3 +3700,30 @@ download. After browser reload, the annular source Body freshly restores,
 all 53 shared edges are selectable and edge 6 can be selected again.
 Screenshots retained. This confirms this fixture's export/cancel/reload
 path, not geometric editing, Undo/Redo, crash or multi-tab acceptance.
+
+
+## Original source face group clearance foundation
+
+New native source_face_gap qualifies a requested positive separation
+between two disjoint groups of privately admitted Body faces. Every
+selected face pair is covered by original natural chart rectangles;
+these are conservative supersets of all retained trims, including holes
+and root-ended fragments. Original rational interval boxes supply lower
+bounds. Unresolved rectangles subdivide with globally bounded cells and
+original span visits. Missing work or unresolved numeric resolution returns
+no certificate and the original face pair/UV rectangles. Certificates
+borrow the exact admitted Body and retain both selected face groups.
+No cached mesh, sampled upper witness or detached saved success is used.
+
+The annular regression covers all 36 pairs of six original flat bottom
+faces and six original flat top faces: requested 5.99 mm separation is
+certified with 36 cells and 72 original span visits. A 7 mm request with
+8 cells/16 spans refuses and localizes the unresolved pair; insufficient
+span work and overlapping face groups also refuse. The combined original
+radius/seam/body regression passes in 27.25 s.
+
+This is a lower clearance certificate for specified face groups, not
+minimum whole-wall thickness: curved transition faces are not in these
+groups. Interior material chord, normal alignment, whole-wall coverage,
+source bridge/UI integration and new packaging for this module remain
+to be developed and qualified. The last packaged WASM is unchanged.

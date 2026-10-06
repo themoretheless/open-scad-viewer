@@ -158,6 +158,29 @@ mod tests {
         if let Some(path)=std::env::var_os("CAD_ANNULAR_SOURCE_BODY_OUTPUT") {
             std::fs::write(path,value_codec::to_string_pretty(&body.definition().unwrap()).unwrap()).unwrap();
         }
+        let shell=body.geometry().shell();
+        let flat_at=|z:f64|shell.faces().iter().enumerate().filter_map(|(i,w)| {
+            let s=w[0].edges()[0].surface();
+            s.control_points.iter().flatten().all(|p|p[2]==z).then_some(i)
+        }).collect::<Vec<_>>();
+        let bottom=flat_at(0.);let top=flat_at(6.);
+        assert!(!bottom.is_empty()&&!top.is_empty());
+        let gap=crate::source_face_gap::qualify(&body,[&bottom,&top],5.99,
+            crate::source_face_gap::Limits{cells:1000,spans:2000}).unwrap();
+        eprintln!("original annular flat face gap {} cells={} spans={} bottom={bottom:?} top={top:?}",gap.reason,gap.cells,gap.spans);
+        let proof=gap.certificate.expect("all original flat top/bottom pairs need clearance");
+        assert!(proof.lower_mm()>=5.99&&proof.lower_mm()<=6.);
+        assert_eq!(proof.faces(),[bottom.as_slice(),top.as_slice()]);
+        assert!(std::ptr::eq(proof.body(),&body));
+        let too_large=crate::source_face_gap::qualify(&body,[&bottom,&top],7.,
+            crate::source_face_gap::Limits{cells:8,spans:16}).unwrap();
+        assert!(too_large.certificate.is_none());
+        assert!(too_large.uncertain_faces.is_some()&&too_large.uncertain_uv.is_some());
+        assert!(too_large.cells<=8&&too_large.spans<=16);
+        assert!(crate::source_face_gap::qualify(&body,[&bottom,&top],5.99,
+            crate::source_face_gap::Limits{cells:1,spans:1}).unwrap().certificate.is_none());
+        assert!(crate::source_face_gap::qualify(&body,[&bottom,&bottom],5.99,
+            crate::source_face_gap::Limits{cells:1000,spans:2000}).is_err());
         let q=std::f64::consts::FRAC_PI_2;
         let spans=[
             crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),
