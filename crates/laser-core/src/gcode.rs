@@ -77,8 +77,6 @@ pub(crate) fn compile_job(prepared: PreparedPlan, machine: &MachineProfile) -> R
 pub(crate) fn compile_frame(prepared: PreparedPlan, machine: &MachineProfile) -> Result<Program> {
     let min = prepared.summary.bounds.min;
     let max = prepared.summary.bounds.max;
-    let rapid_distance_mm =
-        distance([0.0, 0.0], min) + 2.0 * ((max[0] - min[0]).abs() + (max[1] - min[1]).abs());
     let mut out = String::new();
     line(&mut out, "; open-scad-viewer/laser-frame 1")?;
     line(&mut out, "G21")?;
@@ -93,16 +91,24 @@ pub(crate) fn compile_frame(prepared: PreparedPlan, machine: &MachineProfile) ->
     line(&mut out, "M5")?;
     Ok(Program {
         gcode: out,
-        summary: Summary {
-            operation_count: 0,
-            path_count: 1,
-            segment_count: 5,
-            cut_distance_mm: 0.0,
-            rapid_distance_mm,
-            estimated_time_s: rapid_distance_mm / machine.estimated_rapid_mm_min * 60.0,
-            bounds: prepared.summary.bounds,
-        },
+        summary: frame_summary(&prepared, machine),
     })
+}
+
+pub(crate) fn frame_summary(prepared: &PreparedPlan, machine: &MachineProfile) -> Summary {
+    let min = prepared.summary.bounds.min;
+    let max = prepared.summary.bounds.max;
+    let rapid_distance_mm =
+        distance([0.0, 0.0], min) + 2.0 * ((max[0] - min[0]).abs() + (max[1] - min[1]).abs());
+    Summary {
+        operation_count: 0,
+        path_count: 1,
+        segment_count: 5,
+        cut_distance_mm: 0.0,
+        rapid_distance_mm,
+        estimated_time_s: rapid_distance_mm / machine.estimated_rapid_mm_min * 60.0,
+        bounds: prepared.summary.bounds,
+    }
 }
 
 fn distance(from: [f64; 2], to: [f64; 2]) -> f64 {

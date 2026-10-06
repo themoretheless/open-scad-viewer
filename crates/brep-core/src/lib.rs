@@ -1856,6 +1856,7 @@ pub mod source_contour_proposal;
 pub mod source_region_restore;
 pub mod source_contour_winding;
 pub mod source_world_wire;
+mod source_line_chart_root;
 pub mod source_shared_edge;
 pub mod source_shared_edge_restore;
 pub mod source_edge_restriction;
@@ -1904,3 +1905,37 @@ pub mod source_seam_tangency;
 
 pub mod linear_canal;
 pub mod linear_canal_body;
+
+pub mod source_inverse_shear;
+
+pub mod source_root_refinement;
+
+pub mod source_exchange_endpoints;
+
+pub mod source_exchange_trims;
+
+pub mod source_exchange_step;
+
+pub mod source_support_shell;
+
+pub mod source_pole_planar_contact;
+
+pub mod source_ruled_projection_contact;
+
+pub mod source_planar_material_hull;
+
+pub mod source_corner_plane_image;
+
+pub(crate) mod source_planar_flux;
+
+pub mod source_face_gap;
+pub mod source_material_segment;
+pub mod source_material_chord;
+pub mod source_material_wall;
+pub mod source_wall_search;
+
+pub mod source_wall_scan;
+
+pub mod source_wall_coverage;
+
+pub mod source_wall_self_coverage;

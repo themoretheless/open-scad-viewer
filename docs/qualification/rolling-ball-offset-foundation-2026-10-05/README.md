@@ -2671,3 +2671,2151 @@ not enable root-valued coordinate-Model editing or STEP export, closed mesh
 tessellation, new fillet construction, or root-body browser acceptance. No
 production dispatcher or UI uses this new native projection yet; the shipped
 WASM remains the previously qualified c79974ab artifact.
+
+### Irrational roots across distinct UV charts — 2026-10-06
+
+Original affine UV line carriers and rational Bezier cutters of equal degree
+now have a sufficient exact chart equation identity predicate. Expansion
+arithmetic compares original control and weight leaves after chart normalization;
+no reconstructed floating root becomes authority. A fresh union-selector unique
+root query prevents identical equations with different selected roots from merging.
+Unsupported nonlinear main curves, multispan cutters and unequal degrees still refuse.
+
+A planar tetrahedral Body with a shared edge split at sqrt(1/2) passes fresh
+shell, contact, injectivity and volume admission. All seven restrictions, five
+vertex identities and original recipes survive native topology and archive replay.
+Negative two-root selection, reversal, shifted parameter domains, mixed input roles
+and work exhaustion are covered. Native suites: 26 predicates, eight shells,
+eight shared edges, and the selected-root test passed.
+
+Fresh WASM SHA-256: 108c9616d6e55aae99d4b291d3cc83c5a8f347fb2ddbaa6579016a3e356f1ce1.
+43 worker/archive/display/client tests passed. Irrational Body restore measured
+722.72 ms host elapsed; the full archive/history scenario measured 4114.61 ms.
+These are single-run host measurements, not isolated Rust latency or performance
+qualification. Metadata Undo/Redo and original recipe reload passed; geometric
+edits and the 20-edit acceptance remain open. Vue and MCP type checks passed.
+Distribution audit: 151 artifacts, 8,166,531 asset bytes plus 14,951,533 raw WASM
+bytes. The packed geometry chunk grew 5,592 bytes to 3,887,392; size budgets were
+adjusted by this measured growth while retaining bounded headroom.
+
+The existing full-cap browser scenario passed with 20 edges and 1536 triangles.
+The first irrational browser run reached mouse/keyboard selection but its harness
+waited for a horizontal SVG polyline to have positive area; the wait now checks
+attachment, with actual mouse selection still asserted. Failure evidence is retained.
+
+This qualifies straight world carriers with nonlinear UV cutters on planar faces.
+General NURBS carriers, root-valued STEP/closed mesh, fillet bodies, whole-wall
+checks, named part acceptance, the full P0 matrix and P2/P3 remain open.
+
+The corrected irrational browser scenario passed: seven edges, 80 display
+triangles and 132 explicitly unresolved face rectangles. Mouse and keyboard
+selection, Retry, reload, visibility persistence, locking, isolation, selection
+handoff and manufacturing restriction passed with no page errors. Screenshot
+was inspected in the CPU/SVG fallback; this is not WebGPU qualification.
+
+### Curved rational UV main curves — native stage
+
+The normalized chord-chart predicate now compares every original control and
+relative rational weight of both main and cutter Bezier equations. Nonlinear
+main curves are accepted only when the complete equations agree under the
+supported chart normalization. Distinct degrees, multispan curves, degenerate
+endpoint chords and unproven chart relations still refuse. Fresh union-root
+uniqueness remains mandatory; source world-carrier identity is independently
+required by the caller.
+
+A rational quadratic main with nonuniform weights passes exact equation
+comparison across translated/scaled charts; perturbing its internal control
+refuses. A curved quadratic main with reflected UV traversal passes original
+SourcePoint replay and the fresh union-selector root query. Tests passed:
+27 cad-predicates, the source root selection test, eight shell tests (11.97 s),
+and eight shared-edge tests. These are native equation/root tests; a curved
+world-carrier closed Body and worker/browser qualification are still required.
+WASM rebuild is running; this stage has not been pushed or qualified in UI.
+
+The new native shared-edge integration test also passed for an actual rational
+quadratic 3D carrier with weights [1,2,1]. Two reflected UV charts independently
+qualify the irrational root at sqrt(1/2); exact source composition, opposite
+directed ownership and a fresh union-root check admit the common restriction.
+Both original fragment definitions remain unchanged. A 1e-12 perturbation of
+the world carrier's interior control refuses admission. This is a shared-edge
+test, not a closed Body or STEP qualification. Evidence:
+`source-curved-rational-world-root.log.gz`.
+
+### Curved closed shell: pending contact admission
+
+The irrational root tetrahedron now has an exact polynomial shear fixture
+F(x,y,z)=(x,y,z+x*x/4). Original affine face charts are represented by exact
+biquadratic coefficients and their original world boundary curves by quadratic
+coefficients. The first fixture incorrectly retained line chords and fresh source
+agreement refused it; correcting the authored world curves allows exact region
+replay, closed incidence, five shared vertices, seven restrictions and coherent
+boundary display (native test passed, 0.12 s).
+
+Fresh embedded Body admission remains refused with
+`source-shell-different-face-contacts-unproven`. This exposes the required next
+proof: contacts of the curved neighboring faces. Closed topology and chart
+injectivity are insufficient. The regression explicitly checks that no Geometry
+is issued; volume, Body, mesh, STEP and worker use of this curved shell remain
+unqualified. The recorded failed admission attempt is retained as evidence.
+
+### Exact inverse shear foundation and rebuilt WASM
+
+`quadratic_shear_chart_identity` checks all 27 original polynomial chart
+coefficients under an inverse quadratic coordinate shear with Expansion
+arithmetic. Biquadratic layout and constant weights are separate caller
+requirements; the predicate alone issues equation identity, no contact or Body
+authority. Perturbed interior coefficients and exhausted work refuse. All four
+curved-shell fixture faces pass this predicate. The unresolved Body pair is
+[0,2]; native work consumed 233956 units. Transporting contact proofs through
+the common invertible shear remains required. All 28 predicate tests, nine
+shell tests and nine shared-edge tests passed.
+
+The rational UV-main production path was rebuilt as WASM SHA-256
+6791d7bf8527b8d928b76ef7e00e23f65d1afcdcc7e76de01f27448e280b3d99
+(11,655,091 bytes). The inverse-shear predicate is currently native-only and
+is not routed through this WASM or worker. Vue/MCP type checks passed.
+43 real worker/archive/display/client tests passed in 5.22 s. These replay the
+existing planar irrational Body and full caps, not the currently refused curved
+Body. A premature first test/build observed partially packed artifacts and
+failed the identity guard; after the build process returned terminal success,
+the same tests passed. Failure evidence is retained.
+
+Distribution audit: 151 artifacts, 8,168,151 asset bytes; the packed geometry
+chunk is 3,889,012 bytes, +1620. Budgets retain their previous bounded margins.
+
+The rebuilt artifact passed browser replay of the existing irrational Body:
+seven edges, 80 display triangles and 132 explicitly unresolved face rectangles.
+Selection, Retry, reload, hiding persistence, locking and isolation passed with
+no page errors. CPU/SVG screenshot was inspected; no WebGPU claim. The curved
+closed-shell fixture remains refused pending contacts, so this replay does not
+qualify that fixture or general curved Body editing.
+
+### Exact affine inverse chart construction — native stage
+
+`source_inverse_shear::qualify` validates a clamped biquadratic source layout,
+constant positive weights, distinct driver/height axes, finite coefficient and
+bounded exact work. It proposes affine inverse corners, then separately proves
+the complete shear equation and exact equality of each proposed corner to the
+original expression. No rounded inverse point becomes authority. Private
+certificate storage retains the original surface, exact accepted inverse
+surface, axes and coefficient. Original knot domains are retained.
+
+A nonuniform-weight source, damaged interior coefficient, wrong shear and work
+exhaustion refuse. An independent corner test proves that subtracting a rounded
+0.1 cubed does not produce an exact zero inverse coordinate. All four curved
+shell charts accept the exact inverse; Body contacts remain refused at [0,2].
+Native inverse-chart and curved-shell tests passed; all 29 predicate tests
+passed. This API is not connected to shell contact admission or WASM. Next work
+is fresh source region/root transport and contact admission through the common
+bijective shear. The previously qualified 6791d7bf WASM is unchanged.
+
+Inverse-chart regression suites: nine shell tests passed (12.23 s), nine shared-edge tests passed (0.01 s).
+
+### Fresh inverse restriction, region and shell transport — native stage
+
+Native transport rebinds unchanged original UV curves to the privately accepted
+inverse chart. Every Crossing endpoint is freshly qualified from its original
+boundary/contact curves, selector and role. Parameter endpoints are preserved.
+The curved fixture now deliberately partitions an edge with varying x, so its
+root-valued carrier really changes under the shear; the earlier fixture selected
+a constant-x edge. Original UV curves, parameter ranges, direction and selectors
+are retained while world enclosures are recomputed.
+
+Region transport supports original/splitRoot/splitParameter recipes. Proposed
+inverse world boundaries must pass exact algebraic curve/surface composition.
+Original contour/region admission and root splits are replayed freshly. Other
+recipe classes remain unsupported. Replay limits apply per native recipe step;
+the separate exact composition budget is accumulated. Reported root mapping
+counts cover inverse selector queries, not all work inside recipe replay.
+
+Shell transport rechecks all inverse charts and regions, reconstructs canonical
+edge directions from underlying UV traversal, and freshly assembles every exact
+paired restriction. The inverse shell has the same face/edge counts and passes
+full native embedded Geometry qualification, including all face contacts.
+The curved original shell still refuses primary contact admission; transfer of
+this inverse proof into original Body admission/persistence is not connected.
+No volume, STEP, closed mesh or original curved Body claim is made. These new
+native APIs are not routed through worker/WASM; the shipped artifact is unchanged.
+
+Regression checks passed: nine shell tests (9.87 s), inverse-chart test, and
+the curved transport/embedding test with preserved vertex ownership, two root
+replays and exhausted exact region work refusal (0.26 s).
+
+### Original curved Body admission through inverse contacts — native stage
+
+An explicit inverse-shear proposal now replays every inverse chart/region/root,
+checks identical original/inverse incidence ownership, and qualifies the complete
+inverse Geometry with bounded remaining exact/chart/contact work. A single global
+bijective shear therefore transfers disjointness and owned contacts to the
+original source shell. The private Geometry retains the inverse proof separately
+from primary contact diagnostics; primary contacts alone still refuse this
+fixture. No public diagnostic report or saved certificate authorizes Geometry.
+
+Fresh original flux integration admits the curved Body with volume bounds
+[0.15484635370860397, 0.17483001747559201], containing the independent determinant-one
+shear volume 1/6. Contact admission used 312569 exact work units and 56 spans.
+Original Body persistence stores only axes/coefficient in `inverseShear`; restore
+rechecks incidence, exact inverse equations, regions, roots, contacts and volume.
+Wrong coefficient 0.5 and omitted recipe both refuse. Body definition replay
+is identical. Native admission/replay test passed in 11.47 s. Nine shell tests
+passed, the capped-canal body regression passed (66.80 s), and the JSON bridge
+regression passed (10.32 s). Vue/MCP type checks passed.
+
+The worker protocol now binds optional inverse recipe axes/coefficient to the
+request identity and rejects invalid axes/nonfinite coefficients. Fourteen
+filtered protocol/display tests passed (25 deliberately skipped), including
+recipe binding. `source-curved-shear-body-request.json.gz` stores original inputs
+for a new real worker/archive/history scenario; it has not yet run on fresh WASM.
+The new WASM build is still optimizing and this stage is not pushed. Browser,
+worker, cold lifecycle, STEP, closed mesh, geometric editing and general NURBS/
+fillet body admission remain unqualified. This family is one common quadratic
+shear of affine charts; it does not cover arbitrary curved face contacts.
+
+The inverse recipe lifecycle test passes: changing only coefficient 0.25 to
+0.5 snapshots the new request, cancels and terminates the previous worker, and
+ignores its captured late callback. Request identity validation also passes.
+Two tests passed, six skipped (filtered run). The first harness assertion used
+the wrong request envelope (options instead of job.options); corrected test
+and original failure evidence are retained. Fresh WASM acceptance remains pending.
+
+### Curved Body through shipped WASM, worker and browser
+
+WASM build finished and packaging returned terminal success before acceptance:
+SHA-256 54c4136e50aa767ad0ad5557068cc0f7fc312ea1040a3623869a05834f0d35f1,
+11,695,280 bytes. All 46 real worker/archive/display/client tests passed
+(10.47 s), including the curved Body, inverse recipe result binding, wrong
+coefficient refusal, document restoration and metadata Undo/Redo/reload.
+The curved restore measured 939.80 ms host elapsed; its full scenario measured
+5156.75 ms. These single-run host values do not isolate Rust execution or UI
+rendering and do not prove cold lifecycle or large-scene performance.
+
+The production browser accepted the curved Body with seven edges, 80 preview
+triangles and 132 explicitly unresolved face rectangles. Mouse and keyboard
+selection, Retry, reload, visibility persistence, locking, isolation, selection
+handoff and manufacturing restriction passed with no page errors. CPU/SVG
+screenshot was inspected; no WebGPU or closed mesh qualification. Vue/MCP type
+checks passed. Distribution audit passed for 151 artifacts: 8,178,675 asset bytes
+plus 14,991,672 raw WASM bytes. Geometry chunk grew 10004 bytes to 3,899,016;
+worker grew 260 bytes to 156737. Budgets preserve previous bounded margins.
+
+### Fresh root refinement toward STEP — native only
+
+`source_root_refinement::qualify` freshly replays nested original selectors
+until the world enclosure's outward L1 diameter upper bound is below the
+requested tolerance. Both fresh and original roots lie inside the original
+Unique selector, so uniqueness proves identity. Original recipe storage remains
+unchanged; no selected Cartesian coordinate, Model vertex or weld is issued.
+Work exhaustion, stagnant bounds and unproven selectors refuse. Tests cover
+sqrt(1/2) at 1e-8 and every Crossing endpoint of the admitted curved Body at
+1e-7. Native root test and curved Body/replay/refinement test passed (11.39 s).
+The first compile attempted an unavailable interval sqrt API; the final bound
+uses outward L1 widths and is conservative for Euclidean diameter. Failure
+evidence is retained. This new native helper is not routed through WASM/UI.
+
+The current native/shipped Body class remains a common quadratic shear of
+affine charts. General curved NURBS contacts, fillet construction/end transitions,
+STEP/closed mesh export, geometric Undo/Redo, whole-wall qualification, named
+part acceptance, full P0 and P2/P3 remain open. Earlier pending/unqualified
+statements above describe their historical stages; this section supersedes
+those only for this precisely tested shear family and worker/browser path.
+
+
+### Bounded exchange endpoint representatives — native only
+
+`source_exchange_endpoints::prepare` takes a privately admitted Body, freshly
+refines its original Crossing selectors, replays shared-edge identity and
+preserves world carriers, directions and parameter maps. Enclosures meet only
+by original vertex ID. Five representatives of the curved control body have
+outward L1 error bounds at most 1e-7 mm; seven original carriers remain intact.
+The original Body recipe remains stored separately. Exhausted exact work and
+an insufficient endpoint limit refuse preparation. The integrated curved
+Body/replay test passed in 11.49 s (`source-exchange-endpoints.log.gz`).
+
+This API is native only. It supplies endpoint accuracy bounds; it does not
+certify full edge/pcurve trims, STEP output, mesh closure, new topology or
+editing admission. Refinement mapping work is accumulated globally; shared-edge
+replay mapping has a separate per-use limit and identity queries are reported
+separately. No WASM or UI route changed in this stage.
+
+
+### Original root-trimmed source STEP candidate — native only
+
+`source_exchange_trims::prepare` binds a private endpoint preparation to the
+original Body definition. For each original carrier and both original pcurves,
+it chooses numeric trim parameters and uses interval evaluation to bound the
+endpoint's L1 distance to the same original vertex representative. Surface
+composition is evaluated with interval UV coordinates. Insufficient work,
+collapsed/reversed trim proposals or unproven tolerance yield no certificate.
+The integrated curved control passes at 1e-7 mm and refuses work=1 and 1e-30 mm.
+
+`source_exchange_step::prepare` freshly runs these gates and emits an AP242
+candidate directly from the original 3D carriers, surfaces and 2D pcurves.
+TRIMMED_CURVE records numeric restriction parameters. Shared EDGE_CURVE
+vertices use original shell IDs; no proximity welding or classic Model
+conversion. Exact source emitters preserve distinct knots and near-unit
+rational weights; existing v5 emission behavior remains unchanged. Pole
+exchange is explicitly refused. This candidate is not a Model, whole-curve
+certificate or general independent-reader qualification. It has no WASM/UI
+route and does not change editing/manufacturing/export admission there.
+
+Native integrated Body/replay/refinement/trim/STEP test passed (12.60 s),
+source coefficient serialization regression passed, and four v5 AP242
+regressions passed (0.39 s). The checked-in OCP script independently reads
+`source-curved.step.gz` after decompression. OCCT reports valid B-rep, one
+solid, four faces, seven edges and five vertices; volume is
+0.16666666666666663 mm³ versus independently expected 1/6. All five vertex
+coordinates match the analytic sheared tetrahedron within 1e-7 mm, including
+x=1-sqrt(1/2), y=0, z=x²/4 at the root split. Bounding extrema are 0..1 mm
+with OCCT's 1e-7 mm box gap. No root-value coordinate was authored into the
+source Body.
+
+The first independent oracle incorrectly assumed a different split edge;
+its failure is retained in `source-curved-step-oracle-correction.log.gz`.
+Inspection of the fixture's first changing-x paired edge establishes the
+correct (1→0) edge and the corrected analytic oracle passes. Initial OCP
+binding inventory also required explorer/IsSame counting and CornerMin/Max
+in place of unavailable IndexedMapOfShape/Bnd_Box::Limits bindings.
+
+This is independent STEP evidence for one qualified quadratic-shear Body,
+not general curved fillets, named-part acceptance, geometric Undo/Redo,
+closed mesh admission, general P0 or P2/P3 completion.
+
+
+### Root-trim STEP through packaged WASM and worker
+
+The optional sourceBodyRestore stepExchange request freshly restores the Body,
+then runs native endpoint/trim gates and serializes original carriers. Work
+exhaustion returns a preparation refusal while the independently admitted
+Body stays available. Request options, tolerance, result counts and bounded
+output are checked by transport; unsolicited or mismatched exchange results
+refuse. Changing a request cancels the old worker and ignores its late response.
+No new editor export action or geometric editing admission is introduced.
+
+Packaged WASM: bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f,
+11744484 bytes. All 48 worker/client/archive/display tests passed (11.84 s).
+The curved STEP scenario including success and work refusal took 1618.05 ms
+host elapsed; it does not isolate Rust or rendering latency. Native endpoint
+error upper bound was 1.550495842828071e-14 mm. Independent OCCT reading the
+worker-produced STEP confirms valid B-rep, one solid, four faces, seven edges,
+five vertices, analytic vertex coordinates within 1e-7 mm, and volume
+0.16666666666666663 mm³. This remains one quadratic-shear control model.
+
+Vue and MCP type checks passed. Production distribution audit passed for
+151 artifacts: 8197363 asset bytes plus 15040876 raw WASM bytes. Packed
+geometry grew 16692 bytes to 3915708 and worker grew 998 to 157735. Asset total
+grew 18688 bytes; budgets preserve the previous bounded margins. New UI
+export, named-part acceptance, general fillets, geometric Undo/Redo, P0 and
+P2/P3 remain unqualified.
+
+
+### New editor source-body STEP action
+
+The File menu exports the selected source Body with a positive numeric
+tolerance in mm. A separate worker freshly restores original recipes and
+prepares native STEP. Cancel terminates that worker; scene/selection/tolerance
+changes and closing/unmounting the editor invalidate the pending generation.
+Only a matching live scene and selected original record can download. Errors
+show a next action, native detail and Retry. Long File menus now scroll inside
+the viewport. Existing assembly/manufacturing restrictions stay separate.
+
+The production browser on the curved control passed mouse and keyboard edge
+selection, Enter export, cancellation with no download, invalid tolerance,
+Retry, corrected tolerance and one downloaded STEP. Existing source display,
+reload, visibility, locking, isolation and manufacturing checks also passed;
+no page errors. File controls screenshot was inspected after the scroll fix.
+Independent OCCT read the UI download as valid one-solid B-rep, 4 faces,
+7 edges, 5 vertices, volume 0.16666666666666663 mm³ and analytic vertex
+coordinates within 1e-7 mm. Vue type check passed. Distribution audit passed:
+151 artifacts, 8199738 asset bytes + 15040876 raw WASM bytes. DirectModeler
+grew 2329 bytes to 419618; CSS added 46 bytes. Bounded margins retained.
+WASM remains bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f.
+
+This supersedes the previous pending editor export statement for this tested
+control and source-carrier action. It does not qualify arbitrary curved
+fillets, geometry edits, named parts, closed preview mesh, full P0 or P2/P3.
+Browser evidence uses CPU/SVG fallback; WebGPU is not qualified here.
+
+
+### Native partial annular support assembly and planar contact
+
+`source_support_shell::prepare` rebuilds original region lifts and shared
+incidence from one complete support shell, including hole wires and explicit
+poles. It checks face/use limits before orientation proposals, proposes
+canonical face senses, then freshly checks every lift and shared world carrier.
+Input Model closed flags/Body records do not grant source geometry admission.
+The capped linear canal factory reuses this path. Unsupported reflected chart
+arithmetic can still refuse at the fresh gates; this is not a general exact
+chart-transport certificate.
+
+The partial quarter annulus (R=20, inner R=5, H=6, transition radius=1.25)
+now passes original source region and closed oriented incidence gates: 27
+faces and two poles. The initial planar lift exhausted verification because
+pcurve degree 5 exceeded the correlated composition path's limit of 4;
+raising that limit to 8 retains the composed degree-32 and other work caps.
+The first unoriented assembly also refused opposite-edge ownership; canonical
+face/chart proposals resolve it and are rechecked against original 3D carriers.
+Failure evidence is retained.
+
+`source_pole_plane_image` now permits zero interior Bernstein coefficients
+while requiring a consistent exact strict side, a strict opposite-edge
+coefficient and strict noncollapsed opposite corners. Positivity of interior
+Bernstein bases excludes extra plane images. Additional corner images, mixed
+signs, unproven pole rows and exhausted exact work refuse.
+`source_pole_planar_contact` binds that image to a freshly proven planar face,
+original shared edges and source pole vertex IDs/points. Boundary classification
+and exact work share global caller budgets. It grants only cross-face contact
+ownership; chart injectivity remains separate. It runs after established
+contact paths, before unresolved numerical search.
+
+The annular transition/top-plane contact [0,1] is now certified, including its
+collapsed endpoint, and exactWork=1 refuses. Whole-shell geometry still refuses
+at [0,2], the transition/cylinder contact. This is the next actual missing
+proof. No private Body or volume is issued for this annulus; radius, whole
+tangency, wall thickness, general fillets and named-part acceptance remain open.
+
+Native tests: annular incidence/planar proof and explicit remaining refusal
+passed (45.34 s); input closed/Body claims do not change incidence, damaged
+pcurve refuses and face-limit refusal passed (0.25 s); four pole image tests
+passed (0.41 s); all 21 composition/agreement tests passed (0.07 s), including
+rational degree-5 agreement and damaged interior detection. Existing capped
+Body/volume regression passed (66.38 s) and root Body/replay/STEP regression
+passed (11.65 s). Timings are test runtimes, not isolated performance evidence.
+
+This is a native source stage. The packaged WASM/UI artifact remains
+bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f;
+these new contact/assembly capabilities have not been packaged or browser
+qualified. Earlier UI STEP evidence applies to its earlier control class.
+
+## Exact projected Jacobian predicate
+
+Added a native original-coefficient predicate for positive-weight rational
+Bezier charts of degrees 1..8. It forms the homogeneous projected Jacobian
+numerator using exact expansion arithmetic and returns signs of its tensor
+Bernstein coefficients. Conversion uses common positive integer denominators;
+no rounded division or sampled derivatives decide orientation. A consistent
+nonzero sign, with zero coefficients allowed, proves strict orientation on the
+open chart. Work exhaustion returns no signs.
+
+Five regression cases pass: plane and reversed axes, collapsed boundary with
+flat endpoint, an interior fold with both signs, nonuniform rational weights
+and work refusal, and a rank-deficient projection. The full cad-predicates
+suite passes. This predicate does not prove global injectivity, simple
+boundaries, cross-face contact ownership, tangency, or a closed fillet body.
+The annular transition/cylinder contact [0,2] remains unresolved. No new WASM
+artifact or browser qualification is claimed for this stage.
+
+The NURBS wrapper owns an immutable original Surface in each issued certificate
+and validates clamped knots, dimension, weights, periodic flags, axes, and the
+actual cad-predicates work cap (1,000,000). Two wrapper regressions pass.
+Power-to-Bernstein common denominators now use exact integer LCM factors; the
+full cad-predicates suite passes after this change.
+
+Actual original annulus: face 0 refuses with ResourceLimit at 999,994 charged
+operations; no orientation certificate is issued. Face 2 returns 45 zero
+coefficients (10,777 operations), as expected for the XY projection of its
+ruled extrusion. The explicit refusal/rank regression passes (0.09 s). This
+is evidence of an unresolved computation limit, not successful annular
+geometry qualification. The transition/cylinder proof still requires a more
+efficient exact determinant and independent boundary ownership/injectivity.
+
+## Exact Bernstein determinant and original annular projection reversal
+
+Replaced power-basis determinant multiplication with exact Bernstein products
+using common positive integer LCM denominators. Original coordinates are
+translated by the first original control coordinate in exact arithmetic.
+Added separately bounded original coefficient-row queries; every row uses the
+same immutable arena and all rows must succeed before any chart certificate.
+The wrapper caps aggregate charged work at 100,000,000; each underlying context
+retains its 1,000,000 cap. Partial row results never grant orientation.
+
+Six predicate regressions and the full cad-predicates suite pass, including
+whole-chart versus independently queried rows of a curved rational chart.
+Two original NURBS wrapper tests pass. Actual annular face 0 now completes
+in 9,130,621 charged operations: 65 negative, 14 zero, 11 positive coefficients.
+All positives lie on v=1, whose Bernstein restriction has strictly positive
+sign for interior u; v=0 is strictly negative for interior u. By continuity,
+every interior u has an interior v where projected Jacobian vanishes.
+This proves a projection orientation reversal, not a 3D self-intersection.
+No orientation certificate or annular Body is granted. Face 2 projection
+returns 45 zeros (57,210 operations), consistent with extrusion rank deficiency.
+The native actual-model regression passes; native authoring at the transition
+endpoint now needs correction and renewed original-geometry qualification.
+WASM/UI remain unchanged and whole annular contact/body remains unproven.
+
+## Transition authoring correction and renewed original qualification
+
+Independent weighted accumulation/division split the cylinder-side XY
+columns. Copying contact XY alone still left seven positive projected
+Jacobian coefficients. The transition constructor now copies the original
+contact rail into the middle meridian column and moves each nonzero internal
+XY coordinate 16 representable steps toward zero. Endpoint and collapsed
+rows, contact rail, centers and weights stay unchanged. This is a rounding
+scale authoring perturbation; it does not claim exact analytic tangency.
+Fresh radius and normal qualification remain necessary. No loaded original
+Surface is rewritten by the projection predicate or its wrapper.
+
+The control annulus now has 77 negative and 13 zero Jacobian coefficients;
+its strict interior XY orientation certificate owns the original corrected
+Surface (9,111,713 charged operations). Eight varying-radius transition
+cases, both directions with end radii 0/1.25 and 0.5/1.25, pass exact interior
+orientation. One reverse transition exhausted a row context, so bounded
+coefficient queries were added: an exhausted row's work remains charged,
+individual coefficients use the same immutable arena, and the aggregate cap
+remains 100,000,000. Missing coefficients never issue a chart certificate.
+Whole/row/coefficient results match on an independent curved rational test.
+All 80 cad-predicates tests pass.
+
+Radius qualification passes both directions and all four end-radius pairs.
+Nonzero-end upper errors are below 1.59e-12 mm against a 1e-9 tolerance;
+zero-end cases retain their existing 1e-6 tolerance (upper bounds below
+8.99e-7 mm). These are whole-patch certificate bounds, not sampled radii.
+Eight existing transition regressions pass, including full-interval seam
+normal coverage (38,798 and 46,894 checked normal spans), pole incidence and
+explicit refusal of regular G1 at the collapsed tip. That batch's new
+orientation case initially failed on its row work cap; after coefficient
+refinement the eight-case orientation test passes separately (1.92 s).
+
+Annular incidence and transition/top-plane contact still pass. Whole source
+geometry still refuses at transition/cylinder pair [0,2] (87.67 s test run).
+Projection orientation alone does not prove projected boundary simplicity,
+containment, cross-face contact ownership or an annular Body. None of these
+new native changes are packaged in WASM or browser qualified yet.
+
+## Original tangent cusp separation and projected Jordan chart
+
+Added exact Bernstein signs for the quadratic functional
+cross(T-J,P-J) - beta*dot(T-J,P-J)^2 on two original rational UV Bezier
+curves. J and T are original control coordinates; beta is a proposed finite
+separator coefficient. Native curve evaluation only proposes beta; every
+original polynomial coefficient supplies the actual decision. Positive
+weights and strict opposite coefficient signs exclude any common interior
+point. Shared endpoint coefficients must vanish exactly and the other
+endpoint coefficients must have strict opposite signs. The immutable
+certificate owns both original curves and its source frame/beta. It does
+not prove individual curve injectivity. Wrong beta, changed controls,
+coincident curves, a 1e-12 endpoint gap and exhausted work refuse. Two native
+separator tests pass, including rational weights and reversed carriers.
+
+The projected Jordan chart extracts original natural boundary coefficients
+by selecting XYZ axes, preserving weights, reversing coefficient order
+where needed, and using normalized Bezier parameters. Constant projected
+boundaries are recorded explicitly. Every retained boundary curve must be
+individually injective and every pair separated, with exact joins. Existing
+sufficient simplicity proofs are reused; tangent-adjacent pairs may use
+the new quadratic separator under the remaining aggregate exact budget.
+No incomplete pair list, partial signs, or sampled geometry grants a chart.
+
+Strict interior Jacobian orientation plus a simple Jordan boundary implies
+global interior projection injectivity: the boundary degree is +/-1 inside
+and zero outside; every interior preimage has the same local degree.
+Openness excludes interior images on the Jordan boundary. This proves an
+interior chart property; collapsed projected boundaries still need original
+3D pole/contact ownership before any cross-face or Body admission.
+
+Actual transition cusp (R=20, H=6, radii 0->1.25, sweep pi/6): beta
+0.01969084457822929 gives strict opposite sides in 166,612 charged operations.
+The complete projected Jordan certificate passes in 8,948,517 operations.
+The canonical original annular source region's transition also passes in
+12,488,524 operations (0.26 s test runtime). Its copied input Surface is
+retained in the immutable certificate. Square and collapsed-triangle
+regressions pass; folded charts and low work refuse. The full 80-test
+cad-predicates suite passes.
+
+Next: match the ruled wall's entire original projected trace to the Jordan
+boundary and bind remaining fibers/poles to shared source identities.
+Transition/cylinder contact [0,2], whole annular Body/volume, full fillet
+acceptance and new WASM/UI integration remain unproven.
+
+## Original transition / ruled-cylinder contact ownership
+
+Added a private source contact certificate for a complete original curved
+material chart with a Jordan projection and an adjacent positive-weight
+clamped ruled Bezier wall. Original wall XY (or XZ/YZ) coordinates and weights
+must agree exactly between its two linear-axis control columns. Its entire
+projected trace must match a natural boundary's original coefficients and
+weights, forward or reversed. No analytic-circle substitution, fitted rail,
+coordinate welding, tolerance identity or sampled contact admission occurs.
+
+The Jordan certificate excludes interior projection images from that trace;
+boundary simplicity confines boundary preimages to the matched natural edge
+and explicitly collapsed boundaries. Each collapsed boundary must be truly
+constant in original XYZ coefficients and must own an original shell pole
+with the same shared-edge endpoint identity. Original source fragments on
+the contact boundary must own shared shell uses; possible endpoint contacts
+must own the same original vertex IDs. Chart injectivity remains the
+separate shell geometry gate. Arbitrary trimmed curved material charts and
+nonmatching/multispan ruled traces remain unproven in this certificate.
+
+Actual annular faces [0,2] now qualify in 12,488,524 charged operations.
+Reversed face order also qualifies; work=1 and wrong neighbor [0,3] refuse.
+A one-ULP projected coordinate or wall-column weight change prevents trace
+admission. Changing only extrusion Z preserves the projected trace but
+does not bypass independently required original shared carriers. These
+positive/negative native tests pass (0.38 s and 0.01 s).
+
+Integrated the immutable certificate into native pair diagnostics and shell
+geometry admission. Whole annular geometry passes [0,2] and now reports the
+next unproven pair [0,6], the transition and neighboring trimmed top plane.
+The updated full gate regression passes (45.95 s); its initial assertion
+expecting old [0,2] failed and is retained as advancement evidence.
+No whole annular Geometry, Body or volume certificate is issued.
+
+Existing native regressions pass: irrational-root flat body/topology
+(1.70 s), curved root/body/inverse-contact/volume replay (11.77 s), and capped
+body with independent analytic cap/frustum volume enclosure (66.71 s).
+These are test runtimes, not performance comparisons. Packaged WASM, UI,
+independent STEP reader and named-part acceptance were not refreshed here.
+
+
+## Original material vertex and corner-only plane contact
+
+Native annular pair [0,6] now qualifies using a fresh planar material
+boundary hull and exact canonical carrier endpoint ownership. This stage
+requires one injective clamped bilinear planar chart, positive original
+carrier weights, full source UV endpoints and direct private SharedEdges.
+Mapped ranges and root-valued endpoints refuse this shortcut. The private
+certificate retains original regions, carrier definitions and chart proof;
+no rounded world endpoint or saved topology flag authorizes contact.
+
+Pair [1,2] now qualifies by exact original Bernstein control signs. Uniform
+strict nonzero signs exclude open surface contact with the other face's
+plane. A zero boundary must map entirely to the same owned original point;
+every zero corner must equal that point. Zero interior controls are allowed
+because the open tensor basis is strictly positive. This is contact proof,
+not an independent chart injectivity or G1 claim.
+
+Actual pair tests pass: [0,6] uses 9,254 exact operations; [1,2] uses 14,985.
+Negative tests reject opposite interior signs, a different zero corner,
+a zero boundary containing another point (including one subnormal step),
+and exhausted work. An explicitly collapsed boundary at the owned point
+is accepted. Existing original vertex contact regressions pass.
+
+The full annular gate advances to [1,6], still reporting
+`source-shell-different-face-contacts-unproven`. The initial outdated pair
+assertion failed and its log is retained as advancement evidence. No whole
+annular Geometry/Body/volume certificate, new WASM, UI or named-part STEP
+acceptance is claimed by this stage.
+
+Updated full annular gate regression passes (37.57 s). Curved irrational-root
+body/contact/volume replay also passes; see retained logs.
+
+
+## Coplanar adjacent original material faces
+
+The [1,6] annular pair consists of two trimmed material regions on the same
+original bilinear top chart, sharing one complete original linear carrier.
+Previously candidate separator points came only from the source planes;
+all candidate planes coincided with the top plane and could not separate
+the material. Native shared-line proof now also proposes finite transverse
+coordinate points. These are guesses only: fresh exact carrier signs,
+opposite strict sides and confinement of the zero hull to the complete
+owned shared segment still decide admission. No topology-only exclusion,
+tolerance weld or sampled contact claim was introduced.
+
+Actual [1,6] qualifies in 135,124 charged operations; reversed face order
+also qualifies. Work=1 and a nonadjacent face without an owned shared line
+refuse. The whole annular gate advances to [1,10]; its initial stale
+assertion failure is retained. Added explicit root/mapped endpoint refusal
+checks to the irrational-root ownership regression. That test passes
+(2.04 s), as does the curved root/body/contact/volume replay (11.49 s).
+No complete annular geometry or body, refreshed WASM/UI or full named-part
+acceptance is established by these results.
+
+The updated whole-gate regression passes; the next unresolved pair remains
+[1,10]. The terminal log is retained as annular-transverse-qualified.log.gz.
+
+
+## Strict separation using original planar material hulls
+
+Annular [1,10] has no owned common edge. The retained top face's untrimmed
+square support chart overlaps the other transition's control hull; this
+prevented the previous full-surface enclosure from proving separation.
+The native hull gate now first retains the original full-surface proof.
+On failure it recomputes bounded planar material hull certificates and
+retries exact strict separation using those immutable enclosures. A curved
+or unsupported trimmed chart keeps its full original positive-weight
+surface controls. All attempted exact work, including failed initial
+proposals and planar certificates, shares the caller's remaining budget.
+If neither material hull is supported, the identical original proposal is
+not repeated. No sampled or tolerance-based separation is admitted.
+
+Private disjoint certificates retain the material hull authority when used.
+Actual [1,10] qualifies in 10,178 charged operations; reversed order also
+qualifies. Work=1 refuses; the touching pair [1,6] cannot be certified as
+disjoint. Existing rotated-shaft and shared-cone-pole regressions pass.
+The integrated shell gate advances to [1,13]; the initial assertion failure
+is retained as advancement evidence. Irrational-root closed body/topology
+regression passes. Complete annular Geometry/Body/volume, packaged WASM/UI,
+and named-part STEP acceptance remain unproven.
+
+Final optimized full-gate regression passes at [1,13]. Curved root/body/
+contact/volume replay also passes; its contact work is 674,285 operations.
+These local test runs do not establish performance improvements.
+
+
+## Coordinate proposals with fresh strict hull admission
+
+Annular pair [1,13] is a trimmed top material region and a distant inner
+wall. Their original/enclosed controls have a strict X gap, but the previous
+centroid-normal candidate intersected the material hull. Native strict
+separation now tries the original centroid candidate followed by at most
+three coordinate-gap midpoint planes. Bounds and rounded midpoints propose
+planes only; exact independence and fresh strict signs of every original
+or privately certified enclosure control remain necessary. Failed candidates
+and work exhaustion do not authorize separation. All candidates share one
+remaining exact-work budget and successful certificates retain original
+regions and any planar material enclosure authority.
+
+Actual [1,13] qualifies in 10,900 charged operations; reversed order also
+qualifies, and work=1 refuses. Synthetic point-hull admission tests show
+that adjacent representable values whose rounded midpoint reaches an
+endpoint refuse, coincident points refuse, and a two-step gap with a strict
+representable midpoint can qualify. These isolate numeric admission rather
+than asserting synthetic shell validity. Original rotated shaft and shared
+cone-pole regressions pass, as does irrational-root closed body/topology.
+The full annular gate advances through all face-1 pairs to [2,4]; the initial
+stale assertion failure is retained. Complete annular Body/volume and new
+WASM/UI/named-part acceptance remain outstanding.
+
+Final full annular gate regression passes at [2,4] (19.93 s), as does curved
+root/body/contact/volume replay (23.35 s). These concurrent local runtimes
+are not controlled performance comparisons.
+
+
+## Whole original annular embedded geometry admission
+
+The original [2,4] outer-wall/bottom contact already qualified independently
+via the existing natural plane-image proof (14,659 exact operations, zero
+classified driver cells), including reversed order and work=1 refusal.
+Scheduling diagnostics identified the integrated failure: [1,23] consumed
+all 100,000 driver cells in heavy fiber guesses before the cheaper exact
+shared-line proof ran. Later independently supported contacts were skipped
+because the global driver budget had already been exhausted.
+
+The native pair scheduler now attempts exact shared-line contact and the
+natural plane-image/owned ruled-projection proofs before the heavier paired
+fiber and chart guesses. All failed attempts remain charged; the original
+100,000 driver and 100,000,000 exact-work limits are unchanged. No caller
+flags, topology-only exclusions, samples or increased budgets authorize
+contacts. Private shell geometry separately recomputes vertex links and
+chart injectivity before accepting the original pair certificates.
+
+The actual 27-face annular fixture now issues
+`source-shell-embedded-geometry-qualified`, with no uncertain face/pair:
+all 351 pairs qualify, 28,005,677 exact operations, 712 spans, 48 driver cells
+and 2,337 linear cells. It does not use an inverse-shear proposal. The initial
+assertion expecting incomplete geometry failed; retained logs show this
+advancement. The rewritten full-gate regression passes (1.98 s).
+This is original embedded shell Geometry, not a volume/orientation Body
+certificate. Full interval fillet/radius/tangency/wall qualification,
+independent STEP/named-part acceptance and packaged WASM/UI remain separate.
+
+Four natural plane-image positive/negative regressions and the root-clipped
+contact search regression pass. The flat-root integrated audit originally
+expected a fiber certificate; scheduling now selects exact shared-line
+certificates first. Its direct fiber checks remain and the audit now requires
+an original shared-line certificate on every pair. The old failure log is
+retained; this changes scheduling assertions rather than root geometry.
+
+Final bounded annular geometry regression passes. Flat irrational-root
+body/topology replay passes (3.16 s); curved root/body/contact/volume replay
+passes (15.23 s). Capped body independent analytic volume and fresh restore
+regression passes (88.44 s); its interval [37.52914969854688,37.77914345395185]
+contains the independent value 37.645933842430814. These concurrent local
+test runtimes are not performance comparisons or annular volume evidence.
+
+
+## Original annular Body volume through closed carrier Green flux
+
+The existing 2D trimmed-domain flux search exhausted 99,999 cells/spans and
+1,000,000 classification cells at requested 20 mm3 error; its broad interval
+[6891.509073457432,7231.33740643522] did not authorize Body admission. The
+terminal failed initial test is retained. A native planar flux path now uses
+Green's theorem on privately owned original world boundary carriers when
+all surface coefficients share the requested flux coordinate. It requires
+literal complete source endpoints, direct complete SharedEdges, unchanged
+positive clamped single-Bezier carrier definitions and exact closed joins.
+Projection copies the two original complementary coordinates and weights;
+direction reverses coefficient order without recomputing authored knots.
+All oriented loops, including holes, contribute their signed area. The
+constant coordinate minus origin multiplies the outward interval area.
+A coordinate identical to origin has provably zero flux. Unsupported
+root/mapped/multispan carriers or curved surfaces retain the previous gate.
+
+Green interval work is charged to both volume cell and span budgets. Fixed
+full-face bounds are excluded from surface subdivision; the final global
+width/sign test still decides admission. A coarse or exhausted area bound
+never skips that test. Native annular admission now yields positive Body
+orientation and volume [7061.341216618879,7061.591214207668] mm3, width under
+0.25 mm3, using 28,287 cells/spans and zero 2D domain cells. This is one
+specified original coefficient fixture, not arbitrary fillet qualification.
+
+The independent Python verifier evaluates original rational Bernstein
+coefficients with Gauss quadrature and uses boundary flux only for horizontal
+affine trimmed planes. Exact binary-rational XY rank proves zero Z flux for
+vertical trimmed planes; unsupported tilted trims refuse. At orders 16,
+32 and 64 the numerical values are 7061.457370838773,7061.457370838772 and
+7061.4573708387725 mm3, maximum difference 9.1e-13 mm3. The value lies inside
+the native interval. Floating convergence is not a rigorous quadrature error
+bound, STEP-reader proof, or source-edit/radius/tangency certificate. The
+coefficient fixture and SHA-linked verifier result are retained.
+
+Negative tests keep curved fallback and insufficient-work refusal, and prove
+zero flux on the original bottom coordinate plane without sampling. Flat
+irrational-root body/topology and curved root/body/volume regressions pass.
+The current source STEP writer explicitly refuses pole-bearing bodies;
+this annulus has two poles and still requires explicit degenerate exchange
+topology. Packaged WASM/UI, full fillet/wall diagnostics, named-part and P0
+acceptance remain outstanding.
+
+Native annular restore recomputes original shell, embedding and volume even
+when the saved value adds false volume [1,1], success=true and reversed
+orientation=true claims. The restored source definition, vertex identities,
+orientation and volume interval exactly match the admitted original body.
+This regression passes (84.66 s). It does not establish UI Undo/Redo, crash
+recovery or multiple-tab behavior.
+
+Final positive-weight/single-Bezier guarded Body and fresh restore test
+passes; its terminal log is retained. The final independent quadrature
+was rerun against the emitted original coefficient fixture and passes.
+
+
+## Explicit original pole STEP topology and independent OCCT qualification
+
+Source STEP preparation now admits privately proved collapsed UV boundaries
+with literal parameter endpoints. Each original UV carrier and source
+surface is emitted unchanged as a trimmed PCURVE; EDGE_CURVE references
+that PCURVE and the same original source vertex at both ends. It has no
+new surrogate 3D carrier. Face loops retain the directed pole boundary.
+The 2D definitional context explicitly includes PARAMETRIC_REPRESENTATION_CONTEXT.
+The reference schema describes PCURVE as a curve with a basis surface and
+2D definitional curve: https://www.steptools.com/docs/stp_aim/html/t_pcurve.html .
+The independent OCCT writer was inspected on cone/Bezier pole controls;
+its omission of pole edges did not substitute for this explicit topology.
+
+Two literal pole endpoints each are reserved within the unchanged global
+trim-work cap. Insufficient positive work returns no candidate; zero or
+work beyond 10,000,000 refuses. Root-valued pole trims still explicitly
+refuse pending independent parameter representatives. Existing original
+rooted shared-carrier preparation remains unchanged. The native annular
+candidate has 27 faces, 55 edges (53 shared carriers plus two poles), 26
+vertices and endpoint error upper 2.2026824808563116e-13 mm.
+
+Independent OCCT reads the final candidate as one valid solid with all
+27 faces, 55 unique edges, 26 unique vertices and exactly two degenerate
+edges. Both poles match (20,0,6) and (0,20,6) mm exactly. Volume is
+7061.457372466771 mm3, differing from independent original-coefficient
+quadrature by 1.6279982446576469e-6 mm3. Maximum extent difference from
+[-20,-20,0,20,20,6] mm is 1.0000001182675078e-7 mm. STEP and SHA-linked
+verifier report are retained. This proves one specified source export,
+not arbitrary pole trims, geometric editing or named-part acceptance.
+
+A deliberate 0.1 mm pole vertex corruption keeps OCCT's general validity
+flag true but fails the verifier's explicit pole coordinate test. Both
+expected and observed pole sets are checked in both directions. Native
+budget tests, irrational-root body/topology/export regression and original
+coefficient serialization test pass. The TS response gate now expects STEP
+edge count = original shared carriers + pole count. Ten existing worker
+compatibility tests pass against the unchanged packaged WASM; they do not
+qualify this new native pole path in WASM or the browser. Fillet/wall
+qualification, new WASM/UI, named-part and full P0 acceptance remain open.
+
+
+## Original admitted body radius and regular middle seams
+
+The annular Body fixture now checks the actual original faces 0, 5 and 10
+against the authored center curves and cubic radius laws. The exposed
+CircularBlendSpan radius_curve returns those same original coefficients;
+existing authoring qualification uses it without changing geometry. Exact
+source surface equality, including reversed U orientation on the exit
+face, is required before qualification. Whole-domain radius error upper
+bounds are 5.610988272093926e-7, 3.622329271863914e-13 and
+8.407770510685909e-7 mm respectively. A corrupted radius coefficient
+(+0.1 mm) and work budget 1 refuse certificates on each face.
+
+Both original middle rails have fresh whole-interval regular tangent-plane
+certificates: edge 6 sine-squared upper 2.3404439736769268e-26, and edge 8
+upper 4.7060135238022814e-7. Budget 1 refuses both. Four transition rails
+with collapsed endpoints refuse regular G1 certificates and report an
+uncertain canonical interval under the stated bounded work. Work or
+resolution exhaustion is not a proof of a geometric defect. No endpoint
+limit tangency or regular pole tangent plane is claimed.
+
+The combined original Body test passes in 22.05 s; all five native seam
+regressions pass, including crease rejection, singular endpoint refusal,
+root endpoints and reversed partial carriers. Existing moving-radius
+authoring regression passes. Terminal logs are retained. This does not
+qualify general fillets, complete wall thickness, packaged WASM/UI,
+named-part acceptance or the remaining P0/P2/P3 scope.
+
+
+## Bounded endpoint normal diagnostics
+
+Regular seam qualification now checks both literal full-carrier endpoints
+before adaptive interval subdivision. An unresolved endpoint normal returns
+source-seam-endpoint-normal-unresolved with a point canonical interval;
+this is incomplete qualification, not a geometric defect certificate.
+Root endpoint enclosures and affine carrier ranges keep the original
+whole-interval path because their enclosure endpoints are not exact
+source representatives. All work remains charged to the same limits.
+The singular endpoint regression now requires the diagnostic in one cell.
+All five seam regressions pass, including rooted and reversed partial
+carriers. This does not provide one-sided pole limit normal certificates.
+
+The final annular Body radius/seam regression passes. Middle rail bounds
+remain unchanged; endpoint preflight adds two cells to each accepted rail.
+The four collapsed-end rails report canonical 0 or 1 in one or two cells.
+Both final terminal logs are retained. WASM/UI packaging remains pending.
+
+
+## Selected source seam bridge and worker response contract
+
+Source Body restoration accepts an optional seamQualification request for
+one original owned edge. Native limits and edge index are validated before
+restoration, including when restoration cannot admit the Body. After fresh
+Body admission, the original seam qualifier reports qualified status,
+angular bounds only with its private certificate, reason, bounded work
+and uncertain canonical interval. A sharp or unresolved seam does not
+invalidate the independently admitted Body. The exact request is echoed.
+
+The worker response gate requires the matching edge and all request limits;
+missing or unsolicited seam results, over-budget work, invalid uncertainty
+intervals, an unsupported reason and false success bounds refuse. Native
+JSON dispatch test passes, including invalid edge and zero-budget requests.
+Ten worker tests pass; new seam responses there are explicit transport-only
+fixtures against the previous packaged WASM, not proof of a new WASM path.
+Direct vue-tsc --noEmit passes. The npm pretypecheck build is still in
+progress at this checkpoint. Generated WASM, real new seam worker execution
+and localized UI interaction remain to be qualified separately.
+
+
+## Source seam UI wiring checkpoint
+
+The source STEP/file panel now includes a selected-edge tangency check,
+Cancel and Retry, localized incomplete endpoint-normal messages, angular
+bounds and uncertain canonical interval details. A refused selected seam
+changes its selected-edge stroke to the diagnostic color. A dedicated
+worker and generation guards cancel on document/selection/open changes;
+late responses also check record identity and disposal. Escape cancels.
+Direct vue-tsc passes after the final UI edits. In isolated Vite preview
+5188, the source canal document loads and edge 0 is selected by Enter.
+The tangency button is present. Actual new WASM qualification and browser
+Cancel/Retry/late-response acceptance are pending optimization/packaging.
+The active root checkout/runtime 5175 was not changed.
+
+
+Selected seam request supersession now has a focused worker test: edge 0
+is superseded by edge 1; the first worker is terminated and its saved late
+callback cannot settle the second request. The focused supersession and
+abort/Retry tests both pass. In isolated browser 5188, the previous WASM
+response without requested seam diagnostics is rejected by the protocol
+gate and shown as a localized incomplete check with Retry. Retry followed
+by Cancel returns to the idle tangency button with no error shown. This
+is old-WASM compatibility/cancellation evidence, not new WASM qualification.
+Optimization remains live; the pending new real-WASM test is uncommitted
+until the rebuilt artifact is packaged and verified.
+
+
+The seam response expectation now copies request limits instead of retaining
+a caller-owned mutable reference. A focused regression mutates the original
+edge, angular tolerance and cell budget after expectation creation; the
+original request key and limits remain fixed. The regression passes.
+This prevents changing response admission bounds while a worker is active.
+
+
+## Rebuilt WASM original annular seam qualification
+
+The complete npm pretypecheck geometry build and TypeScript checks finish
+successfully. New packaged geometry WASM SHA256 is
+ae848eb6e1e7e3c1778c865285c9a98694b1919f6c4d9e1857e978f39685e812,
+11,847,649 bytes (original compiled payload 13,371,614 bytes).
+Both source worker and seam transport suites pass: 13 tests in 14.02 s.
+The real worker freshly restores the original 27-face, two-pole annular
+Body and certifies middle rail 6; transition rail 0 refuses with
+source-seam-endpoint-normal-unresolved, canonical [0,0], one cell.
+A separate real selected seam test on the source canal also passes.
+
+The native test emits the original Body definition without surrogate mesh
+authority. Annular request fixture SHA256 (uncompressed UTF-8 JSON) is
+b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea,
+167,972 bytes. Native original radius/seam fixture test passes in 12.15 s.
+This qualifies the specified new WASM/worker cases, not general fillets,
+whole-wall diagnostics, complete browser acceptance or named-part chains.
+Full distribution size budget remains to be measured after this rebuild.
+
+
+## New packaged WASM browser and distribution checkpoint
+
+After reload on isolated Vite 5188, persisted source canal restores and
+edge 0 is selected by Enter. The actual browser worker returns
+source-seam-tangent-planes-qualified; UI displays whole-edge confirmation,
+sine-squared upper 9.978209658498833e-7 and 8013 cells. Screenshot retained.
+This is source canal browser evidence; annular pole diagnostics are proved
+in the real WASM worker suite but still need their own browser acceptance.
+
+Vite production build passes. Initial size verification flags growth.
+Measured DirectModeler 423231 bytes, source worker 158944 bytes, packed
+geometry 3953416 bytes and non-streamed asset total 8243477 bytes.
+Budgets are updated to these measured values plus the previous respective
+511, 123, 608 and 761-byte margins. Other artifact limits and packed/native
+identity checks remain enforced. Final verify-dist passes on 151 artifacts:
+8243477 asset bytes plus 15144041 raw WASM bytes = 23387518 total bytes.
+General geometry, pole limit tangency, wall checks, named-part and full
+P0/P2/P3 acceptance remain open. No root runtime 5175 change or push here.
+
+
+## Annular pole and regular rail browser acceptance
+
+The original annular document imports through the new WASM in isolated
+Vite 5188. Edge 0 selected by Enter produces the localized unresolved
+endpoint-normal message, canonical [0,0], one cell, and its SVG stroke
+changes to #ff9977. Retry immediately followed by selecting edge 6 clears
+the old pending state and diagnosis. A fresh edge 6 check displays
+whole-edge tangency confirmation, sine-squared upper
+2.3404439736769268e-26 and 17 cells. Screenshots and the original archive
+are retained. This exercises selection, localization and supersession on
+the annular Body; it does not prove endpoint limit tangency.
+The display separately reports 184 unresolved trimmed face tiles; these
+remain explicit preview coverage limits, not admitted material triangles.
+A browser STEP download observation timed out with no captured file;
+no browser STEP export success is claimed at this checkpoint. Existing
+native/OCCT pole STEP evidence remains separately scoped.
+
+
+## Annular browser STEP, cancellation and reload
+
+The in-app download event observer misses the browser export, but actual
+Downloads files Annular_transition.step and Annular_transition (1).step
+exist and both hash to ed039ea999e56d778679198607d879f91a28bf3b488bdc2e10312865af7bc756.
+The second browser file is independently read by OCCT and passes all
+original annular topology, bidirectional pole, extent and volume checks:
+one valid solid, 27 faces, 55 edges, 26 vertices, two degenerate edges;
+pole error 0 mm, maximum bounds error 1.0000001182675078e-7 mm,
+volume difference from independent coefficient quadrature
+1.6279982446576469e-6 mm3. Actual downloaded bytes and report retained.
+
+Another browser export followed immediately by Cancel returns the panel
+to idle and leaves exactly the same two matching STEP files, with no new
+download. After browser reload, the annular source Body freshly restores,
+all 53 shared edges are selectable and edge 6 can be selected again.
+Screenshots retained. This confirms this fixture's export/cancel/reload
+path, not geometric editing, Undo/Redo, crash or multi-tab acceptance.
+
+
+## Original source face group clearance foundation
+
+New native source_face_gap qualifies a requested positive separation
+between two disjoint groups of privately admitted Body faces. Every
+selected face pair is covered by original natural chart rectangles;
+these are conservative supersets of all retained trims, including holes
+and root-ended fragments. Original rational interval boxes supply lower
+bounds. Unresolved rectangles subdivide with globally bounded cells and
+original span visits. Missing work or unresolved numeric resolution returns
+no certificate and the original face pair/UV rectangles. Certificates
+borrow the exact admitted Body and retain both selected face groups.
+No cached mesh, sampled upper witness or detached saved success is used.
+
+The annular regression covers all 36 pairs of six original flat bottom
+faces and six original flat top faces: requested 5.99 mm separation is
+certified with 36 cells and 72 original span visits. A 7 mm request with
+8 cells/16 spans refuses and localizes the unresolved pair; insufficient
+span work and overlapping face groups also refuse. The combined original
+radius/seam/body regression passes in 27.25 s.
+
+This is a lower clearance certificate for specified face groups, not
+minimum whole-wall thickness: curved transition faces are not in these
+groups. Interior material chord, normal alignment, whole-wall coverage,
+source bridge/UI integration and new packaging for this module remain
+to be developed and qualified. The last packaged WASM is unchanged.
+
+
+## Curved original cylindrical face union clearance
+
+The annular test now covers all 36 pairs of original outer cylinder faces
+[2,7,12,16,20,24] and inner cylinder faces [3,8,13,17,21,25].
+A 14.5 mm lower clearance certificate succeeds with 5344 cells and
+10688 original span visits within unchanged 10000/20000 limits. The
+combined Body/radius/seam test passes in 15.18 s.
+
+The first scheduler exhausted 10000 cells/20000 spans on pair [7,3],
+subdividing both extrusion heights along with transverse coordinates.
+For original charts with identical XY controls and weights across each
+V row and overlapping Z boxes, subdivision now prefers U. Every
+rectangle retains full original V coverage; the same 3D interval bound
+remains the sole acceptance condition. This preference is conservative
+and may still refuse difficult cases. It does not certify material chords.
+A rational weight-change regression shows XY varies with V despite
+identical XY controls, so the preference stays disabled. It passes.
+Both failed initial and successful final terminal logs are retained.
+Curved fillet transition faces, whole-wall thickness, interior material
+coverage and this new gap module's WASM/UI qualification remain open.
+
+
+## Original blend and transition face clearance
+
+The source gap scheduler now chooses subdivision axes per surface. An
+original chart whose XY controls and rational weights are identical across
+V retains full V coverage when Z boxes overlap, even if the other chart
+needs both parameters. Acceptance still uses the unchanged complete 3D
+rectangle enclosure; this changes scheduling only. The rational weight
+regression passes and keeps V active when weights vary.
+
+The admitted annular Body test now covers all 54 pairs of outer/blend faces
+[0,2,5,7,10,12,16,20,24] versus inner faces [3,8,13,17,21,25].
+A 13.5 mm lower clearance is qualified with 12262 cells and 24524 original
+span visits, within 50000/100000 limits. This includes the three original
+transition surfaces. The combined original Body/radius/seam test passes
+in 25.80 seconds. Terminal logs are retained alongside this record.
+
+This remains separation of complete source surface chart supersets, not
+material wall thickness. A source-domain boundary audit, interior material
+chord and normal alignment are still required. No new WASM or UI coverage
+is claimed for the gap module.
+
+
+## Original source finite segment boundary audit
+
+`source_material_segment::inspect_boundary` now audits an immutable admitted
+Body directly. It isolates intersections on each original rational surface
+and classifies retained root-ended source contours with original winding.
+No conversion to Model, mesh or rounded trim endpoints is used. Work budgets,
+trim uncertainty and closed-segment endpoint bands remain explicit refusals.
+The public diagnostic report is not a material certificate.
+
+On the original annular Body, segment origin [10,2,-1], direction [0,0,8]
+has exactly two disjoint interior boundary root intervals, no unresolved
+regions, 27 geometry cells and 112 contour cells. An exterior segment
+[30,30,1]+t[0,0,1] is boundary-free; zero direction rejects. The combined
+Body/radius/seam test passes; its complete terminal log is retained.
+
+Boundary-free exterior segments illustrate why this report does not prove
+material membership. Outside seed qualification, parity, normal alignment
+and a private source material chord certificate remain required before
+wall thickness admission; saved diagnostic fields cannot authorize them.
+
+
+## Private original source normal material chord
+
+`source_material_chord::qualify` recomputes the finite boundary audit on the
+borrowed immutable admitted Body. It proves the authored start point is
+strictly outside the union hull of every complete original source chart.
+Exactly two disjoint isolated transverse root intervals with complete
+trim coverage establish entry then exit of material. Both endpoint root
+UV rectangles must pass the original normal/line angle check. The private
+certificate retains the exact Body reference, face identities and length
+interval; caller diagnostic flags do not authorize it.
+
+For [10,2,-1]+t[0,0,8] on the original annular Body, the certified material
+chord length is [5.999999999999997,6.0000000000000036] mm. Tests require
+Body identity and enclosure of 6 mm with width below 1e-5 mm. Interior
+seed, exterior empty segment, insufficient boundary cells, oblique line
+and insufficient normal spans all refuse certificate issuance. The combined
+Body/radius/seam regression passes in 16.45 seconds; terminal log retained.
+
+This is a local normal chord certificate. The conservative exterior hull
+seed may refuse valid starts in concavities. General outside-seed parity,
+complete wall coverage and automatic thin-region search remain open, as do
+bridge/WASM/UI integration of this source chord and clearance calculation.
+
+
+## Whole selected source wall union minimum bounds
+
+`source_material_wall::qualify` recomputes full selected face-pair clearance
+and a normal material chord on the same immutable Body. Its private
+certificate owns both proofs, verifies endpoint membership in opposite
+selected groups and retains the interval for the minimum admitted normal
+material chord length between those groups. Clearance alone cannot issue
+this certificate. Convergence requires outward-rounded interval width no
+larger than the requested positive millimetre tolerance.
+
+All bottom/top source face pairs of the annular Body give minimum bounds
+[5.999999999999997,6.0000000000000036] mm and convergence at 0.02 mm.
+The same interval does not claim convergence at 1e-16 mm. Using a valid
+vertical material chord for outer/inner cylindrical groups refuses with
+`source-wall-candidate-outside-groups`. Body identity is asserted. The
+complete combined Body/radius/seam test passes; terminal log is retained.
+The initial test incorrectly expected a wider interval from a looser
+threshold: the full rectangle bound remains tight independently of that
+threshold. That failed log is retained and the tolerance test is corrected.
+
+Scope remains the explicit groups and stated endpoint angle tolerance.
+This does not enumerate every body wall or automatically find candidates.
+Automatic whole-body wall coverage, thin-region search and source bridge,
+WASM and UI integration remain required.
+
+
+## Automatic original normal chord proposal search
+
+`source_wall_search::search` generates finite lines from sampled original
+chart points and normals with an exterior reach proposal. Every accepted
+result independently recomputes source exterior membership, full boundary
+root isolation, source trim membership and both endpoint normal bounds.
+Only private normal material chord certificates are retained. The shortest
+certified upper witness is returned; samples never certify geometry.
+
+The original annular bottom/top groups with a 3x3 grid across six bottom
+charts produce 54 attempts, 36 refusals and 18 certified candidates. The
+best length interval is [5.999999999999997,6.0000000000000036] mm. The
+initial one-point grid refused all six proposals; its failed acceptance
+expectation and terminal log are retained. The final regression also checks
+a one-attempt cap does not claim candidate exhaustion and overlapping
+groups reject. The combined Body/radius/seam test passes in 18.37 seconds.
+
+This search supplies automatic upper witnesses, not global minimum proof
+or absence of thin regions. `candidates_exhausted` means only the requested
+finite proposal grid was visited. Work is bounded by max_attempts times
+per-candidate limits. Adaptive refinement, coverage of every body wall and
+combining searched witnesses with certified lower bounds remain open.
+No bridge, WASM or UI integration is claimed for this new module.
+
+
+## Automatic selected wall thickness bounds
+
+`source_material_wall::search_and_qualify` combines fresh whole selected
+face-pair clearance and automatic original normal material chord search.
+It verifies the immutable Body identity and opposing group membership,
+then owns both private certificates and returns a bounded minimum normal
+material chord interval. Proposal exhaustion does not replace lower-bound
+coverage. Positive interval convergence uses outward-rounded width.
+
+The original annular bottom/top unions qualify automatically at 0.02 mm
+with interval [5.999999999999997,6.0000000000000036] mm using a 3x3 grid
+and 54 proposals. A one-cell clearance budget refuses the combined
+certificate even though the same search independently finds a valid chord;
+the report retains this witness and marks convergence false. Tests assert
+both admission and refusal and original Body identity. The combined
+Body/radius/seam regression passes; terminal log retained.
+
+This closes automatic candidate-to-bound composition for explicit groups.
+It does not identify all opposing body wall regions, prove coverage of
+every wall, or qualify bridge/WASM/worker/UI transport. Those remain open.
+
+
+## Source wall qualification native bridge
+
+`cad_source_body_restore` accepts optional `wallQualification`: original
+face groups, minimumMm, toleranceMm, toleranceUv, grid, maxAttempts and
+explicit gap/search/normal work limits. Owned, unique, nonempty disjoint
+groups and every tolerance and budget are validated before Body admission.
+After fresh original Body restoration, native automatic minimum bounds
+are recomputed and the response echoes the exact request. It reports
+qualified, converged, intervalMm, lower-clearance reason/work/uncertainty
+and search attempt/refusal/exhaustion counts. Failed wall qualification
+has a null interval; it does not invalidate an otherwise admitted Body.
+
+The real native dispatcher regression verifies refusal on a one-cell
+adjacent-face gap request, matching request identity, null interval and
+false convergence, bounded work counts, and early errors for overlapping,
+empty or foreign groups and zero geometry cells even when restoration
+would otherwise refuse. The existing edge-address/seam/STEP restoration
+regression passes together with these assertions; terminal log retained.
+
+This proves native API behavior. Positive annular native thickness is
+qualified separately above. Current packaged WASM, TypeScript transport,
+worker cancellation/late results and new UI have not yet been qualified
+for this option; no browser wall-thickness completion is claimed.
+
+
+## Source wall TypeScript transport guards
+
+Source Body options/results now carry optional wallQualification, validated
+by sourceWallTransport. Expected groups, limits and all request scalars are
+deeply copied. Matching exact canonical request identity, bounded geometry
+and search work, explicit uncertainty on refusal, certificate interval on
+qualification and outward-rounded convergence are required. Missing or
+unsolicited wall responses reject. Failed Body admission cannot carry a
+wall certificate. Transport never computes geometry or material admission.
+
+Tests cover snapshot mutation, request substitution, missing interval,
+excess work, no successful candidate, false convergence, lower bound below
+request, unexpected uncertainty, null refusal interval, exact tolerance
+boundary rounding and invalid owned groups/search limits. Four focused
+transport tests pass; vue-tsc --noEmit passes. The real packaged worker
+restoration/seam regressions also pass with these new guards, but those
+worker runs do not request wall qualification from the old packaged WASM.
+Complete terminal logs are retained.
+
+New WASM packaging, positive native wall option through the real worker,
+cancellation/late-response wall scenarios and UI controls remain required.
+
+
+## Source wall panel selection acceptance, new WASM pending
+
+The new panel offers explicit opposing face sets, minimum/tolerance fields,
+localized result/refusal, Retry and Cancel. Request generations and sync
+watchers cancel and clear on body/document/panel/input changes; Esc and
+unmount cancel the worker. Selected source face tiles show side A blue
+and side B purple; unresolved clearance faces use orange. This color is
+selection state, not geometry admission.
+
+Browser 5188 on the annular document verifies side A [5,10,15,19,23,27]
+and side B [2,7,12,16,20,24] (one-based UI labels), selection by mouse
+and Enter, enabling calculation only after both selections, and moving
+face 5 between sides removes it from the opposite set. DOM shows twenty
+preview polygons in each side color. The retained screenshot shows the
+corrected field layout. The draft panel passes vue-tsc. A controlled
+worker-port test passes group-change supersession, discarded late result,
+AbortSignal cancellation and retry with a fresh worker.
+
+The new real WASM annular thickness test is prepared but not yet run:
+packaging/optimization is still live. No positive browser wall interval,
+UI Retry/native cancellation or new packaged WASM completion is claimed.
+
+
+### File menu Escape cancellation
+
+Browser testing found File menu Escape consumes the event before the
+workspace handler. closeFileMenu now explicitly cancels pending source
+wall, seam and STEP workers before closing. Selection is retained for
+retry. On annular UI sides [5] and [2], the real browser enters the wall
+pending state, pressing Escape on its Cancel button closes the menu, and
+reopening shows an enabled calculation button without pending/error. This
+checks real worker cancellation while using the prior packaged WASM; it
+does not prove new native wall results. Screenshot retained, vue-tsc passes.
+The new optimized WASM build remains live; positive wall worker test is
+still pending that artifact.
+
+
+## New packaged WASM and positive wall browser acceptance
+
+The completed build optimizes 13399375 to 11872215 bytes. Packaged SHA256
+86ab0caa2618730830b58aa38b079471322e48df7f8f2a66efe9e33ca1c3f552.
+All 18 source Body worker/wall/seam transport tests pass in 15.93 seconds.
+The real worker annular automatic wall scenario takes 1541.54 ms for both
+success and refusal runs combined on this machine (single observation,
+not a performance qualification). Bottom/top groups qualify 6 mm bounds
+[5.999999999999997,6.0000000000000036], with 36 clearance cells/72 spans,
+54 proposals and explicit budget-refusal with null interval on one gap cell.
+Request group substitution rejects; transport cancellation/retry tests pass.
+
+Browser 5188 now shows the same confirmed wall interval through the new
+UI and packaged kernel. Both face sides were selected with mouse/Enter.
+A scene triangle click selects face 6 after stopping the background
+pointerdown selection reset; normal scene interaction remains active when
+the panel/menu is closed. Closing File normally also cancels a pending
+wall request; Escape cancellation was qualified above. vue-tsc passes.
+Terminal build/tests, exact worker JSON and positive UI screenshot retained.
+
+This proves explicit selected flat wall groups through WASM/worker/UI.
+Whole-body wall discovery, adaptive thin-region coverage, measured chord
+scene coordinates, full command matrix and arbitrary fillet geometry are
+still open. Production bundle size verification remains a separate gate.
+
+
+## Source wall production distribution gate
+
+Vite production build completes. The first distribution check rejects
+DirectModeler at 429949 bytes against its prior 423742 limit. Measured
+new artifacts: geometry packed chunk 3962910 bytes, mainSolid worker
+161534 bytes, DirectModeler JS 429949 bytes, total assets 8265356 bytes.
+The selected wall native/transport/UI addition increases assets 21879
+bytes from the prior 8243477 baseline. Named budgets are adjusted only
+for these changed artifacts, retaining prior margins: geometry 608 bytes,
+worker 123, DirectModeler 511, asset total 761. Other limits remain intact.
+
+The final verifier passes all 151 artifacts, packed/raw module validity,
+unique packed payload and source identity: 8265356 asset bytes plus
+15168607 raw WASM bytes = 23433963 distributed bytes. Both initial
+rejection and successful terminal logs are retained. This is distribution
+size/integrity proof; it does not qualify full wall coverage, runtime
+latency distributions, geometric editing or the remaining full goal.
+
+
+## Original curved wall chords around cavities
+
+`source_material_chord::qualify_between` retains complete outside-seeded
+boundary root coverage and sorts every crossing. All root intervals must
+be disjoint and the complete crossing count positive and even. Only pairs
+[0,1], [2,3], etc represent material; an adjacent exit/entry pair through
+a cavity cannot certify a chord. A material pair must connect the selected
+original groups and pass both original normal bounds. The two-crossing
+legacy entrypoint keeps its prior refusal semantics. Search now uses the
+new selected-group admission for multiple intervals.
+
+On [25,5,3]+t[-50,-10,0], original annular Body has four roots and admits
+a radial material chord [14.999999997461057,15.000000002538947] mm.
+Selecting the second/third crossing faces instead refuses with
+material-pair-outside-groups. Automatic outer/inner cylinder group search
+qualifies 54/54 candidates and bounds the selected minimum normal chord
+by [14.500044115597925,15.000000000000671] mm, converged at the requested
+0.6 mm tolerance. This is not an exact 15 mm minimum claim. The complete
+combined original Body/radius/seam regression passes in 36.05 seconds.
+
+Full body wall coverage and tighter automatic adaptive bounds remain
+open. This new multi-interval source logic is native-only in this commit;
+the currently packaged WASM still uses the previous two-crossing chord
+implementation. Browser/WASM cavity qualification requires a new rebuild.
+
+
+## Tight original radial wall bounds and budgeted refinement
+
+Full-chart original axis-radius polynomial bounds now supplement Cartesian
+source face gap enclosures. Distance to a common coordinate axis is
+1-Lipschitz, so separated original radial intervals prove a lower bound
+for every source point pair. Positive-weight Bernstein coefficients
+preserve rational cancellations. Unsupported/numeric-range optional
+bounds retain the Cartesian fallback. No fitted circle or sampled radius
+authorizes admission. XY-independent chart subdivision also balances
+physical XY enclosure widths when both projections are independent of V.
+
+The original annular outer/inner minimum normal material chord interval
+is now [14.999999999999902,15.000000000000671] mm, with whole 36-pair
+lower coverage in 36 cells/72 spans and 54 certified automatic upper
+candidates. search_and_refine preserves the initial private certificate
+while attempting a higher lower threshold within the shared remaining
+cell/span budget. At 0.02 mm it converges immediately; at 1e-16 mm it
+retains the valid interval, reports nonconvergence and a resolution-limit
+refinement after total 294 cells/588 spans.
+
+Cartesian-only refinement exhausted both 50000/100000 and 100000/200000
+work experiments; logs retained. A bounded coefficient cache experiment
+found no reusable charts in this fixture and is removed. Production
+resource caps are unchanged. The final combined Body/radius/seam test
+passes in 18.14 seconds. Two radial tests pass, including independent
+point-pair witnesses after original weight/control perturbations showing
+old 15 mm bounds cannot survive changed data. The rational V-scheduler
+regression passes. All terminal evidence retained.
+
+These changes remain native-only. Packaged WASM and browser still use
+the previous gap implementation and two-crossing chords; rebuilding and
+qualifying the cavity/refined path through worker/UI remains necessary.
+This is selected cylinder-wall proof, not whole-body wall coverage.
+
+
+## Wall error localization and retry in the new interface
+
+All 317 DirectModeler UI regression tests pass (78.34 seconds); vue-tsc
+passes after the localization change. Browser acceptance on isolated port
+5188 requests a 7 mm wall from the original annular bottom/top groups.
+The refusal marks 20 original unresolved face boxes in red, on native
+faces 1 and 4. These are coarse source-face uncertainty regions, not
+certified world-space locations of the failed UV roots. Screenshots retained.
+
+Retry with Enter starts a new request; Cancel interrupts it. Changing the
+minimum to 5.99 mm and checking with Enter qualifies the 6 mm wall interval
+[5.999999999999997,6.0000000000000036] and clears all error boxes.
+This browser run uses the previous packaged WASM flat-wall implementation;
+the cavity/radial WASM rebuild and its new worker test are still pending.
+
+
+## Pending cavity worker acceptance
+
+The real-worker regression now requests the original annular cylinder wall
+at 14.5 mm, requires a converged interval containing 15 mm, and separately
+requires refusal at 16 mm while retaining successful material chord search
+as diagnostic evidence. This worker scenario is pending the live WASM
+optimization, not yet recorded as passing. The four seam/wall transport
+tests pass (2.83 seconds); vue-tsc passes. Logs retained.
+
+
+## Packaged cavity wall worker and browser acceptance
+
+The pending cavity scenario above now passes against packaged geometry WASM
+ae5efa61db3cd4c89929d2622ba5f2499d5b9e939f7a45a34caead2522958037
+(11,882,048 bytes). All 19 source-body/seam/wall tests pass in 18.29 seconds,
+including successful 15 mm selected annular cylinder walls, refusal at
+16 mm, cancellation/retry and stale result transport guards. The build
+completed successfully. Terminal logs and exact worker results retained.
+
+After reloading isolated port 5188, original edge 6 and opposing cylinder
+face unions were selected through the UI. Checking with Enter confirms
+[14.999999999999902,15.000000000000671] mm with 54 candidates; screenshot
+retained. This verifies packaged cavity parity and tight radial bounds
+through WASM/worker/UI. It does not establish automatic whole-body wall
+coverage, adaptive discovery of every thin region, or general fillets.
+The native search_and_refine helper is still not exposed by the bridge.
+
+
+## Cavity wall production distribution
+
+Vite production compilation succeeds. The initial size gate rejects the
+geometry chunk at 3,963,930 bytes against the prior 3,963,518 budget.
+Measured geometry and total asset budgets are updated, preserving prior
+608-byte and 761-byte margins respectively; other budgets are unchanged.
+The final verifier passes all 151 artifacts: 8,266,609 asset bytes plus
+15,178,440 raw WASM bytes, 23,445,049 total. Packed/source identity and
+unique shared module checks remain enabled. Both terminal logs retained.
+This is a local distribution validation, not deployment or a Git push.
+
+
+## Original material chord endpoint enclosures
+
+Private native chord certificates now retain authored finite line coefficients,
+selected original crossing parameter intervals, face identities, UV root
+rectangles and conservative world-coordinate boxes from those original
+surfaces. The annular body/radius/seam regression passes, including four
+cavity crossings, material-pair selection, and exact equality of retained
+endpoint evidence with fresh original rectangle_bounds results.
+
+These boxes enclose endpoints; they are not exact point coordinates. This
+addition is native-only: the bridge, packaged WASM and UI do not yet expose
+this witness. Existing packaged cavity thickness qualification is unchanged.
+The terminal native log is retained.
+
+
+## Material witness bridge and transport
+
+The original chord witness is serialized only from a private admitted wall
+certificate: authored line, length interval and two face/parameter/UV/world
+enclosures. Refused walls serialize a null witness. The source-body native
+dispatch regression passes and checks the null refusal witness. Five seam
+and wall transport tests pass; vue-tsc passes. Transport rejects foreign
+faces, unordered roots, malformed enclosures, zero direction and inconsistent
+upper lengths. Geometry admission remains in Rust.
+
+Witness is optional for compatibility with the previous packaged module;
+missing witness gives no scene measurement. This bridge change is not yet
+packaged in WASM, and a positive real-worker witness run and UI rendering
+remain pending. Terminal evidence retained.
+
+
+## Pending original wall measurement overlay
+
+The new viewport overlay consumes only qualified transported witnesses.
+It draws a dashed line between original world-enclosure centers and both
+endpoint boxes, with labels explicitly identifying enclosure centers rather
+than exact coordinates. Hidden bodies, missing witnesses, closed wall panels
+and invalid projected values suppress the overlay. Existing request-change
+and cancellation guards clear the result. All 317 DirectModeler UI regression
+tests pass (80.23 seconds), and vue-tsc passes.
+
+A new WASM build is live. Positive original witness acceptance through real
+worker and browser rendering remains pending; the old packaged module
+provides no witness, so this overlay is not yet browser-qualified.
+
+
+## Sparse witness transport refusal
+
+Transport enumerates every required line coordinate, endpoint, UV interval
+and world-coordinate interval rather than accepting sparse Array.every
+iteration. Missing tuple members now return false instead of throwing or
+passing malformed data. Regression cases delete line/endpoint/UV/world
+entries. All five seam/wall transport tests pass (1.01 seconds), vue-tsc
+passes, terminal logs retained. The live witness WASM build remains pending.
+
+
+## Independent analytic material endpoint cross-check
+
+The original radial chord endpoint boxes and crossing parameters are checked
+against independent analytic circles of radii 20 and 5 mm along the authored
+[25,5,3]+t[-50,-10,0] line. Rounded oracle coordinates have an explicit
+1e-9 mm tolerance; parameters 1e-11, and enclosure widths must stay below
+1e-5 mm. These oracle values do not authorize geometry admission.
+The combined annular body/radius/seam native regression passes in 18.91
+seconds. Terminal log retained. This changes tests only and does not require
+restarting the currently live witness WASM optimization.
+
+
+## Packaged original material witness worker acceptance
+
+WASM build completes: SHA256 87e8b144b19441e9a115e8443ff393cee93959adce4ae40fb237cc9b93b5f556,
+11,884,998 bytes. All 20 source-body/seam/wall worker/transport tests pass
+in 31.14 seconds, including positive original endpoint enclosures, foreign
+face rejection, null witness on the 16 mm refusal and stale successful
+witness rejection. Terminal results and exact worker JSON retained.
+
+An initial test started after optimization but before packaging finished;
+raw/packed identities were temporarily inconsistent and the artifact gate
+correctly refused nine real-worker loads. The failure log is retained.
+Only the completed build is accepted. Browser measurement overlay acceptance
+and production distribution validation remain pending for this new module.
+
+
+## Original material witness browser acceptance
+
+On isolated port 5188 after completed witness WASM packaging, edge 6 and
+original outer/inner cylinder unions were selected through keyboard controls.
+At minimum 14.5 mm, the qualified interval is
+[14.999999999999902,15.000000000000671] mm. One measurement overlay and two
+endpoints are present, owned by original native faces 7 and 8. Endpoint
+world enclosures and the approximate center line are visibly labelled.
+
+Changing the minimum to 16 mm immediately removes the overlay (count zero).
+The subsequent source-wall-clearance-unproven refusal keeps overlay count
+zero and offers Retry. Both actual browser screenshots are retained. This
+qualifies selected-wall rendering and stale-result clearing on parameter
+change; full wall coverage and all-command P0 acceptance remain open.
+The new production build is still running its prebuild geometry stage.
+
+
+## Original material witness production distribution
+
+Completed geometry prebuild retains witness WASM identity
+87e8b144b19441e9a115e8443ff393cee93959adce4ae40fb237cc9b93b5f556.
+Production compilation succeeds. Initial size refusal retained in build log.
+Measured chunks: geometry 3,965,654 bytes, worker 162,376, DirectModeler
+431,890; total assets 8,271,725. Only these measured budgets and total are
+updated, retaining respective margins 608,123,511,761 bytes. Final
+151-artifact verification passes with packed/source identity gates intact.
+This is local production validation, not deployment or push.
+
+
+## Automatic original all-face thin-wall witness scan
+
+Native source_wall_scan visits original faces, proposes normal lines against
+all other faces and admits each candidate through fresh immutable material
+chord proof. One global attempt budget (1..256) bounds the finite scan;
+cell/domain/normal limits apply per proposal. The best private certificate
+can supply a local thin witness only when its upper length is strictly
+below the requested minimum. No absence or global minimum certificate is
+returned from proposal exhaustion.
+
+On the annular original body, grid 3 visits all 27 faces in 243 attempts,
+134 refused, and discovers the 6 mm wall interval
+[5.999999999999997,6.0000000000000036], below 7 mm. A one-attempt run remains
+explicitly incomplete. Combined native body/radius/seam regression passes
+in 20.37 seconds. Grid 1 initially finds only 15 mm and misses 6 mm despite
+visiting all faces; its failed expectation log is preserved as evidence
+that grid exhaustion does not prove safety.
+
+This is native-only automatic witness discovery. Full continuous whole-wall
+coverage, adaptive thin-region search, bridge/WASM/UI integration remain
+open; current packaged WASM does not expose this scanner.
+
+
+## Coarse proposal exhaustion regression
+
+The grid-1 counterexample is now a passing regression: all 27 faces are
+visited, proposals are exhausted, best chord contains 15 mm, and no thin
+witness is claimed at 7 mm despite the known 6 mm wall. Grid-3 discovery
+still returns that thin wall. Invalid threshold/grid/attempt requests are
+rejected; partial one-attempt search remains explicitly incomplete. Combined
+native regression passes in 21.65 seconds. Terminal log retained.
+
+
+## Automatic wall scan native bridge
+
+Optional wallScan requests validate positive threshold/UV tolerance and
+bounded grid/attempt/material work before restoring a body. The response
+echoes the request, reports thinFound from the private chord certificate,
+serializes the best original witness and bounded attempt/refusal/face counts.
+proposalsExhausted concerns only the finite grid; wholeWallQualified remains
+false. A valid one-attempt native dispatch confirms partial scan counters
+and no whole-wall claim; zero-attempt input is rejected before body restore.
+The complete source-body dispatch regression passes in 23.84 seconds.
+Terminal evidence retained. This change is native bridge only; TS response
+validation, packaged WASM/worker and UI scan controls remain pending.
+
+
+## Automatic wall scan TS transport contract
+
+SourceBody options/expectations/results now include optional wallScan. The
+request is deep-snapshotted and numeric work limits checked before dispatch.
+Returned requests, face ownership, exact bounded grid counts, visited faces,
+refused attempts and exhaustion are checked. thinFound must match a strict
+upper witness below the threshold; missing witnesses require all attempts
+refused. wholeWallQualified must remain false. Missing/unsolicited scans
+are rejected. Failed body restoration may not carry scan evidence.
+
+Original witness shape checks are shared with selected wall qualification,
+including sparse tuples and distinct owned endpoints. All 22 scan/wall/seam
+transport and existing real source-body worker tests pass in 16.81 seconds;
+vue-tsc passes. The existing real-worker runs use previous packaged WASM
+and do not request a scan. A new native scan WASM build is live; actual
+scan-through-worker and UI qualification remain pending.
+
+
+## Automatic scan UI controls pending packaged acceptance
+
+The existing source wall panel adds Find thin regions without manual side
+selection, reusing its cancellable worker and generation/document/selection
+guards. Scan starts clear both selected-wall and scan evidence. Parameter
+and selection watchers clear both results. The UI reports local thin
+discovery or absence among tested proposals, explicitly says whole-wall
+safety is unproven, shows attempt/face counts, offers retry, and renders
+original measurement enclosures. Thin witness faces are highlighted.
+
+All 317 UI regressions pass in 79.12 seconds and vue-tsc passes. A dedicated
+mock-port cancellation test passes: threshold replacement terminates the
+old port, late reply is ignored, Abort and retry work. Its test source is
+still pending with the real scan-worker scenario until the currently live
+WASM build finishes. Terminal logs retained. No positive real scan-worker
+or browser scan UI acceptance is claimed yet.
+
+
+## Scan numeric input localization
+
+Minimum thickness is checked as finite and positive before worker dispatch.
+Selected-wall qualification also checks positive tolerance; automatic scan
+does not consume that tolerance. Error fields use aria-invalid and point to
+the localized alert via aria-describedby. Changing numeric values clears
+old errors/results through existing watchers. On isolated browser 5188,
+minimum 0 and Enter on Find thin regions shows the explicit Russian positive
+minimum message, no pending/cancel state, aria-invalid=true and the linked
+source-wall-input-error alert. Actual screenshot retained; vue-tsc passes.
+The live scan WASM build and positive real scan acceptance remain pending.
+
+
+## Explicit finite scan completion text
+
+The scan UI separately names configured-proposal completion and stopping at
+the attempt limit. facesVisited alone includes a partially scanned final
+face and cannot represent completion. Both messages retain the explicit
+whole-wall safety limitation. vue-tsc passes; the existing transport tests
+cover the partial versus exhausted flags. Browser result acceptance remains
+pending the live WASM packaging.
+
+
+## Packaged automatic wall scan worker and browser acceptance
+
+Completed WASM build SHA256 84c873ccbb280fc9133d902a50c6a00c30766d38d5cc7d64a2cedd2f6fb79e09,
+11,890,939 bytes. All 24 source worker/scan/wall/seam tests pass in 24.08
+seconds, including real original all-face scan, one-attempt partial search,
+forged whole-wall claim refusal and mock cancellation/late-result/retry.
+Exact real-worker JSON and build/test logs retained.
+
+After browser reload on isolated 5188, original edge 6 was selected and
+Find thin regions was run with Enter at 7 mm and no selected sides. The UI
+finds [5.999999999999997,6.0000000000000036] mm, visits 27/27 faces and 243
+proposals, and shows one original measurement with endpoints on native
+faces 18 and 15. Finite-proposal completion and unproven whole-wall safety
+are both visible. Screenshot retained. Production verification for this
+new packaged module and browser scan Retry/Cancel acceptance remain pending.
+
+
+## Automatic scan production and browser Retry/Cancel
+
+Production compilation succeeds. Initial named-size refusal retained.
+Measured geometry/worker/DirectModeler chunks are 3,967,174/163,831/434,313
+bytes. Only their budgets and total assets are updated, preserving margins
+608/123/511 and 761 bytes. Final verifier passes 151 artifacts: 8,278,566
+assets + 15,187,331 raw WASM = 23,465,897 total bytes; identity gates retained.
+
+Browser 5188: Retry search with Enter starts pending work. The first separate
+cancel action arrived after a quick successful result and found no pending
+Cancel control. A fresh retry followed immediately by Cancel click cancels
+active work; overlay and scan-result counts both become zero. Starting
+Find thin regions with Enter afterward again reports the 6 mm wall and
+243 completed proposals. Cancellation and retry screenshots retained.
+These checks validate the finite original scan feature, not continuous
+whole-wall safety. This is local validation; no deployment or push claimed.
+
+
+## Continuous original-body wall coverage foundation
+
+New native source_wall_coverage enumerates every original face pair, including
+same-face pairs, and uses original full charts as conservative supersets of
+root-ended trim regions. Exact planar/coplanar and normal-angle exclusions
+plus fresh original face-gap certificates share bounded work budgets. A
+private lower-threshold certificate requires every pair to be proven.
+
+Original annular regression passes in 22.85 seconds. Pair budget 1 reports
+1/378 and refuses certification. Full enumeration reports 378/378, with
+260 unresolved pairs, 1000 gap cells and 642 normal spans; certification
+is correctly refused. Curved same-face pairs remain explicitly unproven.
+Seven existing material-wall coverage regressions pass in 0.79 seconds.
+Logs retained. This native foundation is not yet packaged into WASM or
+connected to worker/UI. A positive original planar-body fixture and intrinsic
+curved-face coverage are still required; this does not close whole-wall safety.
+
+
+## Positive original cuboid whole-wall qualification
+
+The original 10 x 20 x 30 mm cuboid is rebuilt through source support
+incidence, embedded original geometry admission and original volume admission;
+no Body constructor or legacy model certificate bypass is used. Continuous
+coverage qualifies 9.99 mm over all 21 pairs, including diagonal pairs, with
+3 gap cells and 30 normal spans. Private certificate identity, threshold and
+retained gap certificates are checked. A 10.01 mm threshold refuses admission
+(186 cells); truncating to 20 pairs also refuses admission. The targeted test
+passes in 0.05 seconds. This establishes the native planar success path only;
+curved self pairs, WASM transport and whole-wall UI remain open.
+
+
+## Native bridge continuous wall coverage
+
+cad_source_body_restore accepts optional wallCoverage with positive minimumMm
+and bounded pairs/planeControls/normalSpans/gapCells/gapSpans/maxSineSquared.
+Validation precedes original-body restoration. Only a freshly constructed
+private original coverage certificate can set wholeWallQualified and lowerMm.
+The response binds the request and reports every inspected pair, reasons,
+enumeration completeness and shared work counts. Missing or unresolved pairs
+leave lowerMm null. This field remains separate from finite wallScan results.
+
+The combined native dispatch regression passes in 27.39 seconds, checking
+partial enumeration refusal, null lower bound, request binding and six invalid
+work-limit cases before restoration. Log retained. This bridge addition is
+not yet included in packaged WASM or TS/worker/UI, and does not prove general
+curved self-face coverage.
+
+
+## Continuous coverage TypeScript transport
+
+SourceBody options, expectation and result validation carry optional
+wallCoverage independently of wallScan. Transport checks bind the canonical
+request, native work counters and all lexicographically ordered original
+face pairs including diagonals. Qualified responses require complete
+enumeration with every pair proven and lowerMm exactly equal to the requested
+threshold. Refusals require null lowerMm and matching completeness reason.
+Unrequested certificates and coverage on refused bodies are rejected.
+
+Nine coverage/scan/wall transport tests pass in 130 ms, including sparse or
+wrong pairs, altered request/threshold, budget overflow and partial refusal.
+Direct vue-tsc and MCP tsc checks pass. Native geometry packaging started by
+npm pretypecheck remains running; real packaged worker acceptance and UI
+coverage controls are not yet verified. Logs retained for completed checks.
+
+
+## Whole-wall UI action and lifecycle checks
+
+The existing wall panel now has a separate Check whole wall action without
+selected face groups. It sends continuous coverage work, shows checked/total
+pair counts, reports private qualification or explicit refusal, and highlights
+unproven pairs (all faces when enumeration is incomplete). Generation, body,
+document, panel and disposal guards remain shared with scan/selected-wall
+commands. Parameter changes clear results; Cancel and Retry use the same worker.
+
+317 existing UI regressions pass in 97.08 seconds. Direct vue-tsc passes.
+A targeted mock-worker test passes, covering threshold-change cancellation,
+late reply rejection, explicit AbortController cancellation and Retry.
+A real original annular WASM coverage test has been added but has not run yet;
+packaging remains live. Actual browser coverage acceptance and global curved
+wall certification remain open. These checks do not claim the new browser
+action has already passed end-to-end acceptance.
+
+
+## Original cuboid worker acceptance fixture
+
+The existing admitted cuboid test can export the immutable original Body
+definition through CAD_CUBOID_SOURCE_BODY_OUTPUT. The freshly exported fixture
+is retained without geometry metadata authority; restoration recomputes source
+incidence, embedding and volume. Native qualification passes in 0.07 seconds.
+A real worker test now covers positive 9.99 mm, negative 10.01 mm and incomplete
+20/21 pair cases on this fixture. This test has not run yet because the existing
+geometry optimization/packaging process is still live; no duplicate build was
+started. Annular continuous worker acceptance also remains pending.
+
+
+## Coverage highlight lookup
+
+Unproven original face IDs are collected in a Vue computed Set when the
+coverage result changes. Rendering each face uses Set membership rather
+than rescanning every pair; incomplete enumeration still marks all faces
+uncertain. This removes a repeated pair traversal by inspection, without
+a measured FPS claim. Direct vue-tsc passes; log retained. Packaging session
+remains live, so real worker and browser acceptance are still pending.
+
+
+## Packaged whole-wall coverage acceptance
+
+Completed geometry packaging and npm typecheck pass. Module SHA256
+6b19a5e1b02aef6ea1d7428dc85f89a39642a6ca57b0d0abc9e90afa99de237b, 11,899,580 bytes.
+29 worker and transport tests pass in 22.55 seconds. Real original cuboid
+worker checks qualify 9.99 mm over all 21 pairs, refuse 10.01 mm, and refuse
+20/21 pairs. Real annular worker covers 378/378 pairs, retains 260 unresolved
+pairs with 1000 gap cells/642 normal spans, and rejects forged qualification
+and stale threshold replies. Exact worker reports and complete build log retained.
+
+Browser 5188: Check whole wall with Enter at 5.99 mm and no selected sides
+covers 378/378 pairs and refuses whole-wall qualification, displaying 259
+unproven pairs at the UI's larger 10000-cell budget. Retry with Enter followed
+immediately by Cancel cancels active work and removes the result. Enter on
+Check whole wall afterward again yields the same explicit refusal. Screenshots
+retained. Corrected panel help distinguishes selected-region and whole-wall
+actions; direct vue-tsc passes. This is local acceptance, not deployment.
+The newly authored surface_self_chord native algorithm is not in this compiled
+module and is not yet used by source wall coverage. Production size verification
+for this packaged change remains pending.
+
+
+## Continuous intrinsic self-chord exclusion foundation
+
+New native surface_self_chord uses original rational derivative interval hulls
+over every knot rectangle. A uniformly nonsingular coordinate minor bounds
+all chord lengths from below relative to parameter displacement. The global
+derivative variation bounds normal/chord cosine from above via integration
+along the parameter segment. A strict comparison with the requested angle
+threshold constructs a private source-bound certificate excluding all aligned
+self chords, including arbitrarily close pairs. No UV-distance division,
+sampling-based admission or rounded replacement control net is used.
+
+Three tests pass: a curved polynomial graph admits full-chart exclusion;
+strong curvature and singular projection refuse; missing spans refuse; an
+invalid discontinuous surface returns an input error. Independent analytic
+parabola chords, including a reversed coordinate, lie below the certificate
+bound as an auxiliary oracle only. Five original normal-alignment regressions
+pass. This is a sufficient-condition foundation, not a full general NURBS
+solution; it is not yet wired into original wall coverage or packaged WASM.
+
+
+## Intrinsic self-chord exclusion in original wall coverage
+
+Source whole-wall coverage now freshly qualifies nonplanar same-face pairs
+with the original rational self-chord theorem. Its spans share the normal
+work budget, and successful global certificates retain source-bound intrinsic
+certificates alongside gap certificates. Failure or exhausted work remains
+explicitly unproven. No sampled candidate authorizes an exclusion.
+
+All 16 original support/annular regressions pass in 81.94 seconds. On the
+original annular body, full 378-pair coverage now retains 258 unresolved
+pairs, down from 260, using 1000 gap cells and 657 shared normal spans. The
+whole-wall certificate remains absent; the one-pair case remains incomplete.
+Cuboid positive/negative/missing-pair checks remain valid. Four intrinsic
+NURBS tests pass, including mild rational weights and an independent analytic
+normal/chord oracle as auxiliary evidence. Logs retained.
+
+Real-worker annular expectations are updated to the measured native result.
+This integration is not in the currently packaged 6b19a5e1 module; another
+completed build and real-worker run are required before claiming WASM/UI
+acceptance of these additional curved-face exclusions.
+
+
+## Coverage proof-reason transport checks
+
+The validator now checks native pair reasons against diagonal/distinct pair
+class and proven status. Same-face successes allow exact planar or continuous
+curved exclusions; distinct successes allow coplanarity, normal separation
+or original gap qualification. Unproven reasons cannot accompany a proven
+flag, and unknown reason strings are rejected. These remain transport checks;
+Rust certificates remain the source of geometry authority.
+Ten coverage/scan/wall transport tests pass in 173 ms, including mismatched
+class, unresolved-success flags and invented exclusions. Direct vue-tsc passes.
+The ongoing intrinsic-exclusion WASM build is still live; these checks do not
+claim the latest native integration has completed packaged worker acceptance.
+
+
+## Explicit wall certificate scope in UI
+
+The success text and panel help now state that continuous coverage proves a
+lower threshold for material chords nearly perpendicular to the faces. This
+matches the native maxSineSquared contract. It does not claim unrestricted
+physical wall thickness at arbitrary trimmed boundaries or sharp vertices.
+The full objective still requires general wall qualification. Direct vue-tsc
+passes; log retained. Intrinsic-exclusion packaging remains running.
+
+
+## Packaged intrinsic-exclusion worker and production acceptance
+
+Completed WASM build SHA256 dd8b9a8f4d3614bc11dd5c4d042315124ec9e4e72479d3ddf4f187990955a523,
+11,904,622 bytes. All 30 source worker/coverage/scan/wall tests pass in
+21.06 seconds, including original annular 258 unresolved pairs with 657
+normal spans and original cuboid positive/negative/incomplete coverage.
+Exact worker JSON and terminal build/test logs retained.
+
+Production compilation passes; initial named chunk and total-budget refusals
+are retained. Only measured limits are updated: geometry 3,971,664 +608,
+mainSolid worker 165,863 +123, DirectModeler 436,539 +511, asset total
+8,289,348 +761 bytes. Final verifier passes 151 artifacts, retaining source
+identity and unique packed module checks: 8,289,348 asset + 15,201,014 raw
+WASM = 23,490,362 total bytes. No deployment is claimed.
+
+Browser 5188 after reload: keyboard Check whole wall at 5.99 mm with no
+selected sides reports 378/378 pairs and 257 unproven pairs at the larger
+UI budget, down from 259 before intrinsic exclusions. Explicit refusal and
+normal-chord scope remain visible; screenshot retained. General wall
+qualification, sharp/trimmed boundary cases and remaining fillet/P0/P2/P3
+requirements remain open.
+
+
+## Original rectangular intrinsic exclusion
+
+surface_self_chord now exposes qualify_rectangle over an explicit original
+UV rectangle. Private certificates retain both source surface identity and
+exact rectangle. Derivative hulls use only intersecting original knot spans,
+including one-sided knot endpoints; interval restriction does not create a
+rounded replacement patch. Whole-chart qualify still requests the complete
+natural domain. Positive widths and natural-domain containment are required.
+
+Six intrinsic tests pass in 0.01 seconds. A strongly curved full graph refuses
+global exclusion while a small original rectangle qualifies locally; that
+local certificate retains its limited domain. Missing required knot spans,
+zero-width and out-of-domain rectangles refuse. Existing polynomial/rational
+analytic oracles remain passing. The original annular Body regression passes
+in 67.43 seconds, retaining 258 unresolved pairs/657 normal spans and original
+radius, thickness and seam guards. Logs retained.
+
+This is native infrastructure for complete subdivision, not a claim that
+all 13 remaining curved self pairs or general wall coverage are resolved.
+The rectangular API is not yet used for adaptive coverage or packaged WASM.
+
+
+## Complete adaptive original self-pair coverage foundation
+
+New surface_self_chord_coverage covers the Cartesian product of the full
+original UV chart with itself, including the diagonal. Closed binary splits
+retain every endpoint pair. Each leaf needs a fresh original intrinsic
+exclusion on its convex UV hull, fresh normal-angle separation, or a proven
+original Cartesian lower distance above the requested threshold. Shared cell
+and span budgets include original derivative, normal and image work; pending
+pairs and resolution/work limits prevent private global certification.
+
+Eight intrinsic/adaptive tests pass in 1.67 seconds. A strongly curved graph
+that refuses one full-chart intrinsic check qualifies through 3635 cells and
+13615 spans: 662 intrinsic, 956 angular, 200 distance leaves; no pending pairs.
+Cell/spans budget truncation refuses. A rational half-cylinder has an exact
+2 mm endpoint chord aligned with both endpoint normals independent of the
+rounded arc weight; 2.1 mm qualification refuses with 2000 cells, 7577 spans
+and 17 pending pairs. This refusal is not presented as an independently found
+thin material wall. Logs retained.
+
+This native surface certificate is not yet integrated into original Body wall
+coverage, transport or packaged WASM. It does not resolve all annular self
+pairs, prove material interior ownership, or complete general thickness.
+
+
+## Original Body adaptive self-wall facts and composition
+
+Private face certificates now bind adaptive original-chart self-pair coverage
+to the immutable admitted Body, face, minimum threshold and normal-angle scope.
+Independent per-face work caps also respect shared cell/span/control budgets.
+Public diagnostics cannot change the original expected face count or provide
+proof. Whole-wall composition consumes only unique private facts from the same
+Body whose threshold and angle cover the request; distinct face pairs continue
+through their existing independent checks. A successful global certificate
+retains the private facts.
+
+Original annular native test: 16/27 faces qualify, using 5760 cells and 21010
+spans, with 691 pending self regions. Composition enumerates all 378 pairs:
+256 remain unresolved, with 1000 gap cells and 653 normal spans. Consequently
+no whole-wall certificate is issued. Native annular composition passes in
+32.28 seconds. Original 10 x 20 x 30 cuboid passes at 9.99 mm and retains all
+six self-face facts; requests at 10.01 mm or a broader normal-angle scope reject
+stale facts. Cuboid test passes in 0.06 seconds. Terminal logs are retained.
+
+This checkpoint is native only. Packaged WASM, worker and UI still use the
+earlier whole-chart self exclusion. General material thickness, unresolved
+cross-face/trim/pole regions and the full fillet/P0/P2/P3 acceptance remain open.
+
+
+## Native bridge adaptive self work
+
+wallCoverage accepts optional adaptiveSelf original control/cell/span budgets,
+including per-face caps. All limits are validated before Body restoration.
+Certificates are recomputed in Rust against the restored immutable Body and
+consumed directly by whole-wall composition; request JSON cannot supply proof.
+The response binds the original request and includes per-face pending domains
+and counted work. Missing adaptiveSelf preserves previous behavior. Native
+JSON dispatch regression passes, including one-cell/span refusal and invalid
+zero values for every adaptive budget. Packaged WASM and TS/UI admission for
+this optional field remain pending; no browser acceptance is claimed here.
+
+
+## Adaptive source-wall transport admission
+
+TS now accepts bounded optional adaptiveSelf requests and checks original
+request binding, canonical face indices, per-face/global work, exact aggregate
+counts, qualified/pending/uncertain consistency, bounded finite ordered pending
+rectangles and explicit native reasons. source-wall-self-certified is accepted
+only for a proven diagonal whose adaptive face result qualifies. Unrequested
+or malformed adaptive results refuse; no proof algorithm moves into TS.
+Six transport regressions pass, including forged ownership/counts, missing
+reports, invalid budgets and unresolved rectangular refusal. vue-tsc passes.
+New packaged WASM, worker/UI acceptance and general whole-wall proof remain open.
+
+Adaptive transport additionally requires every enumerated diagonal with a
+qualified private self-face diagnostic to carry source-wall-self-certified.
+A contradictory fallback reason refuses even when all public booleans agree.
+Six transport regressions pass with this composition-consistency guard.
+
+
+## Adaptive UI regression before packaged-worker acceptance
+
+The new interface requests adaptive self work with shared/per-face budgets
+and displays qualified face and pending region counts in result details.
+All 317 existing DirectModeler UI tests pass in 86.07 seconds; the worker
+transport cancellation/retry/late-reply test passes with adaptive options.
+Vue and MCP type checks pass. These tests do not establish new packaged
+WASM or browser behavior: compilation has completed, but optimization and
+packaging remain live. Real-worker annular/cuboid tests have been extended
+and must run against the completed artifact before integration is accepted.
+
+
+## Packaged adaptive real-worker acceptance
+
+Packaging completed successfully: optimized geometry WASM SHA-256
+a0c58afae5436f12c9023b91c75d2b1c46c3449e96a027e69ced385ef0ca2526,
+11915604 bytes. All 26 worker/transport tests pass in 23.91 seconds. Original
+annular adaptive report matches native results: 16/27 self faces, 5760 cells,
+21010 spans, 256 unresolved total pairs and 653 normal spans; whole-wall proof
+remains refused. Legacy requests retain their prior 258 unresolved pairs.
+Original cuboid adaptive requests retain positive 9.99 mm, negative 10.01 mm
+and truncated 20/21 pair outcomes. Wrong face ownership, forged whole-wall
+flags and changed-threshold late reports refuse. Logs and exact reports retain
+the tested artifact hash. Production packaging and browser acceptance remain
+open; general material thickness and the full goal are incomplete.
+
+
+Production compile succeeds. Initial artifact verification rejects measured
+size growth; only affected named budgets were adjusted, preserving margins:
+geometry 3974484 + 608, DirectModeler 437076 + 511, mainSolid.worker 167304 + 123,
+asset total 8295587 + 761 bytes. Final verification passes all 151 artifacts:
+8295587 asset + 15211996 raw WASM = 23507583 total bytes. Source identity and
+unique packed module gates remain enabled. Browser acceptance, deployment
+and push are not claimed.
+
+
+## Adaptive browser acceptance at localhost 5188
+
+Keyboard whole-wall action at 5.99 mm without selected face groups completes
+with 378/378 pairs, 255 unproven pairs at the larger UI gap budget, 16/27
+qualified self faces and 691 pending self regions. The explicit refusal and
+near-normal chord scope remain visible. Keyboard Retry shows pending state;
+immediate Cancel clears the result. A new keyboard Check after cancellation
+returns the same refusal; details expand to the same counts. Screenshot retained.
+This verifies that browser scenario only, not the full P0 command matrix or
+whole material thickness, named-part STEP acceptance, or remaining geometry.
+
+
+## Native shared-boundary gap scheduling
+
+Whole-wall coverage now skips full-chart clearance subdivision for faces
+with admitted shared edge uses unless an independent normal/coplanar exclusion
+already qualifies them. Skipping is never a wall certificate: these pairs
+remain unresolved. This reserves gap work for faces without shared edge uses.
+Original annular regression passes in 30.67 seconds at the unchanged budget:
+legacy unresolved pairs decrease from 258 to 257; adaptive composition from
+256 to 255, retaining 16/27 self facts and 653 normal spans. Both global reports
+still refuse. This latest scheduler change is native only; packaged WASM,
+worker exact expectations and browser currently correspond to the previous
+checkpoint. Cuboid regression and final package acceptance remain pending.
+
+
+Shared-boundary scheduling now builds one canonical adjacency index from
+admitted source edge uses instead of scanning all edges for every face pair.
+Annular regression also asserts that shared-boundary pairs never carry a gap
+subdivision reason. It passes in 32.73 seconds with 255 adaptive unproven pairs;
+cuboid positive, threshold refusal and partial enumeration regression passes
+in 0.07 seconds. These durations are regression evidence, not a speed benchmark.
+Worker exact expectations now target 255 adaptive / 257 legacy unresolved pairs
+and await a fresh package. Remaining full-wall and geometry requirements stay open.
+
+Native private-fact ownership regression now independently admits an
+identical second cuboid Body. Certificates from the first refuse against the
+second despite identical geometry; duplicate private facts for the same face
+also refuse. Existing positive/stale-threshold/angle cases pass: 0.11 seconds.
+Only test code changes; the in-progress WASM scheduler build is not restarted.
+
+
+## Current original shared-edge qualification audit
+
+All nine source_shared_edge native regressions pass in 0.02 seconds. Inspected
+coverage includes original rational restrictions with root ends, different
+original parameter domains, mixed fixed/root endpoints, adjacent noncoplanar
+charts, different UV cutter equations and a rational curved world carrier
+across reflected planar charts. Distinct world-plane roots and unqualified
+world/cutter identity are refused. This evidence goes beyond complete source
+edge coincidence but remains the listed fixtures: the curved-carrier fixture
+uses planar support charts. It does not establish arbitrary NURBS support
+charts, all shared trimmed restrictions, general complex corners, or closed
+fillet-body and named-part acceptance. No broad completion is inferred.
+
+
+## Distinct curved support charts with an irrational shared end
+
+Added native original-root fixture on distinct polynomial NURBS surfaces
+x=u, y=+/-v, z=u^2+v. Their common curved world edge is (t,0,t^2),
+restricted from 0 to the freshly isolated original crossing t=1/sqrt(2),
+with opposite directed use on the second chart. Exact original definitions
+and root interval are retained. Changing the world middle Z control by 1e-12
+refuses shared-edge admission. Test passes; no rounded fitted replacement is
+used. This qualifies that noncoplanar curved-support fixture, not arbitrary
+rational NURBS supports, mixed-radius corners or closed fillet-body acceptance.
+
+
+The distinct curved-support root fixture now additionally uses nonunit original
+NURBS U-row weights [1,2,1] on both support charts and the canonical world
+curve. Fresh source contact isolation preserves the same t=1/sqrt(2) end,
+opposite traversal and original definitions; damaged world Z control refuses
+for both polynomial and rational cases. Test passes in 0.01 seconds. This
+extends one explicitly constructed rational fixture, not arbitrary NURBS
+restriction, whole fillet Body, mixed-radius corners or full P0 acceptance.

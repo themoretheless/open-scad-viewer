@@ -42,8 +42,21 @@ pub fn qualify(spans: &[linear_canal::Span], limits: Limits) -> crate::Result<Re
     from_incidence(incidence, limits.embedding, limits.volume)
 }
 pub(crate) fn from_incidence(
-    mut incidence: crate::source_shell_incidence::Report,
+    incidence: crate::source_shell_incidence::Report,
     embedding_limits: source_shell_geometry::Limits,
+    volume_limits: source_volume::Limits,
+) -> crate::Result<Report> {
+    from_incidence_using(
+        incidence,
+        |shell| source_shell_geometry::qualify(shell, embedding_limits),
+        volume_limits,
+    )
+}
+pub(crate) fn from_incidence_using(
+    mut incidence: crate::source_shell_incidence::Report,
+    qualify: impl FnOnce(
+        crate::source_shell_incidence::Shell,
+    ) -> nurbs_core::Result<source_shell_geometry::Report>,
     volume_limits: source_volume::Limits,
 ) -> crate::Result<Report> {
     let shell = incidence.shell.take();
@@ -55,8 +68,7 @@ pub(crate) fn from_incidence(
     let Some(shell) = shell else {
         return Ok(out);
     };
-    let mut embedding = source_shell_geometry::qualify(shell, embedding_limits)
-        .map_err(|e| crate::Error::new(e.code, e.message))?;
+    let mut embedding = qualify(shell).map_err(|e| crate::Error::new(e.code, e.message))?;
     let geometry = embedding.geometry.take();
     out.embedding = Some(embedding);
     if let Some(geometry) = geometry {

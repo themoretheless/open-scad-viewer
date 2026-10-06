@@ -220,7 +220,18 @@ fn qualify_impl(
                                 &mut out,
                                 max_work,
                             )?;
-                            if same {
+                            let (chart_same, work, checks) = if same {
+                                (false, 0, 0)
+                            } else {
+                                crate::source_line_chart_root::same(
+                                    [(a, *ar), (b, *br)],
+                                    world_reversed,
+                                    max_work - out.work_used,
+                                )?
+                            };
+                            out.work_used += work;
+                            out.root_checks += checks;
+                            if same || chart_same {
                                 true
                             } else if let Some(plane) = planes[i] {
                                 common_plane_root(
@@ -1739,4 +1750,74 @@ mod tests {
             .edge
             .is_none());
     }
+    #[test]
+    fn curved_world_carrier_keeps_irrational_root_across_reflected_uv_charts() {
+        let surface = |sign: f64| Surface {
+            degree_u: 1, degree_v: 1, periodic_u: false, periodic_v: false,
+            knots_u: vec![0.,0.,1.,1.], knots_v: vec![-1.,-1.,1.,1.],
+            control_points: vec![
+                vec![vec![0.,-sign,0.],vec![0.,sign,0.]],
+                vec![vec![1.,-sign,0.],vec![1.,sign,0.]],
+            ], weights: vec![vec![1.;2];2],
+        };
+        let main = Curve {degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![0.5,0.25],vec![1.,0.]],weights:vec![1.,2.,1.]};
+        let cutter=Curve {degree:2,periodic:false,knots:main.knots.clone(),
+            control_points:vec![vec![0.,-0.5],vec![0.5,0.],vec![1.,0.5]],weights:vec![1.,2.,1.]};
+        let mut other_main=main.clone();other_main.control_points.reverse();
+        for p in &mut other_main.control_points {p[1] = -p[1];}
+        let mut other_cutter=cutter.clone();
+        for p in &mut other_cutter.control_points {p[1] = -p[1];}
+        let a_surface=surface(1.);let b_surface=surface(-1.);
+        let point = |surface:&Surface, m:&Curve, c:&Curve, selector| {
+            let r=crate::source_contact_point::qualify(surface,m,c,selector,1000).unwrap();
+            r.point.expect(r.reason)
+        };
+        let a=Fragment::new(&a_surface,&main,Endpoint::Parameter(0.),
+            Endpoint::Crossing {point:point(&a_surface,&main,&cutter,[[0.7,0.71],[0.7,0.71]]),role:Role::Boundary}).unwrap();
+        let b=Fragment::new(&b_surface,&other_main,
+            Endpoint::Crossing {point:point(&b_surface,&other_main,&other_cutter,[[0.29,0.3],[0.7,0.71]]),role:Role::Boundary},Endpoint::Parameter(1.)).unwrap();
+        let mut world=main.clone();for p in &mut world.control_points {p.push(0.);}
+        let r=qualify(&world,[&a,&b],[false,true],1_000_000).unwrap();
+        assert!(r.edge.is_some(),"{}",r.reason);
+        assert!(r.root_checks>0);
+        let edge=r.edge.unwrap();
+        assert_eq!(edge.uses()[0].definition(),a.definition());
+        assert_eq!(edge.uses()[1].definition(),b.definition());
+        let range=edge.uses()[0].parameter_bounds()[1];
+        assert!(range[0]<std::f64::consts::FRAC_1_SQRT_2 && range[1]>std::f64::consts::FRAC_1_SQRT_2);
+        let mut damaged=world.clone();damaged.control_points[1][1]+=1e-12;
+        assert!(qualify(&damaged,[&a,&b],[false,true],1_000_000).unwrap().edge.is_none());
+    }
+
+    #[test]
+    fn curved_support_charts_share_original_root_ended_world_edge() {
+        // Distinct curved sheets use original polynomial and rational U rows.
+        for middle_weight in [1.,2.] {
+        let surface=|sign:f64|Surface{degree_u:2,degree_v:1,periodic_u:false,periodic_v:false,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![-1.,-1.,1.,1.],
+            control_points:vec![vec![vec![0.,-sign,-1.],vec![0.,sign,1.]],
+                vec![vec![0.5,-sign,-1.],vec![0.5,sign,1.]],vec![vec![1.,-sign,0.],vec![1.,sign,2.]]],
+            weights:vec![vec![1.;2],vec![middle_weight;2],vec![1.;2]]};
+        let main=Curve{degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![0.5,0.],vec![1.,0.]],weights:vec![1.;3]};
+        let cutter=Curve{control_points:vec![vec![0.,-0.5],vec![0.5,-0.5],vec![1.,0.5]],..main.clone()};
+        let mut other_main=main.clone();other_main.control_points.reverse();
+        let mut other_cutter=cutter.clone();for p in &mut other_cutter.control_points{p[1] = -p[1];}
+        let sa=surface(1.);let sb=surface(-1.);
+        let pa=crate::source_contact_point::qualify(&sa,&main,&cutter,[[0.7,0.71],[0.7,0.71]],1000).unwrap();
+        let pb=crate::source_contact_point::qualify(&sb,&other_main,&other_cutter,[[0.29,0.3],[0.7,0.71]],1000).unwrap();
+        let a=Fragment::new(&sa,&main,Endpoint::Parameter(0.),Endpoint::Crossing{point:pa.point.expect(pa.reason),role:Role::Boundary}).unwrap();
+        let b=Fragment::new(&sb,&other_main,Endpoint::Crossing{point:pb.point.expect(pb.reason),role:Role::Boundary},Endpoint::Parameter(1.)).unwrap();
+        let world=Curve{control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,0.,1.]],weights:vec![1.,middle_weight,1.],..main.clone()};
+        let r=qualify(&world,[&a,&b],[false,true],1_000_000).unwrap();
+        let edge=r.edge.expect(r.reason);assert!(r.root_checks>0);
+        let range=edge.uses()[0].parameter_bounds()[1];
+        assert!(range[0]<std::f64::consts::FRAC_1_SQRT_2&&range[1]>std::f64::consts::FRAC_1_SQRT_2);
+        assert_eq!(edge.uses()[0].definition(),a.definition());assert_eq!(edge.uses()[1].definition(),b.definition());
+        let mut wrong=world.clone();wrong.control_points[1][2]=1e-12;
+        assert!(qualify(&wrong,[&a,&b],[false,true],1_000_000).unwrap().edge.is_none());
+        }
+    }
+
 }

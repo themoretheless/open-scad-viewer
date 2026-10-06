@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import type {SourceWallCoverageResult} from '../services/sourceWallCoverageTransport'
+import type {SourceWallScanResult} from '../services/sourceWallScanTransport'
 import {SourceBodyDisplay} from '../services/sourceBodyDisplay'
-import type {SourceBodyResult} from '../services/sourceBody'
+import {sourceBodyRecordOptions} from '../services/sourceBodyArchive'
+import type {SourceBodyResult,SourceSeamResult} from '../services/sourceBody'
+import type {SourceWallResult} from '../services/sourceWallTransport'
 
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
@@ -1360,7 +1364,7 @@ const sourceDisplayEdges=computed(()=>(document.value.sourceBodies??[]).filter(i
  (sourceDisplayResults.value[item.id]?.edges??[]).map(edge=>({key:item.id+':'+edge.index,body:item.id,name:item.name,index:edge.index,selectable:objectSelectable(item.id),
   points:(edge.displaySegments??[]).flatMap((segment,i)=>i===0?segment[1]:[segment[1][1]]).map(p=>project(p,'3d').join(',')).join(' ')}))))
 const sourceDisplayFaces=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).flatMap(([id,result])=>
- (result.displayFaces??[]).flatMap(face=>face.tiles.flatMap((tile,i)=>[[0,1,2],[0,2,3]].map((indexes,k)=>({key:id+':'+face.index+':'+i+':'+k,
+ (result.displayFaces??[]).flatMap(face=>face.tiles.flatMap((tile,i)=>[[0,1,2],[0,2,3]].map((indexes,k)=>({key:id+':'+face.index+':'+i+':'+k,body:id,face:face.index,
  points:indexes.map(index=>project(tile.corners[index]!,'3d').join(',')).join(' '),
  depth:indexes.reduce((sum,index)=>sum+projectDirectPoint(tile.corners[index]! as Vec3,camera.value)[2],0)/3}))))).sort((a,b)=>a.depth-b.depth))
 const sourceUnresolvedCount=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).reduce((sum,[,result])=>sum+(result.displayFaces??[]).reduce((n,face)=>n+face.unresolved.length,0),0))
@@ -1852,6 +1856,9 @@ function closeFileMenu(e:KeyboardEvent) {
  const menu=e.currentTarget as HTMLDetailsElement
  if(!menu.open)return
  e.preventDefault();e.stopPropagation()
+ if(sourceWallPending.value)cancelSourceWall()
+ if(sourceSeamPending.value)cancelSourceSeam()
+ if(sourceStepPending.value)cancelSourceStep()
  menu.open=false
  menu.querySelector('summary')?.focus()
 }
@@ -2019,6 +2026,149 @@ async function exportBodySvg() {
     if(!controller.signal.aborted&&!restoreDisposed&&props.open)download(result.svg,'body-xy.svg')
   } catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:String(e)}
   finally{worker?.dispose();if(svgController===controller)svgController=undefined}
+}
+const sourceStepWorker=createSolidPreviewWorker(),sourceStepPending=ref(false),sourceStepError=ref(''),sourceStepTolerance=ref(1e-7)
+const selectedSourceBody=computed(()=>(document.value.sourceBodies??[]).find(record=>sourceEdgeSelection.value.startsWith(record.id+':')))
+const sourceSeamWorker=createSolidPreviewWorker(),sourceSeamPending=ref(false),sourceSeamError=ref('')
+const sourceSeamResult=shallowRef<SourceSeamResult|null>(null)
+let sourceSeamGeneration=0
+function cancelSourceSeam(){sourceSeamGeneration++;sourceSeamWorker.cancel();sourceSeamPending.value=false}
+watch(()=>[document.value,props.open,sourceEdgeSelection.value],()=>{
+ cancelSourceSeam();sourceSeamResult.value=null;sourceSeamError.value=''
+},{flush:'sync'})
+onUnmounted(()=>{cancelSourceSeam();sourceSeamWorker.dispose()})
+const sourceSeamMessage=computed(()=>{
+ const result=sourceSeamResult.value
+ if(!result)return ''
+ if(result.qualified)return label('Касательность подтверждена на всём ребре.','Tangency is qualified over the whole edge.')
+ if(result.reason==='source-seam-endpoint-normal-unresolved')return label('Нормаль на конце ребра не подтверждена. Проверьте концевой переход; повтор с тем же бюджетом не устраняет вырождение.','The endpoint normal is unresolved. Inspect the end transition; repeating the same budget does not resolve a singularity.')
+ if(result.reason==='source-seam-angular-envelope-oblique')return label('Касательность в выбранном допуске не подтверждена. Проверьте сопряжение соседних граней.','Tangency within tolerance is unproven. Inspect the adjacent face transition.')
+ return label('Проверка участка не завершена. Повторите расчёт или уточните геометрию и лимиты.','The interval check is incomplete. Retry or inspect the geometry and work limits.')
+})
+async function qualifySourceSeam(){
+ cancelSourceSeam();sourceSeamResult.value=null;sourceSeamError.value=''
+ const record=selectedSourceBody.value,source=document.value,selection=sourceEdgeSelection.value,generation=sourceSeamGeneration
+ const selected=sourceDisplayResults.value[record?.id??'']?.edges.find(edge=>record!.id+':'+edge.index===selection)
+ if(!record||!selected||restoringDraft.value||!props.open||!objectSelectable(record.id))return
+ sourceSeamPending.value=true
+ try{
+  const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
+   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
+   seamQualification:{edge:selected.index,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
+  if(generation!==sourceSeamGeneration||document.value!==source||sourceEdgeSelection.value!==selection||selectedSourceBody.value!==record||!props.open||restoreDisposed)return
+  if(!result.admitted||!result.seamQualification)throw Error(result.diagnostics.reason)
+  sourceSeamResult.value=result.seamQualification
+ }catch(e){if(generation===sourceSeamGeneration)sourceSeamError.value=e instanceof Error?e.message:String(e)}
+ finally{if(generation===sourceSeamGeneration)sourceSeamPending.value=false}
+}
+const sourceWallWorker=createSolidPreviewWorker(),sourceWallPending=ref(false),sourceWallError=ref('')
+const sourceWallResult=shallowRef<SourceWallResult|null>(null),sourceWallOpen=ref(false),sourceWallMenuOpen=ref(false)
+const sourceWallCoverageResult=shallowRef<SourceWallCoverageResult|null>(null),sourceWallCoverageMode=ref(false)
+const sourceWallScanResult=shallowRef<SourceWallScanResult|null>(null),sourceWallScanMode=ref(false)
+const sourceWallGroups=ref<[number[],number[]]>([[],[]]),sourceWallSide=ref<0|1>(0)
+const sourceWallMinimum=ref(1),sourceWallTolerance=ref(0.02)
+let sourceWallGeneration=0
+function cancelSourceWall(){sourceWallGeneration++;sourceWallWorker.cancel();sourceWallPending.value=false}
+watch(()=>[document.value,props.open,selectedSourceBody.value],()=>{
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallCoverageResult.value=null;sourceWallError.value='';sourceWallGroups.value=[[],[]]
+},{flush:'sync'})
+watch(()=>[sourceWallGroups.value,sourceWallMinimum.value,sourceWallTolerance.value,sourceWallOpen.value],()=>{
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallCoverageResult.value=null;sourceWallError.value=''
+},{deep:true,flush:'sync'})
+onUnmounted(()=>{cancelSourceWall();sourceWallWorker.dispose()})
+const sourceWallFaces=computed(()=>Array.from({length:sourceDisplayResults.value[selectedSourceBody.value?.id??'']?.faceCount??0},(_,i)=>i))
+function sourceWallFileMenuToggle(e:Event){
+ sourceWallMenuOpen.value=(e.currentTarget as HTMLDetailsElement).open
+ if(!sourceWallMenuOpen.value && sourceWallPending.value)cancelSourceWall()
+}
+function toggleSourceWallFace(face:number){
+ if(!selectedSourceBody.value||!objectSelectable(selectedSourceBody.value.id))return
+ const side=sourceWallSide.value,other=side===0?1:0
+ const groups:[number[],number[]]=[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]]
+ groups[side]=groups[side].includes(face)?groups[side].filter(f=>f!==face):[...groups[side],face].sort((a,b)=>a-b)
+ groups[other]=groups[other].filter(f=>f!==face);sourceWallGroups.value=groups
+}
+const sourceWallUnprovenFaces=computed(()=>{
+ const faces=new Set<number>()
+ for(const pair of sourceWallCoverageResult.value?.pairs??[])if(!pair.proven){faces.add(pair.faces[0]);faces.add(pair.faces[1])}
+ return faces
+})
+function sourceWallFaceUncertain(body:string,face:number){
+ return sourceWallOpen.value && body===selectedSourceBody.value?.id && (!!sourceWallResult.value?.clearance.uncertainFaces?.includes(face)
+  ||!!(sourceWallCoverageResult.value&&(!sourceWallCoverageResult.value.enumerationComplete||sourceWallUnprovenFaces.value.has(face)))
+  ||!!(sourceWallScanResult.value?.thinFound&&sourceWallScanResult.value.witness?.endpoints.some(e=>e.face===face)))
+}
+function sourceWallFaceFill(body:string,face:number){
+ if(!sourceWallOpen.value||body!==selectedSourceBody.value?.id)return '#77b8b0'
+ if(sourceWallFaceUncertain(body,face))return '#ff9977'
+ return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
+}
+const sourceWallMeasurement=computed(()=>{
+ const record=selectedSourceBody.value,r=sourceWallResult.value,scan=sourceWallScanResult.value,w=scan?.witness??r?.witness
+ if(!sourceWallOpen.value||!record||!objectInView(record.id)||(!scan&&!r?.qualified)||!w)return null
+ const endpoints=w.endpoints.map(e=>{
+  const center=project(e.worldMm.map(q=>q[0]/2+q[1]/2),'3d')
+  const corners=Array.from({length:8},(_,k)=>project(e.worldMm.map((q,i)=>q[(k>>i)&1]),'3d'))
+  const x=Math.min(...corners.map(p=>p[0])),y=Math.min(...corners.map(p=>p[1]))
+  return {face:e.face,center,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,bounds:e.worldMm}
+ })
+ if(endpoints.some(e=>![...e.center,e.x,e.y,e.width,e.height].every(Number.isFinite)))return null
+ return {endpoints,points:endpoints.map(e=>e.center.join(',')).join(' '),interval:scan?w.lengthMm:r!.intervalMm}
+})
+const sourceWallMessage=computed(()=>{
+ const r=sourceWallResult.value;if(!r)return ''
+ if(r.qualified)return r.converged?label('Толщина между выбранными сторонами подтверждена.','Thickness between the selected sides is qualified.'):
+  label('Интервал толщины подтверждён, но заданный допуск ещё не достигнут.','Thickness bounds are qualified; the requested tolerance is not reached.')
+ return r.reason==='source-wall-clearance-unproven'?label('Нижняя граница не подтверждена. Проверьте выделенные грани и выбор противоположных сторон.','The lower bound is unproven. Inspect highlighted faces and choose opposing sides.'):
+  label('Допустимый участок материала не найден. Уточните выбор сторон; отсутствие тонких участков не подтверждено.','No qualified material chord was found. Refine the side selection; absence of thin regions is unproven.')
+})
+const sourceWallInputError=computed(()=>{
+ if(!Number.isFinite(sourceWallMinimum.value)||sourceWallMinimum.value<=0)return label('Укажите минимальную толщину больше нуля.','Enter a minimum thickness greater than zero.')
+ if(!sourceWallScanMode.value&&!sourceWallCoverageMode.value&&(!Number.isFinite(sourceWallTolerance.value)||sourceWallTolerance.value<=0))return label('Укажите допуск толщины больше нуля.','Enter a thickness tolerance greater than zero.')
+ return ''
+})
+async function qualifySourceWall(scan=false,coverage=false){
+ sourceWallScanMode.value=scan;sourceWallCoverageMode.value=coverage
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallCoverageResult.value=null;sourceWallError.value=''
+ const record=selectedSourceBody.value,source=document.value,generation=sourceWallGeneration
+ if(!record||!props.open||!sourceWallOpen.value||restoringDraft.value||!objectSelectable(record.id)||(!scan&&!coverage&&sourceWallGroups.value.some(g=>!g.length)))return
+ if(sourceWallInputError.value){sourceWallError.value=sourceWallInputError.value;return}
+ sourceWallPending.value=true
+ try{
+  const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
+   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
+   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,adaptiveSelf:{planeControls:1000000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+    limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
+    toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+    limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})
+  if(generation!==sourceWallGeneration||document.value!==source||selectedSourceBody.value!==record||!props.open||!sourceWallOpen.value||restoreDisposed)return
+  if(!result.admitted||(coverage?!result.wallCoverage:scan?!result.wallScan:!result.wallQualification))throw Error(result.diagnostics.reason)
+  if(coverage)sourceWallCoverageResult.value=result.wallCoverage!;else if(scan)sourceWallScanResult.value=result.wallScan!;else sourceWallResult.value=result.wallQualification!
+ }catch(e){if(generation===sourceWallGeneration)sourceWallError.value=e instanceof Error?e.message:String(e)}
+ finally{if(generation===sourceWallGeneration)sourceWallPending.value=false}
+}
+let sourceStepGeneration=0
+function cancelSourceStep(){sourceStepGeneration++;sourceStepWorker.cancel();sourceStepPending.value=false}
+watch(()=>[document.value,props.open,sourceEdgeSelection.value,sourceStepTolerance.value],()=>{cancelSourceStep();sourceStepError.value=''},{flush:'sync'})
+onUnmounted(()=>{cancelSourceStep();sourceStepWorker.dispose()})
+async function exportSourceStep(){
+ cancelSourceStep();sourceStepError.value=''
+ const record=selectedSourceBody.value,source=document.value,generation=sourceStepGeneration
+ if(!record||restoringDraft.value||!props.open)return
+ sourceStepPending.value=true
+ try{
+  const options={...sourceBodyRecordOptions(record),displaySegments:0,faceDisplay:undefined,
+   stepExchange:{toleranceMm:sourceStepTolerance.value,trimWork:10_000_000,
+    limits:{rootChecks:100000,mappingCells:100000,replayMappingPerUse:100000,
+     exactWork:100_000_000,driverCells:100000,spans:100000,endpoints:100000}}}
+  const result=await sourceStepWorker.run({kind:'sourceBodyRestore',options})
+  if(generation!==sourceStepGeneration||document.value!==source||selectedSourceBody.value!==record||!props.open||restoreDisposed)return
+  if(!result.admitted)throw Error(result.diagnostics.reason)
+  const step=result.stepExchange
+  if(!step?.prepared)throw Error(step?.reason??'source-step-preparation-unproven')
+  download(step.text,record.name.replace(/[^a-zA-Z0-9_-]/g,'_')+'.step')
+ }catch(e){if(generation===sourceStepGeneration)sourceStepError.value=e instanceof Error?e.message:String(e)}
+ finally{if(generation===sourceStepGeneration)sourceStepPending.value=false}
 }
 async function exportStepCurrent() {
   if(restoringDraft.value)return
@@ -3053,7 +3203,7 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
-  if (e.key === 'Escape') { e.preventDefault(); cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
+  if (e.key === 'Escape') { e.preventDefault(); cancelSourceWall();cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
     if ((e.target as HTMLElement).closest?.('button, summary, a[href], select')) return
@@ -3485,7 +3635,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <svg v-else-if="saveError" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
-      <details class="file-menu" @keydown.esc="closeFileMenu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+      <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
@@ -3498,6 +3648,59 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <input ref="stepInput" type="file" accept=".step,.stp" hidden @change="importStep" />
         <button type="button" :disabled="restoringDraft || !selectedBody" @click="exportBodySvg">{{ label('SVG выбранного тела · проекция XY', 'Selected body SVG · XY projection') }}</button>
         <button type="button" :disabled="restoringDraft || !document.bodies.length" @click="exportBlender">{{ label('Экспорт для Blender', 'Export for Blender') }}</button>
+        <template v-if="document.sourceBodies?.length">
+          <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceSeamPending" @click="qualifySourceSeam">{{ label('Проверить касательность ребра','Check source edge tangency') }}</button>
+          <span v-if="sourceSeamPending" role="status">{{ label('Проверяю касательность…','Checking tangency…') }} <button type="button" @click="cancelSourceSeam">{{ label('Отмена','Cancel tangency') }}</button></span>
+          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
+          <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
+          <details class="source-wall-panel" :open="sourceWallOpen" @toggle="sourceWallOpen=($event.target as HTMLDetailsElement).open">
+            <summary>{{ label('Толщина исходного тела','Source body wall thickness') }}</summary>
+            <p>{{ label('Для проверки выбранного участка укажите две противоположные стороны. Для всей стенки выбирать грани не требуется. Расчёт оценивает отрезки материала, почти перпендикулярные граням.','Choose opposing sides to check a selected region. Whole-wall qualification needs no selected faces. The calculation evaluates material chords nearly perpendicular to the faces.') }}</p>
+            <button type="button" :aria-pressed="sourceWallSide===0" @click="sourceWallSide=0">{{ label('Первая сторона','First side') }}</button>
+            <button type="button" :aria-pressed="sourceWallSide===1" @click="sourceWallSide=1">{{ label('Вторая сторона','Second side') }}</button>
+            <div class="source-wall-face-grid" role="group" :aria-label="label('Грани стенки','Wall faces')">
+              <button v-for="face in sourceWallFaces" :key="face" type="button" :aria-pressed="sourceWallGroups[sourceWallSide].includes(face)"
+                :style="{borderColor:sourceWallFaceFill(selectedSourceBody?.id??'',face)}" @click="toggleSourceWallFace(face)">{{ label('Грань ','Face ') }}{{ face+1 }}</button>
+            </div>
+            <p>{{ label('Первая сторона','First side') }}: {{ sourceWallGroups[0].map(f=>f+1).join(', ') || '—' }} · {{ label('Вторая сторона','Second side') }}: {{ sourceWallGroups[1].map(f=>f+1).join(', ') || '—' }}</p>
+            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" :aria-invalid="sourceWallError && (!Number.isFinite(sourceWallMinimum) || sourceWallMinimum<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
+            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" :aria-invalid="sourceWallError && !sourceWallScanMode && !sourceWallCoverageMode && (!Number.isFinite(sourceWallTolerance) || sourceWallTolerance<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall(false)">{{ label('Проверить толщину','Check source wall thickness') }}</button>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(true)">{{ label('Найти тонкие участки','Find thin regions') }}</button>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(false,true)">{{ label('Проверить всю стенку','Check whole wall') }}</button>
+            <span v-if="sourceWallCoverageResult" :role="sourceWallCoverageResult.wholeWallQualified?'status':'alert'" data-source-wall-coverage-result="true">
+              {{ sourceWallCoverageResult.wholeWallQualified?label('По всем граням подтверждён нижний порог толщины для отрезков, почти перпендикулярных граням.','The lower thickness threshold for near-normal chords is qualified across all faces.'):label('Толщина всей стенки не подтверждена. Проверьте выделенные грани; часть пар требует дополнительной диагностики.','Whole-wall thickness is unproven. Inspect highlighted faces; some pairs need further diagnostics.') }}
+              {{ sourceWallCoverageResult.lowerMm }} {{ sourceWallCoverageResult.lowerMm!==null?label('мм','mm'):'' }} · {{ sourceWallCoverageResult.pairs.length }}/{{ sourceWallCoverageResult.totalPairs }}
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(false,true)">{{ label('Повторить проверку всей стенки','Retry whole wall') }}</button>
+              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallCoverageResult.reason }} · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('непроверенных пар','unproven pairs') }}
+                <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
+                  · {{ label('Проверка внутри граней','Within-face coverage') }}:
+                  {{ sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>f.qualified).length }}/{{ sourceWallCoverageResult.adaptiveSelf.faces.length }}
+                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('областей требуют проверки','regions require checking') }}
+                </span>
+              </details>
+            </span>
+            <span v-if="sourceWallScanResult" role="status" data-source-wall-scan-result="true">
+              {{ sourceWallScanResult.thinFound?label('Найден тонкий участок.','A thin region was found.'):label('Тонкий участок в проверенных пробах не найден.','No thin region was found in tested proposals.') }}
+              {{ sourceWallScanResult.proposalsExhausted?label('Заданные пробы выполнены.','The configured proposals are complete.'):label('Поиск остановлен по лимиту попыток.','Search stopped at the attempt limit.') }}
+              {{ label('Безопасность всей стенки не подтверждена.','Whole-wall safety is unproven.') }}
+              {{ sourceWallScanResult.witness?.lengthMm }} mm · {{ sourceWallScanResult.facesVisited }}/{{ sourceWallScanResult.facesTotal }} · {{ sourceWallScanResult.attempts }}
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(true)">{{ label('Повторить поиск','Retry search') }}</button>
+            </span>
+            <span v-if="sourceWallPending" role="status">{{ label('Проверяю толщину…','Checking wall thickness…') }} <button type="button" @click="cancelSourceWall">{{ label('Отмена','Cancel wall thickness') }}</button></span>
+            <span v-if="sourceWallResult" :role="sourceWallResult.qualified?'status':'alert'">{{ sourceWallMessage }}
+              <span v-if="sourceWallResult.intervalMm">{{ sourceWallResult.intervalMm[0] }}–{{ sourceWallResult.intervalMm[1] }} {{ label('мм','mm') }}</span>
+              <button v-if="!sourceWallResult.converged" type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode,sourceWallCoverageMode)">{{ label('Повторить','Retry wall thickness') }}</button>
+              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallResult.reason }} · {{ sourceWallResult.search.attempts }} · {{ sourceWallResult.clearance.uncertainUv }}</details>
+            </span>
+            <span v-if="sourceWallError" id="source-wall-input-error" role="alert">{{ sourceWallInputError || label('Расчёт не завершён. Проверьте стороны и числовые параметры, затем повторите.','Calculation failed. Check side selection and numeric values, then retry.') }}
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode,sourceWallCoverageMode)">{{ label('Повторить','Retry wall thickness') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallError }}</details></span>
+          </details>
+          <label>{{ label('Допуск STEP, мм','STEP tolerance, mm') }} <input aria-label="STEP tolerance, mm" v-model.number="sourceStepTolerance" type="number" min="1e-12" step="any" /></label>
+          <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceStepPending" @click="exportSourceStep">{{ label('STEP выбранного исходного тела','Export selected source body STEP') }}</button>
+          <span v-if="sourceStepPending" role="status">{{ label('Готовлю STEP…','Preparing STEP…') }} <button type="button" @click="cancelSourceStep">{{ label('Отмена','Cancel STEP') }}</button></span>
+          <span v-if="sourceStepError" role="alert">{{ label('STEP не подготовлен. Выберите исходное тело и повторите расчёт; при отказе по допуску увеличьте его.','STEP preparation failed. Select the source body and retry; increase tolerance if its bound cannot be proven.') }} <button type="button" :disabled="!selectedSourceBody || sourceStepPending" @click="exportSourceStep">{{ label('Повторить STEP','Retry STEP') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceStepError }}</details></span>
+        </template>
         <button type="button" :disabled="restoringDraft || !selectedBody?.brep" @click="exportStepCurrent">{{ label('STEP выбранного тела · текущая геометрия', 'Export current body STEP') }}</button>
         <button type="button" :disabled="restoringDraft || !document.bodies.length" @click="exportStepAssembly">{{ label('STEP сборки · тела и группы', 'Export bodies and groups STEP') }}</button>
         <button type="button" :disabled="restoringDraft || stepBusy" @click="exportStepOriginal">{{ label('Экспорт AP242-оригинала', 'Export AP242 original') }}</button>
@@ -3657,15 +3860,22 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
-              <g v-if="pane==='3d'" data-source-face-preview="true" pointer-events="none">
-                <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" fill="#77b8b0" fill-opacity=".25" stroke="none" />
-                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" fill="none" stroke="#ff9977" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+              <g v-if="pane==='3d'" data-source-face-preview="true" :pointer-events="sourceWallOpen && sourceWallMenuOpen?'auto':'none'">
+                <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" :data-source-body="face.body" :data-source-face="face.face" :fill="sourceWallFaceFill(face.body,face.face)" fill-opacity=".25" stroke="none" @pointerdown.stop @click.stop="face.body===selectedSourceBody?.id && toggleSourceWallFace(face.face)" />
+                <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" :data-source-wall-error="sourceWallFaceUncertain(box.body,box.face)?'true':undefined" fill="none" :stroke="sourceWallFaceUncertain(box.body,box.face)?'#ff4c4c':'#ff9977'" :stroke-width="sourceWallFaceUncertain(box.body,box.face)?3:1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+              </g>
+              <g v-if="pane==='3d' && sourceWallMeasurement" data-source-wall-measurement="true" pointer-events="none">
+                <polyline :points="sourceWallMeasurement.points" fill="none" stroke="#ffe875" stroke-width="3" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"><title>{{ label('Измерение толщины: линия между центрами координатных интервалов. ','Thickness measurement: line between enclosure centers. ')+sourceWallMeasurement.interval+' mm' }}</title></polyline>
+                <g v-for="(end,i) in sourceWallMeasurement.endpoints" :key="i" :data-source-wall-endpoint="i" :data-source-face="end.face">
+                  <rect :x="end.x" :y="end.y" :width="end.width" :height="end.height" fill="none" stroke="#ffe875" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  <circle :cx="end.center[0]" :cy="end.center[1]" r="3" fill="#ffe875"><title>{{ label('Координатный интервал конца: ','Endpoint coordinate enclosure: ')+end.bounds }}</title></circle>
+                </g>
               </g>
               <g v-if="pane==='3d'" data-source-endpoint-enclosures="true" pointer-events="none">
                 <rect v-for="box in sourceDisplayEndpointBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" fill="none" stroke="#ffc977" stroke-width="2" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"><title>{{ label('Интервал конца: ','Endpoint enclosure: ')+box.bounds }}</title></rect>
               </g>
               <g v-if="pane==='3d'" data-source-body-preview="edges">
-                <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?'#ffc977':sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
+                <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?(sourceSeamResult&&!sourceSeamResult.qualified?'#ff9977':'#ffc977'):sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
               </g>
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
@@ -4359,7 +4569,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 
 .sketch-start-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface)}.sketch-start-bar>button{display:inline-flex;align-items:center;gap:6px}.extrude-sketch:not(:disabled){border-color:var(--accent);color:var(--accent)}
 
-.direct-workspace{position:fixed;inset:var(--topbar-h,52px) 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}.canvas-wrap svg text{user-select:none;-webkit-user-select:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.primary:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 88%,var(--text))}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.subtract-card{display:grid;gap:8px}.subtract-field{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px}.subtract-field[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.subtract-field small{color:var(--text-dim);font:11px var(--font-mono,monospace);white-space:normal}.subtract-card>div{display:flex;justify-content:flex-end;gap:6px}.fps-badge{position:absolute;left:14px;bottom:14px;padding:3px 8px;border-radius:5px;background:var(--surface);color:var(--text-dim);font:11px var(--font-mono,monospace);pointer-events:none;opacity:.85}.fps-badge.low{color:var(--danger)}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{width:auto;flex:0 0 auto;padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
+.direct-workspace{position:fixed;inset:var(--topbar-h,52px) 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;max-height:calc(100dvh - 180px);overflow:auto;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}.canvas-wrap svg text{user-select:none;-webkit-user-select:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.primary:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 88%,var(--text))}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.subtract-card{display:grid;gap:8px}.subtract-field{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px}.subtract-field[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.subtract-field small{color:var(--text-dim);font:11px var(--font-mono,monospace);white-space:normal}.subtract-card>div{display:flex;justify-content:flex-end;gap:6px}.fps-badge{position:absolute;left:14px;bottom:14px;padding:3px 8px;border-radius:5px;background:var(--surface);color:var(--text-dim);font:11px var(--font-mono,monospace);pointer-events:none;opacity:.85}.fps-badge.low{color:var(--danger)}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{width:auto;flex:0 0 auto;padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
 .hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{max-height:calc(100% - 28px);overflow-y:auto;position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card :deep(small){font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card :deep(label){min-width:0;display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card :deep(input){width:90px}.operation-card .preparation-tolerance :deep(.quantity-field){flex:0 0 110px}.operation-card input.surface-match-number{width:110px;flex-shrink:0}.operation-card :deep(input[type=checkbox]){width:auto}.operation-card :deep(select){max-width:145px;min-width:0;flex-shrink:1;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
 .nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 
@@ -4392,6 +4602,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0;gap:8px;padding:10px}
  .canvas-viewport{min-height:120px}
 }
+ .source-wall-panel>label{display:grid;gap:4px;margin:8px 0}.source-wall-panel>label>input{width:100%;box-sizing:border-box}
+ .source-wall-face-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:8px 0}
+ .source-wall-face-grid>button{min-width:0;padding:4px}.source-wall-panel [role=alert],.source-wall-panel [role=status]{display:block;margin:8px 0;overflow-wrap:anywhere}
 </style>
 
 <style scoped>

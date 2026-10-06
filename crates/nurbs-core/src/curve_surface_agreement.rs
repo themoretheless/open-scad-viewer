@@ -834,4 +834,16 @@ mod tests {
         assert_eq!(verify_on(&piece,&pc,&plane(),false,[3.5,6.5],1e-9,128).unwrap().status,Status::WithinTolerance);
     }
 
+    #[test]
+    fn degree_five_rational_plane_composition_is_bounded_and_detects_damage() {
+        let p=Curve {degree:5,periodic:false,knots:[vec![0.;6],vec![1.;6]].concat(),
+            control_points:vec![vec![0.,0.],vec![0.125,0.0625],vec![0.25,0.125],vec![0.5,0.75],vec![0.875,0.9375],vec![1.,1.]],
+            weights:vec![1.,1.5,0.5,2.,0.75,1.]};
+        let mut c=p.clone();c.control_points=p.control_points.iter().map(|q|vec![q[0],q[1],0.]).collect();
+        let report=verify(&c,&p,&plane(),false,1e-7,1024).unwrap();
+        assert_eq!(report.status,Status::WithinTolerance);assert_eq!(report.cells,1);
+        c.control_points[2][2]=0.1;
+        assert_eq!(verify(&c,&p,&plane(),false,1e-7,1024).unwrap().status,Status::Mismatch);
+    }
+
 }

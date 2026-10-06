@@ -3,8 +3,8 @@ import {planPolygonMeshToolpaths,sectionPolygonMesh} from './geometry/polygon'
 import type {LaserMachineProfile,LaserOperation,LaserPlan} from './geometry/laser'
 
 export interface LaserProcessSettings {
-  line:{output:boolean;speedMmMin:number;power:number;passes:number;airAssist:boolean}
-  fill:{output:boolean;speedMmMin:number;power:number;passes:number;airAssist:boolean;spacingMm:number}
+  line:{output:boolean;speedMmMin:number;power:number;passes:number;airAssist:boolean;kerfMm:number;kerfMode:'center'|'part'|'cavity';pathOrder:'preserve'|'nearest'|'inner-first'|'inner-first-nearest'}
+  fill:{output:boolean;speedMmMin:number;power:number;passes:number;airAssist:boolean;spacingMm:number;pathOrder:'preserve'|'nearest'}
   offset:[number,number]
 }
 
@@ -35,13 +35,15 @@ export function planLaserMeshSection(
       name:'Fill',kind:'fill',
       output:true,speedMmMin:settings.fill.speedMmMin,power:settings.fill.power,
       passes:settings.fill.passes,airAssist:settings.fill.airAssist,
+      kerfMm:0,kerfMode:'center',pathOrder:settings.fill.pathOrder,
       paths:(layer?.paths??[]).filter(path=>path.role==='hatch')
         .map(path=>({points:translated(path.points,settings.offset),closed:false})),
     })
   }else operations.push({
     name:'Fill',kind:'fill',output:false,
     speedMmMin:settings.fill.speedMmMin,power:settings.fill.power,
-    passes:settings.fill.passes,airAssist:settings.fill.airAssist,paths:[],
+    passes:settings.fill.passes,airAssist:settings.fill.airAssist,
+    kerfMm:0,kerfMode:'center',pathOrder:settings.fill.pathOrder,paths:[],
   })
   return {machine,operations}
 }

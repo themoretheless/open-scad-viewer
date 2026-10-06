@@ -2,6 +2,8 @@ import {callGeometryRust} from './kernel'
 
 export type LaserPowerMode='m3'|'m4'
 export type LaserOperationKind='line'|'fill'
+export type LaserKerfMode='center'|'part'|'cavity'
+export type LaserPathOrder='preserve'|'nearest'|'inner-first'|'inner-first-nearest'
 
 export interface LaserMachineProfile {
   widthMm:number
@@ -28,6 +30,9 @@ export interface LaserOperation {
   power:number
   passes:number
   airAssist:boolean
+  kerfMm:number
+  kerfMode:LaserKerfMode
+  pathOrder:LaserPathOrder
   paths:readonly LaserPath[]
 }
 
@@ -52,8 +57,25 @@ export interface LaserProgram {
   summary:LaserSummary
 }
 
+export interface LaserPreviewOperation {
+  name:string
+  kind:LaserOperationKind
+  paths:readonly LaserPath[]
+}
+
+export interface LaserPreview {
+  summary:LaserSummary
+  operations:readonly LaserPreviewOperation[]
+}
+
+export const previewLaserPlan=(plan:LaserPlan):LaserPreview=>
+  callGeometryRust<LaserPreview>('laser_preflight',plan)
+
+export const previewLaserFrame=(plan:LaserPlan):LaserPreview=>
+  callGeometryRust<LaserPreview>('laser_frame_preview',plan)
+
 export const preflightLaserPlan=(plan:LaserPlan):LaserSummary=>
-  callGeometryRust<{summary:LaserSummary}>('laser_preflight',plan).summary
+  previewLaserPlan(plan).summary
 
 export const emitLaserGrbl=(plan:LaserPlan):LaserProgram=>
   callGeometryRust<LaserProgram>('laser_grbl',plan)

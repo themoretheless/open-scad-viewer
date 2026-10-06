@@ -100,6 +100,90 @@ pub fn restore(v: Value) -> Result<Value> {
     if !(1..=100000).contains(&max_spans) {
         return Err(super::input("Choose endpointSpans in 1..100000"));
     }
+    let seam_request = if v["seamQualification"].is_null() {
+        None
+    } else {
+        let option = &v["seamQualification"];
+        let edge: usize = field(option, "edge")?;
+        let work = &option["limits"];
+        let seam_limits = brep_core::source_seam_tangency::Limits {
+            max_sine_squared: field(work, "maxSineSquared")?,
+            cells: field(work, "cells")?,
+            curve_spans: field(work, "curveSpans")?,
+            normal_spans: field(work, "normalSpans")?,
+        };
+        if edge >= edge_count || !seam_limits.max_sine_squared.is_finite()
+            || !(0. ..1.).contains(&seam_limits.max_sine_squared)
+            || [seam_limits.cells, seam_limits.curve_spans, seam_limits.normal_spans]
+                .iter().any(|n| !(1..=100000).contains(n))
+        {
+            return Err(super::input("Choose an owned source edge and bounded seam qualification limits"));
+        }
+        Some((edge, seam_limits))
+    };
+    let wall_request = if v["wallQualification"].is_null() { None } else {
+        let o=&v["wallQualification"];
+        let groups:[Vec<usize>;2]=field(o,"groups")?;
+        let face_count=definition["shell"]["regions"].as_array().map_or(0,Vec::len);
+        let minimum:f64=field(o,"minimumMm")?;
+        let tolerance:f64=field(o,"toleranceMm")?;
+        let uv:f64=field(o,"toleranceUv")?;
+        let grid:usize=field(o,"grid")?;
+        let attempts:usize=field(o,"maxAttempts")?;
+        let w=&o["limits"];
+        let gap=brep_core::source_face_gap::Limits{cells:field(w,"gapCells")?,spans:field(w,"gapSpans")?};
+        let chord=brep_core::source_material_chord::Limits{cells:field(w,"cells")?,domain_cells:field(w,"domainCells")?,
+            normal_spans:field(w,"normalSpans")?,max_sine_squared:field(w,"maxSineSquared")?};
+        if groups.iter().any(|g|g.is_empty() || g.iter().enumerate().any(|(i,f)|*f>=face_count || g[..i].contains(f)))
+            || groups[0].iter().any(|f|groups[1].contains(f))
+            || [minimum,tolerance,uv].iter().any(|x|!x.is_finite() || *x<=0.)
+            || !(1..=8).contains(&grid) || !(1..=256).contains(&attempts)
+            || [gap.cells,gap.spans,chord.normal_spans].iter().any(|n|!(1..=100000).contains(n))
+            || !(1..=1000000).contains(&chord.cells) || !(1..=8000000).contains(&chord.domain_cells)
+            || !chord.max_sine_squared.is_finite() || !(0. ..1.).contains(&chord.max_sine_squared) {
+            return Err(super::input("Choose disjoint owned wall face groups, positive tolerances and bounded search work"));
+        }
+        Some((groups,minimum,tolerance,uv,grid,attempts,brep_core::source_material_wall::Limits{gap,chord}))
+    };
+    let scan_request=if v["wallScan"].is_null(){None}else{
+        let o=&v["wallScan"];
+        let minimum:f64=field(o,"minimumMm")?;let uv:f64=field(o,"toleranceUv")?;
+        let grid:usize=field(o,"grid")?;let attempts:usize=field(o,"maxAttempts")?;
+        let w=&o["limits"];
+        let work=brep_core::source_material_chord::Limits{cells:field(w,"cells")?,domain_cells:field(w,"domainCells")?,normal_spans:field(w,"normalSpans")?,max_sine_squared:field(w,"maxSineSquared")?};
+        if [minimum,uv].iter().any(|x|!x.is_finite()||*x<=0.)||!(1..=8).contains(&grid)||!(1..=256).contains(&attempts)
+            ||!(1..=1000000).contains(&work.cells)||!(1..=8000000).contains(&work.domain_cells)||!(1..=100000).contains(&work.normal_spans)
+            ||!work.max_sine_squared.is_finite()||!(0. ..1.).contains(&work.max_sine_squared){return Err(super::input("Choose positive scan threshold and bounded original material work"));}
+        Some((minimum,uv,grid,attempts,work))
+    };
+    let coverage_request=if v["wallCoverage"].is_null(){None}else{
+        let o=&v["wallCoverage"];let w=&o["limits"];
+        let minimum:f64=field(o,"minimumMm")?;
+        let work=brep_core::source_wall_coverage::Limits {
+            pairs:field(w,"pairs")?,plane_controls:field(w,"planeControls")?,
+            normal_spans:field(w,"normalSpans")?,
+            gap:brep_core::source_face_gap::Limits{cells:field(w,"gapCells")?,spans:field(w,"gapSpans")?},
+            max_sine_squared:field(w,"maxSineSquared")?,
+        };
+        if !minimum.is_finite()||minimum<=0.||!(1..=100000).contains(&work.pairs)
+            ||!(1..=1000000).contains(&work.plane_controls)
+            ||[work.normal_spans,work.gap.cells,work.gap.spans].iter().any(|n|!(1..=100000).contains(n))
+            ||!work.max_sine_squared.is_finite()||!(0. ..1.).contains(&work.max_sine_squared) {
+            return Err(super::input("Choose positive whole-wall threshold and bounded continuous work"));
+        }
+        let self_work=if o["adaptiveSelf"].is_null(){None}else{
+            let a=&o["adaptiveSelf"];
+            let limits=brep_core::source_wall_self_coverage::Limits{
+                plane_controls:field(a,"planeControls")?,cells:field(a,"cells")?,spans:field(a,"spans")?,
+                cells_per_face:field(a,"cellsPerFace")?,spans_per_face:field(a,"spansPerFace")?};
+            if !(1..=1000000).contains(&limits.plane_controls)
+                ||[limits.cells,limits.spans,limits.cells_per_face,limits.spans_per_face].iter().any(|n|!(1..=100000).contains(n)) {
+                return Err(super::input("Choose bounded adaptive original self-wall work"));
+            }
+            Some(limits)
+        };
+        Some((minimum,work,self_work))
+    };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
         "incidence":{"work":report.incidence.work_used,"rootChecks":report.incidence.root_checks,
@@ -112,6 +196,78 @@ pub fn restore(v: Value) -> Result<Value> {
         return Ok(
             json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}),
         );
+    };
+    let seam_qualification = seam_request.map(|(edge, work)| -> Result<Value> {
+        let r = body.qualify_edge_tangency(edge, work)?;
+        Ok(json!({"request":v["seamQualification"],"qualified":r.seam.is_some(),
+            "sineSquaredBounds":r.seam.as_ref().map(|s|s.sine_squared_bounds()),
+            "reason":r.reason,"cells":r.cells,"curveSpans":r.curve_spans,
+            "normalSpans":r.normal_spans,"acceptedCells":r.accepted_cells,
+            "uncertainCanonical":r.uncertain_canonical}))
+    }).transpose()?;
+    let wall_qualification=wall_request.map(|(groups,minimum,tolerance,uv,grid,attempts,work)|->Result<Value>{
+        let r=brep_core::source_material_wall::search_and_qualify(body,[&groups[0],&groups[1]],minimum,tolerance,uv,grid,attempts,work)?;
+        let witness=r.certificate.as_ref().map(|c| {
+            let chord=c.chord();
+            let endpoints=chord.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));
+            json!({"line":chord.line(),"lengthMm":chord.length_mm(),"endpoints":endpoints})
+        });
+        Ok(json!({"request":v["wallQualification"],"qualified":r.certificate.is_some(),"converged":r.converged,
+            "intervalMm":r.certificate.as_ref().map(|c|c.interval_mm()),"reason":r.reason,"witness":witness,
+            "clearance":{"reason":r.clearance.reason,"cells":r.clearance.cells,"spans":r.clearance.spans,
+                "uncertainFaces":r.clearance.uncertain_faces,"uncertainUv":r.clearance.uncertain_uv},
+            "search":{"attempts":r.search.attempts,"refused":r.search.refused,"candidatesExhausted":r.search.candidates_exhausted}}))
+    }).transpose()?;
+    let wall_scan=scan_request.map(|(minimum,uv,grid,attempts,work)|->Result<Value>{
+        let r=brep_core::source_wall_scan::search(body,minimum,grid,attempts,uv,work)?;
+        let witness=r.best().map(|c|{
+            let endpoints=c.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));
+            json!({"line":c.line(),"lengthMm":c.length_mm(),"endpoints":endpoints})
+        });
+        Ok(json!({"request":v["wallScan"],"thinFound":r.thin_witness().is_some(),"witness":witness,
+            "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
+            "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
+    }).transpose()?;
+    let wall_coverage=coverage_request.map(|(minimum,work,self_work)|->Result<Value>{
+        let (facts,self_report)=if let Some(limits)=self_work {
+            let report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
+            let diagnostics=json!({"faces":report.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,
+                "reason":f.reason,"cells":f.cells,"spans":f.spans,"pending":f.pending,"uncertain":f.uncertain})).collect::<Vec<_>>(),
+                "planeControls":report.plane_controls,"cells":report.cells,"spans":report.spans,
+                "allSelfPairsQualified":report.all_self_pairs_qualified()});
+            (report.into_certificates(),diagnostics)
+        }else{(Vec::new(),Value::Null)};
+        let r=brep_core::source_wall_coverage::qualify_with_self_facts(body,minimum,work,facts)?;
+        Ok(json!({"request":v["wallCoverage"],"wholeWallQualified":r.certificate.is_some(),
+            "lowerMm":r.certificate.as_ref().map(|c|c.minimum_mm()),
+            "enumerationComplete":r.enumeration_complete,"totalPairs":r.total_pairs,
+            "pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>(),
+            "planeControls":r.plane_controls,"normalSpans":r.normal_spans,
+            "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report}))
+    }).transpose()?;
+    let step_exchange = if v["stepExchange"].is_null() {
+        Value::Null
+    } else {
+        let option = &v["stepExchange"];
+        let tolerance: f64 = field(option,"toleranceMm")?;
+        let work = &option["limits"];
+        let candidate = brep_core::source_exchange_step::prepare(body,tolerance,
+            brep_core::source_exchange_endpoints::Limits {
+                root_checks:field(work,"rootChecks")?,
+                mapping_cells:field(work,"mappingCells")?,
+                replay_mapping_per_use:field(work,"replayMappingPerUse")?,
+                exact_work:field(work,"exactWork")?,
+                driver_cells:field(work,"driverCells")?,
+                spans:field(work,"spans")?,
+                endpoints:field(work,"endpoints")?,
+            },field(option,"trimWork")?)?;
+        match candidate {
+            Some(c) => json!({"prepared":true,"request":option,"text":c.text,
+                "endpointErrorUpper":c.endpoint_error_upper,"vertices":c.vertices,
+                "edges":c.edges,"faces":c.faces}),
+            None => json!({"prepared":false,"request":option,"text":null,
+                "reason":"source-step-preparation-unproven"}),
+        }
     };
     let shell = body.geometry().shell();
     let boundary_display = if display_segments == 0 { None } else {
@@ -145,7 +301,7 @@ pub fn restore(v: Value) -> Result<Value> {
         }).collect()
     }).transpose()?;
     Ok(
-        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,
+        json!({"admitted":true,"sourceBody":body.definition()?,"edges":edges,"stepExchange":step_exchange,"seamQualification":seam_qualification,"wallQualification":wall_qualification,"wallScan":wall_scan,"wallCoverage":wall_coverage,
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
@@ -268,6 +424,98 @@ mod tests {
             json!("source-volume-initial-work-limit")
         );
         let restored = run(50000);
+        let seam_option = json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":100,"curveSpans":100,"normalSpans":100}});
+        let checked = super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "seamQualification":seam_option.clone()})).unwrap();
+        assert_eq!(checked["admitted"], json!(true));
+        let seam = &checked["seamQualification"];
+        assert_eq!(seam["request"], seam_option);
+        assert!(seam["qualified"].as_bool().is_some());
+        assert!(seam["reason"].as_str().unwrap().starts_with("source-seam-"));
+        assert!(seam["cells"].as_u64().unwrap() <= 100);
+        assert!(seam["normalSpans"].as_u64().unwrap() <= 100);
+        if seam["qualified"] == json!(true) {
+            assert!(seam["uncertainCanonical"].is_null());
+            assert!(seam["sineSquaredBounds"].as_array().is_some());
+        } else {
+            assert!(seam["sineSquaredBounds"].is_null());
+        }
+        for bad in [json!({"edge":999999,"limits":seam_option["limits"]}),
+            json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":0,"curveSpans":100,"normalSpans":100}})] {
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+                "seamQualification":bad})).is_err());
+        }
+
+        let wall_option=json!({"groups":[[0],[1]],"minimumMm":0.1,"toleranceMm":0.01,"toleranceUv":1e-8,
+            "grid":1,"maxAttempts":1,"limits":{"gapCells":1,"gapSpans":100,"cells":100,
+                "domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
+        let checked_wall=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallQualification":wall_option.clone()})).unwrap();
+        let wall=&checked_wall["wallQualification"];
+        assert_eq!(wall["request"],wall_option);
+        assert_eq!(wall["qualified"],json!(false));assert_eq!(wall["converged"],json!(false));
+        assert!(wall["intervalMm"].is_null());assert!(wall["witness"].is_null());
+        assert!(wall["clearance"]["cells"].as_u64().unwrap()<=1);
+        assert!(wall["search"]["attempts"].as_u64().unwrap()<=1);
+        for bad_groups in [json!([[0],[0]]),json!([[999999],[1]]),json!([[],[1]])] {
+            let mut bad=wall_option.clone();bad["groups"]=bad_groups;
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+                "wallQualification":bad})).is_err());
+        }
+        let coverage_option=json!({"minimumMm":0.1,"limits":{"pairs":1,"planeControls":1000,
+            "normalSpans":100,"gapCells":100,"gapSpans":100,"maxSineSquared":1e-6}});
+        let covered=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallCoverage":coverage_option.clone()})).unwrap();
+        let coverage=&covered["wallCoverage"];
+        assert_eq!(coverage["request"],coverage_option);
+        assert_eq!(coverage["wholeWallQualified"],json!(false));
+        assert_eq!(coverage["enumerationComplete"],json!(false));
+        assert!(coverage["lowerMm"].is_null());
+        assert_eq!(coverage["pairs"].as_array().unwrap().len(),1);
+        for (key,value) in [("pairs",json!(0)),("planeControls",json!(1000001)),
+            ("normalSpans",json!(0)),("gapCells",json!(0)),("gapSpans",json!(100001)),
+            ("maxSineSquared",json!(1.))] {
+            let mut bad=coverage_option.clone();bad["limits"][key]=value;
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+                "wallCoverage":bad})).is_err());
+        }
+        let mut adaptive_option=coverage_option.clone();
+        adaptive_option["adaptiveSelf"]=json!({"planeControls":1000,"cells":1,"spans":1,"cellsPerFace":1,"spansPerFace":1});
+        let adaptive=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallCoverage":adaptive_option.clone()})).unwrap();
+        let a=&adaptive["wallCoverage"];
+        assert_eq!(a["request"],adaptive_option);
+        assert_eq!(a["wholeWallQualified"],json!(false));
+        assert!(a["adaptiveSelf"]["faces"].as_array().unwrap().len()>0);
+        assert!(a["adaptiveSelf"]["cells"].as_u64().unwrap()<=1);
+        assert!(a["adaptiveSelf"]["spans"].as_u64().unwrap()<=1);
+        for key in ["planeControls","cells","spans","cellsPerFace","spansPerFace"] {
+            let mut bad=adaptive_option.clone();bad["adaptiveSelf"][key]=json!(0);
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                "definition":wire_definition.clone(),"limits":config(1),"wallCoverage":bad})).is_err());
+        }
+        let scan_option=json!({"minimumMm":7.,"toleranceUv":1e-7,"grid":1,"maxAttempts":1,
+            "limits":{"cells":100,"domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
+        let scanned=super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),
+            "limits":config(50000),"endpointSpans":10000,"wallScan":scan_option.clone()})).unwrap();
+        let scan=&scanned["wallScan"];assert_eq!(scan["request"],scan_option);
+        assert_eq!(scan["wholeWallQualified"],json!(false));assert_eq!(scan["proposalsExhausted"],json!(false));
+        assert_eq!(scan["attempts"],json!(1));assert_eq!(scan["facesVisited"],json!(1));
+        let bad_scan=json!({"minimumMm":7.,"toleranceUv":1e-7,"grid":3,"maxAttempts":0,
+            "limits":{"cells":100,"domainCells":100,"normalSpans":100,"maxSineSquared":1e-6}});
+        assert!(super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),
+            "limits":config(1),"endpointSpans":10000,"wallScan":bad_scan})).is_err());
+        let mut bad=wall_option.clone();bad["limits"]["cells"]=json!(0);
+        assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,
+            "wallQualification":bad})).is_err());
         if let Some(path) = std::env::var_os("CAD_SOURCE_BODY_FIXTURE_OUTPUT") {
             let request = json!({"op":"cad_source_body_restore","definition":definition.clone(),"limits":config(50000),"endpointSpans":10000});
             std::fs::write(path, value_codec::to_string(&request).unwrap()).unwrap();

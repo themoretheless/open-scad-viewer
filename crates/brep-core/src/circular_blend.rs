@@ -27,6 +27,16 @@ pub struct CircularBlendBoundary {
 }
 
 impl CircularBlendSpan {
+    /// Original cubic radius coefficients for independent body-face admission.
+    pub fn radius_curve(&self) -> Curve {
+        Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: self.radius_law.iter().map(|&r| vec![r, 0.]).collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        }
+    }
     /// Qualify the full original support patch against its authored moving
     /// center and cubic radius law. Does not admit a sewn fillet body.
     pub fn qualify_radius(
@@ -35,13 +45,7 @@ impl CircularBlendSpan {
         max_cells: usize,
         max_work: u64,
     ) -> nurbs_core::Result<nurbs_core::moving_radius::Report> {
-        let radius = Curve {
-            degree: 3,
-            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-            control_points: self.radius_law.iter().map(|&r| vec![r, 0.]).collect(),
-            weights: vec![1.; 4],
-            periodic: false,
-        };
+        let radius = self.radius_curve();
         nurbs_core::moving_radius::qualify(
             &self.surface,
             &self.centers,
@@ -645,7 +649,7 @@ pub fn plane_cylinder_rim(
     Ok(spans)
 }
 
-/// Exact end-transition support with cubic smoothstep radius in rational arc
+/// Rational end-transition support with cubic smoothstep radius in rational arc
 /// parameter u. This is a cross-section radius law, not a general variable-radius
 /// rolling-ball envelope certificate. Zero-radius ends collapse to a point; they require explicit
 /// degenerate topology handling before this can participate in a sewn solid.
@@ -747,6 +751,29 @@ pub fn plane_cylinder_transition(
                 }
             }
             controls[adjacent] = vec![center_controls[adjacent].clone(); 3];
+        }
+    }
+    // First align the two cylinder-side meridian control columns in XY.
+    // Independently weighted accumulation/division can split them by an ulp.
+    // Preserve the original contact rail and copy it into the tangent column.
+    for row in &mut controls {
+        row[1][0]=row[2][0];
+        row[1][1]=row[2][1];
+    }
+    // Keep rounding-scale projective variation on the inward side of the
+    // contact rail. Endpoint/seam and collapsed rows stay definition-exact.
+    // This is a bounded authoring perturbation, not exact analytic tangency;
+    // radius/normal qualification must still inspect the resulting surface.
+    for k in 1..5 {
+        if controls[k].iter().all(|p|p==&controls[k][0]) {continue;}
+        for d in 0..2 {
+            let x=controls[k][1][d];
+            if x!=0. {
+                let bits=x.to_bits();
+                let moved=f64::from_bits(bits.checked_sub(16).ok_or_else(||invalid("Transition coordinate correction overflow"))?);
+                if !moved.is_finite() {return Err(invalid("Transition coordinate correction is not finite"));}
+                controls[k][1][d]=moved;
+            }
         }
     }
     // The plane contact and its meridian tangent controls have authored
@@ -1257,6 +1284,54 @@ mod tests {
         }
     }
 
+    #[test]
+    fn original_transition_projected_cusp_has_quadratic_separator() {
+        let span=plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_6).unwrap();
+        let project=|c:&Curve| {
+            let mut c=c.clone();for p in &mut c.control_points {p.truncate(2);} c
+        };
+        let curves=[project(&span.plane_contact),project(&span.cylinder_contact)];
+        let join=&curves[0].control_points[0];
+        let t=&curves[0].control_points[1];
+        let tangent=[t[0]-join[0],t[1]-join[1]];
+        let ratio=|curve:&Curve,u:f64| {
+            let p=curve.evaluate(u).unwrap().point;
+            let delta=[p[0]-join[0],p[1]-join[1]];
+            let l=tangent[0]*delta[1]-tangent[1]*delta[0];
+            let b=tangent[0]*delta[0]+tangent[1]*delta[1];
+            l/(b*b)
+        };
+        let mut work=0;let mut proven=false;
+        for u in [0.1,0.25,0.5,0.75,0.9] {
+            let beta=(ratio(&curves[0],u)+ratio(&curves[1],u))*0.5;
+            let r=nurbs_core::curve_quadratic_separator::certify([&curves[0],&curves[1]],[0,0],1,beta,1_000_000).unwrap();
+            work+=r.exact_work;
+            eprintln!("original projected cusp beta={beta} work={} sides={:?}",r.exact_work,r.certificate.as_ref().map(|c|c.sides()));
+            if r.certificate.is_some() {proven=true;break;}
+        }
+        assert!(proven,"original cusp quadratic separation unproven; work={work}");
+        let jordan=nurbs_core::surface_projected_jordan::certify(&span.surface,[0,1],1e-8,100_000_000,100000).unwrap();
+        eprintln!("original projected Jordan: {} work={} cells={}",jordan.reason,jordan.exact_work,jordan.boundary_cells);
+        assert!(jordan.certificate.is_some(),"{}",jordan.reason);
+        let certificate=jordan.certificate.unwrap();
+        assert_eq!(certificate.surface(),&span.surface);
+        assert_eq!(certificate.collapsed_boundaries(),&[3]);
+        assert_eq!(certificate.boundary().len(),3);
+        assert_eq!(certificate.separators().len(),1);
+    }
+    #[test]
+    fn transition_rounding_correction_preserves_interior_projection_orientation() {
+        for direction in [-1.,1.] {
+            for (a,b) in [(0.,1.25),(1.25,0.),(0.5,1.25),(1.25,0.5)] {
+                let span=plane_cylinder_transition(20.,6.,a,b,0.3,direction*0.7).unwrap();
+                let report=nurbs_core::surface_projection_jacobian::certify(&span.surface,[0,1],100_000_000).unwrap();
+                assert!(report.certificate.is_some(),"radii {a}->{b} direction={direction}: {} {:?}",report.reason,report.exact_reason);
+                assert_eq!(report.opposite_v_boundary_signs,None);
+                let expected=if direction>0. {cad_predicates::Sign::Negative} else {cad_predicates::Sign::Positive};
+                assert_eq!(report.certificate.unwrap().orientation(),expected);
+            }
+        }
+    }
     #[test]
     fn transition_boundaries_certify_poles_and_form_an_oriented_loop() {
         for (r0, r1, pole_index) in [(0., 1.25, 3), (1.25, 0., 1)] {

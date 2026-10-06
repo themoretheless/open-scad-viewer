@@ -1068,8 +1068,71 @@ mod tests {
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
+        root_partition_control(false, false);
+    }
+    #[test]
+    fn irrational_root_partition_preserves_closed_body_and_exact_source_topology() {
+        root_partition_control(true, false);
+    }
+    #[test]
+    fn curved_shell_preserves_roots_and_replays_inverse_contacts_volume() {
+        root_partition_control(true, true);
+    }
+    fn root_partition_control(irrational: bool, curved: bool) {
         use crate::source_boundary_fragment::Role;
         let (mut faces, mut pairs) = tetrahedron();
+        if curved {
+            // Exact polynomial shear F(x,y,z)=(x,y,z+x*x/4), determinant one.
+            // Elevate the affine charts to biquadratic Bezier coefficients.
+            for face in &mut faces {
+                let original=face[0].edges()[0].surface();
+                let a=&original.control_points[0][0];
+                let b:Vec<_>=(0..3).map(|k|original.control_points[1][0][k]-a[k]).collect();
+                let c:Vec<_>=(0..3).map(|k|original.control_points[0][1][k]-a[k]).collect();
+                let controls=(0..3).map(|i| (0..3).map(|j| {
+                    let mut q:Vec<_>=(0..3).map(|k|a[k]+b[k]*(i as f64/2.)+c[k]*(j as f64/2.)).collect();
+                    let square=a[0]*a[0]+a[0]*b[0]*i as f64+a[0]*c[0]*j as f64
+                        +if i==2 {b[0]*b[0]} else {0.}
+                        +if j==2 {c[0]*c[0]} else {0.}
+                        +0.5*b[0]*c[0]*(i*j) as f64;
+                    q[2]+=square/4.;q
+                }).collect()).collect();
+                let surface=Surface {degree_u:2,degree_v:2,periodic_u:false,periodic_v:false,
+                    knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:controls,weights:vec![vec![1.;3];3]};
+                let mut leaves=surface.control_points.iter().flatten().flatten().map(|v|
+                    cad_predicates::AuthoredScalar::Binary64Bits(v.to_bits())).collect::<Vec<_>>();
+                leaves.push(cad_predicates::AuthoredScalar::Binary64Bits(0.25f64.to_bits()));
+                let arena=cad_predicates::SourceArena::authored("curved-body-shear",1,leaves).unwrap();
+                let tolerance=cad_predicates::ToleranceContext::default_valid();
+                let mut predicate=cad_predicates::PredicateContext::new(&arena,&tolerance,
+                    cad_predicates::Limits::default(),None);
+                let refs=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|
+                    arena.leaf(9*i+3*j+k).unwrap())));
+                let proof=cad_predicates::quadratic_shear_chart_identity(&mut predicate,refs,
+                    arena.leaf(27).unwrap(),0,2).unwrap();
+                assert_eq!(proof.outcome,cad_predicates::ParameterIdentity::Equal);
+                let inverse=crate::source_inverse_shear::qualify(&surface,[0,2],0.25,100000).unwrap();
+                let certificate=inverse.certificate.expect(inverse.reason);
+                assert_eq!(certificate.source(),&surface);
+                assert_eq!(certificate.inverse().degree_u,1);
+                assert_eq!(certificate.inverse().degree_v,1);
+                for wire in face {
+                    let edges=wire.edges().iter().map(|e|Fragment::new(&surface,e.curve(),
+                        Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap()).collect::<Vec<_>>();
+                    *wire=Wire::new(&edges).unwrap();
+                }
+            }
+            for pair in &mut pairs {
+                let a=&pair.world.control_points[0];let b=&pair.world.control_points[1];
+                let mut first=a.clone();first[2]+=a[0]*a[0]/4.;
+                let mut last=b.clone();last[2]+=b[0]*b[0]/4.;
+                let mut middle:Vec<_>=(0..3).map(|k|(a[k]+b[k])/2.).collect();
+                middle[2]+=a[0]*b[0]/4.;
+                pair.world=Curve {degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:vec![first,middle,last],weights:vec![1.;3]};
+            }
+        }
         let context = cad_predicates::ToleranceContext::default_valid();
         let mut regions = faces
             .iter()
@@ -1084,12 +1147,16 @@ mod tests {
                                 let c = e.curve();
                                 let a = &c.control_points[0];
                                 let b = &c.control_points[1];
+                                let first=surface.evaluate(a[0],a[1]).unwrap().point.to_vec();
+                                let last=surface.evaluate(b[0],b[1]).unwrap().point.to_vec();
+                                let curve=if curved {
+                                    let mut middle:Vec<_>=(0..3).map(|k|(first[k]+last[k])/2.).collect();
+                                    middle[2]-=(last[0]-first[0])*(last[0]-first[0])/8.;
+                                    Curve {degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+                                        control_points:vec![first,middle,last],weights:vec![1.;3]}
+                                } else {Curve::from_polyline(vec![first,last]).unwrap()};
                                 crate::trimmed_face_recipe::Boundary {
-                                    curve: Curve::from_polyline(vec![
-                                        surface.evaluate(a[0], a[1]).unwrap().point.to_vec(),
-                                        surface.evaluate(b[0], b[1]).unwrap().point.to_vec(),
-                                    ])
-                                    .unwrap(),
+                                    curve,
                                     pcurve: c.clone(),
                                     reversed: false,
                                 }
@@ -1135,7 +1202,9 @@ mod tests {
                 report.region.unwrap()
             })
             .collect::<Vec<_>>();
-        let old = pairs.remove(0);
+        let split_index=if curved {pairs.iter().position(|p|
+            p.world.control_points.first().unwrap()[0]!=p.world.control_points.last().unwrap()[0]).unwrap()} else {0};
+        let old = pairs.remove(split_index);
         for (i, address) in old.uses.iter().enumerate() {
             let edge = &faces[address.face][address.wire].edges()[address.edge];
             let c = edge.curve();
@@ -1144,16 +1213,32 @@ mod tests {
             let b = &c.control_points[1];
             let point = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
             let normal = [-(b[1] - a[1]), b[0] - a[0]];
-            let cutter = Curve::from_polyline(vec![
-                vec![point[0] - normal[0], point[1] - normal[1]],
-                vec![point[0] + normal[0], point[1] + normal[1]],
-            ])
-            .unwrap();
-            let p =
-                crate::source_contact_point::qualify(edge.surface(), c, &cutter, [[0., 1.]; 2], 16)
-                    .unwrap()
-                    .point
-                    .unwrap();
+            let cutter = if irrational {
+                // q(t)=a+d*t+n*(t²-1/2), reflected along d on the other use.
+                // The boundary root is sqrt(1/2), or 1-sqrt(1/2), not a
+                // floating point authored parameter. All controls are dyadic.
+                let controls = [(if i == 0 { 0. } else { 1. }, -0.5),
+                    (0.5, -0.5), (if i == 0 { 1. } else { 0. }, 0.5)]
+                    .map(|(along,across)| (0..2).map(|axis|
+                        a[axis]+along*(b[axis]-a[axis])+across*normal[axis]
+                    ).collect());
+                Curve { periodic:false,degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:controls.to_vec(),weights:vec![1.;3] }
+            } else {
+                Curve::from_polyline(vec![
+                    vec![point[0] - normal[0], point[1] - normal[1]],
+                    vec![point[0] + normal[0], point[1] + normal[1]],
+                ]).unwrap()
+            };
+            if irrational {
+                let broad = crate::source_contact_point::qualify(edge.surface(), c, &cutter, [[0.,1.];2], 10000).unwrap();
+                assert!(broad.point.is_none());
+            }
+            let selector = if irrational {
+                [if i == 0 { [0.7,0.71] } else { [0.29,0.3] }, [0.7,0.71]]
+            } else { [[0.,1.];2] };
+            let point_report = crate::source_contact_point::qualify(edge.surface(), c, &cutter, selector, 10000).unwrap();
+            let p = point_report.point.expect(point_report.reason);
             assert!(
                 regions[address.face]
                     .split_boundary(address.wire, address.edge, &p, Role::Contact)
@@ -1216,6 +1301,184 @@ mod tests {
         assert_eq!(network.endpoints, 14);
         assert_eq!(network.spans, 14);
         let root_vertex = network.vertices.iter().find(|v| v.ends.len() == 2).unwrap();
+        if curved {
+            assert!(shell.faces().iter().all(|face| face[0].edges()[0].surface().degree_u==2));
+            assert!(shell.edges().iter().any(|edge|edge.world().degree==2));
+            let display=crate::source_boundary_display::prepare(&shell,8,14,14).unwrap();
+            assert_eq!(display.edges.len(),7);
+            for [edge,end] in &root_vertex.ends {
+                let bounds=shell.edges()[*edge].uses()[0].parameter_bounds();
+                assert!(bounds.iter().any(|b|b[0]<b[1]));
+                let _=end;
+            }
+            for face in shell.faces() {
+                let report=crate::source_inverse_shear::qualify(face[0].edges()[0].surface(),[0,2],0.25,100000).unwrap();
+                let certificate=report.certificate.expect(report.reason);
+                for wire in face {for original in wire.edges() {
+                    let result=crate::source_inverse_shear::transport_fragment(&certificate,original,10000).unwrap();
+                    let inverse=result.fragment.expect(result.reason);
+                    assert_eq!(inverse.curve(),original.curve());
+                    assert_eq!(inverse.parameter_bounds(),original.parameter_bounds());
+                    assert_eq!(inverse.reversed(),original.reversed());
+                    assert_eq!(inverse.surface(),certificate.inverse());
+                    for (a,b) in original.endpoints().iter().zip(inverse.endpoints()) {
+                        match (a,b) {
+                            (Endpoint::Crossing {point:a,role:ar},Endpoint::Crossing {point:b,role:br})=>{
+                                assert_eq!(ar,br);assert_eq!(a.boundary(),b.boundary());
+                                assert_eq!(a.contact(),b.contact());assert_eq!(a.selector(),b.selector());
+                                assert_ne!(a.world_box(),b.world_box());
+                            },
+                            (Endpoint::Parameter(a),Endpoint::Parameter(b))=>assert_eq!(a,b),
+                            _=>panic!("Endpoint kind changed"),
+                        }
+                    }
+                }}
+            }
+            for source in shell.regions().unwrap() {
+                let chart=crate::source_inverse_shear::qualify(source.loops()[0][0].surface(),[0,2],0.25,100000).unwrap();
+                let certificate=chart.certificate.expect(chart.reason);
+                let limits=crate::source_region_restore::Limits {
+                    region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                    search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                    membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+                };
+                let exhausted=crate::source_inverse_shear::transport_region(&certificate,source,&limits,1).unwrap();
+                assert!(exhausted.region.is_none());
+                let transported=crate::source_inverse_shear::transport_region(&certificate,source,&limits,1000000).unwrap();
+                let inverse=transported.region.expect(transported.reason);
+                assert_eq!(inverse.source_loop_indices(),source.source_loop_indices());
+                assert_eq!(inverse.loops().len(),source.loops().len());
+                for (a,b) in source.loops().iter().flatten().zip(inverse.loops().iter().flatten()) {
+                    assert_eq!(a.curve(),b.curve());assert_eq!(a.parameter_bounds(),b.parameter_bounds());
+                    assert_eq!(a.reversed(),b.reversed());
+                }
+            }
+            let replay_limits=crate::source_region_restore::Limits {
+                region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+            };
+            let inverse=crate::source_inverse_shear::transport_shell(&shell,[0,2],0.25,&replay_limits,100_000_000).unwrap();
+            assert_eq!(inverse.root_checks,2);
+            let inverse=inverse.shell.expect(inverse.reason);
+            assert_eq!(inverse.vertices(),shell.vertices());
+            assert_eq!(inverse.faces().len(),shell.faces().len());
+            assert_eq!(inverse.edges().len(),shell.edges().len());
+            let inverse_geometry=crate::source_shell_geometry::qualify(inverse,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                }).unwrap();
+            assert!(inverse_geometry.geometry.is_some(),"{}",inverse_geometry.reason);
+            let replay_body_limits=|| crate::source_body_restore::Limits {
+                shell:crate::source_shell_restore::Limits {
+                    regions:crate::source_region_restore::Limits {
+                        region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                        search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                        membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+                    },exact_work:100_000_000,driver_cells:10000,
+                },
+                embedding:crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                },
+                volume:crate::source_volume::Limits {
+                    axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,
+                    cells:10000,spans:100000,domain_cells:1000000,
+                },
+            };
+            let primary=crate::source_shell_restore::restore(shell.definition().unwrap(),&replay_body_limits().shell).unwrap().shell.unwrap();
+            let admitted=crate::source_shell_geometry::qualify(primary,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                }).unwrap();
+            // Closed incidence and injective charts cannot authorize unproven contacts.
+            // The primary contact path still refuses; only a fresh inverse proof admits this fixture.
+            assert!(admitted.geometry.is_none());
+            assert_eq!(admitted.reason,"source-shell-different-face-contacts-unproven");
+            let embedding=crate::source_shell_geometry::qualify_with_inverse_shear(shell,
+                replay_body_limits().embedding,[0,2],0.25,&replay_limits).unwrap();
+            assert!(embedding.geometry.is_some(),"{}",embedding.reason);
+            let geometry=embedding.geometry.unwrap();
+            let proof=geometry.inverse_shear().unwrap();
+            assert_eq!(proof.axes(),[0,2]);assert_eq!(proof.coefficient(),0.25);
+            assert!(proof.inverse().contacts().all_pairs_qualified);
+            let volume=crate::source_volume::qualify(geometry,replay_body_limits().volume).unwrap();
+            assert!(volume.body.is_some(),"{} {:?}",volume.reason,volume.signed_bounds);
+            let body=volume.body.unwrap();
+            assert!(body.volume()[0]<=1./6. && body.volume()[1]>=1./6.);
+            for endpoint in body.geometry().shell().faces().iter().flatten().flat_map(|wire|wire.edges()).flat_map(|edge|edge.endpoints()) {
+                if let Endpoint::Crossing {point,..}=endpoint {
+                    let refined=crate::source_root_refinement::qualify(point,1e-7,16,10000).unwrap();
+                    let proof=refined.refinement.expect(refined.reason);
+                    assert_eq!(proof.original().definition(),point.definition());
+                    assert!(proof.diameter_bound()[1]<=1e-7);
+                }
+            }
+            eprintln!("curved Body volume {:?}; contact exact work {}, spans {}",body.volume(),embedding.exact_work,embedding.spans);
+            assert_eq!(body.definition().unwrap()["inverseShear"],value_codec::json!({"axes":[0,2],"coefficient":0.25}));
+            let exhausted=crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:1,driver_cells:10000,spans:14,endpoints:14,
+            }).unwrap();
+            assert!(exhausted.prepared.is_none());
+            assert!(crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:13,
+            }).is_err());
+            let prepared=crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:14,
+            }).unwrap();
+            let endpoints=prepared.prepared.expect(prepared.reason);
+            assert_eq!(endpoints.original(),&body.definition().unwrap());
+            assert_eq!(endpoints.vertices().len(),5);assert_eq!(endpoints.restrictions().len(),7);
+            for vertex in endpoints.vertices() {
+                assert!(vertex.error_upper<=1e-7);
+                for axis in 0..3 {assert!(vertex.point[axis]>=vertex.bounds[axis][0] && vertex.point[axis]<=vertex.bounds[axis][1]);}
+            }
+            for (index,restriction) in endpoints.restrictions().iter().enumerate() {
+                assert_eq!(restriction.edge().world(),body.geometry().shell().edges()[index].world());
+            }
+            let trims=crate::source_exchange_trims::prepare(&body,&endpoints,1e-7,100000).unwrap().expect("bounded trim endpoints");
+            assert_eq!(trims.edges().len(),7);
+            for edge in trims.edges() {
+                assert!(edge.canonical()[0]<edge.canonical()[1]);
+                assert!(edge.error_upper().iter().flatten().all(|e|*e<=1e-7));
+            }
+            assert!(crate::source_exchange_trims::prepare(&body,&endpoints,1e-7,1).unwrap().is_none());
+            assert!(crate::source_exchange_trims::prepare(&body,&endpoints,1e-30,100000).unwrap().is_none());
+            let step=crate::source_exchange_step::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:14,
+            },100000).unwrap().expect("source STEP candidate");
+            assert_eq!((step.vertices,step.edges,step.faces),(5,7,4));
+            assert!(step.endpoint_error_upper<=1e-7);
+            if let Ok(path)=std::env::var("CAD_SOURCE_CURVED_STEP_OUTPUT") {std::fs::write(path,step.text).unwrap();}
+            let definition=body.definition().unwrap();
+            let restored=crate::source_body_restore::restore(definition.clone(),replay_body_limits()).unwrap();
+            let replayed=restored.body().expect(restored.reason());
+            assert_eq!(replayed.definition().unwrap(),definition);
+            assert!(replayed.geometry().inverse_shear().is_some());
+            let mut damaged=definition.clone();damaged["inverseShear"]["coefficient"]=value_codec::json!(0.5);
+            assert!(crate::source_body_restore::restore(damaged,replay_body_limits()).unwrap().body().is_none());
+            if let (Ok(template),Ok(output))=(std::env::var("CAD_CURVED_SHEAR_BODY_FIXTURE_TEMPLATE"),std::env::var("CAD_CURVED_SHEAR_BODY_FIXTURE_OUTPUT")) {
+                let mut request=value_codec::from_str::<value_codec::Value>(&std::fs::read_to_string(template).unwrap()).unwrap();
+                request["definition"]=definition.clone();
+                std::fs::write(output,value_codec::to_string(&request).unwrap()).unwrap();
+            }
+            let mut omitted=definition;omitted.as_object_mut().unwrap().remove("inverseShear");
+            assert!(crate::source_body_restore::restore(omitted,replay_body_limits()).unwrap().body().is_none());
+
+            return;
+        }
         assert!(root_vertex.poles.is_empty());
         for count in [1, 2, 8] {
             let preview = crate::source_boundary_display::prepare(&shell, count, 14, 14).unwrap();
@@ -1246,6 +1509,23 @@ mod tests {
             let parameter = restriction.parameter_bounds().unwrap()[*end];
             let domain = restriction.edge().world().domain();
             assert!(parameter[0] > domain[0] && parameter[1] < domain[1]);
+            if irrational {
+                assert!(parameter[0] < parameter[1]);
+                assert!(restriction.edge().uses().iter().any(|fragment|
+                    fragment.endpoints().iter().any(|endpoint|
+                        matches!(endpoint, crate::source_boundary_fragment::Endpoint::Crossing { .. }))));
+            }
+            // Root/mapped restrictions never gain literal canonical corner
+            // authority through the trimmed planar endpoint shortcut.
+            for (slot,address) in shell.uses()[*edge].iter().enumerate() {
+                let fragment=&shell.edges()[*edge].uses()[slot];
+                for endpoint in 0..2 {
+                    if shell.edges()[*edge].ranges().is_some()
+                        || matches!(fragment.endpoints()[endpoint],crate::source_boundary_fragment::Endpoint::Crossing { .. }) {
+                        assert!(crate::source_vertex_contact::carrier_corner(&shell,*address,endpoint).is_none());
+                    }
+                }
+            }
             let bounds = restriction.endpoint_boxes(2).unwrap()[*end];
             for axis in 0..3 {
                 assert!(root_vertex.bounds[axis][0] >= bounds[axis][0]);
@@ -1310,7 +1590,9 @@ mod tests {
         .unwrap();
         assert!(fiber_audit.all_pairs_qualified);
         assert_eq!(fiber_audit.pairs.len(), 6);
-        assert!(fiber_audit.pairs.iter().any(|p| p.fiber.is_some()));
+        // The scheduler now selects the already proven shared-line proof
+        // before fiber guesses; the direct fiber assertions above remain.
+        assert!(fiber_audit.pairs.iter().all(|p| p.allowed.is_some()));
         assert_eq!(fiber_audit.cells, 0);
         let exhausted = crate::source_face_contacts::inspect_shell_with_boundary_fibers(
             &shell,
@@ -1545,6 +1827,14 @@ mod tests {
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
+        if irrational {
+            if let Some(path) = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_OUTPUT") {
+                let template = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_TEMPLATE").unwrap();
+                let mut request: value_codec::Value = value_codec::from_str(&std::fs::read_to_string(template).unwrap()).unwrap();
+                request["definition"] = body.definition().unwrap();
+                std::fs::write(path, value_codec::to_string(&request).unwrap()).unwrap();
+            }
+        }
     }
     #[test]
     fn chart_audit_catches_folded_geometry_even_when_exact_boundary_incidence_closes() {

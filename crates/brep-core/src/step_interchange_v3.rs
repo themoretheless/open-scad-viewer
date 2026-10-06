@@ -3958,12 +3958,12 @@ pub fn export_step_v10(document: &StepV10Document) -> Result<String> {
     Ok(document.source.clone())
 }
 
-struct Writer {
+pub(crate) struct Writer {
     next: usize,
-    rows: BTreeMap<usize, String>,
+    pub(crate) rows: BTreeMap<usize, String>,
 }
 impl Writer {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             next: 1,
             rows: BTreeMap::new(),
@@ -3977,12 +3977,12 @@ impl Writer {
     fn set(&mut self, id: usize, body: String) {
         self.rows.insert(id, body);
     }
-    fn emit(&mut self, body: String) -> usize {
+    pub(crate) fn emit(&mut self, body: String) -> usize {
         let id = self.reserve();
         self.set(id, body);
         id
     }
-    fn point(&mut self, p: &[f64]) -> usize {
+    pub(crate) fn point(&mut self, p: &[f64]) -> usize {
         self.emit(format!("CARTESIAN_POINT('',({}))", floats(p)))
     }
 }
@@ -4723,7 +4723,7 @@ pub(crate) fn canonical_face_senses(model: &Model) -> Result<Model> {
     result.validate()?;
     Ok(result)
 }
-fn refs_text(v: &[usize]) -> String {
+pub(crate) fn refs_text(v: &[usize]) -> String {
     v.iter()
         .map(|x| format!("#{x}"))
         .collect::<Vec<_>>()
@@ -4772,16 +4772,40 @@ fn emit_surface(w: &mut Writer, s: &Surface) -> usize {
 fn all_unit_weights(mut weights: impl Iterator<Item = f64>) -> bool {
     weights.all(|weight| (weight - 1.).abs() <= f64::EPSILON)
 }
+fn knot_form_exchange(knots: &[f64], exact: bool) -> (Vec<usize>, Vec<f64>) {
+    if !exact {
+        return knot_form(knots);
+    }
+    let mut counts = Vec::new();
+    let mut values = Vec::new();
+    for &knot in knots {
+        if values.last() == Some(&knot) {
+            *counts.last_mut().unwrap() += 1;
+        } else {
+            values.push(knot);
+            counts.push(1);
+        }
+    }
+    (counts, values)
+}
 fn emit_curve_v5(w: &mut Writer, c: &Curve) -> usize {
+    emit_curve_exchange(w, c, false)
+}
+pub(crate) fn emit_curve_source(w: &mut Writer, c: &Curve) -> usize {
+    emit_curve_exchange(w, c, true)
+}
+fn emit_curve_exchange(w: &mut Writer, c: &Curve, exact: bool) -> usize {
     let cps: Vec<_> = c.control_points.iter().map(|p| w.point(p)).collect();
-    let (m, k) = knot_form(&c.knots);
+    let (m, k) = knot_form_exchange(&c.knots, exact);
     let mult = m
         .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(",");
     let closed = if c.periodic { "T" } else { "F" };
-    if all_unit_weights(c.weights.iter().copied()) {
+    let unit = if exact { c.weights.iter().all(|&v| v == 1.) }
+        else { all_unit_weights(c.weights.iter().copied()) };
+    if unit {
         w.emit(format!("B_SPLINE_CURVE_WITH_KNOTS('',{},({}),.UNSPECIFIED.,.{closed}.,.F.,({mult}),({}),.UNSPECIFIED.)",
             c.degree,refs_text(&cps),floats(&k)))
     } else {
@@ -4790,6 +4814,12 @@ fn emit_curve_v5(w: &mut Writer, c: &Curve) -> usize {
     }
 }
 fn emit_surface_v5(w: &mut Writer, s: &Surface) -> usize {
+    emit_surface_exchange(w, s, false)
+}
+pub(crate) fn emit_surface_source(w: &mut Writer, s: &Surface) -> usize {
+    emit_surface_exchange(w, s, true)
+}
+fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
     let grid = s
         .control_points
         .iter()
@@ -4805,8 +4835,8 @@ fn emit_surface_v5(w: &mut Writer, s: &Surface) -> usize {
         .map(|row| format!("({})", floats(row)))
         .collect::<Vec<_>>()
         .join(",");
-    let (mu, ku) = knot_form(&s.knots_u);
-    let (mv, kv) = knot_form(&s.knots_v);
+    let (mu, ku) = knot_form_exchange(&s.knots_u, exact);
+    let (mv, kv) = knot_form_exchange(&s.knots_v, exact);
     let mu = mu
         .iter()
         .map(ToString::to_string)
@@ -4819,7 +4849,9 @@ fn emit_surface_v5(w: &mut Writer, s: &Surface) -> usize {
         .join(",");
     let pu = if s.periodic_u { "T" } else { "F" };
     let pv = if s.periodic_v { "T" } else { "F" };
-    if all_unit_weights(s.weights.iter().flatten().copied()) {
+    let unit = if exact { s.weights.iter().flatten().all(|&v| v == 1.) }
+        else { all_unit_weights(s.weights.iter().flatten().copied()) };
+    if unit {
         w.emit(format!("B_SPLINE_SURFACE_WITH_KNOTS('',{},{},({grid}),.UNSPECIFIED.,.{pu}.,.{pv}.,.F.,({mu}),({mv}),({}),({}),.UNSPECIFIED.)",
             s.degree_u,s.degree_v,floats(&ku),floats(&kv)))
     } else {
