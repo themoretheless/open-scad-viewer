@@ -240,4 +240,39 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn original_rational_weights_have_continuous_exclusion_with_analytic_oracle() {
+        let mut s = graph(0.01);
+        let w = 1.001;
+        s.weights[2] = vec![w; 2];
+        let proof = qualify(&s, 1e-6, 1)
+            .unwrap()
+            .certificate
+            .expect("mild rational graph");
+        let point = |u: f64| {
+            let d = 1. + (w - 1.) * u * u;
+            [(u + (w - 1.) * u * u) / d, w * 0.01 * u * u / d]
+        };
+        for a in 0..16 {
+            for b in 0..16 {
+                if a == b {
+                    continue;
+                }
+                let u = a as f64 / 15.;
+                let v = b as f64 / 15.;
+                let d = 1. + (w - 1.) * u * u;
+                let dxdu = ((1. + 2. * (w - 1.) * u) * d
+                    - (u + (w - 1.) * u * u) * 2. * (w - 1.) * u)
+                    / (d * d);
+                let dzdu = 2. * w * 0.01 * u / (d * d);
+                let pa = point(u);
+                let pb = point(v);
+                let dx = pb[0] - pa[0];
+                let dz = pb[1] - pa[1];
+                let cosine2 = (-dzdu * dx + dxdu * dz).powi(2)
+                    / ((dxdu * dxdu + dzdu * dzdu) * (dx * dx + dz * dz));
+                assert!(cosine2 <= proof.cosine_squared_upper());
+            }
+        }
+    }
 }

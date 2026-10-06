@@ -4536,3 +4536,25 @@ parabola chords, including a reversed coordinate, lie below the certificate
 bound as an auxiliary oracle only. Five original normal-alignment regressions
 pass. This is a sufficient-condition foundation, not a full general NURBS
 solution; it is not yet wired into original wall coverage or packaged WASM.
+
+
+## Intrinsic self-chord exclusion in original wall coverage
+
+Source whole-wall coverage now freshly qualifies nonplanar same-face pairs
+with the original rational self-chord theorem. Its spans share the normal
+work budget, and successful global certificates retain source-bound intrinsic
+certificates alongside gap certificates. Failure or exhausted work remains
+explicitly unproven. No sampled candidate authorizes an exclusion.
+
+All 16 original support/annular regressions pass in 81.94 seconds. On the
+original annular body, full 378-pair coverage now retains 258 unresolved
+pairs, down from 260, using 1000 gap cells and 657 shared normal spans. The
+whole-wall certificate remains absent; the one-pair case remains incomplete.
+Cuboid positive/negative/missing-pair checks remain valid. Four intrinsic
+NURBS tests pass, including mild rational weights and an independent analytic
+normal/chord oracle as auxiliary evidence. Logs retained.
+
+Real-worker annular expectations are updated to the measured native result.
+This integration is not in the currently packaged 6b19a5e1 module; another
+completed build and real-worker run are required before claiming WASM/UI
+acceptance of these additional curved-face exclusions.

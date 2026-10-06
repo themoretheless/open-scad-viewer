@@ -1,5 +1,5 @@
 //! Continuous lower qualification over every original source face pair.
-//! Intrinsic curved self pairs remain unresolved until separately proven.
+//! Curved self pairs require a continuous intrinsic exclusion; otherwise they remain unresolved.
 use crate::{material_wall_coverage as geometry, source_face_gap, source_volume::Body};
 use nurbs_core::{Error, Result};
 pub struct Limits {
@@ -19,6 +19,7 @@ pub struct Certificate<'a> {
     minimum_mm: f64,
     max_sine_squared: f64,
     gaps: Vec<source_face_gap::Certificate<'a>>,
+    self_chords: Vec<nurbs_core::surface_self_chord::Certificate<'a>>,
 }
 impl<'a> Certificate<'a> {
     pub fn body(&self) -> &'a Body {
@@ -29,6 +30,9 @@ impl<'a> Certificate<'a> {
     }
     pub fn max_sine_squared(&self) -> f64 {
         self.max_sine_squared
+    }
+    pub fn self_chord_certificates(&self) -> &[nurbs_core::surface_self_chord::Certificate<'a>] {
+        &self.self_chords
     }
     pub fn gap_certificates(&self) -> &[source_face_gap::Certificate<'a>] {
         &self.gaps
@@ -103,6 +107,7 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
         .collect();
     let necessary = geometry::necessary_normal_sine(limits.max_sine_squared)?;
     let mut gaps = Vec::new();
+    let mut self_chords = Vec::new();
     'pairs: for a in 0..surfaces.len() {
         for b in a..surfaces.len() {
             if out.pairs.len() == limits.pairs {
@@ -119,6 +124,19 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
                     pair.proven = true;
                 } else {
                     pair.reason = "source-wall-curved-self-unproven";
+                    if out.normal_spans < limits.normal_spans {
+                        let r = nurbs_core::surface_self_chord::qualify(
+                            surfaces[a],
+                            limits.max_sine_squared,
+                            limits.normal_spans - out.normal_spans,
+                        )?;
+                        out.normal_spans += r.spans;
+                        if let Some(certificate) = r.certificate {
+                            pair.reason = "source-wall-curved-self-excluded";
+                            pair.proven = true;
+                            self_chords.push(certificate);
+                        }
+                    }
                 }
             } else if matches!((planes[a],planes[b]),(Some(x),Some(y)) if geometry::same_plane(x,y))
             {
@@ -169,6 +187,7 @@ pub fn qualify<'a>(body: &'a Body, minimum_mm: f64, limits: Limits) -> Result<Re
             minimum_mm,
             max_sine_squared: limits.max_sine_squared,
             gaps,
+            self_chords,
         });
         out.reason = "source-whole-wall-lower-qualified";
     } else if !out.enumeration_complete {

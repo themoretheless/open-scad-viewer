@@ -415,8 +415,8 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   expect(coverage.enumerationComplete).toBe(pairs===378)
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
-   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(260)
-   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(642)
+   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(258)
+   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(657)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
   }
   const forged=structuredClone(r);forged.wallCoverage!.wholeWallQualified=true;forged.wallCoverage!.lowerMm=5.99
