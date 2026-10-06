@@ -1447,6 +1447,21 @@ mod tests {
             for (index,restriction) in endpoints.restrictions().iter().enumerate() {
                 assert_eq!(restriction.edge().world(),body.geometry().shell().edges()[index].world());
             }
+            let trims=crate::source_exchange_trims::prepare(&body,&endpoints,1e-7,100000).unwrap().expect("bounded trim endpoints");
+            assert_eq!(trims.edges().len(),7);
+            for edge in trims.edges() {
+                assert!(edge.canonical()[0]<edge.canonical()[1]);
+                assert!(edge.error_upper().iter().flatten().all(|e|*e<=1e-7));
+            }
+            assert!(crate::source_exchange_trims::prepare(&body,&endpoints,1e-7,1).unwrap().is_none());
+            assert!(crate::source_exchange_trims::prepare(&body,&endpoints,1e-30,100000).unwrap().is_none());
+            let step=crate::source_exchange_step::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:14,
+            },100000).unwrap().expect("source STEP candidate");
+            assert_eq!((step.vertices,step.edges,step.faces),(5,7,4));
+            assert!(step.endpoint_error_upper<=1e-7);
+            if let Ok(path)=std::env::var("CAD_SOURCE_CURVED_STEP_OUTPUT") {std::fs::write(path,step.text).unwrap();}
             let definition=body.definition().unwrap();
             let restored=crate::source_body_restore::restore(definition.clone(),replay_body_limits()).unwrap();
             let replayed=restored.body().expect(restored.reason());

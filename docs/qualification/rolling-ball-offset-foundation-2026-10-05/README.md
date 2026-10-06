@@ -2936,3 +2936,46 @@ certify full edge/pcurve trims, STEP output, mesh closure, new topology or
 editing admission. Refinement mapping work is accumulated globally; shared-edge
 replay mapping has a separate per-use limit and identity queries are reported
 separately. No WASM or UI route changed in this stage.
+
+
+### Original root-trimmed source STEP candidate — native only
+
+`source_exchange_trims::prepare` binds a private endpoint preparation to the
+original Body definition. For each original carrier and both original pcurves,
+it chooses numeric trim parameters and uses interval evaluation to bound the
+endpoint's L1 distance to the same original vertex representative. Surface
+composition is evaluated with interval UV coordinates. Insufficient work,
+collapsed/reversed trim proposals or unproven tolerance yield no certificate.
+The integrated curved control passes at 1e-7 mm and refuses work=1 and 1e-30 mm.
+
+`source_exchange_step::prepare` freshly runs these gates and emits an AP242
+candidate directly from the original 3D carriers, surfaces and 2D pcurves.
+TRIMMED_CURVE records numeric restriction parameters. Shared EDGE_CURVE
+vertices use original shell IDs; no proximity welding or classic Model
+conversion. Exact source emitters preserve distinct knots and near-unit
+rational weights; existing v5 emission behavior remains unchanged. Pole
+exchange is explicitly refused. This candidate is not a Model, whole-curve
+certificate or general independent-reader qualification. It has no WASM/UI
+route and does not change editing/manufacturing/export admission there.
+
+Native integrated Body/replay/refinement/trim/STEP test passed (12.60 s),
+source coefficient serialization regression passed, and four v5 AP242
+regressions passed (0.39 s). The checked-in OCP script independently reads
+`source-curved.step.gz` after decompression. OCCT reports valid B-rep, one
+solid, four faces, seven edges and five vertices; volume is
+0.16666666666666663 mm³ versus independently expected 1/6. All five vertex
+coordinates match the analytic sheared tetrahedron within 1e-7 mm, including
+x=1-sqrt(1/2), y=0, z=x²/4 at the root split. Bounding extrema are 0..1 mm
+with OCCT's 1e-7 mm box gap. No root-value coordinate was authored into the
+source Body.
+
+The first independent oracle incorrectly assumed a different split edge;
+its failure is retained in `source-curved-step-oracle-correction.log.gz`.
+Inspection of the fixture's first changing-x paired edge establishes the
+correct (1→0) edge and the corrected analytic oracle passes. Initial OCP
+binding inventory also required explorer/IsSame counting and CornerMin/Max
+in place of unavailable IndexedMapOfShape/Bnd_Box::Limits bindings.
+
+This is independent STEP evidence for one qualified quadratic-shear Body,
+not general curved fillets, named-part acceptance, geometric Undo/Redo,
+closed mesh admission, general P0 or P2/P3 completion.
