@@ -2712,3 +2712,80 @@ triangles and 132 explicitly unresolved face rectangles. Mouse and keyboard
 selection, Retry, reload, visibility persistence, locking, isolation, selection
 handoff and manufacturing restriction passed with no page errors. Screenshot
 was inspected in the CPU/SVG fallback; this is not WebGPU qualification.
+
+### Curved rational UV main curves — native stage
+
+The normalized chord-chart predicate now compares every original control and
+relative rational weight of both main and cutter Bezier equations. Nonlinear
+main curves are accepted only when the complete equations agree under the
+supported chart normalization. Distinct degrees, multispan curves, degenerate
+endpoint chords and unproven chart relations still refuse. Fresh union-root
+uniqueness remains mandatory; source world-carrier identity is independently
+required by the caller.
+
+A rational quadratic main with nonuniform weights passes exact equation
+comparison across translated/scaled charts; perturbing its internal control
+refuses. A curved quadratic main with reflected UV traversal passes original
+SourcePoint replay and the fresh union-selector root query. Tests passed:
+27 cad-predicates, the source root selection test, eight shell tests (11.97 s),
+and eight shared-edge tests. These are native equation/root tests; a curved
+world-carrier closed Body and worker/browser qualification are still required.
+WASM rebuild is running; this stage has not been pushed or qualified in UI.
+
+The new native shared-edge integration test also passed for an actual rational
+quadratic 3D carrier with weights [1,2,1]. Two reflected UV charts independently
+qualify the irrational root at sqrt(1/2); exact source composition, opposite
+directed ownership and a fresh union-root check admit the common restriction.
+Both original fragment definitions remain unchanged. A 1e-12 perturbation of
+the world carrier's interior control refuses admission. This is a shared-edge
+test, not a closed Body or STEP qualification. Evidence:
+`source-curved-rational-world-root.log.gz`.
+
+### Curved closed shell: pending contact admission
+
+The irrational root tetrahedron now has an exact polynomial shear fixture
+F(x,y,z)=(x,y,z+x*x/4). Original affine face charts are represented by exact
+biquadratic coefficients and their original world boundary curves by quadratic
+coefficients. The first fixture incorrectly retained line chords and fresh source
+agreement refused it; correcting the authored world curves allows exact region
+replay, closed incidence, five shared vertices, seven restrictions and coherent
+boundary display (native test passed, 0.12 s).
+
+Fresh embedded Body admission remains refused with
+`source-shell-different-face-contacts-unproven`. This exposes the required next
+proof: contacts of the curved neighboring faces. Closed topology and chart
+injectivity are insufficient. The regression explicitly checks that no Geometry
+is issued; volume, Body, mesh, STEP and worker use of this curved shell remain
+unqualified. The recorded failed admission attempt is retained as evidence.
+
+### Exact inverse shear foundation and rebuilt WASM
+
+`quadratic_shear_chart_identity` checks all 27 original polynomial chart
+coefficients under an inverse quadratic coordinate shear with Expansion
+arithmetic. Biquadratic layout and constant weights are separate caller
+requirements; the predicate alone issues equation identity, no contact or Body
+authority. Perturbed interior coefficients and exhausted work refuse. All four
+curved-shell fixture faces pass this predicate. The unresolved Body pair is
+[0,2]; native work consumed 233956 units. Transporting contact proofs through
+the common invertible shear remains required. All 28 predicate tests, nine
+shell tests and nine shared-edge tests passed.
+
+The rational UV-main production path was rebuilt as WASM SHA-256
+6791d7bf8527b8d928b76ef7e00e23f65d1afcdcc7e76de01f27448e280b3d99
+(11,655,091 bytes). The inverse-shear predicate is currently native-only and
+is not routed through this WASM or worker. Vue/MCP type checks passed.
+43 real worker/archive/display/client tests passed in 5.22 s. These replay the
+existing planar irrational Body and full caps, not the currently refused curved
+Body. A premature first test/build observed partially packed artifacts and
+failed the identity guard; after the build process returned terminal success,
+the same tests passed. Failure evidence is retained.
+
+Distribution audit: 151 artifacts, 8,168,151 asset bytes; the packed geometry
+chunk is 3,889,012 bytes, +1620. Budgets retain their previous bounded margins.
+
+The rebuilt artifact passed browser replay of the existing irrational Body:
+seven edges, 80 display triangles and 132 explicitly unresolved face rectangles.
+Selection, Retry, reload, hiding persistence, locking and isolation passed with
+no page errors. CPU/SVG screenshot was inspected; no WebGPU claim. The curved
+closed-shell fixture remains refused pending contacts, so this replay does not
+qualify that fixture or general curved Body editing.

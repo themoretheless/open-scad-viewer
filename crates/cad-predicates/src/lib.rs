@@ -394,3 +394,6 @@ mod tests;
 
 mod bezier_point_identity;
 pub use bezier_point_identity::*;
+
+mod quadratic_shear_identity;
+pub use quadratic_shear_identity::*;

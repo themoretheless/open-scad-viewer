@@ -1068,15 +1068,66 @@ mod tests {
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
-        root_partition_control(false);
+        root_partition_control(false, false);
     }
     #[test]
     fn irrational_root_partition_preserves_closed_body_and_exact_source_topology() {
-        root_partition_control(true);
+        root_partition_control(true, false);
     }
-    fn root_partition_control(irrational: bool) {
+    #[test]
+    fn curved_shell_preserves_roots_but_refuses_unproven_face_contacts() {
+        root_partition_control(true, true);
+    }
+    fn root_partition_control(irrational: bool, curved: bool) {
         use crate::source_boundary_fragment::Role;
         let (mut faces, mut pairs) = tetrahedron();
+        if curved {
+            // Exact polynomial shear F(x,y,z)=(x,y,z+x*x/4), determinant one.
+            // Elevate the affine charts to biquadratic Bezier coefficients.
+            for face in &mut faces {
+                let original=face[0].edges()[0].surface();
+                let a=&original.control_points[0][0];
+                let b:Vec<_>=(0..3).map(|k|original.control_points[1][0][k]-a[k]).collect();
+                let c:Vec<_>=(0..3).map(|k|original.control_points[0][1][k]-a[k]).collect();
+                let controls=(0..3).map(|i| (0..3).map(|j| {
+                    let mut q:Vec<_>=(0..3).map(|k|a[k]+b[k]*(i as f64/2.)+c[k]*(j as f64/2.)).collect();
+                    let square=a[0]*a[0]+a[0]*b[0]*i as f64+a[0]*c[0]*j as f64
+                        +if i==2 {b[0]*b[0]} else {0.}
+                        +if j==2 {c[0]*c[0]} else {0.}
+                        +0.5*b[0]*c[0]*(i*j) as f64;
+                    q[2]+=square/4.;q
+                }).collect()).collect();
+                let surface=Surface {degree_u:2,degree_v:2,periodic_u:false,periodic_v:false,
+                    knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:controls,weights:vec![vec![1.;3];3]};
+                let mut leaves=surface.control_points.iter().flatten().flatten().map(|v|
+                    cad_predicates::AuthoredScalar::Binary64Bits(v.to_bits())).collect::<Vec<_>>();
+                leaves.push(cad_predicates::AuthoredScalar::Binary64Bits(0.25f64.to_bits()));
+                let arena=cad_predicates::SourceArena::authored("curved-body-shear",1,leaves).unwrap();
+                let tolerance=cad_predicates::ToleranceContext::default_valid();
+                let mut predicate=cad_predicates::PredicateContext::new(&arena,&tolerance,
+                    cad_predicates::Limits::default(),None);
+                let refs=std::array::from_fn(|i|std::array::from_fn(|j|std::array::from_fn(|k|
+                    arena.leaf(9*i+3*j+k).unwrap())));
+                let proof=cad_predicates::quadratic_shear_chart_identity(&mut predicate,refs,
+                    arena.leaf(27).unwrap(),0,2).unwrap();
+                assert_eq!(proof.outcome,cad_predicates::ParameterIdentity::Equal);
+                for wire in face {
+                    let edges=wire.edges().iter().map(|e|Fragment::new(&surface,e.curve(),
+                        Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap()).collect::<Vec<_>>();
+                    *wire=Wire::new(&edges).unwrap();
+                }
+            }
+            for pair in &mut pairs {
+                let a=&pair.world.control_points[0];let b=&pair.world.control_points[1];
+                let mut first=a.clone();first[2]+=a[0]*a[0]/4.;
+                let mut last=b.clone();last[2]+=b[0]*b[0]/4.;
+                let mut middle:Vec<_>=(0..3).map(|k|(a[k]+b[k])/2.).collect();
+                middle[2]+=a[0]*b[0]/4.;
+                pair.world=Curve {degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:vec![first,middle,last],weights:vec![1.;3]};
+            }
+        }
         let context = cad_predicates::ToleranceContext::default_valid();
         let mut regions = faces
             .iter()
@@ -1091,12 +1142,16 @@ mod tests {
                                 let c = e.curve();
                                 let a = &c.control_points[0];
                                 let b = &c.control_points[1];
+                                let first=surface.evaluate(a[0],a[1]).unwrap().point.to_vec();
+                                let last=surface.evaluate(b[0],b[1]).unwrap().point.to_vec();
+                                let curve=if curved {
+                                    let mut middle:Vec<_>=(0..3).map(|k|(first[k]+last[k])/2.).collect();
+                                    middle[2]-=(last[0]-first[0])*(last[0]-first[0])/8.;
+                                    Curve {degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+                                        control_points:vec![first,middle,last],weights:vec![1.;3]}
+                                } else {Curve::from_polyline(vec![first,last]).unwrap()};
                                 crate::trimmed_face_recipe::Boundary {
-                                    curve: Curve::from_polyline(vec![
-                                        surface.evaluate(a[0], a[1]).unwrap().point.to_vec(),
-                                        surface.evaluate(b[0], b[1]).unwrap().point.to_vec(),
-                                    ])
-                                    .unwrap(),
+                                    curve,
                                     pcurve: c.clone(),
                                     reversed: false,
                                 }
@@ -1239,6 +1294,30 @@ mod tests {
         assert_eq!(network.endpoints, 14);
         assert_eq!(network.spans, 14);
         let root_vertex = network.vertices.iter().find(|v| v.ends.len() == 2).unwrap();
+        if curved {
+            assert!(shell.faces().iter().all(|face| face[0].edges()[0].surface().degree_u==2));
+            assert!(shell.edges().iter().any(|edge|edge.world().degree==2));
+            let display=crate::source_boundary_display::prepare(&shell,8,14,14).unwrap();
+            assert_eq!(display.edges.len(),7);
+            for [edge,end] in &root_vertex.ends {
+                let bounds=shell.edges()[*edge].uses()[0].parameter_bounds();
+                assert!(bounds.iter().any(|b|b[0]<b[1]));
+                let _=end;
+            }
+            let admitted=crate::source_shell_geometry::qualify(shell,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                }).unwrap();
+            // Closed incidence and injective charts cannot authorize unproven contacts.
+            // This fixture remains a Body admission target; no volume claim is made.
+            assert!(admitted.geometry.is_none());
+            assert_eq!(admitted.reason,"source-shell-different-face-contacts-unproven");
+            eprintln!("curved contact pending pair: {:?}; work {}",admitted.next_pair,admitted.exact_work);
+            return;
+        }
         assert!(root_vertex.poles.is_empty());
         for count in [1, 2, 8] {
             let preview = crate::source_boundary_display::prepare(&shell, count, 14, 14).unwrap();

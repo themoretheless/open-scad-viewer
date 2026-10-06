@@ -1,4 +1,4 @@
-//! Exact affine chart identity plus a fresh unique-root union query.
+//! Exact rational Bezier chart identity plus a fresh unique-root union query.
 //! The caller separately proves both original main curves share a world carrier.
 use crate::{source_boundary_fragment::Role, source_contact_point::SourcePoint};
 use nurbs_core::{Error, Result, curve::Curve, interval_eval::Interval as I};
@@ -25,7 +25,8 @@ pub fn same(
     if max_work == 0
         || curves
             .iter()
-            .any(|(main, other, _)| main.degree != 1 || !bezier(main) || !bezier(other))
+            .any(|(main, other, _)| !bezier(main) || !bezier(other))
+        || curves[0].0.degree != curves[1].0.degree
         || curves[0].1.degree != curves[1].1.degree
     {
         return Ok((false, 0, 0));
@@ -58,16 +59,23 @@ pub fn same(
             "Invalid original line chart source",
         )
     })?;
-    let main = std::array::from_fn(|side| {
-        std::array::from_fn(|i| {
-            std::array::from_fn(|axis| arena.leaf(6 * side + 3 * i + axis).unwrap())
-        })
+    let main_count = curves[0].0.control_points.len();
+    let main: [Vec<_>; 2] = std::array::from_fn(|side| {
+        (0..main_count)
+            .map(|i| {
+                std::array::from_fn(|axis| arena.leaf(3 * (side * main_count + i) + axis).unwrap())
+            })
+            .collect()
     });
     let count = curves[0].1.control_points.len();
     let cutters: [Vec<_>; 2] = std::array::from_fn(|side| {
         (0..count)
             .map(|i| {
-                std::array::from_fn(|axis| arena.leaf(12 + 3 * (side * count + i) + axis).unwrap())
+                std::array::from_fn(|axis| {
+                    arena
+                        .leaf(6 * main_count + 3 * (side * count + i) + axis)
+                        .unwrap()
+                })
             })
             .collect()
     });
@@ -81,9 +89,9 @@ pub fn same(
         },
         None,
     );
-    let proof = cad_predicates::line_chart_cutter_identity(
+    let proof = cad_predicates::normalized_bezier_chart_identity(
         &mut ctx,
-        main,
+        [&main[0], &main[1]],
         [&cutters[0], &cutters[1]],
         reversed,
     )
@@ -233,5 +241,42 @@ mod tests {
             .unwrap()
             .0
         );
+        let curved = Curve {
+            degree: 2,
+            periodic: false,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0.5, 0.25], vec![1., 0.]],
+            weights: vec![1.; 3],
+        };
+        let cross = Curve::from_polyline(vec![vec![0.5, -0.5], vec![0.5, 0.5]]).unwrap();
+        let qualify = |m: &Curve, c: &Curve| {
+            let r = crate::source_contact_point::qualify(
+                &surface,
+                m,
+                c,
+                [[0.49, 0.51], [0.61, 0.64]],
+                100,
+            )
+            .unwrap();
+            r.point.expect(r.reason)
+        };
+        let curved_a = qualify(&curved, &cross);
+        let mut reflected = curved.clone();
+        reflected.control_points.reverse();
+        for p in &mut reflected.control_points {
+            p[1] = -p[1];
+        }
+        let mut reflected_cross = cross.clone();
+        for p in &mut reflected_cross.control_points {
+            p[1] = -p[1];
+        }
+        let curved_b = qualify(&reflected, &reflected_cross);
+        let proof = same(
+            [(&curved_a, Role::Boundary), (&curved_b, Role::Boundary)],
+            [false, true],
+            100000,
+        )
+        .unwrap();
+        assert!(proof.0 && proof.1 > 0 && proof.2 == 1);
     }
 }
