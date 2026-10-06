@@ -2,6 +2,7 @@ import {callGeometryRust} from './geometry/kernel'
 /** Original native recipes only; display intervals never authorize geometry. */
 export interface SourceBodyDefinition {
  version:1
+ inverseShear?:{axes:[number,number];coefficient:number}
  shell:{version:1;regions:unknown[];pairs:{uses:[number[],number[]];edge:unknown}[];poles:unknown[]}
 }
 export interface SourceBodyOptions {
@@ -61,6 +62,9 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
  if(d?.version!==1||s?.version!==1||!Array.isArray(s.regions)||s.regions.length<2||s.regions.length>4096
   ||!Array.isArray(s.pairs)||s.pairs.length>524288||!Array.isArray(s.poles)||s.poles.length>1000000
   ||!integer(options.endpointSpans,100000)||options.endpointSpans<1)throw new Error('Invalid source Body request')
+ const inverse=d.inverseShear
+ if(inverse&&(!Array.isArray(inverse.axes)||inverse.axes.length!==2||!inverse.axes.every(n=>integer(n,2))
+  ||inverse.axes[0]===inverse.axes[1]||!Number.isFinite(inverse.coefficient)))throw new Error('Invalid inverse shear recipe')
  const segments=options.displaySegments??0
  if(!integer(segments,4096)||segments*s.pairs.length>65536)throw new Error('Source display exceeds transport limits')
  const face=options.faceDisplay
@@ -71,7 +75,7 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
- return {definition:key({version:1,shell:s}),faces:s.regions.length,poles:s.poles.length,edges,
+ return {definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
   absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {

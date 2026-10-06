@@ -20,7 +20,11 @@ pub struct Body {
 impl Body {
     /// Persist original definitions; admission is recomputed during restoration.
     pub fn definition(&self) -> Result<value_codec::Value> {
-        Ok(value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?}))
+        let mut value=value_codec::json!({"version":1,"shell":self.geometry.shell().definition()?});
+        if let Some(proof)=self.geometry.inverse_shear() {
+            value["inverseShear"]=value_codec::json!({"axes":proof.axes(),"coefficient":proof.coefficient()});
+        }
+        Ok(value)
     }
     pub fn geometry(&self) -> &Geometry {
         &self.geometry

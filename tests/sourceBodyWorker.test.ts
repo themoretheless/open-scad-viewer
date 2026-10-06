@@ -118,12 +118,50 @@ it('loads a source archive through the real document worker and rejects saved fa
  await expect(client.run({kind:'restoreDocument',text:serializeDirectDocument(invalid)})).rejects.toMatchObject({code:'CAD_SOURCE_BODY_RESTORE',message:expect.stringContaining('bad-source')})
 },30000)
 
-it('restores irrational endpoint recipes through WASM, preview and archive history',async()=>{
- const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-irrational-body-request.json.gz',import.meta.url))).toString())
+it('discards a late inverse proof after changing only the shear recipe',async()=>{
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const port=new Port();ports.push(port);return port});clients.push(client)
+ const a=options();a.definition.inverseShear={axes:[0,2],coefficient:0.25}
+ const first=client.run({kind:'sourceBodyRestore',options:a}).catch(error=>error.code)
+ const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
+ const b=structuredClone(a);b.definition.inverseShear!.coefficient=0.5
+ const second=client.run({kind:'sourceBodyRestore',options:b})
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ expect(ports[0]!.requests[0]).toMatchObject({job:{options:{definition:{inverseShear:{coefficient:0.25}}}}})
+ expect(ports[1]!.requests[0]).toMatchObject({job:{options:{definition:{inverseShear:{coefficient:0.5}}}}})
+ late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
+ reply(ports[1]!,denied);expect(await second).toEqual(denied)
+})
+
+it('binds inverse shear axes and coefficient into the source request identity',()=>{
+ const o=options();o.definition.inverseShear={axes:[0,2],coefficient:0.25}
+ const expected=sourceBodyExpectation(o)
+ const changed=structuredClone(o);changed.definition.inverseShear!.coefficient=0.5
+ expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
+ changed.definition.inverseShear!.axes=[1,2]
+ expect(sourceBodyExpectation(changed).definition).not.toEqual(expected.definition)
+ changed.definition.inverseShear!.axes=[0,0]
+ expect(()=>sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
+ changed.definition.inverseShear!.axes=[0,2];changed.definition.inverseShear!.coefficient=NaN
+ expect(()=>sourceBodyExpectation(changed)).toThrow('Invalid inverse shear recipe')
+})
+
+it.each([
+ ['source-irrational-body-request','Irrational root tetrahedron','Irrational split on a straight shared carrier of a planar tetrahedral Body; no geometric editing or closed mesh proof.','CAD_IRRATIONAL_BODY_WORKER_REPORT','CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT'],
+ ['source-curved-shear-body-request','Curved root tetrahedron','Curved polynomial shear Body with original irrational root restrictions and fresh inverse contact proof; no geometric editing or closed mesh proof.','CAD_CURVED_SHEAR_BODY_WORKER_REPORT','CAD_CURVED_SHEAR_BODY_DOCUMENT_OUTPUT'],
+])('restores %s through WASM, preview and archive history',async(fixture,name,scope,reportEnv,documentEnv)=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL(`../docs/qualification/rolling-ball-offset-foundation-2026-10-05/${fixture}.json.gz`,import.meta.url))).toString())
  const {op:_op,...base}=request as SourceBodyOptions & {op:string}
  const options={...base,displaySegments:8,faceDisplay:{divisions:8,toleranceUv:1e-8,domainCellsPerFace:10000}},client=realClient()
  const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options}),restoreElapsedMs=performance.now()-started
  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
+ if(base.definition.inverseShear){
+  expect(r.sourceBody!.inverseShear).toEqual(base.definition.inverseShear)
+  const changed=structuredClone(r);changed.sourceBody!.inverseShear!.coefficient=0.5
+  expect(validSourceBody(sourceBodyExpectation(options),changed)).toBe(false)
+  const wrong=structuredClone(options);wrong.definition.inverseShear!.coefficient=0.5
+  const refusal=await client.run({kind:'sourceBodyRestore',options:wrong})
+  expect(refusal.admitted).toBe(false);expect(validSourceBody(sourceBodyExpectation(wrong),refusal)).toBe(true)
+ }
  expect(r.edges).toHaveLength(7);expect(r.faceCount).toBe(4)
  expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
  const ends=new Map<number,[number,0|1][]>()
@@ -140,7 +178,7 @@ it('restores irrational endpoint recipes through WASM, preview and archive histo
  }
  expect(r.displayFaces!.some(face=>face.tiles.length>0)).toBe(true)
  expect(r.displayFaces!.some(face=>face.unresolved.length>0)).toBe(true)
- const record=createSourceBodyRecord('source-irrational-root','Irrational root tetrahedron',base)
+ const record=createSourceBodyRecord('source-irrational-root',name,base)
  const document={...emptyDirectDocument(),sourceBodies:[record]}
  const loaded=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
  expect(loaded.sourceBodies).toEqual([record])
@@ -150,6 +188,7 @@ it('restores irrational endpoint recipes through WASM, preview and archive histo
  expect(history.undo().sourceBodies).toEqual([record])
  expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
  expect(parseDirectDocument(serializeDirectDocument(history.document)).sourceBodies![0]!.source).toEqual(record.source)
- if(process.env.CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT)writeFileSync(process.env.CAD_IRRATIONAL_BODY_DOCUMENT_OUTPUT,serializeDirectDocument(document))
- if(process.env.CAD_IRRATIONAL_BODY_WORKER_REPORT)writeFileSync(process.env.CAD_IRRATIONAL_BODY_WORKER_REPORT,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope:'Irrational split on a straight shared carrier of a planar tetrahedral Body; no geometric editing or closed mesh proof.'},null,2)+'\n')
+ const documentOutput=process.env[documentEnv],reportOutput=process.env[reportEnv]
+ if(documentOutput)writeFileSync(documentOutput,serializeDirectDocument(document))
+ if(reportOutput)writeFileSync(reportOutput,JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),restoreElapsedMs,scenarioElapsedMs:performance.now()-started,edgeCount:r.edges.length,faceCount:r.faceCount,vertexCount:ends.size,volume:r.volume,rootEnds:split[0],displayUnresolved:r.displayFaces!.reduce((n,f)=>n+f.unresolved.length,0),metadataUndoRedo:true,scope},null,2)+'\n')
 },120000)

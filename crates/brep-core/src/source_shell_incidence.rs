@@ -1075,7 +1075,7 @@ mod tests {
         root_partition_control(true, false);
     }
     #[test]
-    fn curved_shell_preserves_roots_but_refuses_unproven_face_contacts() {
+    fn curved_shell_preserves_roots_and_replays_inverse_contacts_volume() {
         root_partition_control(true, true);
     }
     fn root_partition_control(irrational: bool, curved: bool) {
@@ -1372,7 +1372,27 @@ mod tests {
                     exact_work:100_000_000,driver_cells:10000,
                 }).unwrap();
             assert!(inverse_geometry.geometry.is_some(),"{}",inverse_geometry.reason);
-            let admitted=crate::source_shell_geometry::qualify(shell,
+            let replay_body_limits=|| crate::source_body_restore::Limits {
+                shell:crate::source_shell_restore::Limits {
+                    regions:crate::source_region_restore::Limits {
+                        region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                        search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                        membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+                    },exact_work:100_000_000,driver_cells:10000,
+                },
+                embedding:crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                },
+                volume:crate::source_volume::Limits {
+                    axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,
+                    cells:10000,spans:100000,domain_cells:1000000,
+                },
+            };
+            let primary=crate::source_shell_restore::restore(shell.definition().unwrap(),&replay_body_limits().shell).unwrap().shell.unwrap();
+            let admitted=crate::source_shell_geometry::qualify(primary,
                 crate::source_shell_geometry::Limits {
                     tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
                     pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
@@ -1380,10 +1400,45 @@ mod tests {
                     exact_work:100_000_000,driver_cells:10000,
                 }).unwrap();
             // Closed incidence and injective charts cannot authorize unproven contacts.
-            // This fixture remains a Body admission target; no volume claim is made.
+            // The primary contact path still refuses; only a fresh inverse proof admits this fixture.
             assert!(admitted.geometry.is_none());
             assert_eq!(admitted.reason,"source-shell-different-face-contacts-unproven");
-            eprintln!("curved contact pending pair: {:?}; work {}",admitted.next_pair,admitted.exact_work);
+            let embedding=crate::source_shell_geometry::qualify_with_inverse_shear(shell,
+                replay_body_limits().embedding,[0,2],0.25,&replay_limits).unwrap();
+            assert!(embedding.geometry.is_some(),"{}",embedding.reason);
+            let geometry=embedding.geometry.unwrap();
+            let proof=geometry.inverse_shear().unwrap();
+            assert_eq!(proof.axes(),[0,2]);assert_eq!(proof.coefficient(),0.25);
+            assert!(proof.inverse().contacts().all_pairs_qualified);
+            let volume=crate::source_volume::qualify(geometry,replay_body_limits().volume).unwrap();
+            assert!(volume.body.is_some(),"{} {:?}",volume.reason,volume.signed_bounds);
+            let body=volume.body.unwrap();
+            assert!(body.volume()[0]<=1./6. && body.volume()[1]>=1./6.);
+            for endpoint in body.geometry().shell().faces().iter().flatten().flat_map(|wire|wire.edges()).flat_map(|edge|edge.endpoints()) {
+                if let Endpoint::Crossing {point,..}=endpoint {
+                    let refined=crate::source_root_refinement::qualify(point,1e-7,16,10000).unwrap();
+                    let proof=refined.refinement.expect(refined.reason);
+                    assert_eq!(proof.original().definition(),point.definition());
+                    assert!(proof.diameter_bound()[1]<=1e-7);
+                }
+            }
+            eprintln!("curved Body volume {:?}; contact exact work {}, spans {}",body.volume(),embedding.exact_work,embedding.spans);
+            assert_eq!(body.definition().unwrap()["inverseShear"],value_codec::json!({"axes":[0,2],"coefficient":0.25}));
+            let definition=body.definition().unwrap();
+            let restored=crate::source_body_restore::restore(definition.clone(),replay_body_limits()).unwrap();
+            let replayed=restored.body().expect(restored.reason());
+            assert_eq!(replayed.definition().unwrap(),definition);
+            assert!(replayed.geometry().inverse_shear().is_some());
+            let mut damaged=definition.clone();damaged["inverseShear"]["coefficient"]=value_codec::json!(0.5);
+            assert!(crate::source_body_restore::restore(damaged,replay_body_limits()).unwrap().body().is_none());
+            if let (Ok(template),Ok(output))=(std::env::var("CAD_CURVED_SHEAR_BODY_FIXTURE_TEMPLATE"),std::env::var("CAD_CURVED_SHEAR_BODY_FIXTURE_OUTPUT")) {
+                let mut request=value_codec::from_str::<value_codec::Value>(&std::fs::read_to_string(template).unwrap()).unwrap();
+                request["definition"]=definition.clone();
+                std::fs::write(output,value_codec::to_string(&request).unwrap()).unwrap();
+            }
+            let mut omitted=definition;omitted.as_object_mut().unwrap().remove("inverseShear");
+            assert!(crate::source_body_restore::restore(omitted,replay_body_limits()).unwrap().body().is_none());
+
             return;
         }
         assert!(root_vertex.poles.is_empty());

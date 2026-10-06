@@ -19,6 +19,23 @@ pub struct Geometry {
     topology: source_vertex_links::Report,
     charts: ChartReport,
     contacts: source_face_contacts::ShellReport,
+    inverse_shear: Option<InverseShearContacts>,
+}
+pub struct InverseShearContacts {
+    axes: [usize; 2],
+    coefficient: f64,
+    inverse: Box<Geometry>,
+}
+impl InverseShearContacts {
+    pub fn axes(&self) -> [usize; 2] {
+        self.axes
+    }
+    pub fn coefficient(&self) -> f64 {
+        self.coefficient
+    }
+    pub fn inverse(&self) -> &Geometry {
+        &self.inverse
+    }
 }
 impl Geometry {
     pub fn shell(&self) -> &Shell {
@@ -30,8 +47,12 @@ impl Geometry {
     pub fn charts(&self) -> &ChartReport {
         &self.charts
     }
+    /// Primary contact diagnostics; an inverse proof may establish embedding separately.
     pub fn contacts(&self) -> &source_face_contacts::ShellReport {
         &self.contacts
+    }
+    pub fn inverse_shear(&self) -> Option<&InverseShearContacts> {
+        self.inverse_shear.as_ref()
     }
 }
 pub struct Report {
@@ -51,6 +72,24 @@ pub struct Report {
 /// diagnostic reports or caller certificates never authorize this geometry.
 /// Material orientation, signed volume and Model conversion remain separate.
 pub fn qualify(shell: Shell, limits: Limits) -> Result<Report> {
+    qualify_impl(shell, limits, None)
+}
+/// Explicit proposal only: original charts, inverse equations, roots, ownership
+/// and inverse contacts are all recomputed. A proposal is never admission authority.
+pub fn qualify_with_inverse_shear(
+    shell: Shell,
+    limits: Limits,
+    axes: [usize; 2],
+    coefficient: f64,
+    replay: &crate::source_region_restore::Limits,
+) -> Result<Report> {
+    qualify_impl(shell, limits, Some((axes, coefficient, replay)))
+}
+fn qualify_impl(
+    shell: Shell,
+    limits: Limits,
+    proposal: Option<([usize; 2], f64, &crate::source_region_restore::Limits)>,
+) -> Result<Report> {
     if !limits.tolerance_uv.is_finite()
         || limits.tolerance_uv <= 0.
         || shell.regions().is_none()
@@ -132,17 +171,84 @@ pub fn qualify(shell: Shell, limits: Limits) -> Result<Report> {
         })
         .map(|p| p.faces)
         .or(contacts.next_pair);
+    let mut inverse_shear = None;
     if !contacts.all_pairs_qualified
         || contacts.next_pair.is_some()
         || contacts.pairs.len() != contacts.total_pairs
     {
-        return Ok(out);
+        let Some((axes, coefficient, replay)) = proposal else {
+            return Ok(out);
+        };
+        if out.exact_work >= limits.exact_work
+            || out.spans >= limits.spans
+            || out.linear_cells > limits.linear_cells
+        {
+            return Ok(out);
+        }
+        let transported = crate::source_inverse_shear::transport_shell(
+            &shell,
+            axes,
+            coefficient,
+            replay,
+            limits.exact_work - out.exact_work,
+        )?;
+        out.exact_work += transported.exact_work;
+        let Some(inverse) = transported.shell else {
+            out.reason = transported.reason;
+            return Ok(out);
+        };
+        // Root and edge identity must preserve the original incidence ownership.
+        if inverse.vertices() != shell.vertices()
+            || inverse.uses() != shell.uses()
+            || inverse.faces().len() != shell.faces().len()
+        {
+            return Ok(out);
+        }
+        if out.exact_work >= limits.exact_work || out.driver_cells >= limits.driver_cells {
+            return Ok(out);
+        }
+        let checked = qualify(
+            inverse,
+            Limits {
+                tolerance_uv: limits.tolerance_uv,
+                corners: limits.corners,
+                spans: limits.spans - out.spans,
+                linear_cells: limits.linear_cells - out.linear_cells,
+                pairs: crate::face_contacts::Limits {
+                    pairs: limits.pairs.pairs,
+                    cells: limits.pairs.cells,
+                    domain_cells: limits.pairs.domain_cells,
+                    cells_per_pair: limits.pairs.cells_per_pair,
+                    domain_cells_per_pair: limits.pairs.domain_cells_per_pair,
+                },
+                exact_work: limits.exact_work - out.exact_work,
+                driver_cells: limits.driver_cells - out.driver_cells,
+            },
+        )?;
+        out.exact_work += checked.exact_work;
+        out.spans += checked.spans;
+        out.linear_cells += checked.linear_cells;
+        out.driver_cells += checked.driver_cells;
+        let Some(inverse) = checked.geometry else {
+            out.reason = checked.reason;
+            return Ok(out);
+        };
+        // A single globally bijective F(x)[height]=x[height]+k*x[driver]^2
+        // maps every freshly proven inverse face and restriction to its original.
+        // Therefore disjointness and precisely owned contacts transfer unchanged.
+        inverse_shear = Some(InverseShearContacts {
+            axes,
+            coefficient,
+            inverse: Box::new(inverse),
+        });
+        out.next_pair = None;
     }
     out.geometry = Some(Geometry {
         shell,
         topology,
         charts,
         contacts,
+        inverse_shear,
     });
     out.reason = "source-shell-embedded-geometry-qualified";
     Ok(out)

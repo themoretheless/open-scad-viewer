@@ -2840,3 +2840,81 @@ native APIs are not routed through worker/WASM; the shipped artifact is unchange
 Regression checks passed: nine shell tests (9.87 s), inverse-chart test, and
 the curved transport/embedding test with preserved vertex ownership, two root
 replays and exhausted exact region work refusal (0.26 s).
+
+### Original curved Body admission through inverse contacts — native stage
+
+An explicit inverse-shear proposal now replays every inverse chart/region/root,
+checks identical original/inverse incidence ownership, and qualifies the complete
+inverse Geometry with bounded remaining exact/chart/contact work. A single global
+bijective shear therefore transfers disjointness and owned contacts to the
+original source shell. The private Geometry retains the inverse proof separately
+from primary contact diagnostics; primary contacts alone still refuse this
+fixture. No public diagnostic report or saved certificate authorizes Geometry.
+
+Fresh original flux integration admits the curved Body with volume bounds
+[0.15484635370860397, 0.17483001747559201], containing the independent determinant-one
+shear volume 1/6. Contact admission used 312569 exact work units and 56 spans.
+Original Body persistence stores only axes/coefficient in `inverseShear`; restore
+rechecks incidence, exact inverse equations, regions, roots, contacts and volume.
+Wrong coefficient 0.5 and omitted recipe both refuse. Body definition replay
+is identical. Native admission/replay test passed in 11.47 s. Nine shell tests
+passed, the capped-canal body regression passed (66.80 s), and the JSON bridge
+regression passed (10.32 s). Vue/MCP type checks passed.
+
+The worker protocol now binds optional inverse recipe axes/coefficient to the
+request identity and rejects invalid axes/nonfinite coefficients. Fourteen
+filtered protocol/display tests passed (25 deliberately skipped), including
+recipe binding. `source-curved-shear-body-request.json.gz` stores original inputs
+for a new real worker/archive/history scenario; it has not yet run on fresh WASM.
+The new WASM build is still optimizing and this stage is not pushed. Browser,
+worker, cold lifecycle, STEP, closed mesh, geometric editing and general NURBS/
+fillet body admission remain unqualified. This family is one common quadratic
+shear of affine charts; it does not cover arbitrary curved face contacts.
+
+The inverse recipe lifecycle test passes: changing only coefficient 0.25 to
+0.5 snapshots the new request, cancels and terminates the previous worker, and
+ignores its captured late callback. Request identity validation also passes.
+Two tests passed, six skipped (filtered run). The first harness assertion used
+the wrong request envelope (options instead of job.options); corrected test
+and original failure evidence are retained. Fresh WASM acceptance remains pending.
+
+### Curved Body through shipped WASM, worker and browser
+
+WASM build finished and packaging returned terminal success before acceptance:
+SHA-256 54c4136e50aa767ad0ad5557068cc0f7fc312ea1040a3623869a05834f0d35f1,
+11,695,280 bytes. All 46 real worker/archive/display/client tests passed
+(10.47 s), including the curved Body, inverse recipe result binding, wrong
+coefficient refusal, document restoration and metadata Undo/Redo/reload.
+The curved restore measured 939.80 ms host elapsed; its full scenario measured
+5156.75 ms. These single-run host values do not isolate Rust execution or UI
+rendering and do not prove cold lifecycle or large-scene performance.
+
+The production browser accepted the curved Body with seven edges, 80 preview
+triangles and 132 explicitly unresolved face rectangles. Mouse and keyboard
+selection, Retry, reload, visibility persistence, locking, isolation, selection
+handoff and manufacturing restriction passed with no page errors. CPU/SVG
+screenshot was inspected; no WebGPU or closed mesh qualification. Vue/MCP type
+checks passed. Distribution audit passed for 151 artifacts: 8,178,675 asset bytes
+plus 14,991,672 raw WASM bytes. Geometry chunk grew 10004 bytes to 3,899,016;
+worker grew 260 bytes to 156737. Budgets preserve previous bounded margins.
+
+### Fresh root refinement toward STEP — native only
+
+`source_root_refinement::qualify` freshly replays nested original selectors
+until the world enclosure's outward L1 diameter upper bound is below the
+requested tolerance. Both fresh and original roots lie inside the original
+Unique selector, so uniqueness proves identity. Original recipe storage remains
+unchanged; no selected Cartesian coordinate, Model vertex or weld is issued.
+Work exhaustion, stagnant bounds and unproven selectors refuse. Tests cover
+sqrt(1/2) at 1e-8 and every Crossing endpoint of the admitted curved Body at
+1e-7. Native root test and curved Body/replay/refinement test passed (11.39 s).
+The first compile attempted an unavailable interval sqrt API; the final bound
+uses outward L1 widths and is conservative for Euclidean diameter. Failure
+evidence is retained. This new native helper is not routed through WASM/UI.
+
+The current native/shipped Body class remains a common quadratic shear of
+affine charts. General curved NURBS contacts, fillet construction/end transitions,
+STEP/closed mesh export, geometric Undo/Redo, whole-wall qualification, named
+part acceptance, full P0 and P2/P3 remain open. Earlier pending/unqualified
+statements above describe their historical stages; this section supersedes
+those only for this precisely tested shear family and worker/browser path.
