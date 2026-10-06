@@ -3006,3 +3006,31 @@ geometry grew 16692 bytes to 3915708 and worker grew 998 to 157735. Asset total
 grew 18688 bytes; budgets preserve the previous bounded margins. New UI
 export, named-part acceptance, general fillets, geometric Undo/Redo, P0 and
 P2/P3 remain unqualified.
+
+
+### New editor source-body STEP action
+
+The File menu exports the selected source Body with a positive numeric
+tolerance in mm. A separate worker freshly restores original recipes and
+prepares native STEP. Cancel terminates that worker; scene/selection/tolerance
+changes and closing/unmounting the editor invalidate the pending generation.
+Only a matching live scene and selected original record can download. Errors
+show a next action, native detail and Retry. Long File menus now scroll inside
+the viewport. Existing assembly/manufacturing restrictions stay separate.
+
+The production browser on the curved control passed mouse and keyboard edge
+selection, Enter export, cancellation with no download, invalid tolerance,
+Retry, corrected tolerance and one downloaded STEP. Existing source display,
+reload, visibility, locking, isolation and manufacturing checks also passed;
+no page errors. File controls screenshot was inspected after the scroll fix.
+Independent OCCT read the UI download as valid one-solid B-rep, 4 faces,
+7 edges, 5 vertices, volume 0.16666666666666663 mm³ and analytic vertex
+coordinates within 1e-7 mm. Vue type check passed. Distribution audit passed:
+151 artifacts, 8199738 asset bytes + 15040876 raw WASM bytes. DirectModeler
+grew 2329 bytes to 419618; CSS added 46 bytes. Bounded margins retained.
+WASM remains bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f.
+
+This supersedes the previous pending editor export statement for this tested
+control and source-carrier action. It does not qualify arbitrary curved
+fillets, geometry edits, named parts, closed preview mesh, full P0 or P2/P3.
+Browser evidence uses CPU/SVG fallback; WebGPU is not qualified here.
