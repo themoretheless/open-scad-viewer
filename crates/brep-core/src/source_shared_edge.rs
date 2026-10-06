@@ -1790,4 +1790,32 @@ mod tests {
         assert!(qualify(&damaged,[&a,&b],[false,true],1_000_000).unwrap().edge.is_none());
     }
 
+    #[test]
+    fn curved_support_charts_share_original_root_ended_world_edge() {
+        // Distinct curved NURBS sheets z=u^2+v, y=+/-v share v=0.
+        let surface=|sign:f64|Surface{degree_u:2,degree_v:1,periodic_u:false,periodic_v:false,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![-1.,-1.,1.,1.],
+            control_points:vec![vec![vec![0.,-sign,-1.],vec![0.,sign,1.]],
+                vec![vec![0.5,-sign,-1.],vec![0.5,sign,1.]],vec![vec![1.,-sign,0.],vec![1.,sign,2.]]],
+            weights:vec![vec![1.;2];3]};
+        let main=Curve{degree:2,periodic:false,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.],vec![0.5,0.],vec![1.,0.]],weights:vec![1.;3]};
+        let cutter=Curve{control_points:vec![vec![0.,-0.5],vec![0.5,-0.5],vec![1.,0.5]],..main.clone()};
+        let mut other_main=main.clone();other_main.control_points.reverse();
+        let mut other_cutter=cutter.clone();for p in &mut other_cutter.control_points{p[1] = -p[1];}
+        let sa=surface(1.);let sb=surface(-1.);
+        let pa=crate::source_contact_point::qualify(&sa,&main,&cutter,[[0.7,0.71],[0.7,0.71]],1000).unwrap();
+        let pb=crate::source_contact_point::qualify(&sb,&other_main,&other_cutter,[[0.29,0.3],[0.7,0.71]],1000).unwrap();
+        let a=Fragment::new(&sa,&main,Endpoint::Parameter(0.),Endpoint::Crossing{point:pa.point.expect(pa.reason),role:Role::Boundary}).unwrap();
+        let b=Fragment::new(&sb,&other_main,Endpoint::Crossing{point:pb.point.expect(pb.reason),role:Role::Boundary},Endpoint::Parameter(1.)).unwrap();
+        let world=Curve{control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,0.,1.]],..main.clone()};
+        let r=qualify(&world,[&a,&b],[false,true],1_000_000).unwrap();
+        let edge=r.edge.expect(r.reason);assert!(r.root_checks>0);
+        let range=edge.uses()[0].parameter_bounds()[1];
+        assert!(range[0]<std::f64::consts::FRAC_1_SQRT_2&&range[1]>std::f64::consts::FRAC_1_SQRT_2);
+        assert_eq!(edge.uses()[0].definition(),a.definition());assert_eq!(edge.uses()[1].definition(),b.definition());
+        let mut wrong=world.clone();wrong.control_points[1][2]=1e-12;
+        assert!(qualify(&wrong,[&a,&b],[false,true],1_000_000).unwrap().edge.is_none());
+    }
+
 }

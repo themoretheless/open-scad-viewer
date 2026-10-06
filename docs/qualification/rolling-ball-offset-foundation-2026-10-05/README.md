@@ -4798,3 +4798,15 @@ edge coincidence but remains the listed fixtures: the curved-carrier fixture
 uses planar support charts. It does not establish arbitrary NURBS support
 charts, all shared trimmed restrictions, general complex corners, or closed
 fillet-body and named-part acceptance. No broad completion is inferred.
+
+
+## Distinct curved support charts with an irrational shared end
+
+Added native original-root fixture on distinct polynomial NURBS surfaces
+x=u, y=+/-v, z=u^2+v. Their common curved world edge is (t,0,t^2),
+restricted from 0 to the freshly isolated original crossing t=1/sqrt(2),
+with opposite directed use on the second chart. Exact original definitions
+and root interval are retained. Changing the world middle Z control by 1e-12
+refuses shared-edge admission. Test passes; no rounded fitted replacement is
+used. This qualifies that noncoplanar curved-support fixture, not arbitrary
+rational NURBS supports, mixed-radius corners or closed fillet-body acceptance.
