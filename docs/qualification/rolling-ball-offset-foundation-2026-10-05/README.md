@@ -4754,3 +4754,17 @@ immediate Cancel clears the result. A new keyboard Check after cancellation
 returns the same refusal; details expand to the same counts. Screenshot retained.
 This verifies that browser scenario only, not the full P0 command matrix or
 whole material thickness, named-part STEP acceptance, or remaining geometry.
+
+
+## Native shared-boundary gap scheduling
+
+Whole-wall coverage now skips full-chart clearance subdivision for faces
+with admitted shared edge uses unless an independent normal/coplanar exclusion
+already qualifies them. Skipping is never a wall certificate: these pairs
+remain unresolved. This reserves gap work for faces without shared edge uses.
+Original annular regression passes in 30.67 seconds at the unchanged budget:
+legacy unresolved pairs decrease from 258 to 257; adaptive composition from
+256 to 255, retaining 16/27 self facts and 653 normal spans. Both global reports
+still refuse. This latest scheduler change is native only; packaged WASM,
+worker exact expectations and browser currently correspond to the previous
+checkpoint. Cuboid regression and final package acceptance remain pending.

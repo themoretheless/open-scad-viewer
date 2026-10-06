@@ -192,7 +192,16 @@ pub fn qualify_with_self_facts<'a>(
                         pair.proven = true;
                     }
                 }
-                if !pair.proven && out.cells < limits.gap.cells && out.spans < limits.gap.spans {
+                // An admitted shared boundary prevents full-chart clearance from
+                // establishing a positive wall threshold for this pair. Keep it
+                // unresolved unless normal exclusion already succeeded; reserve
+                // gap subdivision for distinct faces without shared edge uses.
+                // This scheduling exclusion is never a thickness certificate.
+                let adjacent = body.geometry().shell().uses().iter().any(|uses| {
+                    (uses[0].face == a && uses[1].face == b)
+                        || (uses[0].face == b && uses[1].face == a)
+                });
+                if !pair.proven && !adjacent && out.cells < limits.gap.cells && out.spans < limits.gap.spans {
                     let r = source_face_gap::qualify(
                         body,
                         [&[a], &[b]],
