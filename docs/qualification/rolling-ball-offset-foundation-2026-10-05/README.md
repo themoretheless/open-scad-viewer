@@ -3423,3 +3423,58 @@ passes (15.23 s). Capped body independent analytic volume and fresh restore
 regression passes (88.44 s); its interval [37.52914969854688,37.77914345395185]
 contains the independent value 37.645933842430814. These concurrent local
 test runtimes are not performance comparisons or annular volume evidence.
+
+
+## Original annular Body volume through closed carrier Green flux
+
+The existing 2D trimmed-domain flux search exhausted 99,999 cells/spans and
+1,000,000 classification cells at requested 20 mm3 error; its broad interval
+[6891.509073457432,7231.33740643522] did not authorize Body admission. The
+terminal failed initial test is retained. A native planar flux path now uses
+Green's theorem on privately owned original world boundary carriers when
+all surface coefficients share the requested flux coordinate. It requires
+literal complete source endpoints, direct complete SharedEdges, unchanged
+positive clamped single-Bezier carrier definitions and exact closed joins.
+Projection copies the two original complementary coordinates and weights;
+direction reverses coefficient order without recomputing authored knots.
+All oriented loops, including holes, contribute their signed area. The
+constant coordinate minus origin multiplies the outward interval area.
+A coordinate identical to origin has provably zero flux. Unsupported
+root/mapped/multispan carriers or curved surfaces retain the previous gate.
+
+Green interval work is charged to both volume cell and span budgets. Fixed
+full-face bounds are excluded from surface subdivision; the final global
+width/sign test still decides admission. A coarse or exhausted area bound
+never skips that test. Native annular admission now yields positive Body
+orientation and volume [7061.341216618879,7061.591214207668] mm3, width under
+0.25 mm3, using 28,287 cells/spans and zero 2D domain cells. This is one
+specified original coefficient fixture, not arbitrary fillet qualification.
+
+The independent Python verifier evaluates original rational Bernstein
+coefficients with Gauss quadrature and uses boundary flux only for horizontal
+affine trimmed planes. Exact binary-rational XY rank proves zero Z flux for
+vertical trimmed planes; unsupported tilted trims refuse. At orders 16,
+32 and 64 the numerical values are 7061.457370838773,7061.457370838772 and
+7061.4573708387725 mm3, maximum difference 9.1e-13 mm3. The value lies inside
+the native interval. Floating convergence is not a rigorous quadrature error
+bound, STEP-reader proof, or source-edit/radius/tangency certificate. The
+coefficient fixture and SHA-linked verifier result are retained.
+
+Negative tests keep curved fallback and insufficient-work refusal, and prove
+zero flux on the original bottom coordinate plane without sampling. Flat
+irrational-root body/topology and curved root/body/volume regressions pass.
+The current source STEP writer explicitly refuses pole-bearing bodies;
+this annulus has two poles and still requires explicit degenerate exchange
+topology. Packaged WASM/UI, full fillet/wall diagnostics, named-part and P0
+acceptance remain outstanding.
+
+Native annular restore recomputes original shell, embedding and volume even
+when the saved value adds false volume [1,1], success=true and reversed
+orientation=true claims. The restored source definition, vertex identities,
+orientation and volume interval exactly match the admitted original body.
+This regression passes (84.66 s). It does not establish UI Undo/Redo, crash
+recovery or multiple-tab behavior.
+
+Final positive-weight/single-Bezier guarded Body and fresh restore test
+passes; its terminal log is retained. The final independent quadrature
+was rerun against the emitted original coefficient fixture and passes.

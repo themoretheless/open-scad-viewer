@@ -130,6 +130,89 @@ mod tests {
             exact_work: 100_000_000,
         }
     }
+    fn geometry_limits() -> crate::source_shell_geometry::Limits {
+        crate::source_shell_geometry::Limits {
+            tolerance_uv: 1e-8,
+            corners: 10000,
+            spans: 100000,
+            linear_cells: 100000,
+            exact_work: 100_000_000,
+            driver_cells: 100000,
+            pairs: crate::face_contacts::Limits {
+                pairs: 10000,
+                cells: 10000,
+                domain_cells: 100000,
+                cells_per_pair: 32,
+                domain_cells_per_pair: 512,
+            },
+        }
+    }
+    #[test]
+    fn annular_planar_flux_keeps_budget_and_curved_fallback_guards() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        assert!(crate::source_planar_flux::bound(&geometry,0,2,0.,0.01,1000).unwrap().bound.is_none());
+        assert!(crate::source_planar_flux::bound(&geometry,1,2,0.,0.01,1).unwrap().bound.is_none());
+        let zero=crate::source_planar_flux::bound(&geometry,4,2,0.,0.01,1).unwrap();
+        assert_eq!(zero.cells,0);
+        let zero=zero.bound.unwrap();assert_eq!([zero.lo,zero.hi],[0.,0.]);
+        let limited=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,cells:1,spans:1,domain_cells:1,
+        }).unwrap();
+        assert!(limited.body.is_none());assert!(limited.cells<=1 && limited.spans<=1);
+    }
+    #[test]
+    fn annular_original_geometry_admits_volume_and_orientation() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let r=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,
+            cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap();
+        eprintln!("annular volume {} bounds={:?} cells={} spans={} domain={} face={:?}",r.reason,r.signed_bounds,r.cells,r.spans,r.domain_cells,r.uncertain_face);
+        let body=r.body.expect("embedded original annulus must admit bounded volume");
+        eprintln!("annular body volume {:?} reverse={}",body.volume(),body.reverse_orientation());
+        let independent=7061.4573708387725_f64;
+        assert!(body.volume()[0]<=independent && independent<=body.volume()[1]);
+        assert!(!body.reverse_orientation());
+        assert!(body.volume()[0]>0. && body.volume()[1]-body.volume()[0]<=0.25);
+        let original=body.definition().unwrap();
+        let mut saved=original.clone();
+        saved["volume"]=value_codec::json!([1.,1.]);
+        saved["success"]=value_codec::json!(true);
+        saved["reverseOrientation"]=value_codec::json!(true);
+        let replay=crate::source_body_restore::restore(saved,crate::source_body_restore::Limits {
+            shell:crate::source_shell_restore::Limits {
+                regions:crate::source_region_restore::test_limits(),exact_work:100_000_000,driver_cells:100000,
+            },
+            embedding:geometry_limits(),
+            volume:crate::source_volume::Limits {
+                axis:2,origin:0.,absolute_error:0.25,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+            },
+        }).unwrap();
+        let recovered=replay.body().expect("original annular body must freshly restore all gates");
+        assert_eq!(recovered.definition().unwrap(),original);
+        assert_eq!(recovered.volume(),body.volume());
+        assert_eq!(recovered.reverse_orientation(),body.reverse_orientation());
+        assert_eq!(recovered.geometry().shell().vertices(),body.geometry().shell().vertices());
+        if let Some(path)=std::env::var_os("CAD_ANNULAR_ORIGINAL_FLUX_OUTPUT") {
+            let faces=body.geometry().shell().regions().unwrap().iter().map(|r| {
+                let loops=r.loops().iter().map(|wire|wire.iter().map(|f| {
+                    let endpoints=f.endpoints().each_ref().map(|e|match e {
+                        crate::source_boundary_fragment::Endpoint::Parameter(t)=>*t,
+                        _=>panic!("independent fixture requires original literal endpoints"),
+                    });
+                    value_codec::json!({"curve":f.curve(),"parameters":endpoints})
+                }).collect::<Vec<_>>()).collect::<Vec<_>>();
+                value_codec::json!({"surface":r.loops()[0][0].surface(),"wholeChartMaterial":r.whole_chart_material(),"chartWinding":r.chart_winding(),"loops":loops})
+            }).collect::<Vec<_>>();
+            let fixture=value_codec::json!({"schema":"cad-original-annular-flux/1","faces":faces,"nativeVolumeBounds":body.volume()});
+            std::fs::write(path,value_codec::to_string_pretty(&fixture).unwrap()).unwrap();
+        }
+
+    }
     #[test]
     fn annular_outer_wall_bottom_contact() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
@@ -293,21 +376,7 @@ mod tests {
                 );
                 let geometry = crate::source_shell_geometry::qualify(
                     shell,
-                    crate::source_shell_geometry::Limits {
-                        tolerance_uv: 1e-8,
-                        corners: 10000,
-                        spans: 100000,
-                        linear_cells: 100000,
-                        exact_work: 100_000_000,
-                        driver_cells: 100000,
-                        pairs: crate::face_contacts::Limits {
-                            pairs: 10000,
-                            cells: 10000,
-                            domain_cells: 100000,
-                            cells_per_pair: 32,
-                            domain_cells_per_pair: 512,
-                        },
-                    },
+                    geometry_limits(),
                 )
                 .unwrap();
                 eprintln!(

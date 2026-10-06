@@ -1925,3 +1925,5 @@ pub mod source_ruled_projection_contact;
 pub mod source_planar_material_hull;
 
 pub mod source_corner_plane_image;
+
+pub(crate) mod source_planar_flux;
