@@ -3547,3 +3547,22 @@ root endpoints and reversed partial carriers. Existing moving-radius
 authoring regression passes. Terminal logs are retained. This does not
 qualify general fillets, complete wall thickness, packaged WASM/UI,
 named-part acceptance or the remaining P0/P2/P3 scope.
+
+
+## Bounded endpoint normal diagnostics
+
+Regular seam qualification now checks both literal full-carrier endpoints
+before adaptive interval subdivision. An unresolved endpoint normal returns
+source-seam-endpoint-normal-unresolved with a point canonical interval;
+this is incomplete qualification, not a geometric defect certificate.
+Root endpoint enclosures and affine carrier ranges keep the original
+whole-interval path because their enclosure endpoints are not exact
+source representatives. All work remains charged to the same limits.
+The singular endpoint regression now requires the diagnostic in one cell.
+All five seam regressions pass, including rooted and reversed partial
+carriers. This does not provide one-sided pole limit normal certificates.
+
+The final annular Body radius/seam regression passes. Middle rail bounds
+remain unchanged; endpoint preflight adds two cells to each accepted rail.
+The four collapsed-end rails report canonical 0 or 1 in one or two cells.
+Both final terminal logs are retained. WASM/UI packaging remains pending.

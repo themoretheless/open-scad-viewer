@@ -88,6 +88,14 @@ pub fn qualify(edge: &SharedEdge, limits: Limits) -> Result<Report> {
     let hi = ends.iter().map(|r| r[1]).fold(f64::NEG_INFINITY, f64::max);
     let coverage = map(edge, 0, I::new(lo, hi)?)?.intersect(0., 1.)?;
     let mut queue = vec![[coverage.lo, coverage.hi]];
+    // Only literal full-carrier endpoints have exact canonical representatives.
+    // Root enclosures and affine ranges retain whole-interval qualification.
+    if edge.ranges().is_none()
+        && edge.uses().iter().all(|f| f.parameter_bounds().iter().all(|r| r[0] == r[1]))
+    {
+        queue.push([coverage.hi, coverage.hi]);
+        queue.push([coverage.lo, coverage.lo]);
+    }
     let mut out = Report {
         seam: None,
         cells: 0,
@@ -150,6 +158,10 @@ pub fn qualify(edge: &SharedEdge, limits: Limits) -> Result<Report> {
             return Ok(out);
         }
         if r.reason == "span-limit" {
+            return Ok(out);
+        }
+        if q[0] == q[1] {
+            out.reason = "source-seam-endpoint-normal-unresolved";
             return Ok(out);
         }
         let mid = q[0] * 0.5 + q[1] * 0.5;
@@ -393,6 +405,8 @@ mod tests {
         budget.cells = 32;
         let report = qualify(&edge, budget).unwrap();
         assert!(report.seam.is_none());
+        assert_eq!(report.reason, "source-seam-endpoint-normal-unresolved");
+        assert_eq!(report.cells, 1);
         let uncertain = report.uncertain_canonical.unwrap();
         assert!(uncertain[0] <= 0. && uncertain[1] >= 0.);
     }
