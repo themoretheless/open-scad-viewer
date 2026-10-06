@@ -4000,3 +4000,22 @@ This proves explicit selected flat wall groups through WASM/worker/UI.
 Whole-body wall discovery, adaptive thin-region coverage, measured chord
 scene coordinates, full command matrix and arbitrary fillet geometry are
 still open. Production bundle size verification remains a separate gate.
+
+
+## Source wall production distribution gate
+
+Vite production build completes. The first distribution check rejects
+DirectModeler at 429949 bytes against its prior 423742 limit. Measured
+new artifacts: geometry packed chunk 3962910 bytes, mainSolid worker
+161534 bytes, DirectModeler JS 429949 bytes, total assets 8265356 bytes.
+The selected wall native/transport/UI addition increases assets 21879
+bytes from the prior 8243477 baseline. Named budgets are adjusted only
+for these changed artifacts, retaining prior margins: geometry 608 bytes,
+worker 123, DirectModeler 511, asset total 761. Other limits remain intact.
+
+The final verifier passes all 151 artifacts, packed/raw module validity,
+unique packed payload and source identity: 8265356 asset bytes plus
+15168607 raw WASM bytes = 23433963 distributed bytes. Both initial
+rejection and successful terminal logs are retained. This is distribution
+size/integrity proof; it does not qualify full wall coverage, runtime
+latency distributions, geometric editing or the remaining full goal.
