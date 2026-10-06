@@ -4437,3 +4437,20 @@ partial enumeration refusal, null lower bound, request binding and six invalid
 work-limit cases before restoration. Log retained. This bridge addition is
 not yet included in packaged WASM or TS/worker/UI, and does not prove general
 curved self-face coverage.
+
+
+## Continuous coverage TypeScript transport
+
+SourceBody options, expectation and result validation carry optional
+wallCoverage independently of wallScan. Transport checks bind the canonical
+request, native work counters and all lexicographically ordered original
+face pairs including diagonals. Qualified responses require complete
+enumeration with every pair proven and lowerMm exactly equal to the requested
+threshold. Refusals require null lowerMm and matching completeness reason.
+Unrequested certificates and coverage on refused bodies are rejected.
+
+Nine coverage/scan/wall transport tests pass in 130 ms, including sparse or
+wrong pairs, altered request/threshold, budget overflow and partial refusal.
+Direct vue-tsc and MCP tsc checks pass. Native geometry packaging started by
+npm pretypecheck remains running; real packaged worker acceptance and UI
+coverage controls are not yet verified. Logs retained for completed checks.
