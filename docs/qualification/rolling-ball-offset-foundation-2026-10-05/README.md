@@ -3478,3 +3478,44 @@ recovery or multiple-tab behavior.
 Final positive-weight/single-Bezier guarded Body and fresh restore test
 passes; its terminal log is retained. The final independent quadrature
 was rerun against the emitted original coefficient fixture and passes.
+
+
+## Explicit original pole STEP topology and independent OCCT qualification
+
+Source STEP preparation now admits privately proved collapsed UV boundaries
+with literal parameter endpoints. Each original UV carrier and source
+surface is emitted unchanged as a trimmed PCURVE; EDGE_CURVE references
+that PCURVE and the same original source vertex at both ends. It has no
+new surrogate 3D carrier. Face loops retain the directed pole boundary.
+The 2D definitional context explicitly includes PARAMETRIC_REPRESENTATION_CONTEXT.
+The reference schema describes PCURVE as a curve with a basis surface and
+2D definitional curve: https://www.steptools.com/docs/stp_aim/html/t_pcurve.html .
+The independent OCCT writer was inspected on cone/Bezier pole controls;
+its omission of pole edges did not substitute for this explicit topology.
+
+Two literal pole endpoints each are reserved within the unchanged global
+trim-work cap. Insufficient positive work returns no candidate; zero or
+work beyond 10,000,000 refuses. Root-valued pole trims still explicitly
+refuse pending independent parameter representatives. Existing original
+rooted shared-carrier preparation remains unchanged. The native annular
+candidate has 27 faces, 55 edges (53 shared carriers plus two poles), 26
+vertices and endpoint error upper 2.2026824808563116e-13 mm.
+
+Independent OCCT reads the final candidate as one valid solid with all
+27 faces, 55 unique edges, 26 unique vertices and exactly two degenerate
+edges. Both poles match (20,0,6) and (0,20,6) mm exactly. Volume is
+7061.457372466771 mm3, differing from independent original-coefficient
+quadrature by 1.6279982446576469e-6 mm3. Maximum extent difference from
+[-20,-20,0,20,20,6] mm is 1.0000001182675078e-7 mm. STEP and SHA-linked
+verifier report are retained. This proves one specified source export,
+not arbitrary pole trims, geometric editing or named-part acceptance.
+
+A deliberate 0.1 mm pole vertex corruption keeps OCCT's general validity
+flag true but fails the verifier's explicit pole coordinate test. Both
+expected and observed pole sets are checked in both directions. Native
+budget tests, irrational-root body/topology/export regression and original
+coefficient serialization test pass. The TS response gate now expects STEP
+edge count = original shared carriers + pole count. Ten existing worker
+compatibility tests pass against the unchanged packaged WASM; they do not
+qualify this new native pole path in WASM or the browser. Fillet/wall
+qualification, new WASM/UI, named-part and full P0 acceptance remain open.

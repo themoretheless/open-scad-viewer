@@ -108,7 +108,7 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
    if(step.prepared){
     if(typeof step.text!=='string'||step.text.length>32*1024*1024||!step.text.startsWith('ISO-10303-21;\n')||!step.text.endsWith('END-ISO-10303-21;\n')
      ||!Number.isFinite(step.endpointErrorUpper)||step.endpointErrorUpper<0||step.endpointErrorUpper>e.stepTolerance!
-     ||step.edges!==e.edges.length||step.faces!==e.faces||!integer(step.vertices,2*e.edges.length+e.poles)||step.vertices<1)return false
+     ||step.edges!==e.edges.length+e.poles||step.faces!==e.faces||!integer(step.vertices,2*e.edges.length+e.poles)||step.vertices<1)return false
    }else if(step.text!==null||step.reason!=='source-step-preparation-unproven')return false
   }else if(step!=null)return false
   const rectangle=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(interval)

@@ -27,12 +27,10 @@ pub fn prepare(
     limits: endpoints::Limits,
     max_trim_work: usize,
 ) -> Result<Option<Candidate>> {
-    let shell = body.geometry().shell();
-    if !shell.poles().is_empty() {
-        return Err(invalid(
-            "Source pole STEP exchange needs explicit degenerate topology",
-        ));
+    if !(1..=10_000_000).contains(&max_trim_work) {
+        return Err(invalid("Choose bounded positive trim work"));
     }
+    let shell = body.geometry().shell();
     let regions = shell
         .regions()
         .ok_or_else(|| invalid("Original source regions required"))?;
@@ -40,7 +38,13 @@ pub fn prepare(
     let Some(points) = report.prepared else {
         return Ok(None);
     };
-    let Some(trims) = trims::prepare(body, &points, tolerance_mm, max_trim_work)? else {
+    let Some(pole_work) = shell.poles().len().checked_mul(2) else {
+        return Err(invalid("Pole trim count overflow"));
+    };
+    let Some(trim_work) = max_trim_work.checked_sub(pole_work).filter(|w| *w > 0) else {
+        return Ok(None);
+    };
+    let Some(trims) = trims::prepare(body, &points, tolerance_mm, trim_work)? else {
         return Ok(None);
     };
     let mut w = Writer::new();
@@ -55,7 +59,7 @@ pub fn prepare(
         .map(|f| emit_surface_source(&mut w, f[0].edges()[0].surface()))
         .collect::<Vec<_>>();
     let context2 =
-        w.emit("(GEOMETRIC_REPRESENTATION_CONTEXT(2)REPRESENTATION_CONTEXT('','2D'))".into());
+        w.emit("(GEOMETRIC_REPRESENTATION_CONTEXT(2)PARAMETRIC_REPRESENTATION_CONTEXT()REPRESENTATION_CONTEXT('','2D'))".into());
     let mut usages = BTreeMap::new();
     let mut edge_entities = Vec::new();
     for (index, restriction) in points.restrictions().iter().enumerate() {
@@ -94,6 +98,36 @@ pub fn prepare(
             "EDGE_CURVE('',#{},#{},#{sc},.T.)",
             vertices[&ids[0]], vertices[&ids[1]]
         )));
+    }
+    // A PCURVE preserves the nonconstant original UV image while its model
+    // image is the privately proved pole. No surrogate 3D curve is authored.
+    for (address, pole) in shell.poles() {
+        let source = pole.source();
+        let ids = shell.vertices()[address.face][address.wire][address.edge];
+        if ids[0] != ids[1] {
+            return Err(invalid("Pole vertex ownership differs"));
+        }
+        let parameters = source.endpoints().each_ref().map(|e| match e {
+            crate::source_boundary_fragment::Endpoint::Parameter(t) => Some(*t),
+            _ => None,
+        });
+        let [Some(a), Some(b)] = parameters else {
+            return Err(invalid(
+                "Root-valued pole trims need independent parameter representatives",
+            ));
+        };
+        let curve = emit_curve_source(&mut w, source.curve());
+        let trimmed = trim(&mut w, curve, [a, b]);
+        let rep = w.emit(format!(
+            "DEFINITIONAL_REPRESENTATION('',(#{trimmed}),#{context2})"
+        ));
+        let pc = w.emit(format!("PCURVE('',#{},#{rep})", surfaces[address.face]));
+        let vertex = *vertices
+            .get(&ids[0])
+            .ok_or_else(|| invalid("Missing original pole vertex"))?;
+        let index = edge_entities.len();
+        edge_entities.push(w.emit(format!("EDGE_CURVE('',#{vertex},#{vertex},#{pc},.T.)")));
+        usages.insert((address.face, address.wire, address.edge), (index, false));
     }
     let mut faces = Vec::new();
     for (face, wires) in shell.faces().iter().enumerate() {
