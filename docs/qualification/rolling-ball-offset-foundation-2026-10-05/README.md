@@ -4675,3 +4675,16 @@ stale facts. Cuboid test passes in 0.06 seconds. Terminal logs are retained.
 This checkpoint is native only. Packaged WASM, worker and UI still use the
 earlier whole-chart self exclusion. General material thickness, unresolved
 cross-face/trim/pole regions and the full fillet/P0/P2/P3 acceptance remain open.
+
+
+## Native bridge adaptive self work
+
+wallCoverage accepts optional adaptiveSelf original control/cell/span budgets,
+including per-face caps. All limits are validated before Body restoration.
+Certificates are recomputed in Rust against the restored immutable Body and
+consumed directly by whole-wall composition; request JSON cannot supply proof.
+The response binds the original request and includes per-face pending domains
+and counted work. Missing adaptiveSelf preserves previous behavior. Native
+JSON dispatch regression passes, including one-cell/span refusal and invalid
+zero values for every adaptive budget. Packaged WASM and TS/UI admission for
+this optional field remain pending; no browser acceptance is claimed here.
