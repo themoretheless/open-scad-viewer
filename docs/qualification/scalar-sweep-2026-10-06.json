@@ -29,9 +29,9 @@
   },
   "evidenceHashes": {
     "docs/qualification/scalar-sweep-2026-10-06/browser.json": "d1383584e08bdf64d03911058782672891f93fd61a5c08cc53a90d60ebe1cfc2",
-    "docs/qualification/scalar-sweep-2026-10-06/native-core.log": "daedcfed8e079060dfd0dc48b59259de500d8386e7ad485d4fa81d165fa10352",
-    "docs/qualification/scalar-sweep-2026-10-06/native-bridge.log": "5fc3c181e5829b0bb460e7b26d47fe605146da993e532e4a5d6d619f26e0d787",
-    "docs/qualification/scalar-sweep-2026-10-06/wasm-rush-regression.log": "c2c10b32f43459c50f6bccdcd0bf8190ecd8f20c08bd67d92d21201383861d17"
+    "docs/qualification/scalar-sweep-2026-10-06/native-core.txt": "daedcfed8e079060dfd0dc48b59259de500d8386e7ad485d4fa81d165fa10352",
+    "docs/qualification/scalar-sweep-2026-10-06/native-bridge.txt": "5fc3c181e5829b0bb460e7b26d47fe605146da993e532e4a5d6d619f26e0d787",
+    "docs/qualification/scalar-sweep-2026-10-06/wasm-rush-regression.txt": "c2c10b32f43459c50f6bccdcd0bf8190ecd8f20c08bd67d92d21201383861d17"
   },
   "checks": [
     "independent rational formula and derivative comparisons with different path/law domains and weights",

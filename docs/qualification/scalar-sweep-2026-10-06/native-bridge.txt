@@ -1,0 +1,147 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/nurbs-core)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3251:4
+     |
+3251 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3252:4
+     |
+3252 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3256:4
+     |
+3256 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3260:4
+     |
+3260 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `DistanceStopReason` is never used
+   --> nurbs-core/src/distance_bounds.rs:106:10
+    |
+106 | pub enum DistanceStopReason {
+    |          ^^^^^^^^^^^^^^^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/gordon_tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+   Compiling brep-core v0.1.0 (/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/brep-core)
+warning: function `progressive_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:562:8
+    |
+562 | pub fn progressive_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `progressive_affine_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:572:8
+    |
+572 | pub fn progressive_affine_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_authored_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:596:8
+    |
+596 | pub fn progressive_authored_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_guided_profile_body` is never used
+   --> brep-core/src/analytic/rational_loft.rs:622:8
+    |
+622 | pub fn progressive_guided_profile_body(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `progressive_body_laws` is never used
+   --> brep-core/src/analytic/rational_loft.rs:645:4
+    |
+645 | fn progressive_body_laws(
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `rational_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:176:8
+    |
+176 | pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `natural_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:182:8
+    |
+182 | pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `capped_loft_surfaces` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:193:8
+    |
+193 | pub fn capped_loft_surfaces(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `periodic_section_loft` is never used
+   --> brep-core/src/analytic/rational_loft_legacy.rs:232:8
+    |
+232 | pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling geometry-bridge v0.1.0 (/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `brep-core` (lib) generated 9 warnings
+warning: `geometry-bridge` (lib) generated 1 warning
+warning: `nurbs-core` (lib) generated 7 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 32.52s
+     Running tests/sweep_pipeline.rs (crates/target/debug/build/geometry-bridge/1bec6cfe5e6a67ba/out/sweep_pipeline-1bec6cfe5e6a67ba)
+
+running 7 tests
+test native_stream_release_cancels_owned_refinement ... ok
+test scalar_adapters_match_native_construction ... ok
+test native_constructor_converts_degree_laws_before_geometry ... ok
+test native_stream_retains_source_and_does_not_admit_exhausted_previews ... ok
+test native_profile_body_stream_matches_owned_station_topology ... ok
+test native_ownership_rejects_copies_mutation_and_exhausted_placement ... ok
+test accepted_miter_preview_remains_owned_until_final_certificates ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.57s
+
