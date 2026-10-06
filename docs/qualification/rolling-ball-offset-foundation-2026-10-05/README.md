@@ -4454,3 +4454,21 @@ wrong pairs, altered request/threshold, budget overflow and partial refusal.
 Direct vue-tsc and MCP tsc checks pass. Native geometry packaging started by
 npm pretypecheck remains running; real packaged worker acceptance and UI
 coverage controls are not yet verified. Logs retained for completed checks.
+
+
+## Whole-wall UI action and lifecycle checks
+
+The existing wall panel now has a separate Check whole wall action without
+selected face groups. It sends continuous coverage work, shows checked/total
+pair counts, reports private qualification or explicit refusal, and highlights
+unproven pairs (all faces when enumeration is incomplete). Generation, body,
+document, panel and disposal guards remain shared with scan/selected-wall
+commands. Parameter changes clear results; Cancel and Retry use the same worker.
+
+317 existing UI regressions pass in 97.08 seconds. Direct vue-tsc passes.
+A targeted mock-worker test passes, covering threshold-change cancellation,
+late reply rejection, explicit AbortController cancellation and Retry.
+A real original annular WASM coverage test has been added but has not run yet;
+packaging remains live. Actual browser coverage acceptance and global curved
+wall certification remain open. These checks do not claim the new browser
+action has already passed end-to-end acceptance.

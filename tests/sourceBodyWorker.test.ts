@@ -401,3 +401,47 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
  const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}})
  reply(ports[2]!,denied);expect(await retry).toEqual(denied)
 })
+
+it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
+ for(const pairs of [1,378]){
+  const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   limits:{pairs,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options})
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
+  const coverage=r.wallCoverage!;expect(coverage.request).toEqual(options.wallCoverage)
+  expect(coverage.totalPairs).toBe(378);expect(coverage.pairs).toHaveLength(pairs)
+  expect(coverage.enumerationComplete).toBe(pairs===378)
+  expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
+  if(pairs===378){
+   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(260)
+   expect(coverage.cells).toBe(1000);expect(coverage.normalSpans).toBe(642)
+   expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
+  }
+  const forged=structuredClone(r);forged.wallCoverage!.wholeWallQualified=true;forged.wallCoverage!.lowerMm=5.99
+  expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
+  const late={...options,wallCoverage:{...options.wallCoverage!,minimumMm:6.01}}
+  expect(validSourceBody(sourceBodyExpectation(late),r)).toBe(false)
+  results.push(coverage)
+ }
+ if(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_COVERAGE_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  elapsedMs:performance.now()-started,results,scope:'Continuous original all-pair coverage with explicit curved self-pair refusals.'},null,2)+'\n')
+},180000)
+
+it('cancels continuous coverage on threshold changes and ignores its late reply',async()=>{
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const wallCoverage={minimumMm:5.99,limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}}).catch(e=>e.code)
+ const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
+ const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage:{...wallCoverage,minimumMm:6.01}}})
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
+ reply(ports[1]!,denied);expect(await next).toEqual(denied)
+ const controller=new AbortController()
+ const pending=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}},{signal:controller.signal}).catch(e=>e.code)
+ controller.abort();expect(await pending).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
+ const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}})
+ reply(ports[2]!,denied);expect(await retry).toEqual(denied)
+})
