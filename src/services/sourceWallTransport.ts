@@ -44,21 +44,25 @@ export function validWall(e:SourceWallOptions|undefined,r:SourceWallResult|null|
    ||!e.groups.every((g,i)=>g.includes(c.uncertainFaces![i]!))
    ||!Array.isArray(c.uncertainUv)||c.uncertainUv.length!==2||!c.uncertainUv.every(q=>Array.isArray(q)&&q.length===2&&q.every(interval)))return false
  }
- if(r.witness!=null){
-  const w=r.witness
-  if(!r.qualified||!interval(w.lengthMm)||w.lengthMm[0]<0||!interval(r.intervalMm)||w.lengthMm[1]!==r.intervalMm[1]
-   ||!Array.isArray(w.line)||w.line.length!==2||![0,1].every(i=>{const p=w.line[i];return Array.isArray(p)&&p.length===3&&[0,1,2].every(k=>Number.isFinite(p[k]))})
-   ||w.line[1].every(n=>n===0)||!Array.isArray(w.endpoints)||w.endpoints.length!==2)return false
-  const [a,b]=w.endpoints
-  if(![0,1].every(i=>{const p=w.endpoints[i];return p&&count(p.face,Number.MAX_SAFE_INTEGER)&&interval(p.parameter)&&p.parameter[0]>=0&&p.parameter[1]<=1
-   &&Array.isArray(p.uv)&&p.uv.length===2&&[0,1].every(k=>interval(p.uv[k]))
-   &&Array.isArray(p.worldMm)&&p.worldMm.length===3&&[0,1,2].every(k=>interval(p.worldMm[k]))})
-   ||a.parameter[1]>=b.parameter[0]
-   ||!(e.groups[0].includes(a.face)&&e.groups[1].includes(b.face)||e.groups[1].includes(a.face)&&e.groups[0].includes(b.face)))return false
- }
+ if(r.witness!=null&&(!r.qualified||!interval(r.intervalMm)
+  ||!validWallWitness(r.witness,f=>e.groups[0].includes(f)||e.groups[1].includes(f))||r.witness.lengthMm[1]!==r.intervalMm[1]
+  ||!(e.groups[0].includes(r.witness.endpoints[0].face)&&e.groups[1].includes(r.witness.endpoints[1].face)
+    ||e.groups[1].includes(r.witness.endpoints[0].face)&&e.groups[0].includes(r.witness.endpoints[1].face))))return false
+
  if(r.qualified)return r.reason==='source-wall-searched-thickness-bounds-qualified'&&c.reason==='source-face-gap-qualified'
   &&s.attempts>s.refused&&interval(r.intervalMm)&&r.intervalMm[0]>=e.minimumMm
   &&r.converged===(nextUp(r.intervalMm[1]-r.intervalMm[0])<=e.toleranceMm)
  return r.intervalMm===null&&!r.converged&&(r.reason==='source-wall-clearance-unproven'&&c.reason!=='source-face-gap-qualified'
   ||r.reason==='source-wall-search-witness-unproven'&&c.reason==='source-face-gap-qualified'&&s.attempts===s.refused)
+}
+
+/** Shape and ownership checks; original geometric proof belongs to Rust. */
+export function validWallWitness(w:SourceWallWitness,owned:(face:number)=>boolean):boolean {
+ if(!w||!interval(w.lengthMm)||w.lengthMm[0]<0||!Array.isArray(w.line)||w.line.length!==2
+  ||![0,1].every(i=>{const p=w.line[i];return Array.isArray(p)&&p.length===3&&[0,1,2].every(k=>Number.isFinite(p[k]))})
+  ||w.line[1].every(n=>n===0)||!Array.isArray(w.endpoints)||w.endpoints.length!==2)return false
+ if(![0,1].every(i=>{const p=w.endpoints[i];return p&&count(p.face,Number.MAX_SAFE_INTEGER)&&owned(p.face)&&interval(p.parameter)&&p.parameter[0]>=0&&p.parameter[1]<=1
+  &&Array.isArray(p.uv)&&p.uv.length===2&&[0,1].every(k=>interval(p.uv[k]))
+  &&Array.isArray(p.worldMm)&&p.worldMm.length===3&&[0,1,2].every(k=>interval(p.worldMm[k]))}))return false
+ return w.endpoints[0].parameter[1]<w.endpoints[1].parameter[0]&&w.endpoints[0].face!==w.endpoints[1].face
 }

@@ -4295,3 +4295,21 @@ and no whole-wall claim; zero-attempt input is rejected before body restore.
 The complete source-body dispatch regression passes in 23.84 seconds.
 Terminal evidence retained. This change is native bridge only; TS response
 validation, packaged WASM/worker and UI scan controls remain pending.
+
+
+## Automatic wall scan TS transport contract
+
+SourceBody options/expectations/results now include optional wallScan. The
+request is deep-snapshotted and numeric work limits checked before dispatch.
+Returned requests, face ownership, exact bounded grid counts, visited faces,
+refused attempts and exhaustion are checked. thinFound must match a strict
+upper witness below the threshold; missing witnesses require all attempts
+refused. wholeWallQualified must remain false. Missing/unsolicited scans
+are rejected. Failed body restoration may not carry scan evidence.
+
+Original witness shape checks are shared with selected wall qualification,
+including sparse tuples and distinct owned endpoints. All 22 scan/wall/seam
+transport and existing real source-body worker tests pass in 16.81 seconds;
+vue-tsc passes. The existing real-worker runs use previous packaged WASM
+and do not request a scan. A new native scan WASM build is live; actual
+scan-through-worker and UI qualification remain pending.
