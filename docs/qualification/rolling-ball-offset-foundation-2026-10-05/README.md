@@ -3662,3 +3662,21 @@ identity checks remain enforced. Final verify-dist passes on 151 artifacts:
 8243477 asset bytes plus 15144041 raw WASM bytes = 23387518 total bytes.
 General geometry, pole limit tangency, wall checks, named-part and full
 P0/P2/P3 acceptance remain open. No root runtime 5175 change or push here.
+
+
+## Annular pole and regular rail browser acceptance
+
+The original annular document imports through the new WASM in isolated
+Vite 5188. Edge 0 selected by Enter produces the localized unresolved
+endpoint-normal message, canonical [0,0], one cell, and its SVG stroke
+changes to #ff9977. Retry immediately followed by selecting edge 6 clears
+the old pending state and diagnosis. A fresh edge 6 check displays
+whole-edge tangency confirmation, sine-squared upper
+2.3404439736769268e-26 and 17 cells. Screenshots and the original archive
+are retained. This exercises selection, localization and supersession on
+the annular Body; it does not prove endpoint limit tangency.
+The display separately reports 184 unresolved trimmed face tiles; these
+remain explicit preview coverage limits, not admitted material triangles.
+A browser STEP download observation timed out with no captured file;
+no browser STEP export success is claimed at this checkpoint. Existing
+native/OCCT pole STEP evidence remains separately scoped.
