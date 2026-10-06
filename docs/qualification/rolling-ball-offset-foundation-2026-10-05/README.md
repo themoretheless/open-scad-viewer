@@ -4182,3 +4182,13 @@ tests pass (80.23 seconds), and vue-tsc passes.
 A new WASM build is live. Positive original witness acceptance through real
 worker and browser rendering remains pending; the old packaged module
 provides no witness, so this overlay is not yet browser-qualified.
+
+
+## Sparse witness transport refusal
+
+Transport enumerates every required line coordinate, endpoint, UV interval
+and world-coordinate interval rather than accepting sparse Array.every
+iteration. Missing tuple members now return false instead of throwing or
+passing malformed data. Regression cases delete line/endpoint/UV/world
+entries. All five seam/wall transport tests pass (1.01 seconds), vue-tsc
+passes, terminal logs retained. The live witness WASM build remains pending.

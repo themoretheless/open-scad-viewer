@@ -47,12 +47,12 @@ export function validWall(e:SourceWallOptions|undefined,r:SourceWallResult|null|
  if(r.witness!=null){
   const w=r.witness
   if(!r.qualified||!interval(w.lengthMm)||w.lengthMm[0]<0||!interval(r.intervalMm)||w.lengthMm[1]!==r.intervalMm[1]
-   ||!Array.isArray(w.line)||w.line.length!==2||!w.line.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))
+   ||!Array.isArray(w.line)||w.line.length!==2||![0,1].every(i=>{const p=w.line[i];return Array.isArray(p)&&p.length===3&&[0,1,2].every(k=>Number.isFinite(p[k]))})
    ||w.line[1].every(n=>n===0)||!Array.isArray(w.endpoints)||w.endpoints.length!==2)return false
   const [a,b]=w.endpoints
-  if(!w.endpoints.every(p=>p&&count(p.face,Number.MAX_SAFE_INTEGER)&&interval(p.parameter)&&p.parameter[0]>=0&&p.parameter[1]<=1
-   &&Array.isArray(p.uv)&&p.uv.length===2&&p.uv.every(interval)
-   &&Array.isArray(p.worldMm)&&p.worldMm.length===3&&p.worldMm.every(interval))
+  if(![0,1].every(i=>{const p=w.endpoints[i];return p&&count(p.face,Number.MAX_SAFE_INTEGER)&&interval(p.parameter)&&p.parameter[0]>=0&&p.parameter[1]<=1
+   &&Array.isArray(p.uv)&&p.uv.length===2&&[0,1].every(k=>interval(p.uv[k]))
+   &&Array.isArray(p.worldMm)&&p.worldMm.length===3&&[0,1,2].every(k=>interval(p.worldMm[k]))})
    ||a.parameter[1]>=b.parameter[0]
    ||!(e.groups[0].includes(a.face)&&e.groups[1].includes(b.face)||e.groups[1].includes(a.face)&&e.groups[0].includes(b.face)))return false
  }

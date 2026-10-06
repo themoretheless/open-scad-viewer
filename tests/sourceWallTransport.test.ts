@@ -46,7 +46,11 @@ it('validates original endpoint witnesses and rejects foreign faces or malformed
   (x:SourceWallResult)=>{x.witness!.endpoints[0].worldMm[0]=[NaN,1]},
   (x:SourceWallResult)=>{x.witness!.endpoints[0].uv[0]=[1,0]},
   (x:SourceWallResult)=>{x.witness!.line[1]=[0,0,0]},
-  (x:SourceWallResult)=>{x.witness!.lengthMm=[5.99,7]}]){
+  (x:SourceWallResult)=>{x.witness!.lengthMm=[5.99,7]},
+  (x:SourceWallResult)=>{delete x.witness!.endpoints[0]},
+  (x:SourceWallResult)=>{delete x.witness!.line[1]},
+  (x:SourceWallResult)=>{delete x.witness!.endpoints[0].worldMm[1]},
+  (x:SourceWallResult)=>{delete x.witness!.endpoints[0].uv[0]}]){
   const bad=structuredClone(r);mutate(bad);expect(validWall(e,bad,key)).toBe(false)
  }
  r.qualified=false;expect(validWall(e,r,key)).toBe(false)
