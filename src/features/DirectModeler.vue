@@ -3661,6 +3661,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(true)">{{ label('Найти тонкие участки','Find thin regions') }}</button>
             <span v-if="sourceWallScanResult" role="status" data-source-wall-scan-result="true">
               {{ sourceWallScanResult.thinFound?label('Найден тонкий участок.','A thin region was found.'):label('Тонкий участок в проверенных пробах не найден.','No thin region was found in tested proposals.') }}
+              {{ sourceWallScanResult.proposalsExhausted?label('Заданные пробы выполнены.','The configured proposals are complete.'):label('Поиск остановлен по лимиту попыток.','Search stopped at the attempt limit.') }}
               {{ label('Безопасность всей стенки не подтверждена.','Whole-wall safety is unproven.') }}
               {{ sourceWallScanResult.witness?.lengthMm }} mm · {{ sourceWallScanResult.facesVisited }}/{{ sourceWallScanResult.facesTotal }} · {{ sourceWallScanResult.attempts }}
               <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(true)">{{ label('Повторить поиск','Retry search') }}</button>

@@ -4344,3 +4344,13 @@ minimum 0 and Enter on Find thin regions shows the explicit Russian positive
 minimum message, no pending/cancel state, aria-invalid=true and the linked
 source-wall-input-error alert. Actual screenshot retained; vue-tsc passes.
 The live scan WASM build and positive real scan acceptance remain pending.
+
+
+## Explicit finite scan completion text
+
+The scan UI separately names configured-proposal completion and stopping at
+the attempt limit. facesVisited alone includes a partially scanned final
+face and cannot represent completion. Both messages retain the explicit
+whole-wall safety limitation. vue-tsc passes; the existing transport tests
+cover the partial versus exhausted flags. Browser result acceptance remains
+pending the live WASM packaging.
