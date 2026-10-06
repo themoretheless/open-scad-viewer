@@ -1530,10 +1530,18 @@ dependencies = [
 name = "osv-math"
 version = "0.1.0"
 dependencies = [
+ "rbench",
+]
+
+[[package]]
+name = "osv-math-compute"
+version = "0.1.0"
+dependencies = [
  "compute-core",
  "compute-cuda",
  "compute-mlx",
  "gpu-compute",
+ "osv-math",
  "rbench",
  "tensor-core",
 ]
@@ -1580,6 +1588,7 @@ dependencies = [
  "compute-core",
  "gpu-compute",
  "osv-math",
+ "osv-math-compute",
  "rbench",
 ]
 

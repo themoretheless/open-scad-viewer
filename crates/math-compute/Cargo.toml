@@ -1,0 +1,75 @@
+[package]
+name = "osv-math-compute"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "GPU/CUDA/tensor backends for the osv-math point kernels"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
+publish = false
+
+[lib]
+name = "math_compute"
+path = "src/lib.rs"
+
+[features]
+# Portable batch vector/matrix kernels (wgpu compute shaders) for large point
+# sets; the CPU reference (`transform_points`) always stays available.
+gpu = ["tensor", "dep:gpu-compute", "dep:compute-core"]
+# CUDA driver-API port of the batch transform kernel; includes the wgpu path
+# as fallback.
+cuda = ["gpu", "gpu-compute/cuda"]
+# Shared resident geometry recipes; the contract crate has no native runtime.
+tensor = ["dep:tensor-core"]
+tensor-wgsl = ["gpu"]
+tensor-cuda = ["tensor", "dep:compute-cuda"]
+tensor-mlx = ["tensor", "dep:compute-mlx"]
+
+[dependencies]
+math-core = { package = "osv-math", path = "../math-core" }
+compute-core = { path = "../compute-core", optional = true }
+gpu-compute = { path = "../gpu-compute", optional = true }
+tensor-core = { path = "../tensor-core", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+compute-cuda = { path = "../compute-cuda", optional = true }
+compute-mlx = { path = "../compute-mlx", optional = true }
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_point_bounds"
+path = "examples/bench_point_bounds.rs"
+
+[[example]]
+name = "bench_point_moments"
+path = "examples/bench_point_moments.rs"
+
+[[example]]
+name = "bench_nearest_two"
+path = "examples/bench_nearest_two.rs"
+
+[[example]]
+name = "bench_chamfer"
+path = "examples/bench_chamfer.rs"
+
+[[example]]
+name = "bench_workgroup_tuning"
+path = "examples/bench_workgroup_tuning.rs"
+required-features = ["gpu"]
+
+[[example]]
+name = "resident_geometry"
+path = "examples/resident_geometry.rs"
+required-features = ["tensor"]
+
+[[example]]
+name = "bench_recorded_nearest"
+path = "examples/bench_recorded_nearest.rs"
+required-features = ["gpu"]
+
+[[example]]
+name = "bench_stable_stats"
+path = "examples/bench_stable_stats.rs"
+required-features = ["gpu"]
