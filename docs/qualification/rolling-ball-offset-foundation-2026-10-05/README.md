@@ -4472,3 +4472,15 @@ A real original annular WASM coverage test has been added but has not run yet;
 packaging remains live. Actual browser coverage acceptance and global curved
 wall certification remain open. These checks do not claim the new browser
 action has already passed end-to-end acceptance.
+
+
+## Original cuboid worker acceptance fixture
+
+The existing admitted cuboid test can export the immutable original Body
+definition through CAD_CUBOID_SOURCE_BODY_OUTPUT. The freshly exported fixture
+is retained without geometry metadata authority; restoration recomputes source
+incidence, embedding and volume. Native qualification passes in 0.07 seconds.
+A real worker test now covers positive 9.99 mm, negative 10.01 mm and incomplete
+20/21 pair cases on this fixture. This test has not run yet because the existing
+geometry optimization/packaging process is still live; no duplicate build was
+started. Annular continuous worker acceptance also remains pending.

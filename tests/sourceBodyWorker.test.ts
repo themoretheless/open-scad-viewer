@@ -445,3 +445,23 @@ it('cancels continuous coverage on threshold changes and ignores its late reply'
  const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}})
  reply(ports[2]!,denied);expect(await retry).toEqual(denied)
 })
+
+it('qualifies the original cuboid whole-wall threshold through real WASM worker',async()=>{
+ const definition=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',import.meta.url))).toString())
+ const client=realClient(),results=[],started=performance.now()
+ for(const [minimumMm,pairs,qualified] of [[9.99,21,true],[10.01,21,false],[9.99,20,false]] as const){
+  const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,
+   limits:{pairs,planeControls:10000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const coverage=r.wallCoverage!;expect(coverage.wholeWallQualified).toBe(qualified)
+  expect(coverage.totalPairs).toBe(21);expect(coverage.pairs).toHaveLength(pairs)
+  expect(coverage.lowerMm).toBe(qualified?minimumMm:null)
+  expect(coverage.enumerationComplete).toBe(pairs===21)
+  if(qualified){expect(coverage.pairs.every(p=>p.proven)).toBe(true);expect(coverage.cells).toBe(3)}
+  results.push(coverage)
+ }
+ if(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_CUBOID_COVERAGE_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  elapsedMs:performance.now()-started,results,scope:'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.'},null,2)+'\n')
+},120000)
