@@ -1515,6 +1515,17 @@ mod tests {
                     fragment.endpoints().iter().any(|endpoint|
                         matches!(endpoint, crate::source_boundary_fragment::Endpoint::Crossing { .. }))));
             }
+            // Root/mapped restrictions never gain literal canonical corner
+            // authority through the trimmed planar endpoint shortcut.
+            for (slot,address) in shell.uses()[*edge].iter().enumerate() {
+                let fragment=&shell.edges()[*edge].uses()[slot];
+                for endpoint in 0..2 {
+                    if shell.edges()[*edge].ranges().is_some()
+                        || matches!(fragment.endpoints()[endpoint],crate::source_boundary_fragment::Endpoint::Crossing { .. }) {
+                        assert!(crate::source_vertex_contact::carrier_corner(&shell,*address,endpoint).is_none());
+                    }
+                }
+            }
             let bounds = restriction.endpoint_boxes(2).unwrap()[*end];
             for axis in 0..3 {
                 assert!(root_vertex.bounds[axis][0] >= bounds[axis][0]);

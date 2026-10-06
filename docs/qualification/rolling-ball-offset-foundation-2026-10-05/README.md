@@ -3298,3 +3298,28 @@ acceptance is claimed by this stage.
 
 Updated full annular gate regression passes (37.57 s). Curved irrational-root
 body/contact/volume replay also passes; see retained logs.
+
+
+## Coplanar adjacent original material faces
+
+The [1,6] annular pair consists of two trimmed material regions on the same
+original bilinear top chart, sharing one complete original linear carrier.
+Previously candidate separator points came only from the source planes;
+all candidate planes coincided with the top plane and could not separate
+the material. Native shared-line proof now also proposes finite transverse
+coordinate points. These are guesses only: fresh exact carrier signs,
+opposite strict sides and confinement of the zero hull to the complete
+owned shared segment still decide admission. No topology-only exclusion,
+tolerance weld or sampled contact claim was introduced.
+
+Actual [1,6] qualifies in 135,124 charged operations; reversed face order
+also qualifies. Work=1 and a nonadjacent face without an owned shared line
+refuse. The whole annular gate advances to [1,10]; its initial stale
+assertion failure is retained. Added explicit root/mapped endpoint refusal
+checks to the irrational-root ownership regression. That test passes
+(2.04 s), as does the curved root/body/contact/volume replay (11.49 s).
+No complete annular geometry or body, refreshed WASM/UI or full named-part
+acceptance is established by these results.
+
+The updated whole-gate regression passes; the next unresolved pair remains
+[1,10]. The terminal log is retained as annular-transverse-qualified.log.gz.

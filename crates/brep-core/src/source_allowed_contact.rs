@@ -229,7 +229,15 @@ pub fn certify(
         let endpoints: [[_; 3]; 2] =
             std::array::from_fn(|i| std::array::from_fn(|k| edge.world().control_points[i][k]));
         let [a, b] = endpoints;
-        for c in a_plane.into_iter().chain(b_plane) {
+        // Coplanar material charts need a separator transverse to their plane.
+        // These finite coordinates only propose a plane: exact original
+        // carrier signs and owned zero-line confinement remain authoritative.
+        let transverse=(0..3).filter_map(|axis| {
+            let mut c=a;
+            c[axis]+=1.;
+            (c[axis].is_finite() && c[axis]!=a[axis]).then_some(c)
+        });
+        for c in a_plane.into_iter().chain(b_plane).chain(transverse) {
             if !independent(a, b, c, &mut out.exact_work, max_work)? {
                 continue;
             }
