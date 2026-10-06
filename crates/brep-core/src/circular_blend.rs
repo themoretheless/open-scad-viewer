@@ -958,9 +958,55 @@ pub fn partial_annular_arc(
             "Partial annular sweep must be finite, nonzero and at most pi",
         ));
     }
-    let direction = sweep.signum();
     let q = sweep;
     let spans = circular_strip_spans(outer_radius, height, radius, 0., q / 4., q / 2., q / 4.)?;
+    close_annular_spans(outer_radius, inner_radius, height, q, spans, tolerance_mm)
+}
+
+/// Closed annular prototype with independently sized entry/exit transitions
+/// and two positive section radii. The middle span interpolates the radii by
+/// cubic smoothstep in rational arc parameter. This does not certify a general
+/// rolling-ball envelope, pole G1 continuity, or an edit of an existing body.
+pub fn partial_annular_variable_arc(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radii: [f64; 2],
+    sweeps: [f64; 3],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    if radii.iter().any(|r| !r.is_finite() || *r <= 0.)
+        || sweeps.iter().any(|s| {
+            !s.is_finite()
+                || s.abs() < 1e-12
+                || s.abs() > std::f64::consts::FRAC_PI_2
+                || s.signum() != sweeps[0].signum()
+        })
+    {
+        return Err(invalid("Variable annular blend requires two positive radii and three consistently directed nonzero spans of at most pi/2"));
+    }
+    let middle_start = sweeps[0];
+    let exit_start = middle_start + sweeps[1];
+    let sweep = exit_start + sweeps[2];
+    let entry = plane_cylinder_transition(outer_radius, height, 0., radii[0], 0., sweeps[0])?;
+    let middle = if radii[0] == radii[1] {
+        plane_cylinder_rim(outer_radius, height, radii[0], middle_start, sweeps[1])?.remove(0)
+    } else {
+        plane_cylinder_transition(outer_radius, height, radii[0], radii[1], middle_start, sweeps[1])?
+    };
+    let exit = plane_cylinder_transition(outer_radius, height, radii[1], 0., exit_start, sweeps[2])?;
+    close_annular_spans(outer_radius, inner_radius, height, sweep, [entry, middle, exit], tolerance_mm)
+}
+
+fn close_annular_spans(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    q: f64,
+    spans: [CircularBlendSpan; 3],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let direction = q.signum();
     let mut endpoint = spans[2]
         .cylinder_contact
         .control_points
@@ -1705,6 +1751,48 @@ mod tests {
         for sweep in [0., f64::NAN, 4.] {
             assert!(partial_annular_arc(20., 5., 6., 1.25, sweep, 1e-7).is_err());
         }
+    }
+
+    #[test]
+    fn unequal_radius_annular_transitions_close_with_exact_shared_seams() {
+        for radii in [[0.5, 1.25], [1.25, 0.5], [1., 1.]] {
+            for sign in [-1., 1.] {
+                let model = partial_annular_variable_arc(
+                    20., 5., 6., radii, [sign * 0.3, sign * 0.7, sign * 0.4], 1e-7,
+                ).unwrap();
+                let report = model.validate().unwrap();
+                assert_eq!(report.body_count, 1);
+                assert_eq!(report.boundary_edge_count, 0);
+                assert_eq!(model.edges.iter().filter(|e| e.degenerate).count(), 2);
+                // Every non-pole edge has exactly two oppositely oriented uses.
+                for (edge_index, edge) in model.edges.iter().enumerate() {
+                    if edge.degenerate { continue; }
+                    let mut uses = Vec::new();
+                    for face_use in &model.shells[0].faces {
+                        let face = &model.faces[face_use.face];
+                        for coedge in &model.loops[face.outer].coedges {
+                            if coedge.edge == edge_index {
+                                uses.push(coedge.reversed ^ face_use.reversed);
+                            }
+                        }
+                    }
+                    assert_eq!(uses.len(), 2, "edge {edge_index}");
+                    assert_ne!(uses[0], uses[1], "edge {edge_index}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn variable_annular_transition_refuses_invalid_radii_and_spans() {
+        for radii in [[0., 1.], [-1., 1.], [f64::NAN, 1.], [1., 6.], [1., 16.]] {
+            assert!(partial_annular_variable_arc(20., 5., 6., radii, [0.3, 0.7, 0.4], 1e-7).is_err());
+        }
+        for sweeps in [[0., 0.7, 0.4], [0.3, -0.7, 0.4], [0.3, f64::NAN, 0.4], [0.3, 2., 0.4]] {
+            assert!(partial_annular_variable_arc(20., 5., 6., [0.5, 1.25], sweeps, 1e-7).is_err());
+        }
+        // A fitting blend must also retain strictly positive inner wall clearance.
+        assert!(partial_annular_variable_arc(20., 19., 6., [0.5, 1.25], [0.3, 0.7, 0.4], 1e-7).is_err());
     }
 
     #[test]
