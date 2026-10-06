@@ -3,6 +3,8 @@ import {
   emitLaserFrame,
   emitLaserGrbl,
   preflightLaserPlan,
+  previewLaserFrame,
+  previewLaserPlan,
   type LaserPlan,
 } from '../src/services/geometry/laser'
 import type {PolygonMesh} from '../src/services/geometry/polygon'
@@ -37,6 +39,9 @@ function plan():LaserPlan {
       power:250,
       passes:2,
       airAssist:true,
+      kerfMm:0,
+      kerfMode:'center',
+      pathOrder:'preserve',
       paths:[{points:[[10,20],[30,20],[30,40]],closed:true}],
     }],
   }
@@ -66,6 +71,14 @@ describe('laser CAM host API',()=>{
     expect(frame.dialect).toBe('open-scad-viewer/laser-frame 1')
     expect(frame.gcode.match(/^G0 /gm)).toHaveLength(5)
     expect(frame.gcode).not.toMatch(/^(?:M3|M4|G1|S)/m)
+    const framePreview=previewLaserFrame({
+      ...source,
+      machine:{...source.machine,laserModeConfirmed:false,maxPower:0},
+      operations:source.operations.map(operation=>({...operation,power:0,passes:0})),
+    })
+    expect(framePreview.summary).toEqual(frame.summary)
+    expect(framePreview.operations).toHaveLength(1)
+    expect(framePreview.operations[0]!.paths[0]!.closed).toBe(true)
   })
 
   it('fails closed for unconfirmed jobs and out-of-bed geometry',()=>{
@@ -80,8 +93,8 @@ describe('laser CAM host API',()=>{
   it('turns a CAD section into ordered Line and hatched Fill operations',()=>{
     const source=plan()
     const planned=planLaserMeshSection(boxMesh(),5,source.machine,{
-      line:{output:true,speedMmMin:900,power:250,passes:1,airAssist:false},
-      fill:{output:true,speedMmMin:1800,power:100,passes:1,airAssist:false,spacingMm:2},
+      line:{output:true,speedMmMin:900,power:250,passes:1,airAssist:false,kerfMm:0,kerfMode:'center',pathOrder:'inner-first-nearest'},
+      fill:{output:true,speedMmMin:1800,power:100,passes:1,airAssist:false,spacingMm:2,pathOrder:'nearest'},
       offset:[20,30],
     })
     expect(planned.operations.map(operation=>operation.kind)).toEqual(['line','fill'])
@@ -91,11 +104,29 @@ describe('laser CAM host API',()=>{
     expect(preflightLaserPlan(planned)).toMatchObject({operationCount:2})
 
     const lineOnly=planLaserMeshSection(boxMesh(),5,source.machine,{
-      line:{output:true,speedMmMin:900,power:250,passes:1,airAssist:false},
-      fill:{output:false,speedMmMin:1800,power:100,passes:1,airAssist:false,spacingMm:2},
+      line:{output:true,speedMmMin:900,power:250,passes:1,airAssist:false,kerfMm:0,kerfMode:'center',pathOrder:'inner-first-nearest'},
+      fill:{output:false,speedMmMin:1800,power:100,passes:1,airAssist:false,spacingMm:2,pathOrder:'nearest'},
       offset:[20,30],
     })
     expect(lineOnly.operations[1]).toMatchObject({kind:'fill',output:false,paths:[]})
     expect(emitLaserGrbl(lineOnly).summary).toMatchObject({operationCount:1})
+  })
+
+  it('applies part kerf and cuts nested contours from the inside out',()=>{
+    const source=plan()
+    const operations=[{
+      ...source.operations[0]!,passes:1,airAssist:false,kerfMm:0.2,kerfMode:'part' as const,
+      pathOrder:'inner-first-nearest' as const,
+      paths:[
+        {points:[[10,10],[50,10],[50,50],[10,50]] as [number,number][],closed:true},
+        {points:[[20,20],[30,20],[30,30],[20,30]] as [number,number][],closed:true},
+      ],
+    }]
+    const program=emitLaserGrbl({...source,operations})
+    const preview=previewLaserPlan({...source,operations})
+    expect(program.summary.bounds).toEqual({min:[9.9,9.9],max:[50.1,50.1]})
+    expect(program.gcode.match(/^G0 .*$/m)?.[0]).toMatch(/^G0 X(?:19\.900|20\.100) Y(?:19\.900|20\.100)$/)
+    expect(preview.summary).toEqual(program.summary)
+    expect(preview.operations[0]!.paths[0]!.points[0]).toEqual(expect.arrayContaining([expect.closeTo(20,0),expect.closeTo(20,0)]))
   })
 })

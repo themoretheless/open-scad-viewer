@@ -12,6 +12,9 @@ same Rust/WASM bridge as the CAD geometry kernel:
 - `preflightLaserPlan(plan)` validates the exact job geometry and returns its
   bounds, operation/path/segment counts, cut and rapid distances, and a
   constant-speed time estimate.
+- `previewLaserPlan(plan)` returns those same metrics plus the exact quantized,
+  compensated and ordered paths rendered by the panel. `previewLaserFrame`
+  provides the same geometry without requiring job-only controller settings.
 - `emitLaserGrbl(plan)` emits `open-scad-viewer/laser-grbl 1`.
 - `emitLaserFrame(plan)` emits `open-scad-viewer/laser-frame 1`, containing
   setup/comments, `M5`, and rectangular `G0` moves only.
@@ -19,14 +22,30 @@ same Rust/WASM bridge as the CAD geometry kernel:
 Plans contain an ordered list of enabled Line or Fill operations. Each
 operation supplies its already-planned paths, speed in mm/min, controller power
 value, pass count and optional air assist. Paths may be open or closed. The
-kernel preserves operation and path order; hatch generation, kerf compensation,
-tabs, lead-in/out and overlap removal belong in upstream CAM planners.
+kernel preserves operation order. Each operation selects preserved, nearest,
+inner-first, or inner-first-nearest path order. Nearest ordering may rotate a
+closed path's start vertex or reverse an open path; it does not change path
+segments. Inner-first ordering derives containment from the closed paths and
+keeps holes ahead of their containing boundary.
+
+Line operations can compensate a finite 0..20 mm kerf. `part` grows the filled
+region by half the kerf (outer boundaries grow and holes shrink); `cavity`
+shrinks it by half the kerf. The planar region offset runs in Rust before
+quantization and bounds validation. Even-odd nesting identifies holes without
+trusting imported contour winding. Compensation refuses open paths and fails
+closed when the requested offset collapses or invalidates the region. Tabs,
+lead-in/out and overlap removal remain future CAM planners.
 
 The current CAD panel is one such adapter: it turns an exact horizontal mesh
 section into the Line operation and uses the bounded planar toolpath planner to
 create horizontal hatch paths for Fill. It exposes section Z and XY placement;
 arbitrary projected faces and imported SVG path assignment are later adapters,
 not implied by this first section workflow.
+
+The panel includes bounded generic machine profiles and conservative material
+starting points. Applying a machine profile always clears `$32=1` confirmation.
+Material values are not qualified recipes: users must calibrate power, focus,
+speed and kerf on their exact machine and stock before producing a job.
 
 ## Safety and validation
 
@@ -44,6 +63,8 @@ the connected controller or accessory wiring is safe.
 Coordinates are quantized once to 0.001 mm before bounds, distance and output
 calculations. Paths that collapse at that precision are rejected. Requests are
 limited to 100,000 paths, 1,000,000 executed segments and 64 MiB of G-code.
+Nearest/containment ordering is additionally limited to 4,096 paths per
+operation so its deterministic search cannot become unbounded.
 The JSON bridge accepts only the documented fields, so accidental or untyped
 settings cannot replace the operation or smuggle an alternate schema.
 
@@ -62,7 +83,8 @@ machine setup and accessory latency, so it is not a measured completion time.
 ## Verification
 
 `laser-core` tests deterministic output, coordinate transformation and
-quantization, power modes, air assist, passes, disabled operations, bounds and
-invalid/collapsed geometry. `geometry-bridge` tests the strict transport schema
+quantization, power modes, air assist, passes, disabled operations, kerf,
+inside-first/nearest ordering, bounds and invalid/collapsed geometry.
+`geometry-bridge` tests the strict transport schema
 and all three operations. `tests/laserCamHostApi.test.ts` exercises the public
 TypeScript API through the real WASM artifact.

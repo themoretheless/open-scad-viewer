@@ -10,13 +10,65 @@ mod planner;
 
 pub use math_core::{Error, Result};
 pub use model::{
-    Bounds, MachineProfile, Operation, OperationKind, Path, Plan, PowerMode, Program, Summary,
+    Bounds, KerfMode, MachineProfile, Operation, OperationKind, Path, PathOrder, Plan, PowerMode,
+    Preview, PreviewOperation, Program, Summary,
 };
 
 /// Validate and summarize the exact geometry that [`generate_grbl`] would emit.
 /// Laser mode confirmation is required because this is job readiness.
 pub fn preflight(plan: &Plan) -> Result<Summary> {
-    Ok(planner::prepare(plan, true)?.summary)
+    Ok(preview(plan)?.summary)
+}
+
+/// Return the exact quantized, compensated and ordered paths used by job
+/// compilation. Hosts should render these paths rather than the source plan.
+pub fn preview(plan: &Plan) -> Result<Preview> {
+    preview_prepared(planner::prepare(plan, true)?)
+}
+
+/// Return exact frame geometry without requiring job-only controller/process
+/// confirmation. This follows the same safety boundary as [`generate_frame`].
+pub fn preview_frame(plan: &Plan) -> Result<Preview> {
+    let prepared = planner::prepare(plan, false)?;
+    let bounds = prepared.summary.bounds;
+    Ok(Preview {
+        summary: gcode::frame_summary(&prepared, &plan.machine),
+        operations: vec![PreviewOperation {
+            name: "Frame".into(),
+            kind: OperationKind::Line,
+            paths: vec![Path {
+                points: vec![
+                    bounds.min,
+                    [bounds.max[0], bounds.min[1]],
+                    bounds.max,
+                    [bounds.min[0], bounds.max[1]],
+                ],
+                closed: true,
+            }],
+        }],
+    })
+}
+
+fn preview_prepared(prepared: planner::PreparedPlan) -> Result<Preview> {
+    Ok(Preview {
+        summary: prepared.summary,
+        operations: prepared
+            .operations
+            .into_iter()
+            .map(|operation| PreviewOperation {
+                name: operation.name,
+                kind: operation.kind,
+                paths: operation
+                    .paths
+                    .into_iter()
+                    .map(|path| Path {
+                        points: path.points,
+                        closed: path.closed,
+                    })
+                    .collect(),
+            })
+            .collect(),
+    })
 }
 
 /// Compile a deterministic GRBL laser program. This fails closed until the
@@ -169,5 +221,87 @@ mod tests {
         assert_eq!(summary.operation_count, 1);
         assert_eq!(summary.path_count, 1);
         assert_eq!(summary.bounds.min, [10.0, 20.0]);
+    }
+
+    #[test]
+    fn part_kerf_grows_outer_boundary_and_shrinks_hole() {
+        let mut plan = square_plan();
+        plan.operations[0].kerf_mm = 0.2;
+        plan.operations[0].kerf_mode = KerfMode::Part;
+        plan.operations[0].paths = vec![
+            Path {
+                points: vec![[10.0, 10.0], [50.0, 10.0], [50.0, 50.0], [10.0, 50.0]],
+                closed: true,
+            },
+            Path {
+                // Same winding as the outer ring: laser nesting is geometric.
+                points: vec![[20.0, 20.0], [30.0, 20.0], [30.0, 30.0], [20.0, 30.0]],
+                closed: true,
+            },
+        ];
+        let program = generate_grbl(&plan).unwrap();
+        assert_eq!(program.summary.bounds.min, [9.9, 9.9]);
+        assert_eq!(program.summary.bounds.max, [50.1, 50.1]);
+        assert!(program.gcode.contains("X20.100 Y20.100"));
+    }
+
+    #[test]
+    fn inner_first_nearest_cuts_holes_before_outer_boundaries() {
+        let mut plan = square_plan();
+        plan.operations[0].path_order = PathOrder::InnerFirstNearest;
+        plan.operations[0].paths = vec![
+            Path {
+                points: vec![[10.0, 10.0], [50.0, 10.0], [50.0, 50.0], [10.0, 50.0]],
+                closed: true,
+            },
+            Path {
+                points: vec![[20.0, 20.0], [30.0, 20.0], [30.0, 30.0], [20.0, 30.0]],
+                closed: true,
+            },
+        ];
+        let program = generate_grbl(&plan).unwrap();
+        let first_rapid = program
+            .gcode
+            .lines()
+            .find(|line| line.starts_with("G0 "))
+            .unwrap();
+        assert_eq!(first_rapid, "G0 X20.000 Y20.000");
+    }
+
+    #[test]
+    fn nearest_order_reduces_rapid_travel_and_can_reverse_open_paths() {
+        let mut preserved = square_plan();
+        preserved.machine.return_to_origin = false;
+        preserved.operations[0].paths = vec![
+            Path {
+                points: vec![[100.0, 0.0], [110.0, 0.0]],
+                closed: false,
+            },
+            Path {
+                points: vec![[10.0, 0.0], [5.0, 0.0]],
+                closed: false,
+            },
+        ];
+        let preserved_program = generate_grbl(&preserved).unwrap();
+        let mut optimized = preserved;
+        optimized.operations[0].path_order = PathOrder::Nearest;
+        let optimized_program = generate_grbl(&optimized).unwrap();
+        assert!(
+            optimized_program.summary.rapid_distance_mm
+                < preserved_program.summary.rapid_distance_mm
+        );
+        assert!(optimized_program.gcode.contains("G0 X5.000 Y0.000\n"));
+    }
+
+    #[test]
+    fn kerf_compensation_rejects_open_paths() {
+        let mut plan = square_plan();
+        plan.operations[0].paths[0].closed = false;
+        plan.operations[0].kerf_mm = 0.2;
+        plan.operations[0].kerf_mode = KerfMode::Part;
+        assert_eq!(
+            generate_grbl(&plan).unwrap_err().code,
+            "LASER_KERF_REQUIRES_CLOSED_LINE"
+        );
     }
 }
