@@ -4605,3 +4605,25 @@ UI budget, down from 259 before intrinsic exclusions. Explicit refusal and
 normal-chord scope remain visible; screenshot retained. General wall
 qualification, sharp/trimmed boundary cases and remaining fillet/P0/P2/P3
 requirements remain open.
+
+
+## Original rectangular intrinsic exclusion
+
+surface_self_chord now exposes qualify_rectangle over an explicit original
+UV rectangle. Private certificates retain both source surface identity and
+exact rectangle. Derivative hulls use only intersecting original knot spans,
+including one-sided knot endpoints; interval restriction does not create a
+rounded replacement patch. Whole-chart qualify still requests the complete
+natural domain. Positive widths and natural-domain containment are required.
+
+Six intrinsic tests pass in 0.01 seconds. A strongly curved full graph refuses
+global exclusion while a small original rectangle qualifies locally; that
+local certificate retains its limited domain. Missing required knot spans,
+zero-width and out-of-domain rectangles refuse. Existing polynomial/rational
+analytic oracles remain passing. The original annular Body regression passes
+in 67.43 seconds, retaining 258 unresolved pairs/657 normal spans and original
+radius, thickness and seam guards. Logs retained.
+
+This is native infrastructure for complete subdivision, not a claim that
+all 13 remaining curved self pairs or general wall coverage are resolved.
+The rectangular API is not yet used for adaptive coverage or packaged WASM.
