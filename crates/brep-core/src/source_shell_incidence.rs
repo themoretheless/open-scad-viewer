@@ -1202,7 +1202,9 @@ mod tests {
                 report.region.unwrap()
             })
             .collect::<Vec<_>>();
-        let old = pairs.remove(0);
+        let split_index=if curved {pairs.iter().position(|p|
+            p.world.control_points.first().unwrap()[0]!=p.world.control_points.last().unwrap()[0]).unwrap()} else {0};
+        let old = pairs.remove(split_index);
         for (i, address) in old.uses.iter().enumerate() {
             let edge = &faces[address.face][address.wire].edges()[address.edge];
             let c = edge.curve();
@@ -1309,6 +1311,67 @@ mod tests {
                 assert!(bounds.iter().any(|b|b[0]<b[1]));
                 let _=end;
             }
+            for face in shell.faces() {
+                let report=crate::source_inverse_shear::qualify(face[0].edges()[0].surface(),[0,2],0.25,100000).unwrap();
+                let certificate=report.certificate.expect(report.reason);
+                for wire in face {for original in wire.edges() {
+                    let result=crate::source_inverse_shear::transport_fragment(&certificate,original,10000).unwrap();
+                    let inverse=result.fragment.expect(result.reason);
+                    assert_eq!(inverse.curve(),original.curve());
+                    assert_eq!(inverse.parameter_bounds(),original.parameter_bounds());
+                    assert_eq!(inverse.reversed(),original.reversed());
+                    assert_eq!(inverse.surface(),certificate.inverse());
+                    for (a,b) in original.endpoints().iter().zip(inverse.endpoints()) {
+                        match (a,b) {
+                            (Endpoint::Crossing {point:a,role:ar},Endpoint::Crossing {point:b,role:br})=>{
+                                assert_eq!(ar,br);assert_eq!(a.boundary(),b.boundary());
+                                assert_eq!(a.contact(),b.contact());assert_eq!(a.selector(),b.selector());
+                                assert_ne!(a.world_box(),b.world_box());
+                            },
+                            (Endpoint::Parameter(a),Endpoint::Parameter(b))=>assert_eq!(a,b),
+                            _=>panic!("Endpoint kind changed"),
+                        }
+                    }
+                }}
+            }
+            for source in shell.regions().unwrap() {
+                let chart=crate::source_inverse_shear::qualify(source.loops()[0][0].surface(),[0,2],0.25,100000).unwrap();
+                let certificate=chart.certificate.expect(chart.reason);
+                let limits=crate::source_region_restore::Limits {
+                    region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                    search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                    membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+                };
+                let exhausted=crate::source_inverse_shear::transport_region(&certificate,source,&limits,1).unwrap();
+                assert!(exhausted.region.is_none());
+                let transported=crate::source_inverse_shear::transport_region(&certificate,source,&limits,1000000).unwrap();
+                let inverse=transported.region.expect(transported.reason);
+                assert_eq!(inverse.source_loop_indices(),source.source_loop_indices());
+                assert_eq!(inverse.loops().len(),source.loops().len());
+                for (a,b) in source.loops().iter().flatten().zip(inverse.loops().iter().flatten()) {
+                    assert_eq!(a.curve(),b.curve());assert_eq!(a.parameter_bounds(),b.parameter_bounds());
+                    assert_eq!(a.reversed(),b.reversed());
+                }
+            }
+            let replay_limits=crate::source_region_restore::Limits {
+                region:crate::trimmed_face_recipe::Limits {pairs:1000,region_cells:10000,domain_cells:10000,agreement_cells:10000},
+                search_cells:10000,point_checks:10000,mapping_cells:10000,driver_cells:10000,
+                membership_cells:10000,controls:10000,winding_cells:10000,steps:64,
+            };
+            let inverse=crate::source_inverse_shear::transport_shell(&shell,[0,2],0.25,&replay_limits,100_000_000).unwrap();
+            assert_eq!(inverse.root_checks,2);
+            let inverse=inverse.shell.expect(inverse.reason);
+            assert_eq!(inverse.vertices(),shell.vertices());
+            assert_eq!(inverse.faces().len(),shell.faces().len());
+            assert_eq!(inverse.edges().len(),shell.edges().len());
+            let inverse_geometry=crate::source_shell_geometry::qualify(inverse,
+                crate::source_shell_geometry::Limits {
+                    tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,
+                    pairs:crate::face_contacts::Limits {pairs:6,cells:10000,domain_cells:10000,
+                        cells_per_pair:1000,domain_cells_per_pair:1000},
+                    exact_work:100_000_000,driver_cells:10000,
+                }).unwrap();
+            assert!(inverse_geometry.geometry.is_some(),"{}",inverse_geometry.reason);
             let admitted=crate::source_shell_geometry::qualify(shell,
                 crate::source_shell_geometry::Limits {
                     tolerance_uv:1e-8,corners:14,spans:1000,linear_cells:1000,

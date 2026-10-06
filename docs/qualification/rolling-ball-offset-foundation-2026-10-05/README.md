@@ -2810,3 +2810,33 @@ is fresh source region/root transport and contact admission through the common
 bijective shear. The previously qualified 6791d7bf WASM is unchanged.
 
 Inverse-chart regression suites: nine shell tests passed (12.23 s), nine shared-edge tests passed (0.01 s).
+
+### Fresh inverse restriction, region and shell transport — native stage
+
+Native transport rebinds unchanged original UV curves to the privately accepted
+inverse chart. Every Crossing endpoint is freshly qualified from its original
+boundary/contact curves, selector and role. Parameter endpoints are preserved.
+The curved fixture now deliberately partitions an edge with varying x, so its
+root-valued carrier really changes under the shear; the earlier fixture selected
+a constant-x edge. Original UV curves, parameter ranges, direction and selectors
+are retained while world enclosures are recomputed.
+
+Region transport supports original/splitRoot/splitParameter recipes. Proposed
+inverse world boundaries must pass exact algebraic curve/surface composition.
+Original contour/region admission and root splits are replayed freshly. Other
+recipe classes remain unsupported. Replay limits apply per native recipe step;
+the separate exact composition budget is accumulated. Reported root mapping
+counts cover inverse selector queries, not all work inside recipe replay.
+
+Shell transport rechecks all inverse charts and regions, reconstructs canonical
+edge directions from underlying UV traversal, and freshly assembles every exact
+paired restriction. The inverse shell has the same face/edge counts and passes
+full native embedded Geometry qualification, including all face contacts.
+The curved original shell still refuses primary contact admission; transfer of
+this inverse proof into original Body admission/persistence is not connected.
+No volume, STEP, closed mesh or original curved Body claim is made. These new
+native APIs are not routed through worker/WASM; the shipped artifact is unchanged.
+
+Regression checks passed: nine shell tests (9.87 s), inverse-chart test, and
+the curved transport/embedding test with preserved vertex ownership, two root
+replays and exhausted exact region work refusal (0.26 s).
