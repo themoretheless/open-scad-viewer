@@ -19,3 +19,21 @@ The independent in-progress adjacency build predates the Laser merge; it must
 finish before a combined build starts. Root checkout has 2097 changed files
 and concurrent active work; it remains untouched. Stash, FDM and sweep work
 remain preserved. No deletion or universal roadmap completion is claimed.
+
+
+## Combined package qualification completed
+
+The canonical build and packaging finish successfully. Shared geometry WASM
+SHA-256 06d44ed1e10bd15502f4727697f674f6848f22d69804d40e0d8c1c7492235932,
+11931604 bytes. All 33 combined CAD worker/transport and Laser profile/host
+tests pass in 74.34 seconds. The five previous Laser failures are resolved
+by the new shared artifact. Two native Laser bridge tests pass. Original
+annular expectations remain 255 adaptive / 257 legacy unproven pairs;
+cuboid qualified/refused/truncated outcomes remain passing.
+
+Production compiles successfully. Initial size gates refuse measured growth;
+only geometry and aggregate limits change, preserving previous margins:
+3982000 + 608 packed geometry bytes, 8307566 + 761 asset bytes. Final verifier
+passes 151 artifacts: 8307566 assets + 15227996 raw WASM = 23535562 total bytes.
+Original source/unique module checks remain enabled. This qualifies package
+and host behavior, not deployment, CI or the full geometry/P0/P2/P3 roadmap.
