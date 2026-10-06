@@ -4354,3 +4354,20 @@ face and cannot represent completion. Both messages retain the explicit
 whole-wall safety limitation. vue-tsc passes; the existing transport tests
 cover the partial versus exhausted flags. Browser result acceptance remains
 pending the live WASM packaging.
+
+
+## Packaged automatic wall scan worker and browser acceptance
+
+Completed WASM build SHA256 84c873ccbb280fc9133d902a50c6a00c30766d38d5cc7d64a2cedd2f6fb79e09,
+11,890,939 bytes. All 24 source worker/scan/wall/seam tests pass in 24.08
+seconds, including real original all-face scan, one-attempt partial search,
+forged whole-wall claim refusal and mock cancellation/late-result/retry.
+Exact real-worker JSON and build/test logs retained.
+
+After browser reload on isolated 5188, original edge 6 was selected and
+Find thin regions was run with Enter at 7 mm and no selected sides. The UI
+finds [5.999999999999997,6.0000000000000036] mm, visits 27/27 faces and 243
+proposals, and shows one original measurement with endpoints on native
+faces 18 and 15. Finite-proposal completion and unproven whole-wall safety
+are both visible. Screenshot retained. Production verification for this
+new packaged module and browser scan Retry/Cancel acceptance remain pending.

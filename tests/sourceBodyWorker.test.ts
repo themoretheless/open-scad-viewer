@@ -361,3 +361,43 @@ it('qualifies curved annular cavity walls through original WASM worker',async()=
   wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
   elapsedMs:performance.now()-started,wall,refusedWall:refused.wallQualification,scope:'Original selected outer/inner cylinder unions with cavity, not whole body wall coverage.'},null,2)+'\n')
 },120000)
+
+it('discovers an original thin wall without selected groups through real WASM worker',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
+ for(const maxAttempts of [243,1]){
+  const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallScan:{minimumMm:7,toleranceUv:1e-7,grid:3,maxAttempts,
+   limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options})
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
+  const scan=r.wallScan!;expect(scan.request).toEqual(options.wallScan);expect(scan.wholeWallQualified).toBe(false)
+  expect(scan.attempts).toBe(maxAttempts);expect(scan.facesTotal).toBe(27)
+  if(maxAttempts===243){
+   expect(scan.thinFound).toBe(true);expect(scan.facesVisited).toBe(27);expect(scan.proposalsExhausted).toBe(true)
+   expect(scan.witness!.lengthMm[0]).toBeLessThanOrEqual(6);expect(scan.witness!.lengthMm[1]).toBeGreaterThanOrEqual(6)
+   expect(scan.witness!.lengthMm[1]-scan.witness!.lengthMm[0]).toBeLessThan(1e-5)
+  }else{expect(scan.facesVisited).toBe(1);expect(scan.proposalsExhausted).toBe(false)}
+  const forged=structuredClone(r);(forged.wallScan as unknown as {wholeWallQualified:boolean}).wholeWallQualified=true
+  expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
+  results.push(scan)
+ }
+ if(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_WALL_SCAN_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  elapsedMs:performance.now()-started,results,scope:'Finite all-face original normal proposals; discovered local thin wall, no whole-wall safety certificate.'},null,2)+'\n')
+},180000)
+
+it('cancels automatic scan when its threshold changes and ignores the late reply',async()=>{
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const scan={minimumMm:7,toleranceUv:1e-7,grid:3,maxAttempts:243,limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}}).catch(e=>e.code)
+ const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
+ const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:{...scan,minimumMm:1}}})
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ late({data:{version:1,id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
+ reply(ports[1]!,denied);expect(await next).toEqual(denied)
+ const controller=new AbortController()
+ const pending=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}},{signal:controller.signal}).catch(e=>e.code)
+ controller.abort();expect(await pending).toBe('CAD_CANCELLED');expect(ports[1]!.terminated).toBe(true)
+ const retry=client.run({kind:'sourceBodyRestore',options:{...options(),wallScan:scan}})
+ reply(ports[2]!,denied);expect(await retry).toEqual(denied)
+})
