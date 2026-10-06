@@ -4219,3 +4219,20 @@ raw/packed identities were temporarily inconsistent and the artifact gate
 correctly refused nine real-worker loads. The failure log is retained.
 Only the completed build is accepted. Browser measurement overlay acceptance
 and production distribution validation remain pending for this new module.
+
+
+## Original material witness browser acceptance
+
+On isolated port 5188 after completed witness WASM packaging, edge 6 and
+original outer/inner cylinder unions were selected through keyboard controls.
+At minimum 14.5 mm, the qualified interval is
+[14.999999999999902,15.000000000000671] mm. One measurement overlay and two
+endpoints are present, owned by original native faces 7 and 8. Endpoint
+world enclosures and the approximate center line are visibly labelled.
+
+Changing the minimum to 16 mm immediately removes the overlay (count zero).
+The subsequent source-wall-clearance-unproven refusal keeps overlay count
+zero and offers Retry. Both actual browser screenshots are retained. This
+qualifies selected-wall rendering and stale-result clearing on parameter
+change; full wall coverage and all-command P0 acceptance remain open.
+The new production build is still running its prebuild geometry stage.
