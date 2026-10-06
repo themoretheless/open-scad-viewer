@@ -4742,3 +4742,15 @@ asset total 8295587 + 761 bytes. Final verification passes all 151 artifacts:
 8295587 asset + 15211996 raw WASM = 23507583 total bytes. Source identity and
 unique packed module gates remain enabled. Browser acceptance, deployment
 and push are not claimed.
+
+
+## Adaptive browser acceptance at localhost 5188
+
+Keyboard whole-wall action at 5.99 mm without selected face groups completes
+with 378/378 pairs, 255 unproven pairs at the larger UI gap budget, 16/27
+qualified self faces and 691 pending self regions. The explicit refusal and
+near-normal chord scope remain visible. Keyboard Retry shows pending state;
+immediate Cancel clears the result. A new keyboard Check after cancellation
+returns the same refusal; details expand to the same counts. Screenshot retained.
+This verifies that browser scenario only, not the full P0 command matrix or
+whole material thickness, named-part STEP acceptance, or remaining geometry.
