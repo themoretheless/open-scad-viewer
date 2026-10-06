@@ -2092,6 +2092,18 @@ function sourceWallFaceFill(body:string,face:number){
  if(sourceWallFaceUncertain(body,face))return '#ff9977'
  return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
 }
+const sourceWallMeasurement=computed(()=>{
+ const record=selectedSourceBody.value,r=sourceWallResult.value,w=r?.witness
+ if(!sourceWallOpen.value||!record||!objectInView(record.id)||!r?.qualified||!w)return null
+ const endpoints=w.endpoints.map(e=>{
+  const center=project(e.worldMm.map(q=>q[0]/2+q[1]/2),'3d')
+  const corners=Array.from({length:8},(_,k)=>project(e.worldMm.map((q,i)=>q[(k>>i)&1]),'3d'))
+  const x=Math.min(...corners.map(p=>p[0])),y=Math.min(...corners.map(p=>p[1]))
+  return {face:e.face,center,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,bounds:e.worldMm}
+ })
+ if(endpoints.some(e=>![...e.center,e.x,e.y,e.width,e.height].every(Number.isFinite)))return null
+ return {endpoints,points:endpoints.map(e=>e.center.join(',')).join(' '),interval:r.intervalMm}
+})
 const sourceWallMessage=computed(()=>{
  const r=sourceWallResult.value;if(!r)return ''
  if(r.qualified)return r.converged?label('Толщина между выбранными сторонами подтверждена.','Thickness between the selected sides is qualified.'):
@@ -3811,6 +3823,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <g v-if="pane==='3d'" data-source-face-preview="true" :pointer-events="sourceWallOpen && sourceWallMenuOpen?'auto':'none'">
                 <polygon v-for="face in sourceDisplayFaces" :key="face.key" :points="face.points" :data-source-body="face.body" :data-source-face="face.face" :fill="sourceWallFaceFill(face.body,face.face)" fill-opacity=".25" stroke="none" @pointerdown.stop @click.stop="face.body===selectedSourceBody?.id && toggleSourceWallFace(face.face)" />
                 <rect v-for="box in sourceUnresolvedBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" :data-source-body="box.body" :data-source-face="box.face" :data-source-wall-error="sourceWallFaceUncertain(box.body,box.face)?'true':undefined" fill="none" :stroke="sourceWallFaceUncertain(box.body,box.face)?'#ff4c4c':'#ff9977'" :stroke-width="sourceWallFaceUncertain(box.body,box.face)?3:1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"><title>{{ box.body }} · {{ label('грань','face') }} {{ box.face }} · UV {{ box.uv }}</title></rect>
+              </g>
+              <g v-if="pane==='3d' && sourceWallMeasurement" data-source-wall-measurement="true" pointer-events="none">
+                <polyline :points="sourceWallMeasurement.points" fill="none" stroke="#ffe875" stroke-width="3" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"><title>{{ label('Измерение толщины: линия между центрами координатных интервалов. ','Thickness measurement: line between enclosure centers. ')+sourceWallMeasurement.interval+' mm' }}</title></polyline>
+                <g v-for="(end,i) in sourceWallMeasurement.endpoints" :key="i" :data-source-wall-endpoint="i" :data-source-face="end.face">
+                  <rect :x="end.x" :y="end.y" :width="end.width" :height="end.height" fill="none" stroke="#ffe875" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  <circle :cx="end.center[0]" :cy="end.center[1]" r="3" fill="#ffe875"><title>{{ label('Координатный интервал конца: ','Endpoint coordinate enclosure: ')+end.bounds }}</title></circle>
+                </g>
               </g>
               <g v-if="pane==='3d'" data-source-endpoint-enclosures="true" pointer-events="none">
                 <rect v-for="box in sourceDisplayEndpointBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" fill="none" stroke="#ffc977" stroke-width="2" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"><title>{{ label('Интервал конца: ','Endpoint enclosure: ')+box.bounds }}</title></rect>

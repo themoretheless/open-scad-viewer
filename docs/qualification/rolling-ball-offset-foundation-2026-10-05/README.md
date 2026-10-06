@@ -4167,3 +4167,18 @@ Witness is optional for compatibility with the previous packaged module;
 missing witness gives no scene measurement. This bridge change is not yet
 packaged in WASM, and a positive real-worker witness run and UI rendering
 remain pending. Terminal evidence retained.
+
+
+## Pending original wall measurement overlay
+
+The new viewport overlay consumes only qualified transported witnesses.
+It draws a dashed line between original world-enclosure centers and both
+endpoint boxes, with labels explicitly identifying enclosure centers rather
+than exact coordinates. Hidden bodies, missing witnesses, closed wall panels
+and invalid projected values suppress the overlay. Existing request-change
+and cancellation guards clear the result. All 317 DirectModeler UI regression
+tests pass (80.23 seconds), and vue-tsc passes.
+
+A new WASM build is live. Positive original witness acceptance through real
+worker and browser rendering remains pending; the old packaged module
+provides no witness, so this overlay is not yet browser-qualified.
