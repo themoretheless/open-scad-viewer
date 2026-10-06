@@ -204,6 +204,25 @@ mod tests {
             || crossing_segment.contacts[1].parameter[1] < crossing_segment.contacts[0].parameter[0]);
         assert!(crate::source_material_segment::inspect_boundary(
             &body,[0.;3],[0.;3],1e-7,10000,10000).is_err());
+        let chord=crate::source_material_chord::qualify(&body,[10.,2.,-1.],[0.,0.,8.],1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        eprintln!("source normal chord {} length={:?}",chord.reason,chord.certificate.as_ref().map(|c|c.length_mm()));
+        let proof=chord.certificate.expect("original annular flat normal material chord");
+        assert!(std::ptr::eq(proof.body(),&body));
+        assert!(proof.length_mm()[0]<=6. && proof.length_mm()[1]>=6.);
+        assert!(proof.length_mm()[1]-proof.length_mm()[0]<1e-5);
+        for (origin,direction,cells,normal_spans) in [
+            ([10.,2.,1.],[0.,0.,4.],10000,1000),
+            ([30.,30.,1.],[0.,0.,1.],10000,1000),
+            ([10.,2.,-1.],[0.,0.,8.],1,1000),
+            ([10.,2.,-1.],[1.,0.,8.],10000,1000),
+            ([10.,2.,-1.],[0.,0.,8.],10000,1),
+        ] {
+            let denied=crate::source_material_chord::qualify(&body,origin,direction,1e-7,
+                crate::source_material_chord::Limits{cells,domain_cells:10000,normal_spans,max_sine_squared:1e-6}).unwrap();
+            eprintln!("source chord refusal {}",denied.reason);
+            assert!(denied.certificate.is_none());
+        }
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();

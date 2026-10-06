@@ -3792,3 +3792,27 @@ Boundary-free exterior segments illustrate why this report does not prove
 material membership. Outside seed qualification, parity, normal alignment
 and a private source material chord certificate remain required before
 wall thickness admission; saved diagnostic fields cannot authorize them.
+
+
+## Private original source normal material chord
+
+`source_material_chord::qualify` recomputes the finite boundary audit on the
+borrowed immutable admitted Body. It proves the authored start point is
+strictly outside the union hull of every complete original source chart.
+Exactly two disjoint isolated transverse root intervals with complete
+trim coverage establish entry then exit of material. Both endpoint root
+UV rectangles must pass the original normal/line angle check. The private
+certificate retains the exact Body reference, face identities and length
+interval; caller diagnostic flags do not authorize it.
+
+For [10,2,-1]+t[0,0,8] on the original annular Body, the certified material
+chord length is [5.999999999999997,6.0000000000000036] mm. Tests require
+Body identity and enclosure of 6 mm with width below 1e-5 mm. Interior
+seed, exterior empty segment, insufficient boundary cells, oblique line
+and insufficient normal spans all refuse certificate issuance. The combined
+Body/radius/seam regression passes in 16.45 seconds; terminal log retained.
+
+This is a local normal chord certificate. The conservative exterior hull
+seed may refuse valid starts in concavities. General outside-seed parity,
+complete wall coverage and automatic thin-region search remain open, as do
+bridge/WASM/UI integration of this source chord and clearance calculation.

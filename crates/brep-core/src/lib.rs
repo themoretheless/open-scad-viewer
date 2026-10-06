@@ -1930,3 +1930,4 @@ pub(crate) mod source_planar_flux;
 
 pub mod source_face_gap;
 pub mod source_material_segment;
+pub mod source_material_chord;
