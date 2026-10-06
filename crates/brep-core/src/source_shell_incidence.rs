@@ -1424,6 +1424,29 @@ mod tests {
             }
             eprintln!("curved Body volume {:?}; contact exact work {}, spans {}",body.volume(),embedding.exact_work,embedding.spans);
             assert_eq!(body.definition().unwrap()["inverseShear"],value_codec::json!({"axes":[0,2],"coefficient":0.25}));
+            let exhausted=crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:1,driver_cells:10000,spans:14,endpoints:14,
+            }).unwrap();
+            assert!(exhausted.prepared.is_none());
+            assert!(crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:13,
+            }).is_err());
+            let prepared=crate::source_exchange_endpoints::prepare(&body,1e-7,crate::source_exchange_endpoints::Limits {
+                root_checks:1000,mapping_cells:10000,replay_mapping_per_use:10000,
+                exact_work:100_000_000,driver_cells:10000,spans:14,endpoints:14,
+            }).unwrap();
+            let endpoints=prepared.prepared.expect(prepared.reason);
+            assert_eq!(endpoints.original(),&body.definition().unwrap());
+            assert_eq!(endpoints.vertices().len(),5);assert_eq!(endpoints.restrictions().len(),7);
+            for vertex in endpoints.vertices() {
+                assert!(vertex.error_upper<=1e-7);
+                for axis in 0..3 {assert!(vertex.point[axis]>=vertex.bounds[axis][0] && vertex.point[axis]<=vertex.bounds[axis][1]);}
+            }
+            for (index,restriction) in endpoints.restrictions().iter().enumerate() {
+                assert_eq!(restriction.edge().world(),body.geometry().shell().edges()[index].world());
+            }
             let definition=body.definition().unwrap();
             let restored=crate::source_body_restore::restore(definition.clone(),replay_body_limits()).unwrap();
             let replayed=restored.body().expect(restored.reason());

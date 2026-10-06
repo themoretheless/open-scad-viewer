@@ -2918,3 +2918,21 @@ STEP/closed mesh export, geometric Undo/Redo, whole-wall qualification, named
 part acceptance, full P0 and P2/P3 remain open. Earlier pending/unqualified
 statements above describe their historical stages; this section supersedes
 those only for this precisely tested shear family and worker/browser path.
+
+
+### Bounded exchange endpoint representatives — native only
+
+`source_exchange_endpoints::prepare` takes a privately admitted Body, freshly
+refines its original Crossing selectors, replays shared-edge identity and
+preserves world carriers, directions and parameter maps. Enclosures meet only
+by original vertex ID. Five representatives of the curved control body have
+outward L1 error bounds at most 1e-7 mm; seven original carriers remain intact.
+The original Body recipe remains stored separately. Exhausted exact work and
+an insufficient endpoint limit refuse preparation. The integrated curved
+Body/replay test passed in 11.49 s (`source-exchange-endpoints.log.gz`).
+
+This API is native only. It supplies endpoint accuracy bounds; it does not
+certify full edge/pcurve trims, STEP output, mesh closure, new topology or
+editing admission. Refinement mapping work is accumulated globally; shared-edge
+replay mapping has a separate per-use limit and identity queries are reported
+separately. No WASM or UI route changed in this stage.
