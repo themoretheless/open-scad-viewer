@@ -41,9 +41,9 @@ describe('continuous original wall coverage transport',()=>{
 it('binds adaptive face certificates and rejects forged ownership or work',()=>{
  const e=structuredClone(request);e.adaptiveSelf={planeControls:100,cells:10,spans:10,cellsPerFace:2,spansPerFace:2}
  const r=result();r.request=e;r.adaptiveSelf={faces:Array.from({length:6},(_,face)=>({face,qualified:true,reason:'source-self-wall-planar-excluded',cells:0,spans:0,pending:0,uncertain:null})),planeControls:24,cells:0,spans:0,allSelfPairsQualified:true}
- r.pairs[0].reason='source-wall-self-certified'
+ for(const p of r.pairs)if(p.faces[0]===p.faces[1])p.reason='source-wall-self-certified'
  expect(validCoverage(e,r,6,key)).toBe(true)
- for(const mutate of [(r:SourceWallCoverageResult)=>r.adaptiveSelf!.faces[0].face=1,r=>r.adaptiveSelf!.cells=1,r=>r.adaptiveSelf!.faces[0].pending=1,r=>r.adaptiveSelf!.allSelfPairsQualified=false,r=>r.adaptiveSelf=null]){
+ for(const mutate of [(r:SourceWallCoverageResult)=>r.adaptiveSelf!.faces[0].face=1,r=>r.adaptiveSelf!.cells=1,r=>r.adaptiveSelf!.faces[0].pending=1,r=>r.adaptiveSelf!.allSelfPairsQualified=false,r=>r.adaptiveSelf=null,r=>r.pairs[0].reason='source-wall-planar-self-excluded']){
   const changed=structuredClone(r);mutate(changed);expect(validCoverage(e,changed,6,key)).toBe(false)
  }
  const unrequested=result();unrequested.pairs[0].reason='source-wall-self-certified';expect(validCoverage(request,unrequested,6,key)).toBe(false)
@@ -54,6 +54,7 @@ it('retains adaptive pending rectangles without promoting whole-wall qualificati
  const e=structuredClone(request);e.adaptiveSelf={planeControls:100,cells:10,spans:10,cellsPerFace:2,spansPerFace:2}
  const r=result();r.request=e;r.adaptiveSelf={faces:Array.from({length:6},(_,face)=>({face,qualified:true,reason:'source-self-wall-planar-excluded',cells:0,spans:0,pending:0,uncertain:null})),planeControls:24,cells:1,spans:1,allSelfPairsQualified:false}
  r.adaptiveSelf.faces[0]={face:0,qualified:false,reason:'source-self-wall-work-limit',cells:1,spans:1,pending:1,uncertain:[[[0,1],[0,1]],[[0,1],[0,1]]]}
+ for(const p of r.pairs)if(p.faces[0]===p.faces[1])p.reason='source-wall-self-certified'
  r.pairs[0]={faces:[0,0],proven:false,reason:'source-wall-curved-self-unproven'};r.wholeWallQualified=false;r.lowerMm=null;r.reason='source-wall-coverage-unproven'
  expect(validCoverage(e,r,6,key)).toBe(true)
  for(const bad of [[],[[[1,0],[0,1]],[[0,1],[0,1]]],[[[0,Infinity],[0,1]],[[0,1],[0,1]]]]){

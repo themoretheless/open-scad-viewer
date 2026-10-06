@@ -62,6 +62,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
     :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit']
   if(!allowed.includes(p.reason))return false
   if(p.reason==='source-wall-self-certified'&&(!adaptive||!adaptive.faces[p.faces[0]]?.qualified))return false
+  if(a===b&&adaptive?.faces[a]?.qualified&&(!p.proven||p.reason!=='source-wall-self-certified'))return false
   all=all&&p.proven
  }
  const qualified=r.enumerationComplete&&all

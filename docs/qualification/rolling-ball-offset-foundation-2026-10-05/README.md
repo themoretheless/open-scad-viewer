@@ -4701,3 +4701,8 @@ or malformed adaptive results refuse; no proof algorithm moves into TS.
 Six transport regressions pass, including forged ownership/counts, missing
 reports, invalid budgets and unresolved rectangular refusal. vue-tsc passes.
 New packaged WASM, worker/UI acceptance and general whole-wall proof remain open.
+
+Adaptive transport additionally requires every enumerated diagonal with a
+qualified private self-face diagnostic to carry source-wall-self-certified.
+A contradictory fallback reason refuses even when all public booleans agree.
+Six transport regressions pass with this composition-consistency guard.
