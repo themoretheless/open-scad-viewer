@@ -1921,3 +1921,7 @@ pub mod source_support_shell;
 pub mod source_pole_planar_contact;
 
 pub mod source_ruled_projection_contact;
+
+pub mod source_planar_material_hull;
+
+pub mod source_corner_plane_image;

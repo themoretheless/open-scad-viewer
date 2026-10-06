@@ -14,6 +14,8 @@ pub struct Certificate {
     point: [f64; 3],
     plane: [[f64; 3]; 3],
     uses: [(Address, usize); 2],
+    material_hulls: [Option<crate::source_planar_material_hull::Certificate>;2],
+    corner_image: Option<crate::source_corner_plane_image::Certificate>,
 }
 impl Certificate {
     pub fn faces(&self) -> [usize; 2] {
@@ -34,6 +36,8 @@ impl Certificate {
     pub fn uses(&self) -> &[(Address, usize); 2] {
         &self.uses
     }
+    pub fn corner_image(&self)->Option<&crate::source_corner_plane_image::Certificate> {self.corner_image.as_ref()}
+    pub fn material_hulls(&self)->&[Option<crate::source_planar_material_hull::Certificate>;2] {&self.material_hulls}
 }
 pub struct Report {
     pub certificate: Option<Certificate>,
@@ -84,6 +88,31 @@ pub(crate) fn corner(source: &Fragment, end: usize) -> Option<[f64; 3]> {
             .unwrap(),
     )
 }
+/// Exact clamped canonical carrier endpoint, including a UV point inside its
+/// surface chart. The private SharedEdge proves the full original composition.
+/// Mapped ranges and root-valued endpoints require their own point proof.
+pub(crate) fn carrier_corner(shell: &Shell, address: Address, end: usize) -> Option<[f64;3]> {
+    if end>1 {return None;}
+    let (index,slot)=shell.uses().iter().enumerate().find_map(|(i,uses)| {
+        uses.iter().position(|a|*a==address).map(|slot|(i,slot))
+    })?;
+    let shared=&shell.edges()[index];
+    if shared.ranges().is_some() {return None;}
+    let source=&shared.uses()[slot];
+    let Endpoint::Parameter(t)=source.endpoints()[end] else {return None;};
+    let domain=source.curve().domain();
+    let side=domain.iter().position(|p|*p==t)?;
+    let world=shared.world();
+    let n=world.control_points.len();
+    let d=world.domain();
+    if world.periodic || !world.knots[..=world.degree].iter().all(|t|*t==d[0])
+        || !world.knots[n..].iter().all(|t|*t==d[1]) {return None;}
+    let reversed=shared.reversed()[slot]^source.reversed();
+    let canonical=side^usize::from(reversed);
+    let i=if canonical==0 {0}else{n-1};
+    if world.weights[i]<=0. {return None;}
+    world.control_points[i].as_slice().try_into().ok()
+}
 pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report> {
     let regions = shell
         .regions()
@@ -107,10 +136,10 @@ pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report
         for (wire, fragments) in regions[face].loops().iter().enumerate() {
             for (edge, source) in fragments.iter().enumerate() {
                 for end in 0..2 {
-                    if let Some(point) = corner(source, end) {
-                        vertices
-                            .entry(shell.vertices()[face][wire][edge][end])
-                            .or_insert((point, (Address { face, wire, edge }, end)));
+                    let address=Address {face,wire,edge};
+                    if let Some(point)=corner(source,end).or_else(||carrier_corner(shell,address,end)) {
+                        vertices.entry(shell.vertices()[face][wire][edge][end])
+                            .or_insert((point,(address,end)));
                     }
                 }
             }
@@ -122,18 +151,22 @@ pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report
         return Ok(out);
     }
 
-    let centroid = |face: usize| {
-        let s = regions[face].loops()[0][0].surface();
-        let count = (s.control_points.len() * s.control_points[0].len()) as f64;
-        std::array::from_fn::<_, 3, _>(|k| {
-            s.control_points
-                .iter()
-                .flatten()
-                .map(|p| p[k] / count)
-                .sum::<f64>()
+    let mut material_hulls=[None,None];
+    for slot in 0..2 {
+        if out.exact_work==max_work {return Ok(out);}
+        let r=crate::source_planar_material_hull::certify(shell,faces[slot],max_work-out.exact_work)?;
+        out.exact_work+=r.exact_work;material_hulls[slot]=r.certificate;
+    }
+    let points=std::array::from_fn::<_,2,_>(|slot| {
+        material_hulls[slot].as_ref().map(|h|h.points().to_vec()).unwrap_or_else(|| {
+            regions[faces[slot]].loops()[0][0].surface().control_points.iter().flatten()
+                .map(|p|[p[0],p[1],p[2]]).collect::<Vec<_>>()
         })
-    };
-    let centers = faces.map(centroid);
+    });
+    let centers=points.each_ref().map(|points| {
+        let count=points.len() as f64;
+        std::array::from_fn::<_,3,_>(|k|points.iter().map(|p|p[k]/count).sum::<f64>())
+    });
     for (vertex, (point, first)) in &vertices[0] {
         if out.exact_work == max_work {
             out.reason = "source-vertex-contact-work-limit";
@@ -187,14 +220,8 @@ pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report
         }
         let mut sides = [None; 2];
         let mut supported = true;
-        for (slot, &face) in faces.iter().enumerate() {
-            for p in regions[face].loops()[0][0]
-                .surface()
-                .control_points
-                .iter()
-                .flatten()
-            {
-                let world: [f64; 3] = p.as_slice().try_into().unwrap();
+        for slot in 0..2 {
+            for &world in &points[slot] {
                 let Some(sign) = crate::source_allowed_contact::orient(
                     &[plane[0], plane[1], plane[2], world],
                     None,
@@ -222,9 +249,37 @@ pub fn certify(shell: &Shell, faces: [usize; 2], max_work: u64) -> Result<Report
                 point: *point,
                 plane,
                 uses: [*first, *second],
+                material_hulls,
+                corner_image: None,
             });
             out.reason = "source-vertex-contact-qualified";
             return Ok(out);
+        }
+    }
+    // A coplanar face need not have a strict side. The other original chart
+    // can independently prove its entire plane image is the owned point.
+    for (vertex,(point,first)) in &vertices[0] {
+        let Some((other,second))=vertices[1].get(vertex) else {continue;};
+        if point!=other {continue;}
+        for planar in 0..2 {
+            if out.exact_work==max_work {return Ok(out);}
+            let Some(plane)=crate::source_allowed_contact::plane(
+                regions[faces[planar]].loops()[0][0].surface(),&mut out.exact_work,max_work,
+            )? else {continue;};
+            if out.exact_work==max_work {return Ok(out);}
+            let r=crate::source_corner_plane_image::certify(
+                regions[faces[1-planar]].loops()[0][0].surface(),plane,*point,max_work-out.exact_work,
+            )?;
+            out.exact_work+=r.exact_work;
+            if let Some(corner_image)=r.certificate {
+                out.certificate=Some(Certificate {
+                    faces,regions:[regions[faces[0]].clone(),regions[faces[1]].clone()],
+                    vertex:*vertex,point:*point,plane,uses:[*first,*second],material_hulls,
+                    corner_image:Some(corner_image),
+                });
+                out.reason="source-vertex-plane-image-qualified";
+                return Ok(out);
+            }
         }
     }
     Ok(out)

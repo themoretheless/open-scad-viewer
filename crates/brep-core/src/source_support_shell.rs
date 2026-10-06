@@ -131,6 +131,43 @@ mod tests {
         }
     }
     #[test]
+    fn annular_top_and_ruled_wall_only_contact_at_owned_pole() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let report=crate::source_vertex_contact::certify(&shell,[1,2],100_000_000).unwrap();
+        eprintln!("top/cylinder owned pole: {} work={}",report.reason,report.exact_work);
+        let certificate=report.certificate.expect("original top/cylinder pole needs contact certificate");
+        assert!(certificate.corner_image().is_some());
+        assert_eq!(certificate.corner_image().unwrap().point(),certificate.point());
+    }
+    #[test]
+    fn trimmed_plane_vertex_owns_an_exact_original_carrier_endpoint() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let regions=shell.regions().unwrap();
+        let mut owned=std::collections::BTreeMap::new();
+        for face in [0,6] {
+            for (wire,fragments) in regions[face].loops().iter().enumerate() {
+                for (edge,fragment) in fragments.iter().enumerate() {
+                    for end in 0..2 {
+                        let address=crate::source_shell_incidence::Address {face,wire,edge};
+                        if let Some(point)=crate::source_vertex_contact::carrier_corner(&shell,address,end) {
+                            if face==6 {assert!(crate::source_vertex_contact::corner(fragment,end).is_none());}
+                            owned.entry(shell.vertices()[face][wire][edge][end]).or_insert_with(Vec::new).push((face,point));
+                        }
+                    }
+                }
+            }
+        }
+        let shared=owned.values().filter(|ends|ends.iter().any(|e|e.0==0)&&ends.iter().any(|e|e.0==6)).collect::<Vec<_>>();
+        assert_eq!(shared.len(),1);
+        assert!(shared[0].iter().all(|e|e.1==shared[0][0].1));
+        let report=crate::source_vertex_contact::certify(&shell,[0,6],100_000_000).unwrap();
+        eprintln!("trimmed planar vertex: {} work={}",report.reason,report.exact_work);
+        assert!(report.certificate.is_some(),"{}",report.reason);
+        assert!(report.certificate.unwrap().material_hulls()[1].is_some());
+    }
+    #[test]
     fn original_annular_transition_cylinder_contact_is_owned() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -238,7 +275,7 @@ mod tests {
                     geometry.reason,
                     "source-shell-different-face-contacts-unproven"
                 );
-                assert_eq!(geometry.next_pair, Some([0, 6]));
+                assert_eq!(geometry.next_pair, Some([1, 6]));
             }
             Err(e) => panic!("annular source support: {}: {}", e.code, e.message),
         }

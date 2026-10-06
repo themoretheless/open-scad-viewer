@@ -3265,3 +3265,36 @@ Existing native regressions pass: irrational-root flat body/topology
 body with independent analytic cap/frustum volume enclosure (66.71 s).
 These are test runtimes, not performance comparisons. Packaged WASM, UI,
 independent STEP reader and named-part acceptance were not refreshed here.
+
+
+## Original material vertex and corner-only plane contact
+
+Native annular pair [0,6] now qualifies using a fresh planar material
+boundary hull and exact canonical carrier endpoint ownership. This stage
+requires one injective clamped bilinear planar chart, positive original
+carrier weights, full source UV endpoints and direct private SharedEdges.
+Mapped ranges and root-valued endpoints refuse this shortcut. The private
+certificate retains original regions, carrier definitions and chart proof;
+no rounded world endpoint or saved topology flag authorizes contact.
+
+Pair [1,2] now qualifies by exact original Bernstein control signs. Uniform
+strict nonzero signs exclude open surface contact with the other face's
+plane. A zero boundary must map entirely to the same owned original point;
+every zero corner must equal that point. Zero interior controls are allowed
+because the open tensor basis is strictly positive. This is contact proof,
+not an independent chart injectivity or G1 claim.
+
+Actual pair tests pass: [0,6] uses 9,254 exact operations; [1,2] uses 14,985.
+Negative tests reject opposite interior signs, a different zero corner,
+a zero boundary containing another point (including one subnormal step),
+and exhausted work. An explicitly collapsed boundary at the owned point
+is accepted. Existing original vertex contact regressions pass.
+
+The full annular gate advances to [1,6], still reporting
+`source-shell-different-face-contacts-unproven`. The initial outdated pair
+assertion failed and its log is retained as advancement evidence. No whole
+annular Geometry/Body/volume certificate, new WASM, UI or named-part STEP
+acceptance is claimed by this stage.
+
+Updated full annular gate regression passes (37.57 s). Curved irrational-root
+body/contact/volume replay also passes; see retained logs.
