@@ -271,6 +271,18 @@ mod tests {
         let proof=radial.certificate.expect("original annular radial material interval around cavity");
         assert!(proof.length_mm()[0]<=15. && proof.length_mm()[1]>=15.);
         assert!(proof.length_mm()[1]-proof.length_mm()[0]<1e-5);
+        assert_eq!(proof.line(),[[25.,5.,3.],[-50.,-10.,0.]]);
+        let endpoints=proof.endpoints();
+        for (i,endpoint) in endpoints.iter().enumerate() {
+            let crossing=&radial.boundary.contacts[i];
+            assert_eq!(endpoint.face,crossing.face);
+            assert_eq!(endpoint.uv,crossing.uv);
+            assert_eq!(endpoint.parameter,crossing.parameter);
+            let surface=body.geometry().shell().regions().unwrap()[endpoint.face].loops()[0][0].surface();
+            assert_eq!(endpoint.world_mm.to_vec(),nurbs_core::surface_distance::rectangle_bounds(surface,endpoint.uv).unwrap());
+            assert!(endpoint.world_mm.iter().all(|v|v[0].is_finite() && v[0]<=v[1] && v[1].is_finite()));
+        }
+        assert!(endpoints[0].parameter[1]<endpoints[1].parameter[0]);
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,
             [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,

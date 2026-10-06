@@ -11,10 +11,21 @@ pub struct Limits {
     pub normal_spans: usize,
     pub max_sine_squared: f64,
 }
+/// Original isolated root and its conservative world-coordinate enclosure.
+/// A box is display/diagnostic evidence; it is not a single exact endpoint.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Endpoint {
+    pub face: usize,
+    pub parameter: [f64; 2],
+    pub uv: [[f64; 2]; 2],
+    pub world_mm: [[f64; 2]; 3],
+}
 pub struct Certificate<'a> {
     body: &'a Body,
     faces: [usize; 2],
     length_mm: [f64; 2],
+    line: [[f64; 3]; 2],
+    endpoints: [Endpoint; 2],
 }
 impl<'a> Certificate<'a> {
     pub fn body(&self) -> &'a Body {
@@ -22,6 +33,13 @@ impl<'a> Certificate<'a> {
     }
     pub fn faces(&self) -> [usize; 2] {
         self.faces
+    }
+    /// Authored finite line P(t)=origin+t*direction, t in [0,1].
+    pub fn line(&self) -> [[f64; 3]; 2] {
+        self.line
+    }
+    pub fn endpoints(&self) -> [Endpoint; 2] {
+        self.endpoints
     }
     pub fn length_mm(&self) -> [f64; 2] {
         self.length_mm
@@ -191,6 +209,31 @@ fn qualify_impl<'a>(
         body,
         faces,
         length_mm: [lo, hi],
+        line: [origin, direction],
+        endpoints: [
+            Endpoint {
+                face: a.face,
+                parameter: a.parameter,
+                uv: a.uv,
+                world_mm: points[0].clone().try_into().map_err(|_| {
+                    Error::new(
+                        "BREP_SOURCE_CHORD_DIMENSION",
+                        "Original endpoint must have three world coordinates",
+                    )
+                })?,
+            },
+            Endpoint {
+                face: b.face,
+                parameter: b.parameter,
+                uv: b.uv,
+                world_mm: points[1].clone().try_into().map_err(|_| {
+                    Error::new(
+                        "BREP_SOURCE_CHORD_DIMENSION",
+                        "Original endpoint must have three world coordinates",
+                    )
+                })?,
+            },
+        ],
     });
     out.reason = "source-material-normal-chord-qualified";
     Ok(out)

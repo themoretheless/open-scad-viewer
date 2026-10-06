@@ -4136,3 +4136,18 @@ The final verifier passes all 151 artifacts: 8,266,609 asset bytes plus
 15,178,440 raw WASM bytes, 23,445,049 total. Packed/source identity and
 unique shared module checks remain enabled. Both terminal logs retained.
 This is a local distribution validation, not deployment or a Git push.
+
+
+## Original material chord endpoint enclosures
+
+Private native chord certificates now retain authored finite line coefficients,
+selected original crossing parameter intervals, face identities, UV root
+rectangles and conservative world-coordinate boxes from those original
+surfaces. The annular body/radius/seam regression passes, including four
+cavity crossings, material-pair selection, and exact equality of retained
+endpoint evidence with fresh original rectangle_bounds results.
+
+These boxes enclose endpoints; they are not exact point coordinates. This
+addition is native-only: the bridge, packaged WASM and UI do not yet expose
+this witness. Existing packaged cavity thickness qualification is unchanged.
+The terminal native log is retained.
