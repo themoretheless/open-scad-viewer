@@ -4124,3 +4124,15 @@ retained. This verifies packaged cavity parity and tight radial bounds
 through WASM/worker/UI. It does not establish automatic whole-body wall
 coverage, adaptive discovery of every thin region, or general fillets.
 The native search_and_refine helper is still not exposed by the bridge.
+
+
+## Cavity wall production distribution
+
+Vite production compilation succeeds. The initial size gate rejects the
+geometry chunk at 3,963,930 bytes against the prior 3,963,518 budget.
+Measured geometry and total asset budgets are updated, preserving prior
+608-byte and 761-byte margins respectively; other budgets are unchanged.
+The final verifier passes all 151 artifacts: 8,266,609 asset bytes plus
+15,178,440 raw WASM bytes, 23,445,049 total. Packed/source identity and
+unique shared module checks remain enabled. Both terminal logs retained.
+This is a local distribution validation, not deployment or a Git push.
