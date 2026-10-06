@@ -3117,3 +3117,27 @@ ruled extrusion. The explicit refusal/rank regression passes (0.09 s). This
 is evidence of an unresolved computation limit, not successful annular
 geometry qualification. The transition/cylinder proof still requires a more
 efficient exact determinant and independent boundary ownership/injectivity.
+
+## Exact Bernstein determinant and original annular projection reversal
+
+Replaced power-basis determinant multiplication with exact Bernstein products
+using common positive integer LCM denominators. Original coordinates are
+translated by the first original control coordinate in exact arithmetic.
+Added separately bounded original coefficient-row queries; every row uses the
+same immutable arena and all rows must succeed before any chart certificate.
+The wrapper caps aggregate charged work at 100,000,000; each underlying context
+retains its 1,000,000 cap. Partial row results never grant orientation.
+
+Six predicate regressions and the full cad-predicates suite pass, including
+whole-chart versus independently queried rows of a curved rational chart.
+Two original NURBS wrapper tests pass. Actual annular face 0 now completes
+in 9,130,621 charged operations: 65 negative, 14 zero, 11 positive coefficients.
+All positives lie on v=1, whose Bernstein restriction has strictly positive
+sign for interior u; v=0 is strictly negative for interior u. By continuity,
+every interior u has an interior v where projected Jacobian vanishes.
+This proves a projection orientation reversal, not a 3D self-intersection.
+No orientation certificate or annular Body is granted. Face 2 projection
+returns 45 zeros (57,210 operations), consistent with extrusion rank deficiency.
+The native actual-model regression passes; native authoring at the transition
+endpoint now needs correction and renewed original-geometry qualification.
+WASM/UI remain unchanged and whole annular contact/body remains unproven.

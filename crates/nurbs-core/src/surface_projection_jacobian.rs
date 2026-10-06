@@ -27,14 +27,18 @@ pub struct Report {
     pub signs: Option<Vec<Vec<Sign>>>,
     pub exact_work: u64,
     pub exact_reason: Option<cad_predicates::Reason>,
+    /// Opposite strict signs on v=0 and v=1 imply an interior zero of
+    /// the projected Jacobian for every interior u, by continuity.
+    /// This is not a certificate of a 3D self-intersection.
+    pub opposite_v_boundary_signs: Option<[Sign; 2]>,
     pub reason: &'static str,
 }
 /// Only single, clamped, nonperiodic Bezier charts are admitted here.
 pub fn certify(surface: &Surface, axes: [usize; 2], max_work: u64) -> Result<Report> {
     surface.validate()?;
     check(
-        (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Projection needs 1..1000000 exact work",
+        (1..=100_000_000).contains(&max_work),
+        "Projection needs 1..100000000 exact work",
     )?;
     check(
         axes[0] < 3 && axes[1] < 3 && axes[0] != axes[1],
@@ -96,23 +100,55 @@ pub fn certify(surface: &Surface, axes: [usize; 2], max_work: u64) -> Result<Rep
         })
         .collect::<Vec<_>>();
     let tolerance = ToleranceContext::default_valid();
-    let mut ctx = PredicateContext::new(
-        &arena,
-        &tolerance,
-        Limits {
-            max_work,
-            ..Limits::default()
-        },
-        None,
-    );
-    let decision = cad_predicates::rational_surface_projected_jacobian(&mut ctx, &leaves, axes)
-        .map_err(|_| numeric_err("Projection predicate admission failed"))?;
-    let orientation = decision.signs.as_ref().and_then(|s| {
+    let mut signs = Vec::new();
+    let mut work = 0u64;
+    let mut exact_reason = None;
+    for row in 0..3 * surface.degree_u {
+        let remaining = max_work.saturating_sub(work).min(cad_predicates::MAX_WORK);
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: remaining,
+                ..Limits::default()
+            },
+            None,
+        );
+        let decision =
+            cad_predicates::rational_surface_projected_jacobian_row(&mut ctx, &leaves, axes, row)
+                .map_err(|_| numeric_err("Projection predicate admission failed"))?;
+        work = work
+            .checked_add(decision.work_used)
+            .ok_or_else(|| numeric_err("Projection work overflow"))?;
+        match decision.signs {
+            Some(mut rows) => signs.push(rows.remove(0)),
+            None => {
+                exact_reason = decision.reason;
+                break;
+            }
+        }
+    }
+    let signs = (signs.len() == 3 * surface.degree_u).then_some(signs);
+    let orientation = signs.as_ref().and_then(|s| {
         let first = s.iter().flatten().find(|s| **s != Sign::Zero).copied()?;
         s.iter()
             .flatten()
             .all(|s| *s == Sign::Zero || *s == first)
             .then_some(first)
+    });
+    let opposite_v_boundary_signs = signs.as_ref().and_then(|rows| {
+        let edge_sign = |column: usize| {
+            let first = rows
+                .iter()
+                .map(|row| row[column])
+                .find(|s| *s != Sign::Zero)?;
+            rows.iter()
+                .all(|row| row[column] == Sign::Zero || row[column] == first)
+                .then_some(first)
+        };
+        let first = edge_sign(0)?;
+        let last = edge_sign(rows[0].len() - 1)?;
+        (first != last).then_some([first, last])
     });
     Ok(Report {
         certificate: orientation.map(|orientation| Certificate {
@@ -120,12 +156,13 @@ pub fn certify(surface: &Surface, axes: [usize; 2], max_work: u64) -> Result<Rep
             axes,
             orientation,
         }),
-        signs: decision.signs,
-        exact_work: decision.work_used,
-        exact_reason: decision.reason.clone(),
+        signs,
+        opposite_v_boundary_signs,
+        exact_work: work,
+        exact_reason: exact_reason.clone(),
         reason: if orientation.is_some() {
             "strict-interior-projection-orientation"
-        } else if decision.reason.is_some() {
+        } else if exact_reason.is_some() {
             "exact-projection-computation-unproven"
         } else {
             "projection-sign-unproven"
