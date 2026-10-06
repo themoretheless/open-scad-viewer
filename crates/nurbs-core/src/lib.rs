@@ -12,6 +12,7 @@
 )]
 #![allow(unused_features)]
 pub mod curve;
+pub mod uv_curve_crossings;
 pub mod coons;
 pub mod continuity;
 pub mod framed_sweep;
@@ -40,6 +41,8 @@ pub mod radial_bounds;
 pub mod ray_surface;
 pub mod normal_alignment;
 pub mod curve_surface_agreement;
+pub mod curve_surface_plane;
+pub mod curve_surface_affine;
 mod curve_surface_composition;
 mod periodic_chart;
 pub mod trim_domain;
@@ -135,3 +138,59 @@ pub mod retained_wall_domain;
 pub mod sweep_seam_set;
 
 pub mod sweep_section_correction;
+
+pub mod surface_offset;
+
+pub mod trimmed_offset_contact;
+
+pub mod offset_source_boundary;
+
+pub mod offset_contact_tangent;
+
+pub mod offset_envelope;
+
+pub mod offset_envelope_fit;
+
+pub mod offset_contact_pcurve;
+
+pub mod offset_contact_trims;
+
+pub mod offset_face_loops;
+
+pub mod offset_patch_boundary;
+
+pub mod curve_partition_agreement;
+
+pub mod boundary_partition;
+
+pub mod contact_normal_agreement;
+
+pub mod offset_contact_predictor;
+
+pub mod offset_contact_path;
+
+pub mod curve_axis_driver;
+
+pub mod offset_path_trims;
+
+pub mod offset_path_pcurves;
+
+pub mod curve_surface_lift;
+
+pub mod curve_point_identity;
+
+pub mod surface_flux;
+
+pub mod moving_radius;
+
+pub mod moving_envelope;
+
+pub mod surface_projection_jacobian;
+
+pub mod curve_quadratic_separator;
+
+pub mod surface_projected_jordan;
+
+pub mod surface_self_chord;
+
+pub mod surface_self_chord_coverage;

@@ -86,6 +86,7 @@ export function meshDataToPolygon(mesh: MeshData): PolygonMesh | null {
 }
 
 export function solidDocumentToMeshDocument(solid: DirectDocument): MeshWorkspaceDocument {
+  if(solid.sourceBodies?.length)throw Error('Mesh exchange cannot yet tessellate exact source bodies. Keep the native document.')
   const doc = emptyMeshDocument()
   for (const body of solid.bodies) {
     doc.objects.push(polygonToMeshObject(body.mesh, body.name, body.id))

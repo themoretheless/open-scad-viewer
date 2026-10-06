@@ -1,0 +1,46 @@
+{
+  "schema": "cad-original-annular-step-occt/1",
+  "stepSha256": "5898b12ac7954181dfcf3968a92f5665ea8465e04a832a2a03398fec4a70ab4f",
+  "oracleSha256": "ba76db7e2ab70b04dfce9d49d5e0bc6eb2c0f189f27a418f4fd0833fff59dcc1",
+  "occtValid": true,
+  "solids": 1,
+  "faces": 27,
+  "edges": 55,
+  "vertices": 26,
+  "degenerateEdges": 2,
+  "polePointsMm": [
+    [
+      20.1,
+      0.0,
+      6.0
+    ],
+    [
+      0.0,
+      20.0,
+      6.0
+    ]
+  ],
+  "poleErrorMm": 0.10000000000000142,
+  "volumeMm3": 7061.457372467371,
+  "expectedVolumeMm3": 7061.4573708387725,
+  "volumeErrorMm3": 1.628598511160817e-06,
+  "boundsMm": [
+    -20.000000100000005,
+    -20.000000100000005,
+    -1e-07,
+    20.00000010000001,
+    20.000000100000012,
+    6.000000100000003
+  ],
+  "expectedBoundsMm": [
+    -20.0,
+    -20.0,
+    0.0,
+    20.0,
+    20.0,
+    6.0
+  ],
+  "maxBoundsErrorMm": 1.0000001182675078e-07,
+  "scope": "One native original annular source STEP: independent OCCT validity, unique topology, poles, extents and volume; no edit, Undo/Redo or arbitrary fillet proof.",
+  "passed": false
+}

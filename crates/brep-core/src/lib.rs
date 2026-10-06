@@ -974,7 +974,19 @@ impl Model {
                         // loop by its face, which carries the surface.
                         loop_owners[wire].insert(faces[use_.face].clone());
                         for coedge in &self.loops[wire].coedges {
-                            edge_owners[coedge.edge].insert(key.clone());
+                            // A pole can own several collapsed UV boundaries in
+                            // one shell. They are distinct chart entities even
+                            // though their world curves and vertices coincide.
+                            let owner = if self.edges[coedge.edge].degenerate {
+                                Self::hash([
+                                    key.clone(),
+                                    faces[use_.face].clone(),
+                                    Self::directed_curve_key(&coedge.pcurve, false),
+                                ])
+                            } else {
+                                key.clone()
+                            };
+                            edge_owners[coedge.edge].insert(owner);
                             for &vertex in &self.edges[coedge.edge].vertices {
                                 vertex_owners[vertex].insert(key.clone());
                             }
@@ -1834,3 +1846,96 @@ pub mod affine_lattice;
 pub mod sweep_retained;
 
 pub mod miter_seams;
+
+pub mod offset_end_boundary;
+
+pub mod trimmed_face_recipe;
+pub mod source_contact_point;
+pub mod source_boundary_fragment;
+pub mod source_contour_proposal;
+pub mod source_region_restore;
+pub mod source_contour_winding;
+pub mod source_world_wire;
+mod source_line_chart_root;
+pub mod source_shared_edge;
+pub mod source_shared_edge_restore;
+pub mod source_edge_restriction;
+pub mod source_boundary_network;
+pub mod source_boundary_display;
+pub mod source_region_display;
+pub mod source_collapsed_boundary;
+pub mod source_shell_incidence;
+pub mod source_shell_restore;
+pub mod source_body_restore;
+pub mod source_face_contacts;
+pub mod source_allowed_contact;
+pub mod source_plane_fiber;
+pub mod source_pole_plane_image;
+pub mod source_pole_paired_contact;
+pub mod source_paired_fiber_contact;
+pub mod source_fiber_boundary;
+pub mod source_fiber_contact;
+pub mod source_affine_use;
+pub mod source_mapped_edge;
+
+pub mod trimmed_shell_recipe;
+
+pub mod offset_edge_supports;
+
+pub mod source_root_parameter;
+
+pub mod source_halfplane_side;
+
+pub mod source_interior_fiber;
+pub mod source_interior_boundary;
+
+pub mod source_interior_contact;
+
+pub mod source_vertex_links;
+pub mod source_vertex_contact;
+pub mod source_hull_separation;
+
+pub mod source_shell_geometry;
+
+pub mod source_volume;
+pub mod source_body_model;
+pub mod source_body_topology;
+
+pub mod source_seam_tangency;
+
+pub mod linear_canal;
+pub mod linear_canal_body;
+
+pub mod source_inverse_shear;
+
+pub mod source_root_refinement;
+
+pub mod source_exchange_endpoints;
+
+pub mod source_exchange_trims;
+
+pub mod source_exchange_step;
+
+pub mod source_support_shell;
+
+pub mod source_pole_planar_contact;
+
+pub mod source_ruled_projection_contact;
+
+pub mod source_planar_material_hull;
+
+pub mod source_corner_plane_image;
+
+pub(crate) mod source_planar_flux;
+
+pub mod source_face_gap;
+pub mod source_material_segment;
+pub mod source_material_chord;
+pub mod source_material_wall;
+pub mod source_wall_search;
+
+pub mod source_wall_scan;
+
+pub mod source_wall_coverage;
+
+pub mod source_wall_self_coverage;

@@ -1,0 +1,24 @@
+{
+  "keyboard": true,
+  "checks": [
+    {
+      "name": "configured-export-independent-coordinates",
+      "printedMoves": 2550
+    },
+    {
+      "name": "reopen-export",
+      "passed": true
+    },
+    {
+      "name": "laser-off-frame",
+      "passed": true
+    },
+    {
+      "name": "laser-job",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "companion": "offline health fixture",
+  "wasmSha256": "a4ed818b5f65fad277d4ebeb1985bc776806e20d86896aa33b4793894d9ee4fd"
+}

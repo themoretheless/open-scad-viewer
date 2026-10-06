@@ -43,6 +43,20 @@ fn cell(c: &Curve, span: usize, domain: [f64; 2], origin: [f64; 2]) -> Result<In
     };
     let left = shift(curve_jets::endpoint(c, span, domain, false)?)?;
     let right = shift(curve_jets::endpoint(c, span, domain, true)?)?;
+    let middle = domain[0] * 0.5 + domain[1] * 0.5;
+    if c.degree <= 2 && c.weights.iter().all(|w| *w == c.weights[0])
+        && middle > domain[0] && middle < domain[1] {
+        // Each equal-weight quadratic knot span is polynomial. Its Green
+        // integrand has degree at most three, so Simpson integration is
+        // exact apart from the outward interval arithmetic. Endpoint jets
+        // of the half cell use its local parameter: restore the full-cell
+        // derivative by multiplying by two.
+        let mid = shift(curve_jets::endpoint(c, span, [domain[0], middle], true)?)?;
+        return cross(&left[0], &left[1])?
+            .add(cross(&mid[0], &mid[1])?.mul(Interval::point(8.))?)?
+            .add(cross(&right[0], &right[1])?)?
+            .div(Interval::point(12.));
+    }
     let jets = shift(curve_jets::enclose(c, span, domain)?)?;
     // Jets use the local cell parameter in [0,1]. Thus no source knot width
     // multiplier is needed. The trapezoid remainder is bounded by sup|F''|/12.
@@ -266,7 +280,12 @@ mod tests {
             assert!(r.area_interval_mm2[0] <= expected && r.area_interval_mm2[1] >= expected);
             assert!(r.cells <= 10000);
         }
-        assert!(!measure(&c, 1e-12, 4).unwrap().converged);
+        let exact = measure(&c, 1e-10, 4).unwrap();
+        assert!(exact.converged);
+        assert_eq!(exact.cells, 4);
+        assert!(exact.area_interval_mm2[0] <= 14. / 3.);
+        assert!(exact.area_interval_mm2[1] >= 14. / 3.);
+        assert!(!measure(&c, 1e-16, 4).unwrap().converged);
         assert_eq!(format!("{c:?}"), before);
     }
 }

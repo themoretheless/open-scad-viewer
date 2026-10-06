@@ -46,6 +46,36 @@ fn homogeneous<const N:usize>(points:&[[Expansion;N]],ctx:&mut PredicateContext<
         polynomial(&values,ctx)
     }).collect()
 }
+// Exact affine pullback of the complete canonical curve. All common
+// denominator factors remain homogeneous and cancel only by cross products.
+fn affine_homogeneous(points:&[[Expansion;4]],range:&[Expansion],ctx:&mut PredicateContext<'_>)
+    ->Result<Option<Vec<Poly>>,Reason> {
+    for i in 0..2 {
+        if range[2*i+1].sign()!=Sign::Positive || range[2*i].sign()==Sign::Negative
+            || range[2*i+1].sub(&range[2*i],ctx)?.sign()==Sign::Negative {return Ok(None);}
+    }
+    let denominator=range[1].mul(&range[3],ctx)?;
+    let a=range[0].mul(&range[3],ctx)?;
+    let b=range[2].mul(&range[1],ctx)?;
+    let span=b.sub(&a,ctx)?;
+    if span.sign()==Sign::Zero {return Ok(None);}
+    let low=vec![a.clone(),span.clone()];
+    let high=vec![denominator.sub(&a,ctx)?,Expansion::scalar(0.).sub(&span,ctx)?];
+    let degree=points.len()-1;
+    let mut lows=vec![vec![Expansion::scalar(1.)]];
+    let mut highs=vec![vec![Expansion::scalar(1.)]];
+    for i in 1..=degree {lows.push(mul(&lows[i-1],&low,ctx)?);highs.push(mul(&highs[i-1],&high,ctx)?);}
+    let mut out:Vec<Poly>=(0..4).map(|_|Vec::new()).collect();
+    for (i,point) in points.iter().enumerate() {
+        let basis=mul(&lows[i],&highs[degree-i],ctx)?;
+        let scale=Expansion::integer(choose(degree,i),ctx)?;
+        for axis in 0..4 {
+            let control=if axis==3 {point[3].clone()} else {point[axis].mul(&point[3],ctx)?};
+            add_scaled(&mut out[axis],&basis,&control.mul(&scale,ctx)?,ctx)?;
+        }
+    }
+    Ok(Some(out))
+}
 /// Euclidean XYZ+weight for C and S, UV+weight for P. Surface domain bounds
 /// are authored leaves. Degrees: C 1..32; P and each surface axis 1..8.
 /// Reversed traversal is expressed by reversing C's control sequence.
@@ -53,13 +83,28 @@ pub fn rational_bezier_composition_identity(
     ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
     surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],
 )->Result<BezierIdentityDecision,InputError>{
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,None)
+}
+/// Formal identity C(a+(b-a)t)=S(P(t)); a and b are exact authored
+/// numerator/positive-denominator pairs in normalized canonical traversal.
+pub fn rational_bezier_composition_affine_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
+    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+)->Result<BezierIdentityDecision,InputError>{
+    composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range))
+}
+fn composition_identity_impl(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],pcurve:&[[LeafRef;3]],
+    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:Option<[[LeafRef;2];2]>,
+)->Result<BezierIdentityDecision,InputError>{
     if !(2..=33).contains(&curve.len()) || !(2..=9).contains(&pcurve.len())
         || !(2..=9).contains(&surface.len()) || surface.first().is_none_or(|r|!(2..=9).contains(&r.len()))
         || surface.iter().any(|r|r.len()!=surface[0].len()) {
         return Err(InputError::InvalidInput("Bezier composition dimensions exceed the supported degree bounds"));
     }
     let refs:Vec<_>=curve.iter().flatten().chain(pcurve.iter().flatten())
-        .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten()).copied().collect();
+        .chain(surface.iter().flatten().flatten()).chain(domain.iter().flatten())
+        .chain(range.iter().flatten().flatten()).copied().collect();
     let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
     let result=(||->Result<BezierIdentity,Reason>{
         ctx.charge(values.len() as u64)?;
@@ -69,7 +114,8 @@ pub fn rational_bezier_composition_identity(
         let p:Vec<[Expansion;3]>=values[4*nc..4*nc+3*np].chunks_exact(3).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
         let start=4*nc+3*np;
         let s:Vec<[Expansion;4]>=values[start..start+4*nu*nv].chunks_exact(4).map(|x|std::array::from_fn(|i|x[i].clone())).collect();
-        let d=&values[start+4*nu*nv..];
+        let d=&values[start+4*nu*nv..start+4*nu*nv+4];
+        let mapping=range.map(|_|&values[start+4*nu*nv+4..]);
         if c.iter().chain(&s).any(|x|x[3].sign()!=Sign::Positive) || p.iter().any(|x|x[2].sign()!=Sign::Positive)
             || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
@@ -77,7 +123,7 @@ pub fn rational_bezier_composition_identity(
         // An exact affine bilinear chart maps each rational pole with the
         // same parameter weights. Prove the chart and pole identities using
         // cross-multiplied domain widths; no rounded inverse is introduced.
-        if nu==2 && nv==2 && nc==np {
+        if mapping.is_none() && nu==2 && nv==2 && nc==np {
             let mut eligible=true;
             for pole in &s {
                 eligible &= pole[3].sub(&s[0][3],ctx)?.sign()==Sign::Zero;
@@ -120,7 +166,13 @@ pub fn rational_bezier_composition_identity(
             }
             constant_axes[axis]=same;
         }
-        let c=homogeneous(&c,ctx)?;let p=homogeneous(&p,ctx)?;
+        let c=if let Some(mapping)=mapping {
+            match affine_homogeneous(&c,mapping,ctx)? {
+                Some(c)=>c,
+                None=>return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)),
+            }
+        } else {homogeneous(&c,ctx)?};
+        let p=homogeneous(&p,ctx)?;
         let mut basis=Vec::new();
         for axis in 0..2 {
             let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
@@ -227,4 +279,137 @@ mod tests {
         assert_eq!(run(&c,&bad,d,Limits::default()),BezierIdentity::Indeterminate(Reason::MissingProof));
         assert_eq!(run(&c,&p,[[1.,0.],[0.,1.]],Limits::default()),BezierIdentity::Indeterminate(Reason::MissingProof));
     }
+}
+
+/// Exact formal identity that S(P(t)) lies in the plane through three source
+/// anchors. Chart membership and denominator positivity are separate proofs.
+/// The plane normal and every composition coefficient are exact expansions.
+pub fn rational_bezier_composition_plane_identity(
+    ctx: &mut PredicateContext<'_>, pcurve: &[[LeafRef;3]],
+    surface: &[Vec<[LeafRef;4]>], domain: [[LeafRef;2];2], plane: [[LeafRef;3];3],
+) -> Result<BezierIdentityDecision,InputError> {
+    if !(2..=9).contains(&pcurve.len()) || !(2..=9).contains(&surface.len())
+        || surface.first().is_none_or(|r| !(2..=9).contains(&r.len()))
+        || surface.iter().any(|r| r.len()!=surface[0].len()) {
+        return Err(InputError::InvalidInput("Plane composition dimensions exceed supported degree bounds"));
+    }
+    let refs:Vec<_>=pcurve.iter().flatten().chain(surface.iter().flatten().flatten())
+        .chain(domain.iter().flatten()).chain(plane.iter().flatten()).copied().collect();
+    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let result=(|| -> Result<BezierIdentity,Reason> {
+        ctx.charge(values.len() as u64)?;
+        let values=exact_inputs(&values,ctx)?;
+        let (np,nu,nv)=(pcurve.len(),surface.len(),surface[0].len());
+        let p:Vec<[Expansion;3]>=values[..3*np].chunks_exact(3).map(|v|std::array::from_fn(|k|v[k].clone())).collect();
+        let s:Vec<[Expansion;4]>=values[3*np..3*np+4*nu*nv].chunks_exact(4).map(|v|std::array::from_fn(|k|v[k].clone())).collect();
+        let d=&values[3*np+4*nu*nv..3*np+4*nu*nv+4];
+        let anchors=&values[3*np+4*nu*nv+4..];
+        if p.iter().any(|v|v[2].sign()!=Sign::Positive) || s.iter().any(|v|v[3].sign()!=Sign::Positive)
+            || d[1].sub(&d[0],ctx)?.sign()!=Sign::Positive || d[3].sub(&d[2],ctx)?.sign()!=Sign::Positive {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let a=(0..3).map(|k|anchors[3+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let b=(0..3).map(|k|anchors[6+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let normal=(0..3).map(|k|a[(k+1)%3].mul(&b[(k+2)%3],ctx)?.sub(&a[(k+2)%3].mul(&b[(k+1)%3],ctx)?,ctx)).collect::<Result<Vec<_>,_>>()?;
+        if normal.iter().all(|v|v.sign()==Sign::Zero) {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));}
+        let mut factors=Vec::new();
+        for pole in &s {
+            let mut signed=Expansion::scalar(0.);
+            for k in 0..3 { signed=signed.add(&pole[k].sub(&anchors[k],ctx)?.mul(&normal[k],ctx)?,ctx)?; }
+            factors.push(signed.mul(&pole[3],ctx)?);
+        }
+        if factors.iter().all(|v|v.sign()==Sign::Zero) { return Ok(BezierIdentity::Equal); }
+        let p=homogeneous(&p,ctx)?;
+        let mut basis=Vec::new();
+        for axis in 0..2 {
+            let mut low=p[axis].clone();
+            add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
+            let mut high=Vec::new();
+            add_scaled(&mut high,&p[2],&d[2*axis+1],ctx)?;
+            add_scaled(&mut high,&p[axis],&Expansion::scalar(-1.),ctx)?;
+            let degree=if axis==0 {nu-1} else {nv-1};
+            let mut lows=vec![vec![Expansion::scalar(1.)]];
+            let mut highs=vec![vec![Expansion::scalar(1.)]];
+            for i in 1..=degree {lows.push(mul(&lows[i-1],&low,ctx)?);highs.push(mul(&highs[i-1],&high,ctx)?);}
+            let mut parts=Vec::new();
+            for i in 0..=degree {
+                let product=mul(&lows[i],&highs[degree-i],ctx)?;
+                let mut part=Vec::new();
+                add_scaled(&mut part,&product,&Expansion::integer(choose(degree,i),ctx)?,ctx)?;
+                parts.push(part);
+            }
+            basis.push(parts);
+        }
+        let mut signed=Vec::new();
+        for i in 0..nu {for j in 0..nv {
+            if factors[i*nv+j].sign()==Sign::Zero {continue;}
+            add_scaled(&mut signed,&mul(&basis[0][i],&basis[1][j],ctx)?,&factors[i*nv+j],ctx)?;
+        }}
+        Ok(if signed.iter().all(|v|v.sign()==Sign::Zero) {BezierIdentity::Equal} else {BezierIdentity::Different})
+    })().and_then(|v|ctx.charge(0).map(|_|v));
+    Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
+}
+
+/// Exact plane membership of C(q), where q is an optionally reflected fraction
+/// (t-lo)/(hi-lo) from another original source domain. Evaluation stays entirely
+/// homogeneous; neither q nor a Cartesian point is rounded.
+pub fn rational_bezier_plane_point_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],reversed:bool,
+) -> Result<BezierIdentityDecision,InputError> {
+    plane_point_impl(ctx,curve,plane,parameter,reversed,None)
+}
+pub fn rational_bezier_plane_point_affine_identity(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],range:[[LeafRef;2];2],
+) ->Result<BezierIdentityDecision,InputError> {
+    plane_point_impl(ctx,curve,plane,parameter,false,Some(range))
+}
+fn plane_point_impl(
+    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],plane:[[LeafRef;3];3],
+    parameter:[LeafRef;3],reversed:bool,range:Option<[[LeafRef;2];2]>,
+) ->Result<BezierIdentityDecision,InputError> {
+    if !(2..=33).contains(&curve.len()) {
+        return Err(InputError::InvalidInput("Plane point curve degree exceeds supported bounds"));
+    }
+    let refs:Vec<_>=curve.iter().flatten().chain(plane.iter().flatten()).chain(parameter.iter()).chain(range.iter().flatten().flatten()).copied().collect();
+    let values=refs.iter().map(|&r|ctx.resolve(r).cloned()).collect::<Result<Vec<AuthoredScalar>,_>>()?;
+    let result=(|| -> Result<BezierIdentity,Reason> {
+        ctx.charge(values.len() as u64)?;
+        let v=exact_inputs(&values,ctx)?;
+        let points=&v[..4*curve.len()];let anchors=&v[4*curve.len()..4*curve.len()+9];
+        let parameter=&v[4*curve.len()+9..4*curve.len()+12];
+        if points.chunks_exact(4).any(|p|p[3].sign()!=Sign::Positive) {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let low=parameter[0].sub(&parameter[1],ctx)?;
+        let high=parameter[2].sub(&parameter[0],ctx)?;
+        if parameter[2].sub(&parameter[1],ctx)?.sign()!=Sign::Positive
+            || low.sign()==Sign::Negative || high.sign()==Sign::Negative {
+            return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+        }
+        let a=(0..3).map(|k|anchors[3+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let b=(0..3).map(|k|anchors[6+k].sub(&anchors[k],ctx)).collect::<Result<Vec<_>,_>>()?;
+        let normal=(0..3).map(|k|a[(k+1)%3].mul(&b[(k+2)%3],ctx)?.sub(&a[(k+2)%3].mul(&b[(k+1)%3],ctx)?,ctx)).collect::<Result<Vec<_>,_>>()?;
+        if normal.iter().all(|x|x.sign()==Sign::Zero) { return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)); }
+        let degree=curve.len()-1;
+        let (numerator,complement)=if range.is_some() {
+            let width=low.add(&high,ctx)?;
+            let Some((n,d))=crate::line_crossing_parameter::affine_fraction(&low,&width,&v[4*curve.len()+12..],ctx)? else {
+                return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
+            };let complement=d.sub(&n,ctx)?;(n,complement)
+        } else if reversed {(high,low)} else {(low,high)};
+        let mut powers=vec![Expansion::scalar(1.)];let mut complements=vec![Expansion::scalar(1.)];
+        for i in 1..=degree {powers.push(powers[i-1].mul(&numerator,ctx)?);complements.push(complements[i-1].mul(&complement,ctx)?);}
+        let mut total=Expansion::scalar(0.);
+        for (i,p) in points.chunks_exact(4).enumerate() {
+            let mut signed=Expansion::scalar(0.);
+            for k in 0..3 {signed=signed.add(&p[k].sub(&anchors[k],ctx)?.mul(&normal[k],ctx)?,ctx)?;}
+            let factor=signed.mul(&p[3],ctx)?.mul(&Expansion::integer(choose(degree,i),ctx)?,ctx)?;
+            let term=factor.mul(&powers[i],ctx)?.mul(&complements[degree-i],ctx)?;
+            total=total.add(&term,ctx)?;
+        }
+        Ok(if total.sign()==Sign::Zero {BezierIdentity::Equal} else {BezierIdentity::Different})
+    })().and_then(|v|ctx.charge(0).map(|_|v));
+    Ok(BezierIdentityDecision {outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }

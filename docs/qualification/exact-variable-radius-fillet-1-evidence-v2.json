@@ -1,0 +1,35 @@
+{
+  "capability": "exact-variable-radius-fillet/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "analytic-multi-edge-fillet/1",
+  "executedAt": "2026-10-05",
+  "positiveCorpus": [
+    "All 12 cuboid edges, both endpoint orders and rigid placements: 48 native results",
+    "Independent endpoint radius and analytic volume checks",
+    "35 product/WASM regression tests, including real worker on all 12 rotated edges",
+    "Current UI mouse and keyboard acceptance on one rotated edge: preview cancellation, apply, volume, identity, Undo/Redo and reload"
+  ],
+  "negativeCorpus": [
+    "All sheared fixture edges refused",
+    "Concave body with orthogonal incident edges refused",
+    "Zero/negative/nonfinite/equal/oversized radii and invalid selections refused"
+  ],
+  "executed": [
+    {
+      "command": "cargo test --manifest-path crates/Cargo.toml -p brep-core --lib analytic_features::tests",
+      "result": "41 passed; additional endpoint and negative tests passed separately"
+    },
+    {
+      "command": "npx vitest run tests/solidExactEdgeFeature.test.ts tests/mainSolidWorkerRealBoundary.test.ts tests/brepQualificationV7.test.ts",
+      "result": "35 passed"
+    }
+  ],
+  "knownGaps": [
+    "general rolling-ball envelopes",
+    "NURBS edges",
+    "cylinder-cylinder blends",
+    "multi-edge variable-radius networks",
+    "nonlinear laws"
+  ],
+  "evidence": "docs/qualification/rigid-variable-radius-2026-10-05/manifest.json"
+}

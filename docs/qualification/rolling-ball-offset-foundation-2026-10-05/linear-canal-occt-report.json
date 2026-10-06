@@ -1,0 +1,168 @@
+{
+  "schema": "cad-linear-canal-occt/1",
+  "sourceSha256": "a9d85f27a83d5a08a7eeed76396b1a374145d235ce4cea3b1d29ab6838414ce4",
+  "scope": "Independent OCCT control evaluation and natural open-face validity; no whole-domain proof, native coedge import, closed body, STEP, or UI acceptance.",
+  "passed": true,
+  "cases": [
+    {
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "sweep": -0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 861,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 5.102196573270515e-15,
+      "maxRadiusErrorMm": 4.107825191113079e-15,
+      "maxNormalSineSquared": 1.075457518323262e-28,
+      "passed": true
+    },
+    {
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "sweep": 0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 861,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 6.466036496704424e-15,
+      "maxRadiusErrorMm": 4.440892098500626e-15,
+      "maxNormalSineSquared": 1.0556581724011066e-28,
+      "passed": true
+    },
+    {
+      "radii": [
+        1.25,
+        0.5
+      ],
+      "sweep": -0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 861,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 5.4025784115714076e-15,
+      "maxRadiusErrorMm": 4.440892098500626e-15,
+      "maxNormalSineSquared": 9.97931068566701e-29,
+      "passed": true
+    },
+    {
+      "radii": [
+        1.25,
+        0.5
+      ],
+      "sweep": 0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 861,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 7.337557957613285e-15,
+      "maxRadiusErrorMm": 4.3298697960381105e-15,
+      "maxNormalSineSquared": 2.9335098284910655e-28,
+      "passed": true
+    },
+    {
+      "radii": [
+        0.0,
+        1.0
+      ],
+      "sweep": -0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 820,
+      "poleNormalSamplesSkipped": 41,
+      "maxPointErrorMm": 7.105427357601002e-15,
+      "maxRadiusErrorMm": 4.218847493575595e-15,
+      "maxNormalSineSquared": 2.962114033473182e-27,
+      "passed": true
+    },
+    {
+      "radii": [
+        0.0,
+        1.0
+      ],
+      "sweep": 0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 820,
+      "poleNormalSamplesSkipped": 41,
+      "maxPointErrorMm": 5.4025784115714076e-15,
+      "maxRadiusErrorMm": 4.773959005888173e-15,
+      "maxNormalSineSquared": 4.88594651978042e-27,
+      "passed": true
+    },
+    {
+      "radii": [
+        1.0,
+        0.0
+      ],
+      "sweep": -0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 820,
+      "poleNormalSamplesSkipped": 41,
+      "maxPointErrorMm": 7.119291619286993e-15,
+      "maxRadiusErrorMm": 4.218847493575595e-15,
+      "maxNormalSineSquared": 1.7828763293541946e-26,
+      "passed": true
+    },
+    {
+      "radii": [
+        1.0,
+        0.0
+      ],
+      "sweep": 0.7,
+      "faces": 1,
+      "occtFacesValid": true,
+      "samples": 861,
+      "regularNormalSamples": 820,
+      "poleNormalSamplesSkipped": 41,
+      "maxPointErrorMm": 7.32410687763558e-15,
+      "maxRadiusErrorMm": 4.3298697960381105e-15,
+      "maxNormalSineSquared": 2.0843619971786003e-26,
+      "passed": true
+    },
+    {
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "sweep": 6.283185307179586,
+      "faces": 4,
+      "occtFacesValid": true,
+      "samples": 3444,
+      "regularNormalSamples": 3444,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 5.891509130072236e-15,
+      "maxRadiusErrorMm": 4.9960036108132044e-15,
+      "maxNormalSineSquared": 5.181213773588287e-29,
+      "passed": true
+    },
+    {
+      "radii": [
+        0.5,
+        1.25
+      ],
+      "sweep": -4.7,
+      "faces": 3,
+      "occtFacesValid": true,
+      "samples": 2583,
+      "regularNormalSamples": 2583,
+      "poleNormalSamplesSkipped": 0,
+      "maxPointErrorMm": 7.377764055609925e-15,
+      "maxRadiusErrorMm": 4.9960036108132044e-15,
+      "maxNormalSineSquared": 7.774211908107955e-29,
+      "passed": true
+    }
+  ]
+}

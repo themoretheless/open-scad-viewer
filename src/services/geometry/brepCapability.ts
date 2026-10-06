@@ -230,8 +230,8 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'exact-variable-radius-fillet/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
-    notes: 'Exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face; constant-radius substitution and valence-3 networks remain typed-refuse',
-    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1-qualified.json',
+    notes: 'Exact linear cross-section radius law on one straight edge of an audited orthogonal cuboid under rigid placement; rational conical patch. General rolling-ball envelopes, constant-radius substitution and corner networks remain outside this cell.',
+    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1-rigid-qualified.json',
   }),
   Object.freeze({
     id: 'exact-parallel-frame-sweep/1',

@@ -72,7 +72,7 @@ fn restrict_hull(
     }
     Ok(hull)
 }
-fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<[[I; 2]; 3]> {
+pub(crate) fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<[[I; 2]; 3]> {
     let [u, v] = indices;
     let (p, q) = (s.degree_u, s.degree_v);
     let span = [
@@ -96,22 +96,7 @@ fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Resul
         if degree == 0 {
             continue;
         }
-        let width = I::point(span[axis][1]).sub(I::point(span[axis][0]))?;
-        let mut derivatives = vec![
-            vec![[I::point(0.); 4]; q + 1 - usize::from(axis == 1)];
-            p + 1 - usize::from(axis == 0)
-        ];
-        for i in 0..derivatives.len() {
-            for j in 0..derivatives[0].len() {
-                for k in 0..4 {
-                    derivatives[i][j][k] = net[i + usize::from(axis == 0)]
-                        [j + usize::from(axis == 1)][k]
-                        .sub(net[i][j][k])?
-                        .mul(I::point(degree as f64))?
-                        .div(width)?;
-                }
-            }
-        }
+        let derivatives = differentiate_net(&net, [p, q], axis, span)?;
         let d = restrict_hull(
             &derivatives,
             [p - usize::from(axis == 0), q - usize::from(axis == 1)],
@@ -126,6 +111,158 @@ fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Resul
         }
     }
     Ok(result)
+}
+#[derive(Clone, Copy)]
+pub(crate) struct JetBounds {
+    pub point: [I; 3],
+    pub first: [[I; 3]; 2],
+    pub second: [[I; 3]; 3],
+}
+fn differentiate_net(
+    net: &Net,
+    degrees: [usize; 2],
+    axis: usize,
+    span: [[f64; 2]; 2],
+) -> Result<Net> {
+    let degree = degrees[axis];
+    let mut out = vec![
+        vec![[I::point(0.); 4]; degrees[1] + 1 - usize::from(axis == 1)];
+        degrees[0] + 1 - usize::from(axis == 0)
+    ];
+    let width = I::point(span[axis][1]).sub(I::point(span[axis][0]))?;
+    for i in 0..out.len() {
+        for j in 0..out[0].len() {
+            for k in 0..4 {
+                out[i][j][k] = net[i + usize::from(axis == 0)][j + usize::from(axis == 1)][k]
+                    .sub(net[i][j][k])?
+                    .mul(I::point(degree as f64))?
+                    .div(width)?;
+            }
+        }
+    }
+    Ok(out)
+}
+fn homogeneous_jet_hull(
+    net: &Net,
+    degrees: [usize; 2],
+    span: [[f64; 2]; 2],
+    domain: [[f64; 2]; 2],
+    order: [usize; 2],
+) -> Result<[I; 4]> {
+    if (0..2).any(|axis| order[axis] > degrees[axis]) {
+        return Ok([I::point(0.); 4]);
+    }
+    let mut derivative = net.clone();
+    let mut degree = degrees;
+    for axis in 0..2 {
+        for _ in 0..order[axis] {
+            derivative = differentiate_net(&derivative, degree, axis, span)?;
+            degree[axis] -= 1;
+        }
+    }
+    restrict_hull(&derivative, degree, span, domain)
+}
+fn jet_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<JetBounds> {
+    let [u, v] = indices;
+    let degrees = [s.degree_u, s.degree_v];
+    let span = [
+        [s.knots_u[u], s.knots_u[u + 1]],
+        [s.knots_v[v], s.knots_v[v + 1]],
+    ];
+    let mut net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
+    let origin = &s.control_points[u - degrees[0]][v - degrees[1]];
+    for row in &mut net {
+        for h in row {
+            for k in 0..3 {
+                h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
+            }
+        }
+    }
+    let mut h = [[I::point(0.); 4]; 6];
+    for (i, order) in [[0, 0], [1, 0], [0, 1], [2, 0], [1, 1], [0, 2]]
+        .into_iter()
+        .enumerate()
+    {
+        h[i] = homogeneous_jet_hull(&net, degrees, span, domain, order)?;
+    }
+    let mut out = JetBounds {
+        point: [I::point(0.); 3],
+        first: [[I::point(0.); 3]; 2],
+        second: [[I::point(0.); 3]; 3],
+    };
+    for k in 0..3 {
+        let relative = h[0][k].div(h[0][3])?;
+        out.point[k] = relative.add(I::point(origin[k]))?;
+        for axis in 0..2 {
+            out.first[axis][k] = h[axis + 1][k]
+                .sub(relative.mul(h[axis + 1][3])?)?
+                .div(h[0][3])?;
+        }
+        for (slot, a, b) in [(0, 0, 0), (1, 0, 1), (2, 1, 1)] {
+            out.second[slot][k] = h[slot + 3][k]
+                .sub(out.first[a][k].mul(h[b + 1][3])?)?
+                .sub(out.first[b][k].mul(h[a + 1][3])?)?
+                .sub(relative.mul(h[slot + 3][3])?)?
+                .div(h[0][3])?;
+        }
+    }
+    Ok(out)
+}
+/// All incident span-side jets over the rectangle. Their union does not prove
+/// source continuity across repeated knots; root inclusion must check that separately.
+pub(crate) fn jet_bounds(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<(Option<JetBounds>, usize)> {
+    validate_input(s, domain, [1., 0., 0.], 0., max_spans)?;
+    let mut out: Option<JetBounds> = None;
+    let mut spans = 0;
+    let union = |a: &mut I, b: I| {
+        a.lo = a.lo.min(b.lo);
+        a.hi = a.hi.max(b.hi);
+    };
+    for u in s.degree_u..s.control_points.len() {
+        for v in s.degree_v..s.control_points[0].len() {
+            let mut section = [[0.; 2]; 2];
+            let indices = [u, v];
+            let knots = [&s.knots_u, &s.knots_v];
+            let mut outside = false;
+            for axis in 0..2 {
+                let i = indices[axis];
+                let lo = knots[axis][i];
+                let hi = knots[axis][i + 1];
+                if lo == hi || domain[axis][1] < lo || domain[axis][0] > hi {
+                    outside = true;
+                    break;
+                }
+                section[axis] = [lo.max(domain[axis][0]), hi.min(domain[axis][1])];
+            }
+            if outside {
+                continue;
+            }
+            if spans == max_spans {
+                return Ok((None, spans));
+            }
+            spans += 1;
+            let next = jet_on(s, indices, section)?;
+            if let Some(current) = &mut out {
+                for k in 0..3 {
+                    union(&mut current.point[k], next.point[k]);
+                    for axis in 0..2 {
+                        union(&mut current.first[axis][k], next.first[axis][k]);
+                    }
+                    for slot in 0..3 {
+                        union(&mut current.second[slot][k], next.second[slot][k]);
+                    }
+                }
+            } else {
+                out = Some(next);
+            }
+        }
+    }
+    check(spans > 0, "Jet rectangle has no nonempty knot spans")?;
+    Ok((out, spans))
 }
 fn validate_input(
     s: &Surface,
@@ -157,24 +294,32 @@ fn validate_input(
     }
     Ok(())
 }
-pub fn inspect(
+/// Encloses unnormalized source normals over every intersecting knot span.
+/// None means the span budget did not cover the requested rectangle.
+pub(crate) fn validate_rectangle(
     s: &Surface,
     domain: [[f64; 2]; 2],
-    direction: [f64; 3],
-    max_sine_squared: f64,
     max_spans: usize,
-) -> Result<Report> {
-    validate_input(s, domain, direction, max_sine_squared, max_spans)?;
+) -> Result<()> {
+    validate_input(s, domain, [1., 0., 0.], 0., max_spans)
+}
+pub fn normal_bounds(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+    validate_input(s, domain, [1., 0., 0.], 0., max_spans)?;
+    normal_bounds_validated(s, domain, max_spans)
+}
+fn normal_bounds_validated(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
     let degrees = [s.degree_u, s.degree_v];
     let knots = [&s.knots_u, &s.knots_v];
     let counts = [s.control_points.len(), s.control_points[0].len()];
-    let mut out = Report {
-        aligned: None,
-        sine_squared_interval: None,
-        normal_components: None,
-        spans: 0,
-        reason: "span-limit",
-    };
+    let mut spans = 0;
     let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     for u in degrees[0]..counts[0] {
         for v in degrees[1]..counts[1] {
@@ -194,10 +339,10 @@ pub fn inspect(
             if outside {
                 continue;
             }
-            if out.spans == max_spans {
-                return Ok(out);
+            if spans == max_spans {
+                return Ok((None, spans));
             }
-            out.spans += 1;
+            spans += 1;
             // Differentiate the original span first, then restrict the derivative
             // polynomial. Narrow/point rectangles never divide by their own width.
             let j = jacobian_on(s, indices, section)?;
@@ -210,8 +355,28 @@ pub fn inspect(
             }
         }
     }
-    check(out.spans > 0, "Normal rectangle has no nonempty knot spans")?;
-    out.normal_components = Some(hull);
+    check(spans > 0, "Normal rectangle has no nonempty knot spans")?;
+    Ok((Some(hull), spans))
+}
+pub fn inspect(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    direction: [f64; 3],
+    max_sine_squared: f64,
+    max_spans: usize,
+) -> Result<Report> {
+    validate_input(s, domain, direction, max_sine_squared, max_spans)?;
+    let (components, spans) = normal_bounds_validated(s, domain, max_spans)?;
+    let mut out = Report {
+        aligned: None,
+        sine_squared_interval: None,
+        normal_components: components,
+        spans,
+        reason: "span-limit",
+    };
+    let Some(hull) = components else {
+        return Ok(out);
+    };
     if hull.iter().all(|r| r[0] <= 0. && r[1] >= 0.) {
         out.reason = "normal-unresolved";
         return Ok(out);

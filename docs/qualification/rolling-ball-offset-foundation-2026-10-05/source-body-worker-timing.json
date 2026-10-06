@@ -1,0 +1,32 @@
+{
+  "schema": "source-body-worker/1",
+  "passed": true,
+  "wasmBytes": 11606065,
+  "wasmSha256": "068ffdea0f4034f8c08a57294558d643fb4ffdbb92a85dcf9c1aee4a5f923788",
+  "restoreElapsedMs": 876.627792,
+  "timings": [
+    {
+      "id": 1,
+      "ok": true,
+      "admitted": true,
+      "warmupMs": 122.82233300000007,
+      "executeMs": 594.540958,
+      "prepareMs": 0.050625000000081855
+    },
+    {
+      "id": 2,
+      "ok": true,
+      "admitted": false,
+      "warmupMs": 0.06725000000005821,
+      "executeMs": 248.88004100000012,
+      "prepareMs": 0.007500000000163709
+    }
+  ],
+  "volume": [
+    1.975733253543111,
+    2.225406058720331
+  ],
+  "edgeCount": 20,
+  "faceCount": 12,
+  "scope": "Native-authored equal-radius capped canal through the shipped worker and WASM; executeMs includes the adapter and native gates, and does not isolate Rust or rendered UI latency."
+}

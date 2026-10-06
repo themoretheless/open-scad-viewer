@@ -7,6 +7,10 @@
 mod arithmetic;
 mod bezier_composition_identity;
 pub use bezier_composition_identity::*;
+mod line_chart_identity;
+pub use line_chart_identity::*;
+mod line_crossing_parameter;
+pub use line_crossing_parameter::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod projective_strip_jets;
@@ -387,3 +391,15 @@ pub fn classify_residual(
 
 #[cfg(test)]
 mod tests;
+
+mod bezier_point_identity;
+pub use bezier_point_identity::*;
+
+mod quadratic_shear_identity;
+pub use quadratic_shear_identity::*;
+
+mod projected_surface_jacobian;
+pub use projected_surface_jacobian::*;
+
+mod quadratic_curve_separator;
+pub use quadratic_curve_separator::*;

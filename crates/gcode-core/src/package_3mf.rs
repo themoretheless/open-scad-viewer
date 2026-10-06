@@ -256,6 +256,8 @@ pub fn parse_3mf(bytes: &[u8]) -> Result<crate::GcodePreview> {
     let gcode = extract_gcode_3mf(bytes)?;
     if gcode.lines().next() == Some(format!("; {}", crate::JOB_DIALECT).as_str()) {
         parse_job(&gcode)
+    } else if gcode.lines().next()==Some("; open-scad-viewer/configured-job 1") {
+        crate::parse_foreign(&gcode)
     } else {
         parse(&gcode)
     }

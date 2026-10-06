@@ -14,6 +14,7 @@ gpu = ["dep:gpu-compute", "dep:compute-core"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda"]
 
 [dependencies]
+gcode-core = { path = "../gcode-core" }
 math-core = { package = "osv-math", path = "../math-core" }
 compute-core = { path = "../compute-core", optional = true }
 gpu-compute = { path = "../gpu-compute", optional = true }
@@ -32,6 +33,7 @@ sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }
 polygon-core = { path = "../polygon-core" }
 slicer-core = { path = "../slicer-core" }
+laser-core = { path = "../laser-core" }
 usvg = { version = "0.47.0", default-features = false, features = ["text"] }
 svgtypes = "0.16.1"
 base64 = "0.22"
@@ -45,4 +47,3 @@ simplecss = "0.2.2"
 ttf-parser = "0.25.1"
 
 [dev-dependencies]
-gcode-core = { path = "../gcode-core" }

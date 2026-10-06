@@ -5,7 +5,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-volume-distance')
-const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
+const faults=process.argv.includes('--faults'),keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
@@ -21,16 +21,23 @@ let browser,page
 const errors=[]
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true})
- page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))})
- await page.addInitScript(()=>{
+ browser=await playwright.chromium.launch({headless:true,...(process.env.SOLID_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.SOLID_CHROMIUM_EXECUTABLE_PATH}:{})})
+ page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1100}});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))})
+ await page.addInitScript(faults=>{
   const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[]
   window.Worker=class extends NativeWorker {
-   constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='solidDistance'&&e.data.ok)window.__distanceResults.push(e.data.result)})}
-   postMessage(message,...args){if(message?.job?.kind==='solidDistance'){window.__distanceRequests++;if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}}return super.postMessage(message,...args)}
+   constructor(...args){super(...args);this.addEventListener('message',e=>{
+    if(e.data?.kind!=='solidDistance'||!e.data.ok)return
+    if(faults&&window.__holdDistance){
+     e.stopImmediatePropagation();const deliver=this.onmessage
+     window.__lateDistance=()=>deliver?.call(this,e);window.__distanceHeld=true;this.__held=true;window.__holdDistance=false;return
+    }
+    window.__distanceResults.push(e.data.result)
+   },true)}
+   postMessage(message,...args){if(message?.job?.kind==='solidDistance'){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'solidDistance',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Injected transport failure'}}}));return}if(window.__holdDistance&&!faults){this.__held=true;window.__distanceHeld=true;return}}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__distanceTerminated=true;return super.terminate()}
   }
- })
+ },faults)
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  await page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}).waitFor({timeout:10000})
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
@@ -57,9 +64,12 @@ try {
  }
  async function closeMenu(){if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
  async function ready(){await page.waitForFunction(()=>!document.body.innerText.includes('Восстанавливаю геометрию'));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden'})}
- async function exportDoc(file){await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu);const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));const download=await pending;await download.saveAs(path.join(directory,file));await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
- async function command(name){await closeMenu();await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});if(keyboard){await search.press('ControlOrMeta+A');await search.pressSequentially(name)}else await search.fill(name);await search.press('Enter')}
+ let lastDownload=0
+ async function exportDoc(file){const delay=1100-(Date.now()-lastDownload);if(delay>0)await new Promise(r=>setTimeout(r,delay));await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu);const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));const download=await pending;await download.saveAs(path.join(directory,file));lastDownload=Date.now();await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
+ async function command(name){await closeMenu();await activate(page.getByRole('button',{name:'Команды',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});if(keyboard){await search.press('ControlOrMeta+A');await search.pressSequentially(name)}else await search.fill(name);await search.press('Enter')}
  const native=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json','utf8')).cases
+ const extra=process.argv.find(a=>a.startsWith('--extra-fixtures='))?.slice(17)
+ if(extra)native.push(...JSON.parse(await readFile(extra,'utf8')))
  function documentFor(request,displayMeshes=[]){
   return {version:1,sketches:[],bodies:[request.a,request.b].map((brep,i)=>{
    const positions=brep.vertices.flatMap(v=>v.point),indices=[]
@@ -96,15 +106,30 @@ try {
    await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),'a')
    await field.getByRole('alert').filter({hasText:'Выберите два разных тела B-rep'}).waitFor()
    assert.equal(await solid.locator('[data-measurement="volume-contact"]').count(),0)
+   if(faults){
+    await page.evaluate(()=>window.__failDistance=true)
+    await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),'b')
+    await field.getByRole('alert').filter({hasText:'Расчёт не выполнен'}).waitFor()
+    await activate(field.getByRole('button',{name:'Повторить',exact:true}))
+    await field.getByText('Общие точки тел подтверждены. Расстояние — 0 мм.',{exact:true}).waitFor({timeout:120000})
+    assert.deepEqual(await exportDoc('after-retry.json'),before)
+    await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),'a')
+   }
    await page.evaluate(()=>window.__holdDistance=true)
    await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),'b');await page.waitForFunction(()=>window.__distanceHeld)
    await focusByTab(field.getByRole('button',{name:'Закрыть · Esc',exact:true}));await page.keyboard.press('Escape')
    await page.waitForFunction(()=>window.__distanceTerminated);await page.evaluate(()=>window.__holdDistance=false)
+   if(faults){
+    await page.evaluate(()=>{assertLate();function assertLate(){if(typeof window.__lateDistance!=='function')throw new Error('No captured successful distance reply');window.__lateDistance()}})
+    await field.waitFor({state:'hidden'})
+    assert.equal(await solid.locator('[data-measurement="volume-contact"], [data-measurement="volume-separation"]').count(),0)
+    assert.deepEqual(await exportDoc('after-late-reply.json'),before)
+   }
   }
  }
  assert.deepEqual(errors,[])
  const artifact={geometryWasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),indexSha256:createHash('sha256').update(await readFile(path.join(root,'index.html'))).digest('hex')}
- const report={artifact,browser:browser.version(),keyboard,tabs,results,requests:await page.evaluate(()=>window.__distanceRequests),cancelledWorkerTerminated:true,invalidTargetLocalized:true,documentUnchanged:true}
+ const report={artifact,browser:browser.version(),keyboard,faults,retryAfterFailure:faults,successfulLateReplyDelivered:faults,tabs,results,requests:await page.evaluate(()=>window.__distanceRequests),cancelledWorkerTerminated:true,invalidTargetLocalized:true,documentUnchanged:true}
  await writeFile(path.join(directory,'solid-volume-distance-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

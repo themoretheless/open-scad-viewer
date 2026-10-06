@@ -19,12 +19,14 @@ import {
 
 const props = defineProps<{ meshes: MeshData[]; selection: number[]; source: string; ready: boolean; locale: string }>()
 const label = (ru: string, en: string) => props.locale === 'ru' ? ru : en
+const waitLabel=(wait:string)=>wait==='Heating'?label('Ждать нагрева','Wait for heating'):wait==='HeatingOrCooling'?label('Ждать нагрева или охлаждения','Wait for heating or cooling'):label('Без ожидания','No wait')
 const worker = createGcodePreviewWorker()
 const settings = reactive<Required<ToolpathSettingsInput>>({
   layerHeightMm: 0.2, lineWidthMm: 0.4, wallCount: 2, infillSpacingMm: 2,
   feedrateMmS: 50, travelFeedrateMmS: 120, filamentDiameterMm: 1.75,
 })
 const jobSettings = reactive({
+  inches:false, relativeXyz:false, relativeE:false, startTemplate:'', zHopMm:0, chamberTempC:0,
   nozzleTempC: 210,
   bedTempC: 60,
   retractLengthMm: 0.8,
@@ -84,10 +86,11 @@ const preview = computed(() => result.value?.preview ?? null)
 const moveCount = computed(() => preview.value ? gcodePreviewMoveCount(preview.value) : 0)
 const isJob = computed(() => !!result.value?.gcode3mfBase64)
 const foreign = computed(() => result.value?.native === false)
+const configuredImport=computed(()=>result.value?.gcode.startsWith('; open-scad-viewer/configured-job 1')??false)
 const detected = computed(() => {
   const doc = result.value
   if (!doc || doc.native !== false) return ''
-  const parts = [doc.generator && doc.generator !== 'unknown' ? doc.generator : label('неизвестный слайсер', 'unknown slicer')]
+  const parts = [configuredImport.value?'OpenSCAD Viewer':doc.generator && doc.generator !== 'unknown' ? doc.generator : label('неизвестный слайсер', 'unknown slicer')]
   if (doc.flavor) parts.push(`${label('прошивка', 'firmware')}: ${doc.flavor}`)
   return parts.join(' · ')
 })
@@ -264,7 +267,13 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
       <label>{{ label('Вентилятор 0–255', 'Fan 0–255') }}<input v-model.number="jobSettings.fanSpeed" :aria-label="label('Вентилятор 0–255', 'Fan 0–255')" type="number" min="0" max="255" step="1"></label>
     </div>
     <label><input v-model="jobSettings.homeAxes" type="checkbox">{{ label('Парковка осей (G28) в job', 'Home axes (G28) in job') }}</label>
-    <label>{{ label('Диалект прошивки (job)', 'Firmware flavor (job)') }}
+    <label><input type="checkbox" v-model="jobSettings.inches"/>{{ label('Дюймы','Inches') }}</label>
+<label><input type="checkbox" v-model="jobSettings.relativeXyz"/>{{ label('Относительные XYZ','Relative XYZ') }}</label>
+<label><input type="checkbox" v-model="jobSettings.relativeE"/>{{ label('Относительная E','Relative E') }}</label>
+<label>{{ label('Подъём Z, мм','Z hop, mm') }}<input type="number" min="0" max="100" step="0.1" v-model.number="jobSettings.zHopMm"/></label>
+<label>{{ label('Камера, °C','Chamber, °C') }}<input type="number" min="0" max="150" v-model.number="jobSettings.chamberTempC"/></label>
+<label>{{ label('Стартовый шаблон','Start template') }}<textarea maxlength="65536" v-model="jobSettings.startTemplate"/></label>
+<label>{{ label('Диалект прошивки (job)', 'Firmware flavor (job)') }}
       <select :value="jobSettings.flavor" :aria-label="label('Диалект прошивки (job)', 'Firmware flavor (job)')" @change="setFlavor">
         <option v-for="option in flavorOptions" :key="option.value" :value="option.value">{{ label(option.ru, option.en) }}</option>
       </select>
@@ -282,8 +291,15 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
     <p v-if="message" role="status">{{ message }}</p>
     <p v-if="error" role="alert">{{ error }}</p>
     <section v-if="preview && result" class="gcode-result" :aria-label="label('Предпросмотр G-code', 'G-code preview')">
-      <p class="gcode-filename">{{ filename }} · {{ result.dialect }}<template v-if="isJob && result.flavor"> · {{ result.flavor }}</template></p>
-      <p v-if="foreign" class="gcode-hint" role="note">{{ label('Сторонний файл', 'Foreign file') }}: {{ detected }}. {{ label('Неизвестные команды пропущены; статистика приблизительная, объём — по диаметру филамента из заголовка или 1.75 мм.', 'Unknown commands were skipped; statistics are approximate and volume uses the header filament diameter or 1.75 mm.') }}</p>
+      <details v-if="result.firmware"><summary>{{ label('Состояние прошивки','Firmware state') }}</summary>
+<p v-if="result.firmware.activeTool!==undefined">{{ label('Активный инструмент','Active tool') }}: T{{ result.firmware.activeTool }}</p>
+<p v-if="result.firmware.error" role="alert">{{ result.firmware.error }}</p>
+<p v-for="tool in result.firmware.tools" :key="tool.id">T{{ tool.id }} · {{ tool.targetC ?? '?' }} °C <template v-if="tool.standbyC!==null"> · {{ label('Ожидание','Standby') }} {{ tool.standbyC }} °C</template> · {{ tool.retracted===null ? '?' : tool.retracted ? label('ретракт','retracted') : label('возврат','recovered') }}</p>
+<p v-for="event in result.firmware.events?.slice(0,200)" :key="event.line">{{ label('Строка','Line') }} {{ event.line }} · {{ event.tool===null ? label('Общий нагреватель','Shared heater') : 'T'+event.tool }} <template v-if="event.targetC!==null || event.wait!=='None'"> · {{ event.targetC ?? '?' }} °C · {{ waitLabel(event.wait) }}</template><template v-if="event.retractOffsetMm!==null"> · {{ event.retractOffsetMm }} mm</template></p>
+<p v-if="(result.firmware.events?.length ?? 0)>200">{{ label('Показаны первые 200 событий из','Showing the first 200 events of') }} {{ result.firmware.events?.length }}</p>
+<p>{{ label('Непроверенные строки','Unverified lines') }}: {{ result.firmware.unverifiedLines?.slice(0,200).join(', ') || '—' }}</p>
+</details><p class="gcode-filename">{{ filename }} · {{ configuredImport ? 'open-scad-viewer/configured-job 1' : result.dialect }}<template v-if="isJob && result.flavor"> · {{ result.flavor }}</template></p>
+      <p v-if="foreign" class="gcode-hint" role="note">{{ configuredImport ? label('Настроенное задание','Configured job') : label('Сторонний файл', 'Foreign file') }}: {{ detected }}. {{ label('Неизвестные команды пропущены; статистика приблизительная, объём — по диаметру филамента из заголовка или 1.75 мм.', 'Unknown commands were skipped; statistics are approximate and volume uses the header filament diameter or 1.75 mm.') }}</p>
       <template v-if="preview.layers && moveCount">
         <label>{{ label('Слой', 'Layer') }} {{ layer + 1 }} / {{ preview.layers }}
           <input v-model.number="layer" :aria-label="label('Слой предпросмотра', 'Preview layer')" type="range" min="0" :max="preview.layers - 1" step="1">

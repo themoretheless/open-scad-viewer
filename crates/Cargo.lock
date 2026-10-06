@@ -737,6 +737,7 @@ dependencies = [
  "gpu-compute",
  "image-webp",
  "imagesize",
+ "laser-core",
  "mechanical-core",
  "mechanics-core",
  "nurbs-core",
@@ -1117,6 +1118,14 @@ name = "languages-wasm"
 version = "0.1.0"
 dependencies = [
  "languages-bridge",
+]
+
+[[package]]
+name = "laser-core"
+version = "0.1.0"
+dependencies = [
+ "osv-math",
+ "planar-geometry",
 ]
 
 [[package]]

@@ -19,6 +19,7 @@ function remap(text:string,offset:number) {
  * Sketches/curves/surfaces are refused rather than silently omitted.
  */
 export async function exportSolidStepAssembly(document:DirectDocument):Promise<string> {
+  if(document.sourceBodies?.length)throw Error('STEP assembly cannot yet transfer exact source Body restrictions. Keep the native document.')
   const snapshot=structuredClone(document)
   if(!snapshot.bodies.length)throw Error('STEP assembly requires at least one body.')
   if(new Set(snapshot.bodies.map(body=>body.id)).size!==snapshot.bodies.length)throw Error('STEP assembly requires unique body IDs.')

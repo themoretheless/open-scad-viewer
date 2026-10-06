@@ -19,11 +19,13 @@ const server=createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page,persistentContext,profile
 const errors=[]
+const browserOptions={headless:true,channel:'chromium',args:['--enable-unsafe-webgpu']}
+const contextOptions={acceptDownloads:true,viewport:{width:1440,height:1100}}
 try{
  const {playwright}=await loadQualificationPlaywrightPackage()
- if(process.argv.includes('--persistent')){profile=await mkdtemp(path.join(tmpdir(),'cad-draft-quota-'));persistentContext=await playwright.chromium.launchPersistentContext(profile,{headless:true,acceptDownloads:true});browser=persistentContext.browser()}
- else browser=await playwright.chromium.launch({headless:true})
- const context=persistentContext??await browser.newContext({acceptDownloads:true})
+ if(process.argv.includes('--persistent')){profile=await mkdtemp(path.join(tmpdir(),'cad-draft-quota-'));persistentContext=await playwright.chromium.launchPersistentContext(profile,{...browserOptions,...contextOptions});browser=persistentContext.browser()}
+ else browser=await playwright.chromium.launch(browserOptions)
+ const context=persistentContext??await browser.newContext(contextOptions)
  const origin=`http://127.0.0.1:${server.address().port}`
  page=await context.newPage();page.on('pageerror',e=>errors.push(String(e)))
  await page.goto(origin)
@@ -234,7 +236,7 @@ try{
  await other.reload();await saved(other);assert.deepEqual(await exportDoc(other,'quota-large-retried.json'),quotaLargeLocal)
  if(profile){
   await persistentContext.close()
-  persistentContext=await playwright.chromium.launchPersistentContext(profile,{headless:true,acceptDownloads:true})
+  persistentContext=await playwright.chromium.launchPersistentContext(profile,{...browserOptions,...contextOptions})
   browser=persistentContext.browser();page=await persistentContext.newPage();page.on('pageerror',e=>errors.push(String(e)))
   await page.goto(origin);await saved(page)
   assert.deepEqual(await exportDoc(page,'browser-restarted.json'),quotaLargeLocal)

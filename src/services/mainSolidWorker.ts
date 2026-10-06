@@ -56,3 +56,7 @@ export function computeBondedSolid(inputJson:string,options:MainSolidRunOptions=
  parseBondedSolidInput(inputJson)
  return shared.run({kind:'bondedSolid',inputJson},{...options,timeoutMs:options.timeoutMs??30000})
 }
+
+export function computeSourceBodyRestoration(options:import('./sourceBody').SourceBodyOptions,runOptions:MainSolidRunOptions={}) {
+ return shared.run({kind:'sourceBodyRestore',options},runOptions)
+}

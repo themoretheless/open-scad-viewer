@@ -18,6 +18,289 @@ pub struct Report {
     /// adjacent-row point, and the two meridian controls in the next row.
     pub source_frame: Option<[[f64; 3]; 4]>,
 }
+#[derive(Clone, Debug)]
+pub struct RuledReport {
+    pub proven: bool,
+    pub cells: usize,
+    pub reason: &'static str,
+    pub direction_denominator_lower: Option<f64>,
+    pub angular_derivative_numerator: Option<[f64; 2]>,
+}
+/// A linear U chart with one constant row is a rational family of rays.
+/// A positive linear direction functional and a strictly monotone projected
+/// direction ratio prove distinct rays on the whole V interval. Along each
+/// ray u/(w0(v)*(1-u)+w1(v)*u) is strictly increasing for positive weights.
+/// Only the complete constant row is identified; no samples admit a chart.
+pub fn certify_ruled_source_frame(
+    s: &Surface,
+    collapsed_end: usize,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<RuledReport> {
+    s.validate()?;
+    check(
+        collapsed_end <= 1 && (1..=64).contains(&subdivisions) && (1..=100000).contains(&max_cells),
+        "Choose bounded ruled pole work",
+    )?;
+    let mut out = RuledReport {
+        proven: false,
+        cells: 0,
+        reason: "unsupported-ruled-chart",
+        direction_denominator_lower: None,
+        angular_derivative_numerator: None,
+    };
+    let q = s.degree_v;
+    let clamped = |k: &[f64], d: usize| {
+        k.len() == 2 * (d + 1)
+            && k[..=d].iter().all(|x| *x == k[d])
+            && k[d + 1..].iter().all(|x| *x == k[d + 1])
+    };
+    if s.periodic_u
+        || s.periodic_v
+        || s.degree_u != 1
+        || s.control_points.len() != 2
+        || q == 0
+        || q > 8
+        || s.control_points[0].len() != q + 1
+        || !clamped(&s.knots_u, 1)
+        || !clamped(&s.knots_v, q)
+    {
+        return Ok(out);
+    }
+    let pole = &s.control_points[collapsed_end][0];
+    if s.control_points[collapsed_end].iter().any(|p| p != pole) {
+        out.reason = "boundary-not-collapsed";
+        return Ok(out);
+    }
+    let row = 1 - collapsed_end;
+    let difference = |p: &[f64]| -> Result<[I; 3]> {
+        let mut a = [I::point(0.); 3];
+        for k in 0..3 {
+            if p[k] != pole[k] {
+                a[k] = I::point(p[k]).sub(I::point(pole[k]))?;
+            }
+        }
+        Ok(a)
+    };
+    let first = difference(&s.control_points[row][0])?;
+    let last = difference(&s.control_points[row][q])?;
+    let mut h = [I::point(0.); 3];
+    let mut g = h;
+    for k in 0..3 {
+        h[k] = add(first[k], last[k])?;
+        g[k] = sub(last[k], first[k])?;
+    }
+    let mut coordinates = [
+        vec![vec![I::point(0.); q + 1]],
+        vec![vec![I::point(0.); q + 1]],
+    ];
+    for j in 0..=q {
+        let point = difference(&s.control_points[row][j])?;
+        for (axis, projection) in [h, g].iter().enumerate() {
+            let mut value = I::point(0.);
+            for k in 0..3 {
+                value = add(value, mul(projection[k], point[k])?)?;
+            }
+            coordinates[axis][0][j] = mul(value, I::point(s.weights[row][j]))?;
+        }
+    }
+    let [h, g] = coordinates;
+    let derivative = combine(
+        &product(&derivative(&g, 1)?, &h)?,
+        &product(&g, &derivative(&h, 1)?)?,
+        -1.,
+    )?;
+    if subdivisions > max_cells {
+        out.reason = "work-limit";
+        return Ok(out);
+    }
+    let mut denominator = f64::INFINITY;
+    let mut angular = [f64::INFINITY, f64::NEG_INFINITY];
+    for j in 0..subdivisions {
+        let domain = [
+            [0., 1.],
+            [
+                j as f64 / subdivisions as f64,
+                (j + 1) as f64 / subdivisions as f64,
+            ],
+        ];
+        out.cells += 1;
+        denominator = denominator.min(bound(&restrict(&h, domain)?).lo);
+        let b = bound(&restrict(&derivative, domain)?);
+        angular = [angular[0].min(b.lo), angular[1].max(b.hi)];
+    }
+    out.direction_denominator_lower = Some(denominator);
+    out.angular_derivative_numerator = Some(angular);
+    if denominator > 0. && (angular[0] > 0. || angular[1] < 0.) {
+        out.proven = true;
+        out.reason = "global-ruled-ray-quotient";
+    } else {
+        out.reason = "ray-direction-order-unproven";
+    }
+    Ok(out)
+}
+#[derive(Clone, Debug)]
+pub struct PolarReport {
+    pub proven: bool,
+    pub cells: usize,
+    pub reason: &'static str,
+    pub derivative_bounds: Option<[f64; 4]>,
+    pub dominance_margin_lower: Option<f64>,
+}
+/// Blow up only a complete constant U row. With S-P=u D/W, use
+/// F=f.(S-P) and G=(g.D)/(h.D), with independent fixed functionals.
+/// The exact common u factor is removed
+/// from G before bounding derivatives. Global diagonal dominance proves the
+/// extended (F,G) map injective on the rectangle; positive F_u and F(0,v)=0
+/// prove that the original image is injective modulo that boundary alone.
+pub fn certify_polar_source_frame(
+    s: &Surface,
+    end: usize,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<PolarReport> {
+    s.validate()?;
+    check(
+        end <= 1 && (1..=64).contains(&subdivisions) && (1..=100000).contains(&max_cells),
+        "Choose bounded polar chart work",
+    )?;
+    let mut out = PolarReport {
+        proven: false,
+        cells: 0,
+        reason: "unsupported-polar-chart",
+        derivative_bounds: None,
+        dominance_margin_lower: None,
+    };
+    let (p, q) = (s.degree_u, s.degree_v);
+    let clamped = |k: &[f64], d: usize| {
+        k.len() == 2 * (d + 1)
+            && k[..=d].iter().all(|x| *x == k[d])
+            && k[d + 1..].iter().all(|x| *x == k[d + 1])
+    };
+    if s.periodic_u
+        || s.periodic_v
+        || p < 2
+        || p > 8
+        || q == 0
+        || q > 8
+        || s.control_points.len() != p + 1
+        || s.control_points[0].len() != q + 1
+        || !clamped(&s.knots_u, p)
+        || !clamped(&s.knots_v, q)
+    {
+        return Ok(out);
+    }
+    let index = |i| if end == 0 { i } else { p - i };
+    let pole = &s.control_points[index(0)][0];
+    if s.control_points[index(0)].iter().any(|x| x != pole) {
+        out.reason = "boundary-not-collapsed";
+        return Ok(out);
+    }
+    let delta = |point: &[f64]| -> Result<[I; 3]> {
+        let mut a = [I::point(0.); 3];
+        for k in 0..3 {
+            if point[k] != pole[k] {
+                a[k] = I::point(point[k]).sub(I::point(pole[k]))?;
+            }
+        }
+        Ok(a)
+    };
+    let a = delta(&s.control_points[index(p)][0])?;
+    let b = delta(&s.control_points[index(p)][q])?;
+    let first = delta(&s.control_points[index(1)][0])?;
+    let last = delta(&s.control_points[index(1)][q])?;
+    let mut h = [I::point(0.); 3];
+    let mut direction = h;
+    let mut g = h;
+    for k in 0..3 {
+        h[k] = add(a[k], b[k])?;
+        direction[k] = add(first[k], last[k])?;
+        g[k] = sub(last[k], first[k])?;
+    }
+    let mut coordinates: [Poly; 4] =
+        std::array::from_fn(|_| vec![vec![I::point(0.); q + 1]; p + 1]);
+    for i in 0..=p {
+        for j in 0..=q {
+            let d = delta(&s.control_points[index(i)][j])?;
+            let w = I::point(s.weights[index(i)][j]);
+            coordinates[3][i][j] = w;
+            for (axis, row) in [h, direction, g].iter().enumerate() {
+                let mut value = I::point(0.);
+                for k in 0..3 {
+                    value = add(value, mul(row[k], d[k])?)?;
+                }
+                coordinates[axis][i][j] = mul(value, w)?;
+            }
+        }
+    }
+    let [f, direction, g, w] = coordinates;
+    let Some(h) = factor_u(&direction, 1)? else {
+        out.reason = "pole-factor-unproven";
+        return Ok(out);
+    };
+    let Some(k) = factor_u(&g, 1)? else {
+        out.reason = "pole-factor-unproven";
+        return Ok(out);
+    };
+    let numerator = |n: &Poly, d: &Poly, axis| {
+        combine(
+            &product(&derivative(n, axis)?, d)?,
+            &product(n, &derivative(d, axis)?)?,
+            -1.,
+        )
+    };
+    let fu = numerator(&f, &w, 0)?;
+    let fv = numerator(&f, &w, 1)?;
+    let gu = numerator(&k, &h, 0)?;
+    let gv = numerator(&k, &h, 1)?;
+    if subdivisions * subdivisions > max_cells {
+        out.reason = "work-limit";
+        return Ok(out);
+    }
+    let (mut a, mut b, mut e, mut c) = (f64::INFINITY, f64::INFINITY, 0_f64, 0_f64);
+    for i in 0..subdivisions {
+        for j in 0..subdivisions {
+            let domain = [
+                [
+                    i as f64 / subdivisions as f64,
+                    (i + 1) as f64 / subdivisions as f64,
+                ],
+                [
+                    j as f64 / subdivisions as f64,
+                    (j + 1) as f64 / subdivisions as f64,
+                ],
+            ];
+            out.cells += 1;
+            let weight = bound(&restrict(&w, domain)?);
+            let direction = bound(&restrict(&h, domain)?);
+            if weight.lo <= 0. || direction.lo <= 0. {
+                out.reason = "polar-denominator-unproven";
+                return Ok(out);
+            }
+            let wd = weight.mul(weight)?;
+            let hd = direction.mul(direction)?;
+            a = a.min(bound(&restrict(&fu, domain)?).div(wd)?.lo);
+            b = b.min(bound(&restrict(&gv, domain)?).div(hd)?.lo);
+            let x = bound(&restrict(&fv, domain)?).div(wd)?;
+            e = e.max(x.lo.abs().max(x.hi.abs()));
+            let x = bound(&restrict(&gu, domain)?).div(hd)?;
+            c = c.max(x.lo.abs().max(x.hi.abs()));
+        }
+    }
+    let margin = I::point(a)
+        .mul(I::point(b))?
+        .sub(I::point(e).mul(I::point(c))?)?
+        .lo;
+    out.derivative_bounds = Some([a, b, e, c]);
+    out.dominance_margin_lower = Some(margin);
+    if a > 0. && b > 0. && margin > 0. {
+        out.proven = true;
+        out.reason = "global-polar-blowup-dominance";
+    } else {
+        out.reason = "polar-dominance-unproven";
+    }
+    Ok(out)
+}
 enum Projection {
     Fixed([[f64; 3]; 2]),
     Source,
@@ -97,6 +380,7 @@ fn certify_inner(
     if s.periodic_u
         || s.periodic_v
         || p > 8
+        || q == 0
         || q > 8
         || s.control_points.len() != p + 1
         || s.control_points[0].len() != q + 1
@@ -686,6 +970,115 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    fn polar_surface() -> Surface {
+        Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![2., 2., 2., 5., 5., 5.],
+            knots_v: vec![-4., -4., 8., 8.],
+            control_points: vec![
+                vec![vec![3., -7., 5.]; 2],
+                vec![vec![3.5, -7., 5.], vec![3.5, -6.5, 5.]],
+                vec![vec![4., -7., 5.], vec![4., -6., 5.]],
+            ],
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+    #[test]
+    fn polar_blowup_preserves_original_nonunit_charts_and_both_pole_ends() {
+        let mut s = polar_surface();
+        for end in [0, 1] {
+            if end == 1 {
+                s.control_points.reverse();
+                s.weights.reverse();
+            }
+            let original = s.clone();
+            let r = certify_polar_source_frame(&s, end, 8, 64).unwrap();
+            assert!(r.proven, "{r:?}");
+            assert_eq!(r.cells, 64);
+            assert!(r.dominance_margin_lower.unwrap() > 0.);
+            assert_eq!(s, original);
+        }
+    }
+    #[test]
+    fn polar_blowup_refuses_fold_repeated_direction_nonpole_and_work_limit() {
+        let mut s = polar_surface();
+        s.control_points[1][0][0] = 2.;
+        s.control_points[1][1][0] = 2.;
+        assert!(!certify_polar_source_frame(&s, 0, 8, 64).unwrap().proven);
+        let mut s = polar_surface();
+        for row in &mut s.control_points {
+            row[1] = row[0].clone();
+        }
+        assert!(!certify_polar_source_frame(&s, 0, 8, 64).unwrap().proven);
+        let mut s = polar_surface();
+        s.control_points[0][1][0] += 1e-12;
+        assert!(!certify_polar_source_frame(&s, 0, 8, 64).unwrap().proven);
+        let r = certify_polar_source_frame(&polar_surface(), 0, 8, 63).unwrap();
+        assert!(!r.proven && r.cells == 0 && r.derivative_bounds.is_none());
+        assert!(certify_polar_source_frame(&polar_surface(), 2, 8, 64).is_err());
+    }
+    fn ruled_surface() -> Surface {
+        Surface {
+            degree_u: 1,
+            degree_v: 2,
+            knots_u: vec![2., 2., 5., 5.],
+            knots_v: vec![-4., -4., -4., 8., 8., 8.],
+            control_points: vec![
+                vec![vec![3., -7., 5.]; 3],
+                vec![vec![4., -7., 6.], vec![4., -6., 6.], vec![3., -6., 6.]],
+            ],
+            weights: vec![vec![1., 0.25, 2.], vec![0.3, 1., 0.75]],
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+    #[test]
+    fn ruled_ray_ratio_covers_nonunit_domains_and_independent_weight_rows() {
+        let mut s = ruled_surface();
+        for end in [0, 1] {
+            if end == 1 {
+                s.control_points.reverse();
+                s.weights.reverse();
+            }
+            let original = s.clone();
+            let r = certify_ruled_source_frame(&s, end, 16, 16).unwrap();
+            assert!(r.proven, "{r:?}");
+            assert_eq!(r.cells, 16);
+            assert!(r.direction_denominator_lower.unwrap() > 0.);
+            assert!(r.angular_derivative_numerator.unwrap()[0] > 0.);
+            assert_eq!(s, original);
+        }
+    }
+    #[test]
+    fn ruled_fold_repeated_ray_and_nonconstant_pole_remain_unproven() {
+        let mut folded = ruled_surface();
+        folded.control_points[1][1] = vec![8., -12., 6.];
+        assert!(
+            !certify_ruled_source_frame(&folded, 0, 16, 16)
+                .unwrap()
+                .proven
+        );
+        let mut repeated = ruled_surface();
+        repeated.control_points[1][2] = repeated.control_points[1][0].clone();
+        assert!(
+            !certify_ruled_source_frame(&repeated, 0, 16, 16)
+                .unwrap()
+                .proven
+        );
+        let mut broken = ruled_surface();
+        broken.control_points[0][1][0] += 1e-12;
+        let r = certify_ruled_source_frame(&broken, 0, 16, 16).unwrap();
+        assert!(!r.proven && r.reason == "boundary-not-collapsed");
+    }
+    #[test]
+    fn ruled_budget_exhaustion_has_no_direction_certificate() {
+        let r = certify_ruled_source_frame(&ruled_surface(), 0, 16, 15).unwrap();
+        assert!(!r.proven && r.cells == 0 && r.angular_derivative_numerator.is_none());
+        assert!(certify_ruled_source_frame(&ruled_surface(), 0, 0, 16).is_err());
     }
     #[test]
     fn collapsed_triangle_is_injective_only_after_identifying_its_pole_boundary() {

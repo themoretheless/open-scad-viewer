@@ -26,7 +26,7 @@ const renderErrors=[]
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
- page=await browser.newPage({acceptDownloads:true})
+ page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1100}})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
  if(process.argv.includes('--profile-provenance')||process.argv.includes('--profile-intersections'))await page.addInitScript(()=>{
   const OriginalWorker=window.Worker;window.__profileProvenance=null
@@ -141,6 +141,8 @@ try {
  const inputs=generalNurbs?[original.curves[0],original.sketches[0]]:original.sketches
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'profiles.json' ,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
+ if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
  await solid.getByRole('button',{name:inputs[0].name,exact:true}).waitFor()
  const before=await download('Скачать проект JSON','before.json')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)

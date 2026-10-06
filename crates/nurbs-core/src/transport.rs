@@ -1,5 +1,6 @@
 //! Optional bounded JSON request boundary.
 use super::*;
+use crate::surface::Surface;
 #[path="retained_body_coverage.rs"]
 mod retained_body_coverage;
 use crate::retained_wall_domain;
@@ -742,6 +743,166 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
+    if op == "surface_offset_evaluate" {
+        let e = surface_offset::evaluate(
+            &field(&v, "surface")?,
+            field(&v, "parameters")?,
+            field(&v, "distance")?,
+        )?;
+        return Ok(
+            json!({"method":"normal-offset-numerical-jets","point":e.point,"du":e.du,"dv":e.dv,
+            "sourceUnitNormal":e.source_unit_normal,"certified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_bounds" {
+        let r = surface_offset::bounds(
+            &field(&v, "surface")?,
+            field(&v, "domain")?,
+            field(&v, "distance")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-source-normal-offset","scope":"incident-span-offset-images",
+            "image":r.image,"unitNormals":r.unit_normals,"normalSpanVisits":r.spans,"reason":r.reason,
+            "offsetRegularityCertified":false,"continuityCertified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_jacobian_bounds" {
+        let r = surface_offset::jacobian_bounds(
+            &field(&v, "surface")?,
+            field(&v, "domain")?,
+            field(&v, "distance")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-source-normal-offset-jets","scope":"incident-span-offset-jets",
+            "image":r.image,"derivatives":r.derivatives,"normalSpanVisits":r.spans,"reason":r.reason,
+            "offsetRegularityCertified":false,"continuityCertified":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_candidates" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::intersection_candidates(
+            [&a, &b],
+            field(&v, "domains")?,
+            field(&v, "distances")?,
+            field(&v, "parameterTolerance")?,
+            field(&v, "maxBoxes")?,
+            field(&v, "maxSpans")?,
+        )?;
+        return Ok(
+            json!({"method":"interval-offset-pair-exclusion","scope":"untrimmed-offset-carriers",
+            "candidateBoxes":r.boxes,"pendingBoxes":r.pending,"visitedBoxes":r.visited_boxes,
+            "excludedBoxes":r.excluded_boxes,"normalSpanVisits":r.normal_span_visits,"reason":r.reason,
+            "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
+        );
+    }
+    if op == "surface_offset_contact_qualification" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        let candidate: Surface = field(&v,"candidate")?;
+        let pcurves: [crate::curve::Curve;2] = field(&v,"sourcePcurves")?;
+        let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;
+        let second_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"secondLoops")?;
+        let report=crate::offset_contact_trims::certify_with_tangency(&candidate,[&pcurves[0],&pcurves[1]],[&a,&b],[&first_loops,&second_loops],
+            field(&v,"distances")?,field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,field(&v,"secondDomain")?,field(&v,"maxSpans")?,
+            field(&v,"toleranceMm")?,field(&v,"toleranceUv")?,crate::offset_contact_trims::Limits {
+                fit_cells:field(&v,"maxFitCells")?,uv_cells:field(&v,"maxUvCells")?,agreement_cells:field(&v,"maxAgreementCells")?,root_refinements:field(&v,"rootRefinements")?,
+                trim:crate::trimmed_offset_contact::Limits {max_pairs:field(&v,"maxPairs")?,max_cells:field(&v,"maxTrimCells")?,max_domain_cells:field(&v,"maxDomainCells")?},
+            },field(&v,"maxSineSquared")?,crate::offset_contact_trims::TangentLimits {
+                position_cells:field(&v,"maxTangentPositionCells")?,normal_cells:field(&v,"maxNormalCells")?,normal_spans:field(&v,"maxNormalSpans")?,
+            })?;
+        return Ok(json!({"method":"offset-contact-qualification-delivery","request":v,"candidateSurface":candidate,"qualification":report.to_value()}));
+    }
+    if op == "surface_offset_envelope_fit" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        let candidate: Option<Surface> = v.get("candidate").filter(|x|!x.is_null()).map(|_|field(&v,"candidate")).transpose()?;
+        return crate::offset_envelope_fit::deliver(candidate.as_ref(),[&a,&b],field(&v,"distances")?,
+            field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?,field(&v,"toleranceMm")?,field(&v,"maxCells")?);
+    }
+    if op == "surface_offset_envelope" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        return Ok(crate::offset_envelope::certify([&a,&b],field(&v,"distances")?,
+            field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?,field(&v,"maxCells")?)?.to_value());
+    }
+    if op == "surface_offset_contact_tangent" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        return Ok(crate::offset_contact_tangent::certify([&a,&b],field(&v,"distances")?,
+            field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?)?.to_value());
+    }
+    if op == "surface_offset_source_boundary" {
+        let a: Surface = field(&v,"a")?;let b: Surface = field(&v,"b")?;
+        let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;
+        let second_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"secondLoops")?;
+        let first_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(&v,"firstCoedges")?;
+        let second_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(&v,"secondCoedges")?;
+        return Ok(crate::offset_source_boundary::certify([&a,&b],[&first_loops,&second_loops],[&first_world,&second_world],
+            field(&v,"distances")?,field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,field(&v,"firstOther")?,
+            field(&v,"secondDomain")?,field(&v,"maxSpans")?,field(&v,"toleranceUv")?,
+            crate::trimmed_offset_contact::Limits{max_pairs:field(&v,"maxPairs")?,max_cells:field(&v,"maxCells")?,max_domain_cells:field(&v,"maxDomainCells")?},
+            field(&v,"toleranceMm")?,field(&v,"maxExactWork")?,field(&v,"maxAgreementCells")?)?.to_value());
+    }
+    if op == "surface_offset_trimmed_contact_band" {
+        let a: Surface = field(&v,"a")?;
+        let b: Surface = field(&v,"b")?;
+        let first_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"firstLoops")?;
+        let second_loops: Vec<Vec<crate::curve::Curve>> = field(&v,"secondLoops")?;
+        return Ok(crate::trimmed_offset_contact::certify([&a,&b],[&first_loops,&second_loops],
+            field(&v,"distances")?,field(&v,"fixedAxis")?,field(&v,"fixedInterval")?,
+            field(&v,"firstOther")?,field(&v,"secondDomain")?,field(&v,"maxSpans")?,field(&v,"toleranceUv")?,
+            crate::trimmed_offset_contact::Limits{max_pairs:field(&v,"maxPairs")?,max_cells:field(&v,"maxCells")?,max_domain_cells:field(&v,"maxDomainCells")?})?.to_value());
+    }
+    if op == "surface_offset_contact_band" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::certify_contact_band(
+            [&a, &b], field(&v, "distances")?, field(&v, "fixedAxis")?,
+            field(&v, "fixedInterval")?, field(&v, "firstOther")?,
+            field(&v, "secondDomain")?, field(&v, "maxSpans")?,
+        )?;
+        let (status, witness) = match r {
+            surface_offset::ContactBand::Excluded => ("excluded", Value::Null),
+            surface_offset::ContactBand::Unresolved => ("unresolved", Value::Null),
+            surface_offset::ContactBand::ContinuousBranch(w) => (
+                "continuous-branch", json!({"firstUV":w.first_uv,"secondUV":w.second_uv,
+                "centerIntervalMm":w.point,"contractionUpper":w.contraction_upper}),
+            ),
+        };
+        return Ok(json!({"method":"interval-offset-band-krawczyk","scope":"parameter-band-within-tube",
+            "status":status,"witness":witness,"rootForEveryParameterProven":status=="continuous-branch",
+            "uniqueWithinTube":status=="continuous-branch","continuousBranchProven":status=="continuous-branch",
+            "wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}));
+    }
+    if op == "surface_offset_contact_section" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::certify_contact_section(
+            [&a, &b],
+            field(&v, "distances")?,
+            field(&v, "fixedAxis")?,
+            field(&v, "fixed")?,
+            field(&v, "firstOther")?,
+            field(&v, "secondDomain")?,
+            field(&v, "maxSpans")?,
+        )?;
+        let (status, witness) = match r {
+            surface_contact::Verdict::Excluded => ("excluded", Value::Null),
+            surface_contact::Verdict::Unresolved => ("unresolved", Value::Null),
+            surface_contact::Verdict::Witness(w) => (
+                "unique-contact",
+                json!({"firstUV":w.first_uv,"secondUV":w.second_uv,
+                "centerIntervalMm":w.point,"contractionUpper":w.contraction_upper}),
+            ),
+        };
+        return Ok(
+            json!({"method":"interval-offset-section-krawczyk","scope":"fixed-parameter-offset-section",
+            "status":status,"witness":witness,"rootExistenceProven":status=="unique-contact",
+            "uniqueInSection":status=="unique-contact","wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
+        );
+    }
     if op == "surface_distance" {
         return Ok(surface_distance::distance(
             &field(&v, "a")?,
@@ -1205,3 +1366,7 @@ fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
     let curve=curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![value.to_vec();2],weights:vec![1.,1.],periodic:false};
     curve.validate()?;Ok(curve)
 }
+
+#[cfg(test)]
+#[path="surface_offset_transport_tests.rs"]
+mod surface_offset_transport_tests;

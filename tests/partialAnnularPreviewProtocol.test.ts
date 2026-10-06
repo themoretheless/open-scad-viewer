@@ -44,7 +44,7 @@ it('drops a partial-annular preview delivered after cancellation and replacement
 })
 
 it('accepts and executes the partial-annular request through the complete worker handler',async()=>{
- const {createBrepTube,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createBrepTube,tessellateNurbsBrep,partialAnnularPreview}=await import('../src/services/geometry/brep')
  const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
  const brep=createBrepTube(20,5,6)
  const source={id:'annular',name:'Annular',brep,mesh:tessellateNurbsBrep(brep,2)}
@@ -54,5 +54,12 @@ it('accepts and executes the partial-annular request through the complete worker
  expect(messages).toHaveLength(1)
  expect(messages[0].ok).toBe(true)
  expect(mainSolidResult(mainSolidExpectation(actualJob),messages[0].result)).toBe(true)
- expect(messages[0].result.body.mesh.indices.length/3).toBe(7714)
+ // Verify that the worker transports the requested geometry and its display
+ // mesh, rather than pinning a triangle count that changes with tessellation.
+ const expected=partialAnnularPreview(brep,actualJob.edge,actualJob.radius)
+ expect(messages[0].result.evidence).toEqual(expected)
+ expect(messages[0].result.body.brep).toEqual(expected.model)
+ expect(messages[0].result.body.mesh).toEqual(tessellateNurbsBrep(expected.model,12))
+ expect(messages[0].result.body.mesh.indices.length/3).toBeGreaterThan(0)
+ expect(messages[0].result.body.mesh.indices.length/3).toBeLessThanOrEqual(20000)
 })

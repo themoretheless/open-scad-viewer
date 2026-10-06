@@ -62,7 +62,7 @@ pub(crate) fn upper(c: &Curve, p: &Curve, s: &Surface, reversed: bool) -> Result
     if degree > 32
         || c.degree > 16
         || du + dv > 8
-        || p.degree > 4
+        || p.degree > 8
         || !bezier(&c.knots, c.degree, c.control_points.len())
         || !bezier(&p.knots, p.degree, p.control_points.len())
         || !bezier(&s.knots_u, du, s.control_points.len())
@@ -184,15 +184,15 @@ fn span(knots: &[f64], degree: usize, n: usize, range: Interval) -> Option<usize
 }
 /// Homogeneous blossom of the original curve, with interval affine endpoint
 /// mapping. Never round a newly extracted control point before certification.
-fn restricted(c: &Curve, t: [f64; 2], reversed: bool) -> Result<Option<Vec<Poly>>> {
-    use crate::curve_surface_agreement::mapped;
-    let range = mapped(c, Interval::new(t[0], t[1])?, reversed)?;
+fn restricted(c: &Curve, t: [f64; 2], reversed: bool, source_interval: [f64;2]) -> Result<Option<Vec<Poly>>> {
+    use crate::curve_surface_agreement::mapped_range;
+    let range = mapped_range(source_interval, Interval::new(t[0], t[1])?, reversed)?;
     let Some(span) = span(&c.knots, c.degree, c.control_points.len(), range) else {
         return Ok(None);
     };
     let ends = [
-        mapped(c, Interval::point(t[0]), reversed)?,
-        mapped(c, Interval::point(t[1]), reversed)?,
+        mapped_range(source_interval, Interval::point(t[0]), reversed)?,
+        mapped_range(source_interval, Interval::point(t[1]), reversed)?,
     ];
     let dim = c.control_points[0].len();
     let mut source = Vec::new();
@@ -306,21 +306,27 @@ pub(crate) fn upper_cell(
     reversed: bool,
     t: [f64; 2],
 ) -> Result<Option<f64>> {
+    upper_cell_on(c,p,s,reversed,t,p.domain())
+}
+pub(crate) fn upper_cell_on(
+    c: &Curve, p: &Curve, s: &Surface, reversed: bool,
+    t: [f64;2], source_interval: [f64;2],
+)->Result<Option<f64>> {
     let (du, dv) = (s.degree_u, s.degree_v);
     if p.degree.saturating_mul(du.saturating_add(dv)) > 32
         || c.degree > 16
         || du + dv > 8
-        || p.degree > 4
+        || p.degree > 8
     {
         return Ok(None);
     }
-    let Some(curve) = restricted(c, t, reversed)? else {
+    let Some(curve) = restricted(c, t, reversed, c.domain())? else {
         return Ok(None);
     };
-    let Some(h) = restricted(p, t, false)? else {
+    let Some(h) = restricted(p, t, false, source_interval)? else {
         return Ok(None);
     };
-    let range = crate::curve_surface_agreement::mapped(p, Interval::new(t[0], t[1])?, false)?;
+    let range = crate::curve_surface_agreement::mapped_range(source_interval, Interval::new(t[0], t[1])?, false)?;
     let uv = crate::curve_surface_agreement::curve_bounds(p, range)?;
     let domains = [
         [s.knots_u[du], s.knots_u[s.control_points.len()]],

@@ -288,15 +288,25 @@ pub(crate) fn export_job(v: &Value) -> Result<Value> {
     require_extrusion(&layers)?;
     let optimize = optimize_settings(v)?;
     let job = job_profile(v, &settings)?;
-    let gcode = slicer_core::emit_job_gcode(&layers, &job, &optimize)?;
-    let preview = slicer_core::parse_gcode_job(&gcode)?;
+    let canonical = slicer_core::emit_job_gcode(&layers, &job, &optimize)?;
+    let boolean = |key: &str| -> Result<bool> {match v.get(key) {None=>Ok(false),Some(Value::Bool(value))=>Ok(*value),_=>Err(input(format!("{key} must be boolean")))}};
+    let options=gcode_core::JobOutputOptions {
+        inches:boolean("inches")?,relative_xyz:boolean("relativeXyz")?,relative_e:boolean("relativeE")?,
+        z_hop_mm:optional_non_negative(v,"zHopMm",0.0)?,
+        start_template:match v.get("startTemplate") {None=>String::new(),Some(value)=>value.as_str().ok_or_else(||input("startTemplate must be a string"))?.to_owned()},
+        chamber_temp_c:match v.get("chamberTempC") {None=>None,Some(value)=>Some(value.as_f64().ok_or_else(||input("chamberTempC must be numeric"))?)},
+    };
+    let mut options=options;
+    if options.chamber_temp_c==Some(0.0) {options.chamber_temp_c=None;}
+    let configured=options.inches||options.relative_xyz||options.relative_e||options.z_hop_mm>0.0||!options.start_template.is_empty()||options.chamber_temp_c.is_some();
+    let gcode=if configured {gcode_core::configure_job_gcode(&canonical,&job,&options)?}else{canonical};
+    let preview = if configured {gcode_core::parse_foreign(&gcode)?}else{slicer_core::parse_gcode_job(&gcode)?};
     require_positive_extrusion(&preview)?;
-    let packaged =
-        slicer_core::emit_job_gcode_3mf(&layers, &job, &optimize, Some(&mesh_body(&mesh)))?;
+    let packaged = gcode_core::package_job_3mf(&gcode,&job,Some(&mesh_body(&mesh)))?;
     Ok(json!({
         "gcode": gcode,
         "gcode3mfBase64": base64::engine::general_purpose::STANDARD.encode(packaged),
-        "dialect": slicer_core::GCODE_JOB_DIALECT,
+        "dialect": if configured {"open-scad-viewer/configured-job 1"}else{slicer_core::GCODE_JOB_DIALECT},
         "flavor": job.flavor.name(),
         "layerCount": layers.len(),
         "preview": preview_value(preview, packed),
@@ -329,7 +339,17 @@ pub(crate) fn inspect(v: &Value) -> Result<Value> {
     } else {
         format!("{} G-code (tolerant preview)", info.generator.name())
     };
+    let firmware = info.flavor.as_deref().and_then(|name| gcode_core::Flavor::from_name(name).ok()).map(|flavor| {
+        match gcode_core::analyze_firmware(text, flavor) {
+            Ok(state) => json!({"activeTool":state.active_tool,"bedTargetC":state.bed_target_c,"chamberTargetC":state.chamber_target_c,
+                "tools":state.tools.iter().map(|tool|json!({"id":tool.id,"targetC":tool.target_c,"standbyC":tool.standby_c,"retracted":tool.retracted})).collect::<Vec<_>>(),
+                "events":state.events.iter().map(|event|json!({"line":event.line,"tool":event.tool,"targetC":event.target_c,"wait":format!("{:?}",event.wait),"retractOffsetMm":event.retract_offset_mm})).collect::<Vec<_>>(),
+                "unverifiedLines":state.unverified_lines}),
+            Err(error) => json!({"error":error.to_string()}),
+        }
+    });
     Ok(json!({
+        "firmware":firmware,
         "preview": preview_value(preview, packed),
         "dialect": dialect,
         "native": info.native,
