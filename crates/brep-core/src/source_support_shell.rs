@@ -302,6 +302,15 @@ mod tests {
         assert_eq!(scan.attempts,243);assert_eq!(scan.faces_visited,27);assert!(scan.proposals_exhausted);
         let thin=scan.thin_witness().expect("automatic native scan must find the 6 mm wall");
         assert!(thin.length_mm()[1]<7.);assert!(std::ptr::eq(thin.body(),&body));
+        let coarse_scan=crate::source_wall_scan::search(&body,7.,1,27,1e-7,
+            crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
+        assert!(coarse_scan.proposals_exhausted);assert_eq!(coarse_scan.faces_visited,27);
+        assert!(coarse_scan.thin_witness().is_none(),"exhausted coarse proposals must not assert the missing 6 mm witness");
+        let coarse=coarse_scan.best().unwrap();assert!(coarse.length_mm()[0]<=15. && coarse.length_mm()[1]>=15.);
+        for (minimum,grid,attempts) in [(f64::NAN,3,243),(0.,3,243),(7.,0,243),(7.,9,243),(7.,3,0),(7.,3,257)] {
+            assert!(crate::source_wall_scan::search(&body,minimum,grid,attempts,1e-7,
+                crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).is_err());
+        }
         let limited_scan=crate::source_wall_scan::search(&body,1.,1,1,1e-7,
             crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
         assert_eq!(limited_scan.attempts,1);assert!(!limited_scan.proposals_exhausted);assert!(limited_scan.thin_witness().is_none());

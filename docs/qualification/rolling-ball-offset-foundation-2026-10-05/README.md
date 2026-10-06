@@ -4271,3 +4271,13 @@ that grid exhaustion does not prove safety.
 This is native-only automatic witness discovery. Full continuous whole-wall
 coverage, adaptive thin-region search, bridge/WASM/UI integration remain
 open; current packaged WASM does not expose this scanner.
+
+
+## Coarse proposal exhaustion regression
+
+The grid-1 counterexample is now a passing regression: all 27 faces are
+visited, proposals are exhausted, best chord contains 15 mm, and no thin
+witness is claimed at 7 mm despite the known 6 mm wall. Grid-3 discovery
+still returns that thin wall. Invalid threshold/grid/attempt requests are
+rejected; partial one-attempt search remains explicitly incomplete. Combined
+native regression passes in 21.65 seconds. Terminal log retained.
