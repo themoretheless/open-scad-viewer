@@ -192,3 +192,5 @@ pub mod curve_quadratic_separator;
 pub mod surface_projected_jordan;
 
 pub mod surface_self_chord;
+
+pub mod surface_self_chord_coverage;

@@ -4627,3 +4627,27 @@ radius, thickness and seam guards. Logs retained.
 This is native infrastructure for complete subdivision, not a claim that
 all 13 remaining curved self pairs or general wall coverage are resolved.
 The rectangular API is not yet used for adaptive coverage or packaged WASM.
+
+
+## Complete adaptive original self-pair coverage foundation
+
+New surface_self_chord_coverage covers the Cartesian product of the full
+original UV chart with itself, including the diagonal. Closed binary splits
+retain every endpoint pair. Each leaf needs a fresh original intrinsic
+exclusion on its convex UV hull, fresh normal-angle separation, or a proven
+original Cartesian lower distance above the requested threshold. Shared cell
+and span budgets include original derivative, normal and image work; pending
+pairs and resolution/work limits prevent private global certification.
+
+Eight intrinsic/adaptive tests pass in 1.67 seconds. A strongly curved graph
+that refuses one full-chart intrinsic check qualifies through 3635 cells and
+13615 spans: 662 intrinsic, 956 angular, 200 distance leaves; no pending pairs.
+Cell/spans budget truncation refuses. A rational half-cylinder has an exact
+2 mm endpoint chord aligned with both endpoint normals independent of the
+rounded arc weight; 2.1 mm qualification refuses with 2000 cells, 7577 spans
+and 17 pending pairs. This refusal is not presented as an independently found
+thin material wall. Logs retained.
+
+This native surface certificate is not yet integrated into original Body wall
+coverage, transport or packaged WASM. It does not resolve all annular self
+pairs, prove material interior ownership, or complete general thickness.
