@@ -243,7 +243,8 @@
         "loft",
         "progressive_miter",
         "sweep_section_correction",
-        "sweep_seam_set"
+        "sweep_seam_set",
+        "sweeps::scalar"
       ],
       "bridgeTests": [
         "sweep_pipeline",
@@ -259,7 +260,8 @@
       "tests/miterSmoothStationWalls.test.ts",
       "tests/sweepCurvedGuideMiter.test.ts",
       "tests/nurbsProgressiveMiterWallAudit.test.ts",
-      "tests/sweepViewportEvidence.test.ts"
+      "tests/sweepViewportEvidence.test.ts",
+      "tests/nurbsScalarSweep.test.ts"
     ],
     "rush": [
       "tests/modelGraphLoft.test.ts",

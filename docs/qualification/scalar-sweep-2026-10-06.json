@@ -1,0 +1,55 @@
+{
+  "schema": "scalar-sweep-verification/1",
+  "scope": "Native rational fixed-orientation scalar sweep and one-level sampled RMF profile sweep; finite regression qualification.",
+  "nativeCoreTests": 668,
+  "nativeBridgeTests": 7,
+  "wasmRushRegressionTests": 186,
+  "browserScenarios": 10,
+  "browserWidths": [
+    1440,
+    600
+  ],
+  "distArtifacts": 151,
+  "geometryWasm": {
+    "sha256": "68496f918533741137f6ad63703fe5883fbc7a5e5f3f6b9056a48036a3035a5b",
+    "byteLength": 11808055
+  },
+  "sourceHashes": {
+    "crates/nurbs-core/src/sweeps/scalar.rs": "1cc2a97bb9c033d61e76961062fca47783c05d96c34bd3c0374ace8b2df37e57",
+    "crates/nurbs-core/src/sweeps.rs": "a6caf2030032dce2a82516e7ef21ca50591f063a0683712b02f6d2ccba1f7b9b",
+    "crates/nurbs-core/src/gordon.rs": "80fe9a52796b96955b96033f150a85a2bc6b641a84a49ba4b00d43ce0cd62404",
+    "crates/nurbs-core/src/gordon_denominators.rs": "30fffce382e942decf0ccc52270617585eeec7f91f36195835e5cfbfd99304c3",
+    "crates/nurbs-core/src/transport.rs": "c8a1dc2dce3deef9c36453bfb8c725d4a818cb31c03f60a242b746c885f83da4",
+    "crates/geometry-bridge/src/sweep_pipeline.rs": "9e4293307a01ba03f803e6708974d6b2a2d83ee991a04b0d2318c917a2a8ceb3",
+    "crates/geometry-bridge/tests/sweep_pipeline.rs": "86e2b8c0be28586dc50d9a2ba0e217348022bb49aaa43d4d37a76bc8794746ef",
+    "tests/nurbsScalarSweep.test.ts": "ba1015d7a269658d11b31e51696758cda57bf1118e251ed1912f41bd2ded86ed",
+    "scripts/check-scalar-sweep-browser.mjs": "77ad72129c5b7b90f4baebd56c5fbea5c0576ecb6ae4ef55fb181425f19c2c2a",
+    "examples/rush/scaled-sweep-weighted.r": "272eac69d5673a7db87e3825394f12fd5e8b71d9614f7718ad79606c0bb81f38",
+    "examples/rush/profile-sweep-scaled.r": "0a430115d8c771373a918d68616987c75d1bfa5eeea41a3cff3e3d0a744a37c3"
+  },
+  "evidenceHashes": {
+    "docs/qualification/scalar-sweep-2026-10-06/browser.json": "d1383584e08bdf64d03911058782672891f93fd61a5c08cc53a90d60ebe1cfc2",
+    "docs/qualification/scalar-sweep-2026-10-06/native-core.log": "daedcfed8e079060dfd0dc48b59259de500d8386e7ad485d4fa81d165fa10352",
+    "docs/qualification/scalar-sweep-2026-10-06/native-bridge.log": "5fc3c181e5829b0bb460e7b26d47fe605146da993e532e4a5d6d619f26e0d787",
+    "docs/qualification/scalar-sweep-2026-10-06/wasm-rush-regression.log": "c2c10b32f43459c50f6bccdcd0bf8190ecd8f20c08bd67d92d21201383861d17"
+  },
+  "checks": [
+    "independent rational formula and derivative comparisons with different path/law domains and weights",
+    "multispan path and scalar knot partitions",
+    "source data preservation",
+    "positive laws, bounded resources, invalid initial normal refusal",
+    "sampled refinement refusal produces no surface",
+    "closed RMF matching scale and explicit C0 seam",
+    "native JSON adapter/direct kernel parity",
+    "existing Rush and browser entrypoints",
+    "Vue/MCP type checks, production build, git diff --check"
+  ],
+  "limitations": [
+    "Binary64 rounding is not certified.",
+    "RMF acceptance is sampled fourfold refinement, continuousBound remains false.",
+    "Scaled sweep requires compatible continuous cell seams and degree 25/32 controls per axis.",
+    "No new regularity, injectivity, Solid topology or universal geometry guarantee.",
+    "Historical migration and STEP records are unchanged; this record supersedes the earlier unsupported-scalar-operation limitation.",
+    "Hosted CI remains externally blocked by the previously confirmed GitHub billing lock; local validation does not close global G0/G1 gates."
+  ]
+}

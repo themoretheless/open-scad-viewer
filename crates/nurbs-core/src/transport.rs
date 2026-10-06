@@ -1248,6 +1248,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field::<f64>(&v, "maxError")?.unwrap_or(1e-6),
         );
     }
+    if op == "surface_scaled_sweep" {
+        return encode(sweeps::scaled_sweep(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "origin")?)?);
+    }
+    if op == "surface_profile_sweep" {
+        return sweeps::checked_profile_sweep(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "normal")?, field(&v, "sections")?, match optional_field::<f64>(&v, "maxDeviation")? {Some(x)=>x,None=>field(&v,"max_deviation")?});
+    }
     if op == "surface_framed_sweep" {
         return framed_sweep::checked_sweep(
             &field(&v, "profile")?,

@@ -169,23 +169,20 @@ fn accepted_miter_preview_remains_owned_until_final_certificates() {
 }
 
 #[test]
-fn legacy_scalar_adapters_preserve_explicit_native_refusal() {
+fn scalar_adapters_match_native_construction() {
     let request = raw();
     let path = json!({"degree":1,"knots":[0,0,1,1],"controlPoints":[[0,0,0],[0,0,10]],"weights":[1,1],"periodic":false});
     let scale = json!({"degree":1,"knots":[0,0,1,1],"controlPoints":[[1,0,0],[1,0,0]],"weights":[1,1],"periodic":false});
     for operation in ["surface_scaled_sweep", "surface_profile_sweep"] {
         let authored = json!({"operation":operation,"profile":request["profiles"][0],"path":path,"scale":law(1.),"origin":[0,0,0],"normal":[1,0,0],"sections":5,"maxDeviation":0.01});
-        // These legacy operations are not implemented by the existing kernel.
-        // Transport must preserve rejection, without inventing a geometry fallback.
         let mut migrated = authored.clone();
         migrated["op"] = json!("brep_sweep_constructor");
-        let actual = dispatch(migrated).unwrap_err();
+        let actual = dispatch(migrated).unwrap();
         let mut original = authored;
         original["op"] = json!(operation);
         original["scale"] = scale.clone();
         original["max_deviation"] = json!(0.01);
-        let baseline = dispatch(original).unwrap_err();
-        assert_eq!(actual.code, baseline.code);
-        assert_eq!(actual.message, baseline.message);
+        let baseline = dispatch(original).unwrap();
+        assert_eq!(actual, baseline);
     }
 }

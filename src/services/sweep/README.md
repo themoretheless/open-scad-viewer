@@ -49,7 +49,14 @@ volume calculations, and geometric assertions stay outside the selection catalog
 Browser provenance includes both compatibility facades and implementation sources.
 Historical qualification records remain unchanged.
 
-The legacy `surface_scaled_sweep` and `surface_profile_sweep` operations have no
-implementation in this kernel revision. Their compatibility adapters convert laws
-in Rust and retain the native refusal. They are excluded from the successful
-progressive sweep/miter qualification claim; no substitute geometry is returned.
+`surface_scaled_sweep` now builds fixed-orientation rational Bernstein products
+with independently normalized path and positive scalar law domains. It preserves
+profile parameterization and supports compatible multispan cells within degree 25
+and 32 controls per axis. Discontinuous cell seams are refused. Ordinary binary64
+rounding, regularity, injectivity and solid topology are not certified.
+
+`surface_profile_sweep` now uses the native progressive RMF transport for one
+2..32-section level and a fourfold sampled comparison. It returns no surface when
+the sampled budget fails. Closed paths require matching endpoint scale and retain
+an explicit C0 seam. `continuousBound` remains false. The earlier migration record
+is historical; scalar sweep qualification is recorded separately.

@@ -103,7 +103,8 @@ const limits = new Map([
 // Fresh source Body replay, exact root restrictions and volume admission: 3,871,336 bytes.
 // Coherent native source boundary endpoints: measured 3,881,800 bytes, +5,362.
 // Combined native sweep ownership: measured 3,918,058 packed bytes;
-// retain 6,942 bytes of headroom.
+// Scalar sweep compatibility: measured 3,921,284 packed bytes.
+// Retain 3,716 bytes of headroom.
 const geometryChunkBudget = 3_925_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
