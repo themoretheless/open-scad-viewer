@@ -167,6 +167,7 @@ fn qualify_impl(
                 && p.vertex_contact.is_none()
                 && p.disjoint_hull.is_none()
                 && p.pole_paired.is_none()
+                && p.pole_planar.is_none()
                 && !p.result.as_ref().is_some_and(|r| r.absence_proven)
         })
         .map(|p| p.faces)

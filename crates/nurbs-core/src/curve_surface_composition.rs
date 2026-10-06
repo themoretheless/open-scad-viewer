@@ -62,7 +62,7 @@ pub(crate) fn upper(c: &Curve, p: &Curve, s: &Surface, reversed: bool) -> Result
     if degree > 32
         || c.degree > 16
         || du + dv > 8
-        || p.degree > 4
+        || p.degree > 8
         || !bezier(&c.knots, c.degree, c.control_points.len())
         || !bezier(&p.knots, p.degree, p.control_points.len())
         || !bezier(&s.knots_u, du, s.control_points.len())
@@ -316,7 +316,7 @@ pub(crate) fn upper_cell_on(
     if p.degree.saturating_mul(du.saturating_add(dv)) > 32
         || c.degree > 16
         || du + dv > 8
-        || p.degree > 4
+        || p.degree > 8
     {
         return Ok(None);
     }

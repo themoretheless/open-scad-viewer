@@ -216,75 +216,13 @@ pub fn to_capped_source_shell(
     region_limits: crate::trimmed_face_recipe::Limits,
     max_exact_work: u64,
 ) -> Result<crate::source_shell_incidence::Report> {
-    use crate::source_shell_incidence::{Address, Pair, Pole};
-    use std::collections::BTreeMap;
     if spans.is_empty() || spans.len() > 64 || !(1..=100_000_000).contains(&max_exact_work) {
         return Err(invalid("Choose 1..64 authored canal spans"));
     }
     let model = to_capped_region(spans, tolerance_mm)?;
-    let mut regions = Vec::new();
-    let mut pairs = Vec::new();
-    let mut poles = Vec::new();
-    let mut pending = BTreeMap::new();
-    for (face, f) in model.faces.iter().enumerate() {
-        let mut boundaries = Vec::new();
-        for (edge, use_) in model.loops[f.outer].coedges.iter().enumerate() {
-            let a = Address {
-                face,
-                wire: 0,
-                edge,
-            };
-            let world = &model.edges[use_.edge];
-            boundaries.push(crate::trimmed_face_recipe::Boundary {
-                curve: world.curve.clone(),
-                pcurve: use_.pcurve.clone(),
-                reversed: use_.reversed,
-            });
-            if world.degenerate {
-                poles.push(Pole {
-                    use_: a,
-                    point: model.vertices[world.vertices[0]].point,
-                });
-            } else if let Some((other, reversed)) = pending.remove(&use_.edge) {
-                pairs.push(Pair {
-                    uses: [other, a],
-                    world: world.curve.clone(),
-                    world_reversed: [reversed, use_.reversed],
-                    cutters: [None, None],
-                });
-            } else {
-                pending.insert(use_.edge, (a, use_.reversed));
-            }
-        }
-        let r = crate::source_contour_proposal::qualify_original_region(
-            &cad_predicates::ToleranceContext::default_valid(),
-            &f.surface,
-            &[boundaries],
-            tolerance_uv,
-            crate::trimmed_face_recipe::Limits {
-                pairs: region_limits.pairs,
-                region_cells: region_limits.region_cells,
-                domain_cells: region_limits.domain_cells,
-                agreement_cells: region_limits.agreement_cells,
-            },
-        )?;
-        let Some(region) = r.region else {
-            return Err(invalid(format!("Source face {face}: {}", r.reason)));
-        };
-        regions.push(region);
-    }
-    if !pending.is_empty() {
-        return Err(invalid(
-            "Capped source supports retain unpaired ordinary edges",
-        ));
-    }
-    crate::source_shell_incidence::assemble_regions_with_poles(
-        &regions,
-        &pairs,
-        &poles,
-        max_exact_work,
-    )
-    .map_err(|e| crate::Error::new(e.code, e.message))
+    crate::source_support_shell::prepare(&model, crate::source_support_shell::Limits {
+        tolerance_uv, faces:4096,uses:100000,regions:region_limits,exact_work:max_exact_work,
+    })
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {

@@ -119,6 +119,7 @@ pub fn certify(
         }
     }
     let mut side = None;
+    let mut strict = vec![vec![false; counts[1]]; counts[0]];
     for (u, row) in surface.control_points.iter().enumerate() {
         for (v, p) in row.iter().enumerate() {
             let Some(sign) = crate::source_allowed_contact::orient(
@@ -138,11 +139,37 @@ pub fn certify(
                     return Ok(out);
                 }
             } else {
-                if sign == Sign::Zero || side.is_some_and(|s| s != sign) {
-                    return Ok(out);
+                if sign != Sign::Zero {
+                    if side.is_some_and(|s| s != sign) {
+                        return Ok(out);
+                    }
+                    side = Some(sign);
+                    strict[u][v] = true;
                 }
-                side = Some(sign);
             }
+        }
+    }
+    // Positive Bernstein bases exclude interior contact even when some
+    // coefficients vanish (e.g. a smoothstep endpoint). The opposite natural
+    // edge must have a strict coefficient; each noncollapsed transverse end
+    // also needs a strict opposite corner, excluding extra boundary images.
+    let opposite = if upper { 0 } else { counts[axis] - 1 };
+    let at = |t: usize| {
+        let uv = if axis == 0 {
+            [opposite, t]
+        } else {
+            [t, opposite]
+        };
+        strict[uv[0]][uv[1]]
+    };
+    if !(0..counts[transverse]).any(at) {
+        return Ok(out);
+    }
+    for end in [false, true] {
+        if !poles.iter().any(|(e, _)| *e == end)
+            && !at(if end { counts[transverse] - 1 } else { 0 })
+        {
+            return Ok(out);
         }
     }
     if side.is_none() {
@@ -281,6 +308,33 @@ mod tests {
         s.control_points[0][0][2] = 1e-12;
         assert!(
             certify(&s, PLANE, 1, false, 1000000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+    }
+    #[test]
+    fn zero_interior_coefficients_keep_strict_image_but_extra_corner_refuses() {
+        let mut surface = chart();
+        surface.control_points[1][1][2] = 0.;
+        assert!(
+            certify(&surface, PLANE, 1, false, 1000000)
+                .unwrap()
+                .certificate
+                .is_some()
+        );
+        // The opposite noncollapsed corner would introduce an extra plane point.
+        surface.control_points[2][2][2] = 0.;
+        assert!(
+            certify(&surface, PLANE, 1, false, 1000000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        surface.control_points[2][2][2] = 1.;
+        surface.control_points[1][1][2] = -1.;
+        assert!(
+            certify(&surface, PLANE, 1, false, 1000000)
                 .unwrap()
                 .certificate
                 .is_none()

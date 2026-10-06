@@ -3034,3 +3034,54 @@ This supersedes the previous pending editor export statement for this tested
 control and source-carrier action. It does not qualify arbitrary curved
 fillets, geometry edits, named parts, closed preview mesh, full P0 or P2/P3.
 Browser evidence uses CPU/SVG fallback; WebGPU is not qualified here.
+
+
+### Native partial annular support assembly and planar contact
+
+`source_support_shell::prepare` rebuilds original region lifts and shared
+incidence from one complete support shell, including hole wires and explicit
+poles. It checks face/use limits before orientation proposals, proposes
+canonical face senses, then freshly checks every lift and shared world carrier.
+Input Model closed flags/Body records do not grant source geometry admission.
+The capped linear canal factory reuses this path. Unsupported reflected chart
+arithmetic can still refuse at the fresh gates; this is not a general exact
+chart-transport certificate.
+
+The partial quarter annulus (R=20, inner R=5, H=6, transition radius=1.25)
+now passes original source region and closed oriented incidence gates: 27
+faces and two poles. The initial planar lift exhausted verification because
+pcurve degree 5 exceeded the correlated composition path's limit of 4;
+raising that limit to 8 retains the composed degree-32 and other work caps.
+The first unoriented assembly also refused opposite-edge ownership; canonical
+face/chart proposals resolve it and are rechecked against original 3D carriers.
+Failure evidence is retained.
+
+`source_pole_plane_image` now permits zero interior Bernstein coefficients
+while requiring a consistent exact strict side, a strict opposite-edge
+coefficient and strict noncollapsed opposite corners. Positivity of interior
+Bernstein bases excludes extra plane images. Additional corner images, mixed
+signs, unproven pole rows and exhausted exact work refuse.
+`source_pole_planar_contact` binds that image to a freshly proven planar face,
+original shared edges and source pole vertex IDs/points. Boundary classification
+and exact work share global caller budgets. It grants only cross-face contact
+ownership; chart injectivity remains separate. It runs after established
+contact paths, before unresolved numerical search.
+
+The annular transition/top-plane contact [0,1] is now certified, including its
+collapsed endpoint, and exactWork=1 refuses. Whole-shell geometry still refuses
+at [0,2], the transition/cylinder contact. This is the next actual missing
+proof. No private Body or volume is issued for this annulus; radius, whole
+tangency, wall thickness, general fillets and named-part acceptance remain open.
+
+Native tests: annular incidence/planar proof and explicit remaining refusal
+passed (45.34 s); input closed/Body claims do not change incidence, damaged
+pcurve refuses and face-limit refusal passed (0.25 s); four pole image tests
+passed (0.41 s); all 21 composition/agreement tests passed (0.07 s), including
+rational degree-5 agreement and damaged interior detection. Existing capped
+Body/volume regression passed (66.38 s) and root Body/replay/STEP regression
+passed (11.65 s). Timings are test runtimes, not isolated performance evidence.
+
+This is a native source stage. The packaged WASM/UI artifact remains
+bdaba2e3ee02232ddf2b12746dcf4a59e58f8e485f06280feac00e40e0917b0f;
+these new contact/assembly capabilities have not been packaged or browser
+qualified. Earlier UI STEP evidence applies to its earlier control class.
