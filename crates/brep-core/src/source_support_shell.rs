@@ -131,6 +131,18 @@ mod tests {
         }
     }
     #[test]
+    fn annular_distant_top_material_separation() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let r=crate::source_hull_separation::certify_shell(&shell,[1,10],100_000_000).unwrap();
+        eprintln!("distant material separation {} work={}",r.reason,r.exact_work);
+        let c=r.certificate.expect("original material hull must separate distant transition");
+        assert!(c.material_hulls()[0].is_some());
+        assert!(crate::source_hull_separation::certify_shell(&shell,[10,1],100_000_000).unwrap().certificate.is_some());
+        assert!(crate::source_hull_separation::certify_shell(&shell,[1,10],1).unwrap().certificate.is_none());
+        assert!(crate::source_hull_separation::certify_shell(&shell,[1,6],100_000_000).unwrap().certificate.is_none());
+    }
+    #[test]
     fn annular_neighboring_top_material_contact() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -286,7 +298,7 @@ mod tests {
                     geometry.reason,
                     "source-shell-different-face-contacts-unproven"
                 );
-                assert_eq!(geometry.next_pair, Some([1, 10]));
+                assert_eq!(geometry.next_pair, Some([1, 13]));
             }
             Err(e) => panic!("annular source support: {}: {}", e.code, e.message),
         }

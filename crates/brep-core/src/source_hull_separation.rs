@@ -6,8 +6,12 @@ pub struct Certificate {
     regions: [SourceRegion; 2],
     plane: [[f64; 3]; 3],
     sides: [Sign; 2],
+    material_hulls: [Option<crate::source_planar_material_hull::Certificate>; 2],
 }
 impl Certificate {
+    pub fn material_hulls(&self) -> &[Option<crate::source_planar_material_hull::Certificate>; 2] {
+        &self.material_hulls
+    }
     pub fn regions(&self) -> &[SourceRegion; 2] {
         &self.regions
     }
@@ -27,6 +31,85 @@ pub struct Report {
 /// control prove the separation, and positive weights enclose every trimmed
 /// region in its original control hull. Unsuccessful guesses are unresolved.
 pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
+    certify_points(regions, original_points(regions), [None, None], max_work)
+}
+fn original_points(regions: [&SourceRegion; 2]) -> [Vec<[f64; 3]>; 2] {
+    regions.map(|r| {
+        r.loops()[0][0]
+            .surface()
+            .control_points
+            .iter()
+            .flatten()
+            .map(|p| p.as_slice().try_into().unwrap())
+            .collect()
+    })
+}
+/// Fresh native planar material enclosures replace only proven planar hulls.
+/// Curved and unsupported trimmed charts retain their full original controls.
+pub fn certify_shell(
+    shell: &crate::source_shell_incidence::Shell,
+    faces: [usize; 2],
+    max_work: u64,
+) -> Result<Report> {
+    if !(1..=100_000_000).contains(&max_work) || faces[0] == faces[1] {
+        return Err(Error::new(
+            "BREP_SOURCE_CONTACT",
+            "Choose distinct faces and bounded hull work",
+        ));
+    }
+    let all = shell
+        .regions()
+        .ok_or_else(|| Error::new("BREP_SOURCE_CONTACT", "Original regions required"))?;
+    if faces.iter().any(|f| *f >= all.len()) {
+        return Err(Error::new("BREP_SOURCE_CONTACT", "Invalid hull face"));
+    }
+    let regions = faces.map(|f| &all[f]);
+    let mut initial = certify(regions, max_work)?;
+    if initial.certificate.is_some() {
+        return Ok(initial);
+    }
+    let mut hulls = [None, None];
+    let mut used = initial.exact_work;
+    for slot in 0..2 {
+        if used == max_work {
+            return Ok(Report {
+                certificate: None,
+                exact_work: used,
+                reason: "source-hull-work-limit",
+            });
+        }
+        let r = crate::source_planar_material_hull::certify(shell, faces[slot], max_work - used)?;
+        used += r.exact_work;
+        hulls[slot] = r.certificate;
+    }
+    if used == max_work {
+        return Ok(Report {
+            certificate: None,
+            exact_work: used,
+            reason: "source-hull-work-limit",
+        });
+    }
+    if hulls.iter().all(Option::is_none) {
+        initial.exact_work = used;
+        return Ok(initial);
+    }
+    let original = original_points(regions);
+    let points = std::array::from_fn(|slot| {
+        hulls[slot]
+            .as_ref()
+            .map(|h| h.points().to_vec())
+            .unwrap_or_else(|| original[slot].clone())
+    });
+    let mut r = certify_points(regions, points, hulls, max_work - used)?;
+    r.exact_work += used;
+    Ok(r)
+}
+fn certify_points(
+    regions: [&SourceRegion; 2],
+    points: [Vec<[f64; 3]>; 2],
+    material_hulls: [Option<crate::source_planar_material_hull::Certificate>; 2],
+    max_work: u64,
+) -> Result<Report> {
     if !(1..=100_000_000).contains(&max_work) {
         return Err(Error::new("BREP_SOURCE_CONTACT", "Bound source hull work"));
     }
@@ -35,16 +118,9 @@ pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
         exact_work: 0,
         reason: "source-hull-plane-unproven",
     };
-    let centers = regions.map(|r| {
-        let s = r.loops()[0][0].surface();
-        let count = (s.control_points.len() * s.control_points[0].len()) as f64;
-        std::array::from_fn::<_, 3, _>(|k| {
-            s.control_points
-                .iter()
-                .flatten()
-                .map(|p| p[k] / count)
-                .sum::<f64>()
-        })
+    let centers = points.each_ref().map(|points| {
+        let count = points.len() as f64;
+        std::array::from_fn::<_, 3, _>(|k| points.iter().map(|p| p[k] / count).sum::<f64>())
     });
     let mut normal = std::array::from_fn::<_, 3, _>(|k| centers[0][k] - centers[1][k]);
     let scale = normal.iter().map(|v| v.abs()).fold(0_f64, f64::max);
@@ -87,15 +163,10 @@ pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
         return Ok(out);
     }
     let mut sides = [None; 2];
-    for (slot, r) in regions.iter().enumerate() {
-        for p in r.loops()[0][0].surface().control_points.iter().flatten() {
+    for (slot, points) in points.iter().enumerate() {
+        for p in points {
             let Some(sign) = crate::source_allowed_contact::orient(
-                &[
-                    plane[0],
-                    plane[1],
-                    plane[2],
-                    p.as_slice().try_into().unwrap(),
-                ],
+                &[plane[0], plane[1], plane[2], *p],
                 None,
                 &mut out.exact_work,
                 max_work,
@@ -116,6 +187,7 @@ pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
             regions: [regions[0].clone(), regions[1].clone()],
             plane,
             sides: sides.map(Option::unwrap),
+            material_hulls,
         });
         out.reason = "source-hull-disjoint-qualified";
     }

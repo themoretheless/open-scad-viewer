@@ -3323,3 +3323,31 @@ acceptance is established by these results.
 
 The updated whole-gate regression passes; the next unresolved pair remains
 [1,10]. The terminal log is retained as annular-transverse-qualified.log.gz.
+
+
+## Strict separation using original planar material hulls
+
+Annular [1,10] has no owned common edge. The retained top face's untrimmed
+square support chart overlaps the other transition's control hull; this
+prevented the previous full-surface enclosure from proving separation.
+The native hull gate now first retains the original full-surface proof.
+On failure it recomputes bounded planar material hull certificates and
+retries exact strict separation using those immutable enclosures. A curved
+or unsupported trimmed chart keeps its full original positive-weight
+surface controls. All attempted exact work, including failed initial
+proposals and planar certificates, shares the caller's remaining budget.
+If neither material hull is supported, the identical original proposal is
+not repeated. No sampled or tolerance-based separation is admitted.
+
+Private disjoint certificates retain the material hull authority when used.
+Actual [1,10] qualifies in 10,178 charged operations; reversed order also
+qualifies. Work=1 refuses; the touching pair [1,6] cannot be certified as
+disjoint. Existing rotated-shaft and shared-cone-pole regressions pass.
+The integrated shell gate advances to [1,13]; the initial assertion failure
+is retained as advancement evidence. Irrational-root closed body/topology
+regression passes. Complete annular Geometry/Body/volume, packaged WASM/UI,
+and named-part STEP acceptance remain unproven.
+
+Final optimized full-gate regression passes at [1,13]. Curved root/body/
+contact/volume replay also passes; its contact work is 674,285 operations.
+These local test runs do not establish performance improvements.

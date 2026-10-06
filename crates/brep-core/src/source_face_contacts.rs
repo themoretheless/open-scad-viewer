@@ -216,8 +216,8 @@ fn inspect_impl(
             }
             if let Some((work, spans, driver, linear)) = allowed_budget {
                 if out.exact_work < work {
-                    let proof = crate::source_hull_separation::certify(
-                        [&regions[a], &regions[b]],
+                    let proof = crate::source_hull_separation::certify_shell(
+                        shell, [a,b],
                         work - out.exact_work,
                     )?;
                     out.exact_work += proof.exact_work;
