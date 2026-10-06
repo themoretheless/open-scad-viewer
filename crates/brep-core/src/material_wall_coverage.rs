@@ -30,8 +30,8 @@ pub struct Report {
     pub cells: usize,
     pub domain_cells: usize,
 }
-type Plane = [[f64; 3]; 3];
-fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usize) {
+pub(crate) type Plane = [[f64; 3]; 3];
+pub(crate) fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usize) {
     let count = surface.control_points.iter().map(Vec::len).sum::<usize>();
     if count > remaining {
         return (None, 0);
@@ -64,7 +64,7 @@ fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usize) {
         count,
     )
 }
-fn same_plane(a: Plane, b: Plane) -> bool {
+pub(crate) fn same_plane(a: Plane, b: Plane) -> bool {
     b.iter().all(|p| {
         crate::shared_boundary::orient(&[&a[0], &a[1], &a[2], p], None) == Some(Sign::Zero)
     })
@@ -77,7 +77,7 @@ fn domain(s: &Surface) -> [[f64; 2]; 2] {
 }
 // If a line is within alpha of each unoriented endpoint normal, the normals
 // must be within 2*alpha. Use an outward upper bound, not a rounded threshold.
-fn necessary_normal_sine(sine_squared: f64) -> Result<Option<f64>> {
+pub(crate) fn necessary_normal_sine(sine_squared: f64) -> Result<Option<f64>> {
     if sine_squared >= 0.5 {
         return Ok(None);
     }

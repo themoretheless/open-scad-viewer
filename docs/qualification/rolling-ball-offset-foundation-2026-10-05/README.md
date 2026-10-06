@@ -4389,3 +4389,21 @@ Find thin regions with Enter afterward again reports the 6 mm wall and
 243 completed proposals. Cancellation and retry screenshots retained.
 These checks validate the finite original scan feature, not continuous
 whole-wall safety. This is local validation; no deployment or push claimed.
+
+
+## Continuous original-body wall coverage foundation
+
+New native source_wall_coverage enumerates every original face pair, including
+same-face pairs, and uses original full charts as conservative supersets of
+root-ended trim regions. Exact planar/coplanar and normal-angle exclusions
+plus fresh original face-gap certificates share bounded work budgets. A
+private lower-threshold certificate requires every pair to be proven.
+
+Original annular regression passes in 22.85 seconds. Pair budget 1 reports
+1/378 and refuses certification. Full enumeration reports 378/378, with
+260 unresolved pairs, 1000 gap cells and 642 normal spans; certification
+is correctly refused. Curved same-face pairs remain explicitly unproven.
+Seven existing material-wall coverage regressions pass in 0.79 seconds.
+Logs retained. This native foundation is not yet packaged into WASM or
+connected to worker/UI. A positive original planar-body fixture and intrinsic
+curved-face coverage are still required; this does not close whole-wall safety.

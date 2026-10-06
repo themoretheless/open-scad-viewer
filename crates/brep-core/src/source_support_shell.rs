@@ -314,6 +314,15 @@ mod tests {
         let limited_scan=crate::source_wall_scan::search(&body,1.,1,1,1e-7,
             crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}).unwrap();
         assert_eq!(limited_scan.attempts,1);assert!(!limited_scan.proposals_exhausted);assert!(limited_scan.thin_witness().is_none());
+        for pair_budget in [1,378] {
+            let coverage=crate::source_wall_coverage::qualify(&body,5.99,crate::source_wall_coverage::Limits{
+                pairs:pair_budget,plane_controls:10000,normal_spans:1000,gap:crate::source_face_gap::Limits{cells:1000,spans:2000},max_sine_squared:1e-6}).unwrap();
+            eprintln!("original continuous wall coverage reason={} pairs={}/{} unresolved={} cells={} normals={}",coverage.reason,
+                coverage.pairs.len(),coverage.total_pairs,coverage.pairs.iter().filter(|p|!p.proven).count(),coverage.cells,coverage.normal_spans);
+            assert_eq!(coverage.total_pairs,378);assert_eq!(coverage.enumeration_complete,pair_budget==378);
+            assert!(coverage.certificate.is_none());assert!(coverage.cells<=1000&&coverage.spans<=2000&&coverage.normal_spans<=1000);
+            if pair_budget==378 {assert!(coverage.pairs.iter().any(|p|p.faces[0]==p.faces[1]&&!p.proven));}
+        }
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,
             [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,

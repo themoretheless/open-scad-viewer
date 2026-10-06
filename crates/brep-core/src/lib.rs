@@ -1935,3 +1935,5 @@ pub mod source_material_wall;
 pub mod source_wall_search;
 
 pub mod source_wall_scan;
+
+pub mod source_wall_coverage;
