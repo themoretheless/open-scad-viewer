@@ -3914,3 +3914,26 @@ This proves native API behavior. Positive annular native thickness is
 qualified separately above. Current packaged WASM, TypeScript transport,
 worker cancellation/late results and new UI have not yet been qualified
 for this option; no browser wall-thickness completion is claimed.
+
+
+## Source wall TypeScript transport guards
+
+Source Body options/results now carry optional wallQualification, validated
+by sourceWallTransport. Expected groups, limits and all request scalars are
+deeply copied. Matching exact canonical request identity, bounded geometry
+and search work, explicit uncertainty on refusal, certificate interval on
+qualification and outward-rounded convergence are required. Missing or
+unsolicited wall responses reject. Failed Body admission cannot carry a
+wall certificate. Transport never computes geometry or material admission.
+
+Tests cover snapshot mutation, request substitution, missing interval,
+excess work, no successful candidate, false convergence, lower bound below
+request, unexpected uncertainty, null refusal interval, exact tolerance
+boundary rounding and invalid owned groups/search limits. Four focused
+transport tests pass; vue-tsc --noEmit passes. The real packaged worker
+restoration/seam regressions also pass with these new guards, but those
+worker runs do not request wall qualification from the old packaged WASM.
+Complete terminal logs are retained.
+
+New WASM packaging, positive native wall option through the real worker,
+cancellation/late-response wall scenarios and UI controls remain required.
