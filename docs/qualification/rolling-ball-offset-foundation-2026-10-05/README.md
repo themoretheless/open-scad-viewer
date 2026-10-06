@@ -3602,3 +3602,15 @@ Direct vue-tsc passes after the final UI edits. In isolated Vite preview
 The tangency button is present. Actual new WASM qualification and browser
 Cancel/Retry/late-response acceptance are pending optimization/packaging.
 The active root checkout/runtime 5175 was not changed.
+
+
+Selected seam request supersession now has a focused worker test: edge 0
+is superseded by edge 1; the first worker is terminated and its saved late
+callback cannot settle the second request. The focused supersession and
+abort/Retry tests both pass. In isolated browser 5188, the previous WASM
+response without requested seam diagnostics is rejected by the protocol
+gate and shown as a localized incomplete check with Retry. Retry followed
+by Cancel returns to the idle tangency button with no error shown. This
+is old-WASM compatibility/cancellation evidence, not new WASM qualification.
+Optimization remains live; the pending new real-WASM test is uncommitted
+until the rebuilt artifact is packaged and verified.
