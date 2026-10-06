@@ -4494,3 +4494,25 @@ than rescanning every pair; incomplete enumeration still marks all faces
 uncertain. This removes a repeated pair traversal by inspection, without
 a measured FPS claim. Direct vue-tsc passes; log retained. Packaging session
 remains live, so real worker and browser acceptance are still pending.
+
+
+## Packaged whole-wall coverage acceptance
+
+Completed geometry packaging and npm typecheck pass. Module SHA256
+6b19a5e1b02aef6ea1d7428dc85f89a39642a6ca57b0d0abc9e90afa99de237b, 11,899,580 bytes.
+29 worker and transport tests pass in 22.55 seconds. Real original cuboid
+worker checks qualify 9.99 mm over all 21 pairs, refuse 10.01 mm, and refuse
+20/21 pairs. Real annular worker covers 378/378 pairs, retains 260 unresolved
+pairs with 1000 gap cells/642 normal spans, and rejects forged qualification
+and stale threshold replies. Exact worker reports and complete build log retained.
+
+Browser 5188: Check whole wall with Enter at 5.99 mm and no selected sides
+covers 378/378 pairs and refuses whole-wall qualification, displaying 259
+unproven pairs at the UI's larger 10000-cell budget. Retry with Enter followed
+immediately by Cancel cancels active work and removes the result. Enter on
+Check whole wall afterward again yields the same explicit refusal. Screenshots
+retained. Corrected panel help distinguishes selected-region and whole-wall
+actions; direct vue-tsc passes. This is local acceptance, not deployment.
+The newly authored surface_self_chord native algorithm is not in this compiled
+module and is not yet used by source wall coverage. Production size verification
+for this packaged change remains pending.

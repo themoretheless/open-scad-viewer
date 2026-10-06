@@ -3655,7 +3655,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
           <details class="source-wall-panel" :open="sourceWallOpen" @toggle="sourceWallOpen=($event.target as HTMLDetailsElement).open">
             <summary>{{ label('Толщина исходного тела','Source body wall thickness') }}</summary>
-            <p>{{ label('Выберите две противоположные стороны стенки. Проверка относится только к выбранным граням.','Choose two opposing wall sides. Qualification covers only the selected faces.') }}</p>
+            <p>{{ label('Для проверки выбранного участка укажите две противоположные стороны. Для проверки всей стенки выбирать грани не требуется.','Choose opposing sides to check a selected region. Whole-wall qualification does not require selected faces.') }}</p>
             <button type="button" :aria-pressed="sourceWallSide===0" @click="sourceWallSide=0">{{ label('Первая сторона','First side') }}</button>
             <button type="button" :aria-pressed="sourceWallSide===1" @click="sourceWallSide=1">{{ label('Вторая сторона','Second side') }}</button>
             <div class="source-wall-face-grid" role="group" :aria-label="label('Грани стенки','Wall faces')">
