@@ -104,7 +104,7 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
- return {seamQualification:seam?key(seam):null,seamLimits:seam?.limits,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
+ return {seamQualification:seam?key(seam):null,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,
   absoluteError:options.limits.volume.absoluteError,segments,faceDisplay:face?{...face}:null}
 }
 export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value:unknown):value is SourceBodyResult {

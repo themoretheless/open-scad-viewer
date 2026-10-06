@@ -3614,3 +3614,10 @@ by Cancel returns to the idle tangency button with no error shown. This
 is old-WASM compatibility/cancellation evidence, not new WASM qualification.
 Optimization remains live; the pending new real-WASM test is uncommitted
 until the rebuilt artifact is packaged and verified.
+
+
+The seam response expectation now copies request limits instead of retaining
+a caller-owned mutable reference. A focused regression mutates the original
+edge, angular tolerance and cell budget after expectation creation; the
+original request key and limits remain fixed. The regression passes.
+This prevents changing response admission bounds while a worker is active.
