@@ -4313,3 +4313,21 @@ transport and existing real source-body worker tests pass in 16.81 seconds;
 vue-tsc passes. The existing real-worker runs use previous packaged WASM
 and do not request a scan. A new native scan WASM build is live; actual
 scan-through-worker and UI qualification remain pending.
+
+
+## Automatic scan UI controls pending packaged acceptance
+
+The existing source wall panel adds Find thin regions without manual side
+selection, reusing its cancellable worker and generation/document/selection
+guards. Scan starts clear both selected-wall and scan evidence. Parameter
+and selection watchers clear both results. The UI reports local thin
+discovery or absence among tested proposals, explicitly says whole-wall
+safety is unproven, shows attempt/face counts, offers retry, and renders
+original measurement enclosures. Thin witness faces are highlighted.
+
+All 317 UI regressions pass in 79.12 seconds and vue-tsc passes. A dedicated
+mock-port cancellation test passes: threshold replacement terminates the
+old port, late reply is ignored, Abort and retry work. Its test source is
+still pending with the real scan-worker scenario until the currently live
+WASM build finishes. Terminal logs retained. No positive real scan-worker
+or browser scan UI acceptance is claimed yet.

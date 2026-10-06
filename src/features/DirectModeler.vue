@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type {SourceWallScanResult} from '../services/sourceWallScanTransport'
 import {SourceBodyDisplay} from '../services/sourceBodyDisplay'
 import {sourceBodyRecordOptions} from '../services/sourceBodyArchive'
 import type {SourceBodyResult,SourceSeamResult} from '../services/sourceBody'
@@ -2061,15 +2062,16 @@ async function qualifySourceSeam(){
 }
 const sourceWallWorker=createSolidPreviewWorker(),sourceWallPending=ref(false),sourceWallError=ref('')
 const sourceWallResult=shallowRef<SourceWallResult|null>(null),sourceWallOpen=ref(false),sourceWallMenuOpen=ref(false)
+const sourceWallScanResult=shallowRef<SourceWallScanResult|null>(null),sourceWallScanMode=ref(false)
 const sourceWallGroups=ref<[number[],number[]]>([[],[]]),sourceWallSide=ref<0|1>(0)
 const sourceWallMinimum=ref(1),sourceWallTolerance=ref(0.02)
 let sourceWallGeneration=0
 function cancelSourceWall(){sourceWallGeneration++;sourceWallWorker.cancel();sourceWallPending.value=false}
 watch(()=>[document.value,props.open,selectedSourceBody.value],()=>{
- cancelSourceWall();sourceWallResult.value=null;sourceWallError.value='';sourceWallGroups.value=[[],[]]
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallError.value='';sourceWallGroups.value=[[],[]]
 },{flush:'sync'})
 watch(()=>[sourceWallGroups.value,sourceWallMinimum.value,sourceWallTolerance.value,sourceWallOpen.value],()=>{
- cancelSourceWall();sourceWallResult.value=null;sourceWallError.value=''
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallError.value=''
 },{deep:true,flush:'sync'})
 onUnmounted(()=>{cancelSourceWall();sourceWallWorker.dispose()})
 const sourceWallFaces=computed(()=>Array.from({length:sourceDisplayResults.value[selectedSourceBody.value?.id??'']?.faceCount??0},(_,i)=>i))
@@ -2085,7 +2087,8 @@ function toggleSourceWallFace(face:number){
  groups[other]=groups[other].filter(f=>f!==face);sourceWallGroups.value=groups
 }
 function sourceWallFaceUncertain(body:string,face:number){
- return sourceWallOpen.value && body===selectedSourceBody.value?.id && !!sourceWallResult.value?.clearance.uncertainFaces?.includes(face)
+ return sourceWallOpen.value && body===selectedSourceBody.value?.id && (!!sourceWallResult.value?.clearance.uncertainFaces?.includes(face)
+  ||!!(sourceWallScanResult.value?.thinFound&&sourceWallScanResult.value.witness?.endpoints.some(e=>e.face===face)))
 }
 function sourceWallFaceFill(body:string,face:number){
  if(!sourceWallOpen.value||body!==selectedSourceBody.value?.id)return '#77b8b0'
@@ -2093,8 +2096,8 @@ function sourceWallFaceFill(body:string,face:number){
  return sourceWallGroups.value[0].includes(face)?'#58c4f2':sourceWallGroups.value[1].includes(face)?'#dfacff':'#77b8b0'
 }
 const sourceWallMeasurement=computed(()=>{
- const record=selectedSourceBody.value,r=sourceWallResult.value,w=r?.witness
- if(!sourceWallOpen.value||!record||!objectInView(record.id)||!r?.qualified||!w)return null
+ const record=selectedSourceBody.value,r=sourceWallResult.value,scan=sourceWallScanResult.value,w=scan?.witness??r?.witness
+ if(!sourceWallOpen.value||!record||!objectInView(record.id)||(!scan&&!r?.qualified)||!w)return null
  const endpoints=w.endpoints.map(e=>{
   const center=project(e.worldMm.map(q=>q[0]/2+q[1]/2),'3d')
   const corners=Array.from({length:8},(_,k)=>project(e.worldMm.map((q,i)=>q[(k>>i)&1]),'3d'))
@@ -2102,7 +2105,7 @@ const sourceWallMeasurement=computed(()=>{
   return {face:e.face,center,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,bounds:e.worldMm}
  })
  if(endpoints.some(e=>![...e.center,e.x,e.y,e.width,e.height].every(Number.isFinite)))return null
- return {endpoints,points:endpoints.map(e=>e.center.join(',')).join(' '),interval:r.intervalMm}
+ return {endpoints,points:endpoints.map(e=>e.center.join(',')).join(' '),interval:scan?w.lengthMm:r!.intervalMm}
 })
 const sourceWallMessage=computed(()=>{
  const r=sourceWallResult.value;if(!r)return ''
@@ -2111,20 +2114,22 @@ const sourceWallMessage=computed(()=>{
  return r.reason==='source-wall-clearance-unproven'?label('Нижняя граница не подтверждена. Проверьте выделенные грани и выбор противоположных сторон.','The lower bound is unproven. Inspect highlighted faces and choose opposing sides.'):
   label('Допустимый участок материала не найден. Уточните выбор сторон; отсутствие тонких участков не подтверждено.','No qualified material chord was found. Refine the side selection; absence of thin regions is unproven.')
 })
-async function qualifySourceWall(){
- cancelSourceWall();sourceWallResult.value=null;sourceWallError.value=''
+async function qualifySourceWall(scan=false){
+ sourceWallScanMode.value=scan
+ cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallError.value=''
  const record=selectedSourceBody.value,source=document.value,generation=sourceWallGeneration
- if(!record||!props.open||!sourceWallOpen.value||restoringDraft.value||!objectSelectable(record.id)||sourceWallGroups.value.some(g=>!g.length))return
+ if(!record||!props.open||!sourceWallOpen.value||restoringDraft.value||!objectSelectable(record.id)||(!scan&&sourceWallGroups.value.some(g=>!g.length)))return
  sourceWallPending.value=true
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
-   wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
+   ...(scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+    limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
-    limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}})
+    limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})
   if(generation!==sourceWallGeneration||document.value!==source||selectedSourceBody.value!==record||!props.open||!sourceWallOpen.value||restoreDisposed)return
-  if(!result.admitted||!result.wallQualification)throw Error(result.diagnostics.reason)
-  sourceWallResult.value=result.wallQualification
+  if(!result.admitted||(scan?!result.wallScan:!result.wallQualification))throw Error(result.diagnostics.reason)
+  if(scan)sourceWallScanResult.value=result.wallScan!;else sourceWallResult.value=result.wallQualification!
  }catch(e){if(generation===sourceWallGeneration)sourceWallError.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===sourceWallGeneration)sourceWallPending.value=false}
 }
@@ -3646,15 +3651,22 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <p>{{ label('Первая сторона','First side') }}: {{ sourceWallGroups[0].map(f=>f+1).join(', ') || '—' }} · {{ label('Вторая сторона','Second side') }}: {{ sourceWallGroups[1].map(f=>f+1).join(', ') || '—' }}</p>
             <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" /></label>
             <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" /></label>
-            <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall">{{ label('Проверить толщину','Check source wall thickness') }}</button>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall(false)">{{ label('Проверить толщину','Check source wall thickness') }}</button>
+            <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(true)">{{ label('Найти тонкие участки','Find thin regions') }}</button>
+            <span v-if="sourceWallScanResult" role="status" data-source-wall-scan-result="true">
+              {{ sourceWallScanResult.thinFound?label('Найден тонкий участок.','A thin region was found.'):label('Тонкий участок в проверенных пробах не найден.','No thin region was found in tested proposals.') }}
+              {{ label('Безопасность всей стенки не подтверждена.','Whole-wall safety is unproven.') }}
+              {{ sourceWallScanResult.witness?.lengthMm }} mm · {{ sourceWallScanResult.facesVisited }}/{{ sourceWallScanResult.facesTotal }} · {{ sourceWallScanResult.attempts }}
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(true)">{{ label('Повторить поиск','Retry search') }}</button>
+            </span>
             <span v-if="sourceWallPending" role="status">{{ label('Проверяю толщину…','Checking wall thickness…') }} <button type="button" @click="cancelSourceWall">{{ label('Отмена','Cancel wall thickness') }}</button></span>
             <span v-if="sourceWallResult" :role="sourceWallResult.qualified?'status':'alert'">{{ sourceWallMessage }}
               <span v-if="sourceWallResult.intervalMm">{{ sourceWallResult.intervalMm[0] }}–{{ sourceWallResult.intervalMm[1] }} {{ label('мм','mm') }}</span>
-              <button v-if="!sourceWallResult.converged" type="button" :disabled="sourceWallPending" @click="qualifySourceWall">{{ label('Повторить','Retry wall thickness') }}</button>
+              <button v-if="!sourceWallResult.converged" type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode)">{{ label('Повторить','Retry wall thickness') }}</button>
               <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallResult.reason }} · {{ sourceWallResult.search.attempts }} · {{ sourceWallResult.clearance.uncertainUv }}</details>
             </span>
             <span v-if="sourceWallError" role="alert">{{ label('Расчёт не завершён. Проверьте стороны и числовые параметры, затем повторите.','Calculation failed. Check side selection and numeric values, then retry.') }}
-              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall">{{ label('Повторить','Retry wall thickness') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallError }}</details></span>
+              <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode)">{{ label('Повторить','Retry wall thickness') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallError }}</details></span>
           </details>
           <label>{{ label('Допуск STEP, мм','STEP tolerance, mm') }} <input aria-label="STEP tolerance, mm" v-model.number="sourceStepTolerance" type="number" min="1e-12" step="any" /></label>
           <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceStepPending" @click="exportSourceStep">{{ label('STEP выбранного исходного тела','Export selected source body STEP') }}</button>
