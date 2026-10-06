@@ -3587,3 +3587,18 @@ fixtures against the previous packaged WASM, not proof of a new WASM path.
 Direct vue-tsc --noEmit passes. The npm pretypecheck build is still in
 progress at this checkpoint. Generated WASM, real new seam worker execution
 and localized UI interaction remain to be qualified separately.
+
+
+## Source seam UI wiring checkpoint
+
+The source STEP/file panel now includes a selected-edge tangency check,
+Cancel and Retry, localized incomplete endpoint-normal messages, angular
+bounds and uncertain canonical interval details. A refused selected seam
+changes its selected-edge stroke to the diagnostic color. A dedicated
+worker and generation guards cancel on document/selection/open changes;
+late responses also check record identity and disposal. Escape cancels.
+Direct vue-tsc passes after the final UI edits. In isolated Vite preview
+5188, the source canal document loads and edge 0 is selected by Enter.
+The tangency button is present. Actual new WASM qualification and browser
+Cancel/Retry/late-response acceptance are pending optimization/packaging.
+The active root checkout/runtime 5175 was not changed.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {SourceBodyDisplay} from '../services/sourceBodyDisplay'
 import {sourceBodyRecordOptions} from '../services/sourceBodyArchive'
-import type {SourceBodyResult} from '../services/sourceBody'
+import type {SourceBodyResult,SourceSeamResult} from '../services/sourceBody'
 
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
@@ -2023,6 +2023,38 @@ async function exportBodySvg() {
 }
 const sourceStepWorker=createSolidPreviewWorker(),sourceStepPending=ref(false),sourceStepError=ref(''),sourceStepTolerance=ref(1e-7)
 const selectedSourceBody=computed(()=>(document.value.sourceBodies??[]).find(record=>sourceEdgeSelection.value.startsWith(record.id+':')))
+const sourceSeamWorker=createSolidPreviewWorker(),sourceSeamPending=ref(false),sourceSeamError=ref('')
+const sourceSeamResult=shallowRef<SourceSeamResult|null>(null)
+let sourceSeamGeneration=0
+function cancelSourceSeam(){sourceSeamGeneration++;sourceSeamWorker.cancel();sourceSeamPending.value=false}
+watch(()=>[document.value,props.open,sourceEdgeSelection.value],()=>{
+ cancelSourceSeam();sourceSeamResult.value=null;sourceSeamError.value=''
+},{flush:'sync'})
+onUnmounted(()=>{cancelSourceSeam();sourceSeamWorker.dispose()})
+const sourceSeamMessage=computed(()=>{
+ const result=sourceSeamResult.value
+ if(!result)return ''
+ if(result.qualified)return label('Касательность подтверждена на всём ребре.','Tangency is qualified over the whole edge.')
+ if(result.reason==='source-seam-endpoint-normal-unresolved')return label('Нормаль на конце ребра не подтверждена. Проверьте концевой переход; повтор с тем же бюджетом не устраняет вырождение.','The endpoint normal is unresolved. Inspect the end transition; repeating the same budget does not resolve a singularity.')
+ if(result.reason==='source-seam-angular-envelope-oblique')return label('Касательность в выбранном допуске не подтверждена. Проверьте сопряжение соседних граней.','Tangency within tolerance is unproven. Inspect the adjacent face transition.')
+ return label('Проверка участка не завершена. Повторите расчёт или уточните геометрию и лимиты.','The interval check is incomplete. Retry or inspect the geometry and work limits.')
+})
+async function qualifySourceSeam(){
+ cancelSourceSeam();sourceSeamResult.value=null;sourceSeamError.value=''
+ const record=selectedSourceBody.value,source=document.value,selection=sourceEdgeSelection.value,generation=sourceSeamGeneration
+ const selected=sourceDisplayResults.value[record?.id??'']?.edges.find(edge=>record!.id+':'+edge.index===selection)
+ if(!record||!selected||restoringDraft.value||!props.open||!objectSelectable(record.id))return
+ sourceSeamPending.value=true
+ try{
+  const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
+   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
+   seamQualification:{edge:selected.index,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
+  if(generation!==sourceSeamGeneration||document.value!==source||sourceEdgeSelection.value!==selection||selectedSourceBody.value!==record||!props.open||restoreDisposed)return
+  if(!result.admitted||!result.seamQualification)throw Error(result.diagnostics.reason)
+  sourceSeamResult.value=result.seamQualification
+ }catch(e){if(generation===sourceSeamGeneration)sourceSeamError.value=e instanceof Error?e.message:String(e)}
+ finally{if(generation===sourceSeamGeneration)sourceSeamPending.value=false}
+}
 let sourceStepGeneration=0
 function cancelSourceStep(){sourceStepGeneration++;sourceStepWorker.cancel();sourceStepPending.value=false}
 watch(()=>[document.value,props.open,sourceEdgeSelection.value,sourceStepTolerance.value],()=>{cancelSourceStep();sourceStepError.value=''},{flush:'sync'})
@@ -3079,7 +3111,7 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
-  if (e.key === 'Escape') { e.preventDefault(); cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
+  if (e.key === 'Escape') { e.preventDefault(); cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
     if ((e.target as HTMLElement).closest?.('button, summary, a[href], select')) return
@@ -3525,6 +3557,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button type="button" :disabled="restoringDraft || !selectedBody" @click="exportBodySvg">{{ label('SVG выбранного тела · проекция XY', 'Selected body SVG · XY projection') }}</button>
         <button type="button" :disabled="restoringDraft || !document.bodies.length" @click="exportBlender">{{ label('Экспорт для Blender', 'Export for Blender') }}</button>
         <template v-if="document.sourceBodies?.length">
+          <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceSeamPending" @click="qualifySourceSeam">{{ label('Проверить касательность ребра','Check source edge tangency') }}</button>
+          <span v-if="sourceSeamPending" role="status">{{ label('Проверяю касательность…','Checking tangency…') }} <button type="button" @click="cancelSourceSeam">{{ label('Отмена','Cancel tangency') }}</button></span>
+          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
+          <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
           <label>{{ label('Допуск STEP, мм','STEP tolerance, mm') }} <input aria-label="STEP tolerance, mm" v-model.number="sourceStepTolerance" type="number" min="1e-12" step="any" /></label>
           <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceStepPending" @click="exportSourceStep">{{ label('STEP выбранного исходного тела','Export selected source body STEP') }}</button>
           <span v-if="sourceStepPending" role="status">{{ label('Готовлю STEP…','Preparing STEP…') }} <button type="button" @click="cancelSourceStep">{{ label('Отмена','Cancel STEP') }}</button></span>
@@ -3697,7 +3733,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <rect v-for="box in sourceDisplayEndpointBoxes" :key="box.key" :x="box.x" :y="box.y" :width="box.width" :height="box.height" fill="none" stroke="#ffc977" stroke-width="2" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"><title>{{ label('Интервал конца: ','Endpoint enclosure: ')+box.bounds }}</title></rect>
               </g>
               <g v-if="pane==='3d'" data-source-body-preview="edges">
-                <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?'#ffc977':sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
+                <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?(sourceSeamResult&&!sourceSeamResult.qualified?'#ff9977':'#ffc977'):sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
               </g>
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
