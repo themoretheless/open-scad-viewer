@@ -4407,3 +4407,16 @@ Seven existing material-wall coverage regressions pass in 0.79 seconds.
 Logs retained. This native foundation is not yet packaged into WASM or
 connected to worker/UI. A positive original planar-body fixture and intrinsic
 curved-face coverage are still required; this does not close whole-wall safety.
+
+
+## Positive original cuboid whole-wall qualification
+
+The original 10 x 20 x 30 mm cuboid is rebuilt through source support
+incidence, embedded original geometry admission and original volume admission;
+no Body constructor or legacy model certificate bypass is used. Continuous
+coverage qualifies 9.99 mm over all 21 pairs, including diagonal pairs, with
+3 gap cells and 30 normal spans. Private certificate identity, threshold and
+retained gap certificates are checked. A 10.01 mm threshold refuses admission
+(186 cells); truncating to 20 pairs also refuses admission. The targeted test
+passes in 0.05 seconds. This establishes the native planar success path only;
+curved self pairs, WASM transport and whole-wall UI remain open.

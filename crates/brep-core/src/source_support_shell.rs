@@ -148,6 +148,37 @@ mod tests {
         }
     }
     #[test]
+    fn original_cuboid_whole_wall_coverage_requires_all_pairs() {
+        let model=crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.expect("original cuboid incidence");
+        let admission=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap();
+        let geometry=admission.geometry.expect(admission.reason);
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,
+            cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap();
+        let body=volume.body.expect(volume.reason);
+        for (minimum,pairs,success) in [(9.99,21,true),(10.01,21,false),(9.99,20,false)] {
+            let report=crate::source_wall_coverage::qualify(&body,minimum,
+                crate::source_wall_coverage::Limits {
+                    pairs,plane_controls:10000,normal_spans:10000,
+                    gap:crate::source_face_gap::Limits{cells:10000,spans:20000},
+                    max_sine_squared:1e-6,
+                }).unwrap();
+            eprintln!("original cuboid wall minimum={minimum} reason={} pairs={}/{} cells={} normals={}",
+                report.reason,report.pairs.len(),report.total_pairs,report.cells,report.normal_spans);
+            assert_eq!(report.total_pairs,21);
+            assert_eq!(report.enumeration_complete,pairs==21);
+            assert_eq!(report.certificate.is_some(),success,"{}",report.reason);
+            if let Some(certificate)=report.certificate {
+                assert!(std::ptr::eq(certificate.body(),&body));
+                assert_eq!(certificate.minimum_mm(),minimum);
+                assert_eq!(certificate.max_sine_squared(),1e-6);
+                assert!(!certificate.gap_certificates().is_empty());
+            }
+        }
+    }
+    #[test]
     fn admitted_annular_body_checks_original_radius_patches() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
