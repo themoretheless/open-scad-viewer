@@ -4192,3 +4192,15 @@ iteration. Missing tuple members now return false instead of throwing or
 passing malformed data. Regression cases delete line/endpoint/UV/world
 entries. All five seam/wall transport tests pass (1.01 seconds), vue-tsc
 passes, terminal logs retained. The live witness WASM build remains pending.
+
+
+## Independent analytic material endpoint cross-check
+
+The original radial chord endpoint boxes and crossing parameters are checked
+against independent analytic circles of radii 20 and 5 mm along the authored
+[25,5,3]+t[-50,-10,0] line. Rounded oracle coordinates have an explicit
+1e-9 mm tolerance; parameters 1e-11, and enclosure widths must stay below
+1e-5 mm. These oracle values do not authorize geometry admission.
+The combined annular body/radius/seam native regression passes in 18.91
+seconds. Terminal log retained. This changes tests only and does not require
+restarting the currently live witness WASM optimization.

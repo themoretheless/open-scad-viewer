@@ -283,6 +283,19 @@ mod tests {
             assert!(endpoint.world_mm.iter().all(|v|v[0].is_finite() && v[0]<=v[1] && v[1].is_finite()));
         }
         assert!(endpoints[0].parameter[1]<endpoints[1].parameter[0]);
+        // Independent analytic radial oracle; rounded oracle coordinates are
+        // checked with an explicit 1e-9 mm tolerance, never used for admission.
+        let radial_unit=[25./650f64.sqrt(),5./650f64.sqrt(),0.];
+        for (end,radius) in endpoints.iter().zip([20.,5.]) {
+            let expected=[radius*radial_unit[0],radius*radial_unit[1],3.];
+            for (bounds,value) in end.world_mm.iter().zip(expected) {
+                assert!(bounds[0]-1e-9<=value && value<=bounds[1]+1e-9);
+                assert!(bounds[1]-bounds[0]<1e-5);
+            }
+            let expected_t=(650f64.sqrt()-radius)/(2.*650f64.sqrt());
+            assert!(end.parameter[0]-1e-11<=expected_t && expected_t<=end.parameter[1]+1e-11);
+        }
+
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,
             [&[cavity_faces[0]],&[cavity_faces[1]]],[25.,5.,3.],[-50.,-10.,0.],1e-7,
