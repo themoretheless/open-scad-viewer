@@ -2114,11 +2114,17 @@ const sourceWallMessage=computed(()=>{
  return r.reason==='source-wall-clearance-unproven'?label('Нижняя граница не подтверждена. Проверьте выделенные грани и выбор противоположных сторон.','The lower bound is unproven. Inspect highlighted faces and choose opposing sides.'):
   label('Допустимый участок материала не найден. Уточните выбор сторон; отсутствие тонких участков не подтверждено.','No qualified material chord was found. Refine the side selection; absence of thin regions is unproven.')
 })
+const sourceWallInputError=computed(()=>{
+ if(!Number.isFinite(sourceWallMinimum.value)||sourceWallMinimum.value<=0)return label('Укажите минимальную толщину больше нуля.','Enter a minimum thickness greater than zero.')
+ if(!sourceWallScanMode.value&&(!Number.isFinite(sourceWallTolerance.value)||sourceWallTolerance.value<=0))return label('Укажите допуск толщины больше нуля.','Enter a thickness tolerance greater than zero.')
+ return ''
+})
 async function qualifySourceWall(scan=false){
  sourceWallScanMode.value=scan
  cancelSourceWall();sourceWallResult.value=null;sourceWallScanResult.value=null;sourceWallError.value=''
  const record=selectedSourceBody.value,source=document.value,generation=sourceWallGeneration
  if(!record||!props.open||!sourceWallOpen.value||restoringDraft.value||!objectSelectable(record.id)||(!scan&&sourceWallGroups.value.some(g=>!g.length)))return
+ if(sourceWallInputError.value){sourceWallError.value=sourceWallInputError.value;return}
  sourceWallPending.value=true
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
@@ -3649,8 +3655,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 :style="{borderColor:sourceWallFaceFill(selectedSourceBody?.id??'',face)}" @click="toggleSourceWallFace(face)">{{ label('Грань ','Face ') }}{{ face+1 }}</button>
             </div>
             <p>{{ label('Первая сторона','First side') }}: {{ sourceWallGroups[0].map(f=>f+1).join(', ') || '—' }} · {{ label('Вторая сторона','Second side') }}: {{ sourceWallGroups[1].map(f=>f+1).join(', ') || '—' }}</p>
-            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" /></label>
-            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" /></label>
+            <label>{{ label('Минимальная толщина, мм','Minimum thickness, mm') }} <input v-model.number="sourceWallMinimum" type="number" min="1e-9" step="any" aria-label="Minimum source wall thickness, mm" :aria-invalid="sourceWallError && (!Number.isFinite(sourceWallMinimum) || sourceWallMinimum<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
+            <label>{{ label('Допуск толщины, мм','Thickness tolerance, mm') }} <input v-model.number="sourceWallTolerance" type="number" min="1e-9" step="any" aria-label="Source wall thickness tolerance, mm" :aria-invalid="sourceWallError && !sourceWallScanMode && (!Number.isFinite(sourceWallTolerance) || sourceWallTolerance<=0)?'true':undefined" :aria-describedby="sourceWallError && sourceWallInputError?'source-wall-input-error':undefined" /></label>
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody || sourceWallGroups.some(g=>!g.length)" @click="qualifySourceWall(false)">{{ label('Проверить толщину','Check source wall thickness') }}</button>
             <button type="button" :disabled="sourceWallPending || !selectedSourceBody" @click="qualifySourceWall(true)">{{ label('Найти тонкие участки','Find thin regions') }}</button>
             <span v-if="sourceWallScanResult" role="status" data-source-wall-scan-result="true">
@@ -3665,7 +3671,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button v-if="!sourceWallResult.converged" type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode)">{{ label('Повторить','Retry wall thickness') }}</button>
               <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallResult.reason }} · {{ sourceWallResult.search.attempts }} · {{ sourceWallResult.clearance.uncertainUv }}</details>
             </span>
-            <span v-if="sourceWallError" role="alert">{{ label('Расчёт не завершён. Проверьте стороны и числовые параметры, затем повторите.','Calculation failed. Check side selection and numeric values, then retry.') }}
+            <span v-if="sourceWallError" id="source-wall-input-error" role="alert">{{ sourceWallInputError || label('Расчёт не завершён. Проверьте стороны и числовые параметры, затем повторите.','Calculation failed. Check side selection and numeric values, then retry.') }}
               <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(sourceWallScanMode)">{{ label('Повторить','Retry wall thickness') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallError }}</details></span>
           </details>
           <label>{{ label('Допуск STEP, мм','STEP tolerance, mm') }} <input aria-label="STEP tolerance, mm" v-model.number="sourceStepTolerance" type="number" min="1e-12" step="any" /></label>

@@ -4331,3 +4331,16 @@ old port, late reply is ignored, Abort and retry work. Its test source is
 still pending with the real scan-worker scenario until the currently live
 WASM build finishes. Terminal logs retained. No positive real scan-worker
 or browser scan UI acceptance is claimed yet.
+
+
+## Scan numeric input localization
+
+Minimum thickness is checked as finite and positive before worker dispatch.
+Selected-wall qualification also checks positive tolerance; automatic scan
+does not consume that tolerance. Error fields use aria-invalid and point to
+the localized alert via aria-describedby. Changing numeric values clears
+old errors/results through existing watchers. On isolated browser 5188,
+minimum 0 and Enter on Find thin regions shows the explicit Russian positive
+minimum message, no pending/cancel state, aria-invalid=true and the linked
+source-wall-input-error alert. Actual screenshot retained; vue-tsc passes.
+The live scan WASM build and positive real scan acceptance remain pending.
