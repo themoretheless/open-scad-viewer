@@ -4045,3 +4045,38 @@ Full body wall coverage and tighter automatic adaptive bounds remain
 open. This new multi-interval source logic is native-only in this commit;
 the currently packaged WASM still uses the previous two-crossing chord
 implementation. Browser/WASM cavity qualification requires a new rebuild.
+
+
+## Tight original radial wall bounds and budgeted refinement
+
+Full-chart original axis-radius polynomial bounds now supplement Cartesian
+source face gap enclosures. Distance to a common coordinate axis is
+1-Lipschitz, so separated original radial intervals prove a lower bound
+for every source point pair. Positive-weight Bernstein coefficients
+preserve rational cancellations. Unsupported/numeric-range optional
+bounds retain the Cartesian fallback. No fitted circle or sampled radius
+authorizes admission. XY-independent chart subdivision also balances
+physical XY enclosure widths when both projections are independent of V.
+
+The original annular outer/inner minimum normal material chord interval
+is now [14.999999999999902,15.000000000000671] mm, with whole 36-pair
+lower coverage in 36 cells/72 spans and 54 certified automatic upper
+candidates. search_and_refine preserves the initial private certificate
+while attempting a higher lower threshold within the shared remaining
+cell/span budget. At 0.02 mm it converges immediately; at 1e-16 mm it
+retains the valid interval, reports nonconvergence and a resolution-limit
+refinement after total 294 cells/588 spans.
+
+Cartesian-only refinement exhausted both 50000/100000 and 100000/200000
+work experiments; logs retained. A bounded coefficient cache experiment
+found no reusable charts in this fixture and is removed. Production
+resource caps are unchanged. The final combined Body/radius/seam test
+passes in 18.14 seconds. Two radial tests pass, including independent
+point-pair witnesses after original weight/control perturbations showing
+old 15 mm bounds cannot survive changed data. The rational V-scheduler
+regression passes. All terminal evidence retained.
+
+These changes remain native-only. Packaged WASM and browser still use
+the previous gap implementation and two-crossing chords; rebuilding and
+qualifying the cavity/refined path through worker/UI remains necessary.
+This is selected cylinder-wall proof, not whole-body wall coverage.

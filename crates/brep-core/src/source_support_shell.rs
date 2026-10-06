@@ -187,7 +187,7 @@ mod tests {
         eprintln!("original annular curved gap {} cells={} spans={} uncertain={:?}",curved_gap.reason,curved_gap.cells,curved_gap.spans,curved_gap.uncertain_faces);
         let curved_proof=curved_gap.certificate.expect("all original cylindrical inner/outer pairs need clearance");
         assert!(curved_proof.lower_mm()>=14.5&&curved_proof.lower_mm()<=15.);
-        assert!(curved_gap.cells>36&&curved_gap.cells<=10000&&curved_gap.spans<=20000);
+        assert!(curved_gap.cells>=36&&curved_gap.cells<=10000&&curved_gap.spans<=20000);
         let outside_segment=crate::source_material_segment::inspect_boundary(
             &body,[30.,30.,1.],[0.,0.,1.],1e-7,10000,10000).unwrap();
         assert!(outside_segment.boundary_free);
@@ -285,13 +285,27 @@ mod tests {
         assert!(automatic_radial.converged);
         let proof=automatic_radial.certificate.expect("automatically found curved cavity wall");
         assert!(proof.interval_mm()[0]<=15. && proof.interval_mm()[1]>=15.);
+        for (cells,spans,tolerance,expected) in [(50000,100000,0.02,true),(10000,20000,1e-16,false)] {
+            let refined=crate::source_material_wall::search_and_refine(&body,
+                [&[2,7,12,16,20,24],&[3,8,13,17,21,25]],14.5,tolerance,1e-7,3,54,
+                crate::source_material_wall::Limits{gap:crate::source_face_gap::Limits{cells,spans},
+                    chord:crate::source_material_chord::Limits{cells:10000,domain_cells:10000,normal_spans:1000,max_sine_squared:1e-6}}).unwrap();
+            eprintln!("source refined radial wall converged={} cells={} spans={} interval={:?} refinement={:?}",
+                refined.result.converged,refined.cells,refined.spans,refined.result.certificate.as_ref().map(|c|c.interval_mm()),
+                refined.refinement.as_ref().map(|r|r.reason));
+            assert!(refined.cells<=cells && refined.spans<=spans);
+            assert_eq!(refined.result.converged,expected);
+            let proof=refined.result.certificate.expect("retain valid original lower bounds even if refinement exhausts");
+            assert!(proof.interval_mm()[0]<=15. && proof.interval_mm()[1]>=15.);
+            if expected {assert!(proof.interval_mm()[1]-proof.interval_mm()[0]<=0.02);}
+        }
         let blended_gap=crate::source_face_gap::qualify(&body,
             [&[0,2,5,7,10,12,16,20,24],&[3,8,13,17,21,25]],13.5,
             crate::source_face_gap::Limits{cells:50000,spans:100000}).unwrap();
         eprintln!("original annular blend wall gap {} cells={} spans={} uncertain={:?}",blended_gap.reason,blended_gap.cells,blended_gap.spans,blended_gap.uncertain_faces);
         let blended_proof=blended_gap.certificate.expect("all original transition/cylinder versus inner wall pairs need clearance");
         assert!(blended_proof.lower_mm()>=13.5&&blended_proof.lower_mm()<=13.75);
-        assert!(blended_gap.cells>54&&blended_gap.cells<=50000&&blended_gap.spans<=100000);
+        assert!(blended_gap.cells>=54&&blended_gap.cells<=50000&&blended_gap.spans<=100000);
         let q=std::f64::consts::FRAC_PI_2;
         let spans=[
             crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),

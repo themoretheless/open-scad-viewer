@@ -106,6 +106,12 @@ pub fn qualify<'a>(
     for &a in faces[0] {
         for &b in faces[1] {
             let surfaces = [surface(a), surface(b)];
+            // Distance to a common coordinate axis is 1-Lipschitz. Disjoint
+            // original radial ranges therefore bound every source point pair.
+            // This optional full-chart polynomial bound preserves rational
+            // cancellations; Cartesian subdivision remains the general fallback.
+            let radial_lower =
+                nurbs_core::radial_bounds::axis_separation_lower(surfaces[0], surfaces[1]);
             let natural = surfaces.map(domain);
             let mut queue = vec![natural];
             while let Some(uv) = queue.pop() {
@@ -121,7 +127,9 @@ pub fn qualify<'a>(
                     rectangle_bounds(surfaces[0], uv[0])?,
                     rectangle_bounds(surfaces[1], uv[1])?,
                 ];
-                let bound = enclosure_distance(&boxes[0], &boxes[1])?.0;
+                let bound = enclosure_distance(&boxes[0], &boxes[1])?
+                    .0
+                    .max(radial_lower);
                 if bound >= minimum_mm {
                     lower = lower.min(bound);
                     continue;
@@ -134,7 +142,15 @@ pub fn qualify<'a>(
                     .filter(|&(side, axis)| !projected[side] || axis == 0)
                     .max_by(|&(s, a), &(t, b)| {
                         let width = |(s, a): (usize, usize)| {
-                            (uv[s][a][1] - uv[s][a][0]) / (natural[s][a][1] - natural[s][a][0])
+                            if projected.iter().all(|x| *x) {
+                                // XY projection is independent of V for both original
+                                // charts. Balance physical enclosure widths, so different
+                                // radii do not force equal angular subdivision effort.
+                                (boxes[s][0][1] - boxes[s][0][0])
+                                    .max(boxes[s][1][1] - boxes[s][1][0])
+                            } else {
+                                (uv[s][a][1] - uv[s][a][0]) / (natural[s][a][1] - natural[s][a][0])
+                            }
                         };
                         width((s, a)).total_cmp(&width((t, b)))
                     })

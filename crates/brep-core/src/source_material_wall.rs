@@ -169,3 +169,83 @@ pub fn search_and_qualify<'a>(
         search,
     })
 }
+
+pub struct RefinedReport<'a> {
+    pub result: SearchReport<'a>,
+    pub refinement: Option<source_face_gap::Report<'a>>,
+    pub cells: usize,
+    pub spans: usize,
+}
+/// Tighten the lower certificate toward a searched material upper witness.
+/// Initial and refinement full-pair visits share one gap budget. Refusal keeps
+/// the original valid interval and exposes the failed refinement separately.
+pub fn search_and_refine<'a>(
+    body: &'a Body,
+    groups: [&[usize]; 2],
+    minimum_mm: f64,
+    tolerance_mm: f64,
+    tolerance_uv: f64,
+    grid: usize,
+    max_attempts: usize,
+    limits: Limits,
+) -> Result<RefinedReport<'a>> {
+    let budget = [limits.gap.cells, limits.gap.spans];
+    let result = search_and_qualify(
+        body,
+        groups,
+        minimum_mm,
+        tolerance_mm,
+        tolerance_uv,
+        grid,
+        max_attempts,
+        limits,
+    )?;
+    let mut out = RefinedReport {
+        cells: result.clearance.cells,
+        spans: result.clearance.spans,
+        result,
+        refinement: None,
+    };
+    if out.result.converged {
+        return Ok(out);
+    }
+    let Some(proof) = out.result.certificate.as_ref() else {
+        return Ok(out);
+    };
+    let remaining = [budget[0] - out.cells, budget[1] - out.spans];
+    if remaining.contains(&0) {
+        return Ok(out);
+    }
+    // This rounded threshold proposes work only. Original interval bounds alone
+    // admit the lower certificate, with outward width checked again afterward.
+    let target = proof.interval_mm[1] - 0.75 * tolerance_mm;
+    if !target.is_finite() || target <= proof.interval_mm[0] {
+        return Ok(out);
+    }
+    let mut refined = source_face_gap::qualify(
+        body,
+        groups,
+        target,
+        source_face_gap::Limits {
+            cells: remaining[0],
+            spans: remaining[1],
+        },
+    )?;
+    out.cells += refined.cells;
+    out.spans += refined.spans;
+    if let Some(gap) = refined.certificate.take() {
+        let proof = out.result.certificate.as_mut().unwrap();
+        if !std::ptr::eq(gap.body(), proof.body()) || gap.lower_mm() > proof.interval_mm[1] {
+            return Err(Error::new(
+                "BREP_SOURCE_WALL_INCONSISTENT",
+                "Refined original material bounds are inconsistent",
+            ));
+        }
+        proof.interval_mm[0] = gap.lower_mm();
+        proof.gap = gap;
+        out.result.converged =
+            (proof.interval_mm[1] - proof.interval_mm[0]).next_up() <= tolerance_mm;
+    }
+    out.refinement = Some(refined);
+    Ok(out)
+}
