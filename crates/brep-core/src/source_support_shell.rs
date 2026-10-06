@@ -155,6 +155,9 @@ mod tests {
         let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
             axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
         }).unwrap().body.unwrap();
+        if let Some(path)=std::env::var_os("CAD_ANNULAR_SOURCE_BODY_OUTPUT") {
+            std::fs::write(path,value_codec::to_string_pretty(&body.definition().unwrap()).unwrap()).unwrap();
+        }
         let q=std::f64::consts::FRAC_PI_2;
         let spans=[
             crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,q/4.).unwrap(),

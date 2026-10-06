@@ -110,9 +110,9 @@ it('restores original source definitions through the real WASM CAD worker',async
 },120000)
 it('supersedes a source restore and ignores its late response',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const first=client.run({kind:'sourceBodyRestore',options:options()}).catch(e=>e.code)
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!
- const second=client.run({kind:'sourceBodyRestore',options:options()})
+ const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
  expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
  late({data:{version:1,id:1,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
  reply(ports[1]!,denied);expect(await second).toEqual(denied)
@@ -253,3 +253,32 @@ it('cancels a changed STEP request and rejects the late worker response',async()
  late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
  reply(ports[1]!,denied);expect(await second).toEqual(denied)
 })
+
+it('qualifies a selected original seam through the rebuilt WASM worker',async()=>{
+ const o:SourceBodyOptions={...options(),displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
+  seamQualification:{edge:0,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}
+ const r=await realClient().run({kind:'sourceBodyRestore',options:o})
+ expect(r.admitted).toBe(true)
+ expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+ expect(r.seamQualification?.request).toEqual(o.seamQualification)
+ expect(r.seamQualification?.reason).toMatch(/^source-seam-/)
+ expect(r.seamQualification?.cells).toBeLessThanOrEqual(128)
+},60000)
+
+it('qualifies the annular middle rail and localizes its collapsed endpoint through WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient()
+ for(const edge of [6,0]){
+  const o:SourceBodyOptions={...base,seamQualification:{edge,limits:{maxSineSquared:1e-6,cells:1024,curveSpans:2048,normalSpans:2048}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(r.admitted).toBe(true)
+  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  expect(r.faceCount).toBe(27);expect(r.poleCount).toBe(2)
+  expect(r.seamQualification?.qualified).toBe(edge===6)
+  if(edge===0){
+   expect(r.seamQualification?.reason).toBe('source-seam-endpoint-normal-unresolved')
+   expect(r.seamQualification?.uncertainCanonical).toEqual([0,0])
+   expect(r.seamQualification?.cells).toBe(1)
+  }
+ }
+},240000)

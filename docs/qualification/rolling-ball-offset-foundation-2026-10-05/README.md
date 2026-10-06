@@ -3621,3 +3621,24 @@ a caller-owned mutable reference. A focused regression mutates the original
 edge, angular tolerance and cell budget after expectation creation; the
 original request key and limits remain fixed. The regression passes.
 This prevents changing response admission bounds while a worker is active.
+
+
+## Rebuilt WASM original annular seam qualification
+
+The complete npm pretypecheck geometry build and TypeScript checks finish
+successfully. New packaged geometry WASM SHA256 is
+ae848eb6e1e7e3c1778c865285c9a98694b1919f6c4d9e1857e978f39685e812,
+11,847,649 bytes (original compiled payload 13,371,614 bytes).
+Both source worker and seam transport suites pass: 13 tests in 14.02 s.
+The real worker freshly restores the original 27-face, two-pole annular
+Body and certifies middle rail 6; transition rail 0 refuses with
+source-seam-endpoint-normal-unresolved, canonical [0,0], one cell.
+A separate real selected seam test on the source canal also passes.
+
+The native test emits the original Body definition without surrogate mesh
+authority. Annular request fixture SHA256 (uncompressed UTF-8 JSON) is
+b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea,
+167,972 bytes. Native original radius/seam fixture test passes in 12.15 s.
+This qualifies the specified new WASM/worker cases, not general fillets,
+whole-wall diagnostics, complete browser acceptance or named-part chains.
+Full distribution size budget remains to be measured after this rebuild.
