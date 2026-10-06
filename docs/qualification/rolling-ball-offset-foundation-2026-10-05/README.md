@@ -4572,3 +4572,13 @@ Ten coverage/scan/wall transport tests pass in 173 ms, including mismatched
 class, unresolved-success flags and invented exclusions. Direct vue-tsc passes.
 The ongoing intrinsic-exclusion WASM build is still live; these checks do not
 claim the latest native integration has completed packaged worker acceptance.
+
+
+## Explicit wall certificate scope in UI
+
+The success text and panel help now state that continuous coverage proves a
+lower threshold for material chords nearly perpendicular to the faces. This
+matches the native maxSineSquared contract. It does not claim unrestricted
+physical wall thickness at arbitrary trimmed boundaries or sharp vertices.
+The full objective still requires general wall qualification. Direct vue-tsc
+passes; log retained. Intrinsic-exclusion packaging remains running.
