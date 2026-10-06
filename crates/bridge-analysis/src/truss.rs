@@ -129,14 +129,14 @@ mod tests {
     #[test]
     fn explicit_wrench_matches_the_nodal_bar_and_superposes_signed_loads() {
         assert_eq!(
-            crate::dispatch(loaded_bar()).unwrap(),
-            crate::dispatch(bar()).unwrap()
+            crate::handle(loaded_bar()).unwrap(),
+            crate::handle(bar()).unwrap()
         );
         let mut v = loaded_bar();
         let mut subtract = v["loads"][0].clone();
         subtract["forceN"] = json!([-25, 0, 0]);
         v["loads"].as_array_mut().unwrap().push(subtract);
-        let result = crate::dispatch(v).unwrap();
+        let result = crate::handle(v).unwrap();
         assert_eq!(result["axialForcesN"][0].as_f64(), Some(75.));
     }
     #[test]
@@ -144,19 +144,19 @@ mod tests {
         let mut v = loaded_bar();
         v["loads"][0]["momentNmm"] = json!([0, 0, 100]);
         assert_eq!(
-            crate::dispatch(v).unwrap_err().code,
+            crate::handle(v).unwrap_err().code,
             "TRUSS_LOAD_UNREALIZABLE"
         );
         let mut v = loaded_bar();
         v["forcesN"] = json!([[0, 0, 0], [100, 0, 0]]);
         assert_eq!(
-            crate::dispatch(v).unwrap_err().code,
+            crate::handle(v).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
         let mut v = loaded_bar();
         v["loads"][0]["momentNm"] = json!([0, 0, 0]);
         assert_eq!(
-            crate::dispatch(v).unwrap_err().code,
+            crate::handle(v).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
     }
@@ -173,7 +173,7 @@ mod tests {
             let mut v = loaded_bar();
             v["loads"][0]["nodes"] = indices;
             assert_eq!(
-                crate::dispatch(v).unwrap_err().code,
+                crate::handle(v).unwrap_err().code,
                 "GEOMETRY_INVALID_INPUT"
             );
         }
@@ -182,51 +182,51 @@ mod tests {
             let load = v["loads"][0].clone();
             v["loads"] = json!(vec![load; count]);
             assert_eq!(
-                crate::dispatch(v).unwrap_err().code,
+                crate::handle(v).unwrap_err().code,
                 "GEOMETRY_INVALID_INPUT"
             );
         }
         let mut v = loaded_bar();
         let load = v["loads"][0].clone();
         v["loads"] = json!(vec![load; 32]);
-        let result = crate::dispatch(v).unwrap();
+        let result = crate::handle(v).unwrap();
         assert!((result["axialForcesN"][0].as_f64().unwrap() - 3200.).abs() < 1e-9);
         let mut v = loaded_bar();
         let mut load = v["loads"][0].clone();
         load["forceN"] = json!([f64::MAX / 4., 0., 0.]);
         v["loads"] = json!(vec![load; 5]);
         assert_eq!(
-            crate::dispatch(v).unwrap_err().code,
+            crate::handle(v).unwrap_err().code,
             "TRUSS_LOAD_NUMERIC_RANGE"
         );
     }
     #[test]
     fn dispatches_signed_response_and_rejects_unknown_fields() {
-        let response = crate::dispatch(bar()).unwrap();
+        let response = crate::handle(bar()).unwrap();
         assert_eq!(response["displacementsMm"][1][0].as_f64(), Some(0.25));
         assert_eq!(response["reactionsN"][0][0].as_f64(), Some(-100.));
         let mut v = bar();
         v["momentsNm"] = json!([[0, 0, 0], [0, 0, 1]]);
         assert_eq!(
-            crate::dispatch(v).unwrap_err().code,
+            crate::handle(v).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
         let mut v = bar();
         v["members"][0]["spring"] = json!(1);
-        assert!(crate::dispatch(v).is_err());
+        assert!(crate::handle(v).is_err());
     }
     #[test]
     fn preserves_singular_error_and_rejects_transport_shape() {
         let mut v = bar();
         v["restrained"][1] = json!([false, false, false]);
-        assert_eq!(crate::dispatch(v).unwrap_err().code, "TRUSS_SINGULAR");
+        assert_eq!(crate::handle(v).unwrap_err().code, "TRUSS_SINGULAR");
         for invalid in [json!([0, 1]), json!([0, 1, 2, 3]), json!([0, "1", 2])] {
             let mut v = bar();
             v["nodesMm"][0] = invalid;
-            assert!(crate::dispatch(v).is_err());
+            assert!(crate::handle(v).is_err());
         }
         let mut v = bar();
         v["nodesMm"] = json!(vec![[0.; 3]; MAX_NODES + 1]);
-        assert!(crate::dispatch(v).is_err());
+        assert!(crate::handle(v).is_err());
     }
 }

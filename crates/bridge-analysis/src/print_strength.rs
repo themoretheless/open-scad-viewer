@@ -152,16 +152,16 @@ mod tests {
             {"nozzleTempC":240,"serviceTempC":20,"youngMpa":2000,"tensionMpa":40,"compressionMpa":60},
             {"nozzleTempC":240,"serviceTempC":60,"youngMpa":1000,"tensionMpa":20,"compressionMpa":30}]});
         assert_eq!(
-            crate::dispatch(v.clone()).unwrap()["youngMpa"],
+            crate::handle(v.clone()).unwrap()["youngMpa"],
             json!(1500.)
         );
         let mut bad = v.clone();
         bad["samples"][0]["temperatureFactor"] = json!(1.);
-        assert!(crate::dispatch(bad).is_err());
+        assert!(crate::handle(bad).is_err());
         let mut bad = v;
         bad["serviceTempC"] = json!(80.);
         assert_eq!(
-            crate::dispatch(bad).unwrap_err().code,
+            crate::handle(bad).unwrap_err().code,
             "THERMAL_OUT_OF_RANGE"
         );
     }
@@ -169,14 +169,14 @@ mod tests {
     fn screening_dispatch_is_strict_and_bounded() {
         let v = json!({"op":"truss_screen","areasMm2":[2],"forcesN":[[100]],"limits":{"tensionMpa":80,"compressionMpa":40,"safetyFactor":2}});
         assert_eq!(
-            crate::dispatch(v.clone()).unwrap()[0]["utilization"],
+            crate::handle(v.clone()).unwrap()[0]["utilization"],
             json!(1.25)
         );
         let mut bad = v.clone();
         bad["forcesN"] = json!(vec![vec![0.]; 33]);
-        assert!(crate::dispatch(bad).is_err());
+        assert!(crate::handle(bad).is_err());
         let mut bad = v;
         bad["limits"]["temperatureFactor"] = json!(1);
-        assert!(crate::dispatch(bad).is_err());
+        assert!(crate::handle(bad).is_err());
     }
 }

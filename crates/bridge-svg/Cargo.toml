@@ -1,0 +1,22 @@
+[package]
+name = "bridge-svg"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bridge-codec = { path = "../bridge-codec" }
+value-codec = { path = "../value-codec" }
+planar-geometry = { path = "../planar-geometry" }
+resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
+usvg = { version = "0.47.0", default-features = false, features = ["text"] }
+svgtypes = "0.16.1"
+base64 = "0.22"
+data-url = "0.3"
+imagesize = "0.14"
+gif = "0.14.1"
+image-webp = "0.2.4"
+zune-jpeg = "0.5.8"
+simplecss = "0.2.2"
+ttf-parser = "0.25.1"

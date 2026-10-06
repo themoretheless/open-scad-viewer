@@ -34,7 +34,7 @@ These libraries parse/render SVG documents and do not replace the CAD kernel.
 
 ### Noto Sans
 
-- Asset: `crates/geometry-bridge/assets/NotoSans-Regular.ttf`
+- Asset: `crates/bridge-svg/assets/NotoSans-Regular.ttf`
 - Source: <https://github.com/notofonts/noto-fonts/blob/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf>
 - Copyright 2018 The Noto Project Authors
 - License: SIL Open Font License 1.1

@@ -21,7 +21,8 @@ export const CRATE_LAYERS = {
   'openscad-core': 4, 'modelgraph-runtime': 4, 'modelgraph-text': 4, 'mechanical-core': 4,
   'mechanics-core': 4, 'gcode-core': 4, 'gcode-optimize': 4, 'slicer-core': 4, 'laser-core': 4,
   'printer-core': 4, 'photogrammetry-core': 4,
-  'geometry-bridge': 5, 'languages-bridge': 5, 'photogrammetry-ffi': 5, 'printer-cli': 5,
+  'bridge-codec': 0,
+  'bridge-cam': 5, 'bridge-analysis': 5, 'bridge-svg': 5, 'geometry-bridge': 5, 'languages-bridge': 5, 'photogrammetry-ffi': 5, 'printer-cli': 5,
   'geometry-wasm': 6, 'languages-wasm': 6, 'photogrammetry-wasm': 6,
 }
 
