@@ -1,0 +1,55 @@
+import json,math,sys
+from pathlib import Path
+from OCP.STEPControl import STEPControl_Reader,STEPControl_Writer,STEPControl_AsIs
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.BRepCheck import BRepCheck_Analyzer
+from OCP.BRepGProp import BRepGProp
+from OCP.GProp import GProp_GProps
+from OCP.TopAbs import TopAbs_FACE,TopAbs_SOLID
+from OCP.TopExp import TopExp_Explorer
+from OCP.TopoDS import TopoDS
+from OCP.BRepAdaptor import BRepAdaptor_Surface
+from OCP.gp import gp_Pnt,gp_Vec
+root=Path(sys.argv[1])
+def read(p):
+ r=STEPControl_Reader();assert r.ReadFile(str(p))==IFSelect_RetDone;assert r.TransferRoots()>0;return r.OneShape()
+def count(s,t):
+ e=TopExp_Explorer(s,t);n=0
+ while e.More():n+=1;e.Next()
+ return n
+shape=read(root/'periodic.step'); w=STEPControl_Writer();assert w.Transfer(shape,STEPControl_AsIs)==IFSelect_RetDone;assert w.Write(str(root/'periodic-occt.step'))==IFSelect_RetDone
+samples=json.loads((root/'model-samples.json').read_text())
+reports=[]
+for s in [shape,read(root/'periodic-occt.step')]:
+ p=GProp_GProps();BRepGProp.VolumeProperties_s(s,p)
+ e=TopExp_Explorer(s,TopAbs_FACE);surfaces=[]
+ while e.More():surfaces.append(BRepAdaptor_Surface(TopoDS.Face(e.Current())));e.Next()
+ worst=0.;jet_worst=0.;matched=[];selected=[]
+ def coords(p):return [p.X(),p.Y(),p.Z()]
+ def error(a,b):return math.dist(coords(a),b)
+ for rows in samples:
+  candidates=[(a,reverse) for a in surfaces for reverse in [False,True]]
+  errors=[max(error(a.Value(1-t['u'] if reverse else t['u'],t['v']),t['point']) for t in rows) for a,reverse in candidates]
+  i=min(range(len(errors)),key=errors.__getitem__);worst=max(worst,errors[i]);a,reverse=candidates[i];matched.append((a,reverse)); selected.append(i//2)
+  for t in rows:
+   p0=gp_Pnt();du=gp_Vec();dv=gp_Vec();duu=gp_Vec();dvv=gp_Vec();duv=gp_Vec()
+   a.D2(1-t['u'] if reverse else t['u'],t['v'],p0,du,dv,duu,dvv,duv)
+   if reverse:du.Reverse();duv.Reverse()
+   for k,z in [('du',du),('dv',dv),('duu',duu),('dvv',dvv),('duv',duv)]:jet_worst=max(jet_worst,error(z,t[k]))
+ assert len(set(selected))==len(samples)
+ assert worst<1e-8,worst
+ assert jet_worst<1e-7,jet_worst
+ seam_worst=0.
+ for j in range(4):
+  for u in [.17,.5,.83]:
+   jets=[]
+   for (a,reverse),v in [(matched[len(samples)-4+j],1),(matched[j],0)]:
+    p0=gp_Pnt();du=gp_Vec();dv=gp_Vec();duu=gp_Vec();dvv=gp_Vec();duv=gp_Vec();a.D2(1-u if reverse else u,v,p0,du,dv,duu,dvv,duv)
+    if reverse:du.Reverse();duv.Reverse()
+    jets.append([coords(x) for x in [p0,du,dv,duu,dvv,duv]])
+   seam_worst=max(seam_worst,max(math.dist(a,b) for a,b in zip(*jets)))
+ assert seam_worst<1e-7,seam_worst
+ reports.append({'maxPointError':worst,'maxJetError':jet_worst,'maxClosingJetError':seam_worst,'valid' :BRepCheck_Analyzer(s).IsValid(),'faces':count(s,TopAbs_FACE),'solids':count(s,TopAbs_SOLID),'volume':p.Mass(),'idealRingVolume':2*math.pi*5*.4*.4})
+assert all(r['valid'] and r['faces']==len(samples) and r['solids']==1 for r in reports)
+assert abs(reports[0]['volume']-reports[1]['volume'])<1e-8
+print(json.dumps(reports));(root/'occt-explore.json').write_text(json.dumps(reports,indent=2)+'\n')

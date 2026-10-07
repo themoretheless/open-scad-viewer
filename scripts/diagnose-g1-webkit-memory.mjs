@@ -26,7 +26,7 @@ const trace = async () => {
     const table = await readLinuxProcessTable()
     const descendants = processTreePids(table, process.pid)
     const processes = [...descendants].map(pid => table.get(pid))
-      .filter(p => /WebKit|MiniBrowser|pw_run\.sh/.test(p.command))
+      .filter(p => /WebKit|WPE(?:Web|Network)Process|MiniBrowser|pw_run\.sh/.test(p.command))
       .map(p => ({ pid: p.pid, parentPid: p.parentPid, rssBytes: p.rssBytes,
         executable: basename(p.command.split(/\s+/)[0]).slice(0, 64) }))
     await appendFile(tracePath, `${JSON.stringify({ at: new Date().toISOString(), processes })}\n`)

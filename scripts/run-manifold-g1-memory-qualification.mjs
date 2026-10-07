@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { buildQualificationBundle } from './run-browser-qualification.mjs'
 
 import { createReadStream, constants as fsConstants } from 'node:fs'
 import { access, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
@@ -651,16 +652,27 @@ async function startViteServer(quarantine) {
       { cause: cause instanceof Error ? cause.message : String(cause) },
     )
   }
+  // Use the same bounded, hashed delivery bundle as the actual browser lane.
+  // Jobs, fresh Worker lifetimes, network isolation and RSS sampling are unchanged.
+  const bundle = await withBrowserMemoryOperationTimeout(
+    () => buildQualificationBundle({ vite }),
+    'Vite qualification build',
+    RESOURCE_ACQUISITION_TIMEOUT_MS,
+    quarantine,
+  )
+  if (!bundle.artifacts.some(artifact => artifact.path === qualificationPagePath.slice(1))) {
+    throw new BrowserMemoryQualificationError('E_VITE_STARTUP', 'Qualification build omitted the memory entry')
+  }
   const server = await acquireBrowserMemoryResource(
-    () => vite.createServer({
+    () => vite.preview({
       root: repositoryRoot,
-      configFile: false,
-      appType: 'mpa',
+      configFile: resolve(repositoryRoot, 'vite.qualification.config.ts'),
       logLevel: 'silent',
-      server: {
+      preview: {
         host: '127.0.0.1',
         port: 0,
-        strictPort: false,
+        strictPort: true,
+        open: false,
       },
     }),
     {
@@ -670,18 +682,12 @@ async function startViteServer(quarantine) {
     },
   )
   try {
-    await withBrowserMemoryOperationTimeout(
-      () => server.listen(),
-      'Vite server listen',
-      RESOURCE_ACQUISITION_TIMEOUT_MS,
-      quarantine,
-    )
     const address = server.httpServer?.address()
     if (address === null || typeof address !== 'object'
         || address.address !== '127.0.0.1' || address.port <= 0) {
       throw new BrowserMemoryQualificationError('E_VITE_STARTUP', 'Vite did not expose a TCP address')
     }
-    return { server, url: `http://127.0.0.1:${address.port}${qualificationPagePath}` }
+    return { server, bundle, url: `http://127.0.0.1:${address.port}${qualificationPagePath}` }
   } catch (error) {
     await finalizeQualificationCleanup(error, [{
       label: 'Vite server',
@@ -985,7 +991,7 @@ export async function runActualBrowserMemoryQualification(config) {
         { violations: [...networkIsolation.violations] },
       )
     }
-    record = buildBrowserMemoryRecord({
+    record = Object.freeze({ ...buildBrowserMemoryRecord({
       config,
       qualificationPackage: loadedPlaywright.packageMetadata,
       executablePath,
@@ -995,7 +1001,8 @@ export async function runActualBrowserMemoryQualification(config) {
       samples,
       startedAt,
       finishedAt: new Date().toISOString(),
-    })
+    }), delivery: { kind: 'bounded-built-qualification-bundle', ...vite.bundle,
+      entryPath: qualificationPagePath.slice(1) } })
   } catch (error) {
     primaryError = error
   }

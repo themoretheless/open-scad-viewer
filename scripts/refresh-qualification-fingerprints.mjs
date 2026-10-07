@@ -10,7 +10,14 @@ import { REFREEZE_CORE, digest, jsonBytes, shaRecord, bundleBytes, ordinaryBytes
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v60-g1-v77-refreeze-review.md'
-const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v42.json'
+const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v44.json'
+const MODULE_DELIVERY_PATHS = [
+  'src/services/geometry/kernel.ts',
+  'src/services/geometry/kernelCompilation.ts',
+  'src/services/geometry/kernelCompilationRequired.ts',
+  'src/services/wasmArtifact.ts',
+  'vite.qualification.config.ts',
+]
 export const REFRESH_EXECUTORS = Object.freeze([
   '.gitattributes',
   '.github/workflows/g1-qualification-clean.yml',
@@ -24,6 +31,8 @@ export const REFRESH_EXECUTORS = Object.freeze([
   'scripts/browserPayloadTree.mjs',
   'scripts/g1RuntimeIdentity.mjs',
   'scripts/diagnose-g1-webkit-memory.mjs',
+  'scripts/qualificationKernelModuleDelivery.mjs',
+  'tests/geometryKernelModuleDelivery.test.ts',
   'scripts/g1-github-actions.mjs',
   'scripts/run-g1-candidate-clean-fragment.mjs',
   'scripts/run-g1-ubuntu-docker-fragment.mjs',
@@ -114,6 +123,8 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'docs/qualification/semantic-manifold-g1-plan-v67.json': 'f3aed42f0ae9f5ba14c64f80e5a0f6bed76a2ed4671e91d3876642f3db8a7a8a',
   'docs/qualification/g0-v50-g1-v67-refreeze-status-v1.json': '65ad7d07c4154daffe68acffa67f7ae196c190b5ec4b7e11a342cca85e3b7858',
   'docs/qualification/g0-v50-g1-v67-refreeze-review.md': '66af29411a738cc755d708d756d616aae69b557ad52cda6a007964862044f2d4',
+  'docs/qualification/own-rust-cad-v43.json': '5a9d2a19f08c6e73d0a36c52e32c7eb66c62103423d7ceb591e64ff4bbd1f516',
+  'docs/qualification/own-rust-cad-v42.json': '5a6d3d2033ea2a46d5bf88e540e4765b7efaa527c9754a25bdfafb98a4b2d198',
   'docs/qualification/own-rust-cad-v41.json': '095aaaa8b3ce0bdb8b9b0d8c2e51460bd7f2d3ccfaac63d76876d10ba1466a19',
   'docs/qualification/environment-freeze/g1-github-actions-v34.json': 'c4896e1dab35ce3169770949220bed92501ea0c7d526840a93814b6e60afb2b7',
   'docs/qualification/g0-toolchain-fingerprints-v49.json': '54ec155c05ba997bba63893aeb2c31d2234ec9249a199346e454f97e9d5f0977',
@@ -307,7 +318,7 @@ export function refreshInputPaths(root = defaultRoot) {
   const ownRust = JSON.parse(ordinaryBytes(root, OWN_RUST_EVIDENCE))
   return [...new Set([
     ...Object.keys(FROZEN_ARCHIVES), REFRESH_SCRIPT, REFRESH_REVIEW, REFREEZE_CORE,
-    githubEnvironment, ...REFRESH_EXECUTORS,
+    githubEnvironment, ...REFRESH_EXECUTORS, ...MODULE_DELIVERY_PATHS,
     OWN_RUST_EVIDENCE, ...ownRust.sourceBundle.paths,
     ...fingerprint.artifacts.map(item => item.path),
     ...plan.bindings.artifacts.map(item => item.path),
@@ -415,7 +426,7 @@ export function prepareQualificationRefresh({
     .map(item => /^geometry-v3-source-(\d+)$/u.exec(item.id)?.[1])
     .filter(Boolean).map(Number))
   const geometryArtifacts = [
-    { id: 'own-rust-cad-v42-evidence', path: OWN_RUST_EVIDENCE },
+    { id: 'own-rust-cad-v44-evidence', path: OWN_RUST_EVIDENCE },
     ...ownRust.sourceBundle.paths
       .filter(path => !existingArtifactPaths.has(path))
       .map(path => ({
@@ -461,10 +472,10 @@ export function prepareQualificationRefresh({
   }
   const candidateBundle = plan.bindings.bundles.find(bundle => bundle.id === 'g1-candidate-bundle')
   assert(candidateBundle, 'G1 candidate bundle is missing')
-  if (!candidateBundle.paths.includes('src/core/ownRustCadEvidence.ts')) {
-    candidateBundle.paths.push('src/core/ownRustCadEvidence.ts')
-    candidateBundle.paths.sort()
+  for (const path of ['src/core/ownRustCadEvidence.ts', ...MODULE_DELIVERY_PATHS]) {
+    if (!candidateBundle.paths.includes(path)) candidateBundle.paths.push(path)
   }
+  candidateBundle.paths.sort()
   const harnessBundle = plan.bindings.bundles.find(bundle => bundle.id === 'g1-qualification-harness-bundle')
   assert(harnessBundle, 'G1 qualification harness bundle is missing')
   for (const path of REFRESH_EXECUTORS) {

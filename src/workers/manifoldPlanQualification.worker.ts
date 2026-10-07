@@ -16,6 +16,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   const value = event.data
   if (value && typeof value === 'object' && 'type' in value && value.type === 'native-geometry-module') {
     if (bootstrap) throw new Error('Duplicate native geometry module bootstrap')
+    if (!('module' in value) || !('identity' in value)) throw new Error('Invalid native geometry module bootstrap')
     const payload = value as { module: WebAssembly.Module; identity: {sha256:string;byteLength:number} }
     bootstrap = installGeometryKernelFromTrustedHost(payload.module, payload.identity)
     // Expose bootstrap failure as a Worker crash; it must never fall back to a

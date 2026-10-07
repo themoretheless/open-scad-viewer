@@ -1,0 +1,11 @@
+{
+  "schema": "g1-webkit-process-memory-diagnostic-v1",
+  "diagnosticOnly": true,
+  "qualificationClaim": "none",
+  "qualificationUnits": 0,
+  "sourceSha": null,
+  "processTraceReads": 18,
+  "processTraceFailures": [],
+  "exitCode": 1,
+  "signal": null
+}
