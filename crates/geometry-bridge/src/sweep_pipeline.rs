@@ -1306,10 +1306,9 @@ fn miter_wall_preview(preview: Value) -> Result<Value> {
 pub fn constructor(v: Value) -> Result<Value> {
     let operation = field::<String>(&v, "operation")?;
     if ["surface_scaled_sweep", "surface_profile_sweep"].contains(&operation.as_str()) {
-        return nurbs(
-            &operation,
-            json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]}),
-        );
+        let mut request=json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]});
+        if let Some(cells)=v.get("maxCells") {request["maxCells"]=cells.clone();}
+        return nurbs(&operation,request);
     }
     let miter = operation.starts_with("curve_progressive_miter");
     if ![

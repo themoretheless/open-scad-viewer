@@ -1,6 +1,8 @@
 pub mod progressive_miter;
 pub mod filled_cap_error;
 pub mod progressive_sweep;
+pub mod profile_certificate;
+mod profile_seam;
 
 /// Boundary-wide composition shared by sweep constructors.
 pub mod certificates {
@@ -10,4 +12,4 @@ pub mod certificates {
 }
 
 mod scalar;
-pub use scalar::{scaled_sweep, checked_profile_sweep};
+pub use scalar::{scaled_sweep, checked_profile_sweep, checked_profile_sweep_with_cells};

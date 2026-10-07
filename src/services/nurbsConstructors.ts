@@ -117,9 +117,9 @@ export interface NurbsScaleLaw {
 /** Fixed orientation; origin is the profile scaling center in model coordinates. */
 export const scaledSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,origin:[number,number,number]):NurbsSurface=>
  callNurbsRust('brep_sweep_constructor',{operation:'surface_scaled_sweep',profile,path,origin,scale})
-/** RMF transport with positive dimensionless scale; sampled refinement only. */
-export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
- callNurbsRust('brep_sweep_constructor',{operation:'surface_profile_sweep',profile,path,scale,normal,sections,maxDeviation})
+/** Rust RMF transport admitted by a whole-domain deviation certificate. */
+export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,normal:[number,number,number],sections:number,maxDeviation:number,maxCells?:number):FramedSweepResult=>
+ callNurbsRust('brep_sweep_constructor',{operation:'surface_profile_sweep',profile,path,scale,normal,sections,maxDeviation,...(maxCells===undefined?{}:{maxCells})})
 export interface NurbsVectorLaw {degree:number;knots:number[];values:[number,number,number][];weights:number[]}
 export interface ProgressiveSweepOptions {
  axisScale?:NurbsVectorLaw
@@ -299,7 +299,7 @@ export const coonsNurbsPatch=(boundaries:NurbsCurve[]):NurbsSurface=>callNurbsRu
 
 export interface FramedSweepResult {
  surface:NurbsSurface|null
- report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'open';continuousBound:false;method:'double-reflection-fourfold-section-refinement'}
+ report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'G1'|'G2'|'open';seamCertificate?:{certified:boolean;order:number;exact:boolean;regularityCertified:boolean;work:number;reason:string;scope:string;method:string}|null;continuousBound:boolean;method:'double-reflection-fourfold-section-refinement';continuousCertificate?:{errorUpper:number|null;withinBudget:boolean;cells:number;maxCells:number;method:string;reason:string|null;scope:'matched-parameter-profile-deviation';regularityCertified:false;globalEmbeddingCertified:false;seamSmoothnessCertified:false}}
 }
 /** Sampled refinement diagnostic only; not a certified continuous error bound. */
 export const framedSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>

@@ -146,8 +146,8 @@ pub fn scaled_sweep(
     surface.validate()?;
     Ok(surface)
 }
-/// One discrete RMF level with a fourfold station comparison. Positive scale
-/// varies in normalized path traversal. A failed sampled budget returns no surface.
+/// A retained RMF loft admitted only by a whole-domain, rounding-inclusive
+/// deviation certificate. The fourfold comparison remains a separate diagnostic.
 pub fn checked_profile_sweep(
     profile: &Curve,
     path: &Curve,
@@ -155,6 +155,17 @@ pub fn checked_profile_sweep(
     normal: [f64; 3],
     sections: usize,
     budget: f64,
+) -> Result<value_codec::Value> {
+    checked_profile_sweep_with_cells(profile, path, scale, normal, sections, budget, 16384)
+}
+pub fn checked_profile_sweep_with_cells(
+    profile: &Curve,
+    path: &Curve,
+    scale: &Curve,
+    normal: [f64; 3],
+    sections: usize,
+    budget: f64,
+    max_cells: usize,
 ) -> Result<value_codec::Value> {
     positive_scale(scale)?;
     check(
@@ -181,26 +192,46 @@ pub fn checked_profile_sweep(
         },
     )?;
     let level = sweep.preview_at(sections)?;
-    let accepted = level.report.sampled_control_deviation <= budget;
-    let surface = if accepted {
-        let mut surface = loft(&sweep.sections_at(sections)?)?;
-        if level.report.closed_path {
+    let retained_sections = sweep.sections_at(sections)?;
+    let mut seam_certificate = value_codec::Value::Null;
+    let candidate = {
+        let mut surface = if level.report.closed_path && sections >= 5 && (sections-1).is_power_of_two() {
+            let (surface, proof) = super::profile_seam::build(&retained_sections)?;
+            seam_certificate = proof;
+            surface
+        } else {
+            loft(&retained_sections)?
+        };
+        if level.report.closed_path && surface.degree_v == 1 {
             surface.periodic_v = true;
             surface.knots_v = (0..sections + 2)
                 .map(|i| (i as f64 - 1.) / (sections - 1) as f64)
                 .collect();
-        } else {
+        } else if !level.report.closed_path {
             for k in &mut surface.knots_v {
                 *k /= (sections - 1) as f64;
             }
         }
         surface.validate()?;
-        Some(surface)
+        surface
+    };
+    let certificate = super::profile_certificate::certify(
+        profile, path, scale, normal, &candidate, budget, max_cells,
+    )?;
+    let continuous = certificate.error_upper.is_some();
+    let accepted = certificate.within_budget;
+    let surface = if accepted { Some(candidate) } else { None };
+    let seam = if !level.report.closed_path {
+        "open"
     } else {
-        None
+        match seam_certificate["order"].as_u64() {
+            Some(2) => "G2",
+            Some(1) => "G1",
+            _ => "C0",
+        }
     };
     Ok(
-        value_codec::json!({"surface":surface,"report":{"accepted":accepted,"sampledControlDeviation":level.report.sampled_control_deviation,"budget":budget,"stations":level.report.stations,"sections":sections,"closedPath":level.report.closed_path,"seamContinuity":if level.report.closed_path{"C0"}else{"open"},"continuousBound":false,"method":"double-reflection-fourfold-section-refinement"}}),
+        value_codec::json!({"surface":surface,"report":{"accepted":accepted,"sampledControlDeviation":level.report.sampled_control_deviation,"budget":budget,"stations":level.report.stations,"sections":sections,"closedPath":level.report.closed_path,"seamContinuity":seam,"seamCertificate":seam_certificate,"continuousBound":continuous,"method":"double-reflection-fourfold-section-refinement","continuousCertificate":{"errorUpper":certificate.error_upper,"withinBudget":certificate.within_budget,"cells":certificate.cells,"maxCells":max_cells,"method":certificate.method,"reason":certificate.reason,"scope":"matched-parameter-profile-deviation","regularityCertified":false,"globalEmbeddingCertified":false,"seamSmoothnessCertified":false}}}),
     )
 }
 
@@ -369,14 +400,87 @@ mod tests {
         };
         let p = curve(&[[1., 0., 0.], [1.2, 0., 0.]], &[1., 1.], [0., 1.]);
         let scale = constant_vector_law([1., 0., 0.]).unwrap();
-        let r = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 1.).unwrap();
+        let before = value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap();
+        let r = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.01).unwrap();
         assert_eq!(r["report"]["closedPath"], true);
-        assert_eq!(r["report"]["seamContinuity"], "C0");
+        assert_eq!(r["report"]["seamContinuity"], "G2", "{r}");
+        assert_eq!(r["report"]["accepted"], true, "{r}");
+        assert_eq!(r["report"]["continuousBound"], true);
+        assert!(r["report"]["sampledControlDeviation"].as_f64().unwrap() > 0.01);
         let s: Surface = value_codec::from_value(r["surface"].clone()).unwrap();
         assert!(s.periodic_v);
-        for row in s.control_points {
-            assert_eq!(row.first(), row.last());
+        assert_eq!(s.degree_v, 3);
+        for row in &s.control_points {
+            assert_eq!(&row[..3], &row[row.len() - 3..]);
         }
+        let bound = r["report"]["continuousCertificate"]["errorUpper"]
+            .as_f64()
+            .unwrap();
+        for i in 0..=200 {
+            for u in [0., 0.37, 1.] {
+                let v = i as f64 / 200.;
+                let c = path.evaluate(v).unwrap().point;
+                let radius = c[0].hypot(c[1]);
+                let q = s.evaluate(u, v).unwrap().point;
+                let offset = p.evaluate(u).unwrap().point[0] - 1.;
+                let expected = [
+                    c[0] + offset * c[0] / radius,
+                    c[1] + offset * c[1] / radius,
+                    0.,
+                ];
+                assert!(
+                    (0..3)
+                        .map(|k| (q[k] - expected[k]).powi(2))
+                        .sum::<f64>()
+                        .sqrt()
+                        <= bound
+                );
+            }
+        }
+        // Inspect the represented active Bezier strips independently of the
+        // constructor's report, then prove sensitivity to a changed tangent.
+        let mut a = s.clone();
+        let mut b = s.clone();
+        for surface in [&mut a, &mut b] {
+            surface.periodic_v = false;
+            surface.knots_v = vec![0., 0., 0., 0., 1., 1., 1., 1.];
+        }
+        for (surface,last) in [(&mut a,false),(&mut b,true)] {
+            for row in &mut surface.control_points {
+                let start=if last {row.len()-4} else {0};
+                let q=&row[start..start+4];let mut controls=vec![vec![0.;3];4];
+                for k in 0..3 {
+                    controls[0][k]=(q[0][k]+4.*q[1][k]+q[2][k])/6.;
+                    controls[1][k]=(2.*q[1][k]+q[2][k])/3.;
+                    controls[2][k]=(q[1][k]+2.*q[2][k])/3.;
+                    controls[3][k]=(q[1][k]+4.*q[2][k]+q[3][k])/6.;
+                }
+                *row=controls;
+            }
+            for row in &mut surface.weights {*row=vec![row[0];4];}
+        }
+        assert!(
+            crate::continuity::inspect_surface_exact_strip_jets(
+                &b, &a, "vMax", "vMin", 2, 1., 1000000
+            )
+            .unwrap()
+            .certified
+        );
+        a.control_points[0][1][1] += 1e-6;
+        assert!(
+            !crate::continuity::inspect_surface_exact_strip_jets(
+                &b, &a, "vMax", "vMin", 2, 1., 1000000
+            )
+            .unwrap()
+            .exact_identity
+        );
+        assert_eq!(
+            before,
+            value_codec::to_string(&value_codec::json!([p, path, scale])).unwrap()
+        );
+        let tight = checked_profile_sweep(&p, &path, &scale, [1., 0., 0.], 17, 0.001).unwrap();
+        assert_eq!(tight["report"]["accepted"], false);
+        assert!(tight["surface"].is_null());
         let bad = curve(&[[1., 0., 0.], [2., 0., 0.]], &[1., 1.], [0., 1.]);
         assert!(checked_profile_sweep(&p, &path, &bad, [1., 0., 0.], 17, 1.).is_err());
     }

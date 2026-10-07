@@ -25,7 +25,7 @@ try{
    const scaled=await readFile('examples/rush/scaled-sweep-weighted.r','utf8'),profile=await readFile('examples/rush/profile-sweep-scaled.r','utf8')
    await good(scaled,'scaled-rational');await good(profile,'profile-rmf')
    const curved=profile.replace('[[0,0,0],[0,0,8mm]]','[[0,0,0],[0,0,4mm],[4mm,0,8mm]]').replace('sections:17','sections:3').replace('max_deviation:0.1mm','max_deviation:0.0000000001mm');assert.notEqual(curved,profile)
-   await build(curved);const refusal=await page.locator('.message.error').innerText();assert.match(refusal,/sampled refinement|exceeds/i);report.cases.push({width,label:'sampled-budget-refusal',sourceSha256:hash(Buffer.from(curved)),message:refusal,status:'passed'})
+   await build(curved);const refusal=await page.locator('.message.error').innerText();assert.match(refusal,/continuous deviation|exceeds/i);report.cases.push({width,label:'continuous-budget-refusal',sourceSha256:hash(Buffer.from(curved)),message:refusal,status:'passed'})
    const invalid=scaled.replace('values:[1,2]','values:[0,2]');assert.notEqual(invalid,scaled);await build(invalid);const invalidMessage=await page.locator('.message.error').innerText();assert.match(invalidMessage,/positive|scale/i);report.cases.push({width,label:'positive-scale-refusal',message:invalidMessage,status:'passed'})
    await good(profile,'recovery');assert.deepEqual(errors,[])
   }finally{await context.close()}

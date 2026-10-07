@@ -684,8 +684,22 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     const v=value as MainSolidResults['surfaceBuild'],r=v.report
     return typeof v.error==='string'&&(v.document===null?v.error.length>0:v.error===''&&mainSolidResult({kind:'extrusion'},v.document))
       &&(r===null||!!r&&typeof r.accepted==='boolean'&&finite(r.sampledControlDeviation)&&r.sampledControlDeviation>=0&&finite(r.budget)&&r.budget>=0
-        &&Number.isInteger(r.stations)&&r.stations>0&&Number.isInteger(r.sections)&&r.sections>0&&r.continuousBound===false&&r.method==='double-reflection-fourfold-section-refinement'
-        &&r.accepted===(r.sampledControlDeviation<=r.budget)&&(!v.document||r.accepted))
+        &&Number.isInteger(r.stations)&&r.stations>0&&Number.isInteger(r.sections)&&r.sections>0&&typeof r.continuousBound==='boolean'&&r.method==='double-reflection-fourfold-section-refinement'
+        &&(r.continuousCertificate===undefined?r.continuousBound===false&&r.accepted===(r.sampledControlDeviation<=r.budget)
+          :!!r.continuousCertificate&&r.continuousCertificate.scope==='matched-parameter-profile-deviation'
+            &&typeof r.continuousCertificate.method==='string'&&(r.continuousCertificate.reason===null||typeof r.continuousCertificate.reason==='string')
+            &&r.continuousCertificate.regularityCertified===false&&r.continuousCertificate.globalEmbeddingCertified===false&&r.continuousCertificate.seamSmoothnessCertified===false
+            &&Number.isInteger(r.continuousCertificate.cells)&&r.continuousCertificate.cells>=0
+            &&Number.isInteger(r.continuousCertificate.maxCells)&&r.continuousCertificate.maxCells>=r.continuousCertificate.cells&&r.continuousCertificate.maxCells<=100000
+            &&r.continuousBound===(r.continuousCertificate.errorUpper!==null)
+            &&(r.continuousCertificate.errorUpper===null||finite(r.continuousCertificate.errorUpper)&&r.continuousCertificate.errorUpper>=0)
+            &&r.continuousCertificate.withinBudget===(r.continuousBound&&r.continuousCertificate.errorUpper!<=r.budget)
+            &&r.accepted===r.continuousCertificate.withinBudget)
+        &&(!r.seamContinuity||!['G1','G2'].includes(r.seamContinuity)||!!r.seamCertificate
+          &&r.seamCertificate.certified===true&&r.seamCertificate.exact===true&&r.seamCertificate.regularityCertified===true
+          &&r.seamCertificate.order===(r.seamContinuity==='G2'?2:1)
+          &&r.seamCertificate.scope==='represented-closing-strip-jets'&&r.seamCertificate.method==='dyadic-cubic-closing-strips-exact-predicate'
+          &&Number.isInteger(r.seamCertificate.work)&&r.seamCertificate.work>=0&&r.seamCertificate.work<=1000000)&&(!v.document||r.accepted))
   }
   if(job.kind==='nurbsRefit') {
     const v=value as MainSolidResults['nurbsRefit'],c=v.certificate
