@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v71.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v72.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v71',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v72',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -233,7 +233,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
   })
 
-  it.each(['missing', 'duplicate', 'environment mismatch'])('rejects %s artifacts', kind => {
+  it.each(['missing', 'duplicate', 'environment mismatch', 'discovery-only'])('rejects %s artifacts', kind => {
     const { artifacts, first } = fixture()
     if (kind === 'missing') {
       rmSync(first, { recursive: true })
@@ -242,8 +242,13 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     } else {
       const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
       const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
-      fragment.host.runnerImageVersion = 'wrong'
-      preflight.host.runnerImageVersion = 'wrong'
+      if(kind==='discovery-only') {
+        fragment.classification='discovery-only'
+        fragment.unitsCompleted=0
+      } else {
+        fragment.host.runnerImageVersion = 'wrong'
+        preflight.host.runnerImageVersion = 'wrong'
+      }
       writeEvidence(first, fragment, preflight)
     }
     const result = aggregate(artifacts, kind.replace(' ', '-'))

@@ -371,6 +371,8 @@ export async function superviseBrowserQualification(config, dependencies = {}) {
         signal: outcome.value.signal,
         stdoutSha256: stdout.sha256,
         stderrSha256: stderr.sha256,
+        childStdout: stdout.bytes.subarray(0, 8192).toString('utf8'),
+        childStderr: stderr.bytes.subarray(0, 8192).toString('utf8'),
       },
     )
   }

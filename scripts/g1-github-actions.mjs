@@ -17,11 +17,11 @@ import { fileURLToPath } from 'node:url'
 import {verifyBrowserPayloadTree as verifyTree} from './browserPayloadTree.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v71.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v72.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
 const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v71'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v71'
+const PLAN_ID = 'semantic-manifold-g1-plan-v72'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v72'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -72,7 +72,7 @@ function args(argv) {
   return result
 }
 
-function matrix() {
+function matrix(probeOnly=false) {
   const plan = loadPlan()
   const nodes = []
   const browsers = []
@@ -108,7 +108,7 @@ function matrix() {
   if (expectedUnits !== plan.executionProtocol.plannedWorkUnits) {
     fail(`Matrix expands to ${expectedUnits}, expected ${plan.executionProtocol.plannedWorkUnits}`)
   }
-  process.stdout.write(`${JSON.stringify({ nodes: { include: nodes }, browsers: { include: browsers } })}\n`)
+  process.stdout.write(`${JSON.stringify({ nodes: { include: probeOnly?nodes.slice(0,1):nodes }, browsers: { include: probeOnly?browsers.slice(0,1):browsers } })}\n`)
 }
 
 function regularFrozenFile(relativePath) {
@@ -382,7 +382,8 @@ function commandParts(command) {
   if (command.startsWith('npm test -- ')) {
     return {
       executable: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      args: ['test', '--', ...command.slice('npm test -- '.length).split(/\s+/u).filter(Boolean)],
+      // Release kernels were materialized before preflight; pretest must not rebuild them.
+      args: ['test', '--ignore-scripts', '--', ...command.slice('npm test -- '.length).split(/\s+/u).filter(Boolean)],
     }
   }
   if (command.startsWith('node ')) {
@@ -482,6 +483,7 @@ async function runFragment(values) {
     new Promise(resolvePromise => stdout.end(resolvePromise)),
     new Promise(resolvePromise => stderr.end(resolvePromise)),
   ])
+  verifySource(preflight.sourceSha)
   const passed = !timedOut && outcome.exitCode === 0
   const fragment = {
     schema: 'open-scad-viewer/g1-clean-run-fragment',
@@ -491,10 +493,10 @@ async function runFragment(values) {
     environmentId: environment.id,
     runIndex,
     seed,
-    classification: 'clean-post-freeze',
+    classification: process.env.G1_DISCOVERY_ONLY==='true'?'discovery-only':'clean-post-freeze',
     status: passed ? 'passed' : 'failed',
     unitsPlanned: row.work.unitsPerCleanRun,
-    unitsCompleted: passed ? row.work.unitsPerCleanRun : 0,
+    unitsCompleted: passed && process.env.G1_DISCOVERY_ONLY!=='true' ? row.work.unitsPerCleanRun : 0,
     planId: plan.planId,
     candidateRunId: CANDIDATE_ID,
     planSha256: currentPlanSha,
@@ -734,7 +736,7 @@ function aggregate(values) {
 async function main() {
   const [command, ...rest] = process.argv.slice(2)
   if (command === 'discover-browsers') discoverBrowsers(args(rest))
-  else if (command === 'matrix') matrix()
+  else if (command === 'matrix') matrix(rest.includes('--probe-only'))
   else if (command === 'preflight') preflight(args(rest))
   else if (command === 'run') await runFragment(args(rest))
   else if (command === 'aggregate') aggregate(args(rest))
