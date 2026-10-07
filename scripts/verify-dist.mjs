@@ -108,7 +108,7 @@ const limits = new Map([
 // Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
 // Original annular source proofs and seam transport: measured 3,953,416 bytes; retain 608-byte margin.
 // Source wall native proofs: measured packed geometry 3962910 bytes; retain 608-byte margin.
-const geometryChunkBudget = 3_982_608 // Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
+const geometryChunkBudget = 3_983_370 // Domain bridge crates (bridge-cam/analysis/svg routers): measured 3,982,762 bytes; retain 608-byte margin. Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
@@ -375,7 +375,7 @@ for (const [name, artifact, compression] of [
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
 // Rebuilt original annular proofs and seam UI: measured 8,243,477 bytes; retain 761-byte margin.
 // Source wall native, transport and UI: measured 8265356 asset bytes; retain 761-byte margin.
-const totalBudget = 8_308_327 // Combined CAD/Laser CAM: measured 8,307,566 asset bytes; retain 761-byte margin. Adaptive original self-wall integration: measured 8,295,587 asset bytes; retain 761-byte margin. Continuous wall coverage: measured 8,289,348 asset bytes; retain 761-byte margin.
+const totalBudget = 8_322_030 // Domain bridge crates (bridge-cam/analysis/svg routers): measured 8,321,269 asset bytes; retain 761-byte margin. Combined CAD/Laser CAM: measured 8,307,566 asset bytes; retain 761-byte margin. Adaptive original self-wall integration: measured 8,295,587 asset bytes; retain 761-byte margin. Continuous wall coverage: measured 8,289,348 asset bytes; retain 761-byte margin.
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 

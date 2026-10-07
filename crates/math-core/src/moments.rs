@@ -1,8 +1,5 @@
 use crate::{Acceleration, Error, M3, Result, V3, dot, eigen, unit};
 
-/// WGSL template for point-cloud moment reduction.
-pub const POINT_MOMENTS_WGSL: &str = include_str!("point_moments.wgsl");
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PointMoments {
     pub samples: usize,
@@ -36,8 +33,8 @@ pub struct PointPlane {
 }
 
 impl PointMoments {
-    #[cfg(any(feature = "cuda", all(feature = "gpu", target_arch = "wasm32")))]
-    pub(crate) fn from_sums(samples: usize, sum: V3, outer: [f64; 6]) -> Self {
+    /// Builds moments from raw sums; used by device reduction backends.
+    pub fn from_sums(samples: usize, sum: V3, outer: [f64; 6]) -> Self {
         let n = samples as f64;
         let centroid = [sum[0] / n, sum[1] / n, sum[2] / n];
         let second_moment = [
@@ -197,17 +194,12 @@ pub fn point_moments_accelerated(
             "point_moments_accelerated expects finite point coordinates",
         ));
     }
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() && acceleration != Acceleration::Auto {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(moments) = crate::cuda::point_moments_cuda(points)
-        {
-            return Ok(moments);
-        }
-        if let Some(moments) = crate::gpu::point_moments_gpu(points) {
-            return Ok(moments);
-        }
+    if acceleration.is_gpu()
+        && acceleration != Acceleration::Auto
+        && let Some(moments) =
+            crate::device::kernels().and_then(|kernels| kernels.point_moments(acceleration, points))
+    {
+        return Ok(moments);
     }
     point_moments(points)
 }
@@ -394,61 +386,5 @@ mod tests {
     #[test]
     fn point_fit_plane_rejects_too_few_points() {
         assert!(point_fit_plane(&[[0.; 3], [1.; 3]], Acceleration::Cpu).is_err());
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn point_moments_gpu_matches_cpu_reference() {
-        let points = points(4097);
-        let got = point_moments_accelerated(&points, Acceleration::Gpu).unwrap();
-        let want = point_moments(&points).unwrap();
-        for axis in 0..3 {
-            assert!((got.centroid[axis] - want.centroid[axis]).abs() < 2e-3);
-        }
-        for i in 0..3 {
-            for j in 0..3 {
-                assert!((got.covariance[i][j] - want.covariance[i][j]).abs() < 2e-2);
-            }
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn point_moments_cuda_matches_cpu_reference() {
-        let points = points(4097);
-        let got = point_moments_accelerated(&points, Acceleration::Cuda).unwrap();
-        let want = point_moments(&points).unwrap();
-        for axis in 0..3 {
-            assert!((got.centroid[axis] - want.centroid[axis]).abs() < 2e-3);
-        }
-        for i in 0..3 {
-            for j in 0..3 {
-                assert!((got.covariance[i][j] - want.covariance[i][j]).abs() < 2e-2);
-            }
-        }
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn point_fit_plane_gpu_matches_cpu_reference() {
-        let points = points(4097);
-        let got = point_fit_plane(&points, Acceleration::Gpu).unwrap();
-        let want = point_fit_plane(&points, Acceleration::Cpu).unwrap();
-        for axis in 0..3 {
-            assert!((got.normal[axis] - want.normal[axis]).abs() < 1e-3);
-        }
-        assert!((got.rms_distance - want.rms_distance).abs() < 1e-3);
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn point_fit_plane_cuda_matches_cpu_reference() {
-        let points = points(4097);
-        let got = point_fit_plane(&points, Acceleration::Cuda).unwrap();
-        let want = point_fit_plane(&points, Acceleration::Cpu).unwrap();
-        for axis in 0..3 {
-            assert!((got.normal[axis] - want.normal[axis]).abs() < 1e-3);
-        }
-        assert!((got.rms_distance - want.rms_distance).abs() < 1e-3);
     }
 }

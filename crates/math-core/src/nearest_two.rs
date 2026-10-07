@@ -25,9 +25,6 @@ pub fn nearest_two(queries: &[V3], targets: &[V3]) -> Vec<TwoNearest> {
         .collect()
 }
 
-/// WGSL source for the exact top-2 nearest-neighbor compute shader.
-pub const NEAREST_TWO_WGSL: &str = include_str!("nearest_two.wgsl");
-
 /// [`nearest_two`] with optional GPU/CUDA batch kernels.
 pub fn nearest_two_accelerated(
     queries: &[V3],
@@ -39,17 +36,11 @@ pub fn nearest_two_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(values) = crate::cuda::nearest_two_cuda(queries, targets)
-        {
-            return values;
-        }
-        if let Some(values) = crate::gpu::nearest_two_gpu(queries, targets) {
-            return values;
-        }
+    if acceleration.is_gpu()
+        && let Some(values) = crate::device::kernels()
+            .and_then(|kernels| kernels.nearest_two(acceleration, queries, targets))
+    {
+        return values;
     }
     nearest_two(queries, targets)
 }
@@ -124,55 +115,5 @@ mod tests {
             .map(|pair| pair[0])
             .collect();
         assert_eq!(got, want);
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn nearest_two_gpu_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_two_accelerated(&queries, &targets, Acceleration::Gpu);
-        let want = nearest_two(&queries, &targets);
-        for ([g0, g1], [w0, w1]) in got.iter().zip(&want) {
-            assert_eq!(g0.0, w0.0);
-            assert_eq!(g1.0, w1.0);
-            assert!((g0.1 - w0.1).abs() < 5e-3 * w0.1.max(1.0));
-            assert!((g1.1 - w1.1).abs() < 5e-3 * w1.1.max(1.0));
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn nearest_two_cuda_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_two_accelerated(&queries, &targets, Acceleration::Cuda);
-        let want = nearest_two(&queries, &targets);
-        for ([g0, g1], [w0, w1]) in got.iter().zip(&want) {
-            assert_eq!(g0.0, w0.0);
-            assert_eq!(g1.0, w1.0);
-            assert!((g0.1 - w0.1).abs() < 5e-3 * w0.1.max(1.0));
-            assert!((g1.1 - w1.1).abs() < 5e-3 * w1.1.max(1.0));
-        }
     }
 }

@@ -31,7 +31,8 @@ jobs:
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: python3 scripts/check-gpu-architecture.py
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math --all-targets -- -D warnings
+      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings
+      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math-compute --features gpu,tensor --all-targets -- -D warnings
 
   check:
     runs-on: ubuntu-latest
@@ -58,6 +59,8 @@ jobs:
             crates/target
           key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
+      - run: npm run test:architecture
+      - run: npm run audit:architecture
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry

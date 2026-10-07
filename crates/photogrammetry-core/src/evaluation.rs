@@ -298,6 +298,8 @@ pub fn evaluate_clouds(
     options: &EvaluationOptions,
     mut progress: impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<CloudEvaluation> {
+    #[cfg(feature = "gpu")]
+    math_compute::install();
     if !progress("evaluation", 0, 1) {
         return Err(crate::error("Cancelled"));
     }

@@ -73,8 +73,6 @@ mod cad_split;
 mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
-mod gcode;
-mod laser;
 pub mod intersections;
 #[cfg(feature = "cuda")]
 mod lattice_cuda;
@@ -88,11 +86,7 @@ mod mesh_render;
 pub mod mesh_shell;
 pub mod mesh_surface_groups;
 pub mod print_geometry;
-mod print_strength;
-mod structural_sections;
 mod scene_picking;
-mod truss;
-mod bonded_solid;
 mod viewport;
 
 #[cfg(feature = "gpu")]
@@ -107,9 +101,6 @@ pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;
-mod svg;
-mod svg_css;
-mod svg_silhouette;
 use nurbs_core::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -118,16 +109,13 @@ use polygon_core::{
     BuiltMesh, Mesh, Seams,
     solid::tessellation::{self, Boundary, Options, ParametricSurface},
 };
-use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
 
 pub use math_core::{Error, Result};
-fn input(message: impl Into<String>) -> Error {
-    Error::new("GEOMETRY_INVALID_INPUT", message)
-}
-fn error_json(error: &Error) -> Value {
-    json!({"code": error.code, "message": error.message})
-}
+#[allow(unused_imports)]
+pub(crate) use bridge_codec::{
+    Routed, Router, encode, error_json, field, input, require_exact_fields, response, take_field,
+};
 pub(crate) fn mesh_from_triangles(t: geometry_ops::Triangles) -> Mesh {
     Mesh {
         positions: t.positions,
@@ -140,31 +128,6 @@ pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
         positions: m.positions.clone(),
         indices: m.indices.clone(),
     }
-}
-fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
-    value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
-}
-/// Consume a single-use field from an owned request; preserve `field`'s missing-value errors.
-fn take_field<T: for<'a> Deserialize<'a>>(v: &mut Value, k: &str) -> Result<T> {
-    let value = v
-        .as_object_mut()
-        .and_then(|object| object.remove(k))
-        .unwrap_or(Value::Null);
-    value_codec::from_value(value).map_err(|e| input(format!("Invalid {k}: {e}")))
-}
-fn encode(v: impl Serialize) -> Result<Value> {
-    value_codec::to_value(v).map_err(|e| input(e.to_string()))
-}
-fn require_exact_fields(value: &Value, expected: &[&str], label: &str) -> Result<()> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| input(format!("{label} must be an object")))?;
-    if object.len() != expected.len() || !expected.iter().all(|field| object.contains_key(*field)) {
-        return Err(input(format!(
-            "{label} contains missing or unauthorized fields"
-        )));
-    }
-    Ok(())
 }
 
 fn close_topology_role(value: &str) -> Result<brep_core::BodyRole> {
@@ -310,13 +273,6 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
     }))
 }
 
-fn response(result: Result<Value>) -> String {
-    match result {
-        Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error_json(&error)}),
-    }
-    .to_string()
-}
 
 fn curved_graph_boolean_value(
     model: brep_core::Model,
@@ -545,14 +501,21 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
         })
         .collect()
 }
+/// Domain crates tried before the local operations, in order.
+const DOMAINS: &[Router] = &[bridge_cam::dispatch, bridge_analysis::dispatch, bridge_svg::dispatch];
+
 pub fn dispatch(mut v: Value) -> Result<Value> {
+    for domain in DOMAINS {
+        match domain(v) {
+            Routed::Handled(result) => return result,
+            Routed::Unhandled(request) => v = request,
+        }
+    }
+    dispatch_local(v)
+}
+
+fn dispatch_local(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
-        "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
-        "bonded_solid_solve" => bonded_solid::solve(v),
-        "truss_screen" => print_strength::screening(v),
-        "print_strength_profile" => print_strength::profile(v),
-        "thermal_strength" => print_strength::thermal(v),
-        "structural_sections" => structural_sections::inspect(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"
@@ -595,7 +558,6 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "path2d" => path2d::dispatch(v),
-        "svg" => svg::dispatch(v),
         "subdivision_extrude" => encode(subdivision_core::Cage::extrude(
             &field::<Vec<[f64; 3]>>(&v, "profile")?,
             field(&v, "vector")?,
@@ -798,12 +760,6 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 })).collect::<Vec<_>>(),
             }))
         }
-        "mesh_toolpaths" => gcode::toolpaths(&v),
-        "mesh_gcode" => gcode::export(&v),
-        "mesh_gcode_job" => gcode::export_job(&v),
-        "gcode_preview" => gcode::parse(&v),
-        "gcode_parse" => gcode::inspect(&v),
-        "laser_preflight" | "laser_frame_preview" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {
