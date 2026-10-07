@@ -195,7 +195,7 @@ pub fn checked_profile_sweep_with_cells(
     let retained_sections = sweep.sections_at(sections)?;
     let mut seam_certificate = value_codec::Value::Null;
     let candidate = {
-        let mut surface = if level.report.closed_path && sections >= 5 && (sections-1).is_power_of_two() {
+        let mut surface = if level.report.closed_path && sections >= 4 {
             let (surface, proof) = super::profile_seam::build(&retained_sections)?;
             seam_certificate = proof;
             surface
@@ -218,6 +218,12 @@ pub fn checked_profile_sweep_with_cells(
     let certificate = super::profile_certificate::certify(
         profile, path, scale, normal, &candidate, budget, max_cells,
     )?;
+    let geometry_certificate=if certificate.within_budget {
+        super::profile_geometry::inspect(&candidate,max_cells).unwrap_or_else(|_|value_codec::json!({
+            "certified":false,"reason":"geometry-proof-unresolved","scope":"single-untrimmed-surface",
+            "solidTopologyCertified":false,"pairwiseFaceContactsCertified":false}))
+    } else {value_codec::json!({"certified":false,"reason":"deviation-unproved", "scope":"single-untrimmed-surface",
+        "solidTopologyCertified":false,"pairwiseFaceContactsCertified":false})};
     let continuous = certificate.error_upper.is_some();
     let accepted = certificate.within_budget;
     let surface = if accepted { Some(candidate) } else { None };
@@ -231,7 +237,7 @@ pub fn checked_profile_sweep_with_cells(
         }
     };
     Ok(
-        value_codec::json!({"surface":surface,"report":{"accepted":accepted,"sampledControlDeviation":level.report.sampled_control_deviation,"budget":budget,"stations":level.report.stations,"sections":sections,"closedPath":level.report.closed_path,"seamContinuity":seam,"seamCertificate":seam_certificate,"continuousBound":continuous,"method":"double-reflection-fourfold-section-refinement","continuousCertificate":{"errorUpper":certificate.error_upper,"withinBudget":certificate.within_budget,"cells":certificate.cells,"maxCells":max_cells,"method":certificate.method,"reason":certificate.reason,"scope":"matched-parameter-profile-deviation","regularityCertified":false,"globalEmbeddingCertified":false,"seamSmoothnessCertified":false}}}),
+        value_codec::json!({"surface":surface,"report":{"accepted":accepted,"sampledControlDeviation":level.report.sampled_control_deviation,"budget":budget,"stations":level.report.stations,"sections":sections,"closedPath":level.report.closed_path,"seamContinuity":seam,"seamCertificate":seam_certificate,"geometryCertificate":geometry_certificate,"continuousBound":continuous,"method":"double-reflection-fourfold-section-refinement","continuousCertificate":{"errorUpper":certificate.error_upper,"withinBudget":certificate.within_budget,"cells":certificate.cells,"maxCells":max_cells,"method":certificate.method,"reason":certificate.reason,"scope":"matched-parameter-profile-deviation","regularityCertified":false,"globalEmbeddingCertified":false,"seamSmoothnessCertified":false}}}),
     )
 }
 
@@ -409,9 +415,20 @@ mod tests {
         assert!(r["report"]["sampledControlDeviation"].as_f64().unwrap() > 0.01);
         let s: Surface = value_codec::from_value(r["surface"].clone()).unwrap();
         assert!(s.periodic_v);
+        assert_eq!(r["report"]["geometryCertificate"]["certified"],true,"{r}");
         assert_eq!(s.degree_v, 3);
         for row in &s.control_points {
             assert_eq!(&row[..3], &row[row.len() - 3..]);
+        }
+        for count in [4,6,7,10,12,15,20,24,31,32] {
+            let alternate=checked_profile_sweep(&p,&path,&scale,[1.,0.,0.],count,1.).unwrap();
+            assert_eq!(alternate["report"]["accepted"],true,"count={count}: {alternate}");
+            assert_eq!(alternate["report"]["seamContinuity"],if count==4 {"G1"}else{"G2"},"count={count}: {alternate}");
+            let surface:Surface=value_codec::from_value(alternate["surface"].clone()).unwrap();
+            let a=surface.evaluate(0.37,0.).unwrap();let b=surface.evaluate(0.37,1.).unwrap();
+            for (a,b) in a.point.iter().zip(&b.point){assert!((a-b).abs()<1e-12);}
+            for (a,b) in a.first_derivatives().unwrap().1.iter().zip(b.first_derivatives().unwrap().1){assert!((a-b).abs()<1e-10);}
+            if count>4 {for (a,b) in a.second_derivatives().unwrap().2.iter().zip(b.second_derivatives().unwrap().2){assert!((a-b).abs()<1e-9);}}
         }
         let bound = r["report"]["continuousCertificate"]["errorUpper"]
             .as_f64()

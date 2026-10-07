@@ -297,9 +297,20 @@ export const brushNurbsSurface=(surface:NurbsSurface,brush:GeometryBrush):NurbsS
 /** Homogeneous Coons patch with compatible corner weights and positive control weights; boundaries: bottom, top, left, right. */
 export const coonsNurbsPatch=(boundaries:NurbsCurve[]):NurbsSurface=>callNurbsRust('surface_coons_patch',{boundaries})
 
+/** Native diagnostics for one complete, untrimmed surface; not a Solid certificate. */
+export interface ProfileSweepGeometryCertificate {
+ certified:boolean
+ scope?:'single-untrimmed-surface'
+ reason?:string
+ maxCellsPerPredicate?:number
+ regularity?:{certified:boolean;interiorBasisC1:boolean;cells:number;unresolvedCells:number;scope:'all-original-knot-rectangles'}
+ embedding?:{certified:boolean;cells:number;reason:string;scope:string;method:string;contractionUpper?:number|null;absoluteWinding?:number}
+ solidTopologyCertified:false
+ pairwiseFaceContactsCertified?:false
+}
 export interface FramedSweepResult {
  surface:NurbsSurface|null
- report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'G1'|'G2'|'open';seamCertificate?:{certified:boolean;order:number;exact:boolean;regularityCertified:boolean;work:number;reason:string;scope:string;method:string}|null;continuousBound:boolean;method:'double-reflection-fourfold-section-refinement';continuousCertificate?:{errorUpper:number|null;withinBudget:boolean;cells:number;maxCells:number;method:string;reason:string|null;scope:'matched-parameter-profile-deviation';regularityCertified:false;globalEmbeddingCertified:false;seamSmoothnessCertified:false}}
+ report:{geometryCertificate?:ProfileSweepGeometryCertificate;accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'G1'|'G2'|'open';seamCertificate?:{certified:boolean;order:number;exact:boolean;regularityCertified:boolean;work:number;reason:string;scope:string;method:string}|null;continuousBound:boolean;method:'double-reflection-fourfold-section-refinement';continuousCertificate?:{errorUpper:number|null;withinBudget:boolean;cells:number;maxCells:number;method:string;reason:string|null;scope:'matched-parameter-profile-deviation';regularityCertified:false;globalEmbeddingCertified:false;seamSmoothnessCertified:false}}
 }
 /** Sampled refinement diagnostic only; not a certified continuous error bound. */
 export const framedSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>

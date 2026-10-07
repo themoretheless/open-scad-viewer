@@ -3,6 +3,7 @@ pub mod filled_cap_error;
 pub mod progressive_sweep;
 pub mod profile_certificate;
 mod profile_seam;
+mod profile_geometry;
 
 /// Boundary-wide composition shared by sweep constructors.
 pub mod certificates {

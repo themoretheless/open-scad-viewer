@@ -1,6 +1,7 @@
 //! Whole-domain deviation from the ideal Bishop-transported profile.
 //!
 //! Planar paths have an analytic Bishop frame. Spatial paths use the enclosing
+//! curvature-integral bounds for open transport, falling back to the enclosing
 //! set of all orthonormal frames, including any closing holonomy correction.
 //! This can be deliberately loose. Neither bound proves surface regularity,
 //! injectivity, seam smoothness or solid topology. Unfinished subdivision never
@@ -195,8 +196,42 @@ struct Reference<'a> {
     initial_side: V,
     initial_tangent: V,
     coordinates: Vec<V>,
+    closed: bool,
 }
 impl Reference<'_> {
+    // For Bishop transport, |N'| and |B'| are bounded by |T'|. In
+    // source parameter units, |T'| <= |C''| / |C'|. A whole-prefix
+    // enclosure therefore bounds each frame component's displacement.
+    // Closing correction is deliberately excluded from this premise.
+    fn open_frame(&self, end: f64, remaining: usize, used: &mut usize) -> Result<Option<(V, V)>> {
+        if self.closed {
+            return Ok(None);
+        }
+        let Some(j) = curve_jets(self.path, [0., end], remaining, used)? else {
+            return Ok(None);
+        };
+        let speed = norm(j[0])?;
+        if speed.lo <= 0. {
+            return Ok(None);
+        }
+        let domain = self.path.domain();
+        let length = I::point(domain[1])
+            .sub(I::point(domain[0]))?
+            .mul(I::point(end))?;
+        let displacement = norm(j[1])?.div(speed)?.mul(length)?.hi;
+        if !displacement.is_finite() {
+            return Ok(None);
+        }
+        let enclose = |frame: V| -> Result<V> {
+            let mut result = [I::point(0.); 3];
+            for k in 0..3 {
+                let bound = frame[k].add(I::new(-displacement, displacement)?)?;
+                result[k] = I::new(bound.lo.max(-1.), bound.hi.min(1.))?;
+            }
+            Ok(result)
+        };
+        Ok(Some((enclose(self.initial)?, enclose(self.initial_side)?)))
+    }
     fn at(&self, range: [f64; 2], remaining: usize, used: &mut usize) -> Result<Option<Vec<V>>> {
         let Some(position) = values(self.path, range, remaining, used)? else {
             return Ok(None);
@@ -240,6 +275,8 @@ impl Reference<'_> {
             (normal, cross(tangent, normal)?)
         } else if range == [0., 0.] {
             (self.initial, self.initial_side)
+        } else if let Some(frame) = self.open_frame(range[1], remaining, used)? {
+            frame
         } else {
             // Every exact Bishop normal and binormal is a unit vector. This
             // includes any exact closing correction, without asserting its
@@ -410,7 +447,7 @@ pub fn certify(
     let method = if plane.is_some() {
         "interval-planar-bishop-frame"
     } else {
-        "interval-unit-bishop-frame-envelope"
+        "interval-curvature-and-unit-bishop-frame-envelope"
     };
     let unresolved = |cells, reason| Report {
         error_upper: None,
@@ -488,6 +525,7 @@ pub fn certify(
         initial_side: b0,
         initial_tangent: t0,
         coordinates,
+        closed: retained.periodic_v || super::progressive_sweep::path_is_closed(path)?,
     };
     // Equal-weight one-span lines and affine laws give an affine ideal sweep.
     // Its distance to each affine retained segment is convex, hence endpoints
@@ -795,6 +833,58 @@ mod tests {
             let d = [q[0] - x, q[1] - e.point[1], q[2] - e.point[2]];
             assert!(d.iter().map(|x| x * x).sum::<f64>().sqrt() <= r.error_upper.unwrap());
         }
+    }
+    #[test]
+    fn open_spatial_frame_bound_is_tight_and_parameter_invariant() {
+        let make = |domain| {
+            curve(
+                &[
+                    [0., 0., 0.],
+                    [0.002, 0., 1.],
+                    [0., 0.003, 2.],
+                    [0.004, 0.001, 3.],
+                ],
+                &[1.; 4],
+                domain,
+            )
+        };
+        let evaluate = |path: &Curve, closed| {
+            let tangent = initial_tangent(path).unwrap();
+            let normal = unit(
+                sub(
+                    point(&[1., 0., 0.]),
+                    scale(tangent, dot(point(&[1., 0., 0.]), tangent).unwrap()).unwrap(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            let r = Reference {
+                path,
+                scale: path,
+                plane: None,
+                initial: normal,
+                initial_side: cross(tangent, normal).unwrap(),
+                initial_tangent: tangent,
+                coordinates: vec![],
+                closed,
+            };
+            let mut used = 0;
+            (r.open_frame(1., 100, &mut used).unwrap(), used)
+        };
+        let a = make([0., 1.]);
+        let b = make([-4., 9.]);
+        let (Some((an, ab)), used) = evaluate(&a, false) else {
+            panic!("missing bound")
+        };
+        let (Some((bn, bb)), _) = evaluate(&b, false) else {
+            panic!("missing reparameterized bound")
+        };
+        assert!(used > 0);
+        for (x, y) in an.into_iter().chain(ab).zip(bn.into_iter().chain(bb)) {
+            assert!(x.hi - x.lo < 0.1);
+            assert!((x.lo - y.lo).abs() < 1e-10 && (x.hi - y.hi).abs() < 1e-10);
+        }
+        assert!(evaluate(&a, true).0.is_none());
     }
     #[test]
     fn hidden_stationary_tangent_is_unresolved() {

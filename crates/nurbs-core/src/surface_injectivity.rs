@@ -668,11 +668,11 @@ fn polar_section_jacobian(s: &Surface, span: [usize;2], domain: [[f64;2];2], coo
     }
     Ok(Some(result))
 }
-type PolarPoly = Vec<Vec<I>>;
-fn polar_poly_add(a: &PolarPoly,b: &PolarPoly,scale: f64) -> Result<PolarPoly> {
+pub(crate) type PolarPoly = Vec<Vec<I>>;
+pub(crate) fn polar_poly_add(a: &PolarPoly,b: &PolarPoly,scale: f64) -> Result<PolarPoly> {
     a.iter().zip(b).map(|(ra,rb)| ra.iter().zip(rb).map(|(x,y)| x.add(y.mul(I::point(scale))?)).collect()).collect()
 }
-fn polar_poly_derivative(a: &PolarPoly,axis: usize,domain: [[f64;2];2]) -> Result<PolarPoly> {
+pub(crate) fn polar_poly_derivative(a: &PolarPoly,axis: usize,domain: [[f64;2];2]) -> Result<PolarPoly> {
     let [p,q] = [a.len()-1,a[0].len()-1];
     let degrees = [p,q];
     let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
@@ -681,7 +681,7 @@ fn polar_poly_derivative(a: &PolarPoly,axis: usize,domain: [[f64;2];2]) -> Resul
             .mul(I::point(degrees[axis] as f64))?.div(width)
     ).collect()).collect()
 }
-fn polar_poly_mul(a: &PolarPoly,b: &PolarPoly) -> Result<PolarPoly> {
+pub(crate) fn polar_poly_mul(a: &PolarPoly,b: &PolarPoly) -> Result<PolarPoly> {
     let [p,q,r,t] = [a.len()-1,a[0].len()-1,b.len()-1,b[0].len()-1];
     // Current callers cap each source degree at eight, hence all binomial
     // coefficients here (degree <=24) are exactly representable integers.

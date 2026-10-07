@@ -21,6 +21,7 @@ it('promotes accepted RMF surfaces and refuses unproved continuous deviation wit
  const law={...scale,weights:[1,1]}
  const good=checkedProfileSweepNurbsSurface(profile,path,law,[1,0,0],5,.001)
  expect(good.report).toMatchObject({accepted:true,continuousBound:true,stations:17,sections:5,continuousCertificate:{withinBudget:true}})
+ expect(good.report.geometryCertificate).toMatchObject({certified:true,regularity:{certified:true},embedding:{certified:true},solidTopologyCertified:false,pairwiseFaceContactsCertified:false})
  expect(evaluateNurbsSurface(good.surface!,.5,1).point).toEqual([3,0,5])
  const arc:NurbsCurve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1]}
  const bad=checkedProfileSweepNurbsSurface(profile,arc,law,[1,0,0],3,1e-6)
@@ -39,11 +40,13 @@ it('certifies exact G2 closing strips and refuses incompatible endpoint scales',
  const circle=circleNurbsCurve([0,0,0],[0,0,1],1),law={...scale,values:[1,1],weights:[1,1]}
  const closed=checkedProfileSweepNurbsSurface(profile,circle,law,[1,0,0],17,1)
  expect(closed.report).toMatchObject({accepted:true,closedPath:true,seamContinuity:'G2',continuousBound:true,seamCertificate:{certified:true,exact:true,order:2}})
+ expect(closed.report.geometryCertificate).toMatchObject({certified:true,embedding:{certified:true,absoluteWinding:1},solidTopologyCertified:false})
  expect(closed.surface!.periodicV).toBe(true)
  expect(()=>checkedProfileSweepNurbsSurface(profile,circle,{...law,values:[1,2]},[1,0,0],17,1)).toThrow(/scale/)
 })
 it('carries an exhausted native certificate budget through the existing bridge',()=>{
  const result=checkedProfileSweepNurbsSurface(profile,path,{...scale,weights:[1,1]},[1,0,0],5,.001,0)
  expect(result.surface).toBeNull()
+ expect(result.report.geometryCertificate).toMatchObject({certified:false,reason:'deviation-unproved',solidTopologyCertified:false})
  expect(result.report).toMatchObject({accepted:false,continuousBound:false,continuousCertificate:{cells:0,maxCells:0,errorUpper:null,withinBudget:false,reason:'cell-budget-exhausted'}})
 })
