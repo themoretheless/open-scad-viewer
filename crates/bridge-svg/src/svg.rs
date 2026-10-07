@@ -1139,7 +1139,7 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
     };
     options
         .fontdb_mut()
-        .load_font_data(include_bytes!("../assets/NotoSans-Regular.ttf").to_vec());
+        .load_font_data(include_bytes!("../../geometry-bridge/assets/NotoSans-Regular.ttf").to_vec());
     options.fontdb_mut().set_sans_serif_family("Noto Sans");
     options.fontdb_mut().set_serif_family("Noto Sans");
     options.fontdb_mut().set_monospace_family("Noto Sans");
@@ -2158,7 +2158,7 @@ mod tests {
 
     #[test]
     fn custom_fonts_admit_outlines_and_reject_nested_images_in_every_collection_face() {
-        let outline = include_bytes!("../assets/NotoSans-Regular.ttf").to_vec();
+        let outline = include_bytes!("../../geometry-bridge/assets/NotoSans-Regular.ttf").to_vec();
         fn collection(fonts: &[Vec<u8>]) -> Vec<u8> {
             let header = 12 + fonts.len() * 4;
             let mut out = vec![0; header];

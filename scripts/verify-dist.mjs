@@ -108,7 +108,7 @@ const limits = new Map([
 // Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
 // Original annular source proofs and seam transport: measured 3,953,416 bytes; retain 608-byte margin.
 // Source wall native proofs: measured packed geometry 3962910 bytes; retain 608-byte margin.
-const geometryChunkBudget = 3_982_608 // Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
+const geometryChunkBudget = 3_983_370 // Domain bridge crates (bridge-cam/analysis/svg routers): measured 3,982,762 bytes; retain 608-byte margin. Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
