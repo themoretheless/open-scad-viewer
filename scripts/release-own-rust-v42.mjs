@@ -7,7 +7,7 @@ const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,
 if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v42.json')))throw new Error('Historical own-rust-cad-v42 evidence already exists; publish a new version instead of overwriting it')
 const previousPath='docs/qualification/own-rust-cad-v41.json',previous=JSON.parse(bytes(previousPath))
 const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
-const additions=changed.filter(path=>/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
+const additions=changed.filter(path=>['vite.config.ts','vite.qualification.config.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
 const paths=[...new Set([...previous.sourceBundle.paths,...additions,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].sort()
 
 const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)
@@ -42,7 +42,7 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
 const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
 writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v42.json'),JSON.stringify({
   id:'own-rust-cad-v42',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-07',
-  purpose:'Append-only native whole-surface periodic embedding, generalized periodic seam and open spatial frame-bound evidence. Preserve all earlier release bytes; no clean qualification results are imported.',qualificationClaim:'none',
+  purpose:'Append-only native whole-surface periodic embedding, generalized periodic seam and open spatial frame-bound and immutable Worker module-delivery evidence. Preserve all earlier release bytes; no clean qualification results are imported.',qualificationClaim:'none',
   wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
   sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
   dependencyFingerprints,

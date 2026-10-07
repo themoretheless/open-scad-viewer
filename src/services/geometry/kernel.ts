@@ -1,11 +1,8 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
 import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
-import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
-import {compileOptionalWasm} from '../wasmCompilation'
-import {compileWasmArtifact, compileWasmArtifactSync} from '../wasmArtifact'
+import {compileGeometryKernelArtifact, compileGeometryKernelArtifactSync} from './kernelCompilation'
 import artifactIdentity from '../../generated/geometry-kernels/identity'
-import wasmBase64 from '../../generated/geometry-kernels/bytes'
 import {
   assertGeometryLeaseCurrent,
   bumpGeometryKernelEpoch,
@@ -71,6 +68,8 @@ interface KernelExports extends WebAssembly.Exports {
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
 }
+declare const __G1_SHARED_GEOMETRY_MODULE__: boolean
+const sharedModuleRequired = typeof __G1_SHARED_GEOMETRY_MODULE__ !== 'undefined' && __G1_SHARED_GEOMETRY_MODULE__
 let wasm:KernelExports
 let initialized = false
 let wasmMemory: WebAssembly.Memory
@@ -80,10 +79,8 @@ let warming: Promise<void> | undefined
 export function warmGeometryKernel(): Promise<void> {
   if (initialized) return Promise.resolve()
   warming ??= (async () => {
-    // Keep the large imported constant outside a logical expression: Rolldown
-    // otherwise inlines a payload copy into every consumer of this fallback.
-    let module = await compileOptionalWasm('/wasm/geometry-kernel.wasm', artifactIdentity)
-    if (!module) module = await compileWasmArtifact(unpackBrotliWasmBase64(wasmBase64), artifactIdentity)
+    if (sharedModuleRequired) throw new Error('Qualification Worker requires verified host module bootstrap')
+    const module = await compileGeometryKernelArtifact()
     // Instantiate asynchronously as well: browsers refuse a synchronous instantiation of a module over
     // 8 MB on the main thread, which is where the viewport and the Solid workspace warm the kernel.
     const instance = await WebAssembly.instantiate(module)
@@ -97,6 +94,32 @@ export function warmGeometryKernel(): Promise<void> {
   })().finally(() => { warming = undefined })
   return warming
 }
+/** Private Worker bootstrap boundary. The parent compiles and verifies the
+ * released bytes before posting this immutable module. Model source has only
+ * the evaluate/cancel protocol and cannot mint or post this host capability.
+ * Each invocation creates a distinct instance, memory and native handle arena.
+ */
+export function installGeometryKernelFromTrustedHost(module: WebAssembly.Module,
+  identity: {sha256:string;byteLength:number}): Promise<void> {
+  if (!sharedModuleRequired || typeof window !== 'undefined' || typeof self === 'undefined'
+    || typeof (self as unknown as {importScripts?:unknown}).importScripts !== 'function') {
+    return Promise.reject(new Error('Host module bootstrap is qualification-worker-only'))
+  }
+  if (initialized || warming) return Promise.reject(new Error('Duplicate geometry module bootstrap'))
+  if (!(module instanceof WebAssembly.Module) || identity.sha256 !== artifactIdentity.sha256
+    || identity.byteLength !== artifactIdentity.byteLength) return Promise.reject(new Error('Invalid geometry module bootstrap'))
+  warming = WebAssembly.instantiate(module).then(instance => {
+    const exports = instance.exports as KernelExports
+    if (!(exports.memory instanceof WebAssembly.Memory) || typeof exports.abi_alloc !== 'function'
+      || typeof exports.abi_free !== 'function' || typeof exports.abi_request !== 'function') {
+      throw new Error('Geometry module bootstrap lacks native ABI')
+    }
+    wasm = exports
+    wasmMemory = wasm.memory
+    initialized = true
+  }).finally(() => { warming = undefined })
+  return warming
+}
 /** True once an instance exists, so main-thread callers can avoid the synchronous compile path. */
 export function isGeometryKernelReady(): boolean { return initialized }
 function initialize(): void {
@@ -105,7 +128,8 @@ function initialize(): void {
   if (typeof window !== 'undefined') {
     throw new Error('Geometry kernel must be warmed with warmGeometryKernel() before use on the main thread')
   }
-  wasm = new WebAssembly.Instance(compileWasmArtifactSync(unpackBrotliWasmBase64(wasmBase64), artifactIdentity)).exports as KernelExports
+  if (sharedModuleRequired) throw new Error('Qualification Worker requires verified host module bootstrap')
+  wasm = new WebAssembly.Instance(compileGeometryKernelArtifactSync()).exports as KernelExports
   wasmMemory=wasm.memory
   initialized = true
 }

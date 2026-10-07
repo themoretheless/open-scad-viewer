@@ -11,6 +11,7 @@ const qualificationEntry = fileURLToPath(
  */
 export default defineConfig({
   base: './',
+  define: { __G1_SHARED_GEOMETRY_MODULE__: 'true' },
   // This isolated entry uses embedded kernels, not product streaming assets.
   publicDir: false,
   build: {
