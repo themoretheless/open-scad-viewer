@@ -16,11 +16,11 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v69.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v70.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
 const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v35.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v69'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v69'
+const PLAN_ID = 'semantic-manifold-g1-plan-v70'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v70'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -270,7 +270,7 @@ function discoverBrowsers(values) {
     [revision, verifyTree(resolve(provisionRoot, revision), true)]))
   writeFileSync(resolve(output), JSON.stringify({sourceSha,
     imageOS:process.env.ImageOS, imageVersion:process.env.ImageVersion,
-    qualificationWorkUnits:0, scope:'Observed browser trees only', trees},null,2)+'\n')
+    qualificationWorkUnits:0, scope:'Downloaded payload trees only; no host dependency or browser execution qualification', trees},null,2)+'\n')
 }
 
 function browserIdentity(plan, environment) {
@@ -338,6 +338,14 @@ function verifyToolchain(environmentId, nodeArchivePath, npmArchivePath) {
   }
 }
 
+// Hosted labels can serve more than one deployed image during a rollout.
+// Admission remains byte/identity based: only explicitly observed, frozen
+// image records are accepted, and every fragment retains its actual record.
+function matchesHostedRunner(expected, imageOS, imageVersion) {
+  return !!expected && [expected, ...(expected.observedVariants ?? [])].some(record =>
+    record.imageOS === imageOS && record.imageVersion === imageVersion)
+}
+
 function preflight(values) {
   const environmentId = values.get('--environment')
   const nodeArchivePath = values.get('--node-archive')
@@ -356,9 +364,7 @@ function preflight(values) {
   if (inheritedForbidden.length) fail(`Forbidden environment variables present: ${inheritedForbidden.join(', ')}`)
   const githubFreeze = loadJson(GITHUB_FREEZE_PATH)
   const expectedRunner = githubFreeze.runnerImages[githubRunnerKey(environment)]
-  if (!expectedRunner
-      || process.env.ImageOS !== expectedRunner.imageOS
-      || process.env.ImageVersion !== expectedRunner.imageVersion) {
+  if (!matchesHostedRunner(expectedRunner, process.env.ImageOS, process.env.ImageVersion)) {
     fail(`Hosted runner image mismatch for ${environmentId}`)
   }
   const report = {
@@ -588,10 +594,7 @@ function aggregate(values) {
   const freeze = loadJson(FREEZE_PATH)
   const githubFreeze = loadJson(GITHUB_FREEZE_PATH)
   const aggregateRunner = githubFreeze.runnerImages['ubuntu-24.04']
-  if (process.env.ImageOS && (
-    process.env.ImageOS !== aggregateRunner.imageOS
-    || process.env.ImageVersion !== aggregateRunner.imageVersion
-  )) fail('Aggregate hosted runner image mismatch')
+  if (process.env.ImageOS && !matchesHostedRunner(aggregateRunner, process.env.ImageOS, process.env.ImageVersion)) fail('Aggregate hosted runner image mismatch')
   const expectedPlanSha = sha256File(resolve(root, PLAN_PATH)).value
   const expected = new Map()
   for (const row of plan.matrix) {
@@ -680,9 +683,7 @@ function aggregate(values) {
       errors.push(`toolchain identity mismatch ${fragment.fragmentId}`)
     }
     const expectedRunner = environment && githubFreeze.runnerImages[githubRunnerKey(environment)]
-    if (!expectedRunner
-        || fragment.host?.runnerImage !== expectedRunner.imageOS
-        || fragment.host?.runnerImageVersion !== expectedRunner.imageVersion) {
+    if (!matchesHostedRunner(expectedRunner, fragment.host?.runnerImage, fragment.host?.runnerImageVersion)) {
       errors.push(`hosted runner identity mismatch ${fragment.fragmentId}`)
     }
     if (environment?.browser) {
