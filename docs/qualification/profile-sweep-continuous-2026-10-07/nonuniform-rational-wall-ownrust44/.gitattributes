@@ -1,0 +1,2 @@
+# Preserve exact native/OCCT STEP evidence as binary data, including whitespace.
+*.step -text -diff
