@@ -16,11 +16,11 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v68.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v69.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
 const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v35.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v68'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v68'
+const PLAN_ID = 'semantic-manifold-g1-plan-v69'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v69'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -232,7 +232,7 @@ function verifyPlaywrightLicenses() {
   return verified
 }
 
-function verifyTree(directory) {
+function verifyTree(directory, includeManifest = false) {
   const entries = []
   function walk(current) {
     for (const name of readdirSync(current).sort()) {
@@ -257,7 +257,20 @@ function verifyTree(directory) {
   walk(directory)
   const records = entries.sort().join('')
   const bytes = Buffer.from(records, 'utf8')
-  return { value: sha256(bytes), byteLength: bytes.byteLength, entryCount: entries.length }
+  return { value: sha256(bytes), byteLength: bytes.byteLength, entryCount: entries.length, ...(includeManifest ? {manifest: records} : {}) }
+}
+
+function discoverBrowsers(values) {
+  const freeze = loadJson(GITHUB_FREEZE_PATH).playwright
+  const output = values.get('--output')
+  if (!output) fail('discover-browsers requires --output')
+  const sourceSha = verifySource(values.get('--source-sha'))
+  const provisionRoot = resolve(process.env.HOME ?? fail('HOME is required'), '.cache', 'ms-playwright')
+  const trees = Object.fromEntries(Object.keys(freeze.browserTrees).map(revision =>
+    [revision, verifyTree(resolve(provisionRoot, revision), true)]))
+  writeFileSync(resolve(output), JSON.stringify({sourceSha,
+    imageOS:process.env.ImageOS, imageVersion:process.env.ImageVersion,
+    qualificationWorkUnits:0, scope:'Observed browser trees only', trees},null,2)+'\n')
 }
 
 function browserIdentity(plan, environment) {
@@ -275,7 +288,7 @@ function browserIdentity(plan, environment) {
     if (actual.value !== frozen.treeSha256
         || actual.byteLength !== frozen.manifestByteLength
         || actual.entryCount !== frozen.entryCount) {
-      fail(`Browser tree identity mismatch for ${revision}`)
+      fail(`Browser tree identity mismatch for ${revision}: ${JSON.stringify({actual, expected:frozen})}`)
     }
     trees[revision] = actual
   }
@@ -745,7 +758,8 @@ function aggregate(values) {
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2)
-  if (command === 'matrix') matrix()
+  if (command === 'discover-browsers') discoverBrowsers(args(rest))
+  else if (command === 'matrix') matrix()
   else if (command === 'preflight') preflight(args(rest))
   else if (command === 'run') await runFragment(args(rest))
   else if (command === 'aggregate') aggregate(args(rest))

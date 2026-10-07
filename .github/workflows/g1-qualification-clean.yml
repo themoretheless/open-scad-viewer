@@ -1,4 +1,4 @@
-name: G1 v68 exact clean matrix
+name: G1 v69 exact clean matrix
 
 # Manual-only: each matrix cell is one fresh hosted job and one frozen clean run.
 # A green aggregate establishes complete matrix evidence, not qualification,
@@ -22,12 +22,12 @@ permissions:
   actions: read
 
 concurrency:
-  group: g1-v68-exact-${{ github.ref }}
+  group: g1-v69-exact-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  PLAN_ID: semantic-manifold-g1-plan-v68
-  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v68
+  PLAN_ID: semantic-manifold-g1-plan-v69
+  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v69
   NPM_VERSION: 10.9.8
 
 jobs:
@@ -47,6 +47,29 @@ jobs:
         with:
           name: runner-discovery-${{ matrix.runner }}
           path: runner.json
+  discover-browsers:
+    if: ${{ inputs.discovery_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.2
+      - name: Observe exact browser trees
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          tools/browser-qualification/node_modules/.bin/playwright install --with-deps chromium webkit
+          node scripts/g1-github-actions.mjs discover-browsers --source-sha '${{ inputs.source_sha }}' --output browser-discovery.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-discovery
+          path: browser-discovery.json
   prepare:
     if: ${{ !inputs.discovery_only }}
     runs-on: ubuntu-24.04
@@ -102,8 +125,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           @('node_modules','tools/browser-qualification/node_modules','dist','.vite','.vitest',
-            'output/qualification/semantic-manifold-g1-candidate-run-v68',
+            'output/qualification/semantic-manifold-g1-candidate-run-v69',
             "$HOME/.cache/ms-playwright","$HOME/Library/Caches/ms-playwright") |
             ForEach-Object { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $_ }
           Get-ChildItem -Recurse -Force -Include '*.duckdb','*.duckdb.wal' |
@@ -112,6 +136,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           New-Item -ItemType Directory -Force .qualification-toolchain | Out-Null
           $artifact = switch ('${{ matrix.environment }}') {
             'ubuntu-node20' { 'node-v20.19.0-linux-x64.tar.xz' }
@@ -129,6 +154,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           npm install --global $env:NPM_ARCHIVE --registry=https://registry.npmjs.org/ --audit=false --fund=false
           if ((npm --version) -ne '10.9.8') { throw 'npm version mismatch' }
           npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
@@ -140,6 +166,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           @('NODE_OPTIONS','NODE_PATH','NODE_PRESERVE_SYMLINKS','NPM_CONFIG_PREFIX','NPM_CONFIG_CACHE',
             'npm_config_registry','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy',
             'PLAYWRIGHT_BROWSERS_PATH','PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD','LD_PRELOAD','DYLD_INSERT_LIBRARIES') |
@@ -161,8 +188,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v68-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v68/github-actions/
+          name: g1-v69-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v69/github-actions/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
@@ -194,7 +221,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf node_modules tools/browser-qualification/node_modules dist .vite .vitest \
-            output/qualification/semantic-manifold-g1-candidate-run-v68 \
+            output/qualification/semantic-manifold-g1-candidate-run-v69 \
             "$HOME/.cache/ms-playwright"
           rm -f ./*.duckdb ./*.duckdb.wal
       - name: Fetch and install exact toolchains
@@ -244,8 +271,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v68-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v68/github-actions/
+          name: g1-v69-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v69/github-actions/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
@@ -264,18 +291,18 @@ jobs:
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         continue-on-error: true
         with:
-          pattern: g1-v68-*
+          pattern: g1-v69-*
           path: downloaded-g1-v45
       - name: Verify complete artifact set
         run: |
           node scripts/g1-github-actions.mjs aggregate \
             --artifacts downloaded-g1-v45 \
             --source-sha '${{ inputs.source_sha }}' \
-            --output output/qualification/semantic-manifold-g1-candidate-run-v68/github-actions/aggregate/result.json
+            --output output/qualification/semantic-manifold-g1-candidate-run-v69/github-actions/aggregate/result.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v68-aggregate
-          path: output/qualification/semantic-manifold-g1-candidate-run-v68/github-actions/aggregate/
+          name: g1-v69-aggregate
+          path: output/qualification/semantic-manifold-g1-candidate-run-v69/github-actions/aggregate/
           if-no-files-found: error
           retention-days: 90
