@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v67.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v68.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
 ), 'utf8'))
 const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v34.json',
+  root, 'docs/qualification/environment-freeze/g1-github-actions-v35.json',
 ), 'utf8'))
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v67',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v68',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
