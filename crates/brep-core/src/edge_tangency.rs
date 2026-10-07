@@ -22,6 +22,17 @@ pub struct Report {
 /// parameter domains. Reverse each pcurve according to its actual coedge use.
 /// Diagnostic fields cannot substitute for a source-body admission certificate.
 pub fn inspect(model: &Model, edge: usize, limits: Limits) -> Result<Report> {
+    inspect_interval(model, edge, [0., 1.], limits)
+}
+
+/// Explicit normal interval in the original world's edge parameter. Excluded
+/// ends stay outside this result; positions are checked over the full edge.
+pub fn inspect_interval(
+    model: &Model,
+    edge: usize,
+    interval: [f64; 2],
+    limits: Limits,
+) -> Result<Report> {
     model.validate()?;
     let original = model
         .edges
@@ -48,7 +59,7 @@ pub fn inspect(model: &Model, edge: usize, limits: Limits) -> Result<Report> {
         ));
     }
     let faces = [uses[0].0, uses[1].0];
-    let contact = contact_normal_agreement::certify(
+    let contact = contact_normal_agreement::certify_interval(
         &original.curve,
         [
             &model.faces[faces[0]].surface,
@@ -56,6 +67,7 @@ pub fn inspect(model: &Model, edge: usize, limits: Limits) -> Result<Report> {
         ],
         [&uses[0].1.pcurve, &uses[1].1.pcurve],
         [uses[0].1.reversed, uses[1].1.reversed],
+        interval,
         limits.tolerance_mm,
         limits.max_sine_squared,
         limits.agreement_cells,

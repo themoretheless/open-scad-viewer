@@ -10,12 +10,22 @@ pub struct Cell {
     pub normals: Option<normal_alignment::PairReport>,
 }
 pub struct Report {
+    /// Normal coverage in normalized original world-edge parameter. Position
+    /// agreement still covers the complete original edge on both surfaces.
+    pub normal_interval: [f64; 2],
     pub positions: Vec<lift::Report>,
     pub cells: Vec<Cell>,
     pub visited: usize,
     pub spans: usize,
     pub positions_proven: bool,
     pub tangent_planes_proven: bool,
+}
+impl Report {
+    /// Whole-edge position and angular agreement only. This is not solid or
+    /// exact G1 admission; subinterval success cannot satisfy this predicate.
+    pub fn whole_edge_agreement_proven(&self) -> bool {
+        self.normal_interval == [0., 1.] && self.positions_proven && self.tangent_planes_proven
+    }
 }
 fn uv_box(p: &Curve, t: [f64; 2], reversed: bool, hull: [[f64; 2]; 2]) -> Result<[[f64; 2]; 2]> {
     let d = p.domain();
@@ -44,7 +54,42 @@ pub fn certify(
     normal_cells: usize,
     normal_spans: usize,
 ) -> Result<Report> {
+    certify_interval(
+        world,
+        surfaces,
+        pcurves,
+        reversed,
+        [0., 1.],
+        tolerance_mm,
+        max_sine_squared,
+        agreement_cells,
+        normal_cells,
+        normal_spans,
+    )
+}
+
+/// Inspect an explicit closed subinterval without fitting or replacing any
+/// original curve/surface. A subinterval proof does not qualify excluded ends.
+pub fn certify_interval(
+    world: &Curve,
+    surfaces: [&Surface; 2],
+    pcurves: [&Curve; 2],
+    reversed: [bool; 2],
+    normal_interval: [f64; 2],
+    tolerance_mm: f64,
+    max_sine_squared: f64,
+    agreement_cells: usize,
+    normal_cells: usize,
+    normal_spans: usize,
+) -> Result<Report> {
     world.validate()?;
+    check(
+        normal_interval.iter().all(|v| v.is_finite())
+            && 0. <= normal_interval[0]
+            && normal_interval[0] < normal_interval[1]
+            && normal_interval[1] <= 1.,
+        "Contact normal interval must be a nonempty subset of [0,1]",
+    )?;
     check(
         world.control_points[0].len() == 3,
         "Contact normal qualification needs a 3D world curve",
@@ -68,6 +113,7 @@ pub fn certify(
         "Contact qualification needs finite tolerances and bounded positive work",
     )?;
     let mut out = Report {
+        normal_interval,
         positions: vec![],
         cells: vec![],
         visited: 0,
@@ -120,12 +166,12 @@ pub fn certify(
     }
     if !inside || !out.positions_proven {
         out.cells.push(Cell {
-            interval: [0., 1.],
+            interval: normal_interval,
             normals: None,
         });
         return Ok(out);
     }
-    let mut pending = vec![([0., 1.], 0usize)];
+    let mut pending = vec![(normal_interval, 0usize)];
     while let Some((t, depth)) = pending.pop() {
         if out.visited == normal_cells || out.spans == normal_spans {
             out.cells.push(Cell {
@@ -197,6 +243,99 @@ mod tests {
         }
     }
     #[test]
+    fn singular_endpoint_keeps_regular_coverage_and_an_explicit_pending_partition() {
+        let regular = plane();
+        let mut collapsed = plane();
+        collapsed.control_points[0][1] = vec![0., 0., 0.];
+        let world = line(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [2., 8.]);
+        let uv = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
+        let r = certify(
+            &world,
+            [&collapsed, &regular],
+            [&uv, &uv],
+            [false, false],
+            1e-7,
+            1e-4,
+            100,
+            64,
+            128,
+        )
+        .unwrap();
+        assert!(r.positions_proven);
+        assert!(!r.whole_edge_agreement_proven());
+        assert!(
+            r.cells
+                .iter()
+                .any(|c| c.normals.as_ref().is_some_and(|n| n.aligned == Some(true)))
+        );
+        assert!(
+            r.cells
+                .iter()
+                .any(|c| c.interval[0] == 0.
+                    && c.normals.as_ref().is_none_or(|n| n.aligned.is_none()))
+        );
+        let mut cells = r.cells.iter().map(|c| c.interval).collect::<Vec<_>>();
+        cells.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        assert_eq!(cells.first().unwrap()[0], 0.);
+        assert_eq!(cells.last().unwrap()[1], 1.);
+        for c in &cells {
+            assert!(c[0] < c[1]);
+        }
+        for adjacent in cells.windows(2) {
+            assert_eq!(adjacent[0][1], adjacent[1][0]);
+        }
+    }
+
+    #[test]
+    fn explicit_interval_preserves_original_parameters_and_rejects_invalid_bounds() {
+        let surface = plane();
+        let world = line(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [2., 8.]);
+        let uv = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
+        let reverse = uv.reverse().unwrap();
+        let r = certify_interval(
+            &world,
+            [&surface, &surface],
+            [&uv, &reverse],
+            [false, true],
+            [0.2, 0.8],
+            1e-7,
+            1e-6,
+            100,
+            100,
+            100,
+        )
+        .unwrap();
+        assert!(r.positions_proven && r.tangent_planes_proven);
+        assert!(!r.whole_edge_agreement_proven());
+        assert_eq!(r.normal_interval, [0.2, 0.8]);
+        assert_eq!(r.cells.len(), 1);
+        assert_eq!(r.cells[0].interval, [0.2, 0.8]);
+        for interval in [
+            [0., 0.],
+            [-0.1, 0.8],
+            [0.2, 1.1],
+            [0.8, 0.2],
+            [f64::NAN, 1.],
+        ] {
+            assert!(
+                certify_interval(
+                    &world,
+                    [&surface, &surface],
+                    [&uv, &reverse],
+                    [false, true],
+                    interval,
+                    1e-7,
+                    1e-6,
+                    100,
+                    100,
+                    100
+                )
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
     fn rational_transition_contacts_qualify_and_normal_work_stop_stays_unresolved() {
         let patch = Surface {
             degree_u: 1,
@@ -245,6 +384,7 @@ mod tests {
             )
             .unwrap();
             assert!(r.positions_proven && r.tangent_planes_proven);
+            assert!(r.whole_edge_agreement_proven());
             let stop = certify(
                 &world,
                 [&patch, &source],
