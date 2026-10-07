@@ -941,3 +941,23 @@ mod supplied_multispan_tests {
         assert!(section_loft_surfaces(&sections,&sides,true).is_err());
     }
 }
+
+#[cfg(test)]
+mod nonuniform_wall_regression {
+    use super::*;
+    #[test]
+    fn retained_multispan_wall_edges_reverse_knots_with_their_controls() {
+        let points=[[ -1.,-1.,0.],[1.,-1.,0.],[1.,1.,0.],[-1.,1.,0.]];
+        let section=|z:f64|points.iter().enumerate().map(|(i,p)|Curve {
+            degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![p[0],p[1],z],vec![points[(i+1)%4][0],points[(i+1)%4][1],z]],
+            weights:vec![1.,1.],periodic:false}).collect::<Vec<_>>();
+        let sections=vec![vec![section(0.)],vec![section(5.)]];
+        let sides=vec![points.iter().enumerate().map(|(i,p)|Surface {
+            degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,0.,0.25,1.,1.,1.],
+            control_points:[p,&points[(i+1)%4]].iter().map(|p|[0.,1.,3.,5.].iter().map(|z|vec![p[0],p[1],*z]).collect()).collect(),
+            weights:vec![vec![1.;4];2],periodic_u:false,periodic_v:false}).collect::<Vec<_>>()];
+        let model=section_loft_surfaces(&sections,&sides,false).unwrap();
+        assert_eq!(model.faces.len(),6);
+        assert_eq!(model.validate().unwrap().boundary_edge_count,0);
+    }
+}
