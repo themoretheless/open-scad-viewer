@@ -1,0 +1,26 @@
+[
+  {
+    "case": 0,
+    "beforeSha256": "5e095a294099720743a40fde9001f7a0a4ed8aea097e59e54c1dbf249c5eeea3",
+    "afterSha256": "5e095a294099720743a40fde9001f7a0a4ed8aea097e59e54c1dbf249c5eeea3",
+    "documentEqual": true
+  },
+  {
+    "case": 1,
+    "beforeSha256": "64626d460623b34857c6337233759fb2551736cf443fc77ba3fc42418147f7c0",
+    "afterSha256": "64626d460623b34857c6337233759fb2551736cf443fc77ba3fc42418147f7c0",
+    "documentEqual": true
+  },
+  {
+    "case": 2,
+    "beforeSha256": "b6df8407d3b912001f4af79c078961bbac9470c00fc7afa093a4c7c787571121",
+    "afterSha256": "b6df8407d3b912001f4af79c078961bbac9470c00fc7afa093a4c7c787571121",
+    "documentEqual": true
+  },
+  {
+    "case": 3,
+    "beforeSha256": "babb6bae9cec92a710e35dee024614d77ea99b81960a881dee8b934f02e75ebf",
+    "afterSha256": "babb6bae9cec92a710e35dee024614d77ea99b81960a881dee8b934f02e75ebf",
+    "documentEqual": true
+  }
+]

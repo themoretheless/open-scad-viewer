@@ -1,0 +1,50 @@
+{
+  "checks": [
+    {
+      "case": 0,
+      "faces": 31,
+      "pairs": 465,
+      "absenceProven": true
+    },
+    {
+      "case": 1,
+      "faces": 31,
+      "pairs": 465,
+      "absenceProven": true
+    },
+    {
+      "case": 2,
+      "faces": 31,
+      "pairs": 465,
+      "absenceProven": true
+    },
+    {
+      "case": 3,
+      "faces": 31,
+      "pairs": 465,
+      "absenceProven": true
+    },
+    {
+      "retryAfterFailure": true
+    },
+    {
+      "cancelEsc": true,
+      "lateReplyIgnored": true,
+      "freshRetry": true
+    },
+    {
+      "realContactHighlighted": true
+    }
+  ],
+  "errors": [],
+  "requests": 11,
+  "requestToReplyMs": [
+    2032.5999999940395,
+    1701.7999999970198,
+    1776.5,
+    1690.3999999910593,
+    1778.9000000059605,
+    1823.0999999940395,
+    12.599999994039536
+  ]
+}

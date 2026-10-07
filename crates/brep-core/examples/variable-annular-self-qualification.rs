@@ -55,7 +55,7 @@ fn main() {
                 "joinedProofs":audit.hull_contacts.iter().filter(|c|c.source_join.is_some()||c.polar_join.is_some()).map(|c|
                     value_codec::json!({"faces":c.faces,"edges":c.edges,
                         "polar":c.polar_join.as_ref().map(|p|value_codec::json!({"jacobian":p.jacobian,"determinantLower":p.determinant_lower,"diagonalLower":p.diagonal_lower,"coordinates":p.coordinates})),
-                        "source":c.source_join.as_ref().map(|p|value_codec::json!({"proven":p.proven,"reason":p.reason,"sourceFrame":p.source_frame,"cells":p.cells,"weightedBounds":p.weighted_bounds,"dominanceMarginLower":p.dominance_margin_lower}))})).collect::<Vec<_>>()});
+                        "source":c.source_join.as_ref().map(|proof|{let p=&proof.report; value_codec::json!({"proven":p.proven,"reason":p.reason,"sourceFrame":p.source_frame,"cells":p.cells,"weightedBounds":p.weighted_bounds,"dominanceMarginLower":p.dominance_margin_lower})})})).collect::<Vec<_>>()});
                 (audit.intersections.pairs, Some(summary))
             } else {
                 (

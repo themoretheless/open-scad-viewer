@@ -194,7 +194,7 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
   expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
   expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)
-  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:null,result:{...f.result,polarProjection:null}})));expect(r.spans).toBe(968)}
+  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:null,result:{...f.result,polarProjection:null,polarPMatrix:null}})));expect(r.spans).toBe(968)}
   else expect(r.spans).toBe(budget)
  }
  expect(JSON.stringify(model)).toBe(before)
@@ -213,7 +213,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
   if(budget===maxSpans){
    expect(r.faces.filter(f=>f.result?.proven)).toHaveLength(25)
    expect(r.faces.filter(f=>f.quotientProof?.proven)).toHaveLength(2)
-   expect(r.faces).toEqual(fixture.result.faces)
+   expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,result:f.result?{...f.result,polarPMatrix:null}:null})))
   }else if(budget===256){
    expect(r.faces[0].quotientProof?.proven).toBe(true)
    expect(r.spans).toBe(256)
@@ -268,3 +268,32 @@ it('cancels an audited request when the audit mode changes and ignores its late 
   await expect(fresh).resolves.toMatchObject({absenceProven:true})
  }finally{client.dispose()}
 })
+
+it('transports complete variable-radius annular certificates from the rebuilt WASM',async()=>{
+ const {gunzipSync}=await import('node:zlib')
+ const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const limits={maxPairs:1000,maxCells:1000000,maxDomainCells:8000000,cellsPerPair:4096,domainCellsPerPair:100000,maxBoxes:64}
+ const audit={exactWork:1000000,trimPairs:10000,trimCells:10000,trimDomainCells:1000000}
+ for(let i=0;i<4;i++){
+  const model=JSON.parse(gunzipSync(readFileSync(new URL(`../docs/qualification/variable-annular-transitions-2026-10-07/fixtures/case-${i}.json.gz`,import.meta.url))).toString())
+  const before=JSON.stringify(model),e=selfIntersectionExpectation(model,1e-8,limits,10000,audit)
+  const r=inspectSelfIntersection(model,1e-8,limits,10000,audit)
+  expect(validSelfIntersection(e,r)).toBe(true)
+  expect(r).toMatchObject({absenceProven:true,allFacesInjective:true,visitedPairs:465,unresolvedPairCount:0,unvisitedPairs:0,boundaryEmbedding:{proven:true}})
+  expect(r.faces).toHaveLength(31);expect(r.faces[5].result?.reason).toBe('global-polar-p-matrix')
+  expect(JSON.stringify(model)).toBe(before)
+  if(i===0){
+   for(const patch of [{polarPMatrix:null},{contractionUpper:0.1},{spans:r.faces[5].result!.spans+1}]){
+    const copy=structuredClone(r);Object.assign(copy.faces[5].result!,patch);expect(validSelfIntersection(e,copy)).toBe(false)
+   }
+   const copy=structuredClone(r);copy.faces[5].result!.polarPMatrix!.sourceSurface.controlPoints[2][1][0]+=0.001
+   expect(validSelfIntersection(e,copy)).toBe(false)
+   const bad=structuredClone(r);bad.faces[5].result!.polarPMatrix!.determinantLower=1e9;expect(validSelfIntersection(e,bad)).toBe(false)
+   const joined=structuredClone(r),pair=joined.pairs.find(p=>p.sharedBoundary?.kind==='exact-hull'&&p.sharedBoundary.sourceJoin)!
+   if(pair.sharedBoundary?.kind!=='exact-hull')throw Error('Missing source join')
+   pair.sharedBoundary.sourceJoin!.sourceFrame[1][0]+=0.001;expect(validSelfIntersection(e,joined)).toBe(false)
+   const stale=structuredClone(model);stale.faces[5].surface.controlPoints[2][1][0]+=0.001
+   expect(validSelfIntersection(selfIntersectionExpectation(stale,1e-8,limits,10000,audit),r)).toBe(false)
+  }
+ }
+},120000)

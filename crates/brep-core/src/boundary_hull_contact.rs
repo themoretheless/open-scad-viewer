@@ -13,7 +13,14 @@ pub struct Certificate {
     pub vertex: Option<usize>,
     pub joined_proof:Option<JoinedProof>,
     pub polar_join:Option<nurbs_core::surface_injectivity::PolarPMatrix>,
-    pub source_join:Option<nurbs_core::surface_quotient_injectivity::JoinedReport>,
+    pub source_join:Option<SourceJoinedProof>,
+}
+#[derive(Clone,Debug)]
+pub struct SourceJoinedProof {
+    pub blend_face:usize,
+    pub wall_face:usize,
+    pub collapsed_end:usize,
+    pub report:nurbs_core::surface_quotient_injectivity::JoinedReport,
 }
 #[derive(Clone,Debug)]
 pub struct JoinedProof {
@@ -326,7 +333,7 @@ fn certify_joined_charts(model:&Model,faces:[usize;2])->Option<Certificate>{
                     let mut enclosure=[[f64::INFINITY,f64::NEG_INFINITY];3];
                     for p in &edge.control_points {for k in 0..3{enclosure[k][0]=enclosure[k][0].min(p[k]);enclosure[k][1]=enclosure[k][1].max(p[k]);}}
                     return Some(Certificate{faces,contact_enclosure:enclosure,edges:vec![ca.edge],vertex:None,
-                        joined_proof:None,polar_join:None,source_join:Some(source)});
+                        joined_proof:None,polar_join:None,source_join:Some(SourceJoinedProof{blend_face,wall_face,collapsed_end:end,report:source})});
                 }
             }}
         }
@@ -481,7 +488,7 @@ mod tests {
             let middle=certify_polar_charts(&model,[5,7]).expect("regular middle join");
             assert!(middle.polar_join.unwrap().determinant_lower>0.);
             let exit=certify_joined_charts(&model,[10,12]).expect("collapsed exit join");
-            assert!(exit.source_join.unwrap().proven);
+            assert!(exit.source_join.unwrap().report.proven);
             let a=&model.faces[5].surface;let b=&model.faces[7].surface;
             let frame=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
             assert!(nurbs_core::surface_injectivity::certify_polar_join(a,b,frame,16,512).unwrap().is_some());

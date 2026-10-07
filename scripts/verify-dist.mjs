@@ -108,12 +108,12 @@ const limits = new Map([
 // Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
 // Original annular source proofs and seam transport: measured 3,953,416 bytes; retain 608-byte margin.
 // Source wall native proofs: measured packed geometry 3962910 bytes; retain 608-byte margin.
-const geometryChunkBudget = 3_982_608 // Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
+const geometryChunkBudget = 3_988_192 // Native annular P-matrix and source-join certificates: measured 3,987,584 bytes; retain 608-byte margin.
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 167_427], // Adaptive original transport: measured 167304 bytes; retain 123-byte margin. // Continuous wall coverage measured 165863 bytes; retain 123-byte margin. Automatic scan transport: measured 163831 bytes; retain 123-byte margin. Source wall transport: measured 161534 bytes; retain 123-byte margin. Selected source seam: measured 158944 bytes; retain 123-byte margin. Source STEP transport: measured 157735 bytes (+998); retain 123-byte margin. Inverse shear request binding: measured 156737 bytes, +260; retained 123-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 167_748], // Native P-matrix and joined proof transport: measured 167625 bytes; retain 123-byte margin.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -375,7 +375,7 @@ for (const [name, artifact, compression] of [
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
 // Rebuilt original annular proofs and seam UI: measured 8,243,477 bytes; retain 761-byte margin.
 // Source wall native, transport and UI: measured 8265356 asset bytes; retain 761-byte margin.
-const totalBudget = 8_308_327 // Combined CAD/Laser CAM: measured 8,307,566 asset bytes; retain 761-byte margin. Adaptive original self-wall integration: measured 8,295,587 asset bytes; retain 761-byte margin. Continuous wall coverage: measured 8,289,348 asset bytes; retain 761-byte margin.
+const totalBudget = 8_328_139 // Restored design and native annular certificate transport: measured 8,327,378 asset bytes; retain 761-byte margin.
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 
