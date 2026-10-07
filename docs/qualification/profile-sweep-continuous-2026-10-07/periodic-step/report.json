@@ -1,0 +1,48 @@
+{
+  "schema": "periodic-profile-sweep-step/1",
+  "sourceSha": "1740055fe63a07a22508ef352e9ebf86051c6471",
+  "kernelSha256": "2aac69cb7606de2192ac55163f42e609b4417566e313f2c8d92de1dc4172d0b0",
+  "passed": true,
+  "scope": "One 17-station periodic cubic square-profile ring. Finite point, derivative and closing-jet checks; valid 64-face single solid. No global sweep or complete G1 qualification claim.",
+  "normalization": "Rust applies exact dyadic affine V chart normalization to 16 retained patches per wall. No geometry construction in TypeScript.",
+  "parameterCorrespondence": "STEP may reverse U for face orientation. The checker searches the two exact U orientations, requires unique matching faces and applies the chain-rule signs to du and duv.",
+  "samplesPerStage": 960,
+  "closingJetStationsPerStage": 12,
+  "nativeStepMaxPointError": 6.335327934766281e-16,
+  "occtStages": [
+    {
+      "maxPointError": 9.930136612989092e-16,
+      "maxJetError": 7.119291619286993e-15,
+      "maxClosingJetError": 8.326672684688674e-16,
+      "valid": true,
+      "faces": 64,
+      "solids": 1,
+      "volume": 5.0260661904029575,
+      "idealRingVolume": 5.026548245743669
+    },
+    {
+      "maxPointError": 5.587142190918335e-13,
+      "maxJetError": 9.21606370917522e-12,
+      "maxClosingJetError": 1.1998402271728992e-11,
+      "valid": true,
+      "faces": 64,
+      "solids": 1,
+      "volume": 5.0260661904163335,
+      "idealRingVolume": 5.026548245743669
+    }
+  ],
+  "sha256": {
+    "export-fixture.mts.txt": "dd4fc8db9ab3bf82587f26f6b296dab287c5f655d24ee44aaf32483d5bf45375",
+    "model-samples.json": "6b13ac87e2241ac051f54ab63492cea36f71499a1fdb498de56735eab0666b71",
+    "normalize-patches.rs": "6db193703cbb33784fa76e429d1b5c3c11adca8dacea5c408e50c14f590d0a16",
+    "normalized.json": "909dbf16430583a6282c1674db050508eeaf33ffa01f3b5dfd8c74681f774e26",
+    "occt-explore.json": "ffd32f3becbf8d49ec2980bbd33289b795a9597366f90a9ee8238b5cf144da80",
+    "periodic-occt.step.gz": "e11709c0b3f9bde65d95c3e7ce42fc532d0944ff188abf0e27cdd6c9a3544da9",
+    "periodic.step.gz": "e1678a5c40e3c16c44fd7a9f3b14a39795faa7bddf52ba6e20f2305db74e1a74",
+    "raw-patches.json": "6ed14c24d607fb6adff6c9b3d4a9b5eea542257a011eb4e400b130fcf845a0cc",
+    "reports.json": "b1e0c879b289b5d682efd5bf8547987130c6987baaf05e62281a99798b6318cd",
+    "samples.json": "6b13ac87e2241ac051f54ab63492cea36f71499a1fdb498de56735eab0666b71",
+    "verify-occt.py": "ed73a7b8e7be7b28cd77faf8b88235f21549e9fcc8914b0c64f78caf633988d0",
+    "README.md": "14f8958af971538e613608e85e570100f115e5117ce5fa8dbb6c0c703f6ebc27"
+  }
+}

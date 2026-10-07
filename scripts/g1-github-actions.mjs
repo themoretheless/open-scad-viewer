@@ -14,14 +14,15 @@ import {
 } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {matchesNodeHost,qualificationInvocation} from './g1RuntimeIdentity.mjs'
 import {verifyBrowserPayloadTree as verifyTree} from './browserPayloadTree.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v74.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v75.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
 const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v74'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v74'
+const PLAN_ID = 'semantic-manifold-g1-plan-v75'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v75'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -108,7 +109,7 @@ function matrix(probeOnly=false) {
   if (expectedUnits !== plan.executionProtocol.plannedWorkUnits) {
     fail(`Matrix expands to ${expectedUnits}, expected ${plan.executionProtocol.plannedWorkUnits}`)
   }
-  process.stdout.write(`${JSON.stringify({ nodes: { include: probeOnly?nodes.slice(0,1):nodes }, browsers: { include: probeOnly?browsers.slice(0,1):browsers } })}\n`)
+  process.stdout.write(`${JSON.stringify({ nodes: { include: probeOnly?nodes.filter((entry,index,all)=>all.findIndex(other=>other.environment===entry.environment)===index):nodes }, browsers: { include: probeOnly?browsers.filter((entry,index,all)=>all.findIndex(other=>other.environment===entry.environment)===index):browsers } })}\n`)
 }
 
 function regularFrozenFile(relativePath) {
@@ -157,10 +158,6 @@ function verifyBindings(plan) {
 
 function normalizedArch(arch) {
   return arch === 'x64' ? 'x86_64' : arch === 'arm64' ? 'aarch64' : arch
-}
-
-function normalizedPlatform(platform) {
-  return platform === 'linux' ? 'ubuntu' : platform === 'darwin' ? 'macos' : platform
 }
 
 function githubRunnerKey(environment) {
@@ -292,13 +289,12 @@ function verifyToolchain(environmentId, nodeArchivePath, npmArchivePath) {
   if (npmSha1 !== freeze.npm.shasum || npmIntegrity !== freeze.npm.integrity) {
     fail('npm archive identity mismatch')
   }
-  if (normalizedArch(process.arch) !== environment.architecture
-      || !environment.os.startsWith(normalizedPlatform(process.platform))) {
+  if (!matchesNodeHost(environment,process.platform,process.arch)) {
     fail(`Host identity mismatch: ${process.platform}/${process.arch} for ${environmentId}`)
   }
   const observedNpmVersion = execFileSync(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['--version'],
+    process.platform === 'win32' ? process.execPath : 'npm',
+    process.platform === 'win32' ? [process.env.NPM_CLI ?? fail('NPM_CLI is required on Windows'), '--version'] : ['--version'],
     { cwd: root, encoding: 'utf8' },
   ).trim()
   if (observedNpmVersion !== NPM_VERSION) fail(`npm executable is ${observedNpmVersion}`)
@@ -378,21 +374,6 @@ function expandCommand(template, runIndex, browser) {
     .replaceAll('<chromium|firefox|webkit>', browser)
 }
 
-function commandParts(command) {
-  if (command.startsWith('npm test -- ')) {
-    return {
-      executable: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      // Release kernels were materialized before preflight; pretest must not rebuild them.
-      args: ['test', '--ignore-scripts', '--', ...command.slice('npm test -- '.length).split(/\s+/u).filter(Boolean)],
-    }
-  }
-  if (command.startsWith('node ')) {
-    const parts = command.split(/\s+/u).filter(Boolean)
-    return { executable: process.execPath, args: parts.slice(1) }
-  }
-  fail(`Unsupported frozen command: ${command}`)
-}
-
 function cleanEnvironment(seed) {
   const allowed = [
     'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL',
@@ -444,7 +425,7 @@ async function runFragment(values) {
   }
   const seed = row.work.seeds[runIndex - 1]
   const expanded = expandCommand(row.harness.command, runIndex, environment.browser?.engine ?? '')
-  const invocation = commandParts(expanded)
+  const invocation = qualificationInvocation(expanded,process.execPath,root)
   mkdirSync(output, { recursive: true })
   const stdoutPath = resolve(output, 'stdout.log')
   const stderrPath = resolve(output, 'stderr.log')

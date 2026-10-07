@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v74.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v75.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v74',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v75',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -273,5 +273,44 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     expect(result.process.status).not.toBe(0)
     expect(result.process.stderr).toMatch(/source SHA differs from GITHUB_SHA/u)
     expect(existsSync(result.output)).toBe(false)
+  })
+})
+
+describe('cross-platform frozen runtime execution', () => {
+  it('accepts the actual Node Windows identity and refuses another OS or architecture', async () => {
+    const {matchesNodeHost} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const windows = plan.environments.find((item: any) => item.id === 'windows-node20')
+    expect(matchesNodeHost(windows, 'win32', 'x64')).toBe(true)
+    expect(matchesNodeHost(windows, 'linux', 'x64')).toBe(false)
+    expect(matchesNodeHost(windows, 'win32', 'arm64')).toBe(false)
+    expect(matchesNodeHost(windows, 'windows', 'x64')).toBe(false)
+    const mac = plan.environments.find((item: any) => item.id === 'macos-node20')
+    expect(matchesNodeHost(mac, 'darwin', 'arm64')).toBe(true)
+    const ubuntu = plan.environments.find((item: any) => item.id === 'ubuntu-node20')
+    expect(matchesNodeHost(ubuntu, 'linux', 'x64')).toBe(true)
+  })
+
+  it('preserves frozen test arguments through direct Node execution on Windows', async () => {
+    const {qualificationInvocation} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const invocation = qualificationInvocation(
+      'npm test -- tests/mcpManifoldPlanQualificationSupervisor.test.ts --maxWorkers 2',
+      'C:/Node Runtime/node.exe', root,
+    )
+    expect(invocation.executable).toBe('C:/Node Runtime/node.exe')
+    expect(invocation.args).toEqual([
+      resolve(root, 'node_modules/vitest/vitest.mjs'),
+      'tests/mcpManifoldPlanQualificationSupervisor.test.ts', '--maxWorkers', '2',
+    ])
+    expect(() => qualificationInvocation('powershell arbitrary', 'node', root)).toThrow('Unsupported frozen command')
+  })
+
+  it('probes all frozen hosts without replacing the full matrix', () => {
+    const result = spawnSync(process.execPath, [harness, 'matrix', '--probe-only'], {cwd:root,encoding:'utf8'})
+    expect(result.status, result.stderr).toBe(0)
+    const matrix = JSON.parse(result.stdout)
+    expect(matrix.nodes.include.map((item: any) => item.environment).sort()).toEqual([
+      'macos-node20','ubuntu-node20','ubuntu-node22','windows-node20',
+    ])
+    expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual(['vite-chromium','vite-webkit'])
   })
 })
