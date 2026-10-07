@@ -22,6 +22,8 @@
 //! tangent contacts are never reported as point or guessed-circle components,
 //! matching the house tangency discipline. Nothing here authorizes a topology
 //! change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::sphere_sphere::{
     self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
     lift,
@@ -566,29 +568,6 @@ pub fn intersect_sphere_cylinder(
             .push(circle_component(&sphere, &cylinder, axial, site)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for CylinderPatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for SphereCylinderComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                sphere_uv,
-                cylinder_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"sphereUv":sphere_uv,"cylinderUv":cylinder_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

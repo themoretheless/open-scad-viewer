@@ -1,3 +1,4 @@
+import {sceneMeshesToSolidDocument} from '../solidBridge'
 import { evaluateExactSolids } from '../geometryBuildEngine'
 import { stringifyMeshJson } from '../meshJson'
 import { buildExactSolidBodies } from './brepBuild'
@@ -10,7 +11,14 @@ export async function runExactSolidRequest(request: unknown): Promise<ExactSolid
     const evaluated = await evaluateExactSolids(request.source)
     const plan = evaluated.exactSolids
     if (plan && plan.roots.length > 200) throw new Error('An exact-solid group is limited to 200 bodies.')
-    const bodies = plan ? buildExactSolidBodies(plan.nodes, plan.roots) : []
+    let bodies
+    if(plan) bodies=buildExactSolidBodies(plan.nodes,plan.roots)
+    else {
+      if(evaluated.meshes.length>200)throw new Error('An exact-solid group is limited to 200 bodies.')
+      if(evaluated.meshes.some(mesh=>mesh.nativeGeometry?.kind!=='brep'))
+        throw new Error('Solid source requires native B-rep bodies.')
+      bodies=sceneMeshesToSolidDocument(evaluated.meshes).bodies
+    }
     const document = stringifyMeshJson({ version: 1, sketches: [], bodies })
     if (document.length > EXACT_SOLID_MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
     return { kind: 'exact-solid', version: 1, ok: true, document }

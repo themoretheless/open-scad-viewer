@@ -25,7 +25,7 @@
     "Only matching strictly convex consistently oriented parallel polygon sections",
     "Sufficient positive Bernstein support-coefficient admission is numerical and conservative, not certified or complete for all valid correspondences",
     "Side patches are bilinear, with C0 joins across stations; not general smooth high-degree NURBS loft or arbitrary section matching",
-    "New Rust/WASM constructor is not yet connected to editor mode or ModelGraph/provider schema",
+    "New Rust/WASM constructor is not yet connected to editor mode or RushGraph/provider schema",
     "General B-rep completion and shared qualification refresh remain open"
   ],
   "sha256": {

@@ -1,0 +1,297 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "flange-r0.25-base-0",
+      "stepSha256": "5e1794f61f44cdbe80e4b70eb0dae0678cccff2fc7afbd51e4ff30470ada131e",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000003
+        ]
+      ],
+      "volumeMm3": 7066.9026976148925,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 1.031521605909802e-07,
+      "passed": true,
+      "previewTriangles": 12142
+    },
+    {
+      "name": "flange-r0.25-base-1",
+      "stepSha256": "c1ac745691faa10f26e50dd03e940cd9b0bee4bc7a7c9d7fd53828fd7c7c32f1",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000003
+        ]
+      ],
+      "volumeMm3": 7066.9026976148925,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 1.031521605909802e-07,
+      "passed": true,
+      "previewTriangles": 12142
+    },
+    {
+      "name": "flange-r1-base-0",
+      "stepSha256": "304152dff528d407b9f4d04d47050684d68cbd416356461b70589526f0857a82",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000003
+        ]
+      ],
+      "volumeMm3": 7041.916993794026,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.0574861991917714e-07,
+      "passed": true,
+      "previewTriangles": 7530
+    },
+    {
+      "name": "flange-r1-base-1",
+      "stepSha256": "4967c1b6f37bacd920b4c5859b07d73d18ff8e5dcb0574aa10d4c3a4d0789623",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000003
+        ]
+      ],
+      "volumeMm3": 7041.916993794026,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 2.0574861991917714e-07,
+      "passed": true,
+      "previewTriangles": 7530
+    },
+    {
+      "name": "flange-r2.5-base-0",
+      "stepSha256": "db4fc64d7ee9e3329b2925e4b3a0de91271be40634e43f6248b67f462e24ba8c",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000002
+        ]
+      ],
+      "volumeMm3": 6904.741606201271,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 3.501245373627171e-07,
+      "passed": true,
+      "previewTriangles": 6232
+    },
+    {
+      "name": "flange-r2.5-base-1",
+      "stepSha256": "0776c4f87b0dc560abb07c214dce9727f0fc0b813624d239b9d7e60fe7a21dba",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.00000010000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.00000010000001,
+          6.000000100000002
+        ]
+      ],
+      "volumeMm3": 6904.741606201271,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 3.501245373627171e-07,
+      "passed": true,
+      "previewTriangles": 6232
+    },
+    {
+      "name": "flange-r0.25-placed-0",
+      "stepSha256": "8638d5bb351e763dc0a53495684175f9c58622af2c14061b23f14781d9237b03",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.00000010000001,
+          -9.000000100000001
+        ],
+        [
+          13.000000100000005,
+          17.00000010000001,
+          31.000000100000012
+        ]
+      ],
+      "volumeMm3": 7066.9026976148925,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 1.031521605909802e-07,
+      "passed": true,
+      "previewTriangles": 12198
+    },
+    {
+      "name": "flange-r0.25-placed-1",
+      "stepSha256": "977013efae985c1239e9664afdb053f2edb2284bce440d73ec22e24765c4a235",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.00000010000001,
+          -9.000000100000001
+        ],
+        [
+          13.000000100000005,
+          17.00000010000001,
+          31.000000100000012
+        ]
+      ],
+      "volumeMm3": 7066.9026976148925,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 1.031521605909802e-07,
+      "passed": true,
+      "previewTriangles": 12198
+    },
+    {
+      "name": "flange-r1-placed-0",
+      "stepSha256": "b96b2cd96d9c215f59051290bf6fa6774e0aa867a73894ac9880a1c226160bd7",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.000000100000012,
+          -9.000000100000003
+        ],
+        [
+          13.000000100000003,
+          17.00000010000001,
+          31.000000100000012
+        ]
+      ],
+      "volumeMm3": 7041.916993794026,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 2.0574861991917714e-07,
+      "passed": true,
+      "previewTriangles": 7460
+    },
+    {
+      "name": "flange-r1-placed-1",
+      "stepSha256": "b9f2a09f3e0d2d9720daf0bd63684f6674b8eb5e83916e8f6b84664675764463",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.000000100000012,
+          -9.000000100000003
+        ],
+        [
+          13.000000100000003,
+          17.00000010000001,
+          31.000000100000012
+        ]
+      ],
+      "volumeMm3": 7041.916993794026,
+      "maxBoundsErrorMm": 1.0000001182675078e-07,
+      "volumeErrorMm3": 2.0574861991917714e-07,
+      "passed": true,
+      "previewTriangles": 7460
+    },
+    {
+      "name": "flange-r2.5-placed-0",
+      "stepSha256": "ef945f7a9caa0976a5a96696821315719a0e394a36f7f169c4c214b7313cc286",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.00000010000001,
+          -9.000000100000003
+        ],
+        [
+          13.000000100000005,
+          17.00000010000001,
+          31.00000010000001
+        ]
+      ],
+      "volumeMm3": 6904.741606201272,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 3.501236278680153e-07,
+      "passed": true,
+      "previewTriangles": 6242
+    },
+    {
+      "name": "flange-r2.5-placed-1",
+      "stepSha256": "5234eecdeac6a933ef58f11f0fb8e3a9d2224c3d6970aff4592b92c26138c7e8",
+      "valid": true,
+      "solids": 1,
+      "faces": 20,
+      "boundsMm": [
+        [
+          6.9999999,
+          -23.00000010000001,
+          -9.000000100000003
+        ],
+        [
+          13.000000100000005,
+          17.00000010000001,
+          31.00000010000001
+        ]
+      ],
+      "volumeMm3": 6904.741606201272,
+      "maxBoundsErrorMm": 1.000000082740371e-07,
+      "volumeErrorMm3": 3.501236278680153e-07,
+      "passed": true,
+      "previewTriangles": 6242
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 use crate::{Error, Model, Result, ray_parity, shell_distance};
 
 pub struct Report {
+    pub boundary_separation_certified: bool,
     pub boundary: shell_distance::ShellDistance,
     /// A point of A classified against B, then a point of B against A.
     pub witness_parity: [Option<ray_parity::PointReport>; 2],
@@ -33,7 +34,7 @@ pub fn inspect(
     let boundary = shell_distance::distance(a, b, tolerance_mm, tolerance_uv, max_cells / 2, max_domain_cells / 2)?;
     let mut cells = max_cells - boundary.cells;
     let mut domains = max_domain_cells - boundary.domain_cells;
-    let mut report = Report { boundary, witness_parity: [None, None], reason: "boundary-separation-unproven" };
+    let mut report = Report { boundary_separation_certified:boundary.lower_bound_mm>0.,boundary, witness_parity: [None, None], reason: "boundary-separation-unproven" };
     if report.boundary.lower_bound_mm <= 0. { return Ok(report); }
     report.reason = "boundary-witness-unavailable";
     let Some(witness) = report.boundary.witness.as_ref() else { return Ok(report); };
@@ -66,6 +67,56 @@ pub fn inspect(
         "separated-witness-parities"
     } else { "point-parity-unresolved" };
     Ok(report)
+}
+
+/// Used only after the volume audit's fresh pair certificates prove every
+/// cross-shell face pair disjoint. Exact clamped edge poles need no rounded
+/// surface-evaluation witness or quantitative clearance estimate.
+pub(crate) fn inspect_certified_boundaries(a:&Model,b:&Model,tolerance_uv:f64,
+    max_cells:usize,max_domains:usize)->Result<Report> {
+    let mut report=Report {
+        boundary_separation_certified:false,
+        boundary:shell_distance::ShellDistance {
+            lower_bound_mm:0.,upper_bound_mm:None,faces:None,witness:None,converged:false,
+            reason:"fresh-face-separation-no-distance-bound",pairs:a.faces.len()*b.faces.len(),
+            evaluated_pairs:0,cells:0,domain_cells:0,
+        },
+        witness_parity:[None,None],reason:"boundary-witness-unavailable",
+    };
+    // Qualitative separation was already charged by the embedding audit. It
+    // does not need an additional approximate distance search, and supplies
+    // neither a clearance value nor a distance witness.
+    classify_exact_boundary_witnesses(a,b,&mut report,tolerance_uv,max_cells,max_domains)?;
+    Ok(report)
+}
+pub(crate) fn classify_exact_boundary_witnesses(a:&Model,b:&Model,report:&mut Report,
+    tolerance_uv:f64,max_cells:usize,max_domains:usize)->Result<()> {
+    let witness=|model:&Model|->Option<[f64;3]>{
+        let face=model.faces.get(model.shells[0].faces[0].face)?;
+        let edge=model.loops.get(face.outer)?.coedges.first()?.edge;
+        let curve=&model.edges.get(edge)?.curve;
+        let p=curve.degree;let n=curve.control_points.len();
+        if curve.periodic || curve.knots[..p+1].iter().any(|k|*k!=curve.knots[p])
+            || curve.knots[n..].iter().any(|k|*k!=curve.knots[n]) {return None;}
+        let pole=curve.control_points.first()?;
+        (pole.len()==3).then(||[pole[0],pole[1],pole[2]])
+    };
+    let (Some(pa),Some(pb))=(witness(a),witness(b)) else {return Ok(());};
+    let mut cells=max_cells-report.boundary.cells;
+    let mut domains=max_domains-report.boundary.domain_cells;
+    report.boundary_separation_certified=true;
+    let directions=[[1.,0.317,0.173],[-0.219,1.,0.413],[0.271,-0.193,1.]];
+    for (side,point) in [pa,pb].into_iter().enumerate(){
+        if cells==0 || domains==0 {break;}
+        let r=ray_parity::classify_point(if side==0 {b}else{a},point,&directions,tolerance_uv,
+            (cells/(2-side)).max(1),(domains/(2-side)).max(1))?;
+        cells-=r.cells;domains-=r.domain_cells;
+        report.witness_parity[side]=Some(r);
+    }
+    report.reason=if report.witness_parity.iter().all(|r|r.as_ref().is_some_and(|r|r.parity.is_some())){
+        "certified-boundaries-exact-witness-parities"
+    }else{"certified-boundaries-point-parity-unresolved"};
+    Ok(())
 }
 
 #[cfg(test)]

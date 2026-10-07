@@ -120,6 +120,39 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
 mod tests {
     use super::*;
     #[test]
+    fn moving_hollow_tensor_sides_fit_shared_exact_work_budget() {
+        let ring=|radius:f64,z:f64,f:f64| {
+            let h=f.hypot(1.);
+            [[ [radius,0.],[radius,radius],[0.,radius]],
+             [[0.,radius],[-radius,radius],[-radius,0.]],
+             [[-radius,0.],[-radius,-radius],[0.,-radius]],
+             [[0.,-radius],[radius,-radius],[radius,0.]]].into_iter().map(|points|nurbs_core::curve::Curve {
+                degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                control_points:points.into_iter().map(|xy|vec![2.*xy[0],xy[1]/h,z-xy[1]*f/h]).collect(),
+                weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false,
+            }).collect::<Vec<_>>()
+        };
+        let mut sections=(0..=8).map(|i| {
+            let f=i as f64/8.;let outer=ring(0.5,10.*f,f);
+            let hole=ring(0.25,10.*f,f).into_iter().rev().map(|c|c.reverse().unwrap()).collect();
+            vec![outer,hole]
+        }).collect::<Vec<_>>();
+        for (index,z) in [(0,0.),(8,10.)] {
+            let flat=sections[index].iter().flatten().cloned().collect::<Vec<_>>();
+            let projected=nurbs_core::section_projection::project(&flat,2,[0.,0.],z,2_f64.powi(-40),0.6,1000000).unwrap().curves.unwrap();
+            sections[index]=vec![projected[..4].to_vec(),projected[4..].to_vec()];
+        }
+        let model=crate::rational_section_loft(&sections).unwrap();
+        assert_eq!(model.faces.len(),66);
+        let report=verify_exact(&model,1000000).unwrap();
+        assert!(report.all_equal && report.all_joins_exact,"work={} unresolved={:?}",report.work,
+            report.uses.iter().filter(|u|!u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)).collect::<Vec<_>>());
+        assert!(report.work<1000000);
+        let partial=verify_exact(&model,report.work-1).unwrap();
+        assert!(!partial.all_equal && partial.work<=report.work-1);
+        assert_eq!(partial.uses.len(),report.uses.len());
+    }
+    #[test]
     fn exact_closure_survives_a_nonplanar_bilinear_warp_and_weight_scaling() {
         let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
         // z -> z + xy/4: top/bottom become bilinear graphs. Every box edge

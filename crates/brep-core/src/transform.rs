@@ -96,6 +96,7 @@ pub fn workplane(
 mod tests {
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn batch_affine_preserves_rational_cylinder_and_torus_results() {
         let matrices = [
             [[1.,0.,0.,7.],[0.,1.,0.,-2.],[0.,0.,1.,3.],[0.,0.,0.,1.]],
@@ -126,6 +127,7 @@ mod tests {
         }
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn batch_affine_matches_individual_placements_and_refuses_invalid_inputs() {
         let source = crate::cuboid([0., 0., 0.], [1., 2., 3.]).unwrap();
         let matrices = [
@@ -147,6 +149,7 @@ mod tests {
         assert!(affine_batch(&source, &overflow).is_err());
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn affine_reflection_preserves_identity_and_reverses_shell_uses() {
         let source = crate::cuboid([0., 0., 0.], [1., 2., 3.]).unwrap();
         let before = value_codec::to_string(&source).unwrap();
@@ -260,6 +263,7 @@ pub fn profile(
 mod profile_tests {
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn reflected_circle_keeps_material_orientation_and_scaled_area() {
         let loops = vec![crate::sketch::circle_wire(2.).unwrap()];
         let original = value_codec::to_string(&loops).unwrap();

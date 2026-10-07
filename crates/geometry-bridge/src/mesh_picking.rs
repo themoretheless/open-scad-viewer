@@ -1,7 +1,7 @@
 //! Immutable native picking snapshots. Upload once, query repeatedly, dispose.
 //! Handles are monotonic within one runtime and never identify a reused slot.
 use super::{Result, Value, field, input};
-use polygon_core::solid::{bvh, bvh_query};
+use mesh_query::{bvh, bvh_query};
 use std::collections::{BTreeMap, BTreeSet};
 use value_codec::json;
 

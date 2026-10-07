@@ -1,0 +1,51 @@
+{
+  "oracle": "OpenCascade/cadquery-ocp",
+  "cases": [
+    {
+      "file": "closed-planar-hollow-miter.step",
+      "native_volume_certified": true,
+      "native_external_material_agreement": false,
+      "valid": true,
+      "faces": 32,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 64,
+      "same_parameter": true,
+      "pcurve_samples": 896,
+      "sampled_pcurve_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_pcurve_derivative_max_error": 1.5265566588595902e-15,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 64,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 32,
+      "sampled_surface_max_error_mm": 3.552713678800501e-15,
+      "sampled_derivative_max_error": 3.6914915568786455e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        31.415926543256955,
+        -5.026548246921109
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 26.38937829633585,
+      "expected_volume": 26.38937829015426,
+      "relative_volume_error": 2.342453953533674e-10,
+      "integration_error": 1.4683025999563808e-16,
+      "passed": false
+    }
+  ],
+  "passed": false,
+  "scope": "fixture import, topology and analytic volume; surface/seam/containment matrix remains separate"
+}

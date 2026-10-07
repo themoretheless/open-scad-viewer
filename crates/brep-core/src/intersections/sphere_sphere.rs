@@ -16,6 +16,8 @@
 //! lifts: planar sections of a stereographic patch are exact circles (or lines
 //! through the UV origin when the plane contains the patch pole) clipped to
 //! the patch quarter-disk. Nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::*;
 use crate::Model;
 
@@ -831,29 +833,6 @@ pub fn intersect_sphere_sphere(
         max_sample_residual,
     });
     Ok(report)
-}
-
-impl value_codec::Serialize for SpherePatchCircle {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for SphereSphereComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                first_uv,
-                second_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"firstUv":first_uv,"secondUv":second_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

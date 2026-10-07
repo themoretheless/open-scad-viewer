@@ -419,5 +419,5 @@
       "note": "Current bytes are newly bound in v23; v22 remains archived. Re-freeze after geometry kernel rebuild a93ba6e6 from committed b81fe7f9 (brep-core analytic surface intersections, gcode-core 3mf packaging/parser, stable expression eval); oracle 44/44 unchanged on new kernel, no migration; evidence own-rust-cad-v15, G0 fingerprint v23, G1 plan v40; executors retargeted to v40. Tree carries foreign WIP src/services/shaders/index.ts (not in frozen bundles) — recorded in review."
     }
   ],
-  "previousFingerprintSha256": "51315ca494ad19f26fbff68c214014797accb27c0d8e08dcea37e3558222ae02"
+  "previousFingerprintSha256": "62dab76c2be553f3f3ad8cfdfad04ac43d8459b72c2e4a5c9501d488ec958123"
 }

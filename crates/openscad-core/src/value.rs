@@ -10,11 +10,12 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-/// Stage-2 shape descriptor: geometry modules contribute accounted stubs
-/// (real kernels arrive with migration stage 3); counts and dimensions follow
-/// the TS evaluator's shape-list semantics exactly.
+/// Accounted shape identity with an optional recorded solid-program node.
+/// Diagnostics can run without constructing or executing geometric expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapeDescriptor {
+    pub geometry: Option<usize>,
+    pub profile: Option<usize>,
     pub name: String,
     pub dimension: u8,
 }

@@ -1,7 +1,11 @@
 use brep_core::{Model, cuboid};
+
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Serialize, json};
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn owned_decode_preserves_non_object_refusal() {
     for value in [
         json!(null),
@@ -18,6 +22,8 @@ fn owned_decode_preserves_non_object_refusal() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn missing_identity_tables_are_generated_only_after_safe_validation() {
     let model = cuboid([0.; 3], [2.; 3]).unwrap();
     let mut legacy = model.to_value();
@@ -42,6 +48,8 @@ fn missing_identity_tables_are_generated_only_after_safe_validation() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn partial_supplied_identity_tables_are_not_silently_replaced() {
     let mut value = cuboid([0.; 3], [2.; 3]).unwrap().to_value();
     value["topologyIds"]["vertices"] = json!([]);
@@ -49,6 +57,8 @@ fn partial_supplied_identity_tables_are_not_silently_replaced() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn canonical_ids_and_change_set_round_trip_while_legacy_ids_require_migration() {
     let model = cuboid([0.; 3], [2.; 3]).unwrap();
     let canonical = model.to_value();

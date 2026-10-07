@@ -11,6 +11,8 @@ pub mod lineage;
 pub mod modeling;
 pub mod placement;
 pub mod primitives;
+pub mod program;
+pub mod profile_program;
 pub mod proximity;
 pub mod scene_bvh;
 pub mod section;

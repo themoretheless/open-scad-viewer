@@ -43,6 +43,8 @@
 //! iso-v lines across all four cone side patches, an exact UV circle on a
 //! cap face, and per-patch UV circles/lines on the sphere. Nothing here
 //! authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
@@ -314,24 +316,6 @@ pub fn intersect_sphere_cone(
             .push(circle_component(&sphere, &cone, axial, site)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for SphereConeComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                sphere_uv,
-                cone_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"sphereUv":sphere_uv,"coneUv":cone_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

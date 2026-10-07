@@ -5,7 +5,8 @@ import MaterialControls from './features/MaterialControls.vue'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
-import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
+import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/rushFrontendDetect'
+import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
@@ -21,7 +22,7 @@ import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
-import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
+import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.vue'))
@@ -442,7 +443,7 @@ function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   const doc = emptyMeshDocument()
   const prefix = lang.value === 'ru' ? 'Объект' : 'Object'
   sceneMeshes.value.forEach((mesh, index) => {
-    const polygon = meshDataToPolygon(mesh)
+    const polygon = meshDataToEditablePolygon(mesh)
     if (polygon) doc.objects.push(polygonToMeshObject(polygon, `${prefix} ${index + 1}`, `scene-${index + 1}-${Date.now().toString(36)}`))
   })
   return doc
@@ -459,6 +460,8 @@ function cancelSolidBuild() { solidBuildAbort?.abort() }
 const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
 /** Set while the left panel edits one scene group's source instead of the document. */
 const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
+// A completed worker must not publish a superseded source snapshot.
+watch([code, fileName, () => groupEdit.value?.source], cancelSolidBuild, { flush: 'sync' })
 const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
 
 function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
@@ -592,11 +595,18 @@ const mainRay=(x:number,y:number)=>renderer?.worldRay(x,y)??null
 let mainPreserveGroup=false
 function mainSelectMany(indices:number[]){mainSelectedIndices.value=indices;mainPreserveGroup=true;try{renderer?.selectMesh(indices[0]??null)}finally{mainPreserveGroup=false}}
 let mainPreviewActive = false
+let sweepViewportActive=false
+const sweepViewportProgress=ref<{sections:number;deviation:number;budget:number;profileRegularityCertified?:boolean;wallRegularityCertified?:boolean|null;certifiedErrorUpper?:number|null;continuousErrorUpper?:number;phaseResolved?:boolean;frameTransportCertified?:boolean}|null>(null)
 let mainEditSelection: {source:string;index:number}|null = null
 function previewMainGeometry(meshes:MeshData[]|null) {
  if(meshes){mainPreviewActive=true;renderer?.setMeshes(meshes)}
  else if(mainPreviewActive){try{renderer?.setMeshes(sceneMeshes.value);renderer?.setMeshVisibilityBatch(meshVisibility.value);renderer?.selectMesh(selectedMesh.value)}finally{mainPreviewActive=false}}
 }
+function clearSweepViewportPreview(){
+ sweepViewportProgress.value=null
+ if(sweepViewportActive){previewMainGeometry(null);sweepViewportActive=false}
+}
+watch(code,clearSweepViewportPreview,{flush:'sync'})
 function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  try {
   if(source.length>MAX_WORKSPACE_SOURCE_LENGTH)throw Error('source limit')
@@ -609,7 +619,7 @@ function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  } catch(e){error.value=e instanceof Error?e.message:String(e)}
 }
 function appendMainPrimitive(source:string) {
- if(isModelGraphText(code.value)){error.value=lang.value==='ru'?'Примитивы доступны в документе OpenSCAD.':'Primitives require an OpenSCAD document.';return}
+ if(isRushFrontend(code.value)){error.value=lang.value==='ru'?'Примитивы доступны в документе OpenSCAD.':'Primitives require an OpenSCAD document.';return}
  commitMainSource(code.value+'\n'+source,-1)
 }
 function undoMainGeometry(redo=false){
@@ -670,6 +680,12 @@ const paletteOpen = ref(false)
 const shortcutHelpOpen = ref(false)
 const canPreviousView = computed(() => viewportState.value.canGoBack)
 const commandMru = ref<string[]>(readCommandMru())
+const sweepFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
+const sweepPatchFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepPatchViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
+const sweepBodyFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepBodyBoundaryViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
 const sceneMeshes = computed({
   get: () => sceneState.value.meshes,
   set: (meshes: MeshData[]) => { sceneController.update({ meshes }) },
@@ -809,20 +825,20 @@ async function runGeometryAnalysis() {
   }
 }
 
-// The modelgraph compiler pulls the geometry kernel chunk; load it only when a
-// modelgraph-text document is actually open.
+// The rush compiler pulls the geometry kernel chunk; load it only when a
+// rush-frontend document is actually open.
 const compactControls = ref<{parameters: import('./services/scadCustomizer').CustomizerParameter[]; errors: string[]}>({parameters: [], errors: []})
 watchEffect(async () => {
   const source = code.value
-  if (!isModelGraphText(source)) {
+  if (!isRushFrontend(source)) {
     compactControls.value = {parameters: [], errors: []}
     return
   }
-  const controls = (await import('./services/modelGraphText')).modelGraphTextControls(source)
+  const controls = (await import('./services/rushFrontend')).rushFrontendControls(source)
   if (code.value === source) compactControls.value = controls
 })
 const customizerParameters = computed(() => {
-  if (!isModelGraphText(code.value)) return extractCustomizerParameters(code.value)
+  if (!isRushFrontend(code.value)) return extractCustomizerParameters(code.value)
   return compactControls.value.parameters
 })
 const presetName = ref('')
@@ -1031,6 +1047,9 @@ let noticeTimeout: ReturnType<typeof setTimeout> | null = null
 const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 let resizing = false
+const topbarRef = ref<HTMLElement | null>(null)
+const topbarHeight = ref(52)
+let topbarResizeObserver: ResizeObserver | null = null
 let layoutResizeObserver: ResizeObserver | null = null
 let editorResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
@@ -1040,6 +1059,12 @@ const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 onMounted(async () => {
+  if (topbarRef.value) {
+    const syncTopbarHeight = () => { topbarHeight.value = topbarRef.value!.getBoundingClientRect().height }
+    syncTopbarHeight()
+    topbarResizeObserver = new ResizeObserver(syncTopbarHeight)
+    topbarResizeObserver.observe(topbarRef.value)
+  }
   setStorageFailureHandler(reportStorageFailure)
   themeMediaQuery.addEventListener('change', handleSystemThemeChange)
   applyPreferences()
@@ -1138,6 +1163,7 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
     sceneController.applyRendererHover(hit)
   }
   instance.onMeasurementChange = (value, active) => {
+    if (viewportController.isRecovering || mainPreviewActive) return
     sceneController.applyRendererMeasurement(value, active)
   }
   instance.onCameraHistoryChange = available => { viewportController.applyHistoryAvailability(available) }
@@ -1153,6 +1179,8 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
 }
 
 onUnmounted(() => {
+  topbarResizeObserver?.disconnect()
+  topbarResizeObserver = null
   solidBuildAbort?.abort()
   cancelGeometryAnalysis()
   layoutResizeObserver?.disconnect()
@@ -1592,6 +1620,13 @@ function startBuildCoordinator() {
     // reach a yield point.
     supersedeGraceMs: 300,
     onPublish: handleGeometryResponse,
+    onSweepPreview:preview=>{
+      if(preview.documentRevision!==buildGeneration||!renderer)return
+      if(mainPreviewActive&&!sweepViewportActive)return
+      previewMainGeometry(preview.meshes)
+      sweepViewportActive=true
+      sweepViewportProgress.value={sections:preview.sections,deviation:preview.sampledControlDeviation,budget:preview.budget,profileRegularityCertified:preview.profileRegularityCertified,wallRegularityCertified:preview.wallRegularityCertified,certifiedErrorUpper:preview.certifiedErrorUpper,continuousErrorUpper:preview.continuousErrorUpper,phaseResolved:preview.phaseResolved,frameTransportCertified:preview.frameTransportCertified}
+    },
     workerSilenceTimeoutMs: 30_000,
     onWorkerRestart: () => showNotice(t('workerRestarted')),
     onStateChange: handleBuildState,
@@ -1617,6 +1652,7 @@ function doRender(quality: GeometryQuality = 'full') {
 }
 
 function handleBuildState(state: BuildCoordinatorState) {
+  if(state.status!=='building')clearSweepViewportPreview()
   if (buildCoordinator) {
     const current = buildCoordinator.diagnostics
     buildCounters.value = {
@@ -1644,6 +1680,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
   if (response.documentRevision !== buildGeneration) return
+  clearSweepViewportPreview()
   renderDuration.value = response.durationMs
   const source = buildSources.get(response.documentRevision) ?? code.value
   for (const revision of buildSources.keys()) {
@@ -2654,13 +2691,13 @@ function readCommandMru(): string[] {
   const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
-function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
+function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.r.*$/i, '.r').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 
 <template>
-  <div class="app" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
-    <nav class="topbar" aria-label="Application" :inert="functionReferenceOpen">
+  <div class="app" :style="{ '--workspace-top': topbarHeight + 'px' }" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
+    <nav ref="topbarRef" class="topbar" aria-label="Application" :inert="functionReferenceOpen">
       <div class="topbar-left">
         <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>
@@ -2765,7 +2802,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     <main
       ref="mainRef"
       class="main"
-      :class="{ 'editor-drawer': editorOpen }"
+      :class="{ 'editor-drawer': editorOpen, 'sweep-source-preview': editorOpen && isRushFrontend(code) && (code.includes('progressive_sweep') || code.includes('miter_sweep')) }"
       :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
     >
       <section
@@ -2802,6 +2839,9 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
             :maxlength="100000"
           />
+        </div>
+        <div v-if="error" class="message error" role="alert" aria-live="assertive">
+          {{ error }}
         </div>
         <p class="group-hint">{{ lang === 'ru'
           ? 'Строится как точные тела. hull, projection, offset и polyhedron точной формы не имеют и будут отклонены.'
@@ -2978,6 +3018,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </button>
           <ModelingGridControls :locale="lang" />
+          <details class="viewport-material-menu">
+            <summary :aria-label="lang === 'ru' ? 'Материал' : 'Material'">{{ lang === 'ru' ? 'Материал' : 'Material' }}</summary>
           <MaterialControls
             :locale="lang"
             :shading-model="shadingModel"
@@ -2998,6 +3040,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             @update:shadows-enabled="setShadows"
             @apply-preset="applyMaterialPreset"
           />
+          </details>
           <button
             ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
             :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"
@@ -3063,6 +3106,107 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :aria-label="t('viewport')"
           @keydown="handleViewportKey"
         />
+        <div v-if="sweepBodyFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-body-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepBodyFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Непрерывная ошибка границы sweep-тела' : 'Continuous sweep body boundary error' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            <span v-if="evidence.errorUpper !== null"> · {{ lang === 'ru' ? 'оценка' : 'bound' }} ≈ {{ evidence.errorUpper > 0 && evidence.errorUpper < 0.000001 ? evidence.errorUpper.toExponential(3) : formatNumber(evidence.errorUpper, 6) }} mm</span>
+            <span v-if="evidence.withinBudget === false"> · {{ lang === 'ru' ? 'превышает допуск' : 'exceeds tolerance' }}</span>
+          </div>
+        </div>
+        <div v-if="sweepPatchFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepPatchFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Ошибка sweep-поверхностей относительно исходного переноса профиля' : 'Sweep patch error relative to original profile transport' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            <template v-if="evidence.errorUpper !== null"> · ≤{{ evidence.errorUpper.toPrecision(6) }} / {{ evidence.budget?.toPrecision(6) }} mm</template>
+            <template v-if="evidence.sourceFrameC2Certified !== null && evidence.closedSourceFrameC2Certified === null">
+              · {{ lang === 'ru' ? 'C2 исходного кадра' : 'Original frame C2' }}:
+              {{ evidence.sourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.closedSourceFrameC2Certified !== null">
+              · {{ lang === 'ru' ? 'C2 замкнутого исходного кадра' : 'Closed source frame C2' }}:
+              {{ evidence.closedSourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.closedSourceFrameC1Certified !== null">
+              · {{ lang === 'ru' ? 'C1 замкнутого исходного кадра' : 'Closed source frame C1' }}:
+              {{ evidence.closedSourceFrameC1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.decompositionG2Certified !== null">
+              · {{ lang === 'ru' ? 'G2 между частями одного профиля' : 'G2 between parts of one profile' }}:
+              {{ evidence.decompositionG2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+              <template v-if="evidence.decompositionJoinCount !== null"> ({{ evidence.decompositionJoinCount }})</template>
+            </template>
+            <template v-if="evidence.decompositionG1Certified !== null && evidence.decompositionG2Certified !== true">
+              · {{ lang === 'ru' ? 'G1 между частями одного профиля' : 'G1 between parts of one profile' }}:
+              {{ evidence.decompositionG1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.sourceFrameRegularityCertified !== null">
+              · {{ lang === 'ru' ? 'Регулярность исходного кадра' : 'Original frame regularity' }}:
+              {{ evidence.sourceFrameRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            · {{ lang === 'ru' ? 'Регулярность поверхностей' : 'Surface regularity' }}:
+            {{ evidence.surfaceRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            · {{ lang === 'ru' ? 'Область: сохранённые поверхности' : 'Scope: retained patches' }}
+          </div>
+        </div>
+        <div v-if="sweepFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Геометрия тела' : 'Solid geometry' }}:
+            {{ evidence.solidGeometryCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+            {{ lang === 'ru' ? 'Непрерывная ошибка границы' : 'Continuous boundary error' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+            {{ lang === 'ru' ? 'Регулярность профиля / стен' : 'Profile / wall regularity' }}:
+            {{ evidence.profileRegularityCertified ? '✓' : '?' }} / {{ evidence.wallRegularityCertified ? '✓' : '?' }}
+            <template v-if="evidence.profileG2Certified !== undefined">
+              · {{ lang === 'ru' ? 'G1 / G2 стыков профиля' : 'Profile joins G1 / G2' }}:
+              {{ evidence.profileG1Certified ? '✓' : '?' }} / {{ evidence.profileG2Certified ? '✓' : '?' }} ({{ evidence.profileSeamCount }})
+              · {{ lang === 'ru' ? 'Стыки вдоль пути' : 'Path station joins' }}: {{ evidence.stationContinuity ?? 'C0' }}
+              <template v-if="evidence.capContinuity === 'C0'"> · {{ lang === 'ru' ? 'Стыки крышек' : 'Cap joins' }}: C0</template>
+            </template>
+            <template v-if="evidence.boundaryErrorUpper !== null">
+              · {{ lang === 'ru' ? 'Оценка ошибки границы' : 'Boundary error bound' }}:
+              ≈{{ evidence.boundaryErrorUpper.toPrecision(6) }} mm
+              <template v-if="evidence.boundaryErrorBudget !== null">
+                / {{ evidence.boundaryErrorBudget.toPrecision(6) }} mm
+              </template>
+              · {{ evidence.boundaryErrorWithinBudget === true ? (lang === 'ru' ? 'в допуске' : 'within budget') : evidence.boundaryErrorWithinBudget === false ? (lang === 'ru' ? 'выше допуска' : 'over budget') : (lang === 'ru' ? 'допуск не подтверждён' : 'budget unproved') }}
+            </template>
+          </div>
+        </div>
+        <div v-if="sweepViewportProgress" class="sweep-preview-status" role="status" aria-live="polite">
+          {{ lang === 'ru' ? 'Предпросмотр стен' : 'Wall preview' }} ·
+          {{ sweepViewportProgress.sections }} {{ lang === 'ru' ? 'сечений' : 'sections' }} ·
+          {{ lang === 'ru' ? 'Контрольное отклонение' : 'Sampled deviation' }}
+          {{ formatNumber(sweepViewportProgress.deviation, 6) }} /
+          {{ formatNumber(sweepViewportProgress.budget, 6) }} mm
+          <span v-if="sweepViewportProgress.certifiedErrorUpper !== undefined"> ·
+            {{ sweepViewportProgress.certifiedErrorUpper === null
+              ? (lang === 'ru' ? 'Граница ошибки интерполяции не доказана' : 'Section interpolation bound unproved')
+              : (lang === 'ru' ? 'Доказанная граница ошибки интерполяции' : 'Certified section interpolation bound') }}
+            <template v-if="sweepViewportProgress.certifiedErrorUpper !== null">:
+              {{ formatNumber(sweepViewportProgress.certifiedErrorUpper, 6) }} mm
+            </template>
+          </span>
+          <span v-else-if="sweepViewportProgress.continuousErrorUpper !== undefined"> ·
+            {{ lang === 'ru' ? 'Непрерывная оценка' : 'Continuous estimate' }}:
+            {{ formatNumber(sweepViewportProgress.continuousErrorUpper, 6) }} mm
+            ({{ lang === 'ru' ? 'без сертификации округления' : 'rounding uncertified' }})
+          </span>
+          <span v-if="sweepViewportProgress.profileRegularityCertified !== undefined"> ·
+            {{ sweepViewportProgress.profileRegularityCertified
+              ? (lang === 'ru' ? 'Касательные профиля доказаны' : 'Profile tangents certified')
+              : (lang === 'ru' ? 'Касательные профиля не доказаны' : 'Profile tangents unproved') }}
+          </span>
+          <span v-if="sweepViewportProgress.wallRegularityCertified !== undefined"> ·
+            {{ sweepViewportProgress.wallRegularityCertified === null
+              ? (lang === 'ru' ? 'Регулярность стен ожидает допуска ошибки' : 'Wall regularity awaits error admission')
+              : sweepViewportProgress.wallRegularityCertified
+                ? (lang === 'ru' ? 'Jacobian стен доказан' : 'Wall Jacobian certified')
+                : (lang === 'ru' ? 'Jacobian стен не доказан' : 'Wall Jacobian unproved') }}
+          </span>
+          <span v-if="sweepViewportProgress.frameTransportCertified === false"> · {{ lang === 'ru' ? 'Не доказан перенос кадров' : 'Frame transport unproved' }}</span>
+          <span v-if="sweepViewportProgress.phaseResolved === false"> · {{ lang === 'ru' ? 'Уточняется фаза twist' : 'Resolving twist phase' }}</span>
+        </div>
         <div v-if="!gpuOk" class="no-gpu" role="alert">
           <span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span>
           <button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button>
@@ -3152,10 +3296,10 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           />
           </div>
           <div v-else-if="dockTab === 'svg'" class="dock-scroll" :ref="revealDockDetails">
-          <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
+          <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isRushFrontend(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
           </div>
           <div v-else-if="dockTab === 'photo'" class="dock-scroll" :ref="revealDockDetails">
-          <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
+          <PhotogrammetryPanel :locale="lang" :can-append="!isRushFrontend(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
           </div>
           <div v-else-if="dockTab === 'perf'" class="dock-scroll" :ref="revealDockDetails">
 <details class="performance-panel" open>
@@ -3267,10 +3411,11 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @execute="executeCommand"
     />
     <DirectModeler
+      :style="{ top: topbarHeight + 'px' }"
       @backend="solidGpuActive = $event"
       :open="directModelerOpen"
       :locale="lang"
-      :can-append="!isModelGraphText(code)"
+      :can-append="!isRushFrontend(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
       :append-bodies="solidAppendBodies"
@@ -3300,7 +3445,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     <FunctionReference
       :open="functionReferenceOpen"
       :locale="lang"
-      :language="isModelGraphText(code) ? 'modelgraph' : 'openscad'"
+      :language="isRushFrontend(code) ? 'rush' : 'openscad'"
       :initial-query="functionReferenceQuery"
       @close="functionReferenceOpen = false"
     />
@@ -3397,11 +3542,13 @@ button, select { color: inherit; }
 
 /* Top bar */
 .topbar {
-  z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px;
   padding: 0 12px 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .topbar-right { justify-content: flex-end; }
+.topbar-left .file-menu { min-width: 0; }
+.topbar-left .file-chip { max-width: min(320px, 100%); }
 .logo { color: var(--accent); flex-shrink: 0; }
 .brand { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
 .topbar-divider { width: 1px; height: 20px; background: var(--border); margin-inline: 4px; }
@@ -3483,13 +3630,13 @@ button, select { color: inherit; }
 .mode-switch button.active { background: var(--hover); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 600; }
 
 /* Layout */
-.no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
+.no-gpu { position: absolute; z-index: 1; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 /* With no Code workspace the source opens over the active one. The viewport stays
    laid out off to the side: hiding it would resize its canvas to zero. */
 .main.editor-drawer {
   position: fixed;
-  inset: var(--topbar-h) auto 28px 0;
+  inset: var(--workspace-top, var(--topbar-h)) auto 28px 0;
   z-index: 30;
   width: min(560px, 82vw);
   border-right: 1px solid var(--border);
@@ -3504,6 +3651,24 @@ button, select { color: inherit; }
   pointer-events: none;
 }
 .main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
+.main.editor-drawer.sweep-source-preview { overflow: visible; }
+.main.editor-drawer.sweep-source-preview > .canvas-panel {
+  visibility: visible;
+  pointer-events: auto;
+  width: calc(100vw - min(560px, 82vw));
+  background: var(--canvas-bg);
+}
+
+@media (max-width: 900px) {
+  .main.editor-drawer.sweep-source-preview { width: 100vw; overflow: hidden; }
+  .main.editor-drawer.sweep-source-preview .editor-panel {
+    height: 45%; min-height: 0; flex: none;
+  }
+  .main.editor-drawer.sweep-source-preview > .canvas-panel {
+    inset: 45% 0 0 0; width: 100%; min-height: 0; height: auto;
+  }
+}
+
 .source-toggle.active { color: var(--accent); border-color: var(--accent); }
 .group-editor { display: flex; flex-direction: column; min-height: 0; }
 .group-name-input { flex: 1; min-width: 0; padding: 5px 8px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: 5px; font: inherit; }
@@ -3751,8 +3916,14 @@ button, select { color: inherit; }
 }
 
 @media (max-width: 800px) {
-  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 44px; padding-block: 6px; }
-  .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
+  .topbar { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 0; height: auto; min-height: 44px; padding-block: 6px; }
+  .topbar-left { grid-column: 1; grid-row: 1; }
+  .topbar-left .brand, .topbar-divider { display: none; }
+  .topbar-left .file-menu { min-width: 0; }
+  .topbar-left .file-chip { min-width: 0; max-width: 100%; }
+  .source-toggle { grid-column: 2; grid-row: 1; }
+  .topbar-right { grid-column: 3; grid-row: 1; }
+  .mode-switch { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
   .mode-switch button { flex: 1; }
   .main { flex-direction: column; overflow: auto; }
   .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; border-right: 0; }
@@ -3820,4 +3991,27 @@ button, select { color: inherit; }
 
 <style scoped>
 .code-editor :deep(.syntax-occurrence) { background: color-mix(in srgb, var(--accent) 23%, transparent); outline: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 2px; }
+</style>
+
+<style scoped>
+.sweep-preview-status {
+ position:absolute;
+ z-index:6;
+ bottom:40px;
+ left:12px;
+ max-width:calc(100% - 24px);
+ padding:6px 10px;
+ border:1px solid var(--border);
+ border-radius:6px;
+ background:var(--surface-raised);
+ color:var(--text);
+ font-size:12px;
+ pointer-events:none;
+}
+</style>
+
+<style scoped>
+.viewport-material-menu { position: relative; font-size: 11px; }
+.viewport-material-menu > summary { cursor: pointer; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+.viewport-material-menu :deep(.material-controls) { position: absolute; top: calc(100% + 6px); right: 0; z-index: 35; width: min(280px, calc(100vw - 48px)); padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px #0002; }
 </style>

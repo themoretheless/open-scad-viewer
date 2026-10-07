@@ -1,7 +1,16 @@
 //! Explicit mesh-to-NURBS conversion. PN patches approximate a chosen smoothing;
 //! they do not recover unknown original CAD surfaces or prove global continuity.
 use super::*;
-use polygon_core::solid::proximity::{closest_triangle, valid_source};
+use mesh_query::proximity::closest_triangle;
+pub(crate) fn valid_source(mesh: &Mesh, max_triangles: usize) -> Result<Mesh> {
+    let result = mesh_query::proximity::valid_source(&mesh.view(), max_triangles)
+        .map_err(legacy_mesh_error)?;
+    Ok(Mesh {
+        positions: result.positions,
+        indices: result.indices,
+        uv: None,
+    })
+}
 type Point = math_core::V3;
 use math_core::{cross, dot, norm, sub};
 #[derive(Clone, Copy)]
@@ -268,11 +277,18 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
 /// Tessellate individual patches and sew matching boundary samples. No B-rep
 /// is inferred for smooth patches; the source face IDs remain explicit.
 pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tessellation> {
-    if set.patches.is_empty()
-        || set.patches.len() > 2048
-        || set.face_ids.len() != set.patches.len()
+    tessellate_surfaces(&set.patches, &set.face_ids, segments)
+}
+pub fn tessellate_surfaces(
+    patches: &[Surface],
+    face_ids: &[usize],
+    segments: usize,
+) -> Result<brep::Tessellation> {
+    if patches.is_empty()
+        || patches.len() > 2048
+        || face_ids.len() != patches.len()
         || !(1..=16).contains(&segments)
-        || set.patches.len().saturating_mul(segments * segments * 2) > 20_000
+        || patches.len().saturating_mul(segments * segments * 2) > 20_000
     {
         return Err(input("NURBS patch tessellation budget exceeded"));
     }
@@ -282,7 +298,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
         uv: None,
     };
     let mut ids = Vec::new();
-    for (i, s) in set.patches.iter().enumerate() {
+    for (i, s) in patches.iter().enumerate() {
         let built = tessellate_nurbs(
             s,
             &tessellation::Options {
@@ -293,7 +309,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
             },
         )?;
         let offset = mesh.positions.len() / 3;
-        ids.extend(vec![set.face_ids[i]; built.mesh.indices.len() / 3]);
+        ids.extend(vec![face_ids[i]; built.mesh.indices.len() / 3]);
         mesh.indices
             .extend(built.mesh.indices.iter().map(|j| j + offset));
         mesh.positions.extend(built.mesh.positions);
@@ -425,7 +441,7 @@ pub struct SubdivisionFit {
     pub iterations: usize,
     pub vertex_residual_before_mm: f64,
     pub vertex_residual_after_mm: f64,
-    pub deviation: polygon_core::solid::proximity::Deviation,
+    pub deviation: mesh_query::Deviation,
     pub correspondence: &'static str,
 }
 impl value_codec::Serialize for SubdivisionFit {
@@ -446,7 +462,7 @@ impl value_codec::Serialize for SubdivisionFit {
         );
         object.insert(
             "deviation".into(),
-            value_codec::Serialize::to_value(&self.deviation),
+            json!({"sampledMaxMm":self.deviation.sampled_max_mm,"sampledRmsMm":self.deviation.sampled_rms_mm,"sampleCount":self.deviation.sample_count,"errorBoundCertified":self.deviation.error_bound_certified}),
         );
         object.insert(
             "correspondence".into(),
@@ -476,10 +492,11 @@ pub fn mesh_to_subdivision(mesh: &Mesh, iterations: usize) -> Result<Subdivision
             .collect(),
     )?;
     let preview = crate::mesh_from_triangles(cage.subdivide(1)?.triangulate()?.0);
-    polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
+    mesh_query::sample_deviation(&source.view(), &preview.view()).map_err(legacy_mesh_error)?;
     let fit = subdivision_core::fit(&cage, iterations)?;
     let output = crate::mesh_from_triangles(fit.cage.subdivide(1)?.triangulate()?.0);
-    let deviation = polygon_core::solid::proximity::sample_deviation(&source, &output)?;
+    let deviation =
+        mesh_query::sample_deviation(&source.view(), &output.view()).map_err(legacy_mesh_error)?;
     Ok(SubdivisionFit {
         cage: fit.cage,
         iterations: fit.iterations,
@@ -506,7 +523,7 @@ mod tests {
         assert!(output.built.report.closed);
         assert!((output.built.report.signed_volume_mm3 - 8.).abs() < 1e-9);
         assert!(
-            polygon_core::solid::proximity::sample_deviation(&mesh, &output.built.mesh)
+            mesh_query::sample_deviation(&mesh.view(), &output.built.mesh.view())
                 .unwrap()
                 .sampled_max_mm
                 < 1e-9

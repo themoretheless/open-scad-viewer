@@ -401,5 +401,5 @@
       "note": "Current bytes are newly bound in v19; v18 remains archived. Re-freeze the committed f64 import ABI, Float64Array parser path and raster-core series; rebind the rebuilt dual-format geometry kernel via own-rust-cad-v11; retarget GitHub executors to v36; preserve the finite G1 contract and reset all clean-run work."
     }
   ],
-  "previousFingerprintSha256": "2dbc8fd89e57620112638d8d57714aef555470d6d89b3b9c1ee886168ca796ab"
+  "previousFingerprintSha256": "874ad0e4e6c5b8469fe535de09c4d09b36fc8c5a95222fd97fd607a175c3c740"
 }

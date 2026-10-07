@@ -116,7 +116,7 @@ Geometry WASM is unchanged at SHA256
 `bb97e78ae87b5fa690fc474e76ac413b704b737cec3e319e4b548e0d92ac47d2`.
 The language artifact was rebuilt from current source: its size stays 1,341,106
 bytes, with 40 differing bytes versus the previously tracked artifact. The
-intervening `modelgraph-runtime` source difference is formatting-only, shifting
+intervening `rush-runtime` source difference is formatting-only, shifting
 line positions. Its new SHA256 is
 `541a186889fc102a8f26486c614a4a7c2ea6d9261fbaf72cf4cd795e186109c4`.
 The runtime-manifest audit still exits 1 for the known qualified-v1 attribution

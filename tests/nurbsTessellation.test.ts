@@ -110,11 +110,11 @@ describe('own NURBS parameter-domain tessellation', () => {
   it('writes sampled STL facets with normals only for a closed mesh', () => {
     const mesh = thickenNurbsMesh(tessellateNurbsSurface(plane, { segmentsU: 2, segmentsV: 2 }), [0, 0, 2])
     const stl = exportNurbsStl(mesh)
-    expect(stl.startsWith('solid modelgraph_nurbs_sampled\n')).toBe(true)
+    expect(stl.startsWith('solid rush_nurbs_sampled\n')).toBe(true)
     expect(stl.match(/facet normal/g)).toHaveLength(mesh.report.triangleCount)
     expect(stl.match(/vertex /g)).toHaveLength(mesh.report.triangleCount * 3)
     expect(stl).not.toMatch(/NaN|Infinity/)
-    expect(stl.endsWith('endsolid modelgraph_nurbs_sampled\n')).toBe(true)
+    expect(stl.endsWith('endsolid rush_nurbs_sampled\n')).toBe(true)
     checkSolid(mesh, 200)
   })
 

@@ -42,12 +42,21 @@ fn lens(a: f64, b: f64, distance: f64) -> f64 {
                 .sqrt()
 }
 
+
 fn roundtrip(model: &Model) -> Model {
+    model.validate().unwrap();
+    #[cfg(feature = "codec")]
+    {
+
     let encoded = value_codec::to_string(model).unwrap();
     let decoded: Model = value_codec::from_str(&encoded).unwrap();
     decoded.validate().unwrap();
     assert_eq!(encoded, value_codec::to_string(&decoded).unwrap());
     decoded
+
+    }
+    #[cfg(not(feature = "codec"))]
+    { model.clone() }
 }
 
 fn check(model: &Model, volume: f64, bodies: usize, cap_holes: &[usize]) {
@@ -176,6 +185,8 @@ fn decoded_curved_union_can_be_reused_as_a_boolean_operand() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn near_coincident_curved_boundaries_fail_explicitly_without_mutating_inputs() {
     let a = cylinder(3., [0., 0.], 0., 2.);
     let b = cylinder(3., [1e-10, 0.], 0., 2.);

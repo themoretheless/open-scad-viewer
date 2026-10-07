@@ -58,6 +58,8 @@
 //! parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one
 //! degree-1 line per revolution quadrant patch of the profile row. Nothing
 //! here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
@@ -364,24 +366,6 @@ pub fn intersect_cylinder_torus(
             .push(circle_component(&cylinder, &torus, z, site)?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for CylinderTorusComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                cylinder_uv,
-                torus_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"cylinderUv":cylinder_uv,"torusUv":torus_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

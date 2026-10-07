@@ -45,11 +45,11 @@ export default defineConfig({
             { name: 'binary-codec', test: /(src[\\/]core[\\/]sha256\.ts|src[\\/]services[\\/](wasmPacking|wasmBase91|valueBinaryCodec)\.ts)$/ },
             // The entry graph needs only this regex; keep it out of the lazy
             // compiler chunk so the geometry kernel is not preloaded.
-            { name: 'detect', test: /src[\\/]services[\\/]modelGraphTextDetect\.ts$/ },
+            { name: 'detect', test: /src[\\/]services[\\/]rushFrontendDetect\.ts$/ },
             // WASM host plumbing is shared by every kernel. Grouped with the
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
-            { name: 'modelgraph-text', test: /src[\\/]services[\\/]modelGraphText\.ts$/ },
+            { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
             {

@@ -14,7 +14,7 @@
  * unaffected, so the same source still opens in Mesh.
  *
  * Every primitive, transform and curve spelling lives in `brepGraph.ts`, which the
- * ModelGraph Text adapter shares.
+ * Rush adapter shares.
  */
 import type { CadKernelHandle, CadKernelOps } from '../cadKernelOps'
 import {
@@ -106,10 +106,7 @@ export function createBrepRecordingKernelOps(
     },
 
     rectangle(size, center) {
-      const [x, y] = size
-      const [x0, y0] = center ? [-x / 2, -y / 2] : [0, 0]
-      const ring: [number, number][] = [[x0, y0], [x0 + x, y0], [x0 + x, y0 + y], [x0, y0 + y]]
-      return tag(base.rectangle(size, center), { kind: 'profile', loops: [graph.polylineLoop(ring)] })
+      return tag(base.rectangle(size, center), { kind: 'profile', loops: [graph.rectangleLoop(size, center)] })
     },
 
     circle(radius, radialSegments) {
@@ -181,6 +178,13 @@ export function createBrepRecordingKernelOps(
         graph.transform(value, [...rows, [0, 0, 0, 1]] as [number[], number[], number[], number[]]))
     },
 
+    transform3Projective(input, matrix) {
+      // Projective transforms keep the authored homogeneous fourth row.
+      const rows = [0, 1, 2, 3].map(row => [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? (row === column ? 1 : 0)))
+      return derive(base.transform3Projective(input, matrix), [input], ([value]) =>
+        graph.transform(value, rows as [number[], number[], number[], number[]]))
+    },
+
     translateZ(input, distance) {
       return derive(base.translateZ(input, distance), [input], ([value]) =>
         graph.transform(value, translationMatrix(0, 0, distance)))
@@ -203,6 +207,7 @@ export function createBrepRecordingKernelOps(
     offset(input, distance, join, miterLimit, circularSegments) {
       return tag(base.offset(input, distance, join, miterLimit, circularSegments), refuse('offset'))
     },
+    minkowskiSum2(inputs) { return tag(base.minkowskiSum2(inputs), refuse('minkowski')) },
     minkowskiSum3(left, right) { return tag(base.minkowskiSum3(left, right), refuse('minkowski')) },
     boolean2(operation, inputs) { return tag(base.boolean2(operation, inputs), refuse(`2D ${operation}`)) },
     transform2(input, matrix) { return tag(base.transform2(input, matrix), refuse('2D transform')) },

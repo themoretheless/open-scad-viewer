@@ -295,6 +295,13 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     expect(files.map(file => relative(rootPath, file).split(sep).join('/')).sort()).toEqual([
       'components/CadQuantityInput.vue',
       'components/CommandPalette.vue',
+      'components/CoonsPreparationControls.ts',
+      'components/CpuOrbitCanvas.vue',
+      'components/CurrentCurveChainInspection.vue',
+      'components/CurveOffsetConstructionInfo.ts',
+      'components/CurveOffsetControls.ts',
+      'components/CurveOffsetPreview.ts',
+      'components/CurvePointTrimControls.vue',
       'components/CustomizerPanel.vue',
       'components/ExampleGallery.vue',
       'components/FunctionReference.vue',
@@ -304,8 +311,12 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'components/ModelingGridControls.vue',
       'components/SceneObjectControls.vue',
       'components/SceneOutliner.vue',
+      'components/SceneVirtualList.vue',
+      'components/ShellDistanceSummary.vue',
       'components/SketchDimensionPanel.vue',
+      'components/SolidVolumeDistance.vue',
       'components/ViewCube.vue',
+      'components/VrControls.vue',
       'components/cadPanels.types.ts',
       'core/boundedSceneEntityId.ts',
       'core/build.ts',
@@ -418,6 +429,10 @@ function fakeKernel(options: FakeKernelOptions = {}): {
       return result(2)
     },
     transform3: () => {
+      if (options.failTransform) throw new Error('fake transform failure')
+      return result(3)
+    },
+    transform3Projective: () => {
       if (options.failTransform) throw new Error('fake transform failure')
       return result(3)
     },

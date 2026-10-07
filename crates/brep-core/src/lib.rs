@@ -9,6 +9,10 @@
     yeet_expr
 )]
 #![allow(unused_features)]
+mod rational_identity;
+#[cfg(feature = "codec")]
+mod serialization;
+
 use nurbs_core::{
     Error, Result,
     curve::Curve,
@@ -19,9 +23,15 @@ use std::collections::{BTreeMap, BTreeSet};
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
 
 pub mod analysis;
+pub mod aag;
+pub mod direct_edit;
+pub mod aag_fillets;
+pub mod aag_features;
+pub mod keypoints;
 pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
+pub mod feature_family;
 pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
@@ -30,9 +40,18 @@ mod imprint_assembly;
 mod sphere_mate;
 pub mod tolerant_boolean;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
+mod body_edit;
+pub mod boundary_agreement;
+pub mod watertight;
+pub mod boundary_embedding;
+pub mod boundary_hull_contact;
 pub mod close_topology;
 pub mod coverage_verifier;
 mod cylinder_sphere_boolean;
+pub mod face_contact;
+pub mod face_contacts;
+pub mod face_domain;
+pub mod face_injectivity;
 pub mod iges_interchange_v2;
 pub mod imprint_pipeline;
 pub mod intersections;
@@ -43,55 +62,59 @@ mod nurbs_step_shared;
 pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
 pub mod operations;
-mod body_edit;
 pub mod planar_trim;
-pub mod face_contact;
-pub mod face_contacts;
-pub mod shared_boundary;
-pub mod face_domain;
-pub mod face_injectivity;
-pub mod self_intersection;
-pub mod shell_distance;
-pub mod solid_distance;
-pub mod shell_relation;
-pub mod shell_nesting;
-pub mod shell_orientation;
-pub mod ray_parity;
 pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod profile_imprint;
+pub mod ray_parity;
+pub mod self_intersection;
+pub mod shared_boundary;
+pub mod sweep_cap_contacts;
+pub mod sweep_retained_caps;
+pub mod sweep_retained_walls;
+pub mod sweep_retained_charts;
+pub mod sweep_retained_decomposition;
+pub mod sweep_smoothness;
+pub mod sweep_miter_layout;
+pub mod sweep_station_reconstruction;
+pub mod sweep_affine_boundary;
+pub mod sweep_miter_owned;
+pub mod shell_distance;
+pub mod shell_nesting;
+pub mod shell_orientation;
+pub mod shell_relation;
 pub mod sketch;
 pub mod solid_audit;
-pub mod boundary_agreement;
-pub mod boundary_embedding;
-pub mod boundary_hull_contact;
-pub mod volume_validity;
+pub mod solid_distance;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
+pub mod affine_lattice;
 pub mod trim_sew;
 pub mod uv_arrangement;
 mod uv_regions;
+pub mod volume_validity;
 pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
-    revolve_wire_angle, ruled_loft, sphere, torus, tube,
+    revolve_wire_angle, ruled_loft, periodic_section_loft, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, smooth_station_walls, SmoothStationWalls, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, progressive_profile_body, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult, EXACT_ANALYTIC_SHELL_CAPABILITY,
-    EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
-    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
-    EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+    EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_BENT_RMF_SWEEP_CAPABILITY,
+    EXACT_CONVEX_CHAMFER_CAPABILITY, EXACT_CONVEX_PRISM_FILLET_CAPABILITY,
+    EXACT_MULTI_SECTION_LOFT_CAPABILITY, EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY,
+    EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
     EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_bent_rmf_sweep,
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
-    exact_analytic_shell, exact_annular_fillet, exact_layered_prism_fillet, exact_convex_chamfer, exact_convex_prism_fillet, exact_simple_prism_fillet,
-    exact_valence3_corner_blend, exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep,
-    import_iges,
+    exact_analytic_shell, exact_annular_fillet, exact_convex_chamfer, exact_convex_prism_fillet,
+    exact_layered_prism_fillet, exact_simple_prism_fillet, exact_valence3_corner_blend,
+    exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep, import_iges,
 };
 pub use close_topology::{
     AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, CLOSE_TOPOLOGY_IGES_CAPABILITY,
@@ -122,9 +145,12 @@ pub use nurbs_ss_g6::{
     nurbs_boolean_transverse_bicubic,
 };
 pub use nurbs_ss_general::{
-    GENERAL_SS_CAPABILITY, GeneralBranchGraph, GeneralSsBranch, branch_graph_from_ss_report,
-    rational_traces_from_ss_report, verify_general_ss_branch_graph,
+    GENERAL_SS_CAPABILITY, GeneralBranchGraph, GeneralBranchKind, GeneralPcurve, GeneralSsBranch,
+    TraceCorrespondence, branch_graph_from_surface_intersection, rational_traces_from_branch_graph,
+    verify_general_ss_branch_graph,
 };
+#[cfg(feature = "codec")]
+pub use nurbs_ss_general::{branch_graph_from_ss_report, rational_traces_from_ss_report};
 pub use nurbs_step_interchange::{
     NURBS_STEP_BICUBIC_FACE_CAPABILITY, bicubic_open_face, export_nurbs_step, import_nurbs_step,
 };
@@ -164,7 +190,7 @@ pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
 pub type Loop = brep_topology::Loop<Curve>;
 pub type Face = brep_topology::Face<Surface>;
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopologyIds {
     pub vertices: Vec<TopoId>,
     pub edges: Vec<TopoId>,
@@ -182,200 +208,13 @@ pub struct TopologyLineageRecord {
     pub parents: Vec<TopoId>,
     pub children: Vec<TopoId>,
 }
-impl value_codec::Serialize for TopologyLineageRecord {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "operation".into(),
-            value_codec::Serialize::to_value(&self.operation),
-        );
-        object.insert(
-            "entityKind".into(),
-            value_codec::Serialize::to_value(&self.entity_kind),
-        );
-        object.insert(
-            "parents".into(),
-            value_codec::Serialize::to_value(&self.parents),
-        );
-        object.insert(
-            "children".into(),
-            value_codec::Serialize::to_value(&self.children),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for TopologyLineageRecord {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected topology lineage record"))?;
-        if object.len() != 4
-            || ["operation", "entityKind", "parents", "children"]
-                .iter()
-                .any(|key| !object.contains_key(*key))
-        {
-            return Err(value_codec::error(
-                "Topology lineage fields do not match the schema",
-            ));
-        }
-        let field = |key: &str| {
-            object
-                .get(key)
-                .cloned()
-                .ok_or_else(|| value_codec::error(format!("Missing field {key}")))
-        };
-        Ok(Self {
-            operation: value_codec::Deserialize::from_value(field("operation")?)?,
-            entity_kind: value_codec::Deserialize::from_value(field("entityKind")?)?,
-            parents: value_codec::Deserialize::from_value(field("parents")?)?,
-            children: value_codec::Deserialize::from_value(field("children")?)?,
-        })
-    }
-}
-impl value_codec::Serialize for TopologyIds {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "vertices".into(),
-            value_codec::Serialize::to_value(&self.vertices),
-        );
-        object.insert(
-            "edges".into(),
-            value_codec::Serialize::to_value(&self.edges),
-        );
-        object.insert(
-            "loops".into(),
-            value_codec::Serialize::to_value(&self.loops),
-        );
-        object.insert(
-            "faces".into(),
-            value_codec::Serialize::to_value(&self.faces),
-        );
-        object.insert(
-            "shells".into(),
-            value_codec::Serialize::to_value(&self.shells),
-        );
-        object.insert(
-            "bodies".into(),
-            value_codec::Serialize::to_value(&self.bodies),
-        );
-        object.insert(
-            "lineage".into(),
-            value_codec::Serialize::to_value(&self.lineage),
-        );
-        object.insert(
-            "changeSet".into(),
-            value_codec::Serialize::to_value(&self.change_set),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for TopologyIds {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected topologyIds object"))?;
-        if object.keys().any(|key| {
-            ![
-                "vertices",
-                "edges",
-                "loops",
-                "faces",
-                "shells",
-                "bodies",
-                "lineage",
-                "changeSet",
-            ]
-            .contains(&key.as_str())
-        }) {
-            return Err(value_codec::error("Unknown topologyIds field"));
-        }
-        let read = |key: &str| {
-            object
-                .get(key)
-                .cloned()
-                .map(value_codec::Deserialize::from_value)
-                .transpose()
-                .map(|value| value.unwrap_or_default())
-        };
-        Ok(Self {
-            vertices: read("vertices")?,
-            edges: read("edges")?,
-            loops: read("loops")?,
-            faces: read("faces")?,
-            shells: read("shells")?,
-            bodies: read("bodies")?,
-            lineage: object
-                .get("lineage")
-                .cloned()
-                .map(value_codec::Deserialize::from_value)
-                .transpose()?
-                .unwrap_or_default(),
-            change_set: object
-                .get("changeSet")
-                .cloned()
-                .map(value_codec::Deserialize::from_value)
-                .transpose()?
-                .unwrap_or_default(),
-        })
-    }
-}
-#[derive(Clone, Debug)]
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Model(
     pub brep_topology::Model<Curve, Surface, Curve>,
     pub TopologyIds,
 );
-impl value_codec::Serialize for Model {
-    fn to_value(&self) -> value_codec::Value {
-        let mut value = value_codec::Serialize::to_value(&self.0);
-        value.as_object_mut().unwrap().insert(
-            "topologyIds".into(),
-            value_codec::Serialize::to_value(&self.1),
-        );
-        value
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Model {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let value_codec::Value::Object(mut object) = value else {
-            return Err(value_codec::error("Expected B-rep object"));
-        };
-        let ids = object
-            .remove("topologyIds")
-            .map(TopologyIds::from_value)
-            .transpose()?;
-        let topology =
-            <brep_topology::Model<Curve, Surface, Curve> as value_codec::Deserialize>::from_value(
-                value_codec::Value::Object(object),
-            )?;
-        let generate_ids = ids.is_none();
-        let mut model = Self(topology, ids.unwrap_or_default());
-        if generate_ids {
-            // Legacy documents omit the optional identity tables. Validate
-            // every index and rational definition before deriving signatures;
-            // malformed documents must return errors rather than index traps.
-            let decode_error = |e: Error| value_codec::error(format!("{}: {}", e.code, e.message));
-            model.0.validate_topology().map_err(decode_error)?;
-            for edge in &model.edges {
-                edge.curve.validate().map_err(decode_error)?;
-            }
-            for wire in &model.loops {
-                for use_ in &wire.coedges {
-                    use_.pcurve.validate().map_err(decode_error)?;
-                }
-            }
-            for face in &model.faces {
-                face.surface.validate().map_err(decode_error)?;
-            }
-            model.rebuild_topology_ids();
-        } else if model.1.change_set.nodes.is_empty() && model.1.change_set.changes.is_empty() {
-            // Compatibility for canonical-ID snapshots written before the
-            // authoritative changeSet field was introduced.
-            model.refresh_change_set(&[]);
-        }
-        Ok(model)
-    }
-}
+
 impl std::ops::Deref for Model {
     type Target = brep_topology::Model<Curve, Surface, Curve>;
     fn deref(&self) -> &Self::Target {
@@ -400,52 +239,7 @@ pub struct Report {
     pub geometry_agreement: &'static str,
     pub solid_geometry_status: &'static str,
 }
-impl value_codec::Serialize for Report {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "vertexCount".into(),
-            value_codec::Serialize::to_value(&self.vertex_count),
-        );
-        object.insert(
-            "edgeCount".into(),
-            value_codec::Serialize::to_value(&self.edge_count),
-        );
-        object.insert(
-            "loopCount".into(),
-            value_codec::Serialize::to_value(&self.loop_count),
-        );
-        object.insert(
-            "faceCount".into(),
-            value_codec::Serialize::to_value(&self.face_count),
-        );
-        object.insert(
-            "shellCount".into(),
-            value_codec::Serialize::to_value(&self.shell_count),
-        );
-        object.insert(
-            "bodyCount".into(),
-            value_codec::Serialize::to_value(&self.body_count),
-        );
-        object.insert(
-            "boundaryEdgeCount".into(),
-            value_codec::Serialize::to_value(&self.boundary_edge_count),
-        );
-        object.insert(
-            "topologyValid".into(),
-            value_codec::Serialize::to_value(&self.topology_valid),
-        );
-        object.insert(
-            "geometryAgreement".into(),
-            value_codec::Serialize::to_value(&self.geometry_agreement),
-        );
-        object.insert(
-            "solidGeometryStatus".into(),
-            value_codec::Serialize::to_value(&self.solid_geometry_status),
-        );
-        value_codec::Value::Object(object)
-    }
-}
+
 fn invalid(message: impl Into<String>) -> Error {
     Error {
         code: "BREP_INVALID_TOPOLOGY",
@@ -473,57 +267,6 @@ struct FaceIdentityRegion {
     bounds: [[f64; 2]; 2],
 }
 impl Model {
-    /// Explicit migration entry point for old `<prefix>:<16hex>` identity
-    /// tables. Normal deserialization intentionally rejects those values.
-    pub fn from_legacy_topology_value(mut value: value_codec::Value) -> value_codec::Result<Self> {
-        let ids = value
-            .get_mut("topologyIds")
-            .and_then(value_codec::Value::as_object_mut)
-            .ok_or_else(|| value_codec::error("Missing legacy topologyIds object"))?;
-        let mut migrated = BTreeMap::<String, String>::new();
-        for field in ["vertices", "edges", "loops", "faces", "shells", "bodies"] {
-            let values = ids
-                .get_mut(field)
-                .and_then(value_codec::Value::as_array_mut)
-                .ok_or_else(|| value_codec::error(format!("Missing legacy field {field}")))?;
-            for value in values {
-                let old = value
-                    .as_str()
-                    .ok_or_else(|| value_codec::error("Legacy topology ID must be a string"))?;
-                let id = TopoId::migrate_legacy(old).map_err(value_codec::error)?;
-                migrated.insert(old.into(), id.to_string());
-                *value = value_codec::Value::String(id.to_string());
-            }
-        }
-        if let Some(records) = ids
-            .get_mut("lineage")
-            .and_then(value_codec::Value::as_array_mut)
-        {
-            for record in records {
-                for endpoint in ["parents", "children"] {
-                    let values = record
-                        .get_mut(endpoint)
-                        .and_then(value_codec::Value::as_array_mut)
-                        .ok_or_else(|| value_codec::error("Invalid legacy lineage endpoints"))?;
-                    for value in values {
-                        let old = value.as_str().ok_or_else(|| {
-                            value_codec::error("Legacy lineage ID must be a string")
-                        })?;
-                        let replacement = match migrated.get(old) {
-                            Some(id) => id.clone(),
-                            None => TopoId::migrate_legacy(old)
-                                .map_err(value_codec::error)?
-                                .to_string(),
-                        };
-                        *value = value_codec::Value::String(replacement);
-                    }
-                }
-            }
-        }
-        ids.remove("changeSet");
-        <Self as value_codec::Deserialize>::from_value(value)
-    }
-
     /// Canonical regularized empty solid. It has no placeholder shell or body.
     pub fn empty(tolerance_mm: f64) -> Result<Self> {
         let model = Self(
@@ -851,7 +594,7 @@ impl Model {
         }
         // Every knot, weight, control point, periodic flag and orientation is
         // part of the support identity. A shared boundary is insufficient.
-        value_codec::to_string(surface).unwrap()
+        rational_identity::surface_signature(surface)
     }
     fn face_key(&self, face: &Face) -> String {
         let mut holes = face
@@ -1598,7 +1341,11 @@ impl Model {
             body_count: self.bodies.len(),
             boundary_edge_count: boundary,
             topology_valid: true,
-            geometry_agreement: if sampled_agreement { "sampled_with_tolerance" } else { "not_checked" },
+            geometry_agreement: if sampled_agreement {
+                "sampled_with_tolerance"
+            } else {
+                "not_checked"
+            },
             solid_geometry_status: "not_certified",
         })
     }
@@ -1775,42 +1522,15 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
     Ok(m)
 }
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn box_incidence_and_serialization() {
-        let m = cuboid([0.; 3], [2., 3., 4.]).unwrap();
-        let r = m.validate().unwrap();
-        assert_eq!(
-            (r.vertex_count, r.edge_count, r.face_count, r.body_count),
-            (8, 12, 6, 1)
-        );
-        let restored: Model = value_codec::from_str(&value_codec::to_string(&m).unwrap()).unwrap();
-        restored.validate().unwrap();
-    }
-    #[test]
-    fn rejects_broken_incidence_geometry_and_orientation() {
-        let a = cuboid([0.; 3], [1.; 3]).unwrap();
-        for kind in 0..6 {
-            let mut m = a.clone();
-            match kind {
-                0 => m.0.edges[0].vertices[0] = 999,
-                1 => m.0.loops[0].coedges[0].reversed ^= true,
-                2 => m.0.shells[0].faces[0].reversed = true,
-                3 => m.0.faces[0].outer = m.0.faces[1].outer,
-                4 => m.0.vertices[0].point[0] = 0.2,
-                _ => m.0.bodies[0].inner_shells.push(0),
-            }
-            assert!(m.validate().is_err(), "mutation {kind}");
-        }
-    }
-    #[test]
-    fn open_shell_is_not_a_body() {
-        let mut m = cuboid([0.; 3], [1.; 3]).unwrap();
-        m.0.shells[0].closed = false;
-        assert!(m.validate().is_err());
-        m.0.bodies.clear();
-        m.rebuild_topology_ids();
-        m.validate().unwrap();
-    }
-}
+mod tests;
+
+pub mod rack;
+
+pub mod planar_cap;
+pub mod thread;
+
+mod control_hull_separation;
+mod face_contact_groups;
+
+#[cfg(test)]
+mod spatial_rmf_qualification;

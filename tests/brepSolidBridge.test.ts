@@ -9,7 +9,7 @@ import {analyzeNurbsBrep, booleanNurbsBrep, tessellateNurbsBrep, type NurbsBrep}
 import {identity,rotateY,scale,translate} from '../src/services/math3d'
 
 async function cylinder() {
-  return (await parseOpenSCAD('// @modelgraph-text/1\nshow brep_cylinder(3mm,4mm).brep_tessellate(6)')).meshes[0]
+  return (await parseOpenSCAD('// @rush/1\nshow brep_cylinder(3mm,4mm).brep_tessellate(6)')).meshes[0]
 }
 
 it('retains the complete authored enclosure through the actual Code-to-Solid conversion and persistence',async()=>{
@@ -91,7 +91,7 @@ it('refuses corrupt or empty native authority atomically instead of silently dow
 })
 
 it('preserves coordinates and rational weights beyond display Float32 precision',async()=>{
-  const mesh=(await parseOpenSCAD('// @modelgraph-text/1\nshow brep_cylinder(3.141592653589793mm,2.718281828459045mm).brep_tessellate(3)')).meshes[0]
+  const mesh=(await parseOpenSCAD('// @rush/1\nshow brep_cylinder(3.141592653589793mm,2.718281828459045mm).brep_tessellate(3)')).meshes[0]
   const native=JSON.parse(mesh.nativeGeometry!.geometryJson).geometry as NurbsBrep
   const body=sceneMeshesToSolidDocument([mesh]).bodies[0]
   expect(body.brep).toEqual(native)

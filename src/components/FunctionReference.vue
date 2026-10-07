@@ -203,7 +203,7 @@ function handleKeydown(event: KeyboardEvent) {
           </div>
           <div class="reference-languages" role="group" :aria-label="copy.language">
             <button type="button" :aria-pressed="exampleLanguage === 'openscad'" @click="exampleLanguage = 'openscad'">OpenSCAD</button>
-            <button type="button" :aria-pressed="exampleLanguage === 'modelgraph'" @click="exampleLanguage = 'modelgraph'">ModelGraph</button>
+            <button type="button" :aria-pressed="exampleLanguage === 'rush'" @click="exampleLanguage = 'rush'">RushGraph</button>
           </div>
         </div>
 
@@ -267,7 +267,7 @@ function handleKeydown(event: KeyboardEvent) {
 
             <div class="reference-example-heading">
               <h4>{{ copy.example }}</h4>
-              <span>{{ exampleLanguage === 'openscad' ? 'OpenSCAD' : 'ModelGraph' }}</span>
+              <span>{{ exampleLanguage === 'openscad' ? 'OpenSCAD' : 'RushGraph' }}</span>
               <button type="button" class="reference-copy" :disabled="copyState === 'copying'" @click="copyExample">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                   <path v-if="copyState === 'copied'" d="m5 12 4 4L19 6" />

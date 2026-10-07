@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CadKernelHandle, CadKernelOps } from '../src/services/cadKernelOps'
 import { createBrepRecordingKernelOps } from '../src/services/solid/brepRecorder'
-import { modelGraphNurbsSchema } from '../src/services/modelGraphNurbs'
+import { rushGraphNurbsSchema } from '../src/services/rushGraphNurbs'
 
 /**
  * The recorder only needs distinct handle identities from the polygon track, so the
@@ -22,7 +22,7 @@ function stubKernel(): CadKernelOps {
 }
 
 function documentOf(nodes: readonly unknown[], root: string) {
-  return { language: 'modelgraph/nurbs-1', units: 'mm', parameters: [], nodes, root }
+  return { language: 'rush/nurbs-1', units: 'mm', parameters: [], nodes, root }
 }
 
 describe('B-rep recording kernel', () => {
@@ -34,7 +34,7 @@ describe('B-rep recording kernel', () => {
 
     const resolved = recording.resolve(cut)
     expect(resolved).toHaveProperty('id')
-    const parsed = modelGraphNurbsSchema.parse(
+    const parsed = rushGraphNurbsSchema.parse(
       documentOf(recording.nodes, (resolved as { id: string }).id),
     )
     const ops_ = parsed.nodes.map(node => node.op)
@@ -48,7 +48,7 @@ describe('B-rep recording kernel', () => {
     const { ops, recording } = createBrepRecordingKernelOps(stubKernel())
     const centred = ops.cylinder(10, 2, 2, 32, true)
     const resolved = recording.resolve(centred) as { id: string }
-    const parsed = modelGraphNurbsSchema.parse(documentOf(recording.nodes, resolved.id))
+    const parsed = rushGraphNurbsSchema.parse(documentOf(recording.nodes, resolved.id))
     expect(parsed.nodes.map(node => node.op)).toEqual(['brep_cylinder', 'transform'])
     const shift = parsed.nodes[1] as { matrix: number[][] }
     expect(shift.matrix[2][3]).toBe(-5)
@@ -59,7 +59,7 @@ describe('B-rep recording kernel', () => {
     const disc = ops.circle(4, 32)
     const solid = ops.linearExtrude(disc, 6, 1, 0, [1, 1], false)
     const resolved = recording.resolve(solid) as { id: string }
-    const parsed = modelGraphNurbsSchema.parse(documentOf(recording.nodes, resolved.id))
+    const parsed = rushGraphNurbsSchema.parse(documentOf(recording.nodes, resolved.id))
     const curves = parsed.nodes.filter(node => node.op === 'curve')
     expect(curves).toHaveLength(4)
     // Exactness of a quadratic arc rests on the cos(45 degrees) shoulder weight.

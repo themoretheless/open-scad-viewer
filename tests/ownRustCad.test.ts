@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import Module from '../src/services/geometry/module';
-import { compileModelGraphText } from '../src/services/modelGraphText';
+import { compileRushFrontend } from '../src/services/rushFrontend';
 import { parseOpenSCAD } from '../src/services/openscadParser';
 describe('own Rust CAD qualification v1', () => {
     it('preserves analytic volumes and closed boundaries in overlapping and nested CSG', async () => {
@@ -46,8 +46,8 @@ describe('own Rust CAD qualification v1', () => {
         expect(() => mesh.volume()).toThrow(/deleted/i);
     });
     it('builds the complete SKADIS box without open boundaries', async () => {
-        const source = readFileSync(new URL('../examples/skadis-box/skadis-dovetail.mg', import.meta.url), 'utf8');
-        const result = await parseOpenSCAD(compileModelGraphText(source).source);
+        const source = readFileSync(new URL('../examples/skadis-box/skadis-dovetail.r', import.meta.url), 'utf8');
+        const result = await parseOpenSCAD(compileRushFrontend(source).source);
         expect(result.meshes).toHaveLength(3);
         // Manufacturing-scale tolerance against the previous independently recorded box.
         expect(Math.abs(result.volume - 160352.6604181734)).toBeLessThan(10);

@@ -34,3 +34,28 @@ pub(crate) fn optional<'de, T: Deserialize<'de>>(
         Some(v) => T::from_value(v),
     }
 }
+
+pub(crate) fn encode_number(number: f64) -> Value {
+    if number.is_finite() {
+        value_codec::json!(number)
+    } else {
+        value_codec::json!(if number.is_nan() {
+            "NaN"
+        } else if number > 0. {
+            "Infinity"
+        } else {
+            "-Infinity"
+        })
+    }
+}
+pub(crate) fn decode_number(value: &Value) -> value_codec::Result<f64> {
+    value
+        .as_f64()
+        .or_else(|| match value.as_str()? {
+            "NaN" => Some(f64::NAN),
+            "Infinity" => Some(f64::INFINITY),
+            "-Infinity" => Some(f64::NEG_INFINITY),
+            _ => None,
+        })
+        .ok_or_else(|| value_codec::error("Invalid fragment number"))
+}

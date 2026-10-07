@@ -27,7 +27,7 @@
       "2D outward-hull subdivision retaining every global surface minimizer box and four certified boundary reductions",
       "homogeneous rational derivative cross-product Bernstein bounds for nonplanar surface normal regularity and exact singular patches",
       "non-periodic curve and surface knot removal and degree reduction with outward global Hausdorff bounds and atomic rollback",
-      "ToleranceContext identities through Rust, WASM, TypeScript and ModelGraph successor reports"
+      "ToleranceContext identities through Rust, WASM, TypeScript and RushGraph successor reports"
     ],
     "excluded": [
       "periodic simplification",
@@ -45,7 +45,7 @@
     {"id":"CA12-NF2-WASM-TS-PRODUCT","expected":"Complete","blocksQualification":true}
   ],
   "bindings": {
-    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"],
+    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/rushGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"],
     "registry":"src/services/geometry/brepCapability.ts",
     "evidenceJson":"docs/qualification/nurbs-foundation-2-evidence-v1.json"
   },

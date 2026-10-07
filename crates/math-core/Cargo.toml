@@ -29,13 +29,13 @@ tensor-cuda = ["tensor", "dep:compute-cuda"]
 tensor-mlx = ["tensor", "dep:compute-mlx"]
 
 [dependencies]
-compute-core = { path = "../compute-core", optional = true }
-gpu-compute = { path = "../gpu-compute", optional = true }
-tensor-core = { path = "../tensor-core", optional = true }
+compute-core = { workspace = true, optional = true }
+gpu-compute = { workspace = true, optional = true }
+tensor-core = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-compute-cuda = { path = "../compute-cuda", optional = true }
-compute-mlx = { path = "../compute-mlx", optional = true }
+compute-cuda = { workspace = true, optional = true }
+compute-mlx = { workspace = true, optional = true }
 
 [dev-dependencies]
 rbench = { workspace = true }

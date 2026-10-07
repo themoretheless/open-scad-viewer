@@ -169,43 +169,43 @@
     },
     {
       "path": "docs/qualification/g0-toolchain-fingerprints-v8.json",
-      "sha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62"
+      "sha256": "0218cbadd2406103c7844f44eaff6d112a778dcd7d966eebd72682b6318e4cf6"
     },
     {
       "path": "docs/qualification/g0-toolchain-fingerprints-v9.json",
-      "sha256": "e7476156b67f5e0b00ee98ff5f60740d64e17796067a2d018f9c7f63c856b60c"
+      "sha256": "e701eca5a6a2ce9ba4bd408943a2ce5c0efa1617c8b422f5bbdaae71e4ec7251"
     },
     {
       "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-      "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25"
+      "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d"
     },
     {
       "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-      "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9"
+      "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d"
     },
     {
       "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
-      "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d"
+      "sha256": "c8495d1cce75e8135108e0f8670a425b8a2e83eb5e5115e541158df745920994"
     },
     {
       "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
-      "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e"
+      "sha256": "ff363974cc1cdfc3580c2fbd2504c520fac42054afd1fc0926eeb7463659c9b6"
     },
     {
       "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
-      "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7"
+      "sha256": "7af54367af550425a275fd0ae559e2e9ecc7e8d93566f6982037c3fb5c06b035"
     },
     {
       "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
-      "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887"
+      "sha256": "415e9b1bfa2124988f3c546b5facf1920bb4c22f5496383d65ec42df70ab7ea9"
     },
     {
       "path": "docs/qualification/g0-v8-g1-v25-refreeze-status-v1.json",
-      "sha256": "8d9edcf9f625cfa9620f87d597c05e259d568bda5863e2d3aa13b6ca7c850845"
+      "sha256": "f0125399e2fc19ad07afa23f921c75254a1d52d2138135b4cc6e20ade81ef561"
     },
     {
       "path": "docs/qualification/g0-v9-g1-v26-refreeze-status-v1.json",
-      "sha256": "925967f1f1ca2013794adc9168ab7c5298ac1d5d771dbb16462d78a9a68e50a8"
+      "sha256": "33350a33daea5d2e1ca2e613f08de9215f2ad03db57d4613d702386212c4dbd2"
     },
     {
       "path": "docs/qualification/g0-v6-g1-v23-refreeze-review.md",
@@ -261,7 +261,7 @@
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-      "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9"
+      "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4"
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v11.json",
@@ -332,7 +332,7 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v10.json",
-      "sha256": "cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3",
+      "sha256": "110d719fb119a2a495f02f843f054c9a29ba814159e3540a7ba0b2c7f62f5494",
       "byteLength": 8250
     },
     {
@@ -474,12 +474,12 @@
       },
       {
         "path": "docs/qualification/g0-toolchain-fingerprints-v8.json",
-        "sha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62",
+        "sha256": "0218cbadd2406103c7844f44eaff6d112a778dcd7d966eebd72682b6318e4cf6",
         "byteLength": 5767
       },
       {
         "path": "docs/qualification/g0-toolchain-fingerprints-v9.json",
-        "sha256": "e7476156b67f5e0b00ee98ff5f60740d64e17796067a2d018f9c7f63c856b60c",
+        "sha256": "e701eca5a6a2ce9ba4bd408943a2ce5c0efa1617c8b422f5bbdaae71e4ec7251",
         "byteLength": 9660
       },
       {
@@ -489,17 +489,17 @@
       },
       {
         "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-        "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25",
+        "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d",
         "byteLength": 34523
       },
       {
         "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
-        "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d",
+        "sha256": "c8495d1cce75e8135108e0f8670a425b8a2e83eb5e5115e541158df745920994",
         "byteLength": 35189
       },
       {
         "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
-        "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e",
+        "sha256": "ff363974cc1cdfc3580c2fbd2504c520fac42054afd1fc0926eeb7463659c9b6",
         "byteLength": 35260
       },
       {
@@ -509,7 +509,7 @@
       },
       {
         "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
-        "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7",
+        "sha256": "7af54367af550425a275fd0ae559e2e9ecc7e8d93566f6982037c3fb5c06b035",
         "byteLength": 36450
       },
       {
@@ -519,7 +519,7 @@
       },
       {
         "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
-        "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887",
+        "sha256": "415e9b1bfa2124988f3c546b5facf1920bb4c22f5496383d65ec42df70ab7ea9",
         "byteLength": 37699
       },
       {
@@ -529,7 +529,7 @@
       },
       {
         "path": "docs/qualification/g0-v8-g1-v25-refreeze-status-v1.json",
-        "sha256": "8d9edcf9f625cfa9620f87d597c05e259d568bda5863e2d3aa13b6ca7c850845",
+        "sha256": "f0125399e2fc19ad07afa23f921c75254a1d52d2138135b4cc6e20ade81ef561",
         "byteLength": 45149
       },
       {
@@ -539,12 +539,12 @@
       },
       {
         "path": "docs/qualification/g0-v9-g1-v26-refreeze-status-v1.json",
-        "sha256": "925967f1f1ca2013794adc9168ab7c5298ac1d5d771dbb16462d78a9a68e50a8",
+        "sha256": "33350a33daea5d2e1ca2e613f08de9215f2ad03db57d4613d702386212c4dbd2",
         "byteLength": 47006
       },
       {
         "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-        "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9",
+        "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d",
         "byteLength": 36650
       },
       {
@@ -574,7 +574,7 @@
       },
       {
         "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-        "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9",
+        "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4",
         "byteLength": 77107
       },
       {

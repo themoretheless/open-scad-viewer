@@ -3,7 +3,7 @@
 This internal lane executes actual source lowering, SemanticProgram evaluation
 and the Rust/WASM B-rep scene adapter in a disposable worker. It does not activate
 the permanent `openscad-viewer/brep-1` provider or qualify its production route.
-The browser gallery's ModelGraph B-rep examples remain separately executable.
+The browser gallery's RushGraph B-rep examples remain separately executable.
 
 After `npm run build:geometry`, run the included OpenSCAD syntax example:
 

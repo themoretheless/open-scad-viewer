@@ -56,6 +56,8 @@
 //! is 64 binary64 epsilons plus the recognition-error angular allowances,
 //! and recognition-scale tilts report `NearCoincidence`, never forced.
 //! Nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::plane_sphere::{
     CanonicalPlane, EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d,
     conic_sweep, recognize_plane,
@@ -786,30 +788,6 @@ pub fn intersect_plane_torus(
         )?);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for TorusPatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for PlaneTorusComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                full,
-                plane_uv,
-                torus_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"full":full,"planeUv":plane_uv,"torusUv":torus_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

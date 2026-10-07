@@ -43,3 +43,15 @@ src/generated/harfbuzz
 
 # Independent VR WASM module
 src/generated/vr-core/
+
+# Generated qualification evidence stays local; retain summaries and source fixtures.
+docs/qualification/**/*.json
+docs/qualification/**/*.step
+docs/qualification/**/*.png
+docs/qualification/**/*.jpg
+docs/qualification/**/*.cpuprofile
+docs/qualification/**/*.txt
+!docs/qualification/**/matrix.json
+!docs/qualification/**/opencascade-sweep.json
+!docs/qualification/**/occt-report.json
+!docs/qualification/local-artifact-index-2026-10-07.jsonl

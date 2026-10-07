@@ -1,0 +1,195 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T07:07:04.014Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "d473a56675dde420dc638d116f8c079ef667e89abfbb9a301eaebbd29fd37d63",
+  "artifactProvenance": {
+    "sha256": "d473a56675dde420dc638d116f8c079ef667e89abfbb9a301eaebbd29fd37d63",
+    "byteLength": 11021852,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-BIdiguei.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "d8f946556ea00b81ffdc47b0e47a8b5b4a8c0ff800e5d3cf4dd417ce4484e769",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-planar-rmf-body-boundary.r",
+      "sourceSha256": "2e6c4c9abb0459792eec12cceb23947f87c00f1a2fd9ff0434e5b4e713740734",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "d6e0edc6f3edb1e5a9fdde1b77cf90278a223b34dac734b6210bb9a4aac6a19c",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Sweep path extent is zero or unrepresentable",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "arc-length-curved-planar-rmf-body-boundary.r",
+      "sourceSha256": "2e6c4c9abb0459792eec12cceb23947f87c00f1a2fd9ff0434e5b4e713740734",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "d6e0edc6f3edb1e5a9fdde1b77cf90278a223b34dac734b6210bb9a4aac6a19c",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Sweep path extent is zero or unrepresentable",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "3f6fab39c2911954209075b36a1ac1b925044d5b7470015941c02f2538223ea6",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "3f6ce1267ed9fc50c1af99e8b5f41680601fafba5d1c03574f963f3d032c3ddf",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

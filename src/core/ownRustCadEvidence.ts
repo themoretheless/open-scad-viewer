@@ -1,7 +1,7 @@
 // Exact artifact checked by the own Rust CAD qualification corpus.
 export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
-  "wasmSha256": "a567e938e6502f25bf99efc03fd9c812e3b02b4182e085bc1cb8fcf66c7b75c9",
+  "wasmSha256": "acaaf4989b0641e665331bbb79778ce639e7755d6070c185e6e36305e3059794",
   "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
-  "lockfileSha256": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
-  "rustLockfileSha256": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3"
+  "lockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+  "rustLockfileSha256": "df7afb01351f9a2154b6bbb4c9f6e53f31d66e753f0b1f2d542d96776523ada8"
 })

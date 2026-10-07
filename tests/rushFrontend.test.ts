@@ -1,0 +1,63 @@
+import { expect, it } from 'vitest'
+import { compileRushFrontend } from '../src/services/rushFrontend'
+import { parseOpenSCAD } from '../src/services/openscadParser'
+const source=`// @rush/1
+param radius = 20mm range 1mm..50mm
+param height = 10mm range 1mm..30mm
+expand = x => x + 1mm
+body = circle(expand(radius)).extrude(height)
+show body
+`
+it.each(['[2mm, 3mm, 4mm]', 'x: 2mm, z: 4mm', 'vector: [2, 3, 4]'])('moves geometry with the same relative displacement as translate: %s',args=>{
+ const source=`// @rush/1\nshow box([1,2,3]).move(${args})`
+ expect(compileRushFrontend(source).source).toBe(compileRushFrontend(source.replace('.move(','.translate(')).source)
+})
+it('lowers parameters, units, closures and pipelines and preserves slider spans',()=>{
+ const c=compileRushFrontend(source)
+ expect(c.document.parameters[0]).toMatchObject({id:'radius',value:20,unit:'mm',min:1,max:50})
+ const p=c.customizer[0]!
+ expect(source.slice(p.valueStart,p.valueEnd)).toBe('20')
+ expect(source.slice(p.valueEnd,p.valueEnd+2)).toBe('mm')
+ expect(c.source).toContain('21')
+})
+it('builds compact source through the real parser',async()=>{
+ const built=await parseOpenSCAD('// @rush/1\nbody = box([2mm,3mm,4mm])\nshow body')
+ expect(built.meshes.length).toBe(1)
+ expect(built.meshes[0]!.provenance.every(p=>p.source===null)).toBe(true)
+})
+it('expands repeat with lexical index and short functions',()=>{
+ const c=compileRushFrontend('// @rush/1\nstep = x => x * 3mm\nparts = repeat(18, i => sphere(1mm).translate([step(i),0,0]))\nshow parts')
+ expect(c.document.nodes.some(n=>n.op==='map')).toBe(true)
+})
+it.each(['param x = 2mm range 3mm..4mm\na = sphere(x)','a = unknown(2)','a = sphere(1mm).box([1,2,3])','a = sphere(1mm)\na = sphere(2mm)','a = sphere(1mm); @'])('rejects invalid source: %s',body=>{
+ expect(()=>compileRushFrontend('// @rush/1\n'+body)).toThrow()
+})
+it('builds the documented ring pattern with parameter editing',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const text=readFileSync('examples/rush-frontend/ring-pattern.r','utf8')
+ const compiled=compileRushFrontend(text)
+ const p=compiled.customizer.find(p=>p.name==='height')!
+ const edited=text.slice(0,p.valueStart)+'10'+text.slice(p.valueEnd)
+ expect(compileRushFrontend(edited).document.parameters.find(p=>p.id==='height')!.value).toBe(10)
+ expect((await parseOpenSCAD(text)).meshes).toHaveLength(1)
+})
+it('makes direct repeat-count parameters integer sliders',()=>{
+ const c=compileRushFrontend('// @rush/1\nparam count = 3 range 1..10\nbody = repeat(count, i => sphere(1).translate([i*3,0,0]))')
+ expect(c.customizer[0]!.step).toBe(1)
+ expect(c.document.parameters[0]!.integer).toBe(true)
+})
+
+it("accepts rect as the rectangle primitive",()=>{
+ const source="// @rush/1\nshow rect([12,8]).move([2,3,0]).extrude(4)"
+ expect(compileRushFrontend(source).source).toBe(compileRushFrontend(source.replace("rect(","rectangle(")).source)
+})
+
+it('preserves explicit authored cap correction mode from Rush',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
+ const node=compileRushFrontend(source).document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ expect(node).toHaveProperty('cap_correction_authored_frame',true)
+ expect(node).toHaveProperty('cap_correction_tolerance',1e-9)
+ expect(compileRushFrontend(source.replace('cap_correction_authored_frame: true','cap_correction_authored_frame: false')).document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')).toHaveProperty('cap_correction_authored_frame',false)
+ expect(()=>compileRushFrontend(source.replace('cap_correction_authored_frame: true','cap_correction_authored_frame: 2'))).toThrow('expects true or false')
+})

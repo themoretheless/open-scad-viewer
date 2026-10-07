@@ -1,9 +1,10 @@
+import {callGeometryRust} from './geometry/kernel'
 import type {
   MeshData,
   MeshProvenanceRun,
   MeshTopologyDiagnostics,
 } from '../core/mesh'
-import { transformPoint, type Aabb3, type Vec3 } from './math3d'
+import { type Aabb3, type Vec3 } from './math3d'
 
 const VERTEX_STRIDE = 6
 
@@ -165,43 +166,8 @@ export function resolveProvenance(
 
 /** Build the object-level facts displayed by an Inspect panel. */
 export function inspectMesh(mesh: MeshData, index: number): MeshInspection {
-  const min: Vec3 = [Infinity, Infinity, Infinity]
-  const max: Vec3 = [-Infinity, -Infinity, -Infinity]
-  let hasFinitePosition = false
-
-  for (let offset = 0; offset + 2 < mesh.vertices.length; offset += VERTEX_STRIDE) {
-    const local: Vec3 = [
-      mesh.vertices[offset],
-      mesh.vertices[offset + 1],
-      mesh.vertices[offset + 2],
-    ]
-    if (!local.every(Number.isFinite)) continue
-    const world = transformPoint(mesh.transform, local)
-    if (!world.every(Number.isFinite)) continue
-    hasFinitePosition = true
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], world[axis])
-      max[axis] = Math.max(max[axis], world[axis])
-    }
-  }
-
-  const bounds: Aabb3 | null = hasFinitePosition ? { min, max } : null
-  const dimensions: Vec3 = bounds
-    ? [max[0] - min[0], max[1] - min[1], max[2] - min[2]]
-    : [0, 0, 0]
-  const center: Vec3 | null = bounds
-    ? [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]
-    : null
-
-  return {
-    index,
-    vertices: Math.floor(mesh.vertices.length / VERTEX_STRIDE),
-    triangles: Math.floor(mesh.indices.length / 3),
-    bounds,
-    dimensions,
-    center,
-    topology: (mesh as MeshWithTopology).topology ?? null,
-  }
+  const geometry=callGeometryRust<Pick<MeshInspection,'bounds'|'dimensions'|'center'>>('mesh_display_inspect',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),transform:mesh.transform})
+  return {index,vertices:Math.floor(mesh.vertices.length/VERTEX_STRIDE),triangles:Math.floor(mesh.indices.length/3),...geometry,topology:(mesh as MeshWithTopology).topology??null}
 }
 
 /** Interpolate a triangle hit into world space using BVH barycentric weights. */
@@ -210,40 +176,12 @@ export function computeHitWorldPoint(
   triangleIndex: number,
   barycentric: readonly [number, number, number],
 ): Vec3 | null {
-  if (!barycentric.every(Number.isFinite)) return null
-  const triangle = worldTriangle(mesh, triangleIndex)
-  if (!triangle) return null
-  const [a, b, c] = triangle
-  const [wa, wb, wc] = barycentric
-  const point: Vec3 = [
-    a[0] * wa + b[0] * wb + c[0] * wc,
-    a[1] * wa + b[1] * wb + c[1] * wc,
-    a[2] * wa + b[2] * wb + c[2] * wc,
-  ]
-  return point.every(Number.isFinite) ? point : null
+  return callGeometryRust('mesh_hit_point',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex,barycentric})
 }
 
 /** Compute a flat, unit-length world-space normal for the hit triangle. */
 export function computeHitNormal(mesh: MeshData, triangleIndex: number): Vec3 | null {
-  const triangle = worldTriangle(mesh, triangleIndex)
-  if (!triangle) return null
-  const [a, b, c] = triangle
-  const abx = b[0] - a[0]
-  const aby = b[1] - a[1]
-  const abz = b[2] - a[2]
-  const acx = c[0] - a[0]
-  const acy = c[1] - a[1]
-  const acz = c[2] - a[2]
-  const nx = aby * acz - abz * acy
-  const ny = abz * acx - abx * acz
-  const nz = abx * acy - aby * acx
-  const length = Math.hypot(nx, ny, nz)
-  const edgeScale = (
-    abx * abx + aby * aby + abz * abz
-    + acx * acx + acy * acy + acz * acz
-  )
-  if (!Number.isFinite(length) || length <= edgeScale * Number.EPSILON * 16) return null
-  return [nx / length, ny / length, nz / length]
+  return callGeometryRust('mesh_hit_normal',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex})
 }
 
 /** Summarize an exact two-point measurement in world coordinates. */
@@ -251,45 +189,5 @@ export function summarizeMeasurement(start: Vec3, end: Vec3): MeasurementSummary
   if (![...start, ...end].every(Number.isFinite)) {
     throw new RangeError('Measurement points must contain finite coordinates')
   }
-  const stableStart: Vec3 = [...start]
-  const stableEnd: Vec3 = [...end]
-  const delta: Vec3 = [
-    stableEnd[0] - stableStart[0],
-    stableEnd[1] - stableStart[1],
-    stableEnd[2] - stableStart[2],
-  ]
-  return {
-    start: stableStart,
-    end: stableEnd,
-    delta,
-    deltaX: delta[0],
-    deltaY: delta[1],
-    deltaZ: delta[2],
-    distance: Math.hypot(...delta),
-  }
-}
-
-function worldTriangle(mesh: MeshData, triangleIndex: number): [Vec3, Vec3, Vec3] | null {
-  const triangleCount = Math.floor(mesh.indices.length / 3)
-  if (!Number.isInteger(triangleIndex) || triangleIndex < 0 || triangleIndex >= triangleCount) {
-    return null
-  }
-  const offset = triangleIndex * 3
-  const a = worldVertex(mesh, mesh.indices[offset])
-  const b = worldVertex(mesh, mesh.indices[offset + 1])
-  const c = worldVertex(mesh, mesh.indices[offset + 2])
-  return a && b && c ? [a, b, c] : null
-}
-
-function worldVertex(mesh: MeshData, vertexIndex: number): Vec3 | null {
-  const offset = vertexIndex * VERTEX_STRIDE
-  if (!Number.isInteger(vertexIndex) || offset < 0 || offset + 2 >= mesh.vertices.length) return null
-  const local: Vec3 = [
-    mesh.vertices[offset],
-    mesh.vertices[offset + 1],
-    mesh.vertices[offset + 2],
-  ]
-  if (!local.every(Number.isFinite)) return null
-  const world = transformPoint(mesh.transform, local)
-  return world.every(Number.isFinite) ? world : null
+  return callGeometryRust('mesh_measure',{start,end})
 }

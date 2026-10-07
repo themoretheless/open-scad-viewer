@@ -2,7 +2,7 @@ import { InMemoryTransport, McpServer, type JSONRPCMessage, type StandardSchemaW
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod/v4'
 import { createStaticToolRegistration } from '../src/mcp/staticToolSchemas'
-import { modelGraphSchema } from '../src/services/modelGraph'
+import { rushGraphSchema } from '../src/services/rushGraph'
 
 type Response = {id: number; result?: Record<string, unknown>; error?: unknown}
 
@@ -33,7 +33,7 @@ describe('static MCP tool schemas', () => {
     const conversions = vi.fn()
     const handler = vi.fn()
     const document = {
-      language: 'modelgraph/1', units: 'mm', parameters: [], root: 'shape',
+      language: 'rush/ir-1', units: 'mm', parameters: [], root: 'shape',
       nodes: [{id: 'shape', op: 'sphere', radius: {
         op: 'match', input: {op: 'list', items: [2]}, arms: [
           {pattern: {kind: 'list', prefix: [{kind: 'type', name: 'int', pattern: {kind: 'bind', name: 'n'}}], suffix: []}, body: {local: 'n'}},
@@ -43,7 +43,7 @@ describe('static MCP tool schemas', () => {
     }
     for (let instance = 0; instance < 2; instance++) {
       // Each stateless request reconstructs the Zod wrapper, as our HTTP server does.
-      const original = z.object({document: modelGraphSchema}).strict()
+      const original = z.object({document: rushGraphSchema}).strict()
       const standard = original['~standard']
       const schema: StandardSchemaWithJSON<z.input<typeof original>, z.output<typeof original>> = {
         '~standard': {...standard, jsonSchema: {...standard.jsonSchema, input: options => {

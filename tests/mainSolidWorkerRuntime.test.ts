@@ -358,15 +358,15 @@ it('prepares transferable display buffers without detaching request geometry',as
  expect(mesh.positions.byteLength).toBe(72);expect(mesh.indices.byteLength).toBe(12)
 })
 
-it('imports ModelGraph definitions into a validated document without mutating or detaching its source',async()=>{
+it('imports RushGraph definitions into a validated document without mutating or detaching its source',async()=>{
  const {readFileSync}=await import('node:fs')
  const {emptyDirectDocument,extrudeDirectSketch}=await import('../src/services/directModeling')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const document=emptyDirectDocument(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+ const document=emptyDirectDocument(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  document.bodies.push(extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'existing'))
  const snapshot=JSON.stringify(document),messages:MainSolidResponse[]=[]
  const handle=createMainSolidWorkerHandler((message,buffers=[])=>messages.push(structuredClone(message,{transfer:buffers})))
- const job={kind:'modelGraphImport' as const,document,text,group:'Imported'}
+ const job={kind:'rushGraphImport' as const,document,text,group:'Imported'}
  await handle({version:1,id:1,job})
  const response=messages[0];expect(response.ok).toBe(true)
  if(response.ok){
@@ -375,8 +375,8 @@ it('imports ModelGraph definitions into a validated document without mutating or
  }
  expect(JSON.stringify(document)).toBe(snapshot)
  expect(document.bodies[0].mesh.positions.byteLength).toBeGreaterThan(0)
- await handle({version:1,id:2,job:{...job,text:'{"language":"modelgraph/nurbs-1"}'}})
- expect(messages[1]).toMatchObject({ok:false,kind:'modelGraphImport'})
+ await handle({version:1,id:2,job:{...job,text:'{"language":"rush/nurbs-1"}'}})
+ expect(messages[1]).toMatchObject({ok:false,kind:'rushGraphImport'})
 })
 
 it('measures vertices and curvature in the worker and validates numeric response shapes',async()=>{

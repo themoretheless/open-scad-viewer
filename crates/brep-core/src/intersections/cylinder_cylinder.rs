@@ -29,6 +29,8 @@
 //! radii); a coincident cap plane of nested coaxial cylinders shares the
 //! smaller cap disk and is an honest `CoincidentTrim` region. Nothing here
 //! authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::sphere_cylinder::{CanonicalCylinder, CylinderPatchCurve, recognize_cylinder};
 use super::sphere_sphere::RECOGNITION;
 use super::*;
@@ -335,31 +337,6 @@ pub fn intersect_cylinder_cylinder(
         });
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for CylinderCylinderComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Line {
-                curve,
-                start,
-                end,
-                direction,
-                contact,
-                first_uv,
-                second_uv,
-                max_sample_residual,
-            } => {
-                let contact = match contact {
-                    Contact::Transverse => "transverse",
-                    Contact::Boundary => "boundary",
-                };
-                value_codec::json!({"kind":"line","curve":curve,"start":start,"end":end,
-                    "direction":direction,"contact":contact,"firstUv":first_uv,"secondUv":second_uv,
-                    "maxSampleResidual":max_sample_residual})
-            }
-        }
-    }
 }
 
 #[cfg(test)]

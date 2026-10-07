@@ -7,10 +7,60 @@ publish.workspace = true
 
 [features]
 default = ["transport"]
-transport = []
+transport = ["codec"]
+codec = ["dep:value-codec", "geometry-ops/codec", "brep-topology/codec", "cad-predicates/codec"]
 
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-value-codec = { path = "../value-codec" }
-geometry-ops = { path = "../geometry-ops" }
-cad-predicates = { path = "../cad-predicates" }
+math-core = { workspace = true }
+value-codec = { workspace = true, optional = true }
+geometry-ops = { workspace = true }
+brep-topology = { workspace = true }
+cad-predicates = { workspace = true }
+
+[[example]]
+name = "bounded_curve_offset"
+required-features = ["transport"]
+
+[[example]]
+name = "periodic-agreement-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "preparation-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "surface-distance-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "ray-surface-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "continuity-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "radial-bound-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "trim-domain-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "curve-match-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "surface-injectivity-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "curve-surface-agreement-fixtures"
+required-features = ["codec"]
+
+[[example]]
+name = "surface-contact-fixtures"
+required-features = ["codec"]

@@ -1,0 +1,19 @@
+//! Surface constructors: patches, lofts, section-driven and transition surfaces.
+pub mod boundary_fill;
+pub mod catenoid;
+pub mod coons;
+pub mod extrusion_patches;
+pub mod function_surface;
+pub mod gordon;
+pub mod grid_spline;
+pub mod gregory_patch;
+pub mod helicoid;
+pub mod hermite_patch;
+pub mod loft;
+pub mod patches;
+pub mod polynomial;
+pub mod screw_surface;
+pub mod sections;
+pub mod transitions;
+pub mod triangular_patch;
+pub mod wing_loft;

@@ -1520,6 +1520,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn bounded_refusal_preserves_sources_and_does_not_snap_near_coincidence() {
         let a = vec![rectangle(0., 0., 1., 1.)];
         let b = vec![rectangle(0., 1e-9, 1., 1. + 1e-9)];
@@ -1570,6 +1571,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn local_queries_preserve_world_outputs_and_refuse_insufficient_parameter_precision() {
         let a = vec![rectangle(10_000., -20_000., 10_001., -19_999.)];
         assert_eq!(
