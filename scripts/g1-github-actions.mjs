@@ -14,13 +14,14 @@ import {
 } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {verifyBrowserPayloadTree as verifyTree} from './browserPayloadTree.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v70.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v71.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
-const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v35.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v70'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v70'
+const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
+const PLAN_ID = 'semantic-manifold-g1-plan-v71'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v71'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -232,33 +233,6 @@ function verifyPlaywrightLicenses() {
   return verified
 }
 
-function verifyTree(directory, includeManifest = false) {
-  const entries = []
-  function walk(current) {
-    for (const name of readdirSync(current).sort()) {
-      const path = join(current, name)
-      const stat = lstatSync(path)
-      if (stat.isDirectory()) walk(path)
-      else if (stat.isFile()) {
-        const relativePath = relative(directory, path).split(sep).join('/')
-        entries.push(`F\0${relativePath}\0${sha256(readFileSync(path))}\n`)
-      } else if (stat.isSymbolicLink()) {
-        const target = readlinkSync(path)
-        const absoluteTarget = resolve(dirname(path), target)
-        if (absoluteTarget !== directory && !absoluteTarget.startsWith(`${directory}${sep}`)) {
-          fail(`Browser tree symlink escapes revision: ${path}`)
-        }
-        const relativePath = relative(directory, path).split(sep).join('/')
-        entries.push(`L\0${relativePath}\0${target}\n`)
-      }
-      else fail(`Browser tree contains non-file entry: ${path}`)
-    }
-  }
-  walk(directory)
-  const records = entries.sort().join('')
-  const bytes = Buffer.from(records, 'utf8')
-  return { value: sha256(bytes), byteLength: bytes.byteLength, entryCount: entries.length, ...(includeManifest ? {manifest: records} : {}) }
-}
 
 function discoverBrowsers(values) {
   const freeze = loadJson(GITHUB_FREEZE_PATH).playwright
@@ -267,7 +241,7 @@ function discoverBrowsers(values) {
   const sourceSha = verifySource(values.get('--source-sha'))
   const provisionRoot = resolve(process.env.HOME ?? fail('HOME is required'), '.cache', 'ms-playwright')
   const trees = Object.fromEntries(Object.keys(freeze.browserTrees).map(revision =>
-    [revision, verifyTree(resolve(provisionRoot, revision), true)]))
+    [revision, verifyTree(resolve(provisionRoot, revision), true, freeze.ignoredInstallerMarkers)]))
   writeFileSync(resolve(output), JSON.stringify({sourceSha,
     imageOS:process.env.ImageOS, imageVersion:process.env.ImageVersion,
     qualificationWorkUnits:0, scope:'Downloaded payload trees only; no host dependency or browser execution qualification', trees},null,2)+'\n')
@@ -283,7 +257,7 @@ function browserIdentity(plan, environment) {
   for (const revision of freeze.requiredTrees[environment.browser.engine]) {
     const revisionPath = resolve(provisionRoot, revision)
     if (!existsSync(revisionPath)) fail(`Frozen browser revision missing: ${revisionPath}`)
-    const actual = verifyTree(revisionPath)
+    const actual = verifyTree(revisionPath, false, freeze.ignoredInstallerMarkers)
     const frozen = freeze.browserTrees[revision]
     if (actual.value !== frozen.treeSha256
         || actual.byteLength !== frozen.manifestByteLength

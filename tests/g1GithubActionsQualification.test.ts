@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v70.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v71.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
 ), 'utf8'))
 const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v35.json',
+  root, 'docs/qualification/environment-freeze/g1-github-actions-v36.json',
 ), 'utf8'))
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v70',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v71',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -215,6 +215,22 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
       plannedWorkUnits: 4740,
       qualificationClaim: 'none',
     })
+  })
+
+  it('accepts an observed exact image variant and preserves its recorded identity', () => {
+    const {artifacts,first}=fixture()
+    const fragment=JSON.parse(readFileSync(resolve(first,'fragment.json'),'utf8'))
+    const preflight=JSON.parse(readFileSync(resolve(first,'preflight.json'),'utf8'))
+    const environment=plan.environments.find((item:any)=>item.id===fragment.environmentId)
+    const variant=githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
+    for(const value of [fragment,preflight]) {
+      value.host.runnerImage=variant.imageOS
+      value.host.runnerImageVersion=variant.imageVersion
+    }
+    writeEvidence(first,fragment,preflight)
+    const result=aggregate(artifacts,'observed-image')
+    expect(result.process.status,result.process.stderr).toBe(0)
+    expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
   })
 
   it.each(['missing', 'duplicate', 'environment mismatch'])('rejects %s artifacts', kind => {
