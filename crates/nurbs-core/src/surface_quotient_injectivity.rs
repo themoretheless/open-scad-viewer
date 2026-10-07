@@ -301,6 +301,38 @@ pub fn certify_polar_source_frame(
     }
     Ok(out)
 }
+fn source_coefficients(frame: [[f64; 3]; 4]) -> Result<Option<[[I; 3]; 2]>> {
+    let difference = |a: [f64; 3], b: [f64; 3]| -> Result<[I; 3]> {
+        let mut out = [I::point(0.); 3];
+        for k in 0..3 {
+            if a[k] != b[k] {
+                out[k] = I::point(a[k]).sub(I::point(b[k]))?;
+            }
+        }
+        Ok(out)
+    };
+    let dot = |a: [I; 3], b: [I; 3]| -> Result<I> {
+        let mut out = I::point(0.);
+        for k in 0..3 {
+            out = add(out, mul(a[k], b[k])?)?;
+        }
+        Ok(out)
+    };
+    let tangent = difference(frame[1], frame[0])?;
+    let meridian = difference(frame[3], frame[2])?;
+    let squared = dot(tangent, tangent)?;
+    if squared.lo <= 0. {
+        return Ok(None);
+    }
+    let alpha = dot(meridian, tangent)?.div(squared)?;
+    let mut normal = [I::point(0.); 3];
+    for k in 0..3 {
+        normal[k] = sub(meridian[k], mul(alpha, tangent[k])?)?;
+    }
+    Ok(Some([tangent, normal]))
+}
+
+#[derive(Clone, Copy)]
 enum Projection {
     Fixed([[f64; 3]; 2]),
     Source,
@@ -410,35 +442,8 @@ fn certify_inner(
                 s.control_points[index(2)][q].as_slice().try_into().unwrap(),
             ];
             report.source_frame = Some(frame);
-            let difference = |a: [f64; 3], b: [f64; 3]| -> Result<[I; 3]> {
-                let mut result = [I::point(0.); 3];
-                for k in 0..3 {
-                    if a[k] != b[k] {
-                        result[k] = I::point(a[k]).sub(I::point(b[k]))?;
-                    }
-                }
-                Ok(result)
-            };
-            let dot = |a: [I; 3], b: [I; 3]| -> Result<I> {
-                let mut result = I::point(0.);
-                for k in 0..3 {
-                    result = add(result, mul(a[k], b[k])?)?;
-                }
-                Ok(result)
-            };
-            let tangent = difference(frame[1], frame[0])?;
-            let meridian = difference(frame[3], frame[2])?;
-            let length_squared = dot(tangent, tangent)?;
-            if length_squared.lo <= 0. {
-                report.reason = "frame-not-separated";
-                return Ok(report);
-            }
-            let alpha = dot(meridian, tangent)?.div(length_squared)?;
-            let mut normal = [I::point(0.); 3];
-            for k in 0..3 {
-                normal[k] = sub(meridian[k], mul(alpha, tangent[k])?)?;
-            }
-            [tangent, normal]
+            let Some(coefficients)=source_coefficients(frame)? else {report.reason="frame-not-separated";return Ok(report);};
+            coefficients
         }
     };
     let mut coordinates: [Poly; 3] =
@@ -594,6 +599,7 @@ fn certify_inner(
 }
 #[derive(Clone, Debug)]
 pub struct JoinedReport {
+    pub source_frame:Option<[[f64;3];4]>,
     pub proven: bool,
     pub reason: &'static str,
     pub cells: usize,
@@ -616,6 +622,42 @@ pub fn certify_ruled_join(
     subdivisions: usize,
     max_cells: usize,
 ) -> Result<JoinedReport> {
+    certify_ruled_join_inner(
+        blend,
+        wall,
+        collapsed_end,
+        Projection::Fixed(projection),
+        subdivisions,
+        max_cells,
+    )
+}
+/// The same whole-chart union proof in the exact source frame t=A-P,
+/// n=h-(h.t)/(t.t)*t. Original wall identities establish n.(A-P)=0
+/// symbolically before factoring g_u; interval near-zero is never sufficient.
+pub fn certify_ruled_join_source_frame(
+    blend: &Surface,
+    wall: &Surface,
+    collapsed_end: usize,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<JoinedReport> {
+    certify_ruled_join_inner(
+        blend,
+        wall,
+        collapsed_end,
+        Projection::Source,
+        subdivisions,
+        max_cells,
+    )
+}
+fn certify_ruled_join_inner(
+    blend: &Surface,
+    wall: &Surface,
+    collapsed_end: usize,
+    projection: Projection,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<JoinedReport> {
     blend.validate()?;
     wall.validate()?;
     check(
@@ -624,10 +666,14 @@ pub fn certify_ruled_join(
             && subdivisions <= 64
             && max_cells > 0
             && max_cells <= 100000
-            && projection.iter().flatten().all(|x| x.is_finite()),
+            && match projection {
+                Projection::Fixed(p) => p.iter().flatten().all(|x| x.is_finite()),
+                Projection::Source => true,
+            },
         "Joined projection requires finite rows and bounded work",
     )?;
     let mut out = JoinedReport {
+        source_frame: None,
         proven: false,
         reason: "joined-projection-not-proven",
         cells: 0,
@@ -671,33 +717,64 @@ pub fn certify_ruled_join(
             out.reason = "source-seam-not-identical";
             return Ok(out);
         }
-        if (0..3).any(|k| {
-            projection[0][k] != 0. && wall.control_points[i][0][k] != wall.control_points[i][1][k]
-        }) {
-            out.reason = "wall-first-projection-not-constant";
-            return Ok(out);
-        }
     }
     let index = |i| if collapsed_end == 0 { i } else { p - i };
-    // These exact source equalities establish g_u(0,t)=0 regardless of
-    // differing u weights. Preserve that known factor rather than accepting
-    // independently rounded polynomial cancellations as an exact zero.
-    if (0..2).any(|j| {
-        (0..3).any(|k| {
-            projection[1][k] != 0.
-                && wall.control_points[index(0)][j][k] != wall.control_points[index(1)][j][k]
-        })
-    }) {
-        out.reason = "wall-weighted-order-not-proven";
-        return Ok(out);
-    }
-    let first = certify(
+    let first = certify_inner(
         blend,
         collapsed_end,
         projection,
         subdivisions,
         subdivisions * subdivisions,
     )?;
+    out.source_frame = first.source_frame;
+    let coefficients = match projection {
+        Projection::Fixed(p) => p.map(|r| r.map(I::point)),
+        Projection::Source => {
+            let Some(frame) = first.source_frame else {
+                out.reason = first.reason;
+                return Ok(out);
+            };
+            let Some(c) = source_coefficients(frame)? else {
+                out.reason = "frame-not-separated";
+                return Ok(out);
+            };
+            c
+        }
+    };
+    for row in &wall.control_points {
+        if (0..3).any(|k| !zero(coefficients[0][k]) && row[0][k] != row[1][k]) {
+            out.reason = "wall-first-projection-not-constant";
+            return Ok(out);
+        }
+    }
+    // Adjacent wall controls must differ by exactly the original tangent,
+    // or by zero in every coordinate where that tangent vanishes. This binds
+    // the known orthogonality to both wall ends despite arbitrary U weights.
+    let order_exact = match projection {
+        Projection::Fixed(p) => (0..2).all(|j| {
+            (0..3).all(|k| {
+                p[1][k] == 0.
+                    || wall.control_points[index(0)][j][k] == wall.control_points[index(1)][j][k]
+            })
+        }),
+        Projection::Source => {
+            let frame = first.source_frame.unwrap();
+            (0..2).all(|j| {
+                (0..3).all(|k| {
+                    if frame[0][k] == frame[1][k] {
+                        wall.control_points[index(0)][j][k] == wall.control_points[index(1)][j][k]
+                    } else {
+                        wall.control_points[index(0)][j][k] == frame[0][k]
+                            && wall.control_points[index(1)][j][k] == frame[1][k]
+                    }
+                })
+            })
+        }
+    };
+    if !order_exact {
+        out.reason = "wall-weighted-order-not-proven";
+        return Ok(out);
+    }
     out.cells = first.cells;
     let Some(bounds) = first.weighted_bounds else {
         out.reason = first.reason;
@@ -717,12 +794,12 @@ pub fn certify_ruled_join(
             for row in 0..2 {
                 let mut value = I::point(0.);
                 for k in 0..3 {
-                    if point[k] != pole[k] && projection[row][k] != 0. {
+                    if point[k] != pole[k] && !zero(coefficients[row][k]) {
                         value = add(
                             value,
                             I::point(point[k])
                                 .sub(I::point(pole[k]))?
-                                .mul(I::point(projection[row][k]))?,
+                                .mul(coefficients[row][k])?,
                         )?;
                     }
                 }
@@ -795,6 +872,7 @@ pub fn certify_ruled_join(
     }
     Ok(out)
 }
+
 
 fn zero(x: I) -> bool {
     x.lo == 0. && x.hi == 0.

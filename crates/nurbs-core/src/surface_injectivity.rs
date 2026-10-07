@@ -2,6 +2,7 @@
 //! If a fixed projection F and constant Y satisfy ||I-Y DF||_inf < 1 over
 //! the entire convex parameter rectangle, F(x)=F(y) implies x=y. Every knot
 //! rectangle contributes to the same Jacobian hull; local success is not enough.
+//! A separate C1 polar proof checks all oriented principal minors globally.
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -10,9 +11,21 @@ pub struct Report {
     pub linear_projection: Option<[[f64;3];2]>,
     pub projective_projection: Option<[[f64;4];3]>,
     pub polar_projection: Option<[[f64;4];3]>,
+    pub polar_p_matrix: Option<PolarPMatrix>,
     pub contraction_upper: Option<f64>,
     pub spans: usize,
     pub reason: &'static str,
+}
+/// Original whole-chart Jacobian enclosure and its oriented positive principal
+/// minors. Applies to a C1 chart or an explicitly continuous piecewise join;
+/// every segment integral stays inside the same nonsingular matrix enclosure.
+#[derive(Clone, Debug)]
+pub struct PolarPMatrix {
+    pub coordinates: [[f64; 4]; 3],
+    pub jacobian: [[[f64; 2]; 2]; 2],
+    pub row_signs: [f64; 2],
+    pub diagonal_lower: [f64; 2],
+    pub determinant_lower: f64,
 }
 fn hull(values: impl Iterator<Item = I>) -> I {
     values.fold(
@@ -135,6 +148,7 @@ pub fn certify_contraction(s: &Surface, max_spans: usize) -> Result<Report> {
         linear_projection: None,
         projective_projection: None,
         polar_projection: None,
+        polar_p_matrix: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",
@@ -240,6 +254,42 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn polar_p_matrix_handles_strong_shear_without_claiming_contraction() {
+        let mut s=Surface {
+            degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..3).map(|i|(0..2).map(|v|vec![2.,i as f64/2.,if i==2 {10.-v as f64}else{-(v as f64)}]).collect()).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false,
+        };
+        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        let before=format!("{s:?}");
+        assert!(certify_polar_projection(&s,coordinates,16,256).unwrap().is_none());
+        let proof=certify_polar_p_matrix(&s,coordinates,16,256).unwrap().unwrap();
+        assert!(proof.diagonal_lower.iter().all(|v|*v>0.));
+        assert!(proof.determinant_lower>0.);
+        assert!(certify_polar_p_matrix(&s,coordinates,16,255).unwrap().is_none());
+        let automatic=certify(&s,10000).unwrap();
+        assert!(automatic.proven);
+        assert_eq!(format!("{s:?}"),before);
+        // This projection folds in U, so positive endpoint samples are insufficient.
+        for p in &mut s.control_points[1] {p[1]=2.;}
+        for p in &mut s.control_points[2] {p[1]=0.;}
+        assert!(certify_polar_p_matrix(&s,coordinates,16,256).unwrap().is_none());
+    }
+
+    #[test]
+    fn polar_p_matrix_refuses_c0_internal_knots_and_wrong_angle_branch() {
+        let mut s=Surface {degree_u:1,degree_v:1,
+            knots_u:vec![0.,0.,0.5,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..3).map(|i|(0..2).map(|v|vec![2.,i as f64/2.,-(v as f64)]).collect()).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false};
+        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        assert!(certify_polar_p_matrix(&s,coordinates,4,32).unwrap().is_none());
+        s.knots_u=vec![0.,0.,1.,1.];s.control_points.remove(1);s.weights.remove(1);
+        let mut wrong=coordinates;wrong[0][0]=-1.;
+        assert!(certify_polar_p_matrix(&s,wrong,4,16).unwrap().is_none());
+    }
+
     #[test]
     fn polar_jacobian_bounds_contain_independent_rational_coordinate_derivatives() {
         // x=2, y=2u/(1+u), z=-3v/(1+2v), from separable weights.
@@ -530,6 +580,24 @@ pub fn certify(s:&Surface,max_spans:usize)->Result<Report> {
             }
         }
     }
+    // Axis frames merely propose one continuous polar branch; every original
+    // cell must pass the global P-matrix proof before injectivity is admitted.
+    if s.degree_u <= 8 && s.degree_v <= 8 && cells <= max_spans-report.spans {
+        'frames: for axis in 0..3 { for sign in [1.,-1.] { for zsign in [1.,-1.] {
+            if cells > max_spans-report.spans { break 'frames; }
+            let mut coordinates=[[0.;4];3];
+            coordinates[0][axis]=sign;
+            coordinates[1][(axis+1)%3]=sign;
+            coordinates[2][(axis+2)%3]=zsign;
+            let proof=certify_polar_p_matrix(s,coordinates,16,cells)?;
+            report.spans+=cells;
+            if let Some(proof)=proof {
+                report.proven=true;report.polar_projection=Some(coordinates);
+                report.polar_p_matrix=Some(proof);
+                report.reason="global-polar-p-matrix";return Ok(report);
+            }
+        }}}
+    }
     if report.spans==max_spans {report.reason="work-limit";}
     Ok(report)
 }
@@ -548,6 +616,172 @@ pub fn certify_polar_projection(
     subdivisions: usize,
     max_cells: usize,
 ) -> Result<Option<f64>> {
+    let Some(global)=polar_projection_jacobian(s,coordinates,subdivisions,max_cells)? else {return Ok(None)};
+    Ok(contraction(global)?.filter(|q| *q < 1.))
+}
+
+/// Positive principal minors on one global Jacobian enclosure suffice for
+/// univalence of this C1 projected map on the complete closed rectangle.
+/// Nonzero determinant alone is insufficient. A polar branch is proven in
+/// every original cell by the same strictly positive X enclosure as above.
+pub fn certify_polar_p_matrix(
+    s: &Surface,
+    coordinates: [[f64; 4]; 3],
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<Option<PolarPMatrix>> {
+    s.validate()?;
+    let Some(global) = polar_projection_jacobian(s, coordinates, subdivisions, max_cells)? else {
+        return Ok(None);
+    };
+    for (knots, degree, count) in [
+        (&s.knots_u, s.degree_u, s.control_points.len()),
+        (&s.knots_v, s.degree_v, s.control_points[0].len()),
+    ] {
+        if knots
+            .iter()
+            .filter(|k| **k > knots[degree] && **k < knots[count])
+            .any(|k| knots.iter().filter(|x| *x == k).count() >= degree)
+        {
+            return Ok(None);
+        }
+    }
+    let mut oriented = global;
+    let mut signs = [1.; 2];
+    for row in 0..2 {
+        if global[row][row].lo > 0. {
+        } else if global[row][row].hi < 0. {
+            signs[row] = -1.;
+            for axis in 0..2 {
+                oriented[row][axis] = I::point(-1.).mul(global[row][axis])?;
+            }
+        } else {
+            return Ok(None);
+        }
+    }
+    if oriented[0][0].lo <= 0. || oriented[1][1].lo <= 0. {
+        return Ok(None);
+    }
+    let determinant = oriented[0][0]
+        .mul(oriented[1][1])?
+        .sub(oriented[0][1].mul(oriented[1][0])?)?;
+    if determinant.lo <= 0. {
+        return Ok(None);
+    }
+    Ok(Some(PolarPMatrix {
+        coordinates,
+        jacobian: global.map(|r| r.map(|v| [v.lo, v.hi])),
+        row_signs: signs,
+        diagonal_lower: [oriented[0][0].lo, oriented[1][1].lo],
+        determinant_lower: determinant.lo,
+    }))
+}
+
+/// Continuous union of two original single-Bezier charts, joined at v=max.
+/// The second chart is traversed backward. One global interval Jacobian
+/// encloses every segment integral across both pieces. Positive principal
+/// minors of that enclosure make every such integral nonsingular, including
+/// segments crossing the seam. Exact controls and weights establish continuity.
+pub fn certify_polar_join(
+    a: &Surface,
+    b: &Surface,
+    coordinates: [[f64; 4]; 3],
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<Option<PolarPMatrix>> {
+    a.validate()?;
+    b.validate()?;
+    check(
+        subdivisions > 0
+            && subdivisions <= 64
+            && max_cells > 0
+            && max_cells <= 100000
+            && coordinates.iter().flatten().all(|x| x.is_finite()),
+        "Polar join requires finite coordinates and bounded work",
+    )?;
+    let single = |s: &Surface| {
+        !s.periodic_u
+            && !s.periodic_v
+            && [
+                (&s.knots_u, s.degree_u, s.control_points.len()),
+                (&s.knots_v, s.degree_v, s.control_points[0].len()),
+            ]
+            .iter()
+            .all(|(k, d, n)| {
+                *n == *d + 1
+                    && k[..=*d].iter().all(|v| *v == k[*d])
+                    && k[*n..].iter().all(|v| *v == k[*n])
+            })
+    };
+    if !single(a) || !single(b) || a.degree_u != b.degree_u {
+        return Ok(None);
+    }
+    for u in 0..a.control_points.len() {
+        let av = a.degree_v;
+        let bv = b.degree_v;
+        if a.control_points[u][av] != b.control_points[u][bv]
+            || a.weights[u][av] != b.weights[u][bv]
+        {
+            return Ok(None);
+        }
+    }
+    let required = polar_cells(a, subdivisions) + polar_cells(b, subdivisions);
+    if required > max_cells {
+        return Ok(None);
+    }
+    let mut global = [[I {
+        lo: f64::INFINITY,
+        hi: f64::NEG_INFINITY,
+    }; 2]; 2];
+    for (s, reverse) in [(a, false), (b, true)] {
+        let Some(jac) = polar_projection_jacobian(s, coordinates, subdivisions, max_cells)? else {
+            return Ok(None);
+        };
+        let widths = [
+            I::point(s.knots_u[s.control_points.len()]).sub(I::point(s.knots_u[s.degree_u]))?,
+            I::point(s.knots_v[s.control_points[0].len()]).sub(I::point(s.knots_v[s.degree_v]))?,
+        ];
+        for row in 0..2 {
+            for axis in 0..2 {
+                let mut value = jac[row][axis].mul(widths[axis])?;
+                if reverse && axis == 1 {
+                    value = value.mul(I::point(-1.))?;
+                }
+                global[row][axis] = hull([global[row][axis], value].into_iter());
+            }
+        }
+    }
+    let mut oriented = global;
+    let mut signs = [1.; 2];
+    for row in 0..2 {
+        if global[row][row].lo > 0. {
+        } else if global[row][row].hi < 0. {
+            signs[row] = -1.;
+            for axis in 0..2 {
+                oriented[row][axis] = I::point(-1.).mul(global[row][axis])?;
+            }
+        } else {
+            return Ok(None);
+        }
+    }
+    let determinant = oriented[0][0]
+        .mul(oriented[1][1])?
+        .sub(oriented[0][1].mul(oriented[1][0])?)?;
+    if oriented[0][0].lo <= 0. || oriented[1][1].lo <= 0. || determinant.lo <= 0. {
+        return Ok(None);
+    }
+    Ok(Some(PolarPMatrix {
+        coordinates,
+        jacobian: global.map(|r| r.map(|v| [v.lo, v.hi])),
+        row_signs: signs,
+        diagonal_lower: [oriented[0][0].lo, oriented[1][1].lo],
+        determinant_lower: determinant.lo,
+    }))
+}
+
+fn polar_projection_jacobian(
+    s:&Surface,coordinates:[[f64;4];3],subdivisions:usize,max_cells:usize,
+) -> Result<Option<[[I;2];2]>> {
     s.validate()?;
     check(
         subdivisions > 0 && subdivisions <= 64 && max_cells > 0 && max_cells <= 100_000
@@ -579,7 +813,7 @@ pub fn certify_polar_projection(
             }}
         }
     }
-    Ok(contraction(global)?.filter(|q| *q < 1.))
+    Ok(Some(global))
 }
 fn polar_cells(s: &Surface, subdivisions: usize) -> usize {
     let active = |knots: &[f64],degree: usize,count: usize|

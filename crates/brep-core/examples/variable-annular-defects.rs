@@ -37,8 +37,10 @@ fn main() {
             "visitedPairs": report.pairs.pairs.len(),
             "nextPair": report.pairs.next_pair,
             "faces": report.faces.faces.iter().map(|f| value_codec::json!({
-                "face": f.face, "proven": f.result.as_ref().is_some_and(|r| r.proven),
+                "face": f.face, "proven": f.absence_proven(),
                 "reason": f.result.as_ref().map(|r| r.reason),
+                "quotientProven": f.quotient.as_ref().is_some_and(|q| q.result.proven),
+                "quotientReason": f.quotient.as_ref().map(|q| q.result.reason),
             })).collect::<Vec<_>>(),
             "pairs": report.pairs.pairs.iter().map(|p| value_codec::json!({
                 "faces": p.faces, "reason": p.reason,
