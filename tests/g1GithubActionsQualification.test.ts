@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v75.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v76.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v75',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v76',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -313,4 +313,13 @@ describe('cross-platform frozen runtime execution', () => {
     ])
     expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual(['vite-chromium','vite-webkit'])
   })
+})
+
+it('preserves exact LF checkout bytes for every bound source and native sources', () => {
+  const paths = [...new Set(plan.bindings.bundles.flatMap((item: any) => item.paths))] as string[]
+  paths.push('crates/nurbs-core/src/sweeps/profile_certificate.rs', 'crates/Cargo.toml', 'crates/Cargo.lock')
+  const attributes = execFileSync('git', ['check-attr', '-z', 'eol', '--', ...paths], {cwd:root,encoding:'utf8'}).split('\0')
+  for (let i=0;i<attributes.length-1;i+=3) expect(attributes[i+2], attributes[i]).toBe('lf')
+  const harnessBundle = plan.bindings.bundles.find((item: any) => item.paths.includes('scripts/g1-github-actions.mjs'))
+  expect(harnessBundle.paths).toContain('.gitattributes')
 })
