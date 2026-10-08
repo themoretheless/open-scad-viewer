@@ -231,3 +231,28 @@ remain **3006**, geometric spans **64,370 -> 64,252**, factored query charges
 were added or lost; whole-wall admission remains false. The original annular
 regression passes. The increased query cost is recorded; no speedup is claimed.
 This native update is not yet in the currently qualified 3ad19753 WASM package.
+
+
+## Derivative-cone direction proposal (native)
+
+The batched polar anchor gate may additionally try the sum of normalized
+midpoint generator vectors. This rounded vector is only a proposal: the original
+interval cone predicate must still prove strictly positive projections for every
+generator and the requested normal-angle bound. Empty/invalid/zero midpoint
+sets yield no proposal. The single-direction API keeps its previous semantics.
+
+A regression gives an exact XY cone whose two nearly opposite generators have
+no positive projection among all 26 integer directions. The derived direction
+passes the existing interval predicate. Enlarging one generator across zero
+still refuses. The original source-path regression additionally proves that the
+batch can use its proposal with the same eight geometric spans while the
+single zero-direction call refuses. Native normal tests: 18 passed, one existing
+ignored; source-chord family: 32 passed; annular Body regression passes.
+
+On the original annular whole-wall control this proposal adds **no new proof**:
+17/45 complete mixed pairs, 3006 pending UV products, 64252 geometric spans,
+30461 cells, 11647 normal spans, 314744 domain cells, 4975 charged factor queries,
+55479571 exact preparation work. No proofs are lost. Whole-wall admission is
+false. This diagnostic change remains native and has not replaced the qualified
+3ad19753 WASM/worker/UI artifact. Remaining shared-edge products require stronger
+source chord enclosures; no claim of general fillet qualification is made.

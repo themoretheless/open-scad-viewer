@@ -62,6 +62,23 @@ pub fn positive_chord_cone_excluded(
     Ok(cosine_upper<I::point(1.).sub(I::point(max_sine_squared))?.lo)
 }
 
+/// A rounded direction proposal only. The interval cone predicate must
+/// independently verify it; midpoint vectors never authorize an exclusion.
+pub(crate) fn chord_cone_projection_proposal(generators:&[[[f64;2];3]])->Option<[f64;3]> {
+    if generators.is_empty()||generators.len()>16 {return None;}
+    let mut sum=[0.;3];
+    for g in generators {
+        if g.iter().any(|r|!r[0].is_finite()||!r[1].is_finite()||r[0]>r[1]) {return None;}
+        let mid=g.map(|r|r[0]*0.5+r[1]*0.5);
+        let scale=mid.iter().map(|x|x.abs()).fold(0_f64,f64::max);
+        if scale<f64::MIN_POSITIVE {return None;}
+        let scaled=mid.map(|x|x/scale);
+        let norm=scaled.iter().map(|x|x*x).sum::<f64>().sqrt();
+        for k in 0..3 {sum[k]+=scaled[k]/norm;}
+    }
+    (sum.iter().all(|x|x.is_finite())&&sum.iter().any(|x|*x!=0.)).then_some(sum)
+}
+
 #[cfg(test)]
 mod positive_chord_cone_tests {
     use super::positive_chord_cone_excluded as excluded;
@@ -74,6 +91,20 @@ mod positive_chord_cone_tests {
         assert!(!excluded(&[[[0.,0.],[0.,0.],[1.,2.]]],n,[0.,0.,1.],1e-6).unwrap());
         assert!(!excluded(&[[[-1.,1.],[0.,0.],[0.,0.]]],n,[1.,0.,0.],1e-6).unwrap());
         assert!(!excluded(&g,[[0.,0.];3],[1.,0.,0.],1e-6).unwrap());
+    }
+    #[test]
+    fn proposed_bisector_covers_narrow_cone_missed_by_integer_directions() {
+        let g=[[[1.,1.],[0.,0.],[0.,0.]],[[-0.995,-0.995],[0.1,0.1],[0.,0.]]];
+        let normal=[[0.,0.],[0.,0.],[1.,1.]];
+        for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+            assert!(!excluded(&g,normal,[x as f64,y as f64,z as f64],1e-6).unwrap());
+        }}}
+        let proposal=super::chord_cone_projection_proposal(&g).unwrap();
+        assert!(excluded(&g,normal,proposal,1e-6).unwrap());
+        let mut uncertain=g;uncertain[0][0]=[-1.,1.];
+        assert!(!excluded(&uncertain,normal,proposal,1e-6).unwrap());
+        assert!(super::chord_cone_projection_proposal(&[[[0.,0.];3]]).is_none());
+        assert!(super::chord_cone_projection_proposal(&[[[f64::NAN,1.],[0.,0.],[0.,0.]]]).is_none());
     }
     #[test]
     fn validates_all_generators_before_any_early_refusal() {

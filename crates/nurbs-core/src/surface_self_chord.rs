@@ -698,15 +698,24 @@ pub fn qualify_polar_anchored_chords<'a>(
     normals:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
     projection:[f64;3],sine:f64,max_spans:usize,
 )->Result<(Option<CornerChordCertificate<'a>>,usize)> {
-    qualify_polar_anchored_chords_with_projections(anchors,rectangles,differential,normals,&[projection],sine,max_spans)
+    qualify_polar_anchored_chords_impl(anchors,rectangles,differential,normals,&[projection],sine,max_spans,false)
 }
 /// Enclose original paths and normals once, then test a bounded direction set.
-/// Projection attempts do not repeat geometric span work.
+/// Projection attempts do not repeat geometric span work. One additional
+/// derivative-cone direction proposal is checked by the same interval gate.
 pub fn qualify_polar_anchored_chords_with_projections<'a>(
     anchors:[&SurfaceAnchorCertificate<'a>;2],rectangles:[[[f64;2];2];2],
     differential:[Option<&crate::rational_pole_differential::Certificate<'_>>;2],
     normals:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
     projections:&[[f64;3]],sine:f64,max_spans:usize,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    qualify_polar_anchored_chords_impl(anchors,rectangles,differential,normals,projections,sine,max_spans,true)
+}
+fn qualify_polar_anchored_chords_impl<'a>(
+    anchors:[&SurfaceAnchorCertificate<'a>;2],rectangles:[[[f64;2];2];2],
+    differential:[Option<&crate::rational_pole_differential::Certificate<'_>>;2],
+    normals:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
+    projections:&[[f64;3]],sine:f64,max_spans:usize,adaptive:bool,
 )->Result<(Option<CornerChordCertificate<'a>>,usize)> {
     check(anchors[0].world==anchors[1].world&&(1..=100000).contains(&max_spans)
         &&(1..=26).contains(&projections.len())&&projections.iter().flatten().all(|x|x.is_finite())&&sine.is_finite()&&(0. ..1.).contains(&sine),
@@ -755,12 +764,13 @@ pub fn qualify_polar_anchored_chords_with_projections<'a>(
             generators.push(g);
         }
     }
+    let proposal=if adaptive {normal_alignment::chord_cone_projection_proposal(&generators)}else{None};
     for side in 0..2 {
         if spans==max_spans {break;}
         let normal=if let Some(n)=normals[side] {spans+=1;Some(n.bounds(rectangles[side])?)}else{
             let (n,used)=normal_alignment::normal_bounds(sources[side],rectangles[side],max_spans-spans)?;spans+=used;n
         };
-        if let Some(n)=normal {for projection in projections {
+        if let Some(n)=normal {for projection in proposal.iter().chain(projections.iter()) {
             if normal_alignment::positive_chord_cone_excluded(&generators,n,*projection,sine)? {
                 return Ok((Some(CornerChordCertificate{sources,rectangles,max_sine_squared:sine}),spans));
             }
@@ -893,6 +903,9 @@ mod original_corner_chord_tests {
         let rects=[[[0.,0.001],[0.,0.0001]],[[0.,0.001];2]];
         let (cert,used)=qualify_polar_anchored_chords([&first,&second],rects,[Some(&d),None],[Some(&n),None],[-1.,-1.,0.],1e-6,8).unwrap();
         assert!(cert.is_some());assert_eq!(used,8);
+        assert!(qualify_polar_anchored_chords([&first,&second],rects,[Some(&d),None],[Some(&n),None],[0.;3],1e-6,8).unwrap().0.is_none());
+        let (adaptive,adaptive_spans)=qualify_polar_anchored_chords_with_projections([&first,&second],rects,[Some(&d),None],[Some(&n),None],&[[0.;3]],1e-6,8).unwrap();
+        assert!(adaptive.is_some());assert_eq!(adaptive_spans,8);
         assert!(qualify_polar_anchored_chords([&first,&second],rects,[Some(&d),None],[Some(&n),None],[-1.,-1.,0.],1e-6,7).unwrap().0.is_none());
         let twin=s.clone();let foreign=crate::rational_pole_differential::prepare(&twin,false,10000000).unwrap().certificate.unwrap();
         assert!(qualify_polar_anchored_chords([&first,&second],rects,[Some(&foreign),None],[Some(&n),None],[-1.,-1.,0.],1e-6,8).is_err());
