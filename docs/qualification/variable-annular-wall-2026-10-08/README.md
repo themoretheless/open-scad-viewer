@@ -1427,3 +1427,18 @@ Evidence: `whole-wall-ui-late-reply.json.gz`.
 The same three rendered whole-wall scenarios also passed keyboard operation,
 including the obsolete callback replay, localized failure, Retry and exact
 reload. Evidence: `whole-wall-ui-late-reply-keyboard.json.gz`.
+
+## Original source-body wall panel
+
+The source-body panel passed rendered mouse acceptance on the current isolated
+production build. All 378 original face pairs are enumerated, 253 remain
+unproven, and 18/27 same-face charts qualify. Every unqualified chart retains
+its representative endpoint-exchange obligation array. The panel lists all
+unqualified faces with pending region-pair counts and marks original face
+bounds red. This highlight is at face/display-region granularity, not an exact
+localization of every wall obligation. A held coverage request is cancelled by
+changing the threshold; replaying a saved successful obsolete reply does not
+restore the old result. Retry succeeds; native document and reload stay equal.
+See `source-wall-ui.json.gz` and `source-wall-ui-fixture.json.gz`; decompress the
+fixture and set CAD_SOURCE_WALL_UI_FIXTURE to run check-source-wall-browser.mjs.
+This does not certify the complete wall, arbitrary geometry or all commands.
