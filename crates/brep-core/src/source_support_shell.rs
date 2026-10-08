@@ -650,6 +650,7 @@ mod tests {
         assert_eq!(zero_trim.pending_pairs(),count*(count-1)/2);
 
         let mut original_planar=0;let mut planar_work=0;let mut planar_spans=0;
+        let mut original_fiber=0;let mut fiber_work=0;let mut fiber_spans=0;let mut fiber_drivers=0;
         for pair in &trimmed_shell.pairs {
             if pair.inspection.complete_excluded() {continue;}
             let contact=expression.qualify_original_planar_contact(pair.faces,100000000-planar_work,100000-planar_spans).unwrap();
@@ -658,10 +659,27 @@ mod tests {
                 original_planar+=1;assert_eq!(certificate.faces(),pair.faces);
                 for side in 0..2 {assert!(std::ptr::eq(certificate.owners()[side],&expression.faces()[pair.faces[side]]));}
                 assert!(expression.qualify_original_planar_contact(pair.faces,0,0).unwrap().certificate.is_none());
+            } else {
+                let fiber=expression.qualify_original_fiber_contact(pair.faces,100000000-fiber_work,100000-fiber_spans,100000-fiber_drivers).unwrap();
+                fiber_work+=fiber.exact_work;fiber_spans+=fiber.spans;fiber_drivers+=fiber.driver_cells;
+                if let Some(certificate)=fiber.certificate {
+                    original_fiber+=1;assert_eq!(certificate.faces(),pair.faces);
+                    let source_faces=match certificate.proof() {
+                        crate::source_profile_body::OriginalFiberProof::Boundary(proof)=>proof.faces(),
+                        crate::source_profile_body::OriginalFiberProof::Paired(proof)=>proof.faces(),
+                    };
+                    let original=pair.faces.map(|id|match expression.faces()[id].kind(){ShellFaceKind::Original(index)=>index,_=>panic!("changed face cannot inherit")});
+                    assert!(source_faces==original || source_faces==[original[1],original[0]]);
+                    for side in 0..2 {assert!(std::ptr::eq(certificate.owners()[side],&expression.faces()[pair.faces[side]]));}
+                    assert!(expression.qualify_original_fiber_contact(pair.faces,0,0,0).unwrap().certificate.is_none());
+                }
             }
         }
         eprintln!("expression fresh unchanged planar contacts={} exactWork={} spans={}",original_planar,planar_work,planar_spans);
         assert_eq!(original_planar,10);
+        eprintln!("expression fresh unchanged fiber contacts={} exactWork={} spans={} drivers={}",original_fiber,fiber_work,fiber_spans,fiber_drivers);
+        assert_eq!(original_fiber,19);
+        assert!(expression.qualify_original_fiber_contact(retained_ids,100000000,100000,100000).unwrap().certificate.is_none());
         assert!(expression.qualify_original_planar_contact([0,0],100,100).is_err());
         let transition_id=expression.faces().iter().position(|f|f.kind()==ShellFaceKind::Transition).unwrap();
         assert!(expression.qualify_original_planar_contact([retained_ids[0],transition_id],100000000,100000).unwrap().certificate.is_none());

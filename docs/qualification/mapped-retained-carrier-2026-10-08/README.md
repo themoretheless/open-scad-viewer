@@ -2166,3 +2166,32 @@ for allowed contact, not classified as disjoint. The product report still
 preserves its 244 pending entries; combining it with these ten separate
 contact certificates leaves 234 pairs without a complete pair proof.
 Changed/subdivided faces and curved seam neighborhoods remain required.
+
+
+## Fresh boundary-fiber authority for unchanged curved expression pairs
+
+qualify_original_fiber_contact freshly attempts source_fiber_contact in
+both face orientations, then source_paired_fiber_contact under one shared
+exact-work/driver allowance and a shared span allowance where applicable.
+The complete original-contour identity gate is factored into the same
+private helper used by planar transfer. A private OriginalFiberContact
+borrows the actual final face owners and retains its Boundary or Paired
+source certificate. Reports, topology flags and public numbers cannot
+construct this admission. Changed contour or expression faces still need
+new proofs rather than inherited source authority.
+
+The integration attempts fibers only for pairs left pending after trim
+inspection and not admitted by planar contact, preventing double counting.
+Each admitted certificate is checked against the actual expression-face
+owner pointers and zero-work admission is rejected. Native cargo check
+passed before integration testing.
+
+The first combined native run passed in 64.81 seconds. Nineteen additional
+pending pairs received fresh unchanged fiber certificates after excluding
+the ten planar-qualified pairs, using 948414 exact work, 511 spans and zero
+driver subdivisions. The final run requires exactly nineteen certificates
+and checks the fresh source certificate's unordered face IDs against the
+actual Original expression-face mapping. Retained faces and zero work
+refuse transfer. With 162 trim/world excluded pairs, 10 planar contacts
+and 19 fiber contacts, 215 of the 406 pairs still lack a complete pair
+proof. These are supported fixture results, not full shell qualification.
