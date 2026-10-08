@@ -641,3 +641,52 @@ refuses its invalid inverse path. Signed-negative denominators preserve valid
 quotient bounds; mixed coefficient signs refuse. Evidence: the three
 `coordinate-*-tests.log.gz` files. Retained whole-face coverage remains 28/31;
 no complete wall or WASM/UI integration is claimed here.
+
+
+### Completed corrected prefix audit
+
+The original-body audit with the corrected pole-to-endpoint prefix completed
+against the implementation in commit 5c83a87a. No pole face is fully certified.
+Both directions have matching counts at the unchanged 1024/8192 limits:
+
+| Radius order | Face | Cells | Spans | Direction exclusions | Pending |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 392 | 8192 | 109 | 44 |
+| 0.5 → 1.25 | 10 | 382 | 8192 | 123 | 12 |
+| 1.25 → 0.5 | 0 | 392 | 8192 | 101 | 42 |
+| 1.25 → 0.5 | 10 | 384 | 8192 | 122 | 12 |
+
+Uncertain entry rectangles now have U widths ~1e-4 and V around 0 and 0.396.
+Exit uncertainty remains at finite U. These partitions do not establish a
+certified surface fraction. Whole self-face coverage stays 28/31. Accepted
+evidence: `coordinate-prefix-self-wall.json.gz` and its completed log. The
+older audit lacking the prefix bound remains excluded from qualification.
+
+## Simultaneous coefficient restriction and classified pair evidence
+
+Normalized rational quotient nets now restrict all coefficients through two
+closed de Casteljau splits per axis. Point and full-domain cases retain their
+closed endpoints. Each interval blend is intersected with the parent coefficient
+hull, preserving the exact convex combination. The original knot-span blossom
+helper stays the route for generic position/Jacobian hulls; rational quotient
+queries use the simultaneous unit-domain restriction. Independent rational
+quotient, scaled/reflected frame, prefix-confinement and true-chord refusals
+still pass: 6 path tests, 6 normal tests, and 13 chord tests.
+
+Pair reports separately track whether the coordinate path was attempted,
+available, and actually excluded a pair. Coverage and the native audit expose
+attempts, confinement/factor refusals and successful coordinate-path exclusions;
+an absent budget is not counted as a path refusal. Fixture tests verify the
+successful mode and that insufficient coverage work records zero attempts.
+Per-face elapsed milliseconds include ordinary qualification, exact normal and
+differential preparation, and adaptive coverage. This is not UI latency.
+
+An ignored native microbenchmark compares 50 identical restrictions of a
+16x8 polynomial net. It validates a constant shared-denominator quotient and
+independent 1/(1+u+v) values. In this debug run, the existing blossom restriction
+took 3300.411 ms and simultaneous splitting 364.877 ms (9.045x ratio). This is
+one debug microbenchmark under unmanaged host load, not release speed or
+end-to-end CAD latency. Evidence: `split-restriction-benchmark.log.gz` and the
+three `split-*-tests.log.gz` files (25 regressions plus the benchmark passed).
+A fresh four-body run with classified evidence and splitting is active;
+whole-wall qualification and WASM/UI integration remain open.

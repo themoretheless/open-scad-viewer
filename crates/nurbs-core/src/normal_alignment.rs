@@ -86,15 +86,75 @@ pub(crate) fn restrict_hull(
             .fold(f64::NEG_INFINITY, f64::max),
     }))
 }
+/// Restrict all coefficients together by two de Casteljau splits per axis.
+/// This keeps closed endpoints and avoids a separate blossom for every cell.
+fn restrict_unit_net(net: &Net, domain: [[f64; 2]; 2]) -> Result<Net> {
+    check(
+        domain.iter().all(|d| {
+            d[0].is_finite() && d[1].is_finite() && 0. <= d[0] && d[0] <= d[1] && d[1] <= 1.
+        }),
+        "Closed unit polynomial rectangle",
+    )?;
+    fn split(row: &[[I; 4]], t: I) -> Result<(Vec<[I; 4]>, Vec<[I; 4]>)> {
+        let t = t.intersect(0., 1.)?;
+        let beta = I::point(1.).sub(t)?.intersect(0., 1.)?;
+        let mut current = row.to_vec();
+        let mut left = vec![current[0]];
+        let mut right = vec![*current.last().unwrap()];
+        while current.len() > 1 {
+            let mut next = Vec::new();
+            for pair in current.windows(2) {
+                let mut h = [I::point(0.); 4];
+                for k in 0..4 {
+                    h[k] = pair[0][k].mul(beta)?.add(pair[1][k].mul(t)?)?.intersect(
+                        pair[0][k].lo.min(pair[1][k].lo),
+                        pair[0][k].hi.max(pair[1][k].hi),
+                    )?;
+                }
+                next.push(h);
+            }
+            current = next;
+            left.push(current[0]);
+            right.push(*current.last().unwrap());
+        }
+        right.reverse();
+        Ok((left, right))
+    }
+    fn row_restrict(row: &[[I; 4]], d: [f64; 2]) -> Result<Vec<[I; 4]>> {
+        if d == [0., 1.] {
+            return Ok(row.to_vec());
+        }
+        if d[0] == d[1] {
+            let value = *split(row, I::point(d[0]))?.0.last().unwrap();
+            return Ok(vec![value; row.len()]);
+        }
+        let left = if d[1] == 1. {
+            row.to_vec()
+        } else {
+            split(row, I::point(d[1]))?.0
+        };
+        if d[0] == 0. {
+            return Ok(left);
+        }
+        Ok(split(&left, I::point(d[0]).div(I::point(d[1]))?)?.1)
+    }
+    let mut out = net.clone();
+    for v in 0..net[0].len() {
+        let row = net.iter().map(|r| r[v]).collect::<Vec<_>>();
+        let restricted = row_restrict(&row, domain[0])?;
+        for u in 0..net.len() {
+            out[u][v] = restricted[u];
+        }
+    }
+    for row in &mut out {
+        *row = row_restrict(row, domain[1])?;
+    }
+    Ok(out)
+}
 /// Positive denominator Bernstein coefficients make a rational polynomial a
 /// convex combination of coefficient quotients, including after restriction.
 pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result<[I; 3]> {
-    let restricted = restrict_net(
-        net,
-        [net.len() - 1, net[0].len() - 1],
-        [[0., 1.], [0., 1.]],
-        domain,
-    )?;
+    let restricted = restrict_unit_net(net, domain)?;
     let mut out = [I {
         lo: f64::INFINITY,
         hi: f64::NEG_INFINITY,
@@ -114,12 +174,7 @@ pub(crate) fn signed_rational_quotient_hull(
     net: &Net,
     domain: [[f64; 2]; 2],
 ) -> Result<Option<[I; 3]>> {
-    let r = restrict_net(
-        net,
-        [net.len() - 1, net[0].len() - 1],
-        [[0., 1.], [0., 1.]],
-        domain,
-    )?;
+    let r = restrict_unit_net(net, domain)?;
     let positive = r.iter().flatten().all(|h| h[3].lo > 0.);
     let negative = r.iter().flatten().all(|h| h[3].hi < 0.);
     if !positive && !negative {
@@ -611,6 +666,47 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    #[ignore = "native restriction microbenchmark; no production speed claim"]
+    fn benchmark_closed_rational_restriction() {
+        let (p, q) = (16, 8);
+        let net = (0..=p)
+            .map(|u| {
+                (0..=q)
+                    .map(|v| {
+                        let w = 1. + u as f64 / p as f64 + v as f64 / q as f64;
+                        [I::point(w), I::point(1.), I::point(0.), I::point(w)]
+                    })
+                    .collect()
+            })
+            .collect::<Net>();
+        let domain = [[0.125, 0.875], [0.25, 0.75]];
+        let repeats = 50;
+        let start = std::time::Instant::now();
+        for _ in 0..repeats {
+            let result = restrict_net(&net, [p, q], [[0., 1.], [0., 1.]], domain).unwrap();
+            for h in result.iter().flatten() {
+                assert!(h[0].div(h[3]).unwrap().contains(1.));
+            }
+            std::hint::black_box(result);
+        }
+        let blossom = start.elapsed().as_secs_f64();
+        let start = std::time::Instant::now();
+        for _ in 0..repeats {
+            let result = restrict_unit_net(&net, domain).unwrap();
+            for h in result.iter().flatten() {
+                assert!(h[0].div(h[3]).unwrap().contains(1.));
+            }
+            std::hint::black_box(result);
+        }
+        let splits = start.elapsed().as_secs_f64();
+        let hull = rational_quotient_hull(&net, domain).unwrap();
+        for (u, v) in [(0.125, 0.25), (0.5, 0.5), (0.875, 0.75)] {
+            assert!(hull[0].contains(1.) && hull[1].contains(1. / (1. + u + v)));
+        }
+        eprintln!("restriction-benchmark degree={p},{q} repeats={repeats} blossom_ms={} split_ms={} ratio={}",
+            blossom*1000.,splits*1000.,blossom/splits);
     }
     #[test]
     fn rational_coefficient_quotients_keep_shared_denominator_and_reject_zero() {

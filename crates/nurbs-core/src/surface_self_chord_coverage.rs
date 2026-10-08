@@ -35,6 +35,9 @@ pub struct Report<'a> {
     pub spans: usize,
     pub intrinsic_exclusions: usize,
     pub polar_exclusions: usize,
+    pub coordinate_path_exclusions: usize,
+    pub coordinate_path_attempts: usize,
+    pub coordinate_path_refusals: usize,
     pub polar_factor_refusals: usize,
     pub angular_exclusions: usize,
     pub direction_exclusions: usize,
@@ -229,6 +232,9 @@ fn qualify_impl<'a>(
         spans: 0,
         intrinsic_exclusions: 0,
         polar_exclusions: 0,
+        coordinate_path_exclusions: 0,
+        coordinate_path_attempts: 0,
+        coordinate_path_refusals: 0,
         polar_factor_refusals: 0,
         angular_exclusions: 0,
         direction_exclusions: 0,
@@ -281,7 +287,7 @@ fn qualify_impl<'a>(
         }
         if let (Some(differential), Some(normals)) = (differential, factored) {
             if out.spans < limits.spans {
-                let (excluded, used) = surface_self_chord::rational_pole_pair_exclusion(
+                let r = surface_self_chord::rational_pole_pair_report(
                     s,
                     pair,
                     differential,
@@ -289,8 +295,12 @@ fn qualify_impl<'a>(
                     max_sine_squared,
                     limits.spans - out.spans,
                 )?;
-                out.spans += used;
-                if excluded {
+                out.spans += r.spans;
+                out.coordinate_path_attempts += usize::from(r.coordinate_path_attempted);
+                out.coordinate_path_refusals +=
+                    usize::from(r.coordinate_path_attempted && !r.coordinate_path_available);
+                out.coordinate_path_exclusions += usize::from(r.coordinate_path_excluded);
+                if r.excluded {
                     out.direction_exclusions += 1;
                     continue;
                 }

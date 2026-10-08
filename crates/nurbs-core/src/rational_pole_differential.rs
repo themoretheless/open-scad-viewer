@@ -629,6 +629,17 @@ mod tests {
             // Correlated numerator/denominator coefficients now keep the
             // wide angular pair nonsingular, unlike the old independent hulls.
             assert!(excluded.0 && excluded.1 <= 7);
+            let classified = crate::surface_self_chord::rational_pole_pair_report(
+                &s, pair, &c, &normals, 1e-4, 7,
+            )
+            .unwrap();
+            assert!(
+                classified.excluded
+                    && classified.coordinate_path_excluded
+                    && classified.coordinate_path_attempted
+                    && classified.coordinate_path_available
+            );
+
             let narrow = [[near, [0., 1e-12]], [near, [0.1, 0.1 + 1e-12]]];
             let local = crate::surface_self_chord::rational_pole_pair_exclusion(
                 &s, narrow, &c, &normals, 1e-4, 7,
@@ -657,6 +668,8 @@ mod tests {
             )
             .unwrap();
             assert!(limited.certificate.is_none() && limited.pending > 0 && limited.spans <= 1);
+            assert_eq!(limited.coordinate_path_attempts, 0);
+            assert_eq!(limited.coordinate_path_exclusions, 0);
             assert!(
                 crate::surface_self_chord_coverage::qualify_with_rational_pole(
                     &foreign,

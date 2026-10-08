@@ -34,6 +34,7 @@ fn main() {
                 if selected.as_ref().is_some_and(|ids| !ids.contains(&face)) {
                     continue;
                 }
+                let face_started = std::time::Instant::now();
                 let r = nurbs_core::surface_self_chord::qualify(&f.surface, 1e-4, 4096).unwrap();
                 let adaptive = if adaptive_enabled && r.certificate.is_none() {
                     let prepared = if factored_enabled && (face == 0 || face == 10) {
@@ -89,17 +90,17 @@ fn main() {
                     }
                     .unwrap();
                     eprintln!(
-                        "radii={radii:?} direction={direction} face={face} qualified={} cells={} spans={} pending={} direction_exclusions={} reason={}",
+                        "radii={radii:?} direction={direction} face={face} qualified={} cells={} spans={} pending={} direction_exclusions={} coordinate_exclusions={} coordinate_attempts={} coordinate_refusals={} reason={}",
                         a.certificate.is_some(), a.cells, a.spans, a.pending,
-                        a.direction_exclusions, a.reason,
+                        a.direction_exclusions, a.coordinate_path_exclusions, a.coordinate_path_attempts, a.coordinate_path_refusals, a.reason,
                     );
                     Some(
-                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"polarExclusions":a.polar_exclusions,"polarFactorRefusals":a.polar_factor_refusals,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"rationalDifferentialWork":differential.as_ref().map(|p|p.work),"rationalDifferentialQualified":differential.as_ref().map(|p|p.certificate.is_some()),"rationalDifferentialReason":differential.as_ref().map(|p|p.reason),"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
+                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"polarExclusions":a.polar_exclusions,"coordinatePathExclusions":a.coordinate_path_exclusions,"coordinatePathAttempts":a.coordinate_path_attempts,"coordinatePathRefusals":a.coordinate_path_refusals,"polarFactorRefusals":a.polar_factor_refusals,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"rationalDifferentialWork":differential.as_ref().map(|p|p.work),"rationalDifferentialQualified":differential.as_ref().map(|p|p.certificate.is_some()),"rationalDifferentialReason":differential.as_ref().map(|p|p.reason),"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
                     )
                 } else {
                     None
                 };
-                faces.push(value_codec::json!({"face":face,"qualified":r.certificate.is_some(),"complete":r.complete,"cosineSquaredUpper":r.cosine_squared_upper,"spans":r.spans,"reason":r.reason,"adaptive":adaptive}));
+                faces.push(value_codec::json!({"face":face,"elapsedMs":face_started.elapsed().as_secs_f64()*1000.,"qualified":r.certificate.is_some(),"complete":r.complete,"cosineSquaredUpper":r.cosine_squared_upper,"spans":r.spans,"reason":r.reason,"adaptive":adaptive}));
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
             cases.push(value_codec::json!({"radii":radii,"direction":direction,"sourceFacesTotal":model.faces.len(),"selectedFaces":selected,"adaptiveCellsPerFace":adaptive_cells,"adaptiveSpansPerFace":adaptive_spans,"faces":faces}));

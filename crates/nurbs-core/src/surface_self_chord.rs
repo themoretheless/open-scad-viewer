@@ -135,6 +135,15 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
 /// Pair-specific exclusion, not an intrinsic certificate for the convex union.
 /// Each attempted matrix charges five net restrictions and up to two endpoint
 /// normal restrictions. A confined coordinate path is tried before the UV path.
+#[derive(Default)]
+pub(crate) struct PairExclusion {
+    pub excluded: bool,
+    pub spans: usize,
+    pub coordinate_path_excluded: bool,
+    pub coordinate_path_attempted: bool,
+    pub coordinate_path_available: bool,
+}
+#[cfg(test)]
 pub(crate) fn rational_pole_pair_exclusion(
     s: &Surface,
     pair: [[[f64; 2]; 2]; 2],
@@ -143,6 +152,17 @@ pub(crate) fn rational_pole_pair_exclusion(
     sine: f64,
     max_spans: usize,
 ) -> Result<(bool, usize)> {
+    let r = rational_pole_pair_report(s, pair, differential, normals, sine, max_spans)?;
+    Ok((r.excluded, r.spans))
+}
+pub(crate) fn rational_pole_pair_report(
+    s: &Surface,
+    pair: [[[f64; 2]; 2]; 2],
+    differential: &crate::rational_pole_differential::Certificate<'_>,
+    normals: &crate::factored_surface_normals::Certificate<'_>,
+    sine: f64,
+    max_spans: usize,
+) -> Result<PairExclusion> {
     check(
         std::ptr::eq(s, differential.surface())
             && std::ptr::eq(s, normals.surface())
@@ -154,7 +174,7 @@ pub(crate) fn rational_pole_pair_exclusion(
         "Valid pole pair sine threshold",
     )?;
     if max_spans < 5 {
-        return Ok((false, 0));
+        return Ok(PairExclusion::default());
     }
     let union = std::array::from_fn(|a| {
         [
@@ -164,9 +184,14 @@ pub(crate) fn rational_pole_pair_exclusion(
     });
     let threshold = I::point(1.).sub(I::point(sine))?.lo;
     let mut used = 0;
+    let mut attempted = false;
+    let mut available = false;
     for coordinate_path in [true, false] {
         if max_spans - used < 5 {
             break;
+        }
+        if coordinate_path {
+            attempted = true;
         }
         let matrix = if coordinate_path {
             differential.coordinate_path_bounds(union)?
@@ -174,6 +199,9 @@ pub(crate) fn rational_pole_pair_exclusion(
             differential.bounds(union)?
         };
         used += 5;
+        if coordinate_path && matrix.is_some() {
+            available = true;
+        }
         let Some(mut j) = matrix else {
             continue;
         };
@@ -203,11 +231,23 @@ pub(crate) fn rational_pole_pair_exclusion(
                 n[k] = I::new(b[k][0], b[k][1])?.div(I::point(scale))?;
             }
             if endpoint_matrix_cosine(j, n)? < threshold {
-                return Ok((true, used));
+                return Ok(PairExclusion {
+                    excluded: true,
+                    spans: used,
+                    coordinate_path_excluded: coordinate_path,
+                    coordinate_path_attempted: attempted,
+                    coordinate_path_available: available,
+                });
             }
         }
     }
-    Ok((false, used))
+    Ok(PairExclusion {
+        excluded: false,
+        spans: used,
+        coordinate_path_excluded: false,
+        coordinate_path_attempted: attempted,
+        coordinate_path_available: available,
+    })
 }
 fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     let mut best = cosine_upper(j)?;
