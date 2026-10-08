@@ -361,6 +361,23 @@ mod tests {
             assert!(r.iter().any(|r|r[0]>0.||r[1]<0.),"cut support normal unresolved at {i}: {r:?}");
         }
         eprintln!("corrected pole cut U=0.75 midpoint={:?} regularIntervals=64",middle);
+        let low=proposal.cut_endpoint(0,0,0.75,false,0,16).unwrap().endpoint.unwrap();
+        let high=proposal.cut_endpoint(0,0,0.75,true,1,16).unwrap().endpoint.unwrap();
+        let low_partition=low.split_source_use(100).unwrap().partition.unwrap();
+        let high_partition=high.split_source_use(100).unwrap().partition.unwrap();
+        let contours=crate::source_profile_body::propose_cut_contours(&low_partition,&high_partition,100).unwrap();
+        let contour_cost=contours.fragments;
+        let contours=contours.proposal.expect(contours.reason);
+        for wire in contours.loops() {
+            for i in 0..wire.len() {assert!(wire[i].joins(&wire[(i+1)%wire.len()]));}
+            let restored=wire.iter().map(|f|crate::source_boundary_fragment::restore(f.definition(),100).unwrap()).collect::<Vec<_>>();
+            for i in 0..wire.len() {assert!(restored[i].joins(&restored[(i+1)%wire.len()]));}
+        }
+        assert!(crate::source_profile_body::propose_cut_contours(&low_partition,&high_partition,contour_cost-1).unwrap().proposal.is_none());
+        assert!(crate::source_profile_body::propose_cut_contours(&low_partition,&low_partition,100).unwrap().proposal.is_none());
+        let different=proposal.cut_endpoint(0,0,0.7,true,1,16).unwrap().endpoint.unwrap();
+        let different_partition=different.split_source_use(100).unwrap().partition.unwrap();
+        assert!(crate::source_profile_body::propose_cut_contours(&low_partition,&different_partition,100).unwrap().proposal.is_none());
         for (high,index,neighbor) in [(false,0,1),(true,1,2)] {
             let report=proposal.cut_endpoint(0,0,0.75,high,index,16).unwrap();
             let endpoint=report.endpoint.expect(report.reason);

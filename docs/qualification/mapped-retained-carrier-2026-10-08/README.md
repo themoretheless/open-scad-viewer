@@ -886,3 +886,26 @@ The control regression passed in 2.43 seconds; mapped tests passed 5/5 and
 shared-edge/restore tests 10/10. These fixtures prove source-owned half-edge
 correspondence only. Replacement face contours, corrected surface ownership,
 end caps, closed-body assembly, embedding and packaged WASM remain required.
+
+## Closed original-source contours at a transverse section
+
+`propose_cut_contours` connects two privately owned cut partitions on one
+original face. They must belong to the same Proposal, face and exact section
+parameter, with opposite free ends and identical original UV contact curves.
+Each endpoint boundary must have one unambiguous occurrence in the retained
+wire. The two cyclic arcs preserve original source fragments and join through
+a contact fragment whose endpoints retain both certified root expressions.
+Every cyclic join is verified. Fragment work is bounded before construction.
+
+The annular face cut at U=0.75 produces two closed source contour candidates.
+Every fragment restores independently and all cyclic joins survive. Repeated
+cut ends, different section parameters and insufficient fragment work refuse.
+The qualification fixture passed in 2.91 seconds; contour regressions passed
+2/2 in 0.11 seconds.
+
+The present builder supports a single retained wire with original scalar outer
+ends. Hole assignment is explicitly unclassified. Closure does not prove
+containment, orientation, immersion or self-intersection freedom. The section
+is still owned by the original Surface; it is not an exact shared boundary of
+the corrected weight profile. Exact corrected-section ownership, neighbor
+replacement wires, cap geometry and closed-body admission remain required.
