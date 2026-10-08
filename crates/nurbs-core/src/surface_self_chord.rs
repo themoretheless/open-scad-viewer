@@ -191,6 +191,10 @@ pub(crate) fn rational_pole_pair_report(
     let mut available = false;
     let mut local_attempted = false;
     let mut local_available = false;
+    // Scoped to this invocation: source, pole orientation and rectangles have
+    // already been validated and remain immutable throughout all three modes.
+    // Charge a restriction only when its endpoint bound is first computed.
+    let mut endpoint_bounds = [None; 2];
     for mode in [0, 1, 2] {
         let cost = if mode == 1 { 6 } else { 5 };
         let coordinate_path = mode == 0;
@@ -229,12 +233,18 @@ pub(crate) fn rational_pole_pair_report(
                 }
             }
         }
-        for endpoint in pair {
-            if used == max_spans {
-                break;
-            }
-            let b = normals.bounds(endpoint)?;
-            used += 1;
+        for (index, endpoint) in pair.into_iter().enumerate() {
+            let b = if let Some(bounds) = endpoint_bounds[index] {
+                bounds
+            } else {
+                if used == max_spans {
+                    break;
+                }
+                let bounds = normals.bounds(endpoint)?;
+                used += 1;
+                endpoint_bounds[index] = Some(bounds);
+                bounds
+            };
             let scale = b.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
             if scale < f64::MIN_POSITIVE {
                 continue;
