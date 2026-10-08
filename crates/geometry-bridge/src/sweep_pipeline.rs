@@ -45,11 +45,27 @@ pub fn admission(v: Value) -> Result<Value> {
         id = field(node, "input").map_err(|_| input("Missing sweep transform source."))?;
     };
     let op = node["op"].as_str().unwrap_or("");
-    if !["brep_progressive_miter_sweep", "brep_miter_sweep"].contains(&op) {
+    if !["brep_progressive_sweep", "brep_progressive_miter_sweep", "brep_miter_sweep"].contains(&op) {
         return Ok(Value::Null);
     }
     let model: brep_core::Model = field(&v, "model")?;
-    let caps = if node["closed"] == json!(true) {
+    // A failed exact prerequisite cannot be rescued by pair searches. Reject
+    // it before spending their budget, while charging the replay below to the
+    // remaining exact-boundary work allowance.
+    let mut budgets = volume_budgets();
+    let exact_budget: u64 = field(&budgets, "maxExactWork")?;
+    let agreement = brep_core::boundary_agreement::verify_exact(&model, exact_budget)?;
+    if !agreement.all_equal || !agreement.all_joins_exact {
+        return Err(input("Sweep Solid geometry could not be proved: exact boundary agreement."));
+    }
+    let remaining = exact_budget.saturating_sub(agreement.work);
+    if remaining == 0 {
+        return Err(input("Sweep Solid geometry could not be proved: exact boundary work budget."));
+    }
+    budgets["maxExactWork"] = json!(remaining);
+    // Profile closure is constructor-derived, not a trusted author-supplied flag.
+    // The fresh full-model proof covers every actual face and trimmed domain.
+    let caps = if op == "brep_progressive_sweep" || node["closed"] == json!(true) {
         vec![]
     } else {
         if model.faces.len() < 2 {
@@ -59,7 +75,7 @@ pub fn admission(v: Value) -> Result<Value> {
     };
     let report = call(
         "brep_sweep_volume_audit",
-        merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
+        merge(json!({"model":model,"capFaces":caps}), &budgets),
     )?;
     if report["solidGeometryCertified"] != json!(true) {
         let stage = if report["boundaryEmbeddingCertified"] != json!(true) {
@@ -71,7 +87,7 @@ pub fn admission(v: Value) -> Result<Value> {
         };
         return Err(input(&format!(
             "{} Solid geometry could not be proved: {stage}.",
-            if op == "brep_progressive_miter_sweep" {
+            if op == "brep_progressive_sweep" || op == "brep_progressive_miter_sweep" {
                 "Progressive sweep"
             } else {
                 "Miter sweep"
@@ -368,3 +384,7 @@ mod miter;
 mod profile;
 pub(super) use miter::*;
 pub(super) use profile::*;
+
+#[cfg(test)]
+#[path="tests/sweep_profile_admission.rs"]
+mod profile_admission_tests;

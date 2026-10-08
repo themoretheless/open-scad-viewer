@@ -50,7 +50,7 @@ export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterP
 export const createMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):MiterBrepBody=>callBodyRust('brep_miter_body',{loops,points,normal,miterLimit,closed,capCorrection})
 export const createRationalBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep=>callGeometryRust('brep_nurbs_rational_section_loft',{sections})
 
-export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false}
+export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;volume:import('../certificates/nurbsSweepEmbedding').SweepVolumeAudit;globalEmbeddingCertified:false}
 /** Open-path caps or closed-path periodic shells, constrained by the shared B-rep face budget. Twist values are degrees. */
 export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveBrepBody=>callBodyRust('brep_progressive_profile_body',{loops,path,scale,twist,options})
 

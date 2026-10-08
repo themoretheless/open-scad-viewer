@@ -77,7 +77,7 @@ fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits,
             cap_contacts.push((cap,report));
         }
     }
-    let pairs = face_contacts::inspect_with_certificates(model, tolerance_uv, limits.contacts, &hull_contacts,&allowed_caps)?;
+    let pairs = face_contacts::inspect_with_certificates(model, tolerance_uv, limits.contacts, &hull_contacts,&allowed_caps,exact_domain)?;
     let intersections = self_intersection::Report { absence_proven: faces.all_faces_injective && pairs.all_pairs_classified, faces, pairs };
     let proven = agreement.all_equal && agreement.all_joins_exact && trim.all_valid
         && winding && intersections.absence_proven

@@ -217,7 +217,13 @@ pub(super) fn profile_body_from(v: Value, accepted: Option<Value>, prepared: Opt
         },
         json!({"sections":sections}),
     )?;
-    Ok(json!({"model":model,"approximation":approximation,"globalEmbeddingCertified":false}))
+    let caps = cap_faces(&model, closed)?;
+    let volume = call(
+        "brep_sweep_volume_audit",
+        merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
+    )?;
+    // This certifies the actual retained body, not the ideal swept family.
+    Ok(json!({"model":model,"approximation":approximation,"volume":volume,"globalEmbeddingCertified":false}))
 }
 #[derive(Clone)]
 struct Stream {

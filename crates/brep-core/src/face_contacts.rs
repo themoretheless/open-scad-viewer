@@ -49,11 +49,11 @@ pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Repor
 /// Hull certificates are admitted only by the exact boundary embedding audit.
 pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limits,
     hulls: &[crate::boundary_hull_contact::Certificate]) -> Result<Report> {
-    inspect_with_certificates(model,tolerance_uv,limits,hulls,&[])
+    inspect_with_certificates(model,tolerance_uv,limits,hulls,&[],false)
 }
 /// Cap tuples originate only from native recomputation in boundary embedding.
 pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits: Limits,
-    hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize;3]]) -> Result<Report> {
+    hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize;3]], exact_domain: bool) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100_000).contains(&limits.pairs)
         || !(1..=1_000_000).contains(&limits.cells)
@@ -111,10 +111,10 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
                     .map(SharedBoundary::OppositeSides)
             };
             let periodic = sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v;
-            // Exact control-hull separation is the fast path only for sweep
-            // cap certification (cap tuples present): the plain face-contact
-            // API keeps the frozen trim-search work accounting byte-for-byte.
-            let (hull_disjoint,hull_cells)=if boundary.is_none() && !periodic && !caps.is_empty() {
+            // Exact control-hull separation also applies to closed bodies
+            // after the joint boundary, trim and injectivity prerequisites.
+            // The plain face-contact API retains its trim-search accounting.
+            let (hull_disjoint,hull_cells)=if boundary.is_none() && !periodic && exact_domain {
                 crate::control_hull_separation::inspect(sa,sb,
                     (limits.cells-out.cells).min(limits.cells_per_pair/2).min(64))
             } else { (false,0) };
