@@ -367,12 +367,15 @@ pub(crate) fn jacobian_on(
         [s.knots_u[u], s.knots_u[u + 1]],
         [s.knots_v[v], s.knots_v[v + 1]],
     ];
-    let mut net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
-    // Translation is only numerical preconditioning: any finite constant
-    // cancels from the exact quotient derivative. A local origin reduces
-    // dependency widths; no derivative bound is inferred from this point.
+    let net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
     let origin = s.evaluate_validated(domain[0][0]*0.5+domain[0][1]*0.5,
         domain[1][0]*0.5+domain[1][1]*0.5)?.point;
+    jacobian_net_on(net, [p,q], span, domain, &origin)
+}
+/// Any finite translation cancels from the quotient derivative. The supplied
+/// homogeneous coefficients must describe the actual surface being qualified.
+pub(crate) fn jacobian_net_on(mut net: Net, [p,q]: [usize;2],
+    span:[[f64;2];2], domain:[[f64;2];2], origin:&[f64]) -> Result<[[I;2];3]> {
     for row in &mut net {
         for h in row {
             for k in 0..3 {

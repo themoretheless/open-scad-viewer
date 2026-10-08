@@ -506,3 +506,19 @@ original-body pairs and is not included in the packaged WASM.
 
 All 17 source-support-shell tests pass after the body-boundary admission and
 budget refusal controls. No original Body qualification gate was relaxed.
+
+## Exact-profile normal enclosure
+
+`WeightProfile::normal_bounds` now covers complete original knot rectangles
+using exact factor expressions in homogeneous extraction, quotient derivatives,
+and their interval cross product. Both one-sided knot limits are included;
+missing spans return no enclosure. Zero-containing bounds do not establish
+regularity. Original Surface differentiation shares the same coefficient
+calculus and keeps its original weights and translation preconditioning.
+
+An independent analytic separable rational surface checks normal orientation
+and magnitude at interior and boundary parameters. A multi-span refusal control
+checks incomplete work and knot coverage. All 755 NURBS lib tests pass, with
+two existing ignored tests. This supplies differential bounds for subsequent
+corrected seam/wall admission; it does not itself qualify the corrected body or
+its singular poles. Packaged WASM remains unchanged.

@@ -124,6 +124,59 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((Some(hull), spent))
     }
+    /// Complete rectangle enclosure of the exact profile's unnormalized normal.
+    /// Includes both one-sided limits at knots; zero-containing bounds do not
+    /// establish regularity. A missing span never returns a partial certificate.
+    pub fn normal_bounds(
+        &self,
+        domain: [[f64; 2]; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        crate::normal_alignment::validate_rectangle(self.source, domain, max_spans)?;
+        let s = self.source;
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let knots = [&s.knots_u, &s.knots_v];
+        let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+        let mut spent = 0;
+        for u in degrees[0]..counts[0] {
+            for v in degrees[1]..counts[1] {
+                let span = [
+                    [knots[0][u], knots[0][u + 1]],
+                    [knots[1][v], knots[1][v + 1]],
+                ];
+                if span.iter().any(|a| a[0] == a[1]) {
+                    continue;
+                }
+                let section = std::array::from_fn(|a| {
+                    [span[a][0].max(domain[a][0]), span[a][1].min(domain[a][1])]
+                });
+                if section.iter().any(|a| a[0] > a[1]) {
+                    continue;
+                }
+                if spent == max_spans {
+                    return Ok((None, spent));
+                }
+                let net = self.homogeneous_on([u, v], span)?;
+                let j = crate::normal_alignment::jacobian_net_on(
+                    net,
+                    degrees,
+                    span,
+                    section,
+                    &s.control_points[u][v],
+                )?;
+                for k in 0..3 {
+                    let a = (k + 1) % 3;
+                    let b = (k + 2) % 3;
+                    let n = j[a][0].mul(j[b][1])?.sub(j[b][0].mul(j[a][1])?)?;
+                    hull[k][0] = hull[k][0].min(n.lo);
+                    hull[k][1] = hull[k][1].max(n.hi);
+                }
+                spent += 1;
+            }
+        }
+        Ok((if spent == 0 { None } else { Some(hull) }, spent))
+    }
     pub(crate) fn homogeneous_on(
         &self,
         span: [usize; 2],
@@ -449,6 +502,38 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn profile_normals_cover_exact_rational_derivatives() {
+        let mut s = surface();
+        s.weights = vec![vec![2., 6.], vec![8., 25.]];
+        let profile = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        for u in [0., 0.2, 0.5, 1.] {
+            for v in [0., 0.3, 0.7, 1.] {
+                let (normal, spent) = profile.normal_bounds([[u, u], [v, v]], 1).unwrap();
+                assert_eq!(spent, 1);
+                let n = normal.unwrap();
+                // Target separability: x=4u/(1+3u), y=3v/(1+2v).
+                let expected = 12. / ((1. + 3. * u).powi(2) * (1. + 2. * v).powi(2));
+                assert!(n[0][0] <= 0. && n[0][1] >= 0. && n[1][0] <= 0. && n[1][1] >= 0.);
+                assert!(n[2][0] <= expected && n[2][1] >= expected && n[2][0] > 0.);
+            }
+        }
+        s.knots_u = vec![0., 0., 0.5, 1., 1.];
+        s.control_points
+            .insert(1, vec![vec![0.5, 0., 0.], vec![0.5, 1., 0.]]);
+        s.weights.insert(1, vec![4., 12.]);
+        let profile = qualify_weight_profile(&s, [0, 0], 6).unwrap().0.unwrap();
+        let (missing, spent) = profile.normal_bounds([[0.2, 0.8], [0.3, 0.7]], 1).unwrap();
+        assert!(missing.is_none());
+        assert_eq!(spent, 1);
+        assert!(
+            profile
+                .normal_bounds([[0.5, 0.5], [0.5, 0.5]], 2)
+                .unwrap()
+                .0
+                .is_some()
+        );
     }
     #[test]
     fn tiny_weight_change_is_bounded_without_mutating_source() {
