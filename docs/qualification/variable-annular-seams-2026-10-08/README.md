@@ -57,3 +57,33 @@ cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
 
 `contact-rails-decreasing.json.gz` contains the complete repeat. The initial
 summary is preserved as initial evidence rather than overwritten.
+
+## Exact pole obstruction
+
+All eight original collapsed support ends have different limiting tangent
+planes along their two meridian boundary paths. This is a geometric obstruction
+to a unique regular tangent plane at the pole, not merely exhausted work.
+
+The native exact projected-Jacobian predicates prove every component's
+Bernstein coefficient rows 0 and 1 zero. At row 2, v=0 has exactly zero X/Y
+normal numerator and nonzero Z. At v=1, X is nonzero. The order-two leading
+vectors are therefore nonparallel. Positive rational weights preserve their
+normal directions; higher orders vanish relative to the leading u² term.
+Reversing the U chart at the exit changes orientation but preserves the plane.
+Both paths approach the same original collapsed point. A unique regular pole
+plane would have to equal both different limits, which is impossible.
+
+`pole-normal-orders.json.gz` retains exact coefficient signs and work counts
+for both radius orders and arc directions. Native assertions reject missing
+proof, nonzero lower orders or absence of the nonparallel witness.
+
+```sh
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-pole-orders -- /tmp/pole-orders.json
+```
+
+The current zero-radius taper must remain explicitly singular. A regular smooth
+termination requires a different end construction and renewed radius, contact,
+closure and self-intersection qualification. This does not disprove one-sided
+seam tangency against each support separately; those full-seam angular bounds
+remain an independent requirement.
