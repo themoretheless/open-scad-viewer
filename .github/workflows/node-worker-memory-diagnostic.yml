@@ -19,6 +19,7 @@ jobs:
           node-version: '22.23.3'
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: mkdir -p src/generated && tar -xzf tests/fixtures/node-worker-memory-generated.tar.gz -C src/generated
       - name: Three fresh unmodified memory probes
         env:
           POLICY: ${{ matrix.policy }}
