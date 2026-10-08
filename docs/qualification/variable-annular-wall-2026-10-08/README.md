@@ -1442,3 +1442,8 @@ restore the old result. Retry succeeds; native document and reload stay equal.
 See `source-wall-ui.json.gz` and `source-wall-ui-fixture.json.gz`; decompress the
 fixture and set CAD_SOURCE_WALL_UI_FIXTURE to run check-source-wall-browser.mjs.
 This does not certify the complete wall, arbitrary geometry or all commands.
+
+The source-body mouse scenario additionally injects a transport failure after
+cancellation, checks the localized failed-calculation message, activates its
+actual Retry button, and requires the error to disappear after a real result.
+The archived mouse report includes `localizedTransportFailure: true`.

@@ -29,6 +29,7 @@ try {
   window.Worker=class extends NativeWorker {
    constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='sourceBodyRestore'&&e.data.ok&&e.data.result?.wallCoverage){window.__sourceResults.push(e.data.result.wallCoverage);window.__sourceReply=e.data.result}})}
    postMessage(message,...args){if(message?.job?.kind==='sourceBodyRestore'&&message.job.options.wallCoverage){
+    if(window.__failSource){window.__failSource=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'sourceBodyRestore',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private source wall worker failure'}}}));return}
     if(window.__holdSource){window.__sourceHeld=true;this.held=true;const callback=this.onmessage,result=structuredClone(window.__sourceReply);window.__sourceLate=()=>{if(!callback||!result)throw Error('Missing obsolete source callback or result');callback({data:{version:1,id:message.id,kind:'sourceBodyRestore',ok:true,result}})};return}
    }return super.postMessage(message,...args)}
    terminate(){if(this.held)window.__sourceTerminated=true;return super.terminate()}
@@ -76,9 +77,11 @@ try {
  await activate(run);await page.waitForFunction(()=>window.__sourceHeld)
  await input(panel.getByLabel('Minimum source wall thickness, mm',{exact:true}),'6.01');await page.waitForFunction(()=>window.__sourceTerminated)
  await page.evaluate(()=>window.__sourceLate());assert.equal(await result.count(),0);assert.equal(await panel.locator('#source-wall-input-error').count(),0)
- await page.evaluate(()=>{window.__holdSource=false});await activate(run);await result.waitFor({timeout:120000})
+ await page.evaluate(()=>{window.__holdSource=false;window.__failSource=true});await activate(run)
+ const failure=panel.locator('#source-wall-input-error');await failure.waitFor();assert.ok((await failure.innerText()).includes('Расчёт не завершён'))
+ await activate(failure.getByRole('button',{name:'Повторить',exact:true}));await result.waitFor({timeout:120000});assert.equal(await failure.count(),0)
  assert.equal((await page.evaluate(()=>window.__sourceResults.at(-1))).wholeWallQualified,false)
  await closeMenu();assert.deepEqual(await exportDoc('after.json'),before);await page.reload();await ready();assert.deepEqual(await exportDoc('reload.json'),before)
  assert.deepEqual(errors,[])
- await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
+ await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,localizedTransportFailure:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
