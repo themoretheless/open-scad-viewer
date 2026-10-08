@@ -146,3 +146,12 @@ Other selected faces have 6–261 direction exclusions. These are covered
 subdomains, not extra complete-face certificates. Reports and original-source
 identity checks are retained in `self-wall-secant.json.gz` and its log.
 No new WASM/UI integration or whole-wall certificate is claimed.
+
+The focused native B-rep regression
+`source_support_shell::tests::admitted_annular_body_checks_original_radius_patches`
+passes after the secant change (one test executed). It checks original body
+ownership, bounded adaptive work, all 27 face reports, private proof reuse,
+public-report mutation resistance, and refusal to assert whole-wall coverage
+while curved self or distinct face pairs remain unresolved. Evidence:
+`secant-source-body-tests.log.gz`. This fixed-radius body regression does not
+replace the four variable-radius specimen audits or named-part acceptance.
