@@ -611,6 +611,15 @@ mod tests {
         assert!(!support_pair.separated.is_empty() || !support_pair.pending.is_empty());
         assert!(expression.inspect_support_pair([retained_ids[0];2],[[[0.;2];2];2],1,100,100).is_err());
 
+        let removed_product=[[[0.8;2],[0.5;2]];2];
+        let trim_removed=expression.inspect_trimmed_pair(retained_ids,removed_product,1e-8,1,1000,100,1000).unwrap();
+        eprintln!("removed strip product outside={} pending={} domainCells={}",trim_removed.outside.len(),trim_removed.pending.len(),trim_removed.domain_cells);
+        assert!(trim_removed.complete_excluded());
+        assert!(!trim_removed.complete_separated());
+        assert_eq!(trim_removed.outside,vec![removed_product]);
+        let trim_no_work=expression.inspect_trimmed_pair(retained_ids,removed_product,1e-8,1,1000,100,0).unwrap();
+        assert_eq!(trim_no_work.pending,vec![removed_product]);
+
         let no_pair_work=expression.inspect_shell_supports(0,2,1000,10000).unwrap();
         let count=expression.faces().len();
         assert_eq!(no_pair_work.pairs.len(),count*(count-1)/2);

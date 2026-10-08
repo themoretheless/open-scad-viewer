@@ -2069,3 +2069,36 @@ adding the allocation guard, final compilation and both independent
 support-pair regressions passed. This is conservative support exclusion,
 not complete trimmed-face self-intersection qualification; region
 classification and certified seam neighborhoods remain necessary.
+
+
+## Exact source-contour exclusion inside expression pair traversal
+
+inspect_trimmed_pair combines strict world separation with whole-rectangle
+source_contour_winding classification on the final assembled contours.
+The original and retained faces use their preserved source fragments,
+including Carrier/Crossing root endpoints and holes. The transition keeps
+its full parameter chart. Only Location::Outside excludes a product;
+Inside and Unresolved continue conservative world subdivision. Region
+work has a separate shared allowance. Zero region work never classifies.
+
+Outside products are recorded separately from world-separated products.
+complete_excluded requires no pending products; complete_separated also
+requires that none were removed by trimming. The independent region test
+checks that the union of outside, separated and pending product measures
+still equals the input product and that every outside record lies wholly
+in the declared excluded half-space. All three pair regressions passed.
+
+An initial test requiring a far sibling to be visited within 31 DFS cells
+failed: a near ambiguous branch consumed the allowance first. This did
+not lose coverage; all unvisited siblings remained pending. The test was
+corrected to verify exclusion and coverage without assuming traversal
+reaches a distant branch within that allowance. Fair traversal refinement
+remains a performance consideration.
+
+The combined native regression passed in 40.71 seconds. A coincident
+support product at source (u=.8,v=.5), lying in the removed transition
+strip, was excluded by the owned retained contours in 12 domain cells.
+It remains pending with zero domain allowance. All 406 support pairs
+retain the prior 149 separated / 257 pending baseline. Whole-shell trim
+classification and shared-seam contact certificates remain required.
+Packaged WASM is unchanged.

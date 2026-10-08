@@ -5,12 +5,17 @@ pub type SupportProduct = [[[f64; 2]; 2]; 2];
 pub struct SupportPairReport {
     pub separated: Vec<SupportProduct>,
     pub pending: Vec<SupportProduct>,
+    pub outside: Vec<SupportProduct>,
+    pub domain_cells: usize,
     pub cells: usize,
     pub spans: usize,
 }
 impl SupportPairReport {
-    pub fn complete_separated(&self) -> bool {
+    pub fn complete_excluded(&self) -> bool {
         self.pending.is_empty()
+    }
+    pub fn complete_separated(&self) -> bool {
+        self.pending.is_empty() && self.outside.is_empty()
     }
 }
 pub struct ShellSupportPair {
@@ -35,13 +40,30 @@ fn inspect<F>(
     domain: SupportProduct,
     max_cells: usize,
     max_spans: usize,
-    mut bounds: F,
+    bounds: F,
 ) -> Result<SupportPairReport>
 where
     F: FnMut(usize, [[f64; 2]; 2], usize) -> Result<(Option<[[f64; 2]; 3]>, usize)>,
 {
+    inspect_regions(domain, max_cells, max_spans, 0, bounds, |_, _, _| {
+        Ok((false, 0))
+    })
+}
+fn inspect_regions<F, G>(
+    domain: SupportProduct,
+    max_cells: usize,
+    max_spans: usize,
+    max_domain_cells: usize,
+    mut bounds: F,
+    mut outside: G,
+) -> Result<SupportPairReport>
+where
+    F: FnMut(usize, [[f64; 2]; 2], usize) -> Result<(Option<[[f64; 2]; 3]>, usize)>,
+    G: FnMut(usize, [[f64; 2]; 2], usize) -> Result<(bool, usize)>,
+{
     if max_cells > 100000
         || max_spans > 100000
+        || max_domain_cells > 100000
         || domain
             .iter()
             .flatten()
@@ -57,6 +79,8 @@ where
         pending: Vec::new(),
         cells: 0,
         spans: 0,
+        outside: Vec::new(),
+        domain_cells: 0,
     };
     let mut stack = vec![domain];
     while let Some(cell) = stack.pop() {
@@ -82,6 +106,23 @@ where
         };
         if (0..3).any(|k| a[k][1] < b[k][0] || b[k][1] < a[k][0]) {
             out.separated.push(cell);
+            continue;
+        }
+        let mut excluded = false;
+        for side in 0..2 {
+            if out.domain_cells == max_domain_cells {
+                break;
+            }
+            let (is_outside, used) =
+                outside(side, cell[side], max_domain_cells - out.domain_cells)?;
+            out.domain_cells += used;
+            if is_outside {
+                excluded = true;
+                break;
+            }
+        }
+        if excluded {
+            out.outside.push(cell);
             continue;
         }
         let mut choice = None;
@@ -226,6 +267,71 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(out)
     }
+    /// Exclude products either by strict world separation or by certified
+    /// exclusion from one exact source contour. Boundary bands stay pending.
+    pub fn inspect_trimmed_pair(
+        &self,
+        faces: [usize; 2],
+        domain: SupportProduct,
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_controls_per_enclosure: usize,
+        max_spans: usize,
+        max_domain_cells: usize,
+    ) -> Result<SupportPairReport> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|i| *i >= self.faces.len())
+            || max_controls_per_enclosure > 1000000
+            || !tolerance_uv.is_finite()
+            || tolerance_uv <= 0.
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Require distinct owned faces and bounded region work",
+            ));
+        }
+        let loops = faces.map(|face| {
+            self.faces[face]
+                .loops
+                .iter()
+                .map(|wire| {
+                    wire.iter()
+                        .filter_map(|u| {
+                            if let ShellUse::Source(f) = u {
+                                Some(f.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        });
+        inspect_regions(
+            domain,
+            max_cells,
+            max_spans,
+            max_domain_cells,
+            |side, rect, budget| {
+                self.enclose_support(faces[side], rect, max_controls_per_enclosure, budget)
+            },
+            |side, rect, budget| {
+                if self.faces[faces[side]].kind == ShellFaceKind::Transition {
+                    return Ok((false, 0));
+                }
+                let report = crate::source_contour_winding::classify(
+                    &loops[side],
+                    rect,
+                    tolerance_uv,
+                    budget,
+                )?;
+                Ok((
+                    report.location == nurbs_core::trim_domain::Location::Outside,
+                    report.cells,
+                ))
+            },
+        )
+    }
     /// Excludes intersections only on the supplied support rectangles. Shared
     /// seams and uncertain overlap remain pending; no sampled contact admission.
     pub fn inspect_support_pair(
@@ -289,6 +395,45 @@ mod tests {
         assert_eq!(no_work.pending, vec![domain]);
         let no_spans = inspect(domain, 10, 0, |_, _, _| Ok((None, 0))).unwrap();
         assert_eq!(no_spans.pending, vec![domain]);
+    }
+    #[test]
+    fn support_pair_region_exclusion_keeps_material_and_budget_cover() {
+        let domain = [[[0., 1.]; 2]; 2];
+        let report = inspect_regions(
+            domain,
+            31,
+            100,
+            100,
+            |_, r, _| Ok((Some([r[0], r[1], [0.; 2]]), 1)),
+            |_, r, budget| Ok((r[0][1] < 0.75, usize::from(budget > 0))),
+        )
+        .unwrap();
+        assert!(!report.outside.is_empty());
+        assert!(!report.complete_excluded());
+        let covered = report
+            .pending
+            .iter()
+            .chain(&report.separated)
+            .chain(&report.outside)
+            .copied()
+            .map(volume)
+            .sum::<f64>();
+        assert_eq!(covered, 1.);
+        assert!(report
+            .outside
+            .iter()
+            .all(|r| r.iter().any(|side| side[0][1] < 0.75)));
+        let none = inspect_regions(
+            domain,
+            1,
+            2,
+            0,
+            |_, r, _| Ok((Some([r[0], r[1], [0.; 2]]), 1)),
+            |_, _, _| panic!("zero domain allowance must not classify"),
+        )
+        .unwrap();
+        assert!(none.outside.is_empty());
+        assert!(!none.complete_excluded());
     }
     #[test]
     fn support_pair_proves_disjoint_planes_and_retains_touch() {
