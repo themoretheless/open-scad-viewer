@@ -51,6 +51,9 @@ impl MeanMatrix<'_> {
                 for row in &mut j { row[a]=row[a].div(I::point(scale))?; }
             }
         }
+        // This necessary algebraic precondition is shared with projection.
+        // Failure is an unproven matrix, not an assertion of singular geometry.
+        if mean_matrix_lower(j)?<=0. {return Ok((false,0));}
         let threshold=I::point(1.).sub(I::point(sine))?.lo;
         let mut used=0;
         for (index,rect) in pair.into_iter().enumerate() {
@@ -176,7 +179,7 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
 /// For chord=M z, |n.chord|² <= ||n^T M||² |z|² while
 /// |chord|² >= sigma_min(M)² |z|². Cauchy--Binet bounds sigma_min
 /// from all separated minors. No endpoint normal is inferred from samples.
-fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
+fn mean_matrix_lower(j: [[I; 2]; 3]) -> Result<f64> {
     let mut determinant = I::point(0.);
     for [a, b] in [[0, 1], [0, 2], [1, 2]] {
         let d = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
@@ -185,18 +188,11 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
         }
     }
     let mut trace = I::point(0.);
-    let mut normal_squared = I::point(0.);
     for k in 0..3 {
-        if let Some(x) = separated_square(n[k])? {
-            normal_squared = normal_squared.add(x)?;
-        }
         for a in 0..2 {
             let upper = j[k][a].lo.abs().max(j[k][a].hi.abs());
             trace = trace.add(I::point(upper).mul(I::point(upper))?)?;
         }
-    }
-    if normal_squared.lo <= 0. {
-        return Ok(1.);
     }
     // Gershgorin also bounds the largest eigenvalue of the 2x2 Gram
     // matrix. Nearly orthogonal columns need not pay the full trace bound.
@@ -222,8 +218,16 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     let minor_lower = if determinant.lo > 0. && largest > 0. {
         determinant.div(I::point(largest))?.lo.max(0.)
     } else { 0. };
-    let singular_lower = direct_lower.max(minor_lower);
-    if singular_lower <= 0. { return Ok(1.); }
+    Ok(direct_lower.max(minor_lower))
+}
+fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
+    let singular_lower=mean_matrix_lower(j)?;
+    if singular_lower<=0. {return Ok(1.);}
+    let mut normal_squared=I::point(0.);
+    for value in n {
+        if let Some(square)=separated_square(value)? {normal_squared=normal_squared.add(square)?;}
+    }
+    if normal_squared.lo<=0. {return Ok(1.);}
     let mut numerator = I::point(0.);
     for a in 0..2 {
         let mut dot = I::point(0.);
@@ -360,6 +364,7 @@ pub(crate) fn rational_pole_pair_report_cached(
                 }
             }
         }
+        if mean_matrix_lower(j)?<=0. {continue;}
         for (index, endpoint) in pair.into_iter().enumerate() {
             let b = if let Some(bounds) = endpoint_bounds[index] {
                 bounds
@@ -673,6 +678,11 @@ mod tests {
         assert_eq!(matrix.exclude_pair(pair,1e-4,0,None).unwrap(),(false,0));
         assert_eq!(matrix.exclude_pair(pair,1e-4,1,None).unwrap(),(true,1));
         assert!(matrix.exclude_pair([[[0.,1.01],[0.,1.]],pair[1]],1e-4,0,None).is_err());
+        let mut collapsed=s.clone();
+        for row in &mut collapsed.control_points {for point in row {point.fill(0.);}}
+        let collapsed=qualify_rectangle(&collapsed,[[0.,1.];2],1e-4,1).unwrap();
+        assert_eq!(collapsed.mean_matrix.unwrap().exclude_pair(pair,1e-4,2,None)
+            .unwrap(),(false,0));
         let mut multiple=s.clone();multiple.degree_u=1;
         multiple.knots_u=vec![0.,0.,0.5,1.,1.];
         let incomplete=qualify_rectangle(&multiple,[[0.,1.];2],1e-4,1).unwrap();

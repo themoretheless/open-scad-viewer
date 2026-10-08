@@ -1207,3 +1207,20 @@ reverse, matching spatial directions. None qualified. Its complete JSON
 and every unresolved pair are archived. The new original-mean middle
 audit runs at 20000 cells / 100000 restrictions; no wall safety claim
 follows until its remaining obligations are closed.
+
+## Mean matrix algebraic precondition and completed pole audit
+
+Projection now checks its matrix lower bound before requesting endpoint
+normal restrictions. A nonpositive bound means this estimate cannot prove
+exclusion; it does not declare singular geometry. Source and pair cache
+validation still occurs first. The collapsed polynomial regression refuses
+without spending normal restrictions. Seventeen chord/coverage and seven
+pole tests pass; diff whitespace validation passes.
+
+The complete 7f9b72b7 pole audit preserves all four original models. Forward
+entry faces qualify at 2643 cells / 60966 restrictions. Forward exits retain
+four pairs at 4448 / 100000; reverse entries retain five at 4211 / 100000,
+and reverse exits retain seven at 4387 / 100000. Both spatial directions
+match. Complete JSON and logs are archived with all remaining rectangles.
+This predates the ordinary mean-matrix and algebraic precondition changes.
+Distinct-face wall pairs and global wall thickness remain unqualified.
