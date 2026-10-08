@@ -17,3 +17,7 @@ The native diagnostic binds the original fixture and kernel; receipt hashes bind
 all reports. These runs use kernel 8f28d264 and do not qualify the new factored
 normal package. Variable cases were repeated on the same current UI and script as the refusal
 cases. Successful general NURBS fillets are not established.
+
+## Native correction after this browser receipt
+
+Commit `d39aab137` fixes a false coincidence admission for parallel curves on different supporting lines. All twelve cuboid edges at radii 0.1, 1 and 2 mm pass natively before and after rigid placement, with closed boundaries and independent analytic volumes. Evidence: `../constant-radius-support-lines/`. The refusal recordings above describe the prior packaged kernel; the corrected WASM and browser operation still require qualification.
