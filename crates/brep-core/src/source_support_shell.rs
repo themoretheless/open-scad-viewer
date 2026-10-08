@@ -440,11 +440,22 @@ mod tests {
         let both_specs=[specs[0],crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
         let both_report=crate::source_profile_body::prepare(&body,&both_specs,proposal_limits()).unwrap();
         let both=both_report.proposal.expect(both_report.reason);
-        let both_seam=both.qualify_seam(0,5,100,1e-6,50000,100000).unwrap();
+        let both_seam=both.qualify_edge(5,100,1e-6,50000,100000).unwrap();
         let proof=both_seam.seam.expect(both_seam.reason);
         assert!(std::ptr::eq(proof.proposal(),&both));assert_eq!(proof.edge(),5);
         let work=both_seam.angular.unwrap();assert!(work.pending.is_empty());
         eprintln!("two-profile owned seam cells={} spans={} accepted={} upper={:?}",work.cells,work.spans,work.accepted_cells,work.upper_sine_squared);
+        assert!(crate::source_shared_chord_map::prepare_edge(&body,[0,5],1,100).unwrap().is_none());
+        assert!(crate::source_shared_chord_map::prepare_edge(&body,[0,5],5,5).unwrap().is_none());
+        assert!(both.qualify_edge(usize::MAX,100,1e-6,1,2).is_err());
+        for (index,uses) in body.geometry().shell().uses().iter().enumerate() {
+            if uses.iter().any(|u|both.profile(u.face).is_some()) {
+                let audit=both.qualify_edge(index,100,1e-6,1,2).unwrap();
+                assert!(audit.seam.is_none());
+                eprintln!("incident corrected edge {} faces={:?} reason={} pending={:?}",index,
+                    [uses[0].face,uses[1].face],audit.reason,audit.angular.map(|r|r.pending));
+            }
+        }
         let limited=proposal.qualify_seam(0,5,0,1e-6,50000,100000).unwrap();
         assert!(limited.seam.is_none()&&limited.angular.is_none());
         let limited=proposal.qualify_seam(0,5,100,1e-6,1,1).unwrap();

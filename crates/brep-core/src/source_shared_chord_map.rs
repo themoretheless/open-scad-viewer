@@ -145,12 +145,26 @@ fn same_surface(a:&Surface,b:&Surface)->bool {
 /// Root-ended retained uses may be supported when their full source maps are
 /// already admitted; this does not promote those retained ends to full coverage.
 pub fn prepare<'a>(body:&'a Body,faces:[usize;2],max_edges:usize)->Result<Option<SharedBoundary<'a>>> {
+    prepare_selected(body,faces,max_edges,None)
+}
+/// Select one exact owned edge address. Other edges between the same faces
+/// cannot supply a substitute certificate.
+pub fn prepare_edge<'a>(body:&'a Body,faces:[usize;2],edge:usize,max_edges:usize)
+    ->Result<Option<SharedBoundary<'a>>> {
+    if edge>=body.geometry().shell().edges().len() {
+        return Err(Error::new("BREP_SHARED_CHORD_MAP","Choose an owned edge address"));
+    }
+    prepare_selected(body,faces,max_edges,Some(edge))
+}
+fn prepare_selected<'a>(body:&'a Body,faces:[usize;2],max_edges:usize,selected:Option<usize>)
+    ->Result<Option<SharedBoundary<'a>>> {
     let shell=body.geometry().shell();let regions=shell.regions().ok_or_else(||Error::new("BREP_SHARED_CHORD_MAP","Require retained original regions"))?;
     if faces[0]==faces[1]||faces.iter().any(|&f|f>=regions.len())||max_edges>100000 {
         return Err(Error::new("BREP_SHARED_CHORD_MAP","Choose distinct owned faces and bounded edge inspection"));
     }
     let surfaces=faces.map(|f|regions[f].loops()[0][0].surface());
     for (index,addresses) in shell.uses().iter().enumerate().take(max_edges) {
+        if selected.is_some_and(|edge|edge!=index) {continue;}
         let order=if [addresses[0].face,addresses[1].face]==faces {[0,1]}
             else if [addresses[1].face,addresses[0].face]==faces {[1,0]}else{continue;};
         let edge=&shell.edges()[index];if !edge.maps_complete_canonical_source(){continue;}

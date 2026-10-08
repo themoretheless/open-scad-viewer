@@ -600,3 +600,24 @@ length: 15121 cells, 30242 normal spans, 7561 accepted intervals, no pending
 intervals, squared-sine upper 9.985969734463084e-7 at tolerance 1e-6.
 The native annular regression passes, including the original/profile path and
 its work-limit controls.
+
+## Exact owned edge selection
+
+`source_shared_chord_map::prepare_edge` restricts the carrier search to one
+actual shell edge address. Its bounded scan cannot substitute another edge
+between the same faces. `Proposal::qualify_edge` derives incident face addresses
+from original shell uses and runs the profile/original or profile/profile gate
+for that exact edge. Face-pair convenience selection remains a single selected
+carrier result, not coverage of every edge between those faces.
+
+The annular control checks a wrong face/edge combination, insufficient search
+coverage, an invalid address, and the existing full edge 5 angle proof through
+this exact-edge route. Initial incident-edge audit uses one angular cell/two
+normal spans to expose unsupported carriers and pending intervals; it does not
+claim whole incident seam qualification.
+
+Native incident inventory for proposed faces [0,5] contains exactly edges
+[0,1,5,6,8,15]. Under the initial one-cell budget, edges [1,5,8,15] retain
+canonical intervals [0,0.5] and [0.5,1]; edges [0,6] have unsupported carrier
+maps in this affine-boundary path. The separately fully funded edge 5 proof
+continues to pass. The actual annular regression passes after exact selection.

@@ -66,6 +66,48 @@ impl<'a> Proposal<'a> {
         cells: usize,
         spans: usize,
     ) -> Result<SeamReport<'p, 'a>> {
+        self.qualify_selected_seam(face, neighbor, None, max_edges, threshold, cells, spans)
+    }
+    /// Qualify a single owned edge; never reuse another edge between its faces.
+    pub fn qualify_edge<'p>(
+        &'p self,
+        edge: usize,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
+        let uses = self
+            .body
+            .geometry()
+            .shell()
+            .uses()
+            .get(edge)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose an owned edge"))?;
+        let mut faces = [uses[0].face, uses[1].face];
+        if self.profile(faces[0]).is_none() {
+            faces.reverse();
+        }
+        self.qualify_selected_seam(
+            faces[0],
+            faces[1],
+            Some(edge),
+            max_edges,
+            threshold,
+            cells,
+            spans,
+        )
+    }
+    fn qualify_selected_seam<'p>(
+        &'p self,
+        face: usize,
+        neighbor: usize,
+        edge: Option<usize>,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
         let mut out = SeamReport {
             seam: None,
             angular: None,
@@ -74,9 +116,18 @@ impl<'a> Proposal<'a> {
         let profile = self
             .profile(face)
             .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose a proposed face"))?;
-        let Some(map) =
-            crate::source_shared_chord_map::prepare(self.body, [face, neighbor], max_edges)?
-        else {
+        let map = match edge {
+            Some(edge) => crate::source_shared_chord_map::prepare_edge(
+                self.body,
+                [face, neighbor],
+                edge,
+                max_edges,
+            )?,
+            None => {
+                crate::source_shared_chord_map::prepare(self.body, [face, neighbor], max_edges)?
+            }
+        };
+        let Some(map) = map else {
             return Ok(out);
         };
         let axes = map.fixed_axes();
