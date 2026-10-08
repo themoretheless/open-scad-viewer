@@ -1,4 +1,4 @@
-import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
+import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
@@ -589,6 +589,55 @@ it('qualifies bounded retained face products without losing prior proofs through
   results.push(c)
  }
  if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
+},180000)
+
+it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...o}=request,client=realClient(),r=await client.run({kind:'sourceBodyRestore',options:o})
+ if(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT)writeFileSync(process.env.CAD_MAPPED_CHAIN_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),result:r,scope:'Closed mapped root chain admission, original definitions and native endpoint ownership.'},null,2)+'\n')
+ expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+ expect(r.faceCount).toBe(4);expect(r.edges).toHaveLength(7)
+ expect(r.sourceBody).toEqual(o.definition)
+ expect(r.volume![0]).toBeLessThanOrEqual(1/6);expect(r.volume![1]).toBeGreaterThanOrEqual(1/6)
+ const counts=new Map<number,number>();r.edges.flatMap(e=>e.vertices).forEach(v=>counts.set(v,(counts.get(v)??0)+1))
+ expect(counts.size).toBe(5)
+ const root=[...counts].find(([,count])=>count===2)![0]
+ const halves=r.edges.filter(e=>e.vertices.includes(root));expect(halves).toHaveLength(2)
+ for(let axis=0;axis<3;axis++){
+  const a=halves[0]!.endpointBoxes[halves[0]!.vertices.indexOf(root)]![axis]!,b=halves[1]!.endpointBoxes[halves[1]!.vertices.indexOf(root)]![axis]!
+  expect(Math.max(a[0],b[0])).toBeLessThanOrEqual(Math.min(a[1],b[1]))
+ }
+ client.dispose()
+},180000)
+
+it('preserves mapped root carriers through STEP preparation and document history',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...source}=request
+ const options:SourceBodyOptions={...source,displaySegments:0,stepExchange:{toleranceMm:1e-7,trimWork:100000,
+  limits:{rootChecks:1000,mappingCells:10000,replayMappingPerUse:10000,exactWork:100_000_000,driverCells:10000,spans:14,endpoints:14}}}
+ const client=realClient()
+ try{
+  const result=await client.run({kind:'sourceBodyRestore',options})
+  expect(result.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),result)).toBe(true)
+  expect(result.stepExchange?.prepared).toBe(true)
+  const step=result.stepExchange!
+  expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
+  expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
+  expect(step.text).toContain('MANIFOLD_SOLID_BREP')
+  const record=createSourceBodyRecord('mapped-root-chain','Mapped root chain',source)
+  const document={...emptyDirectDocument(),sourceBodies:[record]}
+  const restored=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
+  expect(restored.sourceBodies).toEqual([record])
+  await warmGeometryKernel()
+  const history=new DirectHistory(document),renamed=history.document
+  renamed.sourceBodies![0]!.name='Renamed mapped root chain';history.commit(renamed)
+  expect(history.undo().sourceBodies).toEqual([record])
+  expect(history.redo().sourceBodies![0]!.source).toEqual(record.source)
+  const reloaded=parseDirectDocument(serializeDirectDocument(history.document))
+  const replay=await client.run({kind:'sourceBodyRestore',options:sourceBodyRecordOptions(reloaded.sourceBodies![0]!)})
+  expect(replay.admitted).toBe(true);expect(replay.sourceBody).toEqual(source.definition)
+  expect(replay.edges.map(e=>e.vertices)).toEqual(result.edges.map(e=>e.vertices))
+ }finally{client.dispose()}
 },180000)
 
 it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM',async()=>{

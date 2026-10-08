@@ -1846,6 +1846,14 @@ mod tests {
         let bounds = body.volume();
         assert!(bounds[0] <= 1. / 6. && 1. / 6. <= bounds[1]);
         assert!(!body.reverse_orientation());
+        if mapped {
+            if let Some(path)=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_OUTPUT") {
+                let template=std::env::var_os("CAD_MAPPED_ROOT_BODY_FIXTURE_TEMPLATE").unwrap();
+                let mut request:value_codec::Value=value_codec::from_str(&std::fs::read_to_string(template).unwrap()).unwrap();
+                request["definition"]=body.definition().unwrap();
+                std::fs::write(path,value_codec::to_string(&request).unwrap()).unwrap();
+            }
+        }
         if irrational {
             if let Some(path) = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_OUTPUT") {
                 let template = std::env::var_os("CAD_IRRATIONAL_BODY_FIXTURE_TEMPLATE").unwrap();
