@@ -232,7 +232,7 @@ pub fn restore(v: Value) -> Result<Value> {
         let (facts,self_report)=if let Some(limits)=self_work {
             let report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
             let diagnostics=json!({"faces":report.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,
-                "reason":f.reason,"cells":f.cells,"spans":f.spans,"pending":f.pending,"uncertain":f.uncertain})).collect::<Vec<_>>(),
+                "reason":f.reason,"cells":f.cells,"spans":f.spans,"pending":f.pending,"uncertain":f.uncertain,"unresolvedPairs":f.unresolved_pairs,"endpointExchangeSymmetric":true})).collect::<Vec<_>>(),
                 "planeControls":report.plane_controls,"cells":report.cells,"spans":report.spans,
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
@@ -496,6 +496,14 @@ mod tests {
         assert!(a["adaptiveSelf"]["faces"].as_array().unwrap().len()>0);
         assert!(a["adaptiveSelf"]["cells"].as_u64().unwrap()<=1);
         assert!(a["adaptiveSelf"]["spans"].as_u64().unwrap()<=1);
+        for face in a["adaptiveSelf"]["faces"].as_array().unwrap() {
+            let pairs=face["unresolvedPairs"].as_array().unwrap();
+            assert_eq!(pairs.len() as u64,face["pending"].as_u64().unwrap());
+            assert_eq!(face["endpointExchangeSymmetric"],json!(true));
+            if let Some(last)=pairs.last() {assert_eq!(last,&face["uncertain"]);}
+            else {assert_eq!(face["uncertain"],Value::Null);}
+        }
+
         for key in ["planeControls","cells","spans","cellsPerFace","spansPerFace"] {
             let mut bad=adaptive_option.clone();bad["adaptiveSelf"][key]=json!(0);
             assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",

@@ -60,5 +60,16 @@ it('retains adaptive pending rectangles without promoting whole-wall qualificati
  for(const bad of [[],[[[1,0],[0,1]],[[0,1],[0,1]]],[[[0,Infinity],[0,1]],[[0,1],[0,1]]]]){
   const changed=structuredClone(r);changed.adaptiveSelf!.faces[0].uncertain=bad;expect(validCoverage(e,changed,6,key)).toBe(false)
  }
+ const face=r.adaptiveSelf.faces[0]
+ face.unresolvedPairs=[structuredClone(face.uncertain!)];face.endpointExchangeSymmetric=true
+ expect(validCoverage(e,r,6,key)).toBe(true)
+ for(const mutate of [
+  (r:SourceWallCoverageResult)=>r.adaptiveSelf!.faces[0].unresolvedPairs=[],
+  (r:SourceWallCoverageResult)=>delete r.adaptiveSelf!.faces[0].endpointExchangeSymmetric,
+  (r:SourceWallCoverageResult)=>r.adaptiveSelf!.faces[0].unresolvedPairs![0][0][0][1]=Infinity,
+  (r:SourceWallCoverageResult)=>r.adaptiveSelf!.faces[0].unresolvedPairs![0][0][0][1]=0.5,
+ ]){
+  const changed=structuredClone(r);mutate(changed);expect(validCoverage(e,changed,6,key)).toBe(false)
+ }
  r.pairs[0].proven=true;r.pairs[0].reason='source-wall-self-certified';expect(validCoverage(e,r,6,key)).toBe(false)
 })

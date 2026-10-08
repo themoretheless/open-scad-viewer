@@ -41,6 +41,8 @@ pub struct Face {
     pub spans: usize,
     pub pending: usize,
     pub uncertain: Option<[[[f64; 2]; 2]; 2]>,
+    /// Closed representatives also cover their exchanged endpoint order.
+    pub unresolved_pairs: Vec<[[[f64;2];2];2]>,
 }
 pub struct Report<'a> {
     pub faces: Vec<Face>,
@@ -119,6 +121,7 @@ pub fn qualify<'a>(
                 spans: 0,
                 pending: 0,
                 uncertain: None,
+                unresolved_pairs: Vec::new(),
             });
             continue;
         }
@@ -143,6 +146,7 @@ pub fn qualify<'a>(
                 spans: 0,
                 pending: 1,
                 uncertain: Some([domain, domain]),
+                unresolved_pairs: vec![[domain,domain]],
             });
             continue;
         }
@@ -170,6 +174,7 @@ pub fn qualify<'a>(
             spans: r.spans,
             pending: r.pending,
             uncertain: r.uncertain,
+            unresolved_pairs: r.unresolved_pairs,
         });
         if let Some(c) = r.certificate {
             out.certificates.push(FaceCertificate {

@@ -397,6 +397,8 @@ mod tests {
         for (i,face) in self_coverage.faces.iter().enumerate() {
             assert_eq!(face.face,i);assert!(face.cells<=512&&face.spans<=4096);
             assert_eq!(face.qualified,face.pending==0);assert_eq!(face.qualified,face.uncertain.is_none());
+            assert_eq!(face.pending,face.unresolved_pairs.len());
+            assert_eq!(face.uncertain,face.unresolved_pairs.last().copied());
         }
         for c in self_coverage.certificates() {
             assert!(std::ptr::eq(c.body(),&body));assert_eq!(c.minimum_mm(),5.99);assert_eq!(c.max_sine_squared(),1e-6);
@@ -406,6 +408,9 @@ mod tests {
         let mut self_coverage=self_coverage;
         self_coverage.faces.retain(|f|f.qualified);
         assert!(!self_coverage.all_self_pairs_qualified(),"public diagnostics cannot change original face coverage");
+        let issued_self_faces:std::collections::BTreeSet<_>=self_coverage.certificates()
+            .iter().map(|c|c.face()).collect();
+        assert!(issued_self_faces.len()>=16,"retain the previously qualified face classes");
         let reused=crate::source_wall_coverage::qualify_with_self_facts(&body,5.99,
             crate::source_wall_coverage::Limits{pairs:378,plane_controls:10000,normal_spans:1000,
                 gap:crate::source_face_gap::Limits{cells:1000,spans:2000},max_sine_squared:1e-6},self_coverage.into_certificates()).unwrap();
@@ -419,7 +424,12 @@ mod tests {
             if adjacent {assert!(!pair.reason.starts_with("source-face-gap-"),"shared-boundary pairs cannot consume clearance subdivision");}
         }
 
-        assert_eq!(reused.pairs.iter().filter(|p|p.reason=="source-wall-self-certified").count(),16);
+        let transported_self_faces:std::collections::BTreeSet<_>=reused.pairs.iter()
+            .filter(|p|p.reason=="source-wall-self-certified").map(|p| {
+                assert!(p.proven && p.faces[0]==p.faces[1]);p.faces[0]
+            }).collect();
+        assert_eq!(transported_self_faces,issued_self_faces,
+            "every issued source-owned self certificate must be reused exactly once");
         assert!(reused.pairs.iter().filter(|p|!p.proven).count()<=256);
         let cavity_faces=[radial.boundary.contacts[1].face,radial.boundary.contacts[2].face];
         let cavity=crate::source_material_chord::qualify_between(&body,

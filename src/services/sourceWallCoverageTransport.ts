@@ -5,7 +5,7 @@ export interface SourceWallCoverageOptions {
  limits:{pairs:number;planeControls:number;normalSpans:number;gapCells:number;gapSpans:number;maxSineSquared:number}
 }
 export interface SourceWallCoverageResult {
- adaptiveSelf?:{faces:{face:number;qualified:boolean;reason:string;cells:number;spans:number;pending:number;uncertain:number[][][]|null}[];planeControls:number;cells:number;spans:number;allSelfPairsQualified:boolean}|null
+ adaptiveSelf?:{faces:{face:number;qualified:boolean;reason:string;cells:number;spans:number;pending:number;uncertain:number[][][]|null;unresolvedPairs?:number[][][][];endpointExchangeSymmetric?:true}[];planeControls:number;cells:number;spans:number;allSelfPairsQualified:boolean}|null
  request:SourceWallCoverageOptions;wholeWallQualified:boolean;lowerMm:number|null
  enumerationComplete:boolean;totalPairs:number
  pairs:{faces:[number,number];proven:boolean;reason:string}[]
@@ -46,6 +46,13 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
    if(!f.qualified){
     const u=f.uncertain
     if(!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1])))return false
+   }
+   if(f.unresolvedPairs!==undefined||f.endpointExchangeSymmetric!==undefined){
+    const pairs=f.unresolvedPairs
+    if(f.endpointExchangeSymmetric!==true||!Array.isArray(pairs)||pairs.length!==f.pending
+     ||pairs.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2
+      ||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1])))
+     ||(pairs.length>0&&key(pairs[pairs.length-1])!==key(f.uncertain)))return false
    }
    cells+=f.cells;spans+=f.spans;allSelf=allSelf&&f.qualified
   }

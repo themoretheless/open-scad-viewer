@@ -1332,3 +1332,24 @@ Radii [0.5, 1.25], direction -1.0: 20000 cells, 90368 restrictions, 14 pending r
 Radii [1.25, 0.5], direction 1.0: 20000 cells, 90412 restrictions, 13 pending representatives.
 Radii [1.25, 0.5], direction -1.0: 20000 cells, 90412 restrictions, 13 pending representatives.
 No additional face is qualified. Full JSON/logs are archived.
+
+## Whole pending-pair diagnostics through Body and worker transport
+
+Native Body face diagnostics now preserve every unresolved original closed
+pair representative. The bridge exports unresolvedPairs and the explicit
+endpointExchangeSymmetric flag. Transport checks the finite ordered shape,
+exact pending count, exchange flag and last uncertain pair. Older packaged
+responses without both extension fields remain readable; a partial or
+inconsistent extension is rejected. The UI identifies each unresolved face
+and its pending region-pair count without asserting a thin defect.
+
+Six transport tests, 35 combined wall/worker/preview protocol tests and Vue
+type checking pass. Native bridge restoration passes with array/count/last
+obligation assertions. Original annular body radius/wall/seam acceptance
+passes: axial wall encloses 6 mm and radial wall encloses 15 mm. The previous
+fixed expectation of 16 reused self-face facts became stale when 18 faces
+qualified; it is replaced by exact equality of issued and transported face
+sets, plus retention of at least the 16 preceding qualified classes. The
+whole-wall certificate still refuses, and limiting pole seam normals remain
+unresolved. Complete passing logs are archived. This is not acceptance of
+all requested bracket/flange/housing operation chains. WASM repack is next.
