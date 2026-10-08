@@ -2803,3 +2803,21 @@ passing only the remaining budget to the original Jordan routine. Tests pass
 for exact separable weights and refuse the rounded-product near-match
 1.1*1.1 versus binary64 1.21, as well as zero work. The test passed after the
 shared-budget correction. Previous native fixtures predate this added guard.
+
+The original-source Jordan/tiled fixture completed in 278.84 seconds. The
+initial projected-region fixture completed in 218.99 seconds but correctly
+refused original orientation at its 10000000-work cap. Its measured full
+original Jordan cost is 12488524, so the next guarded run uses 20000000.
+
+A new private-construction `TransitionRuledContact` route requires an owned
+original projected-region certificate for the very same transition boundary,
+a fresh exact ruled-neighbor reduction, exact complete Bezier boundary-trace
+identity (possibly reversed, preserving positive weights), and a fresh 3D
+root-ended incident-edge certificate. The full wall trace is the original
+Jordan boundary: source/transition interior images cannot meet it, and the
+clipped source subregion touches it only on the selected natural rail.
+No old pair report or approximate trace equality creates authority. The
+exact-identity test passed, including one-bit coordinate/weight refusal,
+reversed nonunit domains and periodic refusal. The full guarded native fixture
+now requires this owned high-rail contact; it is running. The combined audit
+has not yet been changed and still reports 154 pending pairs.

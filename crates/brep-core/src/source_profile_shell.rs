@@ -668,3 +668,7 @@ pub use audit::{AuditedContactPair, ContactAuditLimits, PairContactProof, ShellC
 #[path = "source_profile_shell_transition_contact.rs"]
 mod transition_contact;
 pub use transition_contact::{TransitionPlaneContact, TransitionPlaneReport};
+
+#[path="source_profile_shell_ruled_contact.rs"]
+mod ruled_contact;
+pub use ruled_contact::{TransitionRuledContact,TransitionRuledReport};

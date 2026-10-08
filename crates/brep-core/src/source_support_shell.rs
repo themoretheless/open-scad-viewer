@@ -602,11 +602,11 @@ mod tests {
         assert_eq!(xy_face.projection(),xy_projection);
         assert!(xy_face.qualify_original_xy_region(1e-8,0,0).unwrap().certificate.is_none());
         assert!(xy_face.qualify_original_xy_region(f64::NAN,1,1).is_err());
-        let original_region=xy_face.qualify_original_xy_region(1e-8,10000000,10000).unwrap();
+        let original_region=xy_face.qualify_original_xy_region(1e-8,20000000,10000).unwrap();
         eprintln!("owned transition original XY region qualified={} work={} cells={} reason={}",
             original_region.certificate.is_some(),original_region.exact_work,
             original_region.boundary_cells,original_region.reason);
-        if let Some(region)=original_region.certificate {
+        if let Some(region)=&original_region.certificate {
             assert!(std::ptr::eq(region.face(),&xy_face));
             assert_eq!(region.original().axes(),[0,1]);
             assert_eq!(region.source_domain(),[[0.75,0.9],[0.,1.]]);
@@ -647,6 +647,16 @@ mod tests {
         let assembled=outer.assemble_shell(1000).unwrap();
         eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
         let expression=assembled.shell.expect(assembled.reason);
+        let region=original_region.certificate.as_ref().expect("fresh original XY region");
+        assert!(expression.qualify_transition_ruled_contact(1,region,1000,0,1000).unwrap().certificate.is_none());
+        let ruled=expression.qualify_transition_ruled_contact(1,region,1000,10000000,100000).unwrap();
+        eprintln!("owned transition ruled contact qualified={} work={} reason={}",
+            ruled.certificate.is_some(),ruled.exact_work,ruled.reason);
+        let ruled=ruled.certificate.expect("whole ruled trace contact confined to owned high rail");
+        assert_eq!(ruled.rail(),1);
+        assert_eq!(ruled.trace().domain(),[0.,3.]);
+        let owners=ruled.owners();
+        assert!(owners.iter().all(|owner|expression.faces().iter().any(|f|std::ptr::eq(*owner,f))));
         assert!(std::ptr::eq(expression.assembly(),&outer));
         assert_eq!(expression.faces().len(),body.geometry().shell().faces().len()+2);
         assert_eq!(expression.pairs().len(),body.geometry().shell().edges().len()+6);
