@@ -44,6 +44,8 @@
     "audit:wasm-package": "node scripts/audit-wasm-package.mjs",
     "test:wasm-package": "node --test tests/auditWasmPackage.test.mjs",
     "test:wasm-optimize": "node --test tests/wasmOptimize.test.mjs tests/wasmOptCache.test.mjs",
+    "audit:architecture": "node scripts/audit-architecture.mjs",
+    "test:architecture": "node --test tests/auditArchitecture.test.mjs",
     "audit:qualification-drift": "node scripts/audit-qualification-drift.mjs",
     "audit:runtime-manifests": "node --import tsx scripts/audit-runtime-manifests.mts",
     "test:qualification-drift": "node --test tests/qualificationDriftAudit.test.mjs",

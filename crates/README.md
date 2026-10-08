@@ -4,7 +4,8 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 
 | Crate | Owns |
 | --- | --- |
-| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, shared `Error` / `ensure` |
+| `math-core` (`osv-math` on crates.io) | `V2`/`V3`, vector helpers, CPU point kernels, `DeviceKernels` port, shared `Error` / `ensure` |
+| `math-compute` (`osv-math-compute`) | wgpu/CUDA/tensor implementation of the `osv-math` `DeviceKernels` port |
 | `value-codec` | JSON/binary value transport |
 | `gpu-compute` | Optional WGSL compute host |
 | `geometry-ops` | Deformations, `Triangles`, sweep frames |
