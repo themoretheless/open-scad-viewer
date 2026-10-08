@@ -174,3 +174,50 @@ it('requires requested refinement accounting without granting whole-wall proof',
   expect(()=>coverageExpectation(bad)).toThrow()
  }
 })
+
+function retainedFixture(){
+ const option=structuredClone(request)
+ option.retainedGap={cells:100,spans:100,domainCells:1000,cellsPerPair:10,spansPerPair:20,domainCellsPerPair:100,domainCellsPerQuery:10,toleranceUv:1e-8}
+ const r=result();r.request=structuredClone(option);r.pairs[1].reason='source-wall-retained-gap-qualified'
+ r.retainedGap={cells:2,spans:2,domainCells:8,domainQueries:2,endpointQueries:8,pairs:[{faces:[0,1],qualified:true,reason:'source-retained-gap-qualified',cells:2,spans:2,domainCells:8,domainQueries:2,endpointQueries:8,outsideProducts:1,unresolvedProducts:[]}]}
+ return {option,r}
+}
+it('binds retained domain proofs to owned pairs and exact additive budgets',()=>{
+ const {option,r}=retainedFixture();expect(validCoverage(option,r,6,key)).toBe(true)
+ expect(coverageExpectation(option)).toEqual(option)
+ for(const mutate of [
+  (r:SourceWallCoverageResult)=>r.retainedGap=null,
+  (r:SourceWallCoverageResult)=>r.retainedGap!.cells++,
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].cells=11,
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].faces=[1,0],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].faces=[0,0],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].faces=[0,6],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs.push(structuredClone(r.retainedGap!.pairs[0])),
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].domainQueries=5,
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].outsideProducts=3,
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].reason='source-retained-gap-work-limit',
+  (r:SourceWallCoverageResult)=>r.pairs[1].reason='source-face-gap-qualified',
+  (r:SourceWallCoverageResult)=>r.request.retainedGap!.toleranceUv=1e-7,
+ ]){const changed=structuredClone(r);mutate(changed);expect(validCoverage(option,changed,6,key)).toBe(false)}
+ const unrequested=result();unrequested.retainedGap=r.retainedGap;expect(validCoverage(request,unrequested,6,key)).toBe(false)
+ for(const name of ['cells','spans','domainCells','cellsPerPair','spansPerPair','domainCellsPerPair','domainCellsPerQuery'] as const){
+  for(const value of [0,-1,NaN,1.5,name==='domainCells'?1000001:100001]){
+   const bad=structuredClone(option);bad.retainedGap![name]=value;expect(()=>coverageExpectation(bad)).toThrow()
+  }
+ }
+ for(const value of [0,-1,NaN,Infinity]){const bad=structuredClone(option);bad.retainedGap!.toleranceUv=value;expect(()=>coverageExpectation(bad)).toThrow()}
+})
+it('retains unresolved original products and refuses forged retained success',()=>{
+ const {option,r}=retainedFixture(),p=r.retainedGap!.pairs[0]
+ p.qualified=false;p.reason='source-retained-gap-work-limit';p.unresolvedProducts=[[[[0,1],[0,1]],[[0,1],[0,1]]]]
+ r.pairs[1].proven=false;r.pairs[1].reason='source-face-gap-chart-close';r.wholeWallQualified=false;r.lowerMm=null;r.reason='source-wall-coverage-unproven'
+ expect(validCoverage(option,r,6,key)).toBe(true)
+ for(const mutate of [
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].unresolvedProducts=[],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].unresolvedProducts[0][0][0]=[1,0],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].unresolvedProducts[0][0][0]=[0,Infinity],
+  (r:SourceWallCoverageResult)=>r.retainedGap!.pairs[0].qualified=true,
+  (r:SourceWallCoverageResult)=>{r.pairs[1].proven=true;r.pairs[1].reason='source-wall-retained-gap-qualified'},
+  (r:SourceWallCoverageResult)=>{r.wholeWallQualified=true;r.lowerMm=option.minimumMm},
+ ]){const changed=structuredClone(r);mutate(changed);expect(validCoverage(option,changed,6,key)).toBe(false)}
+})

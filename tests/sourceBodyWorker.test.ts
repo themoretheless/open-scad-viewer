@@ -500,7 +500,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
 
 it('cancels continuous coverage on threshold changes and ignores its late reply',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const wallCoverage={minimumMm:5.99,adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
+ const wallCoverage={minimumMm:5.99,retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:378,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}
  const first=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!,id=ports[0]!.requests[0]!.id
  const next=client.run({kind:'sourceBodyRestore',options:{...options(),wallCoverage:{...wallCoverage,minimumMm:6.01}}})
@@ -560,4 +560,33 @@ it('preserves original pair proofs when close-chart refusals release gap work th
  if(process.env.CAD_SOURCE_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_GAP_WORKER_REPORT,JSON.stringify({
   wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
   results,scope:'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.'},null,2)+'\n')
+},180000)
+
+it('qualifies bounded retained face products without losing prior proofs through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ for(const retained of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   ...(retained?{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}}:{}),
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o});expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull();expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(retained?45:61)
+  if(retained){
+   const d=c.retainedGap!;expect(d.pairs).toHaveLength(61);expect(d.pairs.filter(p=>p.qualified)).toHaveLength(16)
+   for(const old of results[0]!.pairs.filter(p=>p.proven))expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
+   for(const mutate of [
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.domainCells++,
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs[0].faces=[0,0],
+    (r:SourceBodyResult)=>r.wallCoverage!.retainedGap!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
+    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
+   ]){const changed=structuredClone(r);mutate(changed);expect(validSourceBody(sourceBodyExpectation(o),changed)).toBe(false)}
+  }
+  results.push(c)
+ }
+ if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
 },180000)
