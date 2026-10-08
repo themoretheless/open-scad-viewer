@@ -338,6 +338,35 @@ mod tests {
         }
     }
     #[test]
+    fn restricted_profile_seams_match_owned_neighbor_supports() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let specs=[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]},crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
+        let report=crate::source_profile_body::prepare(&body,&specs,
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
+        let proposal=report.proposal.unwrap();
+        for (edge,canonical,faces) in [(0,[0.1,0.25],[0,1]),(1,[0.75,0.9],[0,2])] {
+            let report=proposal.qualify_edge_interval(edge,canonical,1e-6,100000,100000).unwrap();
+            let seam=report.seam.expect(report.angular.reason);
+            assert!(std::ptr::eq(seam.proposal(),&proposal));
+            assert_eq!(seam.edge(),edge);assert_eq!(seam.faces(),faces);
+            assert_eq!(seam.canonical_interval(),canonical);
+            assert_eq!(report.angular.aligned,Some(true));assert!(report.angular.pending.is_empty());
+            assert!(seam.upper_sine_squared()<=seam.threshold());
+            eprintln!("restricted seam edge={edge} interval={canonical:?} cells={} spans={} upper={}",report.angular.cells,report.angular.spans,seam.upper_sine_squared());
+            let limited=proposal.qualify_edge_interval(edge,canonical,1e-6,1,1).unwrap();
+            assert!(limited.seam.is_none());assert!(!limited.angular.pending.is_empty());
+        }
+        for canonical in [[0.5,0.5],[-0.1,0.5],[0.5,1.1],[f64::NAN,1.]] {
+            assert!(proposal.qualify_edge_interval(0,canonical,1e-6,100,100).is_err());
+        }
+        assert!(proposal.qualify_edge_interval(usize::MAX,[0.,1.],1e-6,100,100).is_err());
+    }
+    #[test]
     fn corrected_seam_endpoint_preflight_preserves_work_refusals() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -440,7 +469,7 @@ mod tests {
             eprintln!("constrained rail high={} aligned={:?} sine={:?} spans={}",high,report.aligned,report.sine_squared_interval,report.spans);
         }
         for sample in [0.25,0.5,0.75] {
-            let (normal,spans)=constrained.normals_with_transverse_correction([sample;2],[sample;2],57).unwrap();
+            let (normal,spans)=constrained.normals_with_transverse_correction([sample;2],[sample;2],61).unwrap();
             let normal=normal.unwrap();
             assert!(normal.iter().any(|r|r[0]>0.||r[1]<0.));
             eprintln!("full Hermite point={sample} normal={normal:?} spans={spans}");
@@ -451,6 +480,7 @@ mod tests {
             eprintln!("full Hermite side={high} cells={} spans={}",join.cells,join.spans);
         }
         let full_cover=constrained.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],1000,72000).unwrap();
+        assert!(full_cover.complete_regular,"full corrected bridge regularity must cover the entire rectangle");
         let full_area:f64=full_cover.regular.iter().chain(&full_cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
         assert_eq!(full_area,1.);
         eprintln!("full Hermite regular={} pending={} cells={} spans={}",full_cover.regular.len(),full_cover.pending.len(),full_cover.cells,full_cover.spans);
@@ -476,6 +506,11 @@ mod tests {
         let area:f64=injectivity.regular.iter().chain(&injectivity.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
         eprintln!("bridge injectivity qualified={} accepted={} pending={} cells={} spans={} projection={:?}",injectivity.complete_regular,injectivity.regular.len(),injectivity.pending.len(),injectivity.cells,injectivity.spans,projection);
 
+        let full_injective=constrained.inspect_transverse_corrected_injectivity([0.,1.],[0.,1.],projection,1000,61000).unwrap();
+        let full_injective_area:f64=full_injective.regular.iter().chain(&full_injective.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(full_injective_area,1.);
+        assert!(full_injective.complete_regular,"full corrected transition injectivity must cover the entire rectangle");
+        eprintln!("full Hermite injectivity={} accepted={} pending={} cells={} spans={}",full_injective.complete_regular,full_injective.regular.len(),full_injective.pending.len(),full_injective.cells,full_injective.spans);
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

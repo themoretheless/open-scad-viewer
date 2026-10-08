@@ -54,6 +54,24 @@ pub struct SeamReport<'p, 'b> {
     pub angular: Option<nurbs_core::normal_alignment::ProfilePathReport>,
     pub reason: &'static str,
 }
+/// Tangent-plane qualification for exactly one canonical carrier interval.
+/// Does not qualify the rest of the original edge or admit a sewn Body.
+pub struct RestrictedSeam<'p,'b> {
+    proposal:&'p Proposal<'b>, faces:[usize;2], edge:usize,
+    canonical:[f64;2], threshold:f64, upper:f64,
+}
+impl RestrictedSeam<'_,'_> {
+    pub fn proposal(&self)->&Proposal<'_> {self.proposal}
+    pub fn faces(&self)->[usize;2] {self.faces}
+    pub fn edge(&self)->usize {self.edge}
+    pub fn canonical_interval(&self)->[f64;2] {self.canonical}
+    pub fn threshold(&self)->f64 {self.threshold}
+    pub fn upper_sine_squared(&self)->f64 {self.upper}
+}
+pub struct RestrictedSeamReport<'p,'b> {
+    pub seam:Option<RestrictedSeam<'p,'b>>,
+    pub angular:nurbs_core::normal_alignment::ProfilePathReport,
+}
 /// An owned new section end with an exact source-parameter recipe. Interval
 /// coordinates enclose that recipe; they are not rounded replacement vertices.
 pub struct CutEndpoint<'p, 'b> {
@@ -725,6 +743,24 @@ impl<'a> Proposal<'a> {
         out.angular = Some(angular);
         Ok(out)
     }
+    /// Qualify only the requested interval of an owned original carrier.
+    /// UVs are freshly enclosed from both original pcurves and canonical maps.
+    pub fn qualify_edge_interval<'p>(
+        &'p self,edge:usize,canonical:[f64;2],threshold:f64,cells:usize,spans:usize,
+    )->Result<RestrictedSeamReport<'p,'a>> {
+        let uses=self.body.geometry().shell().uses().get(edge)
+            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned interval edge"))?;
+        let mut faces=[uses[0].face,uses[1].face];
+        if self.profile(faces[0]).is_none() {faces.reverse();}
+        if self.profile(faces[0]).is_none() {
+            return Err(Error::new("BREP_PROFILE_SEAM","Require an owned corrected face"));
+        }
+        let angular=self.inspect_curved_edge_interval(faces[0],faces[1],edge,threshold,cells,spans,canonical)?;
+        let seam=if angular.aligned==Some(true) {
+            Some(RestrictedSeam{proposal:self,faces,edge,canonical,threshold,upper:angular.upper_sine_squared.unwrap()})
+        }else{None};
+        Ok(RestrictedSeamReport{seam,angular})
+    }
     /// Original nonlinear pcurves remain source-owned; inverse canonical maps
     /// and complete curve-span enclosures replace manually supplied UV lines.
     fn inspect_curved_edge(
@@ -736,8 +772,14 @@ impl<'a> Proposal<'a> {
         max_cells: usize,
         max_spans: usize,
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        self.inspect_curved_edge_interval(face,neighbor,index,threshold,max_cells,max_spans,[0.,1.])
+    }
+    fn inspect_curved_edge_interval(
+        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],
+    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
         use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
-        if !(1..=100000).contains(&max_cells)
+        if !canonical.iter().all(|x|x.is_finite()) || canonical[0]<0. || canonical[1]>1. || canonical[0]>=canonical[1]
+            || !(1..=100000).contains(&max_cells)
             || !(1..=100000).contains(&max_spans)
             || !threshold.is_finite()
             || !(0. ..1.).contains(&threshold)
@@ -761,7 +803,7 @@ impl<'a> Proposal<'a> {
             spans: 0,
             accepted_cells: 0,
             upper_sine_squared: None,
-            pending: vec![[0., 1.]],
+            pending: vec![canonical],
             reason: "profile-seam-carrier-unproven",
         };
         let regions = shell.regions().unwrap();
@@ -778,8 +820,8 @@ impl<'a> Proposal<'a> {
         let profile = self.profile(face).unwrap();
         // Singular literal source endpoints are explicitly inspected before
         // repeatedly subdividing an interval that contains a zero normal.
-        out.pending.push([1., 1.]);
-        out.pending.push([0., 0.]);
+        out.pending.push([canonical[1];2]);
+        out.pending.push([canonical[0];2]);
         out.reason = "profile-path-work-limit";
         let mut upper = 0_f64;
         while let Some(q) = out.pending.pop() {

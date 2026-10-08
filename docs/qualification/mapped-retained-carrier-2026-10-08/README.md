@@ -1466,3 +1466,31 @@ a complete certificate. All three bridge tests passed in 0.78 seconds.
 The annular corrected injectivity run is being checked separately. Neighbor
 shared-edge admission, global assembled-body intersection checks, thickness,
 corner closure and WASM/worker/UI integration remain open.
+
+## Complete corrected annular injectivity and restricted neighbor seams
+
+The native corrected injectivity run passed in 163.22 seconds: 328 accepted
+rectangles, zero pending, 655 visited cells and 39955 source spans under
+one fixed projection. Together with the 222-cell regularity cover, this
+qualifies the exact transition expression on the complete unit rectangle.
+It does not qualify assembled-body intersections or closed shell topology.
+
+`Proposal::qualify_edge_interval` freshly maps both owned original pcurves
+and bounds the corrected/original support normals on one canonical interval.
+A distinct RestrictedSeam retains Proposal identity, both faces, edge,
+canonical interval, threshold and angular upper bound; it cannot stand for
+the remaining source edge. The full-edge API delegates with [0,1] and
+preserves its singular endpoint preflight.
+
+The owned annular neighbor regression passed in 11.85 seconds. Edge 0
+on [0.1,0.25] qualified with 11 cells/44 spans and upper squared sine
+4.2472248031705913e-23. Edge 1 on [0.75,0.9] qualified with 2255 cells/9020
+spans and upper squared sine 9.981695392026196e-7 under threshold 1e-6.
+These are finite angular qualifications, not exact zero-angle proofs.
+The test covers Proposal identity, selected faces/edge/interval, work
+refusal and invalid intervals/edge IDs.
+
+These explicitly requested canonical intervals are not yet bound to the
+bridge's root-ended carriers. That binding must enclose the exact transformed
+end coordinates, retain source ownership and restrict neighbor contours
+before a sewn Body can be admitted. Corner/terminal closure remains open.
