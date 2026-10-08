@@ -474,3 +474,32 @@ whole-face or whole-wall certificate is claimed before its completed report.
 Retained previously proven self-face coverage remains 28/31. Distinct-face
 wall pairs and global minimum wall thickness remain unqualified. This native
 calculation has not been included in a new WASM/UI build.
+
+
+## Completed rational pole coverage audit
+
+The native four-body audit completed successfully as a process, with all eight
+source-owned rational preparations qualified. This is not whole-wall admission.
+Both sweep directions have identical coverage counts for each radius order:
+
+| Radius order | Face | Cells | Spans | Rational polar exclusions | Pending |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 861 | 8192 | 235 | 133 |
+| 0.5 → 1.25 | 10 | 908 | 8192 | 0 | 16 |
+| 1.25 → 0.5 | 0 | 864 | 8192 | 216 | 194 |
+| 1.25 → 0.5 | 10 | 937 | 8192 | 0 | 19 |
+
+Exact rational preparation costs 1,536,798–1,666,299 operations per pole,
+separate from normal preparation and coverage restrictions. No pole face
+receives a complete self-wall certificate. Original thresholds and geometry
+are unchanged. The unresolved entry pair reaches U≈1e-12 with V endpoints
+near 0 and 0.245; refining each endpoint rectangle alone does not shrink
+their convex union. The next proof must handle these separated angular
+endpoints and coupled near-pole scales, rather than merely raise work limits.
+Exit pairs remain at finite U widths. Evidence: `rational-self-wall.json.gz`
+and its completed log. Previously qualified same-face coverage stays 28/31.
+
+A fourth independent test uses direct rational quotient derivatives, nonzero
+first-order tangential V derivatives, both reflected ends, and translated,
+scaled knot domains. Its endpoint frames lie in the prepared interval matrix;
+all source points, weights and knots remain unchanged. Four tests pass.

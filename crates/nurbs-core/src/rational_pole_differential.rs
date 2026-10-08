@@ -459,6 +459,46 @@ mod tests {
         }
     }
     #[test]
+    fn independent_rational_endpoint_frames_survive_scaled_domains() {
+        // Direct quotient formulas, independent of coefficient preparation.
+        for end in [false, true] {
+            let mut s = source();
+            if end {
+                s.control_points.reverse();
+                s.weights.reverse();
+            }
+            s.knots_u = vec![2., 2., 2., 7., 7., 7.];
+            s.knots_v = vec![-3., -3., 9., 9.];
+            let before = s.clone();
+            let r = prepare(&s, end, 10_000_000).unwrap();
+            let c = r.certificate.unwrap();
+            let d = [if end { [6.995, 7.] } else { [2., 2.005] }, [-3., -1.8]];
+            let j = c.bounds(d).unwrap().unwrap();
+            for u in [0.0001, 0.0005, 0.001] {
+                for v in [0., 0.05, 0.1] {
+                    let w = 1. + v + 2. * u * (1. - u) * v;
+                    let wu = 2. * (1. - 2. * u) * v;
+                    let wv = 1. + 2. * u * (1. - u);
+                    let x = u * (1. + 2. * v) - u * u * v;
+                    let y = 2. * u * u * v;
+                    let xu = ((1. + 2. * v - 2. * u * v) * w - x * wu) / (w * w);
+                    let xv = ((2. * u - u * u) * w - x * wv) / (w * w);
+                    let yu = (4. * u * v * w - y * wu) / (w * w);
+                    let yv = (2. * u * u * w - y * wv) / (w * w);
+                    assert!(j[1][0].contains(yu / xu));
+                    assert!(j[1][1].contains((yv - yu * xv / xu) / (u * u)));
+                    if v == 0.05 {
+                        assert!(xv.abs() > 0.);
+                    }
+                }
+            }
+            assert_eq!(s.control_points, before.control_points);
+            assert_eq!(s.weights, before.weights);
+            assert_eq!(s.knots_u, before.knots_u);
+            assert_eq!(s.knots_v, before.knots_v);
+        }
+    }
+    #[test]
     fn analytic_cubic_chords_and_endpoint_frames_are_enclosed() {
         // Independent polynomial oracle S=(3u,3u²v,u³).
         let s = Surface {
