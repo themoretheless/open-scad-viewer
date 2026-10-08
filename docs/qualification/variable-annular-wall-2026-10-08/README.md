@@ -190,3 +190,24 @@ Eleven native tests pass, including a direct oblique differential enclosure
 with a strictly stronger combined bound and the independent original parabola
 oracles and short true normal-chord rejection. `gram-tests.log.gz` retains
 the results. Annular improvement for this bound remains to be measured.
+
+## Complete expanded-budget regular-face audit
+
+The completed pre-Gram secant audit at 10000 cells/80000 spans per
+selected face proves faces 20, 21, 25 and 29 in all four specimens.
+Their cell counts are 9687, 6857, 7915 and 9055; span counts are
+49397, 33994, 39517 and 43498. Each has zero pending domains.
+Together with the distinct previously qualified faces, retained native
+proof coverage is 24/31 per specimen at unchanged threshold/angle.
+
+Regular faces 16, 17, 24 and 28 remain unresolved at this budget.
+Together with middle face 5 and singular ends 0/10, seven original
+charts remain without full same-face qualification. Distinct-face
+wall coverage and global minimum thickness are separate open work.
+Reports/logs: `self-wall-secant-regular10000.*.gz`.
+
+The focused original B-rep ownership/coverage regression also passes
+after the combined-minor change (one executed test). Evidence:
+`gram-source-body-tests.log.gz`. The controlled combined-minor
+4096-cell specimen comparison remains running; this expanded-budget
+result must not be attributed to that newer bound.
