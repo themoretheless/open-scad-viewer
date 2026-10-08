@@ -2898,3 +2898,17 @@ Added `inspect_contacts_with_profile_region_refined`: produces the complete fres
 The internal refinement helper updates a report only after all steps succeed; callback failure or excess work leaves its original cover intact. Two focused regressions pass: aggregate cover/budget/transaction behavior, and repeated actual conservative support queries on intersecting perpendicular planes, retaining an explicit intersection witness. A related root-refinement test also passes in the selected test run.
 
 The full restricted-profile fixture now compares base and refined audits, preserves every existing proof and owner pair, enforces global budgets, and exports refined diagnostics when BREP_CONTACT_REFINED_AUDIT_PATH is set. Running session 44284 / `/tmp/profile-refined-contact-audit-native.log`, expected artifact `/tmp/profile-refined-contact-audit.json`; no new pending-count reduction is claimed until it completes. Last verified count is 153.
+
+### Verified shared-budget refinement: 131 pending pairs
+
+The full restricted-profile native fixture passed in 207.04 s. Refinement excluded 22 complete original-original pair frontiers, preserving all prior contact proofs and the global work limits: 3,939 cells, 54,495 spans and 18,055 domain cells. Remaining pending groups: 88 original-original, 17 original-retained, 24 original-transition and 2 retained-transition. Saved `contact-audit-131.json`, SHA256 74f083b1d3accbeb4083d838074fea03ab83c4254a859e3464654715cd2991c4. These are unresolved pairs, not identified intersections; global body admission remains unproven.
+
+The new section-contact protocol is undergoing native validation. It uses owned crossing endpoints to restrict the extended cutter to the natural profile section, together with the full profile Jordan certificate and retained-domain separation. No newer count or WASM/UI delivery is claimed before that validation completes.
+
+The saved 131-pair report further separates pending adjacency: original-original has 15 pairs with shared edges and 73 without; original-retained has 5 with shared edges and 12 without; all 24 original-transition pairs have no shared edge. The two retained-transition pairs share their cut sections. This distinguishes pending contact-locus proofs from incomplete separation queries; absence of a shared edge does not establish nonintersection.
+
+### Verified owned section contacts
+
+The full native restricted-profile fixture passed in 266.87 s. Both cut-section contacts qualify with retained/transition owners; zero and insufficient control budgets refuse, invalid end indices error. Base audit covers all 406 pairs: [151 pending,162 excluded,12 planar,23 fiber,54 vertex-or-interior,1 transition-plane,1 transition-ruled,2 transition-section]. Refined audit has 129 pending, preserving all previous proofs and shared limits. The retained-transition pending group is now empty. Global embedding, thickness/radius qualification, final Body admission and WASM/UI delivery remain incomplete.
+
+Saved reports: `contact-audit-151.json` SHA256 b5b68609a467407c69c3f2dca601d5edbe71fcb50b85881144012a07094ab391; `contact-audit-129.json` SHA256 9c18655564f0630b3b81c6cc8b857f08fa2dcef4503ad4a0c6cba536d10ceeaa.

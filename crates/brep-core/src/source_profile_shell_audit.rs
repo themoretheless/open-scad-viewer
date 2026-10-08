@@ -20,6 +20,7 @@ pub enum PairContactProof<'x> {
     VertexOrInterior(OriginalAdditionalContact<'x>),
     TransitionPlane(TransitionPlaneContact<'x>),
     TransitionRuled(TransitionRuledContact<'x>),
+    TransitionSection(TransitionSectionContact<'x>),
 }
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
@@ -31,6 +32,7 @@ impl PairContactProof<'_> {
             Self::VertexOrInterior(_) => "vertex-or-interior",
             Self::TransitionPlane(_) => "transition-plane",
             Self::TransitionRuled(_) => "transition-ruled",
+            Self::TransitionSection(_) => "transition-section",
         }
     }
 }
@@ -173,6 +175,15 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     pair.proof = PairContactProof::TransitionRuled(certificate);
                     break;
                 }
+            }
+        }
+        for pair in &mut out.pairs {
+            if !matches!(pair.proof,PairContactProof::Pending) {continue;}
+            for &edge in &pair.support.shared_edges {
+                let ShellPairKind::Section(end)=self.pairs[edge].kind else {continue;};
+                let section=self.qualify_transition_section_contact(end,region,limits.controls_per_enclosure)?;
+                pair.reason=section.reason;
+                if let Some(certificate)=section.certificate {pair.proof=PairContactProof::TransitionSection(certificate);break;}
             }
         }
         Ok(out)

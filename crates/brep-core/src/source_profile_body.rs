@@ -1561,3 +1561,5 @@ pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,Shell
 mod projected_region;
 pub use projected_region::{OriginalProjectedRegion,OriginalProjectedRegionReport,ProfileProjectedRegion,ProfileProjectedRegionReport};
 pub use assembled_shell::{TransitionRuledContact,TransitionRuledReport};
+
+pub use assembled_shell::{TransitionSectionContact,TransitionSectionContactReport};

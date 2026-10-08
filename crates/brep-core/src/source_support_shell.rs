@@ -863,10 +863,20 @@ mod tests {
         eprintln!("exact profile ruled contact qualified={} work={} drivers={} reason={}",ruled_profile.certificate.is_some(),ruled_profile.exact_work,ruled_profile.driver_cells,ruled_profile.reason);
         assert!(ruled_profile.certificate.is_some(),"exact profile boundary must match owned wall");
         assert!(expression.qualify_transition_profile_ruled_contact(1,&profile_region,1000,0,0).unwrap().certificate.is_none());
+        for end in 0..2 {
+            let section=expression.qualify_transition_section_contact(end,&profile_region,1000).unwrap();
+            let certificate=section.certificate.expect(section.reason);
+            assert_eq!(certificate.end(),end);
+            assert_eq!(certificate.owners()[0].kind(),ShellFaceKind::Retained(end));
+            assert_eq!(certificate.owners()[1].kind(),ShellFaceKind::Transition);
+            assert!(expression.qualify_transition_section_contact(end,&profile_region,0).unwrap().certificate.is_none());
+            assert!(expression.qualify_transition_section_contact(end,&profile_region,1).unwrap().certificate.is_none());
+        }
+        assert!(expression.qualify_transition_section_contact(2,&profile_region,1000).is_err());
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
-        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),153);
-        let mut kinds=[0usize;7];
+        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),151);
+        let mut kinds=[0usize;8];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
@@ -874,12 +884,13 @@ mod tests {
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
                 PairContactProof::TransitionPlane(c)=>(5,Some([c.owners()[1],c.owners()[0]])),
                 PairContactProof::TransitionRuled(c)=>(6,Some([c.owners()[1],c.owners()[0]])),
+                PairContactProof::TransitionSection(c)=>(7,Some(c.owners())),
             };
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[153,162,12,23,54,1,1]);
-        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(153));
+        assert_eq!(kinds,[151,162,12,23,54,1,1,2]);
+        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(151));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
         }
@@ -887,7 +898,7 @@ mod tests {
         let binary=value_codec::encode_binary(&diagnostics).unwrap();
         assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);
         let json=value_codec::from_str::<value_codec::Value>(&diagnostics.to_string()).unwrap();
-        assert_eq!(json["pendingPairs"].as_u64(),Some(153));
+        assert_eq!(json["pendingPairs"].as_u64(),Some(151));
         assert_eq!(json["pairs"].as_array().unwrap().len(),406);
         eprintln!("expression audit diagnostics binaryBytes={} jsonBytes={}",binary.len(),diagnostics.to_string().len());
 
