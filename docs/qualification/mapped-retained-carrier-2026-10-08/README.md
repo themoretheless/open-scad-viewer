@@ -2792,3 +2792,14 @@ original certificate and original UV subrectangle. This does not admit a 3D
 Body or a neighbor contact. Zero budgets refuse and invalid tolerances error.
 Compilation passed. Native owner/domain/refusal checks and actual original
 qualification are running; no success is assumed for the original source.
+
+The projected-region transfer additionally requires exact identity between
+all original weights and the profile's unrounded factor expressions. This
+condition was missing from the initial route: an approximating WeightProfile
+cannot inherit original geometric authority just because its controls match.
+Fresh exact Orient2 predicates prove row[i]*column[j]-originalWeight*pivot=0
+for every control. Nonzero/uncertain results refuse; all work is charged before
+passing only the remaining budget to the original Jordan routine. Tests pass
+for exact separable weights and refuse the rounded-product near-match
+1.1*1.1 versus binary64 1.21, as well as zero work. The test passed after the
+shared-budget correction. Previous native fixtures predate this added guard.

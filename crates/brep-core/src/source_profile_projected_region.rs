@@ -2,6 +2,28 @@
 use super::*;
 use nurbs_core::interval_eval::Interval as I;
 
+fn original_weights_match(
+    weights: &[Vec<f64>],
+    rows: &[f64],
+    columns: &[f64],
+    pivot: f64,
+    used: &mut u64,
+    max_work: u64,
+) -> Result<bool> {
+    for (i, row) in weights.iter().enumerate() {
+        for (j, &weight) in row.iter().enumerate() {
+            // Exact dyadic determinant: rows[i]*columns[j]-weight*pivot.
+            // Comparing rounded products would incorrectly accept near matches.
+            let points = [[0., 0., 0.], [rows[i], weight, 0.], [pivot, columns[j], 0.]];
+            if crate::source_allowed_contact::orient(&points, Some([0, 1]), used, max_work)?
+                != Some(cad_predicates::Sign::Zero)
+            {
+                return Ok(false);
+            }
+        }
+    }
+    Ok(true)
+}
 /// Both maps have the same simple projected boundary and injective interiors.
 /// Jordan separation therefore gives the same closed projected region. This
 /// is a planar image certificate, not a closed 3D Body/contact certificate.
@@ -62,6 +84,21 @@ impl<'a, 's, 'p, 'b> TransitionFace<'a, 's, 'p, 'b> {
         let root = self.boundary.rooted[0];
         let profile = root.restricted.proposal.profile(root.face).unwrap();
         let source = profile.source();
+        let (rows, columns, pivot) = profile.factors();
+        if !original_weights_match(
+            &source.weights,
+            rows,
+            columns,
+            pivot,
+            &mut out.exact_work,
+            max_work,
+        )? {
+            out.reason = "profile-original-weight-identity-unproven";
+            return Ok(out);
+        }
+        if out.exact_work == max_work {
+            return Ok(out);
+        }
         let ranges = [
             [
                 source.knots_u[source.degree_u],
@@ -81,10 +118,10 @@ impl<'a, 's, 'p, 'b> TransitionFace<'a, 's, 'p, 'b> {
             source,
             [0, 1],
             tolerance,
-            max_work,
+            max_work - out.exact_work,
             max_cells,
         )?;
-        out.exact_work = report.exact_work;
+        out.exact_work += report.exact_work;
         out.boundary_cells = report.boundary_cells;
         out.reason = report.reason;
         let Some(original) = report.certificate else {
@@ -111,5 +148,40 @@ impl<'a, 's, 'p, 'b> TransitionFace<'a, 's, 'p, 'b> {
         });
         out.reason = "profile-original-xy-region-qualified";
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn projected_region_requires_exact_original_weights_and_complete_work() {
+        let mut used = 0;
+        assert!(
+            original_weights_match(
+                &[vec![1., 0.5], vec![2., 1.]],
+                &[1., 2.],
+                &[1., 0.5],
+                1.,
+                &mut used,
+                100000
+            )
+            .unwrap()
+        );
+        assert!(used > 0);
+        let mut used = 0;
+        assert!(
+            !original_weights_match(
+                &[vec![1., 1.1], vec![1.1, 1.21]],
+                &[1., 1.1],
+                &[1., 1.1],
+                1.,
+                &mut used,
+                100000
+            )
+            .unwrap()
+        );
+        let mut used = 0;
+        assert!(!original_weights_match(&[vec![1.]], &[1.], &[1.], 1., &mut used, 0).unwrap());
     }
 }
