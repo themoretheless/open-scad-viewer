@@ -92,7 +92,7 @@ fn main() {
         .unwrap();
         let regions=body.geometry().shell().regions().expect("original retained regions");
         let surfaces=faces.map(|f|regions[f].loops()[0][0].surface());
-        let world_products:Vec<_>=r.unresolved_products.iter().take(32).map(|uv|{
+        let world_products:Vec<_>=r.unresolved_products.iter().take(32).enumerate().map(|(product_index,uv)|{
             let bounds=[nurbs_core::surface_distance::rectangle_bounds(surfaces[0],uv[0]).unwrap(),
                 nurbs_core::surface_distance::rectangle_bounds(surfaces[1],uv[1]).unwrap()];
             let distance=nurbs_core::surface_distance::enclosure_distance(&bounds[0],&bounds[1]).unwrap();
@@ -102,6 +102,32 @@ fn main() {
                 k[n]-uv[side][axis][1]<uv[side][axis][0]-k[p]
             }));
             let mut attempts=Vec::new();let mut corner_spans=0;
+            let mut polar=Vec::new();
+            if product_index==0&&args.get(6).is_some_and(|a|a=="polar") {
+                for side in 0..2 {
+                    let end=corners[side][0];
+                    match nurbs_core::rational_pole_differential::prepare(surfaces[side],end,100000000) {
+                        Ok(report)=>{
+                            let mut value=json!({"side":side,"end":end,"exactWork":report.work,"reason":report.reason,"prepared":report.certificate.is_some()});
+                            if let Some(proof)=report.certificate {
+                                let (matrix,work)=proof.coordinate_path_report(uv[side]).unwrap();
+                                value["anchorAxis"]=json!(proof.anchor());value["pathRestrictions"]=json!(work);
+                                value["matrix"]=json!(matrix.map(|m|m.map(|row|row.map(|x|[x.lo,x.hi]))));
+                            }
+                            polar.push(value);
+                        }
+                        Err(e)=>polar.push(json!({"side":side,"error":e.to_string()})),
+                    }
+                    match nurbs_core::factored_surface_normals::prepare(surfaces[side],end,100000000) {
+                        Ok(report)=>{
+                            let mut value=json!({"normalSide":side,"exactWork":report.work,"reason":report.reason,"prepared":report.certificate.is_some()});
+                            if let Some(proof)=report.certificate {value["normalBounds"]=json!(proof.bounds(uv[side]).unwrap());}
+                            polar.push(value);
+                        }
+                        Err(e)=>polar.push(json!({"normalSide":side,"error":e.to_string()})),
+                    }
+                }
+            }
             'proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
                 if x==0&&y==0&&z==0 {continue;}
                 let projection=[x as f64,y as f64,z as f64];
@@ -142,7 +168,7 @@ fn main() {
                 }
             }
             json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1],
-                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans,"anchorAttempts":anchored})
+                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans,"anchorAttempts":anchored,"polar":polar})
         }).collect();
         results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,

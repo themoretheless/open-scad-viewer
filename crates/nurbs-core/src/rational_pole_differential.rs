@@ -496,7 +496,9 @@ impl<'a> Certificate<'a> {
     pub fn coordinate_path_bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
         Ok(self.coordinate_path_report(domain)?.0)
     }
-    pub(crate) fn coordinate_path_report(&self, domain: [[f64; 2]; 2])
+    /// Return original path bounds together with charged net restrictions.
+    /// A missing matrix supplies no path proof; preparation work is separate.
+    pub fn coordinate_path_report(&self, domain: [[f64; 2]; 2])
         -> Result<(Option<[[I; 2]; 3]>, usize)> {
         let d = self.normalized_domain(domain)?;
         let mut extended = d;
