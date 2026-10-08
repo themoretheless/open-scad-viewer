@@ -624,6 +624,7 @@ it('preserves mapped root carriers through STEP preparation and document history
   expect([step.vertices,step.edges,step.faces]).toEqual([5,7,4])
   expect(step.endpointErrorUpper).toBeLessThanOrEqual(1e-7)
   expect(step.text).toContain('MANIFOLD_SOLID_BREP')
+  if(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT)writeFileSync(process.env.CAD_MAPPED_CHAIN_STEP_OUTPUT,step.text)
   const record=createSourceBodyRecord('mapped-root-chain','Mapped root chain',source)
   const document={...emptyDirectDocument(),sourceBodies:[record]}
   const restored=await client.run({kind:'restoreDocument',text:serializeDirectDocument(document)})
