@@ -604,6 +604,29 @@ pub fn qualify_rectangle<'a>(
 pub struct CornerChordCertificate<'a> {
     sources: [&'a Surface;2], rectangles: [[[f64;2];2];2], max_sine_squared:f64,
 }
+/// Exact original Bezier-chart anchor; approximate evaluated points are only
+/// proposals until homogeneous composition proves their coordinate identity.
+pub struct SurfaceAnchorCertificate<'a> {
+    surface:&'a Surface, uv:[f64;2], world:[f64;3],
+}
+impl<'a> SurfaceAnchorCertificate<'a> {
+    pub fn surface(&self)->&'a Surface{self.surface}
+    pub fn uv(&self)->[f64;2]{self.uv}
+    pub fn world(&self)->[f64;3]{self.world}
+}
+pub fn qualify_surface_anchor<'a>(s:&'a Surface,uv:[f64;2],world:[f64;3],max_work:u64)
+    ->Result<(Option<SurfaceAnchorCertificate<'a>>,u64)> {
+    let constant=|point:Vec<f64>|crate::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
+        control_points:vec![point.clone(),point],weights:vec![1.,1.],periodic:false};
+    let world_curve=constant(world.to_vec());let pcurve=constant(uv.to_vec());
+    let Some(report)=crate::curve_surface_agreement::verify_exact(&world_curve,&pcurve,s,false,max_work)?
+        else{return Ok((None,0));};
+    let work=report.work_used;
+    let certificate=if report.outcome==cad_predicates::BezierIdentity::Equal {
+        Some(SurfaceAnchorCertificate{surface:s,uv,world})
+    }else{None};
+    Ok((certificate,work))
+}
 impl<'a> CornerChordCertificate<'a> {
     pub fn sources(&self)->[&'a Surface;2]{self.sources}
     pub fn rectangles(&self)->[[[f64;2];2];2]{self.rectangles}
@@ -697,6 +720,17 @@ mod original_corner_chord_tests {
         let (cert,used)=qualify_corner_chords([&a,&b],[[true;2],[false;2]],rects,[1.,1.,0.],1e-6,3).unwrap();
         assert!(cert.is_some());assert_eq!(used,3);
         assert!(qualify_corner_chords([&b,&a],[[false;2],[true;2]],[rects[1],rects[0]],[-1.,-1.,0.],1e-6,3).unwrap().0.is_some());
+    }
+    #[test]
+    fn exact_interior_anchor_refuses_approximation_and_insufficient_work() {
+        let s=plane(1.);
+        let (cert,work)=qualify_surface_anchor(&s,[0.25,0.5],[0.25,0.5,0.],100000).unwrap();
+        let cert=cert.unwrap();assert!(std::ptr::eq(cert.surface(),&s));
+        assert_eq!(cert.uv(),[0.25,0.5]);assert_eq!(cert.world(),[0.25,0.5,0.]);
+        assert!(work>0);
+        assert!(qualify_surface_anchor(&s,[0.25,0.5],[0.25,0.5,1e-15],100000).unwrap().0.is_none());
+        assert!(qualify_surface_anchor(&s,[0.25,0.5],[0.25,0.5,0.],0).unwrap().0.is_none());
+        assert!(qualify_surface_anchor(&s,[1.25,0.5],[1.25,0.5,0.],100000).unwrap().0.is_none());
     }
 }
 /// Excludes nonzero geometric chords using S_v=t² B on an exactly verified
