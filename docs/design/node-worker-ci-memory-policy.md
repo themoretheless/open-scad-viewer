@@ -25,3 +25,21 @@ pushed commit. Node's existing compilation policy is unchanged.
 
 No geometry source, WASM artifact, proof budget, historical ownRust record or
 G0/G1 row result changes. The broader clean G1 matrix remains unqualified.
+
+The arena-count-only exact-head CI at 5fc92249 still failed Node22: RSS grew
+56,360,960 bytes in the unchanged full-suite test. Its separate standalone
+probe returned 28 workers and had RSS delta -2,396,160 bytes. Therefore arena
+count alone does not resolve the intermittent full-suite failure.
+
+Native Linux x86 Node22.23.3 run 37739290886 measured three fresh processes
+for each of default, arena2, arena2 with immediate trimming/fixed 128KiB mmap
+threshold, arena1 with the same trimming and Liftoff-only. All 15 standalone
+probes meet the original byte/slope budgets; this does not establish a cause.
+The arena2/trim RSS deltas were -2,453,504, 3,096,576 and 843,776 bytes.
+The workflow now declares `MALLOC_TRIM_THRESHOLD_=0` and
+`MALLOC_MMAP_THRESHOLD_=131072` alongside two arenas before Node starts.
+This bounds allocator retention policy without changing test counts, limits,
+worker lifetimes, JIT policy or geometry. Full-suite exact-head CI remains
+required; the standalone receipts do not certify it. The diagnostic generated
+payload snapshot is confined to a separate diagnostic branch and is not
+part of delivered source or this PR.
