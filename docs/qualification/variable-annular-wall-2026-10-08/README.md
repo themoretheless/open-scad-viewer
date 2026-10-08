@@ -1423,3 +1423,7 @@ succeeds, curved refusal remains explicit, and document/reload equality holds.
 This combines real WASM computations with controlled race/failure injection;
 it does not qualify general source-body wall coverage or all P0 commands.
 Evidence: `whole-wall-ui-late-reply.json.gz`.
+
+The same three rendered whole-wall scenarios also passed keyboard operation,
+including the obsolete callback replay, localized failure, Retry and exact
+reload. Evidence: `whole-wall-ui-late-reply-keyboard.json.gz`.
