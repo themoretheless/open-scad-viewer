@@ -136,6 +136,7 @@
                 initial_tangent: tangent,
                 coordinates: vec![],
                 closed,
+                chart: None,
             };
             let mut used = 0;
             (r.open_frame(1., 100, &mut used).unwrap(), used)
@@ -230,5 +231,68 @@
                 let distance=(0..3).map(|k|(actual[k]-c[k]-q[k]+if k==0{3.}else{0.}).powi(2)).sum::<f64>().sqrt();
                 assert!(distance<=report.error_upper.unwrap(),"{count}: {distance} {report:?}");
             }
+        }
+    }
+
+    fn spatial_closed_path(domain:[f64;2])->Curve {
+        let base=[0.,0.,0.,0.,0.25,0.25,0.25,0.5,0.5,0.5,0.75,0.75,0.75,1.,1.,1.,1.];
+        Curve{degree:3,knots:base.iter().map(|k|domain[0]+(domain[1]-domain[0])*k).collect(),
+            control_points:vec![vec![3.,0.,0.],vec![3.,1.,0.125],vec![1.,3.,0.125],vec![0.,3.,0.],vec![-1.,3.,-0.125],vec![-3.,1.,-0.125],vec![-3.,0.,0.],vec![-3.,-1.,0.125],vec![-1.,-3.,0.125],vec![0.,-3.,0.],vec![1.,-3.,-0.125],vec![3.,-1.,-0.125],vec![3.,0.,0.]],
+            weights:vec![1.;13],periodic:false}
+    }
+    #[test]
+    fn spatial_connection_encloses_dense_independent_transport_and_budget_refusal() {
+        let path=spatial_closed_path([0.,1.]);let original=path.clone();
+        assert!(frame_premises::closing(&path,10000,&mut 0));
+        let tangent=initial_tangent(&path).unwrap();let normal=point(&[1.,0.,0.]);
+        let mut work=0;let chart=spatial_frame::Chart::build(&path,tangent,normal,true,1e-5,5000,&mut work).unwrap().unwrap();
+        assert!(work>0 && work<=5000);
+        let p=curve(&[[3.125,0.,0.],[3.25,0.,0.]],&[1.,1.],[0.,1.]);
+        let law=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let source=Sweep::new(&p,&path,&law,&twist,Options{normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,spacing:Spacing::Parameter,initial_sections:1025,max_sections:1025,max_deviation:1.}).unwrap();
+        let oracle=source.sections_at(1025).unwrap();
+        for index in [0,128,256,512,768,896,1024] {
+            let v=index as f64/1024.;let mut used=0;
+            let jets=curve_jets(&path,[v,v],1000,&mut used).unwrap().unwrap();
+            let t=unit(jets[0]).unwrap();
+            let (n,b)=chart.frame([v,v],t,1000,&mut used).unwrap().unwrap();
+            let position=path.evaluate(v).unwrap().point;
+            for k in 0..3 {
+                let observed=(oracle[index].control_points[0][k]-position[k])/0.125;
+                assert!(observed>=n[k].lo && observed<=n[k].hi,"v={v} axis={k}: {observed} not in {:?}",n[k]);
+                assert!(n[k].hi-n[k].lo<0.02,"v={v} k={k} n={n:?} b={b:?}");assert!(b[k].hi-b[k].lo<0.03,"v={v} k={k} n={n:?} b={b:?}");
+            }
+            assert!(chart.frame([v,v],t,0,&mut 0).unwrap().is_none());
+        }
+        for limit in [0,1,16] {let mut used=0;assert!(spatial_frame::Chart::build(&path,tangent,normal,true,1e-5,limit,&mut used).unwrap().is_none());assert!(used<=limit);}
+        assert_eq!(path,original);
+    }
+    #[test]
+    fn nonplanar_closed_continuous_bound_covers_reparameterization_outside_fixed_station_modes() {
+        let p=curve(&[[3.125,0.,0.],[3.25,0.,0.]],&[1.,1.],[0.,1.]);
+        let law=constant_vector_law([1.,0.,0.]).unwrap();
+        for domain in [[0.,1.],[-4.,9.]] {for count in [6,10] {
+            let path=spatial_closed_path(domain);let surface=retained(&p,&path,&law,[1.,0.,0.],count);
+            let report=certify(&p,&path,&law,[1.,0.,0.],&surface,1.,20000).unwrap();
+            assert!(report.within_budget,"{domain:?} / {count}: {report:?}");
+            assert_eq!(report.method,"interval-connection-bishop-frame");
+        }}
+    }
+
+    #[test]
+    fn checked_nonplanar_closed_profile_keeps_exact_g2_and_global_surface_proofs() {
+        let path=spatial_closed_path([0.,1.]);
+        let p=curve(&[[3.125,0.,0.],[3.25,0.,0.]],&[1.,1.],[0.,1.]);
+        let law=constant_vector_law([1.,0.,0.]).unwrap();
+        for count in [6,10] {
+            let result=super::super::scalar::checked_profile_sweep_with_cells(&p,&path,&law,[1.,0.,0.],count,0.5,65536).unwrap();
+            assert_eq!(result["report"]["accepted"],true,"{count}: {}",result["report"]);
+            assert_eq!(result["report"]["continuousBound"],true);
+            assert_eq!(result["report"]["continuousCertificate"]["method"],"interval-connection-bishop-frame");
+            assert_eq!(result["report"]["seamCertificate"]["exact"],true);
+            assert_eq!(result["report"]["seamCertificate"]["order"],2);
+            assert_eq!(result["report"]["geometryCertificate"]["certified"],true,"{count}: {}",result["report"]["geometryCertificate"]);
+            assert_eq!(result["report"]["continuousCertificate"]["globalEmbeddingCertified"],false);
+            // Surface geometry proof and source-frame deviation remain distinct.
         }
     }
