@@ -1,0 +1,14 @@
+{
+  "runUrl": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37677183547",
+  "sourceSha": "cbb3241e315a45fd0debccfcf34c18d8855746fe",
+  "attempt1ArtifactId": 11512240135,
+  "attempt2ArtifactId": 11511593138,
+  "finalFragments": 132,
+  "completedWorkUnits": 4740,
+  "qualificationClaim": "none",
+  "appliesToMergedSource": false,
+  "files": {
+    "attempt1-result.json": "da06ca895a33e2900b544bf5269c84294407f3631d181a1a3861261e1a704078",
+    "attempt2-result.json": "e39c9ce007b744fff3072ac6d7b96e3bdca66636c0a2718c338f0de68e7298e2"
+  }
+}
