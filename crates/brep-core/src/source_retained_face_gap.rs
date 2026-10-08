@@ -1,6 +1,7 @@
 //! Separation of retained original face domains, including root-valued trims.
 //! Outside proofs prune products; unresolved domains remain covered geometrically.
 use crate::{source_contour_winding, source_volume::Body};
+use std::collections::HashMap;
 use nurbs_core::{
     Error, Result,
     surface::Surface,
@@ -106,6 +107,9 @@ pub fn qualify<'a>(
         unresolved_products: Vec::new(),
         reason: "source-retained-gap-work-limit",
     };
+    // The unchanged body and per-call tolerance bind every cached classification.
+    // Splitting the other side often repeats exactly the same original rectangle.
+    let mut domains: HashMap<(usize, [u64; 4]), (usize, Location)> = HashMap::new();
     while let Some(uv) = queue.pop() {
         if out.cells == limits.cells {
             out.unresolved_products.push(uv);
@@ -115,15 +119,24 @@ pub fn qualify<'a>(
         out.cells += 1;
         let mut outside = false;
         for side in 0..2 {
-            if out.domain_cells == limits.domain_cells {
-                break;
+            let key = (side, [uv[side][0][0].to_bits(), uv[side][0][1].to_bits(),
+                uv[side][1][0].to_bits(), uv[side][1][1].to_bits()]);
+            let allowance = (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_query);
+            if let Some(&(paid, location)) = domains.get(&key) {
+                // Uncertain results remain conservative; larger budgets may retry.
+                if location != Location::Unresolved || allowance <= paid {
+                    if location == Location::Outside { outside = true; break; }
+                    continue;
+                }
             }
+            if allowance == 0 { break; }
             let classification = source_contour_winding::classify(
                 regions[faces[side]].loops(),
                 uv[side],
                 limits.tolerance_uv,
-                (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_query),
+                allowance,
             )?;
+            domains.insert(key, (allowance, classification.location));
             out.domain_cells += classification.cells;
             out.domain_queries += 1;
             out.endpoint_queries += classification.endpoint_queries;

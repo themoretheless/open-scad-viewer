@@ -181,6 +181,10 @@ mod tests {
         let reversed=crate::source_retained_face_gap::qualify(&body,[1,0],29.99,options()).unwrap();assert!(reversed.certificate.is_some());
         let refused=crate::source_retained_face_gap::qualify(&body,[0,1],30.01,options()).unwrap();
         assert!(refused.certificate.is_none());assert!(!refused.unresolved_products.is_empty());assert_eq!(refused.cells,8);assert!(refused.spans<=16);assert!(refused.domain_cells<=1);
+        let repeated=crate::source_retained_face_gap::qualify(&body,[0,1],30.01,
+            crate::source_retained_face_gap::Limits{cells:8,spans:16,domain_cells:10000,domain_cells_per_query:1000,tolerance_uv:1e-8}).unwrap();
+        assert!(repeated.certificate.is_none());
+        assert!(repeated.domain_queries < 2*repeated.cells,"Repeated rectangles should reuse bounded classifications: {} queries for {} cells",repeated.domain_queries,repeated.cells);
         assert!(crate::source_retained_face_gap::qualify(&body,[0,0],29.99,options()).is_err());
         assert!(crate::source_retained_face_gap::qualify(&body,[0,6],29.99,options()).is_err());
         let mut invalid=options();invalid.domain_cells=0;assert!(crate::source_retained_face_gap::qualify(&body,[0,1],29.99,invalid).is_err());
