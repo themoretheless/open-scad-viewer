@@ -968,3 +968,13 @@ restriction: ten succeeds, nine refuses. With both endpoint bounds paid
 upstream, nine additional restrictions succeed and eight refuse. Seven
 pole and thirteen chord tests passed. Original predicates and geometric
 thresholds are unchanged; whole-face/global wall safety remains unproven.
+
+## Local accounting audit complete
+
+The 4d5e144c audit completed on all four unchanged prototypes at 1024/8192.
+Forward radii retain 7/11 pending pairs on faces 0/10, with 8/25 local path
+exclusions. Reverse radii retain 11/11, with 29/26 local path exclusions.
+Both spatial directions match. No pole face qualified; whole same-face
+coverage stays 28/31. JSON/log archives retain full uncertainty rectangles
+and classified attempts. The all-accounting audit for 191a0add is running
+separately with the same limits and thresholds.
