@@ -621,7 +621,9 @@ it('qualifies mixed retained wall products through real WASM and preserves every
    expect(c.mixedProducts!.pairs).toHaveLength(45)
    expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(13)
    // Compare continuous UV/direction qualification against the native original-body replay.
-   const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-chord-native.json',import.meta.url),'utf8')).automatic
+   const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-factor-native.json',import.meta.url),'utf8')).automatic
+   expect(c.factoredQueries).toBe(native.factoredQueries)
+   expect(c.factoredExactWork).toBe(native.factoredExactWork)
    expect(c.mixedProducts!.normalSpans).toBe(native.normalSpans)
    expect(c.mixedProducts!.domainCells).toBe(native.domainCells)
    expect(c.mixedProducts!.pairs.map(p=>[p.faces,p.qualified,p.cells,p.unresolvedProducts.length]))
