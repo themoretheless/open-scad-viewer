@@ -113,7 +113,12 @@ fn main() {
         ];
         let point_gap =
             nurbs_core::surface_distance::enclosure_distance(&points[0], &points[1]).unwrap();
-        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1]}));
+        let regions = shell.regions().expect("admitted original source regions");
+        let memberships=[(a,uv[0]),(b,uv[1])].map(|(face,rect)|{
+            let r=brep_core::source_contour_winding::classify(regions[face].loops(),rect,1e-8,10000).unwrap();
+            json!({"location":format!("{:?}",r.location),"cells":r.cells,"endpointQueries":r.endpoint_queries,"reason":r.reason})
+        });
+        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1],"retainedDomain":memberships}));
     }
     std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results})).unwrap()).unwrap();
 }
