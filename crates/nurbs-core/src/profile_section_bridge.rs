@@ -705,17 +705,25 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             let domain = self.source_rail_domain(high, across)?;
             let rail_free = [range[usize::from(high)]; 2];
             let mut values = Vec::new();
+            let mut source_jet: Option<[[[f64; 2]; 2]; 3]> = None;
+            let mut bridge_jet: Option<[[[f64; 2]; 3]; 2]> = None;
             for query in 0..8 {
-                if spent == budget {
+                if spent == budget && query != 4 && query != 5 {
                     return Ok((None, spent));
                 }
                 let (value, used) = match query {
                     0 => self.source_rail(high, across, budget - spent)?,
                     1 => self.bridge.rail(high).enclose(across, budget - spent)?,
                     2 | 4 => {
-                        let (j, used) = section
-                            .profile()
-                            .derivative_bounds(domain, budget - spent)?;
+                        let (j, used) = if query == 4 {
+                            (source_jet, 0)
+                        } else {
+                            let (j, used) = section
+                                .profile()
+                                .derivative_bounds(domain, budget - spent)?;
+                            source_jet = j;
+                            (j, used)
+                        };
                         let mut v = [[0.; 2]; 3];
                         if let Some(j) = j {
                             for k in 0..3 {
@@ -739,9 +747,15 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                         }
                     }
                     3 | 5 => {
-                        let (j, used) =
-                            self.bridge
-                                .derivative_bounds(rail_free, across, budget - spent)?;
+                        let (j, used) = if query == 5 {
+                            (bridge_jet, 0)
+                        } else {
+                            let (j, used) =
+                                self.bridge
+                                    .derivative_bounds(rail_free, across, budget - spent)?;
+                            bridge_jet = j;
+                            (j, used)
+                        };
                         (j.map(|j| j[usize::from(query == 5)]), used)
                     }
                     6 => {

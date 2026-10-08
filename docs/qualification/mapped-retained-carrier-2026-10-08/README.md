@@ -1331,3 +1331,14 @@ one. The test passes because it checks coverage and truthful unresolved
 reporting; it does not certify annular regularity. These results supersede
 any inference from the original uncorrected bridge's regularity certificate.
 Tighter correlated derivative bounds are needed before Body admission.
+
+## Reuse of identical source derivative queries
+
+The full correction now reuses each side's original profile first jet and
+bridge first jet when differentiating both error fields. Reuse is local to
+one query and one exact domain; no certificate or work allowance is reused
+across different cells. Interior reference queries require 54 source spans
+instead of 72. The independent quartic derivative, whole-domain regularity
+and full-side join regression passed in 39.82 seconds, including refusal at
+53 spans. This establishes the query reduction, not a runtime speedup claim.
+The annular point-normal and whole-side diagnostics are being tested separately.
