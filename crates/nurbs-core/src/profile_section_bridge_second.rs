@@ -268,6 +268,24 @@ mod tests {
                         assert!(bounds[2][0] <= z && z <= bounds[2][1]);
                     }
                 }
+                let wide = corrected
+                    .second_free_derivatives_with_transverse_correction([0., 1.], [0., 1.], 100)
+                    .unwrap()
+                    .0
+                    .unwrap();
+                let narrow = corrected
+                    .second_free_derivatives_with_transverse_correction(
+                        [0.49999, 0.50001],
+                        [0.49999, 0.50001],
+                        100,
+                    )
+                    .unwrap()
+                    .0
+                    .unwrap();
+                assert!(
+                    narrow[2][1] - narrow[2][0] < 0.01 * (wide[2][1] - wide[2][0]),
+                    "axis={axis} rational={rational}: wide={wide:?}, narrow={narrow:?}"
+                );
                 let (_, spent) = corrected
                     .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 100)
                     .unwrap();
