@@ -31,7 +31,36 @@ pub struct Report<'a> {
     pub work: u64,
     pub reason: &'static str,
 }
+/// Diagnostic of two original one-sided limits at a collapsed U boundary.
+/// This never supplies a regular normal or a seam admission certificate.
+#[derive(Debug)]
+pub struct BoundaryLimits {
+    pub collapsed_point: Option<[f64; 3]>,
+    pub components: [[[f64; 2]; 3]; 2],
+    pub sine_squared_interval: Option<[f64; 2]>,
+    pub distinct_tangent_limits: bool,
+}
 impl<'a> Certificate<'a> {
+    pub fn boundary_limits(&self, max_sine_squared: f64) -> Result<BoundaryLimits> {
+        let s = self.surface;
+        let row = &s.control_points[if self.end { s.control_points.len() - 1 } else { 0 }];
+        // The original clamped rational boundary is constant when every
+        // Euclidean control point is exactly equal; positive weights preserve it.
+        let collapsed_point = row.iter().all(|p| p == &row[0])
+            .then(|| [row[0][0], row[0][1], row[0][2]]);
+        let u = s.knots_u[if self.end { s.control_points.len() } else { s.degree_u }];
+        let components = [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]]
+            .map(|v| self.bounds([[u, u], [v, v]]))
+            .into_iter().collect::<Result<Vec<_>>>()?;
+        let components = [components[0], components[1]];
+        let angle = crate::normal_alignment::inspect_pair_bounds(components, max_sine_squared)?;
+        Ok(BoundaryLimits {
+            collapsed_point,
+            components,
+            sine_squared_interval: angle.sine_squared_interval,
+            distinct_tangent_limits: collapsed_point.is_some() && angle.aligned == Some(false),
+        })
+    }
     pub(crate) fn pair_bounds(&self, pair: [[[f64; 2]; 2]; 2]) -> Result<PairBounds<'a>> {
         Ok(PairBounds {
             surface: self.surface, end: self.end, pair,
@@ -135,6 +164,14 @@ fn split(row: &[[I; 3]], t: I) -> Result<(Vec<[I; 3]>, Vec<[I; 3]>)> {
 fn restrict(row: &[[I; 3]], d: [I; 2], point: bool) -> Result<Vec<[I; 3]>> {
     if point {
         let value = *split(row, d[0])?.0.last().unwrap();
+        return Ok(vec![value; row.len()]);
+    }
+    if d[1].lo <= f64::MIN_POSITIVE {
+        // Normalization can round a subnormal positive upper endpoint across
+        // zero. Enclose the entire original parameter interval directly; this
+        // avoids an invalid reciprocal and never replaces original controls.
+        let parameters = I::new(d[0].lo.min(d[1].lo).max(0.), d[0].hi.max(d[1].hi).min(1.))?;
+        let value = *split(row, parameters)?.0.last().unwrap();
         return Ok(vec![value; row.len()]);
     }
     // Restrict the left piece at the upper endpoint, then take the right
@@ -309,6 +346,74 @@ mod tests {
         }
     }
     #[test]
+    fn collapsed_boundary_distinguishes_tangent_limits_without_regularizing_pole() {
+        let mut s = collapsed();
+        s.degree_v = 2;
+        s.knots_v = vec![0., 0., 0., 1., 1., 1.];
+        s.control_points = vec![
+            vec![vec![0., 0., 0.]; 3],
+            vec![vec![0.5, 0., 0.]; 3],
+            vec![vec![1., 0., 0.], vec![1., 0.5, 0.], vec![1., 1., 1.]],
+        ];
+        s.weights = vec![vec![1.; 3]; 3];
+        // S=(u,u²v,u²v²). Independent limiting normals are (0,-2v,1).
+        for end in [false, true] {
+            if end { s.control_points.reverse(); }
+            let p = prepare(&s, end, 100000000).unwrap().certificate.unwrap();
+            let r = p.boundary_limits(1e-6).unwrap();
+            assert_eq!(r.collapsed_point, Some([0.; 3]));
+            assert!(r.distinct_tangent_limits);
+            let angle = r.sine_squared_interval.unwrap();
+            assert!(angle[0] <= 0.8 && angle[1] >= 0.8 && angle[0] > 0.79);
+            let u = if end { 1. } else { 0. };
+            let regular = crate::normal_alignment::normal_bounds(&s, [[u,u],[0.,0.]], 100).unwrap().0;
+            assert!(regular.is_none_or(|n| n.iter().all(|r| r[0] <= 0. && r[1] >= 0.)));
+        }
+        let constant = collapsed();
+        let r = prepare(&constant, false, 100000000).unwrap().certificate.unwrap()
+            .boundary_limits(1e-6).unwrap();
+        assert!(!r.distinct_tangent_limits);
+        assert!(r.sine_squared_interval.unwrap()[1] <= 1e-6);
+    }
+    #[test]
+    fn distinct_limits_at_different_points_do_not_prove_pole_divergence() {
+        // S=(u³,u³v,v): U² divides its normal, but its U=0 boundary is a line.
+        let s = Surface {
+            degree_u: 3, degree_v: 1,
+            knots_u: vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            knots_v: vec![0.,0.,1.,1.],
+            control_points: vec![
+                vec![vec![0.,0.,0.],vec![0.,0.,1.]],
+                vec![vec![0.,0.,0.],vec![0.,0.,1.]],
+                vec![vec![0.,0.,0.],vec![0.,0.,1.]],
+                vec![vec![1.,0.,0.],vec![1.,1.,1.]],
+            ],
+            weights: vec![vec![1.;2];4], periodic_u:false, periodic_v:false,
+        };
+        let r = prepare(&s,false,100000000).unwrap().certificate.unwrap()
+            .boundary_limits(1e-6).unwrap();
+        assert_eq!(r.collapsed_point,None);
+        assert!(r.sine_squared_interval.unwrap()[0] > 0.49);
+        assert!(!r.distinct_tangent_limits);
+    }
+    #[test]
+    fn limiting_bounds_cover_subnormal_rectangles_without_regularizing_the_pole() {
+        let tiny=f64::from_bits(1);
+        for end in [false,true] {
+            let mut s=collapsed();if end{s.control_points.reverse();}
+            let c=prepare(&s,end,1_000_000).unwrap().certificate.unwrap();
+            let u=if end{[1f64.next_down(),1.]}else{[0.,tiny]};
+            for v in [[0.,tiny],[0.,0.],[1f64.next_down(),1.]] {
+                let n=c.bounds([u,v]).unwrap();
+                assert!(n[0][0]<=0.&&n[0][1]>=0.);assert!(n[1][0]<=0.&&n[1][1]>=0.);
+                assert!(if end{n[2][1]<0.}else{n[2][0]>0.});
+            }
+            let point=if end{1.}else{0.};
+            let (regular,_)=crate::normal_alignment::normal_bounds(&s,[[point,point],[0.,0.]],100).unwrap();
+            assert!(regular.is_none()||regular.unwrap().iter().all(|r|r[0]<=0.&&r[1]>=0.));
+        }
+    }
+    #[test]
     fn exact_factor_covers_boundary_and_reversed_original_normals() {
         for end in [false, true] {
             let mut s = collapsed();
@@ -360,6 +465,8 @@ mod tests {
             [[0.2, 0.7], [0.1, 0.8]],
             [[0.3, 0.3], [0.6, 0.6]],
             [[0., 0.], [0., 1.]],
+            [[0., f64::from_bits(1)], [0., f64::from_bits(1)]],
+            [[0., f64::MIN_POSITIVE], [0., 1.]],
             [[1., 1.], [0., 1.]],
         ] {
             let b = c.bounds(domain).unwrap();

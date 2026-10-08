@@ -58,6 +58,77 @@ fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
         },
     })
 }
+fn endpoint_limits(edge: &brep_core::source_shared_edge::SharedEdge, canonical: [f64; 2]) -> Value {
+    use nurbs_core::interval_eval::{Interval as I, evaluate_interval};
+    let ranges = edge.ranges().unwrap_or_else(|| {
+        std::array::from_fn(|side| {
+            if edge.reversed()[side] ^ edge.uses()[side].reversed() {
+                [[1., 1.], [0., 1.]]
+            } else {
+                [[0., 1.], [1., 1.]]
+            }
+        })
+    });
+    let mut sides = Vec::new();
+    for side in 0..2 {
+        let fragment = &edge.uses()[side];
+        let c = fragment.curve();
+        let s = fragment.surface();
+        let d = c.domain();
+        let first = I::point(ranges[side][0][0])
+            .div(I::point(ranges[side][0][1]))
+            .unwrap();
+        let last = I::point(ranges[side][1][0])
+            .div(I::point(ranges[side][1][1]))
+            .unwrap();
+        let normalized = I::new(canonical[0], canonical[1])
+            .unwrap()
+            .sub(first)
+            .unwrap()
+            .div_signed(last.sub(first).unwrap())
+            .unwrap();
+        let t = I::point(d[0])
+            .add(
+                normalized
+                    .mul(I::point(d[1]).sub(I::point(d[0])).unwrap())
+                    .unwrap(),
+            )
+            .unwrap()
+            .intersect(d[0], d[1])
+            .unwrap();
+        let uv = evaluate_interval(c, t).unwrap();
+        let natural = [
+            [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+            [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+        ];
+        let rect = std::array::from_fn(|axis| {
+            let x = uv[axis]
+                .intersect(natural[axis][0], natural[axis][1])
+                .unwrap();
+            [x.lo, x.hi]
+        });
+        let (regular, spans) = nurbs_core::normal_alignment::normal_bounds(s, rect, 10000).unwrap();
+        let mut factors = Vec::new();
+        for end in [false, true] {
+            match nurbs_core::factored_surface_normals::prepare(s, end, 100000000) {
+                Ok(r) => {
+                    let bounds = r.certificate.as_ref().map(|c| c.bounds(rect).unwrap());
+                    let u = natural[0][usize::from(end)];
+                    let whole = [[u, u], natural[1]];
+                    let whole_boundary = r.certificate.as_ref().map(|c| c.bounds(whole).unwrap());
+                    let limits = r.certificate.as_ref().map(|c| c.boundary_limits(1e-6).unwrap());
+                    let divergence = limits.map(|r| json!({"collapsedPoint":r.collapsed_point,"components":r.components,"sineSquaredBounds":r.sine_squared_interval,"distinctTangentLimits":r.distinct_tangent_limits}));
+                    factors.push(json!({"end":end,"qualifiedFactor":r.certificate.is_some(),"work":r.work,"reason":r.reason,"endpointComponents":bounds,"wholeBoundaryComponents":whole_boundary,"boundaryLimits":divergence}));
+                }
+                Err(e) => factors.push(
+                    json!({"end":end,"qualifiedFactor":false,"error":e.code,"message":e.message}),
+                ),
+            }
+        }
+        sides.push(json!({"side":side,"parameter":[t.lo,t.hi],"uv":rect,"regularComponents":regular,"normalSpans":spans,"factors":factors}));
+    }
+    json!({"canonical":canonical,"sides":sides,"scope":"Original limiting normal enclosures; no regular endpoint or seam certificate"})
+}
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let request: Value =
@@ -281,7 +352,7 @@ fn main() {
     let mut shared_seams = Vec::new();
     if args
         .get(4)
-        .is_some_and(|v| v == "seams" || v == "seams-refined")
+        .is_some_and(|v| v == "seams" || v == "seams-refined" || v == "seams-limits")
     {
         for pair in pairs
             .iter()
@@ -330,7 +401,17 @@ fn main() {
                 } else {
                     Value::Null
                 };
-                shared_seams.push(json!({"faces":target,"edge":edge,"worldDegree":source.world().degree,"worldControls":source.world().control_points.len(),"completeCanonicalCoverage":source.covers_complete_canonical_source(),"tangency":tangent,"refinement":refinement}));
+                let endpoint = if args.get(4).is_some_and(|v| v == "seams-limits")
+                    && tangent["reason"] == json!("source-seam-endpoint-normal-unresolved")
+                {
+                    endpoint_limits(
+                        source,
+                        <[f64; 2]>::from_value(tangent["uncertainCanonical"].clone()).unwrap(),
+                    )
+                } else {
+                    Value::Null
+                };
+                shared_seams.push(json!({"faces":target,"edge":edge,"worldDegree":source.world().degree,"worldControls":source.world().control_points.len(),"completeCanonicalCoverage":source.covers_complete_canonical_source(),"tangency":tangent,"refinement":refinement,"endpointLimits":endpoint}));
             }
         }
     }
