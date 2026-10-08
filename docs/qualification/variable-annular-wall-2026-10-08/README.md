@@ -1529,3 +1529,13 @@ is unchanged. These factors are not used to alter the 68 normal-product results
 or the Body coverage count; other parameter axes/factors need separate proof.
 Evidence: `distinct-normal-limit-preparation-audit.json.gz`, its completed log
 and `distinct-normal-limit-preparation-receipt.json`.
+
+The endpoint audit was repeated on both parameter axes, 108 attempts total.
+Parameter exchange is an exact tensor/control/weight permutation; its test
+checks every authored coordinate/weight bit, including negative zero, and the
+inverse permutation. Certificates on exchanged chart objects are explicitly
+kept separate from original Body ownership. The same two original U² factors
+qualify; 106 attempts remain factor-unproven. No extra normal exclusion is
+claimed. This narrows the next investigation to boundary factor order rather
+than simply changing chart axes. Evidence: `distinct-normal-both-axis-preparation-audit.json.gz`,
+its receipt/log and `distinct-normal-parameter-exchange-tests.log.gz`.

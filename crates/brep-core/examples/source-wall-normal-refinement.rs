@@ -1,6 +1,13 @@
 //! Exploratory closed UV-product normal exclusion on immutable original inputs.
 //! This emits diagnostics, never a wall or material-volume certificate.
 use nurbs_core::{normal_alignment::OriginalNormalCache, surface::Surface};
+fn transpose_parameters(s: &Surface) -> Surface {
+    let rows=s.control_points.len();let columns=s.control_points[0].len();
+    Surface {degree_u:s.degree_v,degree_v:s.degree_u,knots_u:s.knots_v.clone(),knots_v:s.knots_u.clone(),
+        control_points:(0..columns).map(|v|(0..rows).map(|u|s.control_points[u][v].clone()).collect()).collect(),
+        weights:(0..columns).map(|v|(0..rows).map(|u|s.weights[u][v]).collect()).collect(),
+        periodic_u:s.periodic_v,periodic_v:s.periodic_u}
+}
 fn split_product(pair: [[[f64;2];2];2], side: usize, axis: usize, mid: f64)
     -> [[[[f64;2];2];2];2] {
     assert!(side<2 && axis<2 && pair[side][axis][0]<mid && mid<pair[side][axis][1]);
@@ -33,17 +40,23 @@ fn main() {
         [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]]).collect();
     let mut limiting_normals=Vec::new();
     if args.get(5).is_some_and(|v|v=="limits") {
-        for (face,surface) in surfaces.iter().enumerate() {for end in [false,true] {
-            let row=match nurbs_core::factored_surface_normals::prepare(surface,end,100_000_000) {
-                Ok(report)=>{
-                    let bounds=report.certificate.as_ref().map(|c|{
-                        assert!(std::ptr::eq(c.surface(),surface));c.bounds(domains[face]).unwrap()
-                    });
-                    value_codec::json!({"face":face,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"bounds":bounds})
-                }
-                Err(error)=>value_codec::json!({"face":face,"end":end,"qualified":false,"error":error.to_string()}),
-            };
-            limiting_normals.push(row);
+        for (face,original) in surfaces.iter().enumerate() {for axis in 0..2 {
+            let exchanged=transpose_parameters(original);
+            assert_eq!(transpose_parameters(&exchanged),*original);
+            let surface=if axis==0 {original} else {&exchanged};
+            let domain=if axis==0 {domains[face]} else {[domains[face][1],domains[face][0]]};
+            for end in [false,true] {
+                let row=match nurbs_core::factored_surface_normals::prepare(surface,end,100_000_000) {
+                    Ok(report)=>{
+                        let bounds=report.certificate.as_ref().map(|c|{
+                            assert!(std::ptr::eq(c.surface(),surface));c.bounds(domain).unwrap()
+                        });
+                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"parameterExchanged":axis==1})
+                    }
+                    Err(error)=>value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":false,"error":error.to_string()}),
+                };
+                limiting_normals.push(row);
+            }
         }}
     }
     let mut caches: Vec<_> = surfaces.iter().map(OriginalNormalCache::new).collect();
@@ -84,6 +97,18 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn parameter_exchange_preserves_every_authored_coordinate_and_weight_bit() {
+        let s=Surface{degree_u:1,degree_v:2,knots_u:vec![2.,2.,5.,5.],knots_v:vec![-1.,-1.,-1.,3.,3.,3.],
+            control_points:vec![vec![vec![-0.,1.,2.],vec![3.,4.,5.],vec![6.,7.,8.]],vec![vec![9.,10.,11.],vec![12.,13.,14.],vec![15.,16.,17.]]],
+            weights:vec![vec![1.,2.,3.],vec![4.,5.,6.]],periodic_u:false,periodic_v:false};
+        let t=transpose_parameters(&s);assert_eq!(t.degree_u,s.degree_v);assert_eq!(t.knots_u,s.knots_v);
+        let back=transpose_parameters(&t);assert_eq!(back,s);
+        for u in 0..2 {for v in 0..3 {
+            assert_eq!(t.weights[v][u].to_bits(),s.weights[u][v].to_bits());
+            for k in 0..3 {assert_eq!(t.control_points[v][u][k].to_bits(),s.control_points[u][v][k].to_bits());}
+        }}
+    }
     #[test]
     fn closed_products_cover_every_split_boundary_and_keep_other_coordinates() {
         let pair=[[[2.,6.],[-3.,1.]],[[10.,14.],[20.,24.]]];
