@@ -164,108 +164,128 @@ mod tests {
         // S(u,v)=(u,v,u^4 v^2). Across interpolation has a quartic remainder.
         // The exact free-side Hermite correction restores v^2 times that
         // remainder, so the corrected result is S and S_vv=(0,0,2u^4).
-        for rational in [false, true] {
-            let mut source = crate::surface::Surface {
-                degree_u: 4,
-                degree_v: 2,
-                knots_u: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
-                knots_v: vec![0., 0., 0., 1., 1., 1.],
-                control_points: (0..5)
-                    .map(|u| {
-                        (0..3)
-                            .map(|v| {
-                                vec![
-                                    u as f64 / 4.,
-                                    v as f64 / 2.,
-                                    if u == 4 && v == 2 { 1. } else { 0. },
-                                ]
-                            })
-                            .collect()
-                    })
-                    .collect(),
-                weights: vec![vec![1.; 3]; 5],
-                periodic_u: false,
-                periodic_v: false,
-            };
-            if rational {
-                source.weights[4].fill(2.);
-            }
-            let profile = crate::normal_alignment::qualify_weight_profile(&source, [0, 0], 100)
-                .unwrap()
-                .0
-                .unwrap();
-            let bridge = ProfileSectionBridge::new(
-                profile.section(0, 0.5).unwrap(),
-                profile.section(0, 0.75).unwrap(),
-                [0.25; 2],
-            )
-            .unwrap();
-            let corrected = bridge.constrain_original_rails(100).unwrap().0.unwrap();
-            for free in [0., 0.25, 0.5, 0.75, 1.] {
-                for across in [0., 0.25, 0.5, 0.75, 1.] {
-                    let (bounds, _) = corrected
-                        .second_free_derivatives_with_transverse_correction(
-                            [free; 2],
-                            [across; 2],
-                            100,
-                        )
-                        .unwrap();
-                    let bounds = bounds.unwrap();
-                    let u = 0.5 + 0.25 * across;
-                    let fourth = u * u * u * u;
-                    let expected = [
-                        0.,
-                        0.,
-                        if rational {
-                            4. * fourth / (1. + fourth)
-                        } else {
-                            2. * fourth
-                        },
-                    ];
-                    for k in 0..3 {
-                        assert!(
-                            bounds[k][0] <= expected[k] && expected[k] <= bounds[k][1],
-                            "free={free} across={across} axis={k}: {:?} vs {}",
-                            bounds[k],
-                            expected[k]
-                        );
-                    }
+        for axis in [0, 1] {
+            for rational in [false, true] {
+                let mut source = crate::surface::Surface {
+                    degree_u: 4,
+                    degree_v: 2,
+                    knots_u: vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+                    knots_v: vec![0., 0., 0., 1., 1., 1.],
+                    control_points: (0..5)
+                        .map(|u| {
+                            (0..3)
+                                .map(|v| {
+                                    vec![
+                                        u as f64 / 4.,
+                                        v as f64 / 2.,
+                                        if u == 4 && v == 2 { 1. } else { 0. },
+                                    ]
+                                })
+                                .collect()
+                        })
+                        .collect(),
+                    weights: vec![vec![1.; 3]; 5],
+                    periodic_u: false,
+                    periodic_v: false,
+                };
+                if rational {
+                    source.weights[4].fill(2.);
                 }
-            }
-            // The analytic derivative is independent of free and monotone in
-            // across, so its endpoint range is its whole rectangle image.
-            for across in [[0., 1.], [0.125, 0.875], [0.25, 0.5]] {
-                let bounds = corrected
-                    .second_free_derivatives_with_transverse_correction([0., 1.], across, 100)
+                if axis == 1 {
+                    source.control_points = (0..3)
+                        .map(|v| {
+                            (0..5)
+                                .map(|u| source.control_points[u][v].clone())
+                                .collect()
+                        })
+                        .collect();
+                    source.weights = (0..3)
+                        .map(|v| (0..5).map(|u| source.weights[u][v]).collect())
+                        .collect();
+                    std::mem::swap(&mut source.degree_u, &mut source.degree_v);
+                    std::mem::swap(&mut source.knots_u, &mut source.knots_v);
+                }
+                let profile = crate::normal_alignment::qualify_weight_profile(&source, [0, 0], 100)
                     .unwrap()
                     .0
                     .unwrap();
-                for parameter in across {
-                    let u = 0.5 + 0.25 * parameter;
-                    let fourth = u.powi(4);
-                    let z = if rational {
-                        4. * fourth / (1. + fourth)
-                    } else {
-                        2. * fourth
-                    };
-                    assert!(bounds[0][0] <= 0. && bounds[0][1] >= 0.);
-                    assert!(bounds[1][0] <= 0. && bounds[1][1] >= 0.);
-                    assert!(bounds[2][0] <= z && z <= bounds[2][1]);
-                }
-            }
-            let (_, spent) = corrected
-                .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 100)
+                let bridge = ProfileSectionBridge::new(
+                    profile.section(axis, 0.5).unwrap(),
+                    profile.section(axis, 0.75).unwrap(),
+                    [0.25; 2],
+                )
                 .unwrap();
-            assert!(corrected
-                .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], spent - 1)
-                .unwrap()
-                .0
-                .is_none());
-            assert!(corrected
-                .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 0)
-                .unwrap()
-                .0
-                .is_none());
+                let corrected = bridge.constrain_original_rails(100).unwrap().0.unwrap();
+                for free in [0., 0.25, 0.5, 0.75, 1.] {
+                    for across in [0., 0.25, 0.5, 0.75, 1.] {
+                        let (bounds, _) = corrected
+                            .second_free_derivatives_with_transverse_correction(
+                                [free; 2],
+                                [across; 2],
+                                100,
+                            )
+                            .unwrap();
+                        let bounds = bounds.unwrap();
+                        let u = 0.5 + 0.25 * across;
+                        let fourth = u * u * u * u;
+                        let expected = [
+                            0.,
+                            0.,
+                            if rational {
+                                4. * fourth / (1. + fourth)
+                            } else {
+                                2. * fourth
+                            },
+                        ];
+                        for k in 0..3 {
+                            assert!(
+                                bounds[k][0] <= expected[k] && expected[k] <= bounds[k][1],
+                                "free={free} across={across} axis={k}: {:?} vs {}",
+                                bounds[k],
+                                expected[k]
+                            );
+                        }
+                    }
+                }
+                // The analytic derivative is independent of free and monotone in
+                // across, so its endpoint range is its whole rectangle image.
+                for across in [[0., 1.], [0.125, 0.875], [0.25, 0.5]] {
+                    let bounds = corrected
+                        .second_free_derivatives_with_transverse_correction([0., 1.], across, 100)
+                        .unwrap()
+                        .0
+                        .unwrap();
+                    for parameter in across {
+                        let u = 0.5 + 0.25 * parameter;
+                        let fourth = u.powi(4);
+                        let z = if rational {
+                            4. * fourth / (1. + fourth)
+                        } else {
+                            2. * fourth
+                        };
+                        assert!(bounds[0][0] <= 0. && bounds[0][1] >= 0.);
+                        assert!(bounds[1][0] <= 0. && bounds[1][1] >= 0.);
+                        assert!(bounds[2][0] <= z && z <= bounds[2][1]);
+                    }
+                }
+                let (_, spent) = corrected
+                    .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 100)
+                    .unwrap();
+                assert!(corrected
+                    .second_free_derivatives_with_transverse_correction(
+                        [0.5; 2],
+                        [0.5; 2],
+                        spent - 1
+                    )
+                    .unwrap()
+                    .0
+                    .is_none());
+                assert!(corrected
+                    .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 0)
+                    .unwrap()
+                    .0
+                    .is_none());
+            }
         }
     }
 }

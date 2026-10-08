@@ -2347,3 +2347,8 @@ Whole-rectangle analytic checks also passed in the four-test group
 (3.78 s). The expanded native run initially failed at the API work guard:
 300000 spans exceeded its documented 100000 cap. The call is corrected
 to 4096 cells / 100000 spans; no geometric predicate or guard is relaxed.
+
+The quartic and rational whole-rectangle checks now run with both source
+parameter axes (transposed control and weight nets). All four bridge tests
+passed in 6.76 s. This covers orientation of the derivative transport; it
+does not certify arbitrary NURBS input or the pending shell contacts.
