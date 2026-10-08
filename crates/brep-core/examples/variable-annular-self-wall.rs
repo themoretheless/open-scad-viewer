@@ -27,7 +27,10 @@ fn main() {
         .map(|s| s.parse().unwrap())
         .unwrap_or(256);
     assert!((1..=100000).contains(&adaptive_cells));
-    let adaptive_spans = (adaptive_cells * 8).min(100000);
+    let adaptive_spans: usize = std::env::args().nth(6)
+        .map(|s| s.parse().unwrap())
+        .unwrap_or_else(|| (adaptive_cells * 8).min(100000));
+    assert!((1..=100000).contains(&adaptive_spans));
     let selected: Option<Vec<usize>> = std::env::args()
         .nth(4)
         .map(|s| s.split(',').map(|x| x.parse().unwrap()).collect());
