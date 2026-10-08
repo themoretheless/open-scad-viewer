@@ -1539,3 +1539,18 @@ qualify; 106 attempts remain factor-unproven. No extra normal exclusion is
 claimed. This narrows the next investigation to boundary factor order rather
 than simply changing chart axes. Evidence: `distinct-normal-both-axis-preparation-audit.json.gz`,
 its receipt/log and `distinct-normal-parameter-exchange-tests.log.gz`.
+
+### Exact boundary coefficient order audit
+
+`distinct-normal-factor-order-audit.json.gz` records all 108 endpoint/axis
+attempts and the complete 212-pair exploratory product audit. Exact projected
+Jacobian coefficient rows distinguish 104 nonzero boundary rows, two factors
+of at least quadratic order, and two unresolved cases. No linear boundary
+factor was established. These are diagnostic coefficient results, not a wall
+certificate or a self-intersection proof. Parameter exchange remains confined
+to the prepared chart; no certificate is rebound to an original body.
+
+Three example tests passed, including regular, linear and quadratic reference
+surfaces at both ends. The receipt binds uncompressed evidence and the original
+request by SHA-256. The remaining two uncertain cases need stronger exact
+coefficient evaluation before extending the normal exclusion algorithm.

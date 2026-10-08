@@ -8,6 +8,30 @@ fn transpose_parameters(s: &Surface) -> Surface {
         weights:(0..columns).map(|v|(0..rows).map(|u|s.weights[u][v]).collect()).collect(),
         periodic_u:s.periodic_v,periodic_v:s.periodic_u}
 }
+fn boundary_order(s: &Surface, end: bool) -> value_codec::Value {
+    use cad_predicates::{AuthoredScalar,SourceArena,PredicateContext,Limits,ToleranceContext,Sign};
+    let mut source=s.clone();if end {source.control_points.reverse();source.weights.reverse();}
+    let width=source.control_points[0].len();
+    let weights=&source.weights;
+    let values=source.control_points.iter().enumerate().flat_map(|(u,row)|
+        row.iter().enumerate().flat_map(move |(v,p)|[p[0],p[1],p[2],weights[u][v]]))
+        .map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect();
+    let arena=SourceArena::authored("normal-boundary-order-audit",1,values).unwrap();
+    let leaves=(0..source.control_points.len()).map(|u|(0..width).map(|v|
+        std::array::from_fn(|k|arena.leaf((u*width+v)*4+k).unwrap())).collect()).collect::<Vec<_>>();
+    let tolerance=ToleranceContext::default_valid();let mut work=0;let mut zero=[true;2];let mut resolved=true;
+    for axes in [[1,2],[2,0],[0,1]] {for u in 0..2 {
+        if work==100_000_000 {resolved=false;break;}
+        let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:(100_000_000-work).min(cad_predicates::MAX_WORK),..Limits::default()},None);
+        let row=cad_predicates::rational_surface_projected_jacobian_row_bounds(&mut ctx,&leaves,axes,u).unwrap();work+=row.work_used;
+        if let Some(signs)=row.signs {for sign in &signs[0] {
+            match sign {Sign::Zero=>{},Sign::Positive|Sign::Negative=>zero[u]=false,_=>resolved=false}
+        }} else {resolved=false;}
+    }}
+    let order=if !resolved {"unproven"} else if !zero[0] {"nonzero-boundary-row"}
+        else if !zero[1] {"exact-linear-boundary-factor"} else {"at-least-quadratic-boundary-factor"};
+    value_codec::json!({"reason":order,"work":work,"rowsExactlyZero":zero,"resolved":resolved})
+}
 fn split_product(pair: [[[f64;2];2];2], side: usize, axis: usize, mid: f64)
     -> [[[[f64;2];2];2];2] {
     assert!(side<2 && axis<2 && pair[side][axis][0]<mid && mid<pair[side][axis][1]);
@@ -51,9 +75,9 @@ fn main() {
                         let bounds=report.certificate.as_ref().map(|c|{
                             assert!(std::ptr::eq(c.surface(),surface));c.bounds(domain).unwrap()
                         });
-                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"parameterExchanged":axis==1})
+                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"parameterExchanged":axis==1,"boundaryOrder":boundary_order(surface,end)})
                     }
-                    Err(error)=>value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":false,"error":error.to_string()}),
+                    Err(error)=>value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":false,"error":error.to_string(),"boundaryOrder":boundary_order(surface,end)}),
                 };
                 limiting_normals.push(row);
             }
@@ -97,6 +121,22 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn boundary_rows_distinguish_regular_linear_and_quadratic_normals() {
+        let make=|rows:Vec<Vec<Vec<f64>>>| {
+            let n=rows.len();
+            Surface {degree_u:n-1,degree_v:1,
+                knots_u:[vec![0.;n],vec![1.;n]].concat(),knots_v:vec![0.,0.,1.,1.],
+                weights:vec![vec![1.;2];n],control_points:rows,periodic_u:false,periodic_v:false}
+        };
+        let regular=make(vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
+        let linear=make(vec![vec![vec![0.,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
+        let quadratic=make(vec![vec![vec![0.,0.,0.];2],vec![vec![0.5,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
+        for (surface,reason) in [(&regular,"nonzero-boundary-row"),(&linear,"exact-linear-boundary-factor"),(&quadratic,"at-least-quadratic-boundary-factor")] {
+            assert_eq!(boundary_order(surface,false)["reason"].as_str(),Some(reason));
+            assert_eq!(boundary_order(surface,true)["reason"].as_str(),Some("nonzero-boundary-row"));
+        }
+    }
     #[test]
     fn parameter_exchange_preserves_every_authored_coordinate_and_weight_bit() {
         let s=Surface{degree_u:1,degree_v:2,knots_u:vec![2.,2.,5.,5.],knots_v:vec![-1.,-1.,-1.,3.,3.,3.],
