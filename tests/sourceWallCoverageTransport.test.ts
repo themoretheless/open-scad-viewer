@@ -36,6 +36,8 @@ describe('continuous original wall coverage transport',()=>{
  it('preserves complete unresolved and truncated refusals',()=>{
   const r=result();r.pairs[1].proven=false;r.pairs[1].reason='source-face-gap-work-limit';r.wholeWallQualified=false;r.lowerMm=null;r.reason='source-wall-coverage-unproven'
   expect(validCoverage(request,r,6,key)).toBe(true)
+  r.pairs[1].reason='source-face-gap-chart-close'
+  expect(validCoverage(request,r,6,key)).toBe(true)
   const partial=structuredClone(request);partial.limits.pairs=20
   r.request=partial;r.pairs.pop();r.enumerationComplete=false;r.reason='source-wall-coverage-pair-limit'
   expect(validCoverage(partial,r,6,key)).toBe(true)

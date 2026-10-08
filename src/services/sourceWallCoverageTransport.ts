@@ -86,7 +86,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
   const allowed=a===b
    ?p.proven?['source-wall-planar-self-excluded','source-wall-curved-self-excluded','source-wall-self-certified']:['source-wall-curved-self-unproven']
    :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded',...(e.factoredNormals?['source-wall-factored-normal-pair-excluded']:[]),'source-face-gap-qualified']
-    :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit']
+    :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit','source-face-gap-chart-close']
   if(!allowed.includes(p.reason))return false
   if(p.reason==='source-wall-self-certified'&&(!adaptive||!adaptive.faces[p.faces[0]]?.qualified))return false
   if(a===b&&adaptive?.faces[a]?.qualified&&(!p.proven||p.reason!=='source-wall-self-certified'))return false
