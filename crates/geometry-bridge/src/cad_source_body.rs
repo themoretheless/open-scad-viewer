@@ -180,7 +180,16 @@ pub fn restore(v: Value) -> Result<Value> {
                 ||[limits.cells,limits.spans,limits.cells_per_face,limits.spans_per_face].iter().any(|n|!(1..=100000).contains(n)) {
                 return Err(super::input("Choose bounded adaptive original self-wall work"));
             }
-            Some(limits)
+            let pole=if a["pole"].is_null(){None}else{
+                let p=&a["pole"];let exact:u64=field(p,"exactWork")?;
+                let extra=brep_core::source_wall_self_coverage::Limits{plane_controls:1,
+                    cells:field(p,"cells")?,spans:field(p,"spans")?,cells_per_face:field(p,"cellsPerFace")?,spans_per_face:field(p,"spansPerFace")?};
+                if !(1..=100000000).contains(&exact)||[extra.cells,extra.spans,extra.cells_per_face,extra.spans_per_face].iter().any(|n|!(1..=100000).contains(n)){
+                    return Err(super::input("Choose bounded additional pole self-wall work"));
+                }
+                Some((extra,exact))
+            };
+            Some((limits,pole))
         };
         let products=if o["normalProducts"].is_null() {
             brep_core::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0}
@@ -251,11 +260,15 @@ pub fn restore(v: Value) -> Result<Value> {
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
     let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors)|->Result<Value>{
-        let (facts,self_report)=if let Some(limits)=self_work {
-            let report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
+        let (facts,self_report)=if let Some((limits,pole))=self_work {
+            let mut report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
+            if let Some((extra,exact))=pole {
+                brep_core::source_wall_self_coverage::extend_with_pole_facts(body,minimum,work.max_sine_squared,&mut report,extra,exact)?;
+            }
             let diagnostics=json!({"faces":report.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,
                 "reason":f.reason,"cells":f.cells,"spans":f.spans,"pending":f.pending,"uncertain":f.uncertain,"unresolvedPairs":f.unresolved_pairs,"endpointExchangeSymmetric":true})).collect::<Vec<_>>(),
-                "planeControls":report.plane_controls,"cells":report.cells,"spans":report.spans,
+                "planeControls":report.plane_controls,"cells":report.cells+report.pole_cells,"spans":report.spans+report.pole_spans,
+                "poleExactWork":report.pole_exact_work,"poleCells":report.pole_cells,"poleSpans":report.pole_spans,
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
@@ -526,6 +539,23 @@ mod tests {
             assert_eq!(face["endpointExchangeSymmetric"],json!(true));
             if let Some(last)=pairs.last() {assert_eq!(last,&face["uncertain"]);}
             else {assert_eq!(face["uncertain"],Value::Null);}
+        }
+
+        let mut pole_option=adaptive_option.clone();
+        pole_option["adaptiveSelf"]["pole"]=json!({"exactWork":1,"cells":1,"spans":1,"cellsPerFace":1,"spansPerFace":1});
+        let pole=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallCoverage":pole_option.clone()})).unwrap();
+        assert_eq!(pole["wallCoverage"]["request"],pole_option);
+        for counter in ["poleExactWork","poleCells","poleSpans"] {
+            assert!(pole["wallCoverage"]["adaptiveSelf"][counter].as_u64().unwrap()<=1);
+        }
+        for key in ["exactWork","cells","spans","cellsPerFace","spansPerFace"] {
+            for value in [json!(0),json!(100000001)] {
+                let mut bad=pole_option.clone();bad["adaptiveSelf"]["pole"][key]=value;
+                assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                    "definition":wire_definition.clone(),"limits":config(1),"wallCoverage":bad})).is_err());
+            }
         }
 
         for key in ["planeControls","cells","spans","cellsPerFace","spansPerFace"] {

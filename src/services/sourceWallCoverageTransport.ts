@@ -3,11 +3,11 @@ export interface SourceWallCoverageOptions {
  minimumMm:number
  factoredNormals?:{exactWork:number;queries:number;cells:number;cellsPerPair:number}
  normalProducts?:{cells:number;cellsPerPair:number}
- adaptiveSelf?:{planeControls:number;cells:number;spans:number;cellsPerFace:number;spansPerFace:number}
+ adaptiveSelf?:{planeControls:number;cells:number;spans:number;cellsPerFace:number;spansPerFace:number;pole?:{exactWork:number;cells:number;spans:number;cellsPerFace:number;spansPerFace:number}}
  limits:{pairs:number;planeControls:number;normalSpans:number;gapCells:number;gapSpans:number;maxSineSquared:number}
 }
 export interface SourceWallCoverageResult {
- adaptiveSelf?:{faces:{face:number;qualified:boolean;reason:string;cells:number;spans:number;pending:number;uncertain:number[][][]|null;unresolvedPairs?:number[][][][];endpointExchangeSymmetric?:true}[];planeControls:number;cells:number;spans:number;allSelfPairsQualified:boolean}|null
+ adaptiveSelf?:{faces:{face:number;qualified:boolean;reason:string;cells:number;spans:number;pending:number;uncertain:number[][][]|null;unresolvedPairs?:number[][][][];endpointExchangeSymmetric?:true}[];planeControls:number;cells:number;spans:number;allSelfPairsQualified:boolean;poleExactWork?:number;poleCells?:number;poleSpans?:number}|null
  request:SourceWallCoverageOptions;wholeWallQualified:boolean;lowerMm:number|null
  enumerationComplete:boolean;totalPairs:number
  pairs:{faces:[number,number];proven:boolean;reason:string}[]
@@ -27,6 +27,8 @@ export function coverageExpectation(o:SourceWallCoverageOptions):SourceWallCover
  if(!Number.isFinite(w.maxSineSquared)||w.maxSineSquared<0||w.maxSineSquared>=1)throw new Error('Invalid continuous wall coverage angle')
  if(o.adaptiveSelf)for(const name of ['planeControls','cells','spans','cellsPerFace','spansPerFace'] as const)
   if(!count(o.adaptiveSelf[name],name==='planeControls'?1000000:100000)||o.adaptiveSelf[name]<1)throw new Error('Invalid adaptive self-wall work')
+ if(o.adaptiveSelf?.pole)for(const name of ['exactWork','cells','spans','cellsPerFace','spansPerFace'] as const)
+  if(!count(o.adaptiveSelf.pole[name],name==='exactWork'?100000000:100000)||o.adaptiveSelf.pole[name]<1)throw new Error('Invalid pole self-wall work')
  return structuredClone(o)
 }
 export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWallCoverageResult|null|undefined,faces:number,key:(v:unknown)=>string):boolean {
@@ -43,15 +45,18 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
   ||!count(r.cells,e.limits.gapCells)||!count(r.spans,e.limits.gapSpans))return false
  const adaptive=r.adaptiveSelf,w=e.adaptiveSelf
  if(!w){if(adaptive!=null)return false}else{
-  const a=adaptive
+  const a=adaptive,pole=w.pole
   if(!a||!Array.isArray(a.faces)||a.faces.length!==faces||typeof a.allSelfPairsQualified!=='boolean'
-   ||!count(a.planeControls,w.planeControls)||!count(a.cells,w.cells)||!count(a.spans,w.spans))return false
+   ||!count(a.planeControls,w.planeControls)||!count(a.cells,w.cells+(pole?.cells??0))||!count(a.spans,w.spans+(pole?.spans??0)))return false
+  for(const [counter,limit] of [['poleExactWork','exactWork'],['poleCells','cells'],['poleSpans','spans']] as const)
+   if(pole?!count(a[counter],pole[limit]):a[counter]!==undefined&&a[counter]!==0)return false
+  if(!count(a.cells-(a.poleCells??0),w.cells)||!count(a.spans-(a.poleSpans??0),w.spans))return false
   let cells=0,spans=0,allSelf=true
   for(let i=0;i<faces;i++){
    const f=a.faces[i]
-   if(!f||f.face!==i||typeof f.qualified!=='boolean'||!count(f.cells,w.cellsPerFace)||!count(f.spans,w.spansPerFace)
+   if(!f||f.face!==i||typeof f.qualified!=='boolean'||!count(f.cells,w.cellsPerFace+(pole?.cellsPerFace??0))||!count(f.spans,w.spansPerFace+(pole?.spansPerFace??0))
     ||!count(f.pending,100001)||f.qualified!==(f.pending===0)||f.qualified!==(f.uncertain===null))return false
-   const allowed=f.qualified?['source-self-wall-planar-excluded','source-self-wall-qualified']
+   const allowed=f.qualified?['source-self-wall-planar-excluded','source-self-wall-qualified',...(pole?['source-self-wall-pole-qualified']:[])]
     :['source-self-wall-total-work-limit','source-self-wall-resolution-limit','source-self-wall-work-limit']
    if(!allowed.includes(f.reason))return false
    if(!f.qualified){

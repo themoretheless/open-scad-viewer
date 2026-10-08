@@ -105,3 +105,44 @@ it('retains adaptive pending rectangles without promoting whole-wall qualificati
    for(const n of [0,-1,NaN,1.5,100000001])expect(()=>coverageExpectation({...option,factoredNormals:{...option.factoredNormals,exactWork:n}})).toThrow()
   })
  })
+
+it('binds additional pole proofs to requested budgets and additive work',()=>{
+ const e=structuredClone(request)
+ e.adaptiveSelf={planeControls:100,cells:10,spans:10,cellsPerFace:2,spansPerFace:2,
+  pole:{exactWork:100,cells:20,spans:30,cellsPerFace:5,spansPerFace:6}}
+ const r=result();r.request=structuredClone(e)
+ r.adaptiveSelf={faces:Array.from({length:6},(_,face)=>({face,qualified:true,reason:face===0?'source-self-wall-pole-qualified':'source-self-wall-planar-excluded',cells:face===0?7:0,spans:face===0?8:0,pending:0,uncertain:null})),planeControls:24,cells:7,spans:8,allSelfPairsQualified:true,poleExactWork:100,poleCells:5,poleSpans:6}
+ for(const p of r.pairs)if(p.faces[0]===p.faces[1])p.reason='source-wall-self-certified'
+ expect(validCoverage(e,r,6,key)).toBe(true)
+ for(const [counter,max] of [['poleExactWork',100],['poleCells',20],['poleSpans',30]] as const){
+  const missing=structuredClone(r);delete missing.adaptiveSelf![counter]
+  expect(validCoverage(e,missing,6,key)).toBe(false)
+  const excessive=structuredClone(r);excessive.adaptiveSelf![counter]=max+1
+  expect(validCoverage(e,excessive,6,key)).toBe(false)
+ }
+ const negativeOrdinary=structuredClone(r);negativeOrdinary.adaptiveSelf!.poleCells=8
+ expect(validCoverage(e,negativeOrdinary,6,key)).toBe(false)
+ const ordinaryOver=structuredClone(r)
+ ordinaryOver.adaptiveSelf!.cells=16;ordinaryOver.adaptiveSelf!.faces[1].cells=7;ordinaryOver.adaptiveSelf!.faces[2].cells=2
+ expect(validCoverage(e,ordinaryOver,6,key)).toBe(false)
+ const sumMismatch=structuredClone(r);sumMismatch.adaptiveSelf!.cells=6
+ expect(validCoverage(e,sumMismatch,6,key)).toBe(false)
+ const perFace=structuredClone(r);perFace.adaptiveSelf!.faces[0].cells=8;perFace.adaptiveSelf!.cells=8
+ expect(validCoverage(e,perFace,6,key)).toBe(false)
+ const unrequested=structuredClone(e);delete unrequested.adaptiveSelf!.pole
+ const unsolicited=structuredClone(r);unsolicited.request=unrequested
+ expect(validCoverage(unrequested,unsolicited,6,key)).toBe(false)
+ const noAuthority=structuredClone(r);noAuthority.request=unrequested
+ noAuthority.adaptiveSelf!.poleExactWork=0;noAuthority.adaptiveSelf!.poleCells=0;noAuthority.adaptiveSelf!.poleSpans=0
+ noAuthority.adaptiveSelf!.cells=0;noAuthority.adaptiveSelf!.spans=0
+ noAuthority.adaptiveSelf!.faces[0].cells=0;noAuthority.adaptiveSelf!.faces[0].spans=0
+ expect(validCoverage(unrequested,noAuthority,6,key)).toBe(false)
+ for(const name of ['exactWork','cells','spans','cellsPerFace','spansPerFace'] as const){
+  for(const value of [0,-1,NaN,1.5,name==='exactWork'?100000001:100001]){
+   const bad=structuredClone(e);bad.adaptiveSelf!.pole![name]=value
+   expect(()=>coverageExpectation(bad)).toThrow()
+  }
+ }
+ const clone=coverageExpectation(e);clone.adaptiveSelf!.pole!.cells=1
+ expect(e.adaptiveSelf.pole!.cells).toBe(20)
+})

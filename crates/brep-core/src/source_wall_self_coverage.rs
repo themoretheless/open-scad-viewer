@@ -229,8 +229,11 @@ pub fn extend_with_pole_facts<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:
         let r=adaptive::qualify_with_rational_pole(surface,minimum_mm,max_sine_squared,adaptive::Limits{cells,spans},
             normal.certificate.as_ref().unwrap(),differential.certificate.as_ref().unwrap())?;
         out.pole_cells+=r.cells;out.pole_spans+=r.spans;
+        let spent_cells=out.faces[face].cells+r.cells;
+        let spent_spans=out.faces[face].spans+r.spans;
+        out.faces[face].cells=spent_cells;out.faces[face].spans=spent_spans;
         if let Some(c)=r.certificate {
-            out.faces[face]=Face{face,qualified:true,reason:"source-self-wall-pole-qualified",cells:r.cells,spans:r.spans,
+            out.faces[face]=Face{face,qualified:true,reason:"source-self-wall-pole-qualified",cells:spent_cells,spans:spent_spans,
                 pending:0,uncertain:None,unresolved_pairs:Vec::new()};
             out.certificates.push(FaceCertificate{body,face,minimum_mm,max_sine_squared,adaptive:Some(c)});
         }

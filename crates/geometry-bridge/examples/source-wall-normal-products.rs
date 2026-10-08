@@ -5,7 +5,7 @@ fn main() {
     let original:Value=value_codec::from_str(&std::fs::read_to_string(&args[1]).unwrap()).unwrap();
     let before=value_codec::to_string(&original["definition"]).unwrap();
     let mut cases=Vec::new();let mut previously_proven=Vec::new();
-    for (cells,adaptive,factored) in [(0,false,false),(1,false,false),(50000,false,false),(50000,true,false),(50000,true,true)] {
+    for (cells,adaptive,factored,pole) in [(0,false,false,false),(1,false,false,false),(50000,false,false,false),(50000,true,false,false),(50000,true,true,false),(50000,true,true,true)] {
         let mut request=original.clone();
         request["displaySegments"]=json!(0);
         request["wallCoverage"]=json!({"minimumMm":5.99,"limits":{
@@ -16,6 +16,8 @@ fn main() {
             "cells":10000,"spans":100000,"cellsPerFace":512,"spansPerFace":4096});}
         if factored {request["wallCoverage"]["factoredNormals"]=json!({"exactWork":100000000,
             "queries":10000,"cells":10000,"cellsPerPair":128});}
+        if pole {request["wallCoverage"]["adaptiveSelf"]["pole"]=json!({"exactWork":100000000,
+            "cells":100000,"spans":100000,"cellsPerFace":4096,"spansPerFace":100000});}
         let result=geometry_bridge::dispatch(request.clone()).unwrap();
         assert_eq!(result["admitted"],json!(true));
         let coverage=&result["wallCoverage"];
@@ -37,14 +39,21 @@ fn main() {
                 assert_eq!(coverage[key],json!(0));
             }
         }
+        if pole {
+            let a=&coverage["adaptiveSelf"];
+            assert!(a["poleExactWork"].as_u64().unwrap()<=100000000);
+            assert!(a["poleCells"].as_u64().unwrap()<=100000);
+            assert!(a["poleSpans"].as_u64().unwrap()<=100000);
+            assert!(unresolved<169,"pole facts must retain and extend earlier certificates");
+        }
         for faces in &previously_proven {
             assert!(pairs.iter().any(|p|&p["faces"]==faces&&p["proven"]==json!(true)));
         }
-        if !factored {previously_proven=pairs.iter().filter(|p|p["proven"]==json!(true))
-            .map(|p|p["faces"].clone()).collect();}
+        previously_proven=pairs.iter().filter(|p|p["proven"]==json!(true))
+            .map(|p|p["faces"].clone()).collect();
         assert_eq!(before,value_codec::to_string(&request["definition"]).unwrap());
         eprintln!("cells={cells} adaptive={adaptive} unresolved={unresolved}");
-        cases.push(json!({"cells":cells,"adaptive":adaptive,"factored":factored,"coverage":coverage}));
+        cases.push(json!({"cells":cells,"adaptive":adaptive,"factored":factored,"pole":pole,"coverage":coverage}));
     }
     std::fs::write(&args[2],value_codec::to_string_pretty(&json!({
         "scope":"Native bridge only; no whole-wall or self-intersection certificate",
