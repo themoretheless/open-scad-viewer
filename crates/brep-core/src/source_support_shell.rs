@@ -457,6 +457,9 @@ mod tests {
         let sides=rooted_seams.iter().map(|root|root.qualify_transition_side(&bridge,1000,1000).unwrap().side.unwrap()).collect::<Vec<_>>();
         let boundary=crate::source_profile_body::propose_transition_boundary([&sides[1],&sides[0]]).unwrap();
         assert!(crate::source_profile_body::propose_transition_boundary([&sides[0],&sides[0]]).is_err());
+        let other_boundary=crate::source_profile_body::propose_transition_boundary([&sides[0],&sides[1]]).unwrap();
+        let mut other_sections=Vec::new();
+        let mut section_bindings=Vec::new();
         for high in [false,true] {
             let parameter=if high {0.9}else{0.75};
             let ends=[proposal.cut_endpoint(0,0,parameter,false,0,16).unwrap().endpoint.unwrap(),
@@ -481,6 +484,8 @@ mod tests {
             assert!(boundary.propose_section_contours(!high,[&parts[0],&parts[1]],100).unwrap().section.is_none());
             assert!(boundary.propose_section_contours(high,[&parts[1],&parts[0]],100).unwrap().section.is_none());
             assert!(boundary.propose_section_contours(high,[&parts[0],&parts[1]],0).unwrap().section.is_none());
+            other_sections.push(other_boundary.propose_section_contours(high,[&parts[0],&parts[1]],100).unwrap().section.unwrap());
+            section_bindings.push(section);
         }
         assert!(boundary.enclose_edge(4,[0.,1.],1).is_err());
         assert!(boundary.enclose_edge(0,[-0.1,0.5],1).is_err());
@@ -502,6 +507,16 @@ mod tests {
         let sewn=face.qualify_rail_incidence(100000000,100000,100).unwrap();
         let sewn=sewn.incidence.expect(sewn.reason);
         assert!(std::ptr::eq(sewn.face(),&face));
+        let exterior=section_bindings.iter().map(|s|s.qualify_exterior(1000,1000).unwrap().region.unwrap()).collect::<Vec<_>>();
+        assert!(sewn.qualify_sections([&exterior[0],&exterior[0]]).unwrap().patch.is_none());
+        let other_exterior=other_sections.iter().map(|s|s.qualify_exterior(1000,1000).unwrap().region.unwrap()).collect::<Vec<_>>();
+        assert!(sewn.qualify_sections([&other_exterior[0],&other_exterior[1]]).unwrap().patch.is_none());
+        let patch=sewn.qualify_sections([&exterior[1],&exterior[0]]).unwrap();
+        let patch=patch.patch.expect(patch.reason);
+        assert!(std::ptr::eq(patch.rails(),&sewn));
+        for index in 0..2 {
+            assert_eq!(patch.retained()[index].iter().map(|f|f.definition()).collect::<Vec<_>>(),exterior[index].kept_loop().iter().map(|f|f.definition()).collect::<Vec<_>>());
+        }
         for rail in sewn.rails() {
             assert_ne!(rail.transition_reversed()^sewn.reverse_face(),rail.edge().reversed()[rail.neighbor_side()]);
             let contour=rail.neighbor_contour();let [wire,index]=contour.middle();

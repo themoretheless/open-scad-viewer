@@ -349,11 +349,44 @@ impl TransitionRail {
 }
 /// Two sewn rail incidences; entry and terminal edges remain open.
 pub struct TransitionRailIncidence<'f,'a,'s,'p,'b> {face:&'f TransitionFace<'a,'s,'p,'b>,rails:[TransitionRail;2],reverse_face:bool}
-impl TransitionRailIncidence<'_,'_,'_,'_,'_> {
+impl<'f,'a,'s,'p,'b> TransitionRailIncidence<'f,'a,'s,'p,'b> {
+    pub fn qualify_sections<'i>(&'i self,sections:[&ExteriorSection<'_, '_, 's,'p,'b>;2])->Result<TransitionPatchReport<'i,'f,'a,'s,'p,'b>> {
+        use crate::source_boundary_fragment::{Endpoint,Role};
+        let mut out=TransitionPatchReport{patch:None,reason:"profile-transition-section-incidence-owner-unproven"};
+        if sections[0].section.high==sections[1].section.high || sections.iter().any(|r|!std::ptr::eq(r.section.boundary,self.face.boundary)) {return Ok(out);}
+        let sections=if sections[0].section.high {[sections[1],sections[0]]}else{sections};
+        let mut kept=Vec::new();
+        for (index,region) in sections.iter().enumerate() {
+            let wire=region.kept_loop();let contact=wire.last().unwrap();
+            let axis=self.face.boundary.rooted[0].axis;
+            let descending=contact.curve().control_points[1][1-axis]<contact.curve().control_points[0][1-axis];
+            let kept_descending=descending^contact.reversed();
+            let transition_descending=(index==0)^self.reverse_face;
+            if kept_descending==transition_descending {out.reason="profile-transition-section-incidence-orientation-conflict";return Ok(out);}
+            for end in 0..2 {
+                let rail=if kept_descending {1-end}else{end};
+                let expected=self.face.boundary.rooted[rail].points[index].root().definition();
+                if !matches!(&contact.endpoints()[end],Endpoint::Crossing{point,role:Role::Contact} if point.definition()==expected) {
+                    out.reason="profile-transition-section-incidence-root-unproven";return Ok(out);
+                }
+            }
+            kept.push(wire.to_vec());
+        }
+        out.patch=Some(TransitionPatchIncidence{rails:self,retained:[kept.remove(0),kept.remove(0)]});
+        out.reason="profile-transition-four-edge-incidence-qualified";Ok(out)
+    }
     pub fn face(&self)->&TransitionFace<'_,'_,'_,'_> {self.face}
     pub fn rails(&self)->&[TransitionRail;2] {&self.rails}
     pub fn reverse_face(&self)->bool {self.reverse_face}
 }
+/// All four patch edges have opposite neighboring uses. Surrounding shell
+/// admission, retained-profile immersion and global embedding remain separate.
+pub struct TransitionPatchIncidence<'i,'f,'a,'s,'p,'b> {rails:&'i TransitionRailIncidence<'f,'a,'s,'p,'b>,retained:[Vec<crate::source_boundary_fragment::Fragment>;2]}
+impl TransitionPatchIncidence<'_,'_,'_,'_,'_,'_> {
+    pub fn rails(&self)->&TransitionRailIncidence<'_,'_,'_,'_,'_> {self.rails}
+    pub fn retained(&self)->&[Vec<crate::source_boundary_fragment::Fragment>;2] {&self.retained}
+}
+pub struct TransitionPatchReport<'i,'f,'a,'s,'p,'b> {pub patch:Option<TransitionPatchIncidence<'i,'f,'a,'s,'p,'b>>,pub reason:&'static str}
 pub struct TransitionRailReport<'f,'a,'s,'p,'b> {pub incidence:Option<TransitionRailIncidence<'f,'a,'s,'p,'b>>,pub work:u64,pub reason:&'static str}
 pub struct TransitionFaceReport<'a,'s,'p,'b> {
     pub face:Option<TransitionFace<'a,'s,'p,'b>>,

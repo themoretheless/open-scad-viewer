@@ -1728,3 +1728,31 @@ terminal directed incidence remain required before shell admission.
 The final strengthened combined annular regression passed in 57.34 seconds;
 the preceding classification regression passed in 35.24 seconds. Interior
 coverage remains 328 accepted rectangles with zero pending. Native-only.
+
+## Four-edge transition-patch incidence
+
+TransitionRailIncidence::qualify_sections now binds the two classified
+exterior section contours to the already admitted transition and rail
+incidence. Both sections must refer to exactly that boundary instance and
+cover opposite entry/terminal ends. Reversed input order is normalized.
+
+For each section, the retained directed contact's free-coordinate traversal
+must oppose the corresponding transition edge after the common orientation
+reversal established by both rails. Each directed contact endpoint must
+retain the exact corresponding original carrier root's crossing definition
+with Contact role. Root-box proximity is not accepted. The private patch
+result retains the rail incidence and the two original retained contour
+definitions in entry/terminal order.
+
+Tests verify positive four-edge incidence, normalized section order, exact
+retained definitions and rail owner identity. Duplicate sections and
+sections bound to another boundary instance over identical source geometry
+refuse. The initial combined regression passed in 49.49 seconds.
+
+This closes incidence around the transition patch, not the surrounding
+shell. Retained profile-face immersion/embedding, original edge segmentation
+assembly, global pair intersections, volume and wall thickness still require
+qualification before a closed Body can be admitted. Native-only.
+
+The final owner-refusal regression passed in 44.03 seconds, including
+complete transition interior coverage (328 accepted, zero pending).
