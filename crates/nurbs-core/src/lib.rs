@@ -193,6 +193,7 @@ pub mod moving_envelope;
 
 pub mod surface_projection_jacobian;
 pub mod profile_projection_jacobian;
+pub mod profile_projected_jordan;
 
 pub mod curve_quadratic_separator;
 
