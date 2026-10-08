@@ -2250,3 +2250,35 @@ The final regression requires all 12/23/54 results with exact intermediate
 endpoint identity checks enabled. With 162 excluded pairs, 155 of 406
 pairs still need a complete geometric proof. Transition/profile contacts
 remain separate; packaged WASM is unchanged.
+
+
+## Unified private expression contact audit and transport diagnostics
+
+ExpressionShell::inspect_contacts freshly creates the complete trimmed
+pair inventory and attempts planar, boundary/paired fiber and vertex/
+interior certificates for its pending pairs. One exact/span/driver budget
+covers the entire combined audit, with the existing global/per-pair cell
+and domain budgets. Each pair retains its support cover and a Pending,
+Excluded or privately owned typed contact proof. The audit borrows the
+actual immutable expression face array; its fields are private and it
+accepts no caller-supplied pair report or certificate.
+
+The diagnostic Value records all face IDs, shared incidence edges,
+proof kinds, refusal reasons, pending/outside/separated parameter products
+and total work. It is transport data only and has no restoring admission
+API. Zero allowances retain all unordered pairs as Pending. No Body or
+volume/thickness/radius admission follows from this partial pair audit.
+Native cargo check passed before the integrated regression.
+
+The first combined audit regression passed in 38.20 seconds. Its counts
+match the separate proofs exactly: [155 pending,162 excluded,12 planar,
+23 fiber,54 vertex/interior]. Total combined work is 2156 product cells,
+12595 spans, 6494 domain cells, 3970573 exact work and zero drivers. Each
+certificate's final owner pointer is verified; zero allowances preserve
+406 pending pairs. The final regression passed in 48.96 seconds including
+exact binary diagnostic encode/decode roundtrip and JSON parse with all
+406 records and 155 pending count preserved. Native-only; these payloads
+are not yet exposed through packaged WASM/worker/UI. Support pending
+products remain present even for contact-certified records; consumers
+must interpret them together with the pair proof kind, not as additional
+unqualified pairs.

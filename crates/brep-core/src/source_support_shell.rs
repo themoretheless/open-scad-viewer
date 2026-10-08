@@ -704,6 +704,39 @@ mod tests {
         assert!(expression.qualify_original_planar_contact([retained_ids[0],transition_id],100000000,100000).unwrap().certificate.is_none());
         assert!(expression.qualify_original_planar_contact(retained_ids,100000000,100000).unwrap().certificate.is_none());
 
+        use crate::source_profile_body::{ContactAuditLimits,PairContactProof};
+        let audit_limits=ContactAuditLimits{cells:4096,cells_per_pair:8,controls_per_enclosure:1000,spans:100000,
+            domain_cells:100000,domain_cells_per_pair:256,exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};
+        let audit=expression.inspect_contacts(audit_limits).unwrap();
+        assert!(std::ptr::eq(audit.owners(),expression.faces()));
+        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),155);
+        let mut kinds=[0usize;5];
+        for pair in audit.pairs() {
+            let (id,owners)=match pair.proof() {
+                PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
+                PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
+                PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
+            };
+            kinds[id]+=1;
+            if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
+        }
+        assert_eq!(kinds,[155,162,12,23,54]);
+        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(155));
+        assert_eq!(diagnostics["pairs"].as_array().unwrap().len(),406);
+        let binary=value_codec::encode_binary(&diagnostics).unwrap();
+        assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);
+        let json=value_codec::from_str::<value_codec::Value>(&diagnostics.to_string()).unwrap();
+        assert_eq!(json["pendingPairs"].as_u64(),Some(155));
+        assert_eq!(json["pairs"].as_array().unwrap().len(),406);
+        eprintln!("expression audit diagnostics binaryBytes={} jsonBytes={}",binary.len(),diagnostics.to_string().len());
+
+        let (cells,spans,domains,work,drivers)=audit.work();
+        assert!(cells<=audit_limits.cells && spans<=audit_limits.spans && domains<=audit_limits.domain_cells
+            && work<=audit_limits.exact_work && drivers<=audit_limits.driver_cells);
+        eprintln!("combined expression audit counts={:?} cells={} spans={} domains={} exactWork={} drivers={}",kinds,cells,spans,domains,work,drivers);
+        let exhausted=expression.inspect_contacts(ContactAuditLimits{cells:0,spans:0,domain_cells:0,exact_work:0,driver_cells:0,..audit_limits}).unwrap();
+        assert_eq!(exhausted.pairs().len(),406);assert_eq!(exhausted.pending_pairs(),406);
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

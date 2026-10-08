@@ -662,3 +662,6 @@ pub use original_contact::{
     OriginalContactReport, OriginalFiberContact, OriginalFiberProof, OriginalFiberReport,
     OriginalPlanarContact,
 };
+#[path = "source_profile_shell_audit.rs"]
+mod audit;
+pub use audit::{AuditedContactPair, ContactAuditLimits, PairContactProof, ShellContactAudit};
