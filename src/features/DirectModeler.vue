@@ -2044,6 +2044,7 @@ const sourceSeamMessage=computed(()=>{
  const result=sourceSeamResult.value
  if(!result)return ''
  if(result.qualified)return label('Касательность подтверждена на всём ребре.','Tangency is qualified over the whole edge.')
+ if(result.endpointLimits?.sides.some(s=>s.distinctTangentLimits))return label('В концевой точке сходятся разные касательные плоскости: радиус выходит на острую кромку. Для гладкого конца измените переход или обработайте соседние рёбра.','The endpoint has distinct tangent planes: the radius returns to a sharp rim. For a smooth end, change the transition or blend adjacent edges.')
  if(result.reason==='source-seam-endpoint-normal-unresolved')return label('Нормаль на конце ребра не подтверждена. Проверьте концевой переход; повтор с тем же бюджетом не устраняет вырождение.','The endpoint normal is unresolved. Inspect the end transition; repeating the same budget does not resolve a singularity.')
  if(result.reason==='source-seam-angular-envelope-oblique')return label('Касательность в выбранном допуске не подтверждена. Проверьте сопряжение соседних граней.','Tangency within tolerance is unproven. Inspect the adjacent face transition.')
  return label('Проверка участка не завершена. Повторите расчёт или уточните геометрию и лимиты.','The interval check is incomplete. Retry or inspect the geometry and work limits.')
@@ -2057,7 +2058,7 @@ async function qualifySourceSeam(){
  try{
   const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
-   seamQualification:{edge:selected.index,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
+   seamQualification:{edge:selected.index,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
   if(generation!==sourceSeamGeneration||document.value!==source||sourceEdgeSelection.value!==selection||selectedSourceBody.value!==record||!props.open||restoreDisposed)return
   if(!result.admitted||!result.seamQualification)throw Error(result.diagnostics.reason)
   sourceSeamResult.value=result.seamQualification
@@ -3658,7 +3659,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <template v-if="document.sourceBodies?.length">
           <button type="button" :disabled="restoringDraft || !selectedSourceBody || sourceSeamPending" @click="qualifySourceSeam">{{ label('Проверить касательность ребра','Check source edge tangency') }}</button>
           <span v-if="sourceSeamPending" role="status">{{ label('Проверяю касательность…','Checking tangency…') }} <button type="button" @click="cancelSourceSeam">{{ label('Отмена','Cancel tangency') }}</button></span>
-          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
+          <span v-if="sourceSeamResult" :role="sourceSeamResult.qualified?'status':'alert'">{{ sourceSeamMessage }} <span v-for="side in sourceSeamResult.endpointLimits?.sides.filter(s=>s.distinctTangentLimits) ?? []" :key="`${side.side}:${side.boundaryEnd}`" data-source-seam-endpoint>{{ label('Концевая точка','Endpoint') }}: {{ side.collapsedPoint?.join(', ') }} {{ label('мм','mm') }}</span> <span v-if="sourceSeamResult.uncertainCanonical">{{ label('Непроверенный интервал ребра','Unverified edge interval') }}: {{ sourceSeamResult.uncertainCanonical }}</span><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamResult.reason }} · sin² ≤ {{ sourceSeamResult.sineSquaredBounds?.[1] ?? '—' }} · {{ sourceSeamResult.cells }}</details><button v-if="!sourceSeamResult.qualified" type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button></span>
           <span v-if="sourceSeamError" role="alert">{{ label('Проверка ребра не завершена. Повторите расчёт.','Edge qualification failed. Retry the calculation.') }} <button type="button" :disabled="sourceSeamPending || !selectedSourceBody" @click="qualifySourceSeam">{{ label('Повторить','Retry tangency') }}</button><details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceSeamError }}</details></span>
           <details class="source-wall-panel" :open="sourceWallOpen" @toggle="sourceWallOpen=($event.target as HTMLDetailsElement).open">
             <summary>{{ label('Толщина исходного тела','Source body wall thickness') }}</summary>

@@ -32,3 +32,11 @@ A replay of edges 0, 1, 16 and 18 returns `source-seam-endpoint-distinct-tangent
 Six seam tests pass, including reversed carrier orientation, tiny budget exhaustion, invalid options, refusal for mapped/root-ended identity, and continued regular G1 rejection. Mapped carriers require separate endpoint identity qualification. WASM/worker/UI integration is still pending.
 
 Correction to interpretation: zero-radius endings are deliberately constructed to return to the original sharp rim. Their differing limiting planes are inherent in that geometry, rather than evidence of a control-net implementation defect. A requirement for a smooth endpoint needs additional transition geometry or adjacent-edge treatment; relaxing the normal test is invalid.
+
+## Bridge and interface integration
+
+The optional `seamQualification.endpointLimitsExactWork` request adds a separate global native factor-work allowance in 1..100,000,000. Diagnostics are returned only for an unresolved literal original carrier endpoint. They remain additive to the regular seam refusal. The response is bound to the original request and canonical endpoint; validation rejects missing requested diagnostics, excess work, duplicate sides, invalid component/angle intervals and inconsistent separated-limit claims.
+
+The interface requests the diagnostic on explicit edge qualification, explains zero-radius sharp endings, and displays original endpoint coordinates in millimetres. Existing generation, selection and document checks govern cancellation and stale responses. Controlled-port cancellation and late-response tests pass; they are not browser acceptance evidence.
+
+The full native B-rep run passes: 941 unit tests, 3 ignored, plus every integration suite. The bridge dispatch test passes with the added request and invalid-budget rejection. 319 interface/transport tests pass; a subsequent transport run after tightening paired-normal bounds passes 2 tests. Vue and MCP typechecks pass. The new real-worker regression for all four endpoints has been added, but its execution and production package verification await the current WASM build.

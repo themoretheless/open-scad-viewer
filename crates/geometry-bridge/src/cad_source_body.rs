@@ -112,14 +112,17 @@ pub fn restore(v: Value) -> Result<Value> {
             curve_spans: field(work, "curveSpans")?,
             normal_spans: field(work, "normalSpans")?,
         };
-        if edge >= edge_count || !seam_limits.max_sine_squared.is_finite()
+        let endpoint_work: Option<u64> = if option["endpointLimitsExactWork"].is_null() {None}
+            else {Some(field(option,"endpointLimitsExactWork")?)};
+        if endpoint_work.is_some_and(|n|!(1..=100000000).contains(&n))
+            || edge >= edge_count || !seam_limits.max_sine_squared.is_finite()
             || !(0. ..1.).contains(&seam_limits.max_sine_squared)
             || [seam_limits.cells, seam_limits.curve_spans, seam_limits.normal_spans]
                 .iter().any(|n| !(1..=100000).contains(n))
         {
             return Err(super::input("Choose an owned source edge and bounded seam qualification limits"));
         }
-        Some((edge, seam_limits))
+        Some((edge, seam_limits, endpoint_work))
     };
     let wall_request = if v["wallQualification"].is_null() { None } else {
         let o=&v["wallQualification"];
@@ -249,9 +252,20 @@ pub fn restore(v: Value) -> Result<Value> {
             json!({"admitted":false,"sourceBody":null,"edges":[],"diagnostics":diagnostics}),
         );
     };
-    let seam_qualification = seam_request.map(|(edge, work)| -> Result<Value> {
+    let seam_qualification = seam_request.map(|(edge, work, endpoint_work)| -> Result<Value> {
+        let angle=work.max_sine_squared;
         let r = body.qualify_edge_tangency(edge, work)?;
+        let endpoint_limits=if r.reason=="source-seam-endpoint-normal-unresolved"
+            && let (Some(budget),Some([a,b]))=(endpoint_work,r.uncertain_canonical)
+            && a==b && [0.,1.].contains(&a)
+        {
+            let d=brep_core::source_seam_tangency::inspect_endpoint_limits(&body.geometry().shell().edges()[edge],a,angle,budget)?;
+            json!({"canonical":d.canonical,"exactWork":d.exact_work,"reason":d.reason,
+                "sides":d.sides.iter().map(|s|json!({"side":s.side,"boundaryEnd":s.boundary_end,"collapsedPoint":s.limits.collapsed_point,
+                    "components":s.limits.components,"sineSquaredBounds":s.limits.sine_squared_interval,"distinctTangentLimits":s.limits.distinct_tangent_limits})).collect::<Vec<_>>()})
+        }else {Value::Null};
         Ok(json!({"request":v["seamQualification"],"qualified":r.seam.is_some(),
+            "endpointLimits":endpoint_limits,
             "sineSquaredBounds":r.seam.as_ref().map(|s|s.sine_squared_bounds()),
             "reason":r.reason,"cells":r.cells,"curveSpans":r.curve_spans,
             "normalSpans":r.normal_spans,"acceptedCells":r.accepted_cells,
@@ -487,7 +501,7 @@ mod tests {
             json!("source-volume-initial-work-limit")
         );
         let restored = run(50000);
-        let seam_option = json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":100,"curveSpans":100,"normalSpans":100}});
+        let seam_option = json!({"edge":0,"endpointLimitsExactWork":100,"limits":{"maxSineSquared":1e-6,"cells":100,"curveSpans":100,"normalSpans":100}});
         let checked = super::super::dispatch(json!({"op":"cad_source_body_restore",
             "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
             "seamQualification":seam_option.clone()})).unwrap();
@@ -505,6 +519,8 @@ mod tests {
             assert!(seam["sineSquaredBounds"].is_null());
         }
         for bad in [json!({"edge":999999,"limits":seam_option["limits"]}),
+            json!({"edge":0,"endpointLimitsExactWork":0,"limits":seam_option["limits"]}),
+            json!({"edge":0,"endpointLimitsExactWork":100000001,"limits":seam_option["limits"]}),
             json!({"edge":0,"limits":{"maxSineSquared":1e-6,"cells":0,"curveSpans":100,"normalSpans":100}})] {
             assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
                 "definition":wire_definition.clone(),"limits":config(1),"endpointSpans":10000,

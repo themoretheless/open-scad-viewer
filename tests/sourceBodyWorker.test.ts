@@ -110,9 +110,9 @@ it('restores original source definitions through the real WASM CAD worker',async
 },120000)
 it('supersedes a source restore and ignores its late response',async()=>{
  const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
- const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
+ const first=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:0,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}}).catch(e=>e.code)
  const late=ports[0]!.onmessage!
- const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
+ const second=client.run({kind:'sourceBodyRestore',options:{...options(),seamQualification:{edge:1,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:128,curveSpans:256,normalSpans:256}}}})
  expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
  late({data:{version:1,id:1,kind:'sourceBodyRestore',ok:true,result:denied}} as MessageEvent)
  reply(ports[1]!,denied);expect(await second).toEqual(denied)
@@ -589,6 +589,32 @@ it('qualifies bounded retained face products without losing prior proofs through
   results.push(c)
  }
  if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
+},180000)
+
+it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ for(const edge of [0,1,16,18]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const seam=r.seamQualification!,d=seam.endpointLimits!
+  expect(seam.qualified).toBe(false);expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved')
+  expect(d.reason).toBe('source-seam-endpoint-distinct-tangent-limits')
+  expect(d.exactWork).toBeLessThanOrEqual(100000000)
+  const pole=d.sides.find(s=>s.distinctTangentLimits)!
+  expect(pole.collapsedPoint).toEqual(edge<2?[20,0,6]:[0,20,6])
+  expect(pole.sineSquaredBounds![0]).toBeGreaterThan(0.999999999999)
+  for(const mutate of [
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits=null},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.canonical=1-d.canonical},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.exactWork=100000001},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint=null},
+  ]){const x=structuredClone(r);mutate(x);expect(validSourceBody(sourceBodyExpectation(o),x)).toBe(false)}
+  results.push({edge,seam})
+ }
+ client.dispose()
+ if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
 },180000)
 
 it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
