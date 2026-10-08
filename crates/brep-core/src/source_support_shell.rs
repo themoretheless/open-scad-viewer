@@ -386,6 +386,14 @@ mod tests {
         let (proof,used)=paths.qualify_product(product,[-1.,-1.,-1.],1e-6,16).unwrap();
         assert!(proof.is_some(),"charged product spans {used}");
         assert!(used<=16);
+        let projections=[[0.,0.,0.],[-1.,-1.,-1.]];
+        let (batch,batch_spans)=paths.qualify_product_projections(product,&projections,1e-6,16).unwrap();
+        assert!(batch.is_some());assert!(batch_spans<=16);
+        assert!(paths.qualify_product_projections(product,&[],1e-6,16).is_err());
+        assert!(paths.qualify_product_projections(product,&[[-1.,-1.,-1.],[f64::NAN,0.,0.]],1e-6,16).is_err());
+        assert!(paths.qualify_product_projections(product,&[[1.,1.,1.];27],1e-6,16).is_err());
+        assert!(paths.qualify_product_projections(product,&projections,1e-6,1).unwrap().0.is_none());
+
         let limits=||crate::source_wall_pair::Limits{normal_spans:100,max_sine_squared:1e-6,
             cells:1,spans:100,domain_cells:100,domain_cells_per_query:16,tolerance_uv:1e-8};
         assert!(crate::source_wall_pair::qualify_with_anchors(&body,[1,0],5.99,limits(),&paths).is_err());

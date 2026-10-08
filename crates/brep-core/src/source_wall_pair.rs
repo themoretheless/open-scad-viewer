@@ -302,17 +302,17 @@ pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm
                 }}}
             }
             if !excluded {if let Some(paths)=anchors {
-                'anchor_projections:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
-                    if x==0&&y==0&&z==0 {continue;}
-                    let allowance=(limits.spans-out.spans).min(64);
-                    if allowance==0 {break 'anchor_projections;}
-                    match paths.qualify_product(uv,[x as f64,y as f64,z as f64],limits.max_sine_squared,allowance) {
-                        Ok((proof,used))=>{out.spans+=used;if proof.is_some(){excluded=true;break 'anchor_projections;}}
-                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{break 'anchor_projections;}
-                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=allowance;break 'anchor_projections;}
+                let projections:Vec<_>=(-1..=1).flat_map(|x|(-1..=1).flat_map(move|y|(-1..=1).map(move|z|[x as f64,y as f64,z as f64])))
+                    .filter(|p|*p!=[0.;3]).collect();
+                let allowance=(limits.spans-out.spans).min(64);
+                if allowance>0 {
+                    match paths.qualify_product_projections(uv,&projections,limits.max_sine_squared,allowance) {
+                        Ok((proof,used))=>{out.spans+=used;excluded=proof.is_some();}
+                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{}
+                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=allowance;}
                         Err(e)=>return Err(e),
                     }
-                }}}
+                }
             }}
             if excluded {out.normal_products+=1;continue;}
             out.unresolved_products.push(uv);

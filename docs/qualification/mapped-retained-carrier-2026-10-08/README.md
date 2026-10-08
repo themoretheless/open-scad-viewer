@@ -188,3 +188,29 @@ Distribution: 152 artifacts, 8,415,805 asset bytes plus 15,439,210 raw WASM byte
 = 23,855,015 bytes. Geometry chunk 4,050,304 bytes; named geometry budget retains
 608-byte margin, total asset budget retains 761-byte margin. Other budgets stay
 unchanged. Vue and MCP type checks pass. No end-to-end speedup is claimed.
+
+
+## Reuse anchor enclosures across direction proposals (native)
+
+`qualify_polar_anchored_chords_with_projections` validates 1..26 finite directions
+before any early proof. Source derivative paths and normals are enclosed once
+per UV product, then each proposed direction is independently checked by the
+same positive chord cone criterion. No floating-point sample authorizes a proof.
+Original Body/face ownership and geometric work limits are retained.
+
+With the unchanged production 1024 mixed cell limit, complete mixed pair proofs
+remain **17/45**, with no proofs lost. Geometric spans **92,369 -> 64,370**.
+Cells **23,565 -> 30,461**, normal spans **9,918 -> 11,647**, domain cells
+**289,302 -> 314,744**. Exact preparation remains **55,479,571**. Pending UV
+products **2714 -> 3006** reflect a different adaptive decomposition: earlier
+per-pair geometric work exhaustion stopped some subdivisions. Counts alone
+are not a physical coverage metric. Whole-wall admission remains false.
+
+The 4096 mixed-cell experiment exhausts the shared geometric span budget
+(99,999/100,000), reaches only 16/45 proofs and leaves 4853 pending products.
+It does not justify raising the production per-pair cell limit; keep 1024.
+Both raw measurements are archived here. Native NURBS family: 32 tests pass.
+Original annular regression, bounded-direction validation and budget-refusal
+checks pass. This change has not yet been packaged into WASM; the current
+worker/UI package remains the 3ad19753 artifact qualified above. No runtime
+speedup or new full-wall qualification is claimed.

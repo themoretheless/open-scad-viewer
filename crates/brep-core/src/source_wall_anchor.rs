@@ -85,6 +85,12 @@ impl<'a> PreparedPair<'a> {
     }
     /// All reusable facts remain attached to this immutable original Body.
     /// Query work includes path restrictions, endpoint enclosures and normals.
+    pub fn qualify_product_projections(&self,rectangles:[[[f64;2];2];2],projections:&[[f64;3]],sine:f64,max_spans:usize)
+        ->Result<(Option<ProductCertificate<'a>>,usize)> {
+        let (proof,used)=chord::qualify_polar_anchored_chords_with_projections(self.anchors.each_ref(),rectangles,
+            self.differential.each_ref().map(Option::as_ref),[None,None],projections,sine,max_spans)?;
+        Ok((proof.map(|_|ProductCertificate{body:self.body,faces:self.faces,rectangles,max_sine_squared:sine}),used))
+    }
     pub fn qualify_product(&self,rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize)
         ->Result<(Option<ProductCertificate<'a>>,usize)> {
         let (proof,used)=chord::qualify_polar_anchored_chords(self.anchors.each_ref(),rectangles,

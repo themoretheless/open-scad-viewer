@@ -698,8 +698,18 @@ pub fn qualify_polar_anchored_chords<'a>(
     normals:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
     projection:[f64;3],sine:f64,max_spans:usize,
 )->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    qualify_polar_anchored_chords_with_projections(anchors,rectangles,differential,normals,&[projection],sine,max_spans)
+}
+/// Enclose original paths and normals once, then test a bounded direction set.
+/// Projection attempts do not repeat geometric span work.
+pub fn qualify_polar_anchored_chords_with_projections<'a>(
+    anchors:[&SurfaceAnchorCertificate<'a>;2],rectangles:[[[f64;2];2];2],
+    differential:[Option<&crate::rational_pole_differential::Certificate<'_>>;2],
+    normals:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
+    projections:&[[f64;3]],sine:f64,max_spans:usize,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
     check(anchors[0].world==anchors[1].world&&(1..=100000).contains(&max_spans)
-        &&projection.iter().all(|x|x.is_finite())&&sine.is_finite()&&(0. ..1.).contains(&sine),
+        &&(1..=26).contains(&projections.len())&&projections.iter().flatten().all(|x|x.is_finite())&&sine.is_finite()&&(0. ..1.).contains(&sine),
         "Use identical exact anchors and bounded original polar path work")?;
     let sources=anchors.map(|a|a.surface);
     for side in 0..2 {
@@ -750,8 +760,10 @@ pub fn qualify_polar_anchored_chords<'a>(
         let normal=if let Some(n)=normals[side] {spans+=1;Some(n.bounds(rectangles[side])?)}else{
             let (n,used)=normal_alignment::normal_bounds(sources[side],rectangles[side],max_spans-spans)?;spans+=used;n
         };
-        if let Some(n)=normal {if normal_alignment::positive_chord_cone_excluded(&generators,n,projection,sine)? {
-            return Ok((Some(CornerChordCertificate{sources,rectangles,max_sine_squared:sine}),spans));
+        if let Some(n)=normal {for projection in projections {
+            if normal_alignment::positive_chord_cone_excluded(&generators,n,*projection,sine)? {
+                return Ok((Some(CornerChordCertificate{sources,rectangles,max_sine_squared:sine}),spans));
+            }
         }}
     }
     Ok((None,spans))
