@@ -2,7 +2,7 @@
 
 Variable radius passes both mouse and keyboard scenarios: local oversize error,
 readable dimension field, zoom/resize, invalid quantity refusal and recovery,
-real Retry/cancel/late replies, apply without recomputing, Undo/Redo and exact
+real cancel/late replies, apply without recomputing, Undo/Redo and exact
 reload. The fixture retains the original rotated cuboid and selects one edge.
 
 Constant radius on that edge remains refused at 0.1, 1 and 2 mm by the current
@@ -15,5 +15,5 @@ The geometric cause and successful constant operation remain open.
 
 The native diagnostic binds the original fixture and kernel; receipt hashes bind
 all reports. These runs use kernel 8f28d264 and do not qualify the new factored
-normal package. Variable results were obtained immediately before the separate
-refusal-message edit; successful general NURBS fillets are not established.
+normal package. Variable cases were repeated on the same current UI and script as the refusal
+cases. Successful general NURBS fillets are not established.
