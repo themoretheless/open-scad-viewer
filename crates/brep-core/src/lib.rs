@@ -1930,6 +1930,7 @@ pub mod source_corner_plane_image;
 pub(crate) mod source_planar_flux;
 
 pub mod source_face_gap;
+pub mod source_retained_face_gap;
 pub mod source_material_segment;
 pub mod source_material_chord;
 pub mod source_material_wall;

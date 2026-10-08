@@ -1,0 +1,7 @@
+# Native retained face-domain separation
+
+The new `source_retained_face_gap` qualifier covers the original complete parameter product. It excludes products only after original contour winding proves one whole inflated rectangle Outside, or original rational Cartesian bounds prove separation. It uses immutable admitted source regions including root-ended fragments. All work and endpoint queries are counted, and every unresolved product is returned on exhaustion or precision limits. Private certificates bind the exact body and ordered face pair to the requested lower threshold.
+
+Native experiment re-admits the original annular body and inspects 32 prior resolution pairs. Fifteen independently qualify 5.99 mm separation, all new relative to the existing complete-chart/normal proof inventory. Seventeen refuse within 10,000 cells / 20,000 spans / 100,000 domain cells per pair. No unresolved obligation is dropped. This does not yet reduce the runtime whole-wall report: aggregation and WASM transport are not connected.
+
+The original cuboid regression proves 29.99 mm separation between faces 0 and 1, checks reverse order, exact body/face binding, and refuses 30.01 mm with all pending domains retained under exhausted work. Invalid repeated/foreign faces and zero domain work are rejected. The regression passes. Broad native coverage and independent review of retained-domain certificates remain required before UI admission.

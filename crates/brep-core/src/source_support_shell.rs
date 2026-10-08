@@ -148,6 +148,25 @@ mod tests {
         }
     }
     #[test]
+    fn source_retained_gap_covers_owned_opposite_faces_and_preserves_exhaustion() {
+        let model=crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits{
+            axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000}).unwrap();
+        let body=volume.body.unwrap();
+        let options=||crate::source_retained_face_gap::Limits{cells:8,spans:16,domain_cells:1,domain_cells_per_query:1,tolerance_uv:1e-8};
+        let proved=crate::source_retained_face_gap::qualify(&body,[0,1],29.99,options()).unwrap();
+        let c=proved.certificate.unwrap();assert!(std::ptr::eq(c.body(),&body));assert_eq!(c.faces(),[0,1]);assert_eq!(c.lower_mm(),29.99);
+        assert!(proved.unresolved_products.is_empty());assert_eq!(proved.cells,1);assert_eq!(proved.spans,2);assert!(proved.domain_cells<=1);
+        let reversed=crate::source_retained_face_gap::qualify(&body,[1,0],29.99,options()).unwrap();assert!(reversed.certificate.is_some());
+        let refused=crate::source_retained_face_gap::qualify(&body,[0,1],30.01,options()).unwrap();
+        assert!(refused.certificate.is_none());assert!(!refused.unresolved_products.is_empty());assert_eq!(refused.cells,8);assert!(refused.spans<=16);assert!(refused.domain_cells<=1);
+        assert!(crate::source_retained_face_gap::qualify(&body,[0,0],29.99,options()).is_err());
+        assert!(crate::source_retained_face_gap::qualify(&body,[0,6],29.99,options()).is_err());
+        let mut invalid=options();invalid.domain_cells=0;assert!(crate::source_retained_face_gap::qualify(&body,[0,1],29.99,invalid).is_err());
+    }
+    #[test]
     fn original_cuboid_whole_wall_coverage_requires_all_pairs() {
         let model=crate::cuboid([0.,0.,0.],[10.,20.,30.]).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.expect("original cuboid incidence");

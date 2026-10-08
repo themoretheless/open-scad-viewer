@@ -118,7 +118,34 @@ fn main() {
             let r=brep_core::source_contour_winding::classify(regions[face].loops(),rect,1e-8,10000).unwrap();
             json!({"location":format!("{:?}",r.location),"cells":r.cells,"endpointQueries":r.endpoint_queries,"reason":r.reason})
         });
-        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1],"retainedDomain":memberships}));
+        let retained = if args.get(4).is_some_and(|v| v == "retained") {
+            let r = brep_core::source_retained_face_gap::qualify(
+                body,
+                [a, b],
+                5.99,
+                brep_core::source_retained_face_gap::Limits {
+                    cells: 10000,
+                    spans: 20000,
+                    domain_cells: 100000,
+                    domain_cells_per_query: 256,
+                    tolerance_uv: 1e-8,
+                },
+            )
+            .unwrap();
+            assert!(r.cells <= 10000 && r.spans <= 20000 && r.domain_cells <= 100000);
+            if let Some(c) = &r.certificate {
+                assert!(std::ptr::eq(c.body(), body));
+                assert_eq!(c.faces(), [a, b]);
+                assert_eq!(c.lower_mm(), 5.99);
+                assert!(r.unresolved_products.is_empty());
+            } else {
+                assert!(!r.unresolved_products.is_empty());
+            }
+            json!({"qualified":r.certificate.is_some(),"reason":r.reason,"cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"domainQueries":r.domain_queries,"endpointQueries":r.endpoint_queries,"outsideProducts":r.outside_products,"unresolvedProducts":r.unresolved_products})
+        } else {
+            Value::Null
+        };
+        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1],"retainedDomain":memberships,"retainedGap":retained}));
     }
     std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results})).unwrap()).unwrap();
 }
