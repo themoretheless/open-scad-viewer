@@ -377,6 +377,20 @@ mod tests {
         let prepared=crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],10000000).unwrap();
         assert!(prepared.prepared.is_some());
         assert!(prepared.exact_work>0 && prepared.exact_work<=10000000);
+        let paths=prepared.prepared.unwrap();
+        let product=[[[0.9999999925494194,1.],[0.,7.450580596923828e-9]],
+            [[19.999999990686774,20.],[-9.313225746154785e-9,0.]]];
+        let (proof,used)=paths.qualify_product(product,[-1.,-1.,-1.],1e-6,16).unwrap();
+        assert!(proof.is_some(),"charged product spans {used}");
+        assert!(used<=16);
+        let limits=||crate::source_wall_pair::Limits{normal_spans:100,max_sine_squared:1e-6,
+            cells:1,spans:100,domain_cells:100,domain_cells_per_query:16,tolerance_uv:1e-8};
+        assert!(crate::source_wall_pair::qualify_with_anchors(&body,[1,0],5.99,limits(),&paths).is_err());
+        let partial=crate::source_wall_pair::qualify_with_anchors(&body,[0,1],5.99,limits(),&paths).unwrap();
+        assert!(partial.certificate.is_none());assert!(!partial.unresolved_products.is_empty());
+
+        assert!(paths.qualify_product(product,[-1.,-1.,-1.],1e-6,1).unwrap().0.is_none());
+
         assert!(crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],0).unwrap().prepared.is_none());
 
         let numerical=crate::source_wall_pair::qualify(&body,[16,20],5.99,

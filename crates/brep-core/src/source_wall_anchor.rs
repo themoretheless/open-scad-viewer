@@ -50,6 +50,9 @@ pub fn prepare<'a>(body:&'a Body,faces:[usize;2],uv:[[f64;2];2],world:[f64;3],ma
     Ok(Preparation{prepared:Some(PreparedPair{body,faces,anchors,differential}),exact_work:used})
 }
 impl<'a> PreparedPair<'a> {
+    pub(crate) fn matches(&self,body:&Body,faces:[usize;2])->bool {
+        std::ptr::eq(self.body,body)&&self.faces==faces
+    }
     /// All reusable facts remain attached to this immutable original Body.
     /// Query work includes path restrictions, endpoint enclosures and normals.
     pub fn qualify_product(&self,rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize)

@@ -84,6 +84,20 @@ pub(crate) fn qualify_with_factors<'a>(
     factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
     query_budget:usize,
 ) -> Result<Report<'a>> {
+    qualify_with_prepared(body,faces,minimum_mm,limits,factors,query_budget,None)
+}
+/// Reuse exact original anchors whose preparation work was charged by the caller.
+/// Full coverage is still required for a pair certificate.
+pub fn qualify_with_anchors<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
+    limits:Limits,anchors:&crate::source_wall_anchor::PreparedPair<'a>)->Result<Report<'a>> {
+    qualify_with_prepared(body,faces,minimum_mm,limits,[None,None],0,Some(anchors))
+}
+fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
+    limits:Limits,factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
+    query_budget:usize,anchors:Option<&crate::source_wall_anchor::PreparedPair<'a>>)->Result<Report<'a>> {
+    if anchors.is_some_and(|a|!a.matches(body,faces)) {
+        return Err(nurbs_core::Error::new("NURBS_INVALID_INPUT","Use anchors prepared for this original body and ordered face pair"));
+    }
     let shell = body.geometry().shell();
     if faces[0] == faces[1]
         || faces.iter().any(|&f| f >= shell.faces().len())
@@ -287,6 +301,19 @@ pub(crate) fn qualify_with_factors<'a>(
                     }
                 }}}
             }
+            if !excluded {if let Some(paths)=anchors {
+                'anchor_projections:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                    if x==0&&y==0&&z==0 {continue;}
+                    let allowance=(limits.spans-out.spans).min(64);
+                    if allowance==0 {break 'anchor_projections;}
+                    match paths.qualify_product(uv,[x as f64,y as f64,z as f64],limits.max_sine_squared,allowance) {
+                        Ok((proof,used))=>{out.spans+=used;if proof.is_some(){excluded=true;break 'anchor_projections;}}
+                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{break 'anchor_projections;}
+                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=allowance;break 'anchor_projections;}
+                        Err(e)=>return Err(e),
+                    }
+                }}}
+            }}
             if excluded {out.normal_products+=1;continue;}
             out.unresolved_products.push(uv);
             continue;
