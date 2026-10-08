@@ -8,3 +8,5 @@ The real WASM worker test checks ten request variants and retains previously pro
 The UI now requests the separately bounded regular refinement. Production build and artifact verification pass; budgets retain the previous byte margins and use measured artifact sizes. The package audit confirms exact packing round trip and unchanged exported names/kinds. This is not a complete ABI type check or independent geometry verification.
 
 Browser rendering, pointer interaction and crash recovery remain unverified. Worker cancellation/Retry tests use controlled ports and do not prove rendered UI behavior.
+
+Follow-up checks: all 317 tests in `directModelerUi.test.ts`, 15 source wall transport tests, and the controlled-port threshold-change cancellation/late-response test pass. The UI suite is automated source/runtime regression coverage; it does not establish browser rendering or eliminate the reported browser tab crash. Logs are archived as gzip files.
