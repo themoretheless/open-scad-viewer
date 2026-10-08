@@ -786,6 +786,46 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((Some(out),spent))
     }
+    /// Higher exact quotient partial for bounded Hermite remainder estimates.
+    /// Includes all incident span sides; continuity must be checked separately.
+    pub fn higher_derivative_bounds(
+        &self, domain:[[f64;2];2], order:[usize;2], max_spans:usize,
+    ) -> Result<(Option<[[f64;2];3]>,usize)> {
+        check(order.iter().all(|&n|n<=4) && order[0]+order[1]<=5 && order!=[0,0],"Bound higher profile derivative order")?;
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
+        let s=self.source;let degree=[s.degree_u,s.degree_v];
+        let knots=[&s.knots_u,&s.knots_v];let counts=[s.control_points.len(),s.control_points[0].len()];
+        let mut out=[[f64::INFINITY,f64::NEG_INFINITY];3];let mut spent=0;
+        let choose=|n:usize,k:usize| -> f64 {
+            let mut c=1usize;for j in 0..k {c=c*(n-j)/(j+1);}c as f64
+        };
+        for u in degree[0]..counts[0] {for v in degree[1]..counts[1] {
+            let span=[[knots[0][u],knots[0][u+1]],[knots[1][v],knots[1][v+1]]];
+            if span.iter().any(|r|r[0]==r[1]) {continue;}
+            let part=std::array::from_fn(|a|[span[a][0].max(domain[a][0]),span[a][1].min(domain[a][1])]);
+            if part.iter().any(|r|r[0]>r[1]) {continue;}
+            if spent==max_spans {return Ok((None,spent));}
+            let mut net=self.homogeneous_on([u,v],span)?;
+            let origin=&s.control_points[u][v];
+            for row in &mut net {for h in row {for k in 0..3 {h[k]=h[k].sub(I::point(origin[k]).mul(h[3])?)?;}}}
+            let mut h=vec![vec![[I::point(0.);4];order[1]+1];order[0]+1];
+            let mut f=vec![vec![[I::point(0.);3];order[1]+1];order[0]+1];
+            for a in 0..=order[0] {for b in 0..=order[1] {
+                h[a][b]=crate::normal_alignment::homogeneous_jet_hull(&net,degree,span,part,[a,b])?;
+                for k in 0..3 {
+                    let mut value=h[a][b][k];
+                    for i in 0..=a {for j in 0..=b {
+                        if i==0 && j==0 {continue;}
+                        value=value.sub(I::point(choose(a,i)*choose(b,j)).mul(h[i][j][3])?.mul(f[a-i][b-j][k])?)?;
+                    }}
+                    f[a][b][k]=value.div(h[0][0][3])?;
+                }
+            }}
+            for k in 0..3 {out[k][0]=out[k][0].min(f[order[0]][order[1]][k].lo);out[k][1]=out[k][1].max(f[order[0]][order[1]][k].hi);}
+            spent+=1;
+        }}
+        Ok((if spent==0 {None}else{Some(out)},spent))
+    }
     /// Mixed derivative of the exact profile, needed by transverse transition
     /// fields. Both one-sided knot limits are included in the complete hull.
     pub fn mixed_derivative_bounds(
@@ -1742,6 +1782,19 @@ mod tests {
         assert!(qualify_weight_profile(&s,[0,0],8).is_err());
     }
     #[test]
+    fn higher_rational_partials_match_independent_fourth_derivative() {
+        let mut s=surface();s.weights=vec![vec![2.,2.],vec![8.,8.]];
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for u in [0.,0.3,1.] {
+            let bounds=p.higher_derivative_bounds([[u;2],[0.2,0.8]],[4,0],1).unwrap().0.unwrap();
+            let expected=-2592./(1.+3.*u).powi(5);
+            assert!(bounds[0][0]<=expected && expected<=bounds[0][1]);
+            let mixed=p.higher_derivative_bounds([[u;2],[0.2,0.8]],[4,1],1).unwrap().0.unwrap();
+            for r in mixed {assert!(r[0]<=0. && r[1]>=0.);}
+        }
+        assert!(p.higher_derivative_bounds([[0.,1.];2],[4,2],1).is_err());
+    }
+    #[test]
     fn rational_profile_second_partials_match_independent_formula() {
         let mut s=surface();s.weights=vec![vec![2.,2.],vec![8.,8.]];
         let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
@@ -1782,12 +1835,12 @@ mod tests {
             let exact=u*u*u*u*free*free;
             let full=corrected.enclose_with_transverse_correction([free;2],[across;2],32).unwrap().0.unwrap();
             assert!(full[2][0]<=exact && exact<=full[2][1]);
-            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[across;2],57).unwrap();
-            assert_eq!(spent,57);
+            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[across;2],61).unwrap();
+            assert_eq!(spent,61);
             let jet=jet.unwrap();
             let expected=[[0.,1.,2.*u.powi(4)*free],[0.25,0.,u.powi(3)*free*free]];
             for axis in 0..2 {for k in 0..3 {assert!(jet[axis][k][0]<=expected[axis][k] && expected[axis][k]<=jet[axis][k][1]);}}
-            assert!(corrected.derivatives_with_transverse_correction([free;2],[across;2],56).unwrap().0.is_none());
+            assert!(corrected.derivatives_with_transverse_correction([free;2],[across;2],60).unwrap().0.is_none());
 
             let old=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
             assert!(exact<old[2][0] || exact>old[2][1],"position-only correction must differ on this reference");

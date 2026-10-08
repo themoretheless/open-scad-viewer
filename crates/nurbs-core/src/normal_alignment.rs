@@ -438,7 +438,7 @@ pub(crate) fn differentiate_net(
     }
     Ok(out)
 }
-fn homogeneous_jet_hull(
+pub(crate) fn homogeneous_jet_hull(
     net: &Net,
     degrees: [usize; 2],
     span: [[f64; 2]; 2],

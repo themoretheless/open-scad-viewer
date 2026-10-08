@@ -1414,3 +1414,32 @@ The independent quartic regression passed in 58.34 seconds, including full
 regularity, a 100-cell partial cover containing certified cells, and area
 one for certified plus pending rectangles. Its annular native check is
 running separately; no new annular regularity result is claimed yet.
+
+## Local annular refinement result and Taylor remainder bounds
+
+The native local-refinement run completed in 141.88 seconds with 495
+accepted rectangles and 11 pending rectangles, 1000 visited cells and
+57000 source spans. Certified plus pending area remains one. This is a
+partial regularity cover, not complete bridge admission.
+
+The profile now bounds higher quotient partials through order four on
+either axis, including mixed [4,1]/[1,4] partials. It differentiates the
+homogeneous quotient recursively with exact binomial factors and all
+incident span-side coverage. A rational reference independently verifies
+the fourth derivative -2592/(1+3u)^5 and zero mixed partials.
+
+The full bridge correction intersects independent error intervals with
+Taylor remainder bounds. Cubic Taylor terms cancel identically in the
+Hermite value and derivative. For normalized t and width d, the value
+remainder is bounded by M*d^4*(t^4/24+h01/24+abs(h11)/6); the across
+derivative remainder by M*d^4*(t^3/6+abs(h01')/24+abs(h11')/6). The same
+calculation for the free jet uses the mixed fourth partial. Every factor
+is evaluated with outward interval arithmetic. This narrowing requires
+C3 continuity across interior knots; otherwise the independent enclosure
+remains in use. Original source/profile ownership is unchanged.
+
+The corrected interior reference uses 61 source spans and refuses 60.
+All 19 profile tests passed in 12.30 seconds, including complete quartic
+regularity coverage, independent first jets and work refusal. The annular
+remainder-bound native run is being checked separately. Whole-body sewing,
+injectivity, wall thickness and neighbor support admission remain open.

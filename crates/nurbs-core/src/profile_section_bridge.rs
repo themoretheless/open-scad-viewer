@@ -674,6 +674,80 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         }
         Ok((Some(result.map(|v| [v.lo, v.hi])), spent))
     }
+    // Taylor polynomial terms through degree three cancel identically in
+    // cubic Hermite interpolation. Bound only the value/derivative remainders.
+    fn side_remainders(
+        &self,
+        high: bool,
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[[f64; 2]; 3]; 4]>, usize)> {
+        let a = self.bridge.section(false);
+        let b = self.bridge.section(true);
+        let mut domain = self.source_rail_domain(high, across)?;
+        domain[a.axis()] = [
+            a.parameter().min(b.parameter()),
+            a.parameter().max(b.parameter()),
+        ];
+        let source = a.profile().source();
+        let (knots, degree) = if a.axis() == 0 {
+            (&source.knots_u, source.degree_u)
+        } else {
+            (&source.knots_v, source.degree_v)
+        };
+        if knots.iter().any(|&k| {
+            k > domain[a.axis()][0]
+                && k < domain[a.axis()][1]
+                && knots.iter().filter(|&&v| v == k).count() + 3 > degree
+        }) {
+            return Ok((None, 0));
+        }
+        let t = I::new(across[0], across[1])?;
+        let q = I::point(1.).sub(t)?;
+        let h01 = t.mul(t)?.mul(I::point(3.).sub(I::point(2.).mul(t)?)?)?;
+        let h11 = t.mul(t)?.mul(q)?;
+        let value = t
+            .mul(t)?
+            .mul(t)?
+            .mul(t)?
+            .div(I::point(24.))?
+            .add(h01.div(I::point(24.))?)?
+            .add(h11.div(I::point(6.))?)?;
+        let d11 = t.mul(I::point(3.).mul(t)?.sub(I::point(2.))?)?;
+        let derivative = t
+            .mul(t)?
+            .mul(t)?
+            .div(I::point(6.))?
+            .add(I::point(6.).mul(t)?.mul(q)?.div(I::point(24.))?)?
+            .add(I::point(d11.lo.abs().max(d11.hi.abs())).div(I::point(6.))?)?;
+        let width = I::point(b.parameter()).sub(I::point(a.parameter()))?;
+        let scale = width.mul(width)?.mul(width)?.mul(width)?;
+        let mut out = [[[0.; 2]; 3]; 4];
+        let mut spent = 0;
+        for free_jet in [false, true] {
+            if spent == budget {
+                return Ok((None, spent));
+            }
+            let mut order = [0; 2];
+            order[a.axis()] = 4;
+            order[1 - a.axis()] = usize::from(free_jet);
+            let (fourth, used) =
+                a.profile()
+                    .higher_derivative_bounds(domain, order, budget - spent)?;
+            spent += used;
+            let Some(fourth) = fourth else {
+                return Ok((None, spent));
+            };
+            for k in 0..3 {
+                let magnitude = I::point(fourth[k][0].abs().max(fourth[k][1].abs())).mul(scale)?;
+                for (deriv, factor) in [value, derivative].into_iter().enumerate() {
+                    let bound = magnitude.mul(factor)?.hi.max(0.);
+                    out[2 * usize::from(free_jet) + deriv][k] = [-bound, bound];
+                }
+            }
+        }
+        Ok((Some(out), spent))
+    }
     /// First jets of the full side Hermite expression, not of the linear
     /// position-only correction. Shares every source query's work allowance.
     pub fn derivatives_with_transverse_correction(
@@ -825,15 +899,31 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 };
                 values.push(value);
             }
+            let (remainders, used) = self.side_remainders(high, across, budget - spent)?;
+            spent += used;
             let i = usize::from(high);
             for k in 0..3 {
                 let v = |i: usize| I::new(values[i][k][0], values[i][k][1]);
+                let mut errors = [
+                    v(0)?.sub(v(1)?)?,
+                    v(4)?.sub(v(5)?)?,
+                    v(2)?.sub(v(3)?)?,
+                    v(6)?.sub(v(7)?)?,
+                ];
+                if let Some(remainders) = remainders {
+                    for j in 0..4 {
+                        errors[j] =
+                            errors[j].intersect(remainders[j][k][0], remainders[j][k][1])?;
+                    }
+                } else if spent == budget {
+                    return Ok((None, spent));
+                }
                 out[0][k] = out[0][k]
-                    .add(dh[i].mul(v(0)?.sub(v(1)?)?)?)?
-                    .add(dg[i].mul(v(2)?.sub(v(3)?)?)?)?;
+                    .add(dh[i].mul(errors[0])?)?
+                    .add(dg[i].mul(errors[2])?)?;
                 out[1][k] = out[1][k]
-                    .add(h[i].mul(v(4)?.sub(v(5)?)?)?)?
-                    .add(g[i].mul(v(6)?.sub(v(7)?)?)?)?;
+                    .add(h[i].mul(errors[1])?)?
+                    .add(g[i].mul(errors[3])?)?;
             }
         }
         Ok((Some(out.map(|axis| axis.map(|v| [v.lo, v.hi]))), spent))
