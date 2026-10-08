@@ -13,7 +13,7 @@
 //! sphere, and sections through its vertices or grazing its seams.
 use crate::Model;
 use crate::imprint_pipeline::SpatialRelation;
-use crate::intersections::Options;
+use nurbs_intersect::Options;
 use crate::intersections::sphere_sphere::{
     self, CanonicalSphere, PatchUvSection, SphereSphereComponent,
 };

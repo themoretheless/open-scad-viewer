@@ -5,15 +5,15 @@
 //! **never** by `prismatic_boolean`, mesh, or Manifold.
 
 use crate::Model;
-use crate::analytic_ss::{
+use nurbs_intersect::analytic_ss::{
     AnalyticSsComponent, FiniteCone, FiniteCylinder, cone_cone, cylinder_cylinder, cylinder_sphere,
     plane_cylinder, torus_torus,
 };
 use crate::box_sphere_boolean;
-use crate::coverage_verifier::verify_complete_report;
+use nurbs_intersect::coverage_verifier::verify_complete_report;
 use crate::cylinder_sphere_boolean;
 use crate::imprint_pipeline::{self, SpatialRelation};
-use crate::intersections::{Coverage, Options, Plane, Report};
+use nurbs_intersect::{Coverage, Options, Plane, Report};
 use crate::solid_audit::audit_solid;
 use crate::sphere_boolean;
 use crate::trim_sew::{
@@ -1215,7 +1215,7 @@ mod tests {
 
     #[test]
     fn parallel_wall_ss_publishes_complete_generator_lines() {
-        let report = crate::analytic_ss::cylinder_cylinder(
+        let report = nurbs_intersect::analytic_ss::cylinder_cylinder(
             FiniteCylinder {
                 origin: [0., 0., 0.],
                 direction: [0., 0., 1.],
@@ -1235,7 +1235,7 @@ mod tests {
         assert_eq!(report.components.len(), 2);
         assert!(matches!(
             report.components[0],
-            crate::analytic_ss::AnalyticSsComponent::Line { .. }
+            nurbs_intersect::analytic_ss::AnalyticSsComponent::Line { .. }
         ));
     }
 }

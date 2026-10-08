@@ -2,7 +2,7 @@
 //! UV trim; the divergence theorem integrates the oriented closed boundary.
 //! Convergence evidence is numerical, never a geometric solid certificate.
 use super::*;
-use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use nurbs_intersect::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
 use crate::solid_audit::{SolidAuditCertificate, audit_solid};
 use cad_predicates::ToleranceSpecIdentity;
 
@@ -1053,7 +1053,7 @@ fn trim_intervals(
     tolerance: f64,
     budget: &mut Budget,
 ) -> Result<Vec<[f64; 2]>> {
-    use crate::intersections::{Coverage, CurvePlaneComponent, Options, Plane, curve_plane};
+    use nurbs_intersect::{Coverage, CurvePlaneComponent, Options, Plane, curve_plane};
     let domain = curve.domain();
     let mut breaks = conditioned_curve_breaks(curve, budget)?;
     let base_spans = spans(&breaks, domain);

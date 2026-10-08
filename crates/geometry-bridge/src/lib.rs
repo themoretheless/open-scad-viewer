@@ -281,8 +281,8 @@ fn curved_graph_boolean_value(
     certificate: brep_core::CurvedGraphBooleanCertificate,
 ) -> Result<Value> {
     let axis = match certificate.axis {
-        brep_core::nurbs_ss_g6::ExactIsoAxis::U => "U",
-        brep_core::nurbs_ss_g6::ExactIsoAxis::V => "V",
+        nurbs_intersect::nurbs_ss::ExactIsoAxis::U => "U",
+        nurbs_intersect::nurbs_ss::ExactIsoAxis::V => "V",
     };
     Ok(json!({
         "model": encode(model)?,

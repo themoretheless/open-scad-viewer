@@ -8,7 +8,7 @@ use crate::analytic::ruled_loft;
 #[cfg(test)]
 use crate::cylinder;
 use crate::operations::{boolean, extrude_polygon};
-use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
+use nurbs_intersect::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_predicate_evidence};
 use crate::solid_audit::{SolidAuditCertificate, audit_solid};
 use crate::{ChangeSet, Model, cuboid, tube};
 use cad_predicates::ToleranceSpecIdentity;

@@ -9,7 +9,7 @@ use cad_predicates::{
 };
 use nurbs_core::{Error, Result};
 
-use crate::intersections::Plane;
+use crate::Plane;
 
 pub const MAX_COMPOSED_EVIDENCE: usize = 64;
 
@@ -382,7 +382,7 @@ pub fn require_positive_orient2d_evidence_in_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::intersections::Plane;
+    use crate::Plane;
 
     #[test]
     fn transverse_segment_gets_opposite_halfspace_evidence() {

@@ -640,7 +640,7 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
             edges,
             loops: vec![Loop { coedges }],
             faces: vec![Face {
-                surface: Surface {
+                surface: nurbs_core::surface::Surface {
                     degree_u: 1,
                     degree_v: 1,
                     knots_u: vec![0., 0., 1., 1.],

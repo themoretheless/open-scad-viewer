@@ -5,7 +5,7 @@
 //! mutation evidence. Periodic/pole rules refuse non-finite or wrap-ambiguous strata.
 
 use crate::Model;
-use crate::coverage_verifier::{UvCoverageCertificate, certify_lifted_uv_coverage};
+use nurbs_intersect::coverage_verifier::{UvCoverageCertificate, certify_lifted_uv_coverage};
 use crate::trim_sew::{
     CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate,
     classify_chart_events, sew_closed_model_edges,
@@ -942,7 +942,7 @@ fn validate_breaks(breaks: &[f64]) -> Result<()> {
 pub fn arrange_multispan_branch_graph_uv(
     context: &ToleranceContext,
     knot_breaks: [&[f64]; 2],
-    graph: &crate::nurbs_ss_g6::BranchGraph,
+    graph: &nurbs_intersect::nurbs_ss::BranchGraph,
     support_index: usize,
     resource_limit: usize,
 ) -> Result<MultiSpanUvArrangement> {
@@ -1413,13 +1413,13 @@ mod tests {
         assert!(arrangement.coverage.complete);
         assert_eq!(arrangement.vertices.len(), 4);
         assert_eq!(arrangement.halfedges.len(), 8);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
             .unwrap();
 
         let mut missed = arrangement.clone();
         missed.halfedges.pop();
         assert!(
-            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&missed, &context)
+            crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&missed, &context)
                 .is_err()
         );
     }
@@ -1464,7 +1464,7 @@ mod tests {
         assert_eq!(arrangement.chart, ChartKind::TensorBezierGraph);
         assert!(arrangement.coverage.complete);
         assert_eq!(arrangement.coverage.primitive_count, 5);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
             .unwrap();
     }
 
@@ -1560,7 +1560,7 @@ mod tests {
         spec.policy = "foreign-uv-context".into();
         let foreign = ToleranceContext::new(spec).unwrap();
         assert!(
-            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &foreign)
+            crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &foreign)
                 .is_err()
         );
     }
@@ -1639,7 +1639,7 @@ mod tests {
     #[test]
     fn multispan_branch_graph_builds_global_tensor_cells() {
         let context = ToleranceContext::default_valid();
-        let graph = crate::nurbs_ss_g6::certify_multispan_ss(
+        let graph = nurbs_intersect::nurbs_ss::certify_multispan_ss(
             &ss_wave(false),
             &ss_plane(),
             [1, 2],
@@ -1660,7 +1660,7 @@ mod tests {
         assert_eq!(arrangement.branch_count, 2);
         assert_eq!(arrangement.hole_cell_count, 0);
         assert!(arrangement.material_cell_count >= 6);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(
             &arrangement.arrangement,
             &context,
         )
@@ -1670,7 +1670,7 @@ mod tests {
     #[test]
     fn multispan_uv_rejects_missed_crossing_resource_and_certificate_mutations() {
         let context = ToleranceContext::default_valid();
-        let graph = crate::nurbs_ss_g6::certify_multispan_ss(
+        let graph = nurbs_intersect::nurbs_ss::certify_multispan_ss(
             &ss_wave(false),
             &ss_plane(),
             [1, 2],
@@ -1703,7 +1703,7 @@ mod tests {
             .is_err()
         );
 
-        let vertical = crate::nurbs_ss_g6::certify_multispan_ss(
+        let vertical = nurbs_intersect::nurbs_ss::certify_multispan_ss(
             &ss_wave(true),
             &ss_plane(),
             [3, 4],
@@ -1717,7 +1717,7 @@ mod tests {
             .chain(&vertical.components)
             .flat_map(|component| component.fragments.clone())
             .collect();
-        let crossing = crate::nurbs_ss_g6::join_certified_multispan_fragments(
+        let crossing = nurbs_intersect::nurbs_ss::join_certified_multispan_fragments(
             fragments,
             &context,
             [8, 2],

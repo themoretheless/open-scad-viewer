@@ -1,7 +1,7 @@
 //! Closed-shell incidence from immutable face fragments and explicit edge keys.
 //! Keys declare sharing; coordinate coincidence never welds independent vertices.
 //! This does not certify embedding, material volume or wall thickness.
-use crate::trim_sew::RationalCurveDefinition;
+use nurbs_intersect::RationalCurveDefinition;
 use crate::{Edge, FaceUse, Model, Vertex, imprint_pipeline, trimmed_face_recipe::QualifiedFace};
 use cad_predicates::ToleranceContext;
 use nurbs_core::{Error, Result};

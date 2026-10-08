@@ -214,6 +214,7 @@ dependencies = [
  "brep-topology",
  "cad-predicates",
  "nurbs-core",
+ "nurbs-intersect",
  "planar-geometry",
  "rbench",
  "sha2",
@@ -804,6 +805,7 @@ dependencies = [
  "gpu-compute",
  "mechanical-core",
  "nurbs-core",
+ "nurbs-intersect",
  "osv-math",
  "planar-geometry",
  "polygon-core",
@@ -1460,6 +1462,15 @@ dependencies = [
  "cad-predicates",
  "geometry-ops",
  "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-intersect"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "nurbs-core",
  "value-codec",
 ]
 

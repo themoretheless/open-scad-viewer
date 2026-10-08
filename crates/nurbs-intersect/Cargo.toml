@@ -1,0 +1,11 @@
+[package]
+name = "nurbs-intersect"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+nurbs-core = { path = "../nurbs-core" }
+cad-predicates = { path = "../cad-predicates" }
+value-codec = { path = "../value-codec" }

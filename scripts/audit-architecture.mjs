@@ -17,7 +17,7 @@ export const CRATE_LAYERS = {
   'value-codec': 0, 'math-core': 0, 'cad-predicates': 0, 'vr-core': 0, 'wasm-brotli': 0,
   'gpu-compute': 1, 'compute-core': 1, 'tensor-core': 1, 'compute-cuda': 1, 'compute-mlx': 1,
   'raster-core': 1, 'math-compute': 1,
-  'geometry-ops': 2, 'planar-geometry': 2, 'polygon-core': 2, 'nurbs-core': 2, 'sdf-core': 2,
+  'geometry-ops': 2, 'planar-geometry': 2, 'polygon-core': 2, 'nurbs-core': 2, 'nurbs-intersect': 2, 'sdf-core': 2,
   'subdivision-core': 2, 'sketch-core': 2, 'brep-topology': 2,
   'brep-core': 3,
   'cad-step': 4,
