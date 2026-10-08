@@ -2698,3 +2698,17 @@ through `qualify_face_from_rails`, verifying owner identity, exact projection,
 and complete regularity. The direct baseline remains unqualified. Complete
 XY injectivity does not yet prove exclusion of the full ruled-neighbor trace
 outside the owned subrail; the combined audit still has 154 pending pairs.
+
+### Exact monotone ruled-neighbor trace
+
+A private certificate now proves a complete single-span positive-weight
+rational Bezier trace is strictly monotone in a selected projected coordinate
+when all successive controls are strictly ordered. The rational derivative
+numerator is a positive sum of weighted ordered control-pair differences;
+strict adjacent differences also cover the two endpoints. Original knots,
+weights, domain, and borrowed trace owner are preserved. Mixed ordering,
+periodic/multispan layouts, insufficient edge budget and invalid coordinate
+retain refusal. This proves a simple full trace, not transition contact.
+The nonunit-domain/reversed/fold/work-limit test passed. Native curved-neighbor
+diagnostics now require this property for the actual full face-2 Y trace;
+that native assertion is awaiting execution.

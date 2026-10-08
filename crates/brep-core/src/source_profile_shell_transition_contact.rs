@@ -240,6 +240,10 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 assert!(std::ptr::eq(trace.source(), neighbor));
                 assert_eq!(trace.axes(), [0, 1]);
                 assert_eq!(trace.linear_axis(), 1);
+                let monotone=crate::source_ruled_projection_contact::exact_trace::certify_monotone_coordinate(
+                    &trace,1,max_controls)?.expect("whole ruled neighbor trace is strictly monotone in Y");
+                assert!(std::ptr::eq(monotone.trace(),&trace));
+                assert!(monotone.increasing() && monotone.coordinate()==1);
                 eprintln!(
                     "transition curved neighbor exactTrace=true curveDegree={} curveDomain={:?}",
                     trace.curve().degree,

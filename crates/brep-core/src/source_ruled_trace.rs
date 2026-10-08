@@ -1,6 +1,6 @@
 //! Exact projection of a ruled source support onto one unchanged NURBS curve.
 //! This reduction alone does not prove contact ownership or exclusion.
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 pub(crate) struct Certificate<'a> {
     source: &'a Surface,
     axes: [usize; 2],
@@ -106,9 +106,98 @@ pub(crate) fn certify(
         curve,
     }))
 }
+/// A positive-weight rational Bezier curve with strictly ordered scalar
+/// controls is strictly monotone on its complete original parameter domain.
+/// This certifies a simple trace, not ownership of any transition contact.
+pub(crate) struct MonotoneCoordinate<'t, 's> {
+    trace: &'t Certificate<'s>,
+    coordinate: usize,
+    increasing: bool,
+}
+impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    pub(crate) fn trace(&self) -> &'t Certificate<'s> {
+        self.trace
+    }
+    pub(crate) fn coordinate(&self) -> usize {
+        self.coordinate
+    }
+    pub(crate) fn increasing(&self) -> bool {
+        self.increasing
+    }
+}
+pub(crate) fn certify_monotone_coordinate<'t, 's>(
+    trace: &'t Certificate<'s>,
+    coordinate: usize,
+    max_edges: usize,
+) -> Result<Option<MonotoneCoordinate<'t, 's>>> {
+    if coordinate > 1 || max_edges > 1000000 {
+        return Err(Error::new(
+            "BREP_RULED_TRACE",
+            "Choose projected coordinate and bounded monotonicity work",
+        ));
+    }
+    let c = trace.curve();
+    let n = c.control_points.len();
+    if c.periodic
+        || c.degree == 0
+        || n != c.degree + 1
+        || n - 1 > max_edges
+        || c.knots.len() != 2 * n
+        || !c.knots[..n].iter().all(|k| *k == c.knots[0])
+        || !c.knots[n..].iter().all(|k| *k == c.knots[n])
+        || c.knots[0] >= c.knots[n]
+        || c.weights.iter().any(|w| *w <= 0.)
+    {
+        return Ok(None);
+    }
+    let increasing = c.control_points[1][coordinate] > c.control_points[0][coordinate];
+    if c.control_points.windows(2).any(|pair| {
+        let a = pair[0][coordinate];
+        let b = pair[1][coordinate];
+        if increasing { b <= a } else { b >= a }
+    }) {
+        return Ok(None);
+    }
+    // The rational derivative numerator is a positive sum over ordered
+    // control pairs: wi*wj*(xj-xi)*(j-i)*Bi*Bj/[t*(1-t)].
+    // Endpoint derivatives inherit the strict adjacent-control order.
+    Ok(Some(MonotoneCoordinate {
+        trace,
+        coordinate,
+        increasing,
+    }))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn monotone_trace_covers_nonunit_domain_and_refuses_folds_and_work_limits() {
+        let s = source(1);
+        let trace = certify(&s, [0, 1], 1, 6).unwrap().unwrap();
+        let proof = certify_monotone_coordinate(&trace, 1, 2).unwrap().unwrap();
+        assert!(std::ptr::eq(proof.trace(), &trace));
+        assert_eq!(proof.coordinate(), 1);
+        assert!(proof.increasing());
+        assert_eq!(proof.trace().curve().knots, vec![2., 2., 2., 5., 5., 5.]);
+        assert!(certify_monotone_coordinate(&trace, 1, 1).unwrap().is_none());
+        assert!(certify_monotone_coordinate(&trace, 2, 2).is_err());
+        let mut reversed = s.clone();
+        reversed.control_points.reverse();
+        reversed.weights.reverse();
+        let reverse = certify(&reversed, [0, 1], 1, 6).unwrap().unwrap();
+        assert!(
+            !certify_monotone_coordinate(&reverse, 1, 2)
+                .unwrap()
+                .unwrap()
+                .increasing()
+        );
+        let mut folded = s.clone();
+        for p in &mut folded.control_points[1] {
+            p[1] = 10.;
+        }
+        let fold = certify(&folded, [0, 1], 1, 6).unwrap().unwrap();
+        assert!(certify_monotone_coordinate(&fold, 1, 2).unwrap().is_none());
+    }
     fn source(linear: usize) -> Surface {
         let mut s = Surface {
             degree_u: 2,
