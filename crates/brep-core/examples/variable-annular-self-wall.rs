@@ -43,7 +43,7 @@ fn main() {
                     )
                     .unwrap();
                     Some(
-                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"reason":a.reason}),
+                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"reason":a.reason}),
                     )
                 } else {
                     None

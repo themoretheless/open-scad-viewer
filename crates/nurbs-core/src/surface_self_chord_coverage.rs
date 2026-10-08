@@ -1,7 +1,7 @@
 //! Complete adaptive coverage of original same-surface endpoint pairs.
 use crate::{
-    Result, check, distance_bounds::Interval as I, normal_alignment, surface::Surface,
-    surface_distance, surface_self_chord,
+    check, distance_bounds::Interval as I, normal_alignment, surface::Surface, surface_distance,
+    surface_self_chord, Result,
 };
 type Rectangle = [[f64; 2]; 2];
 type Pair = [Rectangle; 2];
@@ -35,6 +35,7 @@ pub struct Report<'a> {
     pub spans: usize,
     pub intrinsic_exclusions: usize,
     pub angular_exclusions: usize,
+    pub direction_exclusions: usize,
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
@@ -49,6 +50,89 @@ fn span_count(s: &Surface, domain: Rectangle) -> usize {
     count(s.degree_u, &s.knots_u, s.control_points.len(), domain[0])
         * count(s.degree_v, &s.knots_v, s.control_points[0].len(), domain[1])
 }
+fn squared_norm(v: [I; 3]) -> Result<I> {
+    let mut sum = I::point(0.);
+    for x in v {
+        let lo = if x.lo > 0. {
+            x.lo
+        } else if x.hi < 0. {
+            -x.hi
+        } else {
+            0.
+        };
+        let hi = x.lo.abs().max(x.hi.abs());
+        sum = sum.add(I::new((lo * lo).next_down().max(0.), (hi * hi).next_up())?)?;
+    }
+    I::new(sum.lo.max(0.), sum.hi)
+}
+/// Original position boxes enclose every secant; original normal boxes enclose
+/// both endpoint normals. One endpoint strictly oblique excludes the whole pair.
+fn secant_exclusion(
+    s: &Surface,
+    pair: Pair,
+    boxes: [&Vec<[f64; 2]>; 2],
+    sine: f64,
+    max_spans: usize,
+) -> Result<(bool, usize)> {
+    let mut d = [I::point(0.); 3];
+    for k in 0..3 {
+        d[k] =
+            I::new(boxes[1][k][0], boxes[1][k][1])?.sub(I::new(boxes[0][k][0], boxes[0][k][1])?)?;
+    }
+    let scale = d
+        .iter()
+        .map(|x| x.lo.abs().max(x.hi.abs()))
+        .fold(0_f64, f64::max);
+    if scale == 0. {
+        return Ok((false, 0));
+    }
+    for x in &mut d {
+        *x = x.div(I::point(scale))?;
+    }
+    let length = squared_norm(d)?;
+    if length.lo <= 0. {
+        return Ok((false, 0));
+    }
+    let threshold = I::point(1.).sub(I::point(sine))?;
+    let mut spans = 0;
+    for rect in pair {
+        if spans == max_spans {
+            break;
+        }
+        let (bounds, used) = normal_alignment::normal_bounds(s, rect, max_spans - spans)?;
+        spans += used;
+        let Some(bounds) = bounds else {
+            continue;
+        };
+        let scale = bounds
+            .iter()
+            .flatten()
+            .map(|x| x.abs())
+            .fold(0_f64, f64::max);
+        if scale == 0. {
+            continue;
+        }
+        let mut n = [I::point(0.); 3];
+        for k in 0..3 {
+            n[k] = I::new(bounds[k][0], bounds[k][1])?.div(I::point(scale))?;
+        }
+        let denominator = length.mul(squared_norm(n)?)?;
+        if denominator.lo <= 0. {
+            continue;
+        }
+        let mut dot = I::point(0.);
+        for k in 0..3 {
+            dot = dot.add(n[k].mul(d[k])?)?;
+        }
+        let upper = dot.lo.abs().max(dot.hi.abs());
+        let numerator = I::point(upper).mul(I::point(upper))?;
+        if numerator.div(denominator)?.hi < threshold.lo {
+            return Ok((true, spans));
+        }
+    }
+    Ok((false, spans))
+}
+
 /// Covers the Cartesian product of the full original UV chart with itself.
 /// Every split preserves both closed child rectangles, including the diagonal.
 /// A local intrinsic certificate covers both endpoints through their convex UV
@@ -87,6 +171,7 @@ pub fn qualify<'a>(
         spans: 0,
         intrinsic_exclusions: 0,
         angular_exclusions: 0,
+        direction_exclusions: 0,
         distance_exclusions: 0,
         pending: 1,
         uncertain: None,
@@ -135,6 +220,20 @@ pub fn qualify<'a>(
             if surface_distance::enclosure_distance(&a, &b)?.0 >= minimum_mm {
                 out.distance_exclusions += 1;
                 continue;
+            }
+            if out.spans < limits.spans {
+                let (excluded, used) = secant_exclusion(
+                    s,
+                    pair,
+                    [&a, &b],
+                    max_sine_squared,
+                    limits.spans - out.spans,
+                )?;
+                out.spans += used;
+                if excluded {
+                    out.direction_exclusions += 1;
+                    continue;
+                }
             }
         }
         if out.spans == limits.spans {
@@ -203,14 +302,30 @@ mod tests {
         }
     }
     #[test]
+    fn original_secant_direction_excludes_oblique_chords_and_refuses_overlap_or_no_work() {
+        let s = graph();
+        let pair = [[[0., 0.01], [0., 0.01]], [[0.1, 0.11], [0., 0.01]]];
+        let a = surface_distance::rectangle_bounds(&s, pair[0]).unwrap();
+        let b = surface_distance::rectangle_bounds(&s, pair[1]).unwrap();
+        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100).unwrap();
+        assert!(excluded);
+        assert!(used > 0 && used <= 100);
+        assert_eq!(
+            secant_exclusion(&s, pair, [&a, &b], 1e-6, 0).unwrap(),
+            (false, 0)
+        );
+        assert_eq!(
+            secant_exclusion(&s, [pair[0]; 2], [&a, &a], 1e-6, 100).unwrap(),
+            (false, 0)
+        );
+    }
+    #[test]
     fn complete_subdivision_proves_strongly_curved_graph_and_missing_work_refuses() {
         let s = graph();
-        assert!(
-            surface_self_chord::qualify(&s, 1e-6, 1)
-                .unwrap()
-                .certificate
-                .is_none()
-        );
+        assert!(surface_self_chord::qualify(&s, 1e-6, 1)
+            .unwrap()
+            .certificate
+            .is_none());
         let r = qualify(
             &s,
             0.1,
@@ -240,11 +355,10 @@ mod tests {
         assert!(r.intrinsic_exclusions > 1);
         assert_eq!(r.pending, 0);
         assert!(r.uncertain.is_none());
-        assert!(
-            c.intrinsic_certificates()
-                .iter()
-                .all(|p| std::ptr::eq(p.surface(), &s))
-        );
+        assert!(c
+            .intrinsic_certificates()
+            .iter()
+            .all(|p| std::ptr::eq(p.surface(), &s)));
         for limits in [
             Limits {
                 cells: 1,
@@ -280,6 +394,12 @@ mod tests {
         };
         // Original endpoints at U=0/1 have distance exactly 2 and normals
         // parallel to their connecting line, independent of rounded arc weight.
+        let pair = [[[0., 0.001], [0.4, 0.401]], [[0.999, 1.], [0.4, 0.401]]];
+        let a = surface_distance::rectangle_bounds(&s, pair[0]).unwrap();
+        let b = surface_distance::rectangle_bounds(&s, pair[1]).unwrap();
+        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100).unwrap();
+        assert!(!excluded, "the exact diameter must remain a candidate");
+        assert!(used > 0 && used <= 100);
         let r = qualify(
             &s,
             2.1,
@@ -298,17 +418,15 @@ mod tests {
         assert!(r.pending > 0);
         assert!(r.uncertain.is_some());
         assert!(r.cells <= 2000 && r.spans <= 10000);
-        assert!(
-            qualify(
-                &s,
-                0.,
-                1e-6,
-                Limits {
-                    cells: 2000,
-                    spans: 10000
-                }
-            )
-            .is_err()
-        );
+        assert!(qualify(
+            &s,
+            0.,
+            1e-6,
+            Limits {
+                cells: 2000,
+                spans: 10000
+            }
+        )
+        .is_err());
     }
 }

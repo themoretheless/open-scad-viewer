@@ -123,3 +123,18 @@ additional certificates. The balanced report is preserved as evidence; total
 coverage remains 18/31. The change improves parameter-unit robustness, but
 these annular charts still require a stronger geometric exclusion or further
 complete adaptive work. No new WASM/UI package is claimed for this change.
+
+## Original secant direction exclusion
+
+Adaptive pair coverage now bounds the original position difference and each
+original endpoint normal. If one endpoint has a strictly insufficient squared
+cosine with every enclosed secant, the entire pair is excluded. Fixed positive
+normalization and outward interval arithmetic preserve the original geometry.
+Overlapping position boxes, singular normal bounds and exhausted work do not
+produce a certificate. Work counts include every attempted normal span.
+
+Ten native tests pass, including direct oblique-secant exclusion, overlapping
+boxes and zero-work refusal, and a direct true half-cylinder diameter refusal.
+The existing short-normal-chord full-coverage rejection also passes. Evidence:
+`secant-tests.log.gz`. The controlled eleven-face annular comparison is pending;
+no additional annular certificates or WASM/UI integration are claimed yet.
