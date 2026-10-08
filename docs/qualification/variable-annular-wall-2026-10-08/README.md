@@ -1517,3 +1517,15 @@ alone does not resolve these products; the result motivates original limiting
 normal qualification at singular chart ends rather than dropping endpoints.
 See `distinct-normal-refinement-1024-audit.json.gz`, its receipt/log and
 `distinct-normal-refinement-product-tests.log.gz`. No extra Body proof is issued.
+
+### Original limiting normal preparation
+
+Both U endpoints of every original chart were inspected: 54 exact preparation
+attempts. Existing boundary-U² normal factorization qualifies face 0 at its U
+end and face 10 at its U start, with private immutable source identity checked.
+The other 52 attempts report boundary-factor-unproven, not defective geometry.
+Total exact preparation work is 37,942,972. Every original serialized surface
+is unchanged. These factors are not used to alter the 68 normal-product results
+or the Body coverage count; other parameter axes/factors need separate proof.
+Evidence: `distinct-normal-limit-preparation-audit.json.gz`, its completed log
+and `distinct-normal-limit-preparation-receipt.json`.

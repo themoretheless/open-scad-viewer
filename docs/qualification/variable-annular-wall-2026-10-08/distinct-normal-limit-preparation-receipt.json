@@ -1,0 +1,19 @@
+{
+  "scope": "exact boundary-U-squared limiting normal preparation only; no Body certificate",
+  "inputJsonSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea",
+  "outputJsonSha256": "07c856a91fe5e952b5dcadd225d0bf2902bbe3c775055ce436e862728eda41bb",
+  "preparations": 54,
+  "qualified": [
+    [
+      0,
+      true
+    ],
+    [
+      10,
+      false
+    ]
+  ],
+  "refused": 52,
+  "exactWork": 37942972,
+  "sourceSurfacesUnchanged": true
+}

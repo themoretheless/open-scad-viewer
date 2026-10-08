@@ -31,6 +31,21 @@ fn main() {
     let before = value_codec::to_string(&surfaces).unwrap();
     let domains: Vec<_> = surfaces.iter().map(|s| [[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]]).collect();
+    let mut limiting_normals=Vec::new();
+    if args.get(5).is_some_and(|v|v=="limits") {
+        for (face,surface) in surfaces.iter().enumerate() {for end in [false,true] {
+            let row=match nurbs_core::factored_surface_normals::prepare(surface,end,100_000_000) {
+                Ok(report)=>{
+                    let bounds=report.certificate.as_ref().map(|c|{
+                        assert!(std::ptr::eq(c.surface(),surface));c.bounds(domains[face]).unwrap()
+                    });
+                    value_codec::json!({"face":face,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"bounds":bounds})
+                }
+                Err(error)=>value_codec::json!({"face":face,"end":end,"qualified":false,"error":error.to_string()}),
+            };
+            limiting_normals.push(row);
+        }}
+    }
     let mut caches: Vec<_> = surfaces.iter().map(OriginalNormalCache::new).collect();
     let sine = 1e-6_f64;
     let threshold = ((4.*sine).next_up()*(1.-sine).next_up()).next_up();
@@ -60,7 +75,7 @@ fn main() {
         }
         if pending.is_empty() {reason="normal-product-excluded";}
         rows.push(value_codec::json!({"faces":[a,b],"cells":cells,"spans":spans,"normalExcluded":pending.is_empty(),"reason":reason,"unresolvedPairs":pending}));
-        let report=value_codec::json!({"scope":"Exploratory original closed UV-product normal exclusion only; no wall certificate", "completeAudit":rows.len()==pairs.len(),"expectedPairs":pairs.len(),"maxSineSquared":sine,"necessaryPairSineSquared":threshold,"cellsPerPair":cell_limit,"spansPerPair":span_limit,"rows":rows});
+        let report=value_codec::json!({"scope":"Exploratory original closed UV-product normal exclusion only; no wall certificate", "completeAudit":rows.len()==pairs.len(),"expectedPairs":pairs.len(),"limitingNormals":limiting_normals,"maxSineSquared":sine,"necessaryPairSineSquared":threshold,"cellsPerPair":cell_limit,"spansPerPair":span_limit,"rows":rows});
         let temporary=format!("{}.tmp",args[3]);std::fs::write(&temporary,value_codec::to_string_pretty(&report).unwrap()).unwrap();std::fs::rename(temporary,&args[3]).unwrap();
     }
     assert_eq!(before,value_codec::to_string(&surfaces).unwrap());
