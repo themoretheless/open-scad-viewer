@@ -89,6 +89,10 @@ pub(crate) fn inspect_natural(
     }
     let endpoint_may_contact = |end: &Endpoint| -> Result<bool> {
         match end {
+            Endpoint::Carrier { point, side } => {
+                let b = point.uv_bounds()[*side][axis];
+                Ok(b[0] <= fixed && fixed <= b[1])
+            }
             Endpoint::Crossing { point, .. } => {
                 let b = point.uv_box()[axis];
                 Ok(b[0] <= fixed && fixed <= b[1])

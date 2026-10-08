@@ -1248,6 +1248,7 @@ mod tests {
                 // proposed pair and original root witness is rechecked below.
                 let ends = std::array::from_fn(|i| {
                     let t = match &f.endpoints()[i] {
+                        Endpoint::Carrier { .. } => panic!("Fixture must use original endpoints"),
                         Endpoint::Parameter(t) => *t,
                         Endpoint::Crossing { role, .. } => {
                             candidates[i].unwrap()[if *role == Role::Boundary { 0 } else { 1 }]

@@ -158,6 +158,14 @@ pub fn qualify(
         spans: 0,
         reason: "carrier-root-source-unproven",
     };
+    if edge.uses().iter().any(|u| {
+        u.endpoints()
+            .iter()
+            .any(|e| matches!(e, crate::source_boundary_fragment::Endpoint::Carrier { .. }))
+    }) {
+        out.reason = "carrier-root-nested-parent-refused";
+        return Ok(out);
+    }
     let source = &edge.uses()[side];
     if !edge.maps_complete_canonical_source()
         || root.surface() != source.surface()
@@ -234,6 +242,26 @@ pub fn restore(value: value_codec::Value, limits: RestoreLimits) -> Result<Repor
             "BREP_CARRIER_ROOT",
             "Unsupported original carrier root definition",
         ));
+    }
+    // Inspect direct parent endpoint kinds before any recursive restoration.
+    let uses = value["edge"]["uses"]
+        .as_array()
+        .filter(|u| u.len() == 2)
+        .ok_or_else(|| Error::new("BREP_CARRIER_ROOT", "Require two original parent uses"))?;
+    for original in uses {
+        let ends = original["endpoints"]
+            .as_array()
+            .filter(|e| e.len() == 2)
+            .ok_or_else(|| Error::new("BREP_CARRIER_ROOT", "Require original parent endpoints"))?;
+        if ends
+            .iter()
+            .any(|e| !matches!(e["kind"].as_str(), Some("parameter" | "crossing")))
+        {
+            return Err(Error::new(
+                "BREP_CARRIER_ROOT",
+                "Nested carrier parents are unsupported",
+            ));
+        }
     }
     let side = value["sourceSide"]
         .as_u64()

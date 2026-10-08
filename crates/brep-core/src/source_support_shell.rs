@@ -393,6 +393,26 @@ mod tests {
             assert_eq!(carrier.root().definition(),point.definition());
             for use_side in 0..2 {
                 let parts=carrier.retained_parts(use_side).unwrap();
+                let fragments=original.uses()[use_side].split_at_carrier(&carrier,use_side).unwrap();
+                assert!(fragments[0].joins(&fragments[1]));
+                for fragment in &fragments {
+                    let restored=crate::source_boundary_fragment::restore(fragment.definition(),100).unwrap();
+                    assert_eq!(restored.definition(),fragment.definition());
+                    assert_eq!(restored.parameter_bounds(),fragment.parameter_bounds());
+                    assert!(crate::source_boundary_fragment::restore(fragment.definition(),0).is_err());
+                    let mut foreign=fragment.definition();
+                    for end in foreign["endpoints"].as_array_mut().unwrap() {
+                        if end["kind"].as_str()==Some("carrier") {
+                            end["side"]=value_codec::json!(1-use_side);
+                        }
+                    }
+                    assert!(crate::source_boundary_fragment::restore(foreign,100).is_err());
+                }
+                let mut nested=carrier.definition();
+                nested["edge"]["uses"][0]["endpoints"][0]["kind"]=value_codec::json!("carrier");
+                assert!(crate::source_carrier_point::restore(nested,crate::source_carrier_point::RestoreLimits {
+                    edge:crate::source_shared_edge_restore::Limits {mapping_cells_per_use:100,exact_work:1000000,driver_cells:100},
+                    root_mapping_cells:100,spans:100 }).is_err());
                 assert!(parts[0].joins(&parts[1]));
                 assert!(!parts[1].joins(&parts[0]));
                 assert_eq!(parts[0].parameter_bounds()[1],parts[1].parameter_bounds()[0]);

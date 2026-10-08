@@ -185,6 +185,7 @@ fn qualify_impl(
         // independent canonical cutter identity and projected root uniqueness.
         for i in 0..2 {
             let same = match (&uses[0].endpoints()[i], &uses[1].endpoints()[1 - i]) {
+                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) => false,
                 (Endpoint::Parameter(a), Endpoint::Parameter(b)) => same_normalized_parameter(
                     *a,
                     *b,

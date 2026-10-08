@@ -119,6 +119,7 @@ pub fn prepare(
             let mut endpoints = Vec::new();
             for endpoint in fragment.endpoints() {
                 endpoints.push(match endpoint {
+                    Endpoint::Carrier { .. } => { return Ok(out); },
                     Endpoint::Parameter(t) => Endpoint::Parameter(*t),
                     Endpoint::Crossing { point, role } => {
                         if out.root_checks == limits.root_checks

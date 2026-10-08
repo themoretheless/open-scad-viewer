@@ -224,6 +224,7 @@ pub fn qualify_with_candidates(
         for use_index in 0..2 {
             let endpoint_index = if use_index == 0 { i } else { 1 - i };
             authored[use_index] = match &fragments[use_index].endpoints()[endpoint_index] {
+                Endpoint::Carrier { .. } => None,
                 Endpoint::Parameter(t) => Some(*t),
                 Endpoint::Crossing { point, role } => {
                     if let Some(candidate) = candidates[use_index][endpoint_index] {
@@ -263,6 +264,7 @@ pub fn qualify_with_candidates(
                 &fragments[0].endpoints()[i],
                 &fragments[1].endpoints()[1 - i],
             ) {
+                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) => false,
                 (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
                     let da = fragments[0].curve().domain();
                     let db = fragments[1].curve().domain();

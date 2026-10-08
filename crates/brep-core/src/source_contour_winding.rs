@@ -45,6 +45,11 @@ fn fixed(c: &Curve, t: f64, out: &mut Report) -> Result<[I; 2]> {
 }
 fn endpoint(c: &Curve, end: &Endpoint, out: &mut Report) -> Result<[I; 2]> {
     match end {
+        Endpoint::Carrier { point, side } => {
+            out.endpoint_queries += 1;
+            let b = point.uv_bounds()[*side];
+            Ok([I::new(b[0][0], b[0][1])?, I::new(b[1][0], b[1][1])?])
+        }
         Endpoint::Parameter(t) => fixed(c, *t, out),
         Endpoint::Crossing { point, .. } => {
             out.endpoint_queries += 1;

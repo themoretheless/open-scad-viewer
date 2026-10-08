@@ -838,3 +838,29 @@ source-boundary-fragment tests passed in 0.06 seconds.
 These are exact source restriction views. Integration into Fragment endpoints,
 fresh qualification of both restricted shared carriers, restoration of those
 restrictions and closed-body assembly remain required. No packaged WASM changed.
+
+## Transported root Fragment endpoints
+
+`Endpoint::Carrier` and `Fragment::split_at_carrier` now keep the admitted
+original carrier/root expression at an actual source fragment endpoint. Source
+surface and pcurve identity are checked against the chosen parent use; splits
+require strict interior ordering. Joining two halves requires identical carrier
+recipes and incident sides, without comparing coordinate proximity.
+
+Restoration requalifies the original parent edge, root and transport. Nested
+carrier parents are rejected before recursive restoration. This first restore
+contract admits one carrier endpoint per fragment: it consumes the remaining
+mapping allowance, with separate parent-use/root mapping bounds and fixed
+100-million exact-work, 100000 driver-cell and span ceilings. A second carrier
+endpoint requires a future shared-budget contract and is explicitly refused.
+
+Actual edges 0 and 1 split and restore both incident fragments, including the
+degree-five neighbor. Foreign source sides, zero restoration budget and nested
+parent definitions refuse. The fixture passed in 2.44 seconds. Fragment tests
+passed 5/5, mapped-edge tests 5/5 and shared-edge/restore tests 10/10.
+
+Contour/fiber endpoint queries use conservative certified UV enclosures. Inverse
+shear and exchange refinement refuse these endpoints until replay is supported.
+Direct and mapped shared-edge admission also explicitly refuse Carrier endpoints;
+matching both restricted halves to their parent correspondence is the next proof
+step. Closed-body assembly and packaged WASM integration remain incomplete.
