@@ -1545,3 +1545,29 @@ edge tests also passed.
 This admits the selected trimmed original 3D edges between two source roots.
 Transition-side binding, replacement contour assembly, terminal/corner
 closure and closed corrected Body admission remain open.
+
+## Full transition-side binding to root-ended retained edges
+
+RootEndedSeam retains the selected source face, axis, authored section
+parameters and natural free-end identity from both owned CutEndpoints.
+`qualify_transition_side` accepts only a constrained bridge using the exact
+Proposal-owned profile, that axis and those ordered section parameters.
+The bridge factory already fixes exact affine width/scales and original
+natural rail preservation. The full Hermite side first-jet identity is
+then checked for complete regular support coverage.
+
+The resulting TransitionSide refers to the root-ended seam and exact
+transition recipe. Selected source face ownership is retained even when
+both adjacent faces have corrected profiles; automatic neighbor ordering
+is not allowed to substitute the other face's profile. This binding refers
+to the full Hermite-corrected expression, not the position-only variant.
+
+The final annular regression passed in 11.58 seconds. Both sides bind to
+face 0, axis 0, section parameters [0.75,0.9] and their respective natural
+free ends. An altered terminal parameter, a distinct profile owner over
+identical source geometry and zero-cell allowance refuse. Existing retained
+shared-edge and two-root restoration checks also pass in this regression.
+
+This binds transition rails to admitted trimmed original edges. It does
+not yet build replacement contours or an admitted closed transition face;
+terminal/corner closure and whole-body qualification remain required.

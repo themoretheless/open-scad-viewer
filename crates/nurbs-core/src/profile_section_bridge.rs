@@ -553,6 +553,11 @@ pub struct RailConstrainedBridge<'r, 'a, 'b, 'c, 'd> {
     bridge: &'r ProfileSectionBridge<'a, 'b, 'c, 'd>,
 }
 impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
+    /// Original section identity used to bind B-rep carrier ownership.
+    pub fn section(&self, high: bool) -> &ProfileSection<'_, '_> {
+        self.bridge.section(high)
+    }
+
     fn source_rail_domain(&self, high: bool, across: [f64; 2]) -> Result<[[f64; 2]; 2]> {
         let a = self.bridge.section(false);
         let b = self.bridge.section(true);

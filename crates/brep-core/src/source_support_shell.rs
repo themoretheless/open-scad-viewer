@@ -391,6 +391,23 @@ mod tests {
                 assert_eq!(fresh.definition(),point.definition());
             }
             let twin=crate::source_profile_body::prepare(&body,&specs,crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap().proposal.unwrap();
+            fn make_bridge<'p,'b>(profile:&'p nurbs_core::normal_alignment::WeightProfile<'b>,end:f64)->nurbs_core::normal_alignment::ProfileSectionBridge<'p,'b,'p,'b> {
+                nurbs_core::normal_alignment::ProfileSectionBridge::new(profile.section(0,0.75).unwrap(),profile.section(0,end).unwrap(),[end-0.75;2]).unwrap()
+            }
+            let original_bridge=make_bridge(proposal.profile(0).unwrap(),0.9);
+            let original_bridge=original_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+            let bound=rooted_seam.qualify_transition_side(&original_bridge,1000,1000).unwrap();
+            let bound=bound.side.expect(bound.reason);
+            assert!(std::ptr::eq(bound.rooted(),&rooted_seam));assert_eq!(bound.high_free_end(),high);
+            assert_eq!(bound.parameters(),[0.75,0.9]);assert_eq!(bound.axis(),0);assert_eq!(bound.face(),0);
+            let wrong_bridge=make_bridge(proposal.profile(0).unwrap(),0.85);
+            let wrong_bridge=wrong_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+            assert!(rooted_seam.qualify_transition_side(&wrong_bridge,1000,1000).unwrap().side.is_none());
+            let foreign_bridge=make_bridge(twin.profile(0).unwrap(),0.9);
+            let foreign_bridge=foreign_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+            assert!(rooted_seam.qualify_transition_side(&foreign_bridge,1000,1000).unwrap().side.is_none());
+            assert!(rooted_seam.qualify_transition_side(&original_bridge,0,1000).unwrap().side.is_none());
+
             assert!(twin.qualify_root_ended_seam([&pa,&pb],1e-6,100,100).unwrap().seam.is_none());
             assert!(proposal.qualify_root_ended_seam([&pa,&pa],1e-6,100,100).unwrap().seam.is_none());
             assert!(proposal.qualify_root_ended_seam([&pa,&pb],1e-6,100,1).unwrap().seam.is_none());

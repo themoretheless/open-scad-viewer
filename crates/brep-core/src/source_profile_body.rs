@@ -75,10 +75,28 @@ pub struct RestrictedSeamReport<'p,'b> {
 /// Restricted seam retaining both freshly admitted original carrier roots.
 pub struct RootEndedSeam<'p,'b> {
     restricted:RestrictedSeam<'p,'b>, points:[crate::source_carrier_point::Point;2],
+    face:usize,axis:usize,parameters:[f64;2],high:bool,
 }
-impl RootEndedSeam<'_,'_> {
+impl<'p,'b> RootEndedSeam<'p,'b> {
     pub fn restricted(&self)->&RestrictedSeam<'_,'_> {&self.restricted}
     pub fn points(&self)->&[crate::source_carrier_point::Point;2] {&self.points}
+    /// Bind only the full Hermite-corrected expression with this exact recipe.
+    pub fn qualify_transition_side<'s>(
+        &'s self,bridge:&nurbs_core::normal_alignment::RailConstrainedBridge<'_, '_, '_, '_, '_>,cells:usize,spans:usize,
+    )->Result<TransitionSideReport<'s,'p,'b>> {
+        let mut out=TransitionSideReport{side:None,regularity:None,reason:"profile-transition-side-recipe-unproven"};
+        let owned=self.restricted.proposal.profile(self.face).unwrap();
+        for high in [false,true] {
+            let section=bridge.section(high);
+            if !std::ptr::eq(section.profile(),owned) || section.axis()!=self.axis
+                || section.parameter()!=self.parameters[usize::from(high)] {return Ok(out);}
+        }
+        let report=bridge.inspect_transverse_corrected_side_join(self.high,[0.,1.],cells,spans)?;
+        out.reason=report.reason;
+        if report.complete_regular {out.side=Some(TransitionSide{rooted:self});out.reason="profile-transition-side-qualified";}
+        out.regularity=Some(report);Ok(out)
+    }
+
     /// Retain exactly the original interval between both roots on each use.
     /// Traversal follows the original incident use, preserving opposite sides.
     pub fn incident_fragments(&self)->Result<[crate::source_boundary_fragment::Fragment;2]> {
@@ -106,6 +124,21 @@ impl RootEndedSeam<'_,'_> {
     }
 
 
+}
+/// Exact full-Hermite side recipe bound to the retained root-ended B-rep seam.
+/// Does not admit a closed transition face or certify the bridge interior.
+pub struct TransitionSide<'s,'p,'b> {rooted:&'s RootEndedSeam<'p,'b>}
+impl TransitionSide<'_,'_,'_> {
+    pub fn rooted(&self)->&RootEndedSeam<'_,'_> {self.rooted}
+    pub fn face(&self)->usize {self.rooted.face}
+    pub fn axis(&self)->usize {self.rooted.axis}
+    pub fn parameters(&self)->[f64;2] {self.rooted.parameters}
+    pub fn high_free_end(&self)->bool {self.rooted.high}
+}
+pub struct TransitionSideReport<'s,'p,'b> {
+    pub side:Option<TransitionSide<'s,'p,'b>>,
+    pub regularity:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,
+    pub reason:&'static str,
 }
 pub struct RootEndedSeamReport<'p,'b> {
     pub seam:Option<RootEndedSeam<'p,'b>>,pub carrier_spans:usize,
@@ -817,7 +850,7 @@ impl<'a> Proposal<'a> {
         let angular=self.qualify_edge_interval(ends[0].edge,canonical,threshold,cells,spans-out.carrier_spans)?;
         out.reason=angular.angular.reason;
         if let Some(restricted)=angular.seam {
-            out.seam=Some(RootEndedSeam{restricted,points:[points.remove(0),points.remove(0)]});
+            out.seam=Some(RootEndedSeam{restricted,points:[points.remove(0),points.remove(0)],face:ends[0].face,axis:ends[0].axis,parameters:[ends[0].parameter,ends[1].parameter],high:ends[0].high});
             out.reason="profile-root-ended-seam-qualified";
         }
         out.angular=Some(angular.angular);Ok(out)
