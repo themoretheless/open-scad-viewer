@@ -320,9 +320,9 @@ fn main() {
                             edge,
                             brep_core::source_seam_tangency::Limits {
                                 max_sine_squared: 1e-6,
-                                cells: 4096,
-                                curve_spans: 10000,
-                                normal_spans: 10000,
+                                cells: 32768,
+                                curve_spans: 100000,
+                                normal_spans: 100000,
                             },
                         )
                         .unwrap();

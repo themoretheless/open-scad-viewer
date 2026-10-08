@@ -590,3 +590,19 @@ it('qualifies bounded retained face products without losing prior proofs through
  }
  if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
 },180000)
+
+it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[],started=performance.now()
+ for(const edge of [0,1,5,9,43,10,48,6,8,15,19,20,16,18,27,28,35,36,45,46]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o});expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const seam=r.seamQualification!,regular=[5,9,43,10,48,6,8,15,19,20,27,28,35,36,45,46].includes(edge)
+  expect(seam.qualified).toBe(regular)
+  if(regular){expect(seam.reason).toBe('source-seam-tangent-planes-qualified');expect(seam.sineSquaredBounds![1]).toBeLessThanOrEqual(1e-6);expect(seam.uncertainCanonical).toBeNull()}
+  else{expect(seam.reason).toBe('source-seam-endpoint-normal-unresolved');expect(seam.sineSquaredBounds).toBeNull();expect(seam.uncertainCanonical).not.toBeNull()}
+  const rebound=structuredClone(r);rebound.seamQualification!.request.edge=(edge+1)%r.edges.length;expect(validSourceBody(sourceBodyExpectation(o),rebound)).toBe(false)
+  results.push(seam)
+ }
+ if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
+},180000)
