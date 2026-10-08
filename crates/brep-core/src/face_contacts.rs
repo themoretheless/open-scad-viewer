@@ -1,5 +1,9 @@
 //! Bounded enumeration of different face pairs. Adjacent faces are not skipped:
 //! sharing topology does not prove the absence of extra interior intersections.
+#[path = "boundary_stitched_contact.rs"]
+mod boundary_stitched_contact;
+#[path = "source_volume_contact.rs"]
+mod source_volume_contact;
 use crate::{Error, Model, Result, face_domain::FaceDomain};
 use nurbs_core::surface_contact_search::{self, Report as Search};
 #[derive(Clone, Copy, Debug)]
@@ -16,6 +20,8 @@ pub enum SharedBoundary {
     ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
+    JoinedSourceCharts(boundary_stitched_contact::Certificate),
+    SourceVolumeBoundary(source_volume_contact::Certificate),
 }
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -28,6 +34,8 @@ pub struct Pair {
     /// Exact control-hull separation work spent on this pair. Attributed to
     /// the pair so per-pair work adds up to the report totals.
     pub hull_cells: usize,
+    pub source_chart_cells:usize,
+    pub volume_separation:Option<source_volume_contact::Certificate>,
     pub reason: &'static str,
 }
 #[derive(Clone, Debug)]
@@ -72,6 +80,7 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
     let domains = (0..model.faces.len())
         .map(|f| FaceDomain::new(model, f, tolerance_uv))
         .collect::<Result<Vec<_>>>()?;
+    let source_volume_context=exact_domain.then(||source_volume_contact::Prepared::new(model));
     let n = model.faces.len();
     let total_pairs = n
         .checked_mul(n.saturating_sub(1))
@@ -99,7 +108,7 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
             }
             let sa = &model.faces[a].surface;
             let sb = &model.faces[b].surface;
-            let boundary = if let Some(c)=caps.iter().find(|c|
+            let mut boundary = if let Some(c)=caps.iter().find(|c|
                 [c[0].min(c[1]),c[0].max(c[1])]==[a,b]) {
                 Some(SharedBoundary::SweepCap {cap:c[0],wall:c[1],edge:c[2]})
             } else if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
@@ -111,18 +120,50 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
                     .map(SharedBoundary::OppositeSides)
             };
             let periodic = sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v;
+            let mut source_chart_cells=0;
+            let mut volume_separation=None;
+            // Quintic polygon corner charts need a source-volume proof: their
+            // piecewise profile weights need not have one global chart map.
+            // Try the exact four-wall cell before spending the pair budget on
+            // a stitched surface. Other chart families keep their ordering.
+            let volume_first=sa.degree_u==1 && sa.degree_v==5 && sb.degree_u==1 && sb.degree_v==5;
+            if volume_first && boundary.is_none()&&!periodic&&exact_domain {
+                let separated=source_volume_context.as_ref().unwrap().certify([a,b],
+                    (limits.cells-out.cells).min(limits.cells_per_pair))?;
+                source_chart_cells=separated.cells;out.cells+=separated.cells;
+                if let Some(c)=separated.certificate {
+                    if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
+                    else {volume_separation=Some(c);}
+                }
+            }
+            if boundary.is_none()&&volume_separation.is_none()&&!periodic&&exact_domain&&source_chart_cells<limits.cells_per_pair {
+                let joined=boundary_stitched_contact::certify(model,[a,b],
+                    (limits.cells-out.cells).min(limits.cells_per_pair-source_chart_cells))?;
+                source_chart_cells+=joined.cells;out.cells+=joined.cells;
+                boundary=joined.certificate.map(SharedBoundary::JoinedSourceCharts);
+            }
+            if !volume_first&&boundary.is_none()&&!periodic&&exact_domain&&source_chart_cells<limits.cells_per_pair {
+                let separated=source_volume_context.as_ref().unwrap().certify([a,b],
+                    (limits.cells-out.cells).min(limits.cells_per_pair-source_chart_cells))?;
+                source_chart_cells+=separated.cells;out.cells+=separated.cells;
+                if let Some(c)=separated.certificate {
+                    if c.shared_edge.is_some() {boundary=Some(SharedBoundary::SourceVolumeBoundary(c));}
+                    else {volume_separation=Some(c);}
+                }
+            }
+            let pair_cells=limits.cells_per_pair-source_chart_cells;
             // Exact control-hull separation also applies to closed bodies
             // after the joint boundary, trim and injectivity prerequisites.
             // The plain face-contact API retains its trim-search accounting.
-            let (hull_disjoint,hull_cells)=if boundary.is_none() && !periodic && exact_domain {
+            let (hull_disjoint,hull_cells)=if boundary.is_none() && volume_separation.is_none() && !periodic && exact_domain {
                 crate::control_hull_separation::inspect(sa,sb,
-                    (limits.cells-out.cells).min(limits.cells_per_pair/2).min(64))
+                    (limits.cells-out.cells).min(pair_cells/2).min(64))
             } else { (false,0) };
             out.cells+=hull_cells;
-            let result = if boundary.is_some() || hull_disjoint
+            let result = if boundary.is_some() || hull_disjoint || volume_separation.is_some()
                 || periodic
                 || out.cells == limits.cells
-                || hull_cells == limits.cells_per_pair
+                || hull_cells == pair_cells
             {
                 None
             } else {
@@ -130,12 +171,13 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
                     sa,
                     sb,
                     [&domains[a].region, &domains[b].region],
-                    (limits.cells - out.cells).min(limits.cells_per_pair-hull_cells),
+                    (limits.cells - out.cells).min(pair_cells-hull_cells),
                     (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_pair),
                 )?)
             };
             let reason = match &result {
                 None if hull_disjoint => "pair-disjoint",
+                None if volume_separation.is_some() => "pair-disjoint",
                 None if boundary.is_some() => "shared-boundary",
                 None if sa.periodic_u || sa.periodic_v || sb.periodic_u || sb.periodic_v => "periodic-trim-not-supported",
                 None => "pair-unresolved",
@@ -144,8 +186,8 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
                 Some(_) => "pair-unresolved",
             };
             out.all_pairs_classified &=
-                boundary.is_some() || hull_disjoint || result.as_ref().is_some_and(|r| r.absence_proven);
-            out.all_pairs_disjoint &= hull_disjoint || result.as_ref().is_some_and(|r| r.absence_proven);
+                boundary.is_some() || hull_disjoint || volume_separation.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
+            out.all_pairs_disjoint &= hull_disjoint || volume_separation.is_some() || result.as_ref().is_some_and(|r| r.absence_proven);
             if let Some(r) = &result {
                 out.cells += r.cells;
                 out.domain_cells += r.domain_cells;
@@ -156,6 +198,8 @@ pub(crate) fn inspect_with_certificates(model: &Model, tolerance_uv: f64, limits
                 boundary,
                 hull_disjoint,
                 hull_cells,
+                source_chart_cells,
+                volume_separation,
                 reason,
             });
         }

@@ -6,6 +6,7 @@ pub struct Report {
     pub ray: ray_parity::Report,
     pub face: Option<usize>,
     pub normal_dot_direction: Option<[f64;2]>,
+    pub normal_method: &'static str,
     pub outward: Option<bool>,
 }
 pub fn inspect(model: &Model, point: [f64;3], direction: [f64;3], tolerance_uv: f64,
@@ -16,11 +17,17 @@ pub fn inspect(model: &Model, point: [f64;3], direction: [f64;3], tolerance_uv: 
         return Err(Error::new("BREP_INVALID_INPUT","Orientation requires one closed shell and a bounded positive span budget"));
     }
     let ray=ray_parity::classify_ray(model,point,direction,tolerance_uv,max_cells,max_domain_cells)?;
-    let mut result=Report{ray,face:None,normal_dot_direction:None,outward:None};
+    let mut result=Report{ray,face:None,normal_dot_direction:None,normal_method:"original-source-normal",outward:None};
     if result.ray.parity.is_none() {return Ok(result);}
     let Some(crossing)=result.ray.crossings.last() else {return Ok(result)};
     result.face=Some(crossing.face);
-    let surface=&model.faces[crossing.face].surface;
+    let original=&model.faces[crossing.face].surface;
+    let equivalent=nurbs_core::surface_linear_monotonicity::polynomial_profile_image(original)?;
+    let (surface,uv,scale)=if let Some((polynomial,parameterization))=&equivalent {
+        let (u,derivative)=parameterization.map_interval(crossing.uv[0])?;
+        result.normal_method="positive-profile-bijection-normal";
+        (polynomial,[u,crossing.uv[1]],Some(derivative))
+    } else {(original,crossing.uv,None)};
     // A whole-chart bound avoids cancellation when restricting a translated
     // planar patch to a tiny root enclosure. It is still a bound at the root.
     // Reserve half the span budget for the local fallback when needed.
@@ -30,9 +37,17 @@ pub fn inspect(model: &Model, point: [f64;3], direction: [f64;3], tolerance_uv: 
     let coarse=nurbs_core::surface_injectivity::normal_direction_bounds(surface,whole,direction,coarse_budget)?;
     let bounds=if coarse.is_some_and(|b| b[0]>0. || b[1]<0.) { coarse }
         else if max_spans>coarse_budget {
-            nurbs_core::surface_injectivity::normal_direction_bounds(surface,crossing.uv,direction,max_spans-coarse_budget)?
+            nurbs_core::surface_injectivity::normal_direction_bounds(surface,uv,direction,max_spans-coarse_budget)?
         } else { None };
     let Some(mut bounds)=bounds else {return Ok(result)};
+    if let Some(scale)=scale {
+        // The original normal equals the polynomial normal times the strictly
+        // positive profile derivative. Report an enclosure for the original
+        // source parameterization and keep the actual crossing UV unchanged.
+        let normal=nurbs_core::interval_eval::Interval::new(bounds[0],bounds[1])?
+            .mul(nurbs_core::interval_eval::Interval::new(scale[0],scale[1])?)?;
+        bounds=[normal.lo,normal.hi];
+    }
     let use_=model.shells[0].faces.iter().find(|u|u.face==crossing.face).unwrap();
     if use_.reversed {bounds=[-bounds[1],-bounds[0]];}
     result.normal_dot_direction=Some(bounds);

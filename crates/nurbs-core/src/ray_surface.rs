@@ -2,11 +2,12 @@
 //! inclusions with an invertible preconditioner and contraction certify roots.
 //! Unresolved cells remain explicit; this module does not classify solid volume.
 use crate::{
-    Result, check,
+    check,
     distance_bounds::Interval as I,
     resource,
     surface::Surface,
     surface_distance::{interpolate, rectangle_bounds},
+    Result,
 };
 type Net = Vec<Vec<[I; 2]>>;
 #[derive(Debug)]
@@ -16,6 +17,8 @@ pub struct Root {
 }
 #[derive(Debug)]
 pub struct Report {
+    pub profile_parameterization:
+        Option<crate::surface_linear_monotonicity::ProfileParameterization>,
     pub roots: Vec<Root>,
     pub unresolved: Vec<[[f64; 2]; 2]>,
     pub cells: usize,
@@ -300,6 +303,37 @@ pub fn intersections(
     tolerance_uv: f64,
     max_cells: usize,
 ) -> Result<Report> {
+    if let Some((polynomial, parameterization)) =
+        crate::surface_linear_monotonicity::polynomial_profile_image(s)?
+    {
+        let tolerance = I::point(tolerance_uv)
+            .mul(I::point(parameterization.derivative_lower))?
+            .lo;
+        if tolerance > 0. && tolerance.is_finite() {
+            let mut report =
+                intersections_original(&polynomial, origin, direction, tolerance, max_cells)?;
+            // Isolation and complete-domain coverage are preserved by the exact
+            // positive bijection. UV enclosures refer to the original source;
+            // geometric ray-parameter intervals remain unchanged.
+            for root in &mut report.roots {
+                root.uv[0] = parameterization.inverse_interval(root.uv[0])?;
+            }
+            for uv in &mut report.unresolved {
+                uv[0] = parameterization.inverse_interval(uv[0])?;
+            }
+            report.profile_parameterization = Some(parameterization);
+            return Ok(report);
+        }
+    }
+    intersections_original(s, origin, direction, tolerance_uv, max_cells)
+}
+fn intersections_original(
+    s: &Surface,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    max_cells: usize,
+) -> Result<Report> {
     s.validate()?;
     check(
         origin.iter().chain(&direction).all(|x| x.is_finite())
@@ -340,6 +374,7 @@ pub fn intersections(
         }
     }
     let mut report = Report {
+        profile_parameterization: None,
         roots: Vec::new(),
         unresolved: Vec::new(),
         cells: 0,
@@ -441,6 +476,38 @@ pub fn parameter_bounds(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rational_quintic_ray_isolation_returns_original_parameter_enclosures() {
+        let surface = Surface {
+            degree_u: 1,
+            degree_v: 5,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1.],
+            control_points: (0..2)
+                .map(|u| (0..6).map(|v| vec![u as f64, v as f64 / 5., 0.]).collect())
+                .collect(),
+            weights: vec![vec![1.; 6], vec![2.; 6]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let before = surface.clone();
+        let result = intersections(&surface, [0.25, 0.37, -1.], [0., 0., 1.], 1e-8, 10000).unwrap();
+        assert!(result.complete && result.profile_parameterization.is_some());
+        assert_eq!(result.roots.len(), 1);
+        let root = &result.roots[0];
+        assert!(root.uv[0][0] <= 1. / 7. && root.uv[0][1] >= 1. / 7.);
+        assert!(root.parameter[0] <= 1. && root.parameter[1] >= 1.);
+        assert!(root.uv[0][1] - root.uv[0][0] <= 1e-8);
+        assert_eq!(surface, before);
+        let mut folded = surface.clone();
+        for row in &mut folded.control_points {
+            for (p, y) in row.iter_mut().zip([0., 1., 1., -1., -1., 0.]) {
+                p[1] = y;
+            }
+        }
+        let denied = intersections(&folded, [0.25, 0.2, -1.], [0., 0., 1.], 1e-8, 1).unwrap();
+        assert!(!denied.complete && !denied.unresolved.is_empty() && denied.cells <= 1);
+    }
     fn plane() -> Surface {
         Surface {
             degree_u: 1,
