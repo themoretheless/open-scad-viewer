@@ -651,3 +651,7 @@ mod tests {
         assert!(qualify_vertex_link(&[]).is_err());
     }
 }
+
+#[path = "source_profile_shell_contacts.rs"]
+mod contacts;
+pub use contacts::{SupportPairReport, SupportProduct};

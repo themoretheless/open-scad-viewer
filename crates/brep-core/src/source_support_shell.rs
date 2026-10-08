@@ -603,6 +603,14 @@ mod tests {
         }
         assert!(expression.enclose_support(expression.faces().len(),[[0.;2];2],1000,100).is_err());
 
+        let retained_ids=[0,1].map(|end|expression.faces().iter().position(|f|f.kind()==ShellFaceKind::Retained(end)).unwrap());
+        let support_pair=expression.inspect_support_pair(retained_ids,[[[0.,0.75],[0.,1.]],[[0.9,1.],[0.,1.]]],32,1000,256).unwrap();
+        eprintln!("retained support pair separated={} pending={} cells={} spans={}",support_pair.separated.len(),support_pair.pending.len(),support_pair.cells,support_pair.spans);
+        assert!(support_pair.complete_separated());
+        assert!(support_pair.cells<=32 && support_pair.spans<=256);
+        assert!(!support_pair.separated.is_empty() || !support_pair.pending.is_empty());
+        assert!(expression.inspect_support_pair([retained_ids[0];2],[[[0.;2];2];2],1,100,100).is_err());
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

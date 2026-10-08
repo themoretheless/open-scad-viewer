@@ -2016,3 +2016,30 @@ transition entry matched the exact profile section enclosure, its
 interior returned a bounded expression, retained dispatch preserved the
 exact profile bounds and zero-work cases returned no enclosure. Native
 cargo check and diff whitespace checks passed. Packaged WASM is unchanged.
+
+
+## Adaptive expression support-pair exclusion
+
+ExpressionShell::inspect_support_pair accepts two distinct owned faces
+and their support parameter rectangles. Exact outward position bounds
+exclude a product only when one world coordinate has a strict gap. An
+ambiguous product is bisected along its largest normalized parameter
+width. Shared seams, touching bounds and actual crossings are not admitted
+as safe. The shared span allowance covers both evaluations; the cell
+allowance covers all visited products. Control work is separately bounded
+per transition enclosure. On exhaustion, the current product and every
+queued sibling remain pending. Unsplit representable point products also
+remain pending. This report does not confer Body or contact authority.
+
+Independent regressions passed for separated parallel planes, coincident
+planes, perpendicular intersecting planes and zero work. Product volume
+of excluded plus pending cells equals the original parameter product;
+the known intersection line remains in the pending cover. Both regressions
+passed after final compilation in 0.01 seconds.
+
+The annular integration regression passed: the two retained support
+rectangles [0,.75] x [0,1] and [.9,1] x [0,1] are completely separated
+in one product cell and two span evaluations, with no pending product.
+The final regression explicitly requires complete separation. This is
+one pair; remaining original/retained/transition pairs and shared seam
+neighborhoods still require geometric qualification. Native-only.
