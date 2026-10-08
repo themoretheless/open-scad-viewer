@@ -230,7 +230,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         let neighbor =
             root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
         #[cfg(test)]
-        if rail == 1 && max_work > 0 {
+        if rail == 1 && max_work > 0 && max_cells > 0 {
             if let Some(trace) = crate::source_ruled_projection_contact::exact_trace::certify(
                 neighbor,
                 [0, 1],
@@ -240,6 +240,11 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 assert!(std::ptr::eq(trace.source(), neighbor));
                 assert_eq!(trace.axes(), [0, 1]);
                 assert_eq!(trace.linear_axis(), 1);
+                let original_projection=nurbs_core::surface_projected_jordan::certify(
+                    source,[0,1],1e-8,max_work,max_cells)?;
+                eprintln!("transition original source XY Jordan qualified={} exactWork={} boundaryCells={} reason={}",
+                    original_projection.certificate.is_some(),original_projection.exact_work,
+                    original_projection.boundary_cells,original_projection.reason);
                 let monotone=crate::source_ruled_projection_contact::exact_trace::certify_monotone_coordinate(
                     &trace,1,max_controls)?.expect("whole ruled neighbor trace is strictly monotone in Y");
                 assert!(std::ptr::eq(monotone.trace(),&trace));

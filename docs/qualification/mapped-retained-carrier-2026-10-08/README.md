@@ -2758,3 +2758,14 @@ including swapped roots, overlapping uncertainty, and outside-chart refusal.
 This utility does not bind arbitrary supplied roots to a geometric carrier;
 native diagnostics supply the actual owned carrier UV intervals, and no pair
 contact certificate is created from this split.
+
+A stronger route is under investigation: the corrected transition specializes
+to exact original source curves on all four boundaries. A fresh global
+projected-Jordan certificate for the original source, together with the
+owned transition's complete XY injectivity, could establish equality with
+that source subregion's projected interior. This still requires proving the
+boundary specialization/ownership and exclusion of the full wall trace;
+no certificate is transferred merely from equal-looking diagnostics.
+Native diagnostics now request the original source's XY Jordan certificate
+within declared nonzero work/cell budgets. Compilation passed; qualification
+of this original-source certificate has not yet been observed.
