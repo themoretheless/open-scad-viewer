@@ -24,6 +24,7 @@ pub struct ShellSupportPair {
     pub inspection: SupportPairReport,
 }
 pub struct ShellSupportReport {
+    pub domain_cells: usize,
     pub pairs: Vec<ShellSupportPair>,
     pub cells: usize,
     pub spans: usize,
@@ -32,7 +33,7 @@ impl ShellSupportReport {
     pub fn pending_pairs(&self) -> usize {
         self.pairs
             .iter()
-            .filter(|p| !p.inspection.complete_separated())
+            .filter(|p| !p.inspection.complete_excluded())
             .count()
     }
 }
@@ -206,8 +207,56 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         max_controls_per_enclosure: usize,
         max_spans: usize,
     ) -> Result<ShellSupportReport> {
+        self.inspect_shell_regions(
+            max_cells,
+            cells_per_pair,
+            max_controls_per_enclosure,
+            max_spans,
+            None,
+            0,
+            0,
+        )
+    }
+    pub fn inspect_shell_trimmed(
+        &self,
+        max_cells: usize,
+        cells_per_pair: usize,
+        max_controls_per_enclosure: usize,
+        max_spans: usize,
+        tolerance_uv: f64,
+        max_domain_cells: usize,
+        domain_cells_per_pair: usize,
+    ) -> Result<ShellSupportReport> {
+        if !tolerance_uv.is_finite() || tolerance_uv <= 0. {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Require positive finite UV tolerance",
+            ));
+        }
+        self.inspect_shell_regions(
+            max_cells,
+            cells_per_pair,
+            max_controls_per_enclosure,
+            max_spans,
+            Some(tolerance_uv),
+            max_domain_cells,
+            domain_cells_per_pair,
+        )
+    }
+    fn inspect_shell_regions(
+        &self,
+        max_cells: usize,
+        cells_per_pair: usize,
+        max_controls_per_enclosure: usize,
+        max_spans: usize,
+        tolerance_uv: Option<f64>,
+        max_domain_cells: usize,
+        domain_cells_per_pair: usize,
+    ) -> Result<ShellSupportReport> {
         if max_cells > 100000
             || cells_per_pair > 100000
+            || max_domain_cells > 100000
+            || domain_cells_per_pair > 100000
             || max_spans > 100000
             || max_controls_per_enclosure > 1000000
         {
@@ -231,6 +280,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             .map(|i| self.support_domain(i))
             .collect::<Result<Vec<_>>>()?;
         let mut out = ShellSupportReport {
+            domain_cells: 0,
             pairs: Vec::new(),
             cells: 0,
             spans: 0,
@@ -239,13 +289,27 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             for b in a + 1..self.faces.len() {
                 let faces = [a, b];
                 let domain = [domains[a], domains[b]];
-                let inspection = self.inspect_support_pair(
-                    faces,
-                    domain,
-                    cells_per_pair.min(max_cells - out.cells),
-                    max_controls_per_enclosure,
-                    max_spans - out.spans,
-                )?;
+                let pair_cells = cells_per_pair.min(max_cells - out.cells);
+                let inspection = if let Some(tolerance) = tolerance_uv {
+                    self.inspect_trimmed_pair(
+                        faces,
+                        domain,
+                        tolerance,
+                        pair_cells,
+                        max_controls_per_enclosure,
+                        max_spans - out.spans,
+                        domain_cells_per_pair.min(max_domain_cells - out.domain_cells),
+                    )?
+                } else {
+                    self.inspect_support_pair(
+                        faces,
+                        domain,
+                        pair_cells,
+                        max_controls_per_enclosure,
+                        max_spans - out.spans,
+                    )?
+                };
+                out.domain_cells += inspection.domain_cells;
                 out.cells += inspection.cells;
                 out.spans += inspection.spans;
                 let shared_edges = self

@@ -2102,3 +2102,38 @@ It remains pending with zero domain allowance. All 406 support pairs
 retain the prior 149 separated / 257 pending baseline. Whole-shell trim
 classification and shared-seam contact certificates remain required.
 Packaged WASM is unchanged.
+
+
+## Whole-shell trimmed support traversal
+
+inspect_shell_trimmed applies the owned contour classifier during every
+unordered expression face pair traversal. The shared report preserves
+world-separated, trim-outside and pending products independently.
+pending_pairs now uses complete_excluded, so a fully trim-excluded product
+is not mislabeled as pending or as world-separated. The existing support
+inspection keeps its previous semantics because it never records outside
+products.
+
+A shared domain-cell allowance and a domain-cell cap per pair accompany
+the existing global/per-pair product-cell and shared span allowances.
+Every unordered pair remains represented after exhaustion. Both APIs use
+one internal inventory implementation, including the complete report
+allocation guard and shared incidence IDs. This does not skip adjacent
+pairs or admit shared contact neighborhoods.
+
+The first combined whole-trimmed regression passed in 72.45 seconds:
+406 pairs, 162 completely excluded / 244 pending, 149 outside products,
+2156 product cells, 11256 spans and 6494 domain cells. Adjacent pairs all
+remain pending, and zero product work preserves all 406 pending pairs.
+The independent three pair regressions passed after this integration.
+
+A matched-budget comparison then passed in 59.27 seconds. At the same
+4096 total / 8 per-pair product-cell and 20000 span allowances, support-only
+inspection excludes 158 pairs and leaves 248 pending (2160 cells, 11264
+spans). Owned trim classification excludes 162 and leaves 244 pending
+(2156 cells, 11256 spans, plus 6494 domain cells). Thus trim classification
+completely excludes four additional pairs at that budget, while also
+removing 149 partial outside products. The previous 149/257 result had a
+smaller two-cell per-pair allowance and is not an equal-budget comparison.
+Full shared contact neighborhoods, remaining distinct-face products,
+volume, wall thickness and radius qualification remain required.

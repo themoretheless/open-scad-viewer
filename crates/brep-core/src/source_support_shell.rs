@@ -636,6 +636,19 @@ mod tests {
         }
         eprintln!("all expression supports pairs={} separated={} pending={} cells={} spans={}",all_supports.pairs.len(),all_supports.pairs.len()-all_supports.pending_pairs(),all_supports.pending_pairs(),all_supports.cells,all_supports.spans);
 
+        let support_matched=expression.inspect_shell_supports(4096,8,1000,20000).unwrap();
+        eprintln!("matched support-only pairs={} excluded={} pending={} cells={} spans={}",support_matched.pairs.len(),support_matched.pairs.len()-support_matched.pending_pairs(),support_matched.pending_pairs(),support_matched.cells,support_matched.spans);
+        let trimmed_shell=expression.inspect_shell_trimmed(4096,8,1000,20000,1e-8,100000,256).unwrap();
+        assert_eq!(trimmed_shell.pairs.len(),count*(count-1)/2);
+        assert!(trimmed_shell.cells<=4096 && trimmed_shell.spans<=20000 && trimmed_shell.domain_cells<=100000);
+        for pair in &trimmed_shell.pairs {
+            if !pair.shared_edges.is_empty() {assert!(!pair.inspection.complete_excluded());}
+            assert!(!pair.inspection.pending.is_empty() || !pair.inspection.separated.is_empty() || !pair.inspection.outside.is_empty());
+        }
+        eprintln!("all trimmed expression pairs={} excluded={} pending={} outsideProducts={} cells={} spans={} domainCells={}",trimmed_shell.pairs.len(),trimmed_shell.pairs.len()-trimmed_shell.pending_pairs(),trimmed_shell.pending_pairs(),trimmed_shell.pairs.iter().map(|p|p.inspection.outside.len()).sum::<usize>(),trimmed_shell.cells,trimmed_shell.spans,trimmed_shell.domain_cells);
+        let zero_trim=expression.inspect_shell_trimmed(0,8,1000,20000,1e-8,0,256).unwrap();
+        assert_eq!(zero_trim.pending_pairs(),count*(count-1)/2);
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();
