@@ -824,6 +824,8 @@ mod tests {
         let restored = restore(e.definition(),100_000_000).edge.unwrap();
         assert_eq!(restored.definition(),e.definition());
         assert_eq!(restored.reversed(),e.reversed());
+        assert!(!e.covers_complete_canonical_source());
+        assert!(!restored.covers_complete_canonical_source());
         assert!(restore(e.definition(),1).edge.is_none());
         let mut missing_plane=e.definition();
         missing_plane["recipe"]["planes"][1]=value_codec::Value::Null;
