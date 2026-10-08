@@ -207,8 +207,9 @@ pub(crate) fn rational_pole_pair_report_cached(
     // already been validated and remain immutable throughout all three modes.
     // Charge a restriction only when its endpoint bound is first computed.
     let mut endpoint_bounds = components.map(|values| values.map(Some)).unwrap_or([None; 2]);
-    for mode in [0, 1, 2] {
-        let cost = if mode == 1 { 6 } else { 5 };
+    for mode in [0, 1, 3, 4, 2] {
+        let local_path = matches!(mode, 1 | 3 | 4);
+        let cost = if local_path { 6 } else { 5 };
         let coordinate_path = mode == 0;
         if max_spans - used < cost {
             break;
@@ -216,16 +217,18 @@ pub(crate) fn rational_pole_pair_report_cached(
         if coordinate_path {
             attempted = true;
         }
-        if mode == 1 {
+        if local_path {
             local_attempted = true;
         }
         let matrix = match mode {
             0 => differential.coordinate_path_bounds(union)?,
             1 => differential.local_coordinate_path_bounds(union)?,
+            3 => differential.local_coordinate_path_bounds_with_margin(union, 1.)?,
+            4 => differential.local_coordinate_path_bounds_with_margin(union, 0.25)?,
             _ => differential.bounds(union)?,
         };
         used += cost;
-        if mode == 1 && matrix.is_some() {
+        if local_path && matrix.is_some() {
             local_available = true;
         }
         if coordinate_path && matrix.is_some() {
@@ -272,7 +275,7 @@ pub(crate) fn rational_pole_pair_report_cached(
                     coordinate_path_excluded: coordinate_path,
                     coordinate_path_attempted: attempted,
                     coordinate_path_available: available,
-                    local_path_excluded: mode == 1,
+                    local_path_excluded: local_path,
                     local_path_attempted: local_attempted,
                     local_path_available: local_available,
                 });

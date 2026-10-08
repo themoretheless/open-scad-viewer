@@ -918,3 +918,19 @@ The thirteen chord tests after convex normal restriction also passed.
 The convex prototype audit is still running; its first completed cases
 have exactly the same classified counts as the early Cartesian audit.
 No whole-wall safety or qualification improvement is inferred.
+
+## Convex restriction audit and tighter inverse charts
+
+The convex-normal audit completed with exactly the same classified pending
+counts as early Cartesian exclusion: 6/17 forward radii and 7/15 reverse
+radii, matching both spatial directions. No pole face qualified.
+
+Local inverse paths now additionally try margins of one and one quarter
+parameter width after the original three-width margin. Each attempt still
+pays six restrictions and independently proves signed monotonicity and
+confinement of the complete inverse path. Endpoint normals retain the same
+source-owned cache. The rational analytic regression at U[.45,.55],
+V[0,.01] refuses the broad nonmonotone extension and accepts the tighter
+chart, enclosing independently calculated derivatives. Seven pole and
+thirteen chord tests pass. The unchanged 1024/8192 prototype audit is
+running as annular-tight-path-self-wall; qualification remains unproven.

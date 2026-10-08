@@ -548,9 +548,17 @@ impl<'a> Certificate<'a> {
         &self,
         domain: [[f64; 2]; 2],
     ) -> Result<Option<[[I; 2]; 3]>> {
+        self.local_coordinate_path_bounds_with_margin(domain, 3.)
+    }
+    /// Every margin is independently confined; a smaller chart is never
+    /// accepted merely because its endpoint derivatives are regular.
+    pub(crate) fn local_coordinate_path_bounds_with_margin(
+        &self, domain: [[f64; 2]; 2], factor: f64,
+    ) -> Result<Option<[[I; 2]; 3]>> {
+        check(factor.is_finite() && factor > 0., "Positive inverse path margin")?;
         let d = self.normalized_domain(domain)?;
         let width = I::point(d[0][1]).sub(I::point(d[0][0]))?;
-        let margin = I::point(width.hi.max(2_f64.powi(-20))).mul(I::point(3.))?;
+        let margin = I::point(width.hi.max(2_f64.powi(-20))).mul(I::point(factor))?;
         let extended = [
             [
                 I::point(d[0][0]).sub(margin)?.lo.max(0.),
@@ -885,6 +893,27 @@ mod tests {
         }
         let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
         let d = [[0.8, 0.85], [0., 0.1]];
+        let local = [[0.45, 0.55], [0., 0.01]];
+        assert!(c.local_coordinate_path_bounds(local).unwrap().is_none());
+        let narrow = c.local_coordinate_path_bounds_with_margin(local, 0.25)
+            .unwrap().unwrap();
+        for u in [0.45, 0.5, 0.55] {
+            for v in [0., 0.005, 0.01] {
+                let w = 1. + v + 2. * u * (1. - u) * v;
+                let wu = 2. * (1. - 2. * u) * v;
+                let wv = 1. + 2. * u * (1. - u);
+                let x = -u * (1. + 2. * v) + u * u * (2. + 3. * v);
+                let y = 2. * u * u * v;
+                let xu = ((-1.-2.*v+2.*u*(2.+3.*v))*w-x*wu)/(w*w);
+                let xv = ((-2.*u+3.*u*u)*w-x*wv)/(w*w);
+                let yu = (4.*u*v*w-y*wu)/(w*w);
+                let yv = (2.*u*u*w-y*wv)/(w*w);
+                assert!(narrow[1][0].contains(yu/xu));
+                assert!(narrow[1][1].contains((yv-yu*xv/xu)/(u*u)));
+            }
+        }
+        assert!(c.local_coordinate_path_bounds_with_margin(local, 0.).is_err());
+
         assert!(c.coordinate_path_bounds(d).unwrap().is_none());
         let j = c.local_coordinate_path_bounds(d).unwrap().unwrap();
         let prepared = crate::factored_surface_normals::prepare(&s, false, 10_000_000).unwrap();
