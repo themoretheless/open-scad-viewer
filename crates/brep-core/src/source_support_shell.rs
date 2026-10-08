@@ -396,6 +396,33 @@ mod tests {
         assert_eq!(profile_direction.boundary(),1.);
         assert!(profile_direction.components().iter().any(|r|r[0]>0.||r[1]<0.));
         eprintln!("annular exact profile pole direction {:?}",profile_direction.components());
+        let proposal_limits=||crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7};
+        let specs=[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]}];
+        let report=crate::source_profile_body::prepare(&body,&specs,proposal_limits()).unwrap();
+        let proposal=report.proposal.expect(report.reason);assert!(std::ptr::eq(proposal.original_body(),&body));
+        assert!(proposal.profile(0).is_some()&&proposal.profile(1).is_none());
+        assert_eq!(proposal.specs()[0].anchor,[5,0]);
+        let definition=proposal.definition().unwrap();assert_eq!(definition["originalBody"],body.definition().unwrap());
+        assert_eq!(definition["profiles"][0]["face"],value_codec::json!(0));
+        eprintln!("annular profile body proposal {} controls={} fragments={}",report.reason,report.controls,report.fragments);
+        let mut short=proposal_limits();short.controls=17;
+        assert!(crate::source_profile_body::prepare(&body,&specs,short).unwrap().proposal.is_none());
+        assert!(crate::source_profile_body::prepare(&body,&[specs[0],specs[0]],proposal_limits()).is_err());
+        assert_eq!((report.controls,report.fragments),(44,4));
+        for missing in [0,1,3] {
+            let mut limits=proposal_limits();limits.fragments=missing;
+            let refused=crate::source_profile_body::prepare(&body,&specs,limits).unwrap();
+            assert!(refused.proposal.is_none());
+            assert_eq!(refused.fragments,missing);
+            assert_eq!(refused.reason,"profile-body-work-limit");
+        }
+        let mut exact=proposal_limits();exact.controls=44;exact.fragments=4;
+        assert!(crate::source_profile_body::prepare(&body,&specs,exact).unwrap().proposal.is_some());
+        let mut missing=proposal_limits();missing.controls=43;
+        let refused=crate::source_profile_body::prepare(&body,&specs,missing).unwrap();
+        assert!(refused.proposal.is_none());assert_eq!(refused.controls,43);
+
+
 
 
         let first=shared.canonical_bounds(0,[[0.25,0.5],[0.,1.]]).unwrap();

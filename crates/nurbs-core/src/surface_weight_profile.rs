@@ -40,6 +40,23 @@ impl ProfileDirection<'_, '_> {
         self.components
     }
 }
+/// Pointwise equality of one original natural boundary and the proposal.
+pub struct ProfileBoundary<'a, 's> {
+    profile: &'a WeightProfile<'s>,
+    axis: usize,
+    boundary: f64,
+}
+impl ProfileBoundary<'_, '_> {
+    pub fn profile(&self) -> &WeightProfile<'_> {
+        self.profile
+    }
+    pub fn axis(&self) -> usize {
+        self.axis
+    }
+    pub fn boundary(&self) -> f64 {
+        self.boundary
+    }
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -270,6 +287,74 @@ impl<'source> WeightProfile<'source> {
             1,
         ))
     }
+    /// Prove a complete natural boundary unchanged using original coefficient
+    /// identity or its constant position. No nearby weight or sampled point is
+    /// an identity. Unclamped boundaries and incomplete work refuse.
+    pub fn preserved_boundary<'profile>(
+        &'profile self,
+        axis: usize,
+        high: bool,
+        max_controls: usize,
+    ) -> Result<(Option<ProfileBoundary<'profile, 'source>>, usize)> {
+        check(
+            axis < 2 && max_controls <= 1_000_000,
+            "Choose an original bounded boundary proof",
+        )?;
+        let s = self.source;
+        let knots = [&s.knots_u, &s.knots_v];
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let boundary = if high {
+            knots[axis][counts[axis]]
+        } else {
+            knots[axis][degrees[axis]]
+        };
+        let clamp = if high {
+            &knots[axis][counts[axis]..]
+        } else {
+            &knots[axis][..=degrees[axis]]
+        };
+        if !clamp.iter().all(|x| *x == boundary) {
+            return Ok((None, 0));
+        }
+        let fixed = if high { counts[axis] - 1 } else { 0 };
+        let position = if axis == 0 {
+            &s.control_points[fixed][0]
+        } else {
+            &s.control_points[0][fixed]
+        };
+        let mut constant = true;
+        let mut weights_equal = true;
+        let mut spent = 0;
+        for free in 0..counts[1 - axis] {
+            if spent == max_controls {
+                return Ok((None, spent));
+            }
+            let (i, j) = if axis == 0 {
+                (fixed, free)
+            } else {
+                (free, fixed)
+            };
+            constant &= s.control_points[i][j] == *position;
+            weights_equal &= if axis == 0 {
+                self.row[fixed] == self.pivot && s.weights[i][j] == self.column[j]
+            } else {
+                self.column[fixed] == self.pivot && s.weights[i][j] == self.row[i]
+            };
+            spent += 1;
+        }
+        if !constant && !weights_equal {
+            return Ok((None, spent));
+        }
+        Ok((
+            Some(ProfileBoundary {
+                profile: self,
+                axis,
+                boundary,
+            }),
+            spent,
+        ))
+    }
     pub fn within_position_tolerance(&self, tolerance: f64) -> Result<bool> {
         check(
             tolerance.is_finite() && tolerance >= 0.,
@@ -474,5 +559,31 @@ mod tests {
                 .boundary_direction([[0.99, 1.], [0.2, 0.3]], 1, 1., 0)
                 .is_err()
         );
+    }
+    #[test]
+    fn preserved_boundaries_are_exact_and_budgeted() {
+        let mut s = surface();
+        s.weights[1][1] = 1_f64.next_up();
+        let proof = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        for axis in [0, 1] {
+            let (boundary, spent) = proof.preserved_boundary(axis, false, 2).unwrap();
+            let boundary = boundary.unwrap();
+            assert_eq!(spent, 2);
+            assert!(std::ptr::eq(boundary.profile(), &proof));
+            assert_eq!(boundary.axis(), axis);
+            assert_eq!(boundary.boundary(), 0.);
+            assert!(proof.preserved_boundary(axis, true, 2).unwrap().0.is_none());
+            assert!(
+                proof
+                    .preserved_boundary(axis, false, 1)
+                    .unwrap()
+                    .0
+                    .is_none()
+            );
+        }
+        assert!(proof.preserved_boundary(2, false, 2).is_err());
+        s.control_points[1] = vec![vec![1., 0., 0.]; 2];
+        let proof = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        assert!(proof.preserved_boundary(0, true, 2).unwrap().0.is_some());
     }
 }

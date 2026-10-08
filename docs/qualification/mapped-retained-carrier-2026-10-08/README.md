@@ -481,3 +481,28 @@ unchanged. Applying this proposal still requires a closed corrected-body
 representation, neighboring original carrier verification, seam/wall/volume
 checks and STEP/history acceptance. The 28 original pending pairs are not
 promoted by this proposal certificate.
+
+## Boundary-preserving native body proposal
+
+`source_profile_body::prepare` binds exact profile recipes to an immutable
+original Body. Admission checks all four natural boundaries, including collapsed
+pole rails, and every original retained contour fragment. Boundary equality
+requires exact original weight identity or an exactly constant control rail;
+nearby floating-point values never establish identity. Contour control points
+must all lie on a single preserved natural boundary. Interior trims currently
+refuse admission.
+
+The annular face 0 proposal with anchor [5,0] preserves all four contour
+fragments using 44 control checks. Original world edges, root ends, Body
+identity and source definitions are retained. Limits of 43 controls or fewer
+than four fragments refuse; the exact 44-control/four-fragment budget accepts.
+The profile kernel suite passes all six tests.
+
+The definition stores original Body plus exact factor recipes, not flattened
+weights or certificates. Restoration and corrected embedding, volume, seam,
+wall and STEP qualification remain outstanding. This proposal is not an
+admitted corrected `source_volume::Body`; it does not reduce the 28 unresolved
+original-body pairs and is not included in the packaged WASM.
+
+All 17 source-support-shell tests pass after the body-boundary admission and
+budget refusal controls. No original Body qualification gate was relaxed.
