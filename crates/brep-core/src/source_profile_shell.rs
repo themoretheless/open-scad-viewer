@@ -654,4 +654,4 @@ mod tests {
 
 #[path = "source_profile_shell_contacts.rs"]
 mod contacts;
-pub use contacts::{SupportPairReport, SupportProduct};
+pub use contacts::{ShellSupportPair, ShellSupportReport, SupportPairReport, SupportProduct};

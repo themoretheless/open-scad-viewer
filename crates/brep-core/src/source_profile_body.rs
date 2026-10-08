@@ -1543,4 +1543,4 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
 
 #[path="source_profile_shell.rs"]
 mod assembled_shell;
-pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport,SupportPairReport,SupportProduct};
+pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport,SupportPairReport,SupportProduct,ShellSupportPair,ShellSupportReport};

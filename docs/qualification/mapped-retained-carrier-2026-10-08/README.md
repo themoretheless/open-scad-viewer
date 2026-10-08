@@ -2043,3 +2043,29 @@ in one product cell and two span evaluations, with no pending product.
 The final regression explicitly requires complete separation. This is
 one pair; remaining original/retained/transition pairs and shared seam
 neighborhoods still require geometric qualification. Native-only.
+
+
+## Complete expression-shell support pair inventory
+
+ExpressionShell::support_domain derives a conservative containing
+rectangle from the privately owned face recipe: the original active knot
+domain, the entry/terminal exterior half rectangle, or the exact transition
+free range times normalized across [0,1]. Trimmed-out support regions are
+retained conservatively.
+
+inspect_shell_supports visits every unordered face pair, including
+adjacent faces. Each record identifies the owning faces, all shared
+incidence edge IDs, excluded products and pending products. A global cell
+and span allowance covers the full run, with a separate cell cap per pair.
+Even after exhaustion, every remaining pair retains its full pending
+parameter product. The complete report is bounded to 100000 pairs before
+allocation. Larger shells need a streaming report implementation.
+
+The combined annular regression passed in 34.53 seconds: all 406 pairs of
+29 faces are represented; 149 support pairs are completely separated and
+257 remain pending, using 663 cells and 3062 spans. Every adjacent pair
+remains pending. The zero-cell run retains all 406 full products. After
+adding the allocation guard, final compilation and both independent
+support-pair regressions passed. This is conservative support exclusion,
+not complete trimmed-face self-intersection qualification; region
+classification and certified seam neighborhoods remain necessary.

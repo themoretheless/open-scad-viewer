@@ -13,6 +13,24 @@ impl SupportPairReport {
         self.pending.is_empty()
     }
 }
+pub struct ShellSupportPair {
+    pub faces: [usize; 2],
+    pub shared_edges: Vec<usize>,
+    pub inspection: SupportPairReport,
+}
+pub struct ShellSupportReport {
+    pub pairs: Vec<ShellSupportPair>,
+    pub cells: usize,
+    pub spans: usize,
+}
+impl ShellSupportReport {
+    pub fn pending_pairs(&self) -> usize {
+        self.pairs
+            .iter()
+            .filter(|p| !p.inspection.complete_separated())
+            .count()
+    }
+}
 fn inspect<F>(
     domain: SupportProduct,
     max_cells: usize,
@@ -97,6 +115,117 @@ where
     Ok(out)
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    /// Complete containing support rectangle. Trimmed-out regions are retained
+    /// conservatively until a separate region classifier excludes them.
+    pub fn support_domain(&self, face: usize) -> Result<[[f64; 2]; 2]> {
+        let kind = self
+            .faces
+            .get(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_CONTACTS", "Unknown expression face"))?
+            .kind;
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let proposal = root.restricted.proposal;
+        let natural = |surface: &nurbs_core::surface::Surface| {
+            [
+                [
+                    surface.knots_u[surface.degree_u],
+                    surface.knots_u[surface.control_points.len()],
+                ],
+                [
+                    surface.knots_v[surface.degree_v],
+                    surface.knots_v[surface.control_points[0].len()],
+                ],
+            ]
+        };
+        match kind {
+            ShellFaceKind::Original(index) => Ok(natural(
+                proposal.body.geometry().shell().faces()[index][0].edges()[0].surface(),
+            )),
+            ShellFaceKind::Retained(end) => {
+                let mut domain = natural(proposal.profile(root.face).unwrap().source());
+                domain[root.axis][1 - end] = root.parameters[end];
+                Ok(domain)
+            }
+            ShellFaceKind::Transition => Ok([
+                proposal
+                    .profile(root.face)
+                    .unwrap()
+                    .section(root.axis, root.parameters[0])?
+                    .range(),
+                [0., 1.],
+            ]),
+        }
+    }
+    /// Inspect every unordered face pair, including adjacent faces. Resource
+    /// exhaustion records every remaining pair with its full pending product.
+    pub fn inspect_shell_supports(
+        &self,
+        max_cells: usize,
+        cells_per_pair: usize,
+        max_controls_per_enclosure: usize,
+        max_spans: usize,
+    ) -> Result<ShellSupportReport> {
+        if max_cells > 100000
+            || cells_per_pair > 100000
+            || max_spans > 100000
+            || max_controls_per_enclosure > 1000000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound shell support inspection work",
+            ));
+        }
+        let pair_count = self
+            .faces
+            .len()
+            .checked_mul(self.faces.len().saturating_sub(1))
+            .and_then(|n| n.checked_div(2));
+        if pair_count.is_none_or(|n| n > 100000) {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound complete shell pair report to 100000 pairs",
+            ));
+        }
+        let domains = (0..self.faces.len())
+            .map(|i| self.support_domain(i))
+            .collect::<Result<Vec<_>>>()?;
+        let mut out = ShellSupportReport {
+            pairs: Vec::new(),
+            cells: 0,
+            spans: 0,
+        };
+        for a in 0..self.faces.len() {
+            for b in a + 1..self.faces.len() {
+                let faces = [a, b];
+                let domain = [domains[a], domains[b]];
+                let inspection = self.inspect_support_pair(
+                    faces,
+                    domain,
+                    cells_per_pair.min(max_cells - out.cells),
+                    max_controls_per_enclosure,
+                    max_spans - out.spans,
+                )?;
+                out.cells += inspection.cells;
+                out.spans += inspection.spans;
+                let shared_edges = self
+                    .pairs
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, p)| {
+                        (p.uses[0].face == a && p.uses[1].face == b)
+                            || (p.uses[0].face == b && p.uses[1].face == a)
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+                out.pairs.push(ShellSupportPair {
+                    faces,
+                    shared_edges,
+                    inspection,
+                });
+            }
+        }
+        Ok(out)
+    }
     /// Excludes intersections only on the supplied support rectangles. Shared
     /// seams and uncertain overlap remain pending; no sampled contact admission.
     pub fn inspect_support_pair(

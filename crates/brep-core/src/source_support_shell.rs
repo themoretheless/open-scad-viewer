@@ -611,6 +611,22 @@ mod tests {
         assert!(!support_pair.separated.is_empty() || !support_pair.pending.is_empty());
         assert!(expression.inspect_support_pair([retained_ids[0];2],[[[0.;2];2];2],1,100,100).is_err());
 
+        let no_pair_work=expression.inspect_shell_supports(0,2,1000,10000).unwrap();
+        let count=expression.faces().len();
+        assert_eq!(no_pair_work.pairs.len(),count*(count-1)/2);
+        assert_eq!(no_pair_work.pending_pairs(),no_pair_work.pairs.len());
+        for pair in &no_pair_work.pairs {
+            assert_eq!(pair.inspection.pending,vec![pair.faces.map(|i|expression.support_domain(i).unwrap())]);
+        }
+        let all_supports=expression.inspect_shell_supports(1024,2,1000,10000).unwrap();
+        assert_eq!(all_supports.pairs.len(),count*(count-1)/2);
+        assert!(all_supports.cells<=1024 && all_supports.spans<=10000);
+        for pair in &all_supports.pairs {
+            assert!(!pair.inspection.pending.is_empty() || !pair.inspection.separated.is_empty());
+            if !pair.shared_edges.is_empty() {assert!(!pair.inspection.complete_separated());}
+        }
+        eprintln!("all expression supports pairs={} separated={} pending={} cells={} spans={}",all_supports.pairs.len(),all_supports.pairs.len()-all_supports.pending_pairs(),all_supports.pending_pairs(),all_supports.cells,all_supports.spans);
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();
