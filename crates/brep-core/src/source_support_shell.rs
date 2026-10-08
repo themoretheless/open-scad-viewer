@@ -481,6 +481,15 @@ mod tests {
             assert!(cover.cells<=128 && cover.spans<=256);
             if !high {assert!(cover.complete_regular);assert!(cover.pending.is_empty());}
             eprintln!("retained profile high={high} regular={} pending={} cells={} spans={}",cover.regular.len(),cover.pending.len(),cover.cells,cover.spans);
+            if high {
+                let profile=proposal.profile(0).unwrap();let mut factored_regular=0;
+                for domain in &cover.pending {
+                    let (normal,spent)=profile.factored_pole_normal_bounds(*domain,true,6).unwrap();assert_eq!(spent,6);
+                    let normal=normal.unwrap();assert_eq!(normal.point,[20.,0.,6.]);
+                    if normal.components.iter().any(|r|r[0]>0. || r[1]<0.) {factored_regular+=1;}
+                }
+                eprintln!("retained terminal factored normal accepted={} pending={}",factored_regular,cover.pending.len()-factored_regular);
+            }
             let refused=exterior.inspect_regularity(0,256).unwrap();
             assert!(!refused.complete_regular);assert_eq!(refused.pending.len(),1);
             let expected=if high {1.}else{0.};

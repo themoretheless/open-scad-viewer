@@ -1786,3 +1786,34 @@ closed Body certificate is issued from the incomplete cover. Native-only.
 
 The final combined regression, explicitly requiring complete entry-region
 regularity, passed in 40.83 seconds. The initial run passed in 41.65 seconds.
+
+## Exact collapsed-U normal factor
+
+WeightProfile::factored_pole_normal_bounds factors the collapsed-U position
+numerator under the exact profile weight expression. For a clamped single
+Bezier span with p coincident pole rows, Q=N-P*W=f^p*A, where f is the
+normalized distance from the collapsed U boundary. The ordinary normal
+factors as f^(2p-1) times the returned normal expression. Bernstein
+coefficient reduction uses outward binomial ratios; recentering uses
+original control differences and does not flatten the profile weights.
+Both high and low collapsed boundaries and original parameter width are
+handled. Six homogeneous jet hull queries are required; insufficient work,
+unsupported span structure and missing collapse refuse.
+
+The returned diagnostic explicitly records pole point, boundary side and
+removed power. It does not certify immersion at the singular boundary or
+a smooth common tangent plane. Independent references cover bilinear
+collapse on both ends, third-power normal factors for quadratic position
+collapse, nonunit parameter width and geometry translated by 1e8. The
+initial 21-test profile suite passed in 13.96 seconds. A rational reference
+S=(4u/(1+3u),4uv/(1+3u),0) checks the factored normal
+(0,0,16/(1+3u)^3) at five U values including the collapsed endpoint.
+
+On the annular terminal cover, 5 of the 11 ordinary-normal pending cells
+have nonzero factored normal bounds; 6 still require refinement. The
+ordinary immersion cover is not rewritten as complete. Adaptive factored
+coverage and singular-boundary topology/embedding admission remain open.
+Native-only; packaged WASM remains unchanged.
+
+The final 22-test profile suite passed in 17.75 seconds, including the
+rational reference. The combined annular regression passed in 65.70 seconds.

@@ -11,6 +11,8 @@ pub struct WeightProfile<'a> {
     axis_deviation_upper: [f64; 3],
     weight_deviation_upper: f64,
 }
+/// Explicit collapsed-boundary normal factor diagnostic, never a smooth pole certificate.
+pub struct ProfilePoleNormal {pub components:[[f64;2];3],pub high:bool,pub power:usize,pub point:[f64;3]}
 /// Direction certificate for the exact proposed profile, not its original Surface.
 pub struct ProfileDirection<'a, 's> {
     profile: &'a WeightProfile<'s>,
@@ -936,6 +938,55 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
+    /// Normal divided by the exact normalized collapsed-U factor^(2*power-1).
+    /// This is a factored interior/pole-limit diagnostic, not immersion at the pole.
+    pub fn factored_pole_normal_bounds(&self,domain:[[f64;2];2],high:bool,max_spans:usize)->Result<(Option<ProfilePoleNormal>,usize)> {
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
+        let s=self.source;let n=s.degree_u;let q=s.degree_v;
+        let span=[[s.knots_u[n],s.knots_u[s.control_points.len()]],
+            [s.knots_v[q],s.knots_v[s.control_points[0].len()]]];
+        if n>8 || q>8 || s.control_points.len()!=n+1 || s.control_points[0].len()!=q+1
+            || ![(&s.knots_u,n),(&s.knots_v,q)].iter().enumerate().all(|(axis,(knots,degree))|
+                knots[..=*degree].iter().all(|x|*x==span[axis][0]) && knots[degree+1..].iter().all(|x|*x==span[axis][1])) {return Ok((None,0));}
+        let pole=&s.control_points[if high {n}else{0}][0];
+        let power=(0..=n).take_while(|step|s.control_points[if high {n-step}else{*step}].iter().all(|p|p==pole)).count();
+        if power==0 || power>n || max_spans<6 {return Ok((None,0));}
+        let choose=|n:usize,k:usize|->u64 {(0..k).fold(1,|value,i|value*(n-i) as u64/(i+1) as u64)};
+        let m=n-power;let mut reduced=vec![vec![[I::point(0.);4];q+1];m+1];
+        for i in 0..=m {for j in 0..=q {
+            let original=if high {i}else{i+power};
+            let ratio=I::point(choose(n,original) as f64).div(I::point(choose(m,i) as f64))?;
+            let weight=I::point(self.row[original]).mul(I::point(self.column[j]))?.div(I::point(self.pivot))?;
+            for k in 0..3 {
+                let difference=if s.control_points[original][j][k]==pole[k] {I::point(0.)}else{I::point(s.control_points[original][j][k]).sub(I::point(pole[k]))?};
+                reduced[i][j][k]=difference.mul(weight)?.mul(ratio)?;
+            }
+        }}
+        let full=self.homogeneous_on([n,q],span)?;
+        let hull=crate::normal_alignment::homogeneous_jet_hull;
+        let a=hull(&reduced,[m,q],span,domain,[0,0])?;
+        let au=hull(&reduced,[m,q],span,domain,[1,0])?;
+        let av=hull(&reduced,[m,q],span,domain,[0,1])?;
+        let w=hull(&full,[n,q],span,domain,[0,0])?[3];
+        let wu=hull(&full,[n,q],span,domain,[1,0])?[3];
+        let wv=hull(&full,[n,q],span,domain,[0,1])?[3];
+        let width=I::point(span[0][1]).sub(I::point(span[0][0]))?;
+        let u=I::new(domain[0][0],domain[0][1])?;
+        let factor=if high {I::point(span[0][1]).sub(u)?}else{u.sub(I::point(span[0][0]))?}.div(width)?.intersect(0.,1.)?;
+        let derivative=I::point(if high {-(power as f64)}else{power as f64}).div(width)?;
+        let mut first=[I::point(0.);3];let mut second=first;
+        for k in 0..3 {
+            first[k]=derivative.mul(a[k])?.mul(w)?.add(factor.mul(au[k].mul(w)?.sub(a[k].mul(wu)?)?)?)?;
+            second[k]=av[k].mul(w)?.sub(a[k].mul(wv)?)?;
+        }
+        let denominator=w.mul(w)?.mul(w)?.mul(w)?;
+        let mut components=[[0.;2];3];
+        for k in 0..3 {let i=(k+1)%3;let j=(k+2)%3;
+            let normal=first[i].mul(second[j])?.sub(first[j].mul(second[i])?)?.div(denominator)?;
+            components[k]=[normal.lo,normal.hi];
+        }
+        Ok((Some(ProfilePoleNormal{components,high,power:2*power-1,point:[pole[0],pole[1],pole[2]]}),6))
+    }
     /// Adaptive complete coverage of exact profile normals on a rectangle.
     /// A nonzero component proves immersion; zero-containing cells stay pending.
     pub fn inspect_regularity(&self,domain:[[f64;2];2],max_cells:usize,max_spans:usize)->Result<TransitionRegularityReport> {
@@ -1537,6 +1588,47 @@ mod tests {
             weights: vec![vec![1.; 2]; 2],
             periodic_u: false,
             periodic_v: false,
+        }
+    }
+    #[test]
+    fn collapsed_profile_normal_factor_matches_bilinear_reference() {
+        for high in [false,true] {
+            let mut s=surface();
+            if high {s.control_points[0]=vec![vec![1.,0.,0.],vec![1.,1.,0.]];s.control_points[1]=vec![vec![0.,0.,0.];2];}
+            else {s.control_points[0][1]=vec![0.,0.,0.];}
+            let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+            assert!(profile.factored_pole_normal_bounds([[0.,1.],[0.,1.]],high,5).unwrap().0.is_none());
+            let (normal,spent)=profile.factored_pole_normal_bounds([[0.,1.],[0.,1.]],high,6).unwrap();
+            let normal=normal.unwrap();assert_eq!(spent,6);assert_eq!(normal.power,1);assert_eq!(normal.high,high);
+            let expected=if high {-1.}else{1.};
+            assert!(normal.components[2][0]<=expected && normal.components[2][1]>=expected);
+            assert!(normal.components[2][0]>0. || normal.components[2][1]<0.);
+            for axis in 0..2 {assert!(normal.components[axis][0]<=0. && normal.components[axis][1]>=0.);}
+        }
+        for high in [false,true] {
+            let mut s=surface();s.degree_u=2;s.knots_u=vec![2.,2.,2.,4.,4.,4.];
+            let pole=vec![1e8,2e8,3e8];let outer=vec![vec![1e8+1.,2e8,3e8],vec![1e8+1.,2e8+1.,3e8]];
+            s.control_points=if high {vec![outer,vec![pole.clone();2],vec![pole;2]]}else{vec![vec![pole.clone();2],vec![pole;2],outer]};
+            s.weights=vec![vec![1.;2];3];
+            let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+            let normal=p.factored_pole_normal_bounds([[2.,4.],[0.,1.]],high,6).unwrap().0.unwrap();
+            assert_eq!(normal.power,3);let expected=if high {-1.}else{1.};
+            assert!(normal.components[2][0]<=expected && normal.components[2][1]>=expected);
+            assert!(normal.components[2][0]>0. || normal.components[2][1]<0.);
+        }
+        let s=surface();let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        assert!(p.factored_pole_normal_bounds([[0.,1.],[0.,1.]],true,6).unwrap().0.is_none());
+    }
+    #[test]
+    fn collapsed_profile_normal_factor_matches_rational_reference() {
+        let mut s=surface();s.control_points[0][1]=vec![0.,0.,0.];s.weights[1]=vec![4.;2];
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        // S=(4u/(1+3u),4uv/(1+3u),0), (Su x Sv)/u=(0,0,16/(1+3u)^3).
+        for u in [0.,0.25,0.5,0.75,1.] {
+            let normal=p.factored_pole_normal_bounds([[u;2],[0.,1.]],false,6).unwrap().0.unwrap();
+            let expected=16./(1.+3.*u).powi(3);
+            assert!(normal.components[2][0]<=expected && normal.components[2][1]>=expected);
+            assert!(normal.components[2][0]>0.);
         }
     }
     #[test]
