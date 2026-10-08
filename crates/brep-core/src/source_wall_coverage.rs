@@ -30,6 +30,7 @@ pub struct Certificate<'a> {
     minimum_mm: f64,
     max_sine_squared: f64,
     gaps: Vec<source_face_gap::Certificate<'a>>,
+    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a>>,
     self_chords: Vec<nurbs_core::surface_self_chord::Certificate<'a>>,
     adaptive_self: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
 }
@@ -51,6 +52,7 @@ impl<'a> Certificate<'a> {
     pub fn self_chord_certificates(&self) -> &[nurbs_core::surface_self_chord::Certificate<'a>] {
         &self.self_chords
     }
+    pub fn retained_gap_certificates(&self) -> &[crate::source_retained_face_gap::Certificate<'a>] { &self.retained_gaps }
     pub fn gap_certificates(&self) -> &[source_face_gap::Certificate<'a>] {
         &self.gaps
     }
@@ -111,6 +113,23 @@ pub fn qualify_with_self_facts_and_factored_normals<'a>(
     facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
     products:NormalProductLimits, factors:FactoredNormalLimits,
 )->Result<Report<'a>> {
+    qualify_with_retained_gap_facts(body,minimum_mm,limits,facts,products,factors,Vec::new())
+}
+/// Add private original retained-domain certificates without replacing earlier proofs.
+pub fn qualify_with_retained_gap_facts<'a>(
+    body:&'a Body,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits,factors:FactoredNormalLimits,
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+)->Result<Report<'a>> {
+    let mut retained_pairs=std::collections::HashSet::new();
+    for gap in &retained_gaps {
+        let mut faces=gap.faces();faces.sort();
+        if !std::ptr::eq(gap.body(),body)||gap.lower_mm()<minimum_mm
+            ||!retained_pairs.insert(faces) {
+            return Err(Error::new("BREP_SOURCE_RETAINED_WALL_FACT","Use unique owned retained face facts covering the requested threshold"));
+        }
+    }
     let enabled=factors.exact_work>0;
     if factors.exact_work>100_000_000 || factors.queries>100000 || factors.cells>100000
         || factors.cells_per_pair>100000 || [factors.queries,factors.cells,factors.cells_per_pair]
@@ -319,6 +338,12 @@ pub fn qualify_with_self_facts_and_factored_normals<'a>(
             }
         }
     }
+    for pair in &mut out.pairs {
+        if !pair.proven && retained_pairs.contains(&pair.faces) {
+            pair.proven=true;
+            pair.reason="source-wall-retained-gap-qualified";
+        }
+    }
     out.enumeration_complete = out.pairs.len() == total_pairs;
     if out.enumeration_complete && out.pairs.iter().all(|p| p.proven) {
         out.certificate = Some(Certificate {
@@ -326,6 +351,7 @@ pub fn qualify_with_self_facts_and_factored_normals<'a>(
             minimum_mm,
             max_sine_squared: limits.max_sine_squared,
             gaps,
+            retained_gaps,
             self_chords,
             adaptive_self: facts,
         });

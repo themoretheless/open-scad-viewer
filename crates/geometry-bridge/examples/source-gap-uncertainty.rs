@@ -74,6 +74,7 @@ fn main() {
         .as_array()
         .unwrap();
     let mut results = Vec::new();
+    let mut retained_facts = Vec::new();
     for pair in pairs
         .iter()
         .filter(|p| p["reason"] == json!("source-face-gap-resolution-limit"))
@@ -119,7 +120,7 @@ fn main() {
             json!({"location":format!("{:?}",r.location),"cells":r.cells,"endpointQueries":r.endpoint_queries,"reason":r.reason})
         });
         let retained = if args.get(4).is_some_and(|v| v == "retained") {
-            let r = brep_core::source_retained_face_gap::qualify(
+            let mut r = brep_core::source_retained_face_gap::qualify(
                 body,
                 [a, b],
                 5.99,
@@ -141,11 +142,101 @@ fn main() {
             } else {
                 assert!(!r.unresolved_products.is_empty());
             }
-            json!({"qualified":r.certificate.is_some(),"reason":r.reason,"cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"domainQueries":r.domain_queries,"endpointQueries":r.endpoint_queries,"outsideProducts":r.outside_products,"unresolvedProducts":r.unresolved_products})
+            let qualified = r.certificate.is_some();
+            if let Some(c) = r.certificate.take() {
+                retained_facts.push(c);
+            }
+            json!({"qualified":qualified,"reason":r.reason,"cells":r.cells,"spans":r.spans,"domainCells":r.domain_cells,"domainQueries":r.domain_queries,"endpointQueries":r.endpoint_queries,"outsideProducts":r.outside_products,"unresolvedProducts":r.unresolved_products})
         } else {
             Value::Null
         };
         results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1],"retainedDomain":memberships,"retainedGap":retained}));
     }
-    std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results})).unwrap()).unwrap();
+    let coverage = if !retained_facts.is_empty() {
+        use brep_core::{source_wall_coverage as wall, source_wall_self_coverage as own};
+        let mut self_facts = own::qualify(
+            body,
+            5.99,
+            1e-6,
+            own::Limits {
+                plane_controls: 10000,
+                cells: 50000,
+                spans: 100000,
+                cells_per_face: 8192,
+                spans_per_face: 10000,
+            },
+        )
+        .unwrap();
+        own::extend_with_pole_facts(
+            body,
+            5.99,
+            1e-6,
+            &mut self_facts,
+            own::Limits {
+                plane_controls: 10000,
+                cells: 100000,
+                spans: 100000,
+                cells_per_face: 4096,
+                spans_per_face: 100000,
+            },
+            100000000,
+        )
+        .unwrap();
+        own::refine_unqualified(
+            body,
+            5.99,
+            1e-6,
+            &mut self_facts,
+            own::Limits {
+                plane_controls: 10000,
+                cells: 100000,
+                spans: 100000,
+                cells_per_face: 100000,
+                spans_per_face: 100000,
+            },
+        )
+        .unwrap();
+        assert!(self_facts.all_self_pairs_qualified());
+        let r = wall::qualify_with_retained_gap_facts(
+            body,
+            5.99,
+            wall::Limits {
+                pairs: 378,
+                plane_controls: 10000,
+                normal_spans: 20000,
+                gap: brep_core::source_face_gap::Limits {
+                    cells: 100000,
+                    spans: 100000,
+                },
+                max_sine_squared: 1e-6,
+            },
+            self_facts.into_certificates(),
+            wall::NormalProductLimits {
+                cells: 50000,
+                cells_per_pair: 128,
+            },
+            wall::FactoredNormalLimits {
+                exact_work: 100000000,
+                queries: 10000,
+                cells: 10000,
+                cells_per_pair: 128,
+            },
+            retained_facts,
+        )
+        .unwrap();
+        assert!(r.enumeration_complete);
+        assert!(r.certificate.is_none());
+        assert_eq!(r.pairs.iter().filter(|p| !p.proven).count(), 46);
+        for old in pairs.iter().filter(|p| p["proven"] == json!(true)) {
+            assert!(
+                r.pairs
+                    .iter()
+                    .any(|p| json!(p.faces) == old["faces"] && p.proven)
+            );
+        }
+        json!({"wholeWallQualified":false,"unresolved":46,"pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>()})
+    } else {
+        Value::Null
+    };
+    std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results,"coverage":coverage})).unwrap()).unwrap();
 }
