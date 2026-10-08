@@ -133,7 +133,8 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
         .min(1.))
 }
 /// Pair-specific exclusion, not an intrinsic certificate for the convex union.
-/// Five differential restrictions and up to two endpoint-normal restrictions.
+/// Each attempted matrix charges five net restrictions and up to two endpoint
+/// normal restrictions. A confined coordinate path is tried before the UV path.
 pub(crate) fn rational_pole_pair_exclusion(
     s: &Surface,
     pair: [[[f64; 2]; 2]; 2],
@@ -161,38 +162,49 @@ pub(crate) fn rational_pole_pair_exclusion(
             pair[0][a][1].max(pair[1][a][1]),
         ]
     });
-    let Some(mut j) = differential.bounds(union)? else {
-        return Ok((false, 5));
-    };
-    for a in 0..2 {
-        let scale = j
-            .iter()
-            .map(|r| r[a].lo.abs().max(r[a].hi.abs()))
-            .fold(0_f64, f64::max);
-        if scale >= f64::MIN_POSITIVE && scale.is_finite() {
-            for row in &mut j {
-                row[a] = row[a].div(I::point(scale))?;
-            }
-        }
-    }
     let threshold = I::point(1.).sub(I::point(sine))?.lo;
-    let mut used = 5;
-    for endpoint in pair {
-        if used == max_spans {
+    let mut used = 0;
+    for coordinate_path in [true, false] {
+        if max_spans - used < 5 {
             break;
         }
-        let b = normals.bounds(endpoint)?;
-        used += 1;
-        let scale = b.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
-        if scale < f64::MIN_POSITIVE {
+        let matrix = if coordinate_path {
+            differential.coordinate_path_bounds(union)?
+        } else {
+            differential.bounds(union)?
+        };
+        used += 5;
+        let Some(mut j) = matrix else {
             continue;
+        };
+        for a in 0..2 {
+            let scale = j
+                .iter()
+                .map(|r| r[a].lo.abs().max(r[a].hi.abs()))
+                .fold(0_f64, f64::max);
+            if scale >= f64::MIN_POSITIVE && scale.is_finite() {
+                for row in &mut j {
+                    row[a] = row[a].div(I::point(scale))?;
+                }
+            }
         }
-        let mut n = [I::point(0.); 3];
-        for k in 0..3 {
-            n[k] = I::new(b[k][0], b[k][1])?.div(I::point(scale))?;
-        }
-        if endpoint_matrix_cosine(j, n)? < threshold {
-            return Ok((true, used));
+        for endpoint in pair {
+            if used == max_spans {
+                break;
+            }
+            let b = normals.bounds(endpoint)?;
+            used += 1;
+            let scale = b.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
+            if scale < f64::MIN_POSITIVE {
+                continue;
+            }
+            let mut n = [I::point(0.); 3];
+            for k in 0..3 {
+                n[k] = I::new(b[k][0], b[k][1])?.div(I::point(scale))?;
+            }
+            if endpoint_matrix_cosine(j, n)? < threshold {
+                return Ok((true, used));
+            }
         }
     }
     Ok((false, used))

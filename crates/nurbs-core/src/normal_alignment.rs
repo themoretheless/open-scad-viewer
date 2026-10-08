@@ -108,6 +108,36 @@ pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result
     }
     Ok(out)
 }
+/// Signed denominators are allowed only when all restricted coefficients have
+/// the same separated sign, so their rational convex weights remain positive.
+pub(crate) fn signed_rational_quotient_hull(
+    net: &Net,
+    domain: [[f64; 2]; 2],
+) -> Result<Option<[I; 3]>> {
+    let r = restrict_net(
+        net,
+        [net.len() - 1, net[0].len() - 1],
+        [[0., 1.], [0., 1.]],
+        domain,
+    )?;
+    let positive = r.iter().flatten().all(|h| h[3].lo > 0.);
+    let negative = r.iter().flatten().all(|h| h[3].hi < 0.);
+    if !positive && !negative {
+        return Ok(None);
+    }
+    let mut out = [I {
+        lo: f64::INFINITY,
+        hi: f64::NEG_INFINITY,
+    }; 3];
+    for h in r.iter().flatten() {
+        for k in 0..3 {
+            let x = h[k].div_signed(h[3])?;
+            out[k].lo = out[k].lo.min(x.lo);
+            out[k].hi = out[k].hi.max(x.hi);
+        }
+    }
+    Ok(Some(out))
+}
 pub(crate) fn jacobian_on(
     s: &Surface,
     indices: [usize; 2],
@@ -596,6 +626,22 @@ mod tests {
             assert!(point[1].contains(1. / (2. + 8. * u)));
             assert!(point[1].hi - point[1].lo < 1e-12);
         }
+        let mut negative = net.clone();
+        for h in negative.iter_mut().flatten() {
+            for x in h {
+                *x = I::point(0.).sub(*x).unwrap();
+            }
+        }
+        let signed = signed_rational_quotient_hull(&negative, [[0., 1.], [0., 1.]])
+            .unwrap()
+            .unwrap();
+        assert!(signed[0].contains(1.) && signed[1].contains(0.25));
+        negative[0][0][3] = I::point(1.);
+        assert!(
+            signed_rational_quotient_hull(&negative, [[0., 1.], [0., 1.]])
+                .unwrap()
+                .is_none()
+        );
         let mut invalid = net;
         invalid[0][0][3] = I::point(0.);
         assert!(rational_quotient_hull(&invalid, [[0., 1.], [0., 1.]]).is_err());

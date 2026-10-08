@@ -14,6 +14,8 @@ pub struct Certificate<'a> {
     alpha: Net,
     e: Net,
     b: Net,
+    e_over_lambda: Net,
+    fixed_x: Net,
 }
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
@@ -239,6 +241,41 @@ fn rational_net(mut net: Net, denominator: &Net) -> Result<Net> {
     }
     Ok(net)
 }
+fn fixed_coordinate_net(b: &Net, e: &Net, lambda: &Net, alpha: &Net) -> Result<Net> {
+    let (p, q) = (b.len() - 1, b[0].len() - 1);
+    let mut out = empty(2 * p + 1, 2 * q + 1);
+    for u in 0..=2 * p {
+        for v in 0..=2 * q {
+            let mut value = [I::point(0.); 4];
+            for i in 0..=p {
+                for j in 0..=q {
+                    if u < i || u - i > p || v < j || v - j > q {
+                        continue;
+                    }
+                    // Each integer <= choose(32,16) is exact in Binary64; products
+                    // use outward interval operations rather than a rounded cast.
+                    let mut factor = I::point(1.);
+                    for (n, k) in [(p, i), (p, u - i), (q, j), (q, v - j)] {
+                        factor = factor.mul(I::point(choose(n, k) as f64))?;
+                    }
+                    factor = factor
+                        .div(I::point(choose(2 * p, u) as f64))?
+                        .div(I::point(choose(2 * q, v) as f64))?;
+                    let l = lambda[u - i][v - j][0];
+                    for k in 0..3 {
+                        let n = b[i][j][k]
+                            .mul(l)?
+                            .sub(e[i][j][k].mul(alpha[u - i][v - j][0])?)?;
+                        value[k] = value[k].add(n.mul(factor)?)?;
+                    }
+                    value[3] = value[3].add(b[i][j][3].mul(l)?.mul(factor)?)?;
+                }
+            }
+            out[u][v] = value;
+        }
+    }
+    Ok(out)
+}
 /// No input geometry is fitted or changed. Every dropped coefficient has an
 /// exact Zero sign; all other magnitudes retain authored coefficient units.
 pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
@@ -360,16 +397,29 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
             }
         }
         let denominator = weight_square(&source.weights)?;
+        let lambda = rational_net(scalar(lambda), &denominator)?;
+        let alpha = rational_net(scalar(alpha), &denominator)?;
+        let e = rational_net(e, &denominator)?;
+        let b = rational_net(b, &denominator)?;
+        let fixed_x = fixed_coordinate_net(&b, &e, &lambda, &alpha)?;
+        let mut e_over_lambda = e.clone();
+        for u in 0..e.len() {
+            for v in 0..e[0].len() {
+                e_over_lambda[u][v][3] = lambda[u][v][0];
+            }
+        }
         Ok(Some(Certificate {
             surface: s,
             end,
             anchor,
             a,
             weight,
-            lambda: rational_net(scalar(lambda), &denominator)?,
-            alpha: rational_net(scalar(alpha), &denominator)?,
-            e: rational_net(e, &denominator)?,
-            b: rational_net(b, &denominator)?,
+            lambda,
+            alpha,
+            e,
+            b,
+            e_over_lambda,
+            fixed_x,
         }))
     })()?;
     let reason = if prepared.is_some() {
@@ -393,9 +443,7 @@ impl<'a> Certificate<'a> {
     pub fn anchor(&self) -> usize {
         self.anchor
     }
-    /// Columns enclosing the weighted mean chord matrix and both endpoint tangent
-    /// frames. A separated signed longitudinal derivative is required everywhere.
-    pub fn bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+    fn normalized_domain(&self, domain: [[f64; 2]; 2]) -> Result<[[f64; 2]; 2]> {
         let s = self.surface;
         let original = [
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
@@ -427,6 +475,64 @@ impl<'a> Certificate<'a> {
             let hi = I::point(1.).sub(I::point(d[0][0]))?;
             d[0] = [lo.lo.max(0.), hi.hi.min(1.)];
         }
+        Ok(d)
+    }
+    /// Two-leg path in (original anchor coordinate, V). The separated signed
+    /// lambda proves unique U for every point of the entire path. This refuses
+    /// when the enlarged original chart does not contain that path.
+    pub fn coordinate_path_bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+        let d = self.normalized_domain(domain)?;
+        let mut extended = d;
+        extended[0] = [0., I::point(d[0][1]).mul(I::point(4.))?.hi.min(1.)];
+        let weight = normal_alignment::restrict_hull(
+            &self.weight,
+            [self.weight.len() - 1, self.weight[0].len() - 1],
+            [[0., 1.], [0., 1.]],
+            extended,
+        )?;
+        if weight[0].lo <= 0. {
+            return Ok(None);
+        }
+        // Endpoint X is an integral from the pole, so its derivative bound
+        // must cover that entire prefix, not only the endpoint rectangle.
+        let mut prefix = d;
+        prefix[0][0] = 0.;
+        let endpoint = normal_alignment::rational_quotient_hull(&self.lambda, prefix)?[0];
+        let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
+        if lambda.lo <= 0. && lambda.hi >= 0. {
+            return Ok(None);
+        }
+        let (minimum, maximum) = if lambda.lo > 0. {
+            (lambda.lo, endpoint.hi)
+        } else {
+            (-lambda.hi, -endpoint.lo)
+        };
+        let available = I::point(extended[0][1]).mul(I::point(minimum))?;
+        let needed = I::point(d[0][1]).mul(I::point(maximum))?;
+        if available.lo < needed.hi {
+            return Ok(None);
+        }
+        let Some(ratio) =
+            normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
+        else {
+            return Ok(None);
+        };
+        let Some(second) =
+            normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
+        else {
+            return Ok(None);
+        };
+        let mut j = [[I::point(0.); 2]; 3];
+        for k in 0..3 {
+            j[k][0] = self.a[k].add(I::new(0., extended[0][1])?.mul(ratio[k])?)?;
+            j[k][1] = second[k];
+        }
+        Ok(Some(j))
+    }
+    /// Columns enclosing the weighted mean chord matrix and both endpoint tangent
+    /// frames. A separated signed longitudinal derivative is required everywhere.
+    pub fn bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+        let d = self.normalized_domain(domain)?;
         let hull = |net: &Net| {
             normal_alignment::restrict_hull(
                 net,
@@ -581,6 +687,7 @@ mod tests {
             let c = r.certificate.unwrap();
             let d = [if end { [6.995, 7.] } else { [2., 2.005] }, [-3., -1.8]];
             let j = c.bounds(d).unwrap().unwrap();
+            let path = c.coordinate_path_bounds(d).unwrap().unwrap();
             for u in [0.0001, 0.0005, 0.001] {
                 for v in [0., 0.05, 0.1] {
                     let w = 1. + v + 2. * u * (1. - u) * v;
@@ -594,6 +701,8 @@ mod tests {
                     let yv = (2. * u * u * w - y * wv) / (w * w);
                     assert!(j[1][0].contains(yu / xu));
                     assert!(j[1][1].contains((yv - yu * xv / xu) / (u * u)));
+                    assert!(path[1][0].contains(yu / xu));
+                    assert!(path[1][1].contains((yv - yu * xv / xu) / (u * u)));
                     if v == 0.05 {
                         assert!(xv.abs() > 0.);
                     }
@@ -633,6 +742,10 @@ mod tests {
         let r = prepare(&s, false, 10_000_000).unwrap();
         let c = r.certificate.unwrap();
         let j = c.bounds([[0., 0.25], [0., 0.5]]).unwrap().unwrap();
+        let path = c
+            .coordinate_path_bounds([[0., 0.25], [0., 0.5]])
+            .unwrap()
+            .unwrap();
         for (u0, v0, u1, v1) in [
             (0., 0., 0.25, 0.5),
             (0.25, 0.5, 0.01, 0.1),
@@ -648,11 +761,18 @@ mod tests {
                 assert!(j[k][0].contains(first[k]));
                 assert!(j[k][1].contains(second[k]));
             }
+            let path_first = [1., (u0 + u1) * v0, (u0 * u0 + u0 * u1 + u1 * u1) / 3.];
+            for k in 0..3 {
+                assert!(path[k][0].contains(path_first[k]));
+                assert!(path[k][1].contains(second[k]));
+            }
             let p = |u: f64, v: f64| [3. * u, 3. * u * u * v, u * u * u];
             let (p0, p1) = (p(u0, v0), p(u1, v1));
             for k in 0..3 {
                 let chord = first[k] * 3. * du + second[k] * dv * uu;
                 assert!((chord - (p1[k] - p0[k])).abs() < 1e-14);
+                let path_chord = path_first[k] * 3. * du + second[k] * dv * u1 * u1;
+                assert!((path_chord - (p1[k] - p0[k])).abs() < 1e-14);
             }
             for (u, v) in [(u0, v0), (u1, v1)] {
                 for (k, x) in [1., 2. * u * v, u * u].into_iter().enumerate() {
@@ -660,6 +780,59 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn coordinate_path_bounds_entire_prefix_before_endpoint() {
+        // At u=.99 both V sides have derivative ~.2, but their longitudinal
+        // positions differ by ~3. One cannot carry the high X across V=1,
+        // where the original chart ends at X=.2. Local endpoint derivative
+        // bounds alone would incorrectly admit that inverse-coordinate path.
+        let s = Surface {
+            degree_u: 3,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0usize..4)
+                .map(|i| {
+                    (0..2)
+                        .map(|v| {
+                            let x = if v == 0 {
+                                [0., 3., 3.1, 3.2][i]
+                            } else {
+                                i as f64 * 0.2 / 3.
+                            };
+                            vec![x, (i * i.saturating_sub(1)) as f64 / 2. * v as f64, 0.]
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 4],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
+        assert!(c
+            .coordinate_path_bounds([[0.99, 0.99], [0., 1.]])
+            .unwrap()
+            .is_none());
+    }
+    #[test]
+    fn coordinate_path_refuses_unconfined_or_nonmonotone_chart() {
+        let s = source();
+        let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
+        assert!(c
+            .coordinate_path_bounds([[0., 1.], [0., 1.]])
+            .unwrap()
+            .is_none());
+        let mut s = source();
+        for v in 0..2 {
+            s.control_points[1][v][0] = -0.5;
+        }
+        let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
+        assert!(c
+            .coordinate_path_bounds([[0., 1.], [0., 1.]])
+            .unwrap()
+            .is_none());
     }
     #[test]
     fn partial_work_and_nonzero_transverse_coefficient_refuse() {

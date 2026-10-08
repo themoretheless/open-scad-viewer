@@ -594,3 +594,50 @@ is still unqualified. Evidence: `correlated-self-wall.json.gz` and its completed
 log. The next proof must preserve additional coupling in E, alpha and lambda
 or bound the original transverse endpoint difference directly, while retaining
 all exact leading terms and both closed sides of the collapsed diagonal.
+
+
+## Confined path in longitudinal coordinate and V
+
+A second source-owned chord representation uses X=S_anchor and V. Separated
+lambda=S_anchor,u proves U is uniquely determined by (X,V) wherever the inverse
+path is confined to the original chart. Exact pole factors give a constant
+collapsed rail position at U=0. In these coordinates:
+
+- S_X = a + u E/lambda;
+- S_V at fixed X = u² (B - E alpha/lambda).
+
+Preparation preserves the Schur-complement correlation in a single polynomial
+quotient: (B_num lambda_num - E_num alpha_num)/(W² lambda_num).
+Tensor Bernstein products and degree elevation use outward arithmetic. Degree
+products reach 32, so binomial factors are multiplied as intervals instead of
+casting a potentially inexact integer product. Signed rational coefficient
+quotients are admitted only when all restricted denominator coefficients share
+the same separated sign; their normalized convex weights then remain positive.
+
+The path takes an X leg at the first V, then a V leg at the second X. Its
+chord is M1 delta_X + M2 delta_V integral(u²), with columns enclosed by the
+above frames. Both original endpoint normals are perpendicular to these frames.
+If the weighted vector vanishes, the geometric chord vanishes. A coordinate
+matrix is tried before the existing UV mean matrix; each attempted matrix
+pays five net restrictions and each queried endpoint normal pays one. A failed
+coordinate path does not silently receive a free fallback query.
+
+Confinement is checked on the original normalized rectangle enlarged from the
+pole to min(1,4*u_max). The signed minimum lambda over this enlarged rectangle
+must give an available longitudinal range at least as large as the endpoint
+range. The endpoint range uses lambda over the entire pole-to-endpoint prefix,
+not merely the endpoint rectangle. An earlier experimental audit used the
+latter insufficient bound and is intentionally excluded from qualification
+(`/tmp/annular-coordinate-self-wall.json` is not accepted evidence). A fresh
+corrected audit is running into `annular-coordinate-prefix-self-wall.json`.
+
+Six rational-path tests, six normal tests and thirteen chord tests pass
+(25 total). Independent polynomial chord formulas verify both legs; direct
+rational quotient derivatives verify the correlated frame on both reflected,
+translated/scaled charts. Nonmonotone and unconfined charts refuse. A dedicated
+prefix regression has nearly equal local endpoint derivatives around U=.99
+but incompatible X ranges on the two V sides; the corrected prefix bound
+refuses its invalid inverse path. Signed-negative denominators preserve valid
+quotient bounds; mixed coefficient signs refuse. Evidence: the three
+`coordinate-*-tests.log.gz` files. Retained whole-face coverage remains 28/31;
+no complete wall or WASM/UI integration is claimed here.
