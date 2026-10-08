@@ -877,7 +877,8 @@ pub fn endpoint_chord_excluded(
     max_sine_squared: f64,
 ) -> Result<bool> {
     check(max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared)
-        && points.iter().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1]),
+        && points.iter().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1])
+        && normals.iter().flatten().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1]),
         "Finite original point enclosures and endpoint angular tolerance")?;
     let mut chord=[[0.;2];3];
     for k in 0..3 {
@@ -909,6 +910,29 @@ mod tests {
         assert!(!excluded([origin,[[2.,3.],[0.,0.],[0.,0.]]],[None,None],1e-6).unwrap());
         assert!(excluded([origin,[[2.,3.],[0.,0.],[0.,0.]]],[None,normal],1e-6).unwrap());
         assert!(excluded([origin,[[f64::NAN,3.],[0.,0.],[0.,0.]]],[normal,normal],1e-6).is_err());
+    }
+
+    #[test]
+    fn chord_angle_boundary_and_degenerate_cones_remain_unproved() {
+        use super::endpoint_chord_excluded as excluded;
+        let origin=[[0.,0.];3];
+        let normal=Some([[0.,0.],[0.,0.],[1.,1.]]);
+        let diagonal=[[1.,1.],[0.,0.],[1.,1.]];
+        assert!(excluded([origin,diagonal],[normal,None],0.49).unwrap());
+        assert!(!excluded([origin,diagonal],[normal,None],0.5).unwrap());
+        assert!(!excluded([origin,diagonal],[normal,None],0.51).unwrap());
+        assert!(!excluded([origin,diagonal],[Some([[0.,0.];3]),None],0.49).unwrap());
+        assert!(!excluded([origin,diagonal],[Some([[-1.,1.];3]),None],0.49).unwrap());
+        let bad=Some([[f64::NAN,1.],[0.,0.],[1.,1.]]);
+        assert!(excluded([origin,[[2.,2.],[0.,0.],[0.,0.]]],[normal,bad],0.49).is_err());
+        for scale in [1e-90,1.,1e90] {
+            let along=[[0.,0.],[0.,0.],[scale,scale]];
+            let across=[[scale,scale],[0.,0.],[0.,0.]];
+            let n=Some([[0.,0.],[0.,0.],[-scale,-scale]]);
+            assert!(excluded([origin,across],[n,None],1e-6).unwrap());
+            assert!(!excluded([origin,along],[n,None],1e-6).unwrap());
+            assert!(excluded([across,origin],[n,None],1e-6).unwrap());
+        }
     }
 
     #[test]
