@@ -2585,3 +2585,21 @@ retains the real interior zero. Seven bridge tests passed in 4.59 s,
 including the existing folded-patch refusal under the stronger policy.
 The currently live native comparison predates this determinant change;
 no additional contact or projected-face certificate is claimed yet.
+
+### Whole-domain scheduling for rail-based projected injectivity
+
+The stable source-rail native run reported 486 accepted and 29 pending cells
+at 1000 visited cells / 91673 spans. Pending parameter area remained one third,
+as in the direct baseline (476 accepted / 49 pending / 61000 spans). Its
+pending rectangles included a corner refined below 1e-10 alongside the entire
+[0.5,1] x [0.5,1] rectangle. Fewer pending cells therefore did not demonstrate
+better coverage.
+
+The explicit from-rails policy now uses breadth-first subdivision so a difficult
+corner cannot consume the cell budget before other coarse regions are visited.
+The original policy retains its traversal. Principal-minor tests, full-path
+bounds, interval determinant expansion, and pending-on-exhaustion semantics
+are unchanged. Seven profile-section bridge tests passed (3.15 seconds),
+including genuine-fold refusal and common-displacement determinant tests.
+The full native fixture must still verify this scheduling change; it is not
+an admission of the XY projection or a global shell contact certificate.

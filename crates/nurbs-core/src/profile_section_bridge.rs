@@ -1158,8 +1158,15 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             left[axis][1] = mid;
             let mut right = rect;
             right[axis][0] = mid;
-            queue.push_front(right);
-            queue.push_front(left);
+            if tighten {
+                // Cover the whole domain before refining one difficult rail
+                // corner to machine precision. Pending cells stay explicit.
+                queue.push_back(left);
+                queue.push_back(right);
+            } else {
+                queue.push_front(right);
+                queue.push_front(left);
+            }
         }
         out.complete_regular = out.pending.is_empty();
         out.reason = if out.complete_regular {
