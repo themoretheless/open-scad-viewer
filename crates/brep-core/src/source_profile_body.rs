@@ -237,10 +237,50 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
 /// Admitted embedded transition expression with its root-owned contour.
 /// This does not establish closure or embedding of the surrounding Body.
 pub struct TransitionFace<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,projection:[[f64;3];2]}
-impl TransitionFace<'_,'_,'_,'_> {
+impl<'a,'s,'p,'b> TransitionFace<'a,'s,'p,'b> {
+    /// Fresh retained-edge admission followed by opposite directed incidence.
+    pub fn qualify_rail_incidence<'f>(&'f self,work_per_rail:u64,drivers_per_rail:usize,fragments_per_rail:usize)->Result<TransitionRailReport<'f,'a,'s,'p,'b>> {
+        let mut out=TransitionRailReport{incidence:None,work:0,reason:"profile-transition-rail-incidence-unproven"};
+        let mut rails=Vec::new();let mut orientation=None;
+        for (rail,root) in self.boundary.rooted.iter().enumerate() {
+            let report=root.qualify_incident_edge(work_per_rail,drivers_per_rail)?;
+            out.work+=report.work_used;out.reason=report.reason;
+            let Some(edge)=report.edge else {return Ok(out);};
+            let contours=root.propose_incident_contours(fragments_per_rail)?;out.reason=contours.reason;
+            let Some(contours)=contours.proposal else {return Ok(out);};
+            let selected=root.points[0].source_side();let neighbor=1-selected;
+            let ranges=root.points.each_ref().map(|p|p.canonical_bounds());
+            let forward=if ranges[0][1]<ranges[1][0] {true}else if ranges[1][1]<ranges[0][0] {false}else {return Ok(out);};
+            let transition_reversed=(!forward)^(rail==1);
+            let reverse=transition_reversed==edge.reversed()[neighbor];
+            if orientation.is_some_and(|value|value!=reverse) {out.reason="profile-transition-rail-orientation-conflict";return Ok(out);}
+            orientation=Some(reverse);
+            let neighbor_contour=&contours.contours[neighbor];
+            let [wire,index]=neighbor_contour.middle;
+            if neighbor_contour.loops[wire][index].definition()!=edge.uses()[neighbor].definition() {return Ok(out);}
+            rails.push(TransitionRail{edge,neighbor_contour:contours.contours.into_iter().nth(neighbor).unwrap(),neighbor,transition_reversed});
+        }
+        out.incidence=Some(TransitionRailIncidence{face:self,rails:[rails.remove(0),rails.remove(0)],reverse_face:orientation.unwrap()});
+        out.reason="profile-transition-rail-incidence-qualified";Ok(out)
+    }
     pub fn boundary(&self)->&TransitionBoundary<'_,'_,'_> {self.boundary}
     pub fn projection(&self)->[[f64;3];2] {self.projection}
 }
+pub struct TransitionRail {edge:crate::source_shared_edge::SharedEdge,neighbor_contour:IncidentContour,neighbor:usize,transition_reversed:bool}
+impl TransitionRail {
+    pub fn edge(&self)->&crate::source_shared_edge::SharedEdge {&self.edge}
+    pub fn neighbor_contour(&self)->&IncidentContour {&self.neighbor_contour}
+    pub fn neighbor_side(&self)->usize {self.neighbor}
+    pub fn transition_reversed(&self)->bool {self.transition_reversed}
+}
+/// Two sewn rail incidences; entry and terminal edges remain open.
+pub struct TransitionRailIncidence<'f,'a,'s,'p,'b> {face:&'f TransitionFace<'a,'s,'p,'b>,rails:[TransitionRail;2],reverse_face:bool}
+impl TransitionRailIncidence<'_,'_,'_,'_,'_> {
+    pub fn face(&self)->&TransitionFace<'_,'_,'_,'_> {self.face}
+    pub fn rails(&self)->&[TransitionRail;2] {&self.rails}
+    pub fn reverse_face(&self)->bool {self.reverse_face}
+}
+pub struct TransitionRailReport<'f,'a,'s,'p,'b> {pub incidence:Option<TransitionRailIncidence<'f,'a,'s,'p,'b>>,pub work:u64,pub reason:&'static str}
 pub struct TransitionFaceReport<'a,'s,'p,'b> {
     pub face:Option<TransitionFace<'a,'s,'p,'b>>,
     pub interior:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,

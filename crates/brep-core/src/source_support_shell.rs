@@ -472,6 +472,16 @@ mod tests {
         let face=admitted.face.expect("complete interior admission for the owned annular transition");
         assert!(std::ptr::eq(face.boundary(),&boundary));
         assert_eq!(face.projection(),projection);
+        assert!(face.qualify_rail_incidence(1,1,100).unwrap().incidence.is_none());
+        assert!(face.qualify_rail_incidence(100000000,100000,0).unwrap().incidence.is_none());
+        let sewn=face.qualify_rail_incidence(100000000,100000,100).unwrap();
+        let sewn=sewn.incidence.expect(sewn.reason);
+        assert!(std::ptr::eq(sewn.face(),&face));
+        for rail in sewn.rails() {
+            assert_ne!(rail.transition_reversed()^sewn.reverse_face(),rail.edge().reversed()[rail.neighbor_side()]);
+            let contour=rail.neighbor_contour();let [wire,index]=contour.middle();
+            assert_eq!(contour.loops()[wire][index].definition(),rail.edge().uses()[rail.neighbor_side()].definition());
+        }
         let interior=admitted.interior.unwrap();
         assert!(interior.complete_regular);
         assert!(interior.pending.is_empty());

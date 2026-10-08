@@ -1648,3 +1648,30 @@ region replacement and terminal closure still need assembly and qualification.
 
 The final combined annular regression passed in 33.91 seconds, including
 complete owned transition-face admission (328 accepted, zero pending).
+
+## Oriented rail incidence of the admitted transition
+
+TransitionFace::qualify_rail_incidence freshly admits each retained shared
+3D edge and reconstructs both incident source contours. The selected use
+comes from each carrier root's original source-side authority. The opposite
+use must be the exact middle fragment in the neighbor contour.
+
+Strict canonical root ordering determines each directed transition rail.
+The high rail follows the reverse contour direction. Both neighbor uses
+must admit the same whole-face orientation reversal, and after that reversal
+each transition rail must oppose its neighbor's directed canonical use.
+An orientation conflict refuses. The private incidence result retains the
+admitted transition face, both fresh shared edges, neighbor contours and
+orientation.
+
+Regression cases include insufficient edge work and insufficient contour
+allowance. The positive case checks both opposite traversal relations, exact
+neighbor middle-use definitions and transition-face owner identity.
+
+This establishes the two rail incidences only. Entry/terminal edge incidence,
+selected-region replacement, closed-shell assembly and whole-body embedding
+remain open; it is not a closed Body or a general radius certificate.
+
+The combined native regression passed in 70.19 seconds with complete
+transition interior coverage (328 accepted, zero pending) and both rail
+incidence checks. Packaged WASM is unchanged.
