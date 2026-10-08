@@ -1141,3 +1141,29 @@ proved defects nor proved injective regions. Another projection, tighter
 correlated derivatives or independent pairwise separation is required. Existing
 full local regularity remains valid; side rails, corner geometry, whole-body
 self-intersections, thickness and packaged WASM remain incomplete.
+
+## Complete injectivity proof with projected principal minors
+
+The injectivity gate now checks all 2D projected principal minors: j00>0,
+j11>0 and det(J)>0 over every complete cell. Positive symmetric-part bounds
+remain an alternative sufficient proof of the same P-matrix hypothesis.
+Global injectivity on the closed rectangular domain follows from Theorem 4
+of [Gale and Nikaido (1965)](https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf).
+This replaces the unnecessary symmetric positivity requirement; original
+continuity, fixed projection and full-domain coverage remain mandatory.
+
+Independent matrix regressions accept [[1,8],[-1,1]], whose symmetric part
+is indefinite but whose principal minors are positive. Negative diagonals,
+negative determinant and zero-containing diagonal bounds refuse. The planar
+reference and deliberately folded-bridge regression remain covered.
+
+At 1000 cells/8000 spans the actual annular bridge improves to 308 accepted
+and 385 pending cells. With a 4000-cell/32000-span allowance it completes:
+812 accepted, 0 pending, 1623 visited cells and 12984 original source spans.
+The regression requires full injectivity and unit-domain coverage. The same
+fixed midpoint-proposed projection is used; no point samples grant authority.
+
+This proves the exact U=0.75 to U=0.9 control bridge has no self-intersections,
+including its parameter boundaries. It does not qualify the entire fillet Body,
+other bridges, neighbor intersections, side-rail sewing, terminal corner patches,
+wall thickness or packaged WASM/UI admission. Those remain required.

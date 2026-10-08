@@ -1,6 +1,12 @@
 //! Exact two-ended Hermite transition. Boundary ownership is retained as
 //! section expressions; this is not a sewn Surface or closed Body.
 use crate::{Result, check, interval_eval::Interval as I, surface_weight_profile::ProfileSection};
+fn projected_principal_minors_positive(j: [[I; 2]; 2]) -> Result<bool> {
+    let off = j[0][1].add(j[1][0])?.mul(I::point(0.5))?;
+    let symmetric = j[0][0].mul(j[1][1])?.sub(off.mul(off)?)?;
+    let determinant = j[0][0].mul(j[1][1])?.sub(j[0][1].mul(j[1][0])?)?;
+    Ok(j[0][0].lo > 0. && j[1][1].lo > 0. && (determinant.lo > 0. || symmetric.lo > 0.))
+}
 pub struct ProfileSectionBridge<'a, 'b, 'c, 'd> {
     sections: [Section<'a, 'b, 'c, 'd>; 2],
     scales: [f64; 2],
@@ -212,9 +218,11 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
         }
         Ok((Some(bounds), spent))
     }
-    /// Strict monotonicity of a fixed projected map proves global injectivity
-    /// on this convex rectangle: integrate d^T J d along any joining segment.
-    /// Only a complete cover with positive symmetric projected Jacobians qualifies.
+    /// Gale-Nikaido (1965), Theorem 4: a differentiable projected map on a
+    /// closed rectangle is injective when its Jacobian is a P-matrix everywhere.
+    /// In 2D all principal minors are j00, j11 and det(J). Complete interval
+    /// coverage proves their positivity; symmetric positivity is also sufficient.
+    /// https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
     pub fn inspect_injectivity(
         &self,
         free: [f64; 2],
@@ -289,9 +297,7 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
                     }
                 }
             }
-            let off = j[0][1].add(j[1][0])?.mul(I::point(0.5))?;
-            let determinant = j[0][0].mul(j[1][1])?.sub(off.mul(off)?)?;
-            if j[0][0].lo > 0. && j[1][1].lo > 0. && determinant.lo > 0. {
+            if projected_principal_minors_positive(j)? {
                 out.regular.push(rect);
                 continue;
             }
@@ -380,5 +386,23 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
             "section-bridge-regularity-resolution-limit"
         };
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn principal_minors_admit_nonsymmetric_maps_and_refuse_orientation_failures() {
+        let matrix = |m: [[f64; 2]; 2]| m.map(|row| row.map(I::point));
+        // Positive principal minors, but indefinite symmetric part.
+        assert!(projected_principal_minors_positive(matrix([[1., 8.], [-1., 1.]])).unwrap());
+        assert!(!projected_principal_minors_positive(matrix([[-1., 0.], [0., -1.]])).unwrap());
+        assert!(!projected_principal_minors_positive(matrix([[1., 2.], [2., 1.]])).unwrap());
+        let uncertain = [
+            [I::new(-0.1, 1.).unwrap(), I::point(0.)],
+            [I::point(0.), I::point(1.)],
+        ];
+        assert!(!projected_principal_minors_positive(uncertain).unwrap());
     }
 }

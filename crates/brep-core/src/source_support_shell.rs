@@ -421,7 +421,8 @@ mod tests {
         let determinant=aa*bb-ab*ab;assert!(determinant>0.);
         let projection=[std::array::from_fn(|k|(bb*vectors[0][k]-ab*vectors[1][k])/determinant),
             std::array::from_fn(|k|(aa*vectors[1][k]-ab*vectors[0][k])/determinant)];
-        let injectivity=bridge.inspect_injectivity([0.,1.],[0.,1.],projection,12000,96000).unwrap();
+        let injectivity=bridge.inspect_injectivity([0.,1.],[0.,1.],projection,4000,32000).unwrap();
+        assert!(injectivity.complete_regular,"{} pending={}",injectivity.reason,injectivity.pending.len());
         let area:f64=injectivity.regular.iter().chain(&injectivity.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
         eprintln!("bridge injectivity qualified={} accepted={} pending={} cells={} spans={} projection={:?}",injectivity.complete_regular,injectivity.regular.len(),injectivity.pending.len(),injectivity.cells,injectivity.spans,projection);
 
