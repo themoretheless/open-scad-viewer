@@ -31,6 +31,21 @@ pub struct RetainedGapLimits {
     pub cells_per_pair:usize,pub spans_per_pair:usize,pub domain_cells_per_pair:usize,
     pub domain_cells_per_query:usize,pub tolerance_uv:f64,
 }
+#[derive(Clone, Copy)]
+pub struct MixedPairLimits {
+    pub domains: RetainedGapLimits,
+    pub normal_spans: usize,
+    pub normal_spans_per_pair: usize,
+}
+pub struct MixedPair {
+    pub retained: RetainedPair,
+    pub normal_spans: usize,
+    pub normal_products: usize,
+}
+pub struct MixedReport {
+    pub cells: usize, pub spans: usize, pub domain_cells: usize,
+    pub normal_spans: usize, pub pairs: Vec<MixedPair>,
+}
 pub struct RetainedPair {
     pub faces:[usize;2],pub qualified:bool,pub reason:&'static str,
     pub cells:usize,pub spans:usize,pub domain_cells:usize,
@@ -77,6 +92,7 @@ impl<'a> Certificate<'a> {
 }
 pub struct Report<'a> {
     pub retained_gap:Option<RetainedReport>,
+    pub mixed:Option<MixedReport>,
     pub certificate: Option<Certificate<'a>>,
     pub pairs: Vec<Pair>,
     pub total_pairs: usize,
@@ -159,10 +175,29 @@ pub fn qualify_with_mixed_pair_facts<'a>(
     body:&'a Body,minimum_mm:f64,limits:Limits,
     facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
     retained:Option<RetainedGapLimits>,
     mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a>>,
 )->Result<Report<'a>> {
+    qualify_with_mixed_pair_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,mixed_pairs,None)
+}
+/// Additional bounded mixed criterion over the remaining original products.
+pub fn qualify_with_mixed_pair_pass<'a>(
+    body:&'a Body,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits,factors:FactoredNormalLimits,
+    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained:Option<RetainedGapLimits>,
+    mut mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a>>,
+    mixed:Option<MixedPairLimits>,
+)->Result<Report<'a>> {
+    if let Some(m)=mixed {
+        let r=m.domains;
+        if [m.normal_spans,m.normal_spans_per_pair,r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
+            ||!(1..=1000000).contains(&r.domain_cells)||!r.tolerance_uv.is_finite()||r.tolerance_uv<=0. {
+            return Err(Error::new("BREP_SOURCE_MIXED_WALL_LIMIT","Choose bounded total and per-pair mixed proof work"));
+        }
+    }
     let mut mixed_faces=std::collections::HashSet::new();
     for proof in &mixed_pairs {
         let mut faces=proof.faces();faces.sort();
@@ -240,6 +275,7 @@ pub fn qualify_with_mixed_pair_facts<'a>(
     let mut out = Report {
         certificate: None,
         retained_gap:None,
+        mixed:None,
         pairs: Vec::with_capacity(total_pairs.min(limits.pairs)),
         total_pairs,
         enumeration_complete: false,
@@ -420,6 +456,30 @@ pub fn qualify_with_mixed_pair_facts<'a>(
             diagnostics.pairs.push(RetainedPair{faces:pair.faces,qualified,reason:r.reason,cells:r.cells,spans:r.spans,domain_cells:r.domain_cells,domain_queries:r.domain_queries,endpoint_queries:r.endpoint_queries,outside_products:r.outside_products,unresolved_products:r.unresolved_products});
         }
         out.retained_gap=Some(diagnostics);
+    }
+    if let Some(work)=mixed {
+        let d=work.domains;
+        let mut diagnostics=MixedReport{cells:0,spans:0,domain_cells:0,normal_spans:0,pairs:Vec::new()};
+        for pair in out.pairs.iter_mut().filter(|p|!p.proven&&p.faces[0]!=p.faces[1]) {
+            if diagnostics.cells==d.cells||diagnostics.spans==d.spans
+                ||diagnostics.domain_cells==d.domain_cells||diagnostics.normal_spans==work.normal_spans {break;}
+            let r=crate::source_wall_pair::qualify(body,pair.faces,minimum_mm,crate::source_wall_pair::Limits{
+                cells:(d.cells-diagnostics.cells).min(d.cells_per_pair),
+                spans:(d.spans-diagnostics.spans).min(d.spans_per_pair),
+                domain_cells:(d.domain_cells-diagnostics.domain_cells).min(d.domain_cells_per_pair),
+                domain_cells_per_query:d.domain_cells_per_query,tolerance_uv:d.tolerance_uv,
+                normal_spans:(work.normal_spans-diagnostics.normal_spans).min(work.normal_spans_per_pair),
+                max_sine_squared:limits.max_sine_squared})?;
+            diagnostics.cells+=r.cells;diagnostics.spans+=r.spans;
+            diagnostics.domain_cells+=r.domain_cells;diagnostics.normal_spans+=r.normal_spans;
+            let qualified=r.certificate.is_some();
+            if let Some(c)=r.certificate {mixed_pairs.push(c);pair.proven=true;pair.reason="source-wall-mixed-product-qualified";}
+            diagnostics.pairs.push(MixedPair{normal_spans:r.normal_spans,normal_products:r.normal_products,
+                retained:RetainedPair{faces:pair.faces,qualified,reason:r.reason,cells:r.cells,spans:r.spans,
+                    domain_cells:r.domain_cells,domain_queries:r.domain_queries,endpoint_queries:r.endpoint_queries,
+                    outside_products:r.outside_products,unresolved_products:r.unresolved_products}});
+        }
+        out.mixed=Some(diagnostics);
     }
     out.enumeration_complete = out.pairs.len() == total_pairs;
     if out.enumeration_complete && out.pairs.iter().all(|p| p.proven) {

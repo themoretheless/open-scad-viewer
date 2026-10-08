@@ -209,6 +209,20 @@ mod tests {
         let pass=crate::source_wall_coverage::RetainedGapLimits{cells:1,spans:2,domain_cells:1,cells_per_pair:1,spans_per_pair:2,domain_cells_per_pair:1,domain_cells_per_query:1,tolerance_uv:1e-8};
         let bounded=crate::source_wall_coverage::qualify_with_retained_gap_pass(&body,30.01,coverage_options(),Vec::new(),no_products(),no_factors(),Vec::new(),Some(pass)).unwrap();
         assert!(bounded.certificate.is_none());let extra=bounded.retained_gap.unwrap();assert_eq!(extra.cells,1);assert!(extra.spans<=2);assert!(extra.domain_cells<=1);assert_eq!(extra.pairs.len(),1);assert!(!extra.pairs[0].qualified);assert!(!extra.pairs[0].unresolved_products.is_empty());
+        let mixed_pass=crate::source_wall_coverage::MixedPairLimits{domains:pass,normal_spans:1,normal_spans_per_pair:1};
+        let limited=crate::source_wall_coverage::qualify_with_mixed_pair_pass(&body,30.01,coverage_options(),
+            Vec::new(),no_products(),no_factors(),Vec::new(),None,Vec::new(),Some(mixed_pass)).unwrap();
+        assert!(limited.certificate.is_none());
+        for old in bounded.pairs.iter().filter(|p|p.proven) {
+            assert!(limited.pairs.iter().find(|p|p.faces==old.faces).unwrap().proven);
+        }
+        let diagnostics=limited.mixed.unwrap();assert_eq!(diagnostics.pairs.len(),1);
+        assert_eq!(diagnostics.cells,1);assert!(diagnostics.spans<=2);assert!(diagnostics.domain_cells<=1);
+        assert!(diagnostics.normal_spans<=1);assert!(!diagnostics.pairs[0].retained.qualified);
+        assert!(!diagnostics.pairs[0].retained.unresolved_products.is_empty());
+        let mut invalid_mixed=mixed_pass;invalid_mixed.normal_spans_per_pair=0;
+        assert!(crate::source_wall_coverage::qualify_with_mixed_pair_pass(&body,9.99,coverage_options(),
+            Vec::new(),no_products(),no_factors(),Vec::new(),None,Vec::new(),Some(invalid_mixed)).is_err());
         let mut invalid=pass;invalid.cells_per_pair=0;assert!(crate::source_wall_coverage::qualify_with_retained_gap_pass(&body,9.99,coverage_options(),Vec::new(),no_products(),no_factors(),Vec::new(),Some(invalid)).is_err());
         let reversed=crate::source_retained_face_gap::qualify(&body,[1,0],29.99,options()).unwrap();assert!(reversed.certificate.is_some());
         let refused=crate::source_retained_face_gap::qualify(&body,[0,1],30.01,options()).unwrap();

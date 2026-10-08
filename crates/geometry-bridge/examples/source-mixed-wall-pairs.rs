@@ -93,9 +93,67 @@ fn main() {
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,
             "domainCells":r.domain_cells,"unresolvedProducts":r.unresolved_products.len(),"reason":r.reason}));
     }
+    let automatic = if args.get(4).is_some_and(|v| v == "pass") {
+        use brep_core::source_wall_coverage as w;
+        let domains = w::RetainedGapLimits {
+            cells: 100000,
+            spans: 100000,
+            domain_cells: 1000000,
+            cells_per_pair: 256,
+            spans_per_pair: 512,
+            domain_cells_per_pair: 10000,
+            domain_cells_per_query: 256,
+            tolerance_uv: 1e-8,
+        };
+        let mut mixed_domains = domains;
+        mixed_domains.cells_per_pair = 1024;
+        mixed_domains.spans_per_pair = 4096;
+        let r = w::qualify_with_mixed_pair_pass(
+            body,
+            5.99,
+            w::Limits {
+                pairs: 378,
+                plane_controls: 10000,
+                normal_spans: 20000,
+                gap: brep_core::source_face_gap::Limits {
+                    cells: 100000,
+                    spans: 100000,
+                },
+                max_sine_squared: 1e-6,
+            },
+            Vec::new(),
+            w::NormalProductLimits {
+                cells: 50000,
+                cells_per_pair: 128,
+            },
+            w::FactoredNormalLimits {
+                exact_work: 100000000,
+                queries: 10000,
+                cells: 10000,
+                cells_per_pair: 128,
+            },
+            Vec::new(),
+            Some(domains),
+            Vec::new(),
+            Some(w::MixedPairLimits {
+                domains: mixed_domains,
+                normal_spans: 100000,
+                normal_spans_per_pair: 10000,
+            }),
+        )
+        .unwrap();
+        let d = r.mixed.unwrap();
+        json!({"wholeWallQualified":r.certificate.is_some(),"cells":d.cells,"spans":d.spans,
+            "normalSpans":d.normal_spans,"domainCells":d.domain_cells,
+            "pairs":d.pairs.iter().map(|p|json!({"faces":p.retained.faces,"qualified":p.retained.qualified,
+                "reason":p.retained.reason,"cells":p.retained.cells,"normalProducts":p.normal_products,
+                "unresolvedProducts":p.retained.unresolved_products.len()})).collect::<Vec<_>>()})
+    } else {
+        Value::Null
+    };
     std::fs::write(
         &args[3],
-        value_codec::to_string(&json!({"results":results})).unwrap(),
+        value_codec::to_string(&json!({"results":results,"automatic":automatic})).unwrap(),
     )
     .unwrap();
 }
