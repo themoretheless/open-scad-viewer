@@ -42,6 +42,10 @@
       "progressive-miter-reconstructed-sharp.r",
       "closed-miter-frame-guide-affine-hollow.r",
       "miter-g1-profile-frame-guide-affine.r"
+    ],
+    "profileSolid": [
+      "closed-profile-planar-10.r",
+      "closed-profile-spatial-6.r"
     ]
   },
   "step": {
@@ -329,7 +333,8 @@
     "rush": [
       "tests/modelGraphLoft.test.ts",
       "tests/miterStationGraph.test.ts",
-      "tests/solidRetainedLoft.test.ts"
+      "tests/solidRetainedLoft.test.ts",
+      "tests/profileSolidRush.test.ts"
     ]
   }
 }

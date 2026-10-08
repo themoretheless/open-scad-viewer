@@ -14,6 +14,7 @@ const commands={
  native:[...catalog.suites.native.filters.map(filter=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p',catalog.suites.native.package,'--lib',filter]),...(catalog.suites.native.bridgeTests??[]).map(test=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p','geometry-bridge','--test',test])],
  wasm:[['node_modules/.bin/vitest','run',...catalog.suites.wasm]],
  rush:[['node_modules/.bin/vitest','run',...catalog.suites.rush]],
+ 'profile-browser':[['node','scripts/check-profile-solid-browser.mjs',...args]],
  browser:[['node','scripts/check-sweep-miter-matrix-browser.mjs',...args]],
  step:[['node','--import','tsx','scripts/export-sweep-step-oracle.mts',...args]],
  'profile-step':[['node','--import','tsx','scripts/export-profile-solid-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-profile-solid-step.py',args[0]??'/tmp/profile-solid-step']],
