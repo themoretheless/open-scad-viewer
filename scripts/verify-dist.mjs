@@ -105,7 +105,9 @@ const limits = new Map([
 // Combined CAD, Laser CAM and native sweep kernel: 4,021,240 packed bytes.
 // Retain 3,760 bytes of headroom.
 // Native continuous profile bounds and exact cubic seam add ~16 KB packed.
-const geometryChunkBudget = 4_050_000
+// Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
+// Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
+const geometryChunkBudget = 4_068_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
@@ -372,7 +374,9 @@ for (const [name, artifact, compression] of [
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
 // Rebuilt original annular proofs and seam UI: measured 8,243,477 bytes; retain 761-byte margin.
 // Source wall native, transport and UI: measured 8265356 asset bytes; retain 761-byte margin.
-const totalBudget = 8_340_000 // Native continuous profile/seam delivery: measured 8,314,228 asset bytes.
+// Exact-frame ownRust48: local 8,348,171; Node 22 CI 8,350,241 asset bytes.
+// Keep a 9,759-byte delivery margin for the measured cross-host packaging variation.
+const totalBudget = 8_360_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 

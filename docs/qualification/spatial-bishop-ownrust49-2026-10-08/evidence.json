@@ -1,0 +1,72 @@
+{
+  "schema": "spatial-bishop-local-evidence/1",
+  "nativeSourceCommit": "9258573e",
+  "ownRustEvidence": "docs/qualification/own-rust-cad-v49.json",
+  "geometryWasmSha256": "1d13d91300a279b45cbcf552ee41369262f19bfc109a3d31f5ccaed325774676",
+  "qualificationClaim": "finite-local-cases-only",
+  "g1ResultImported": false,
+  "files": {
+    "1440-closed-profile-planar-10.r.png": "b1929d88ad44e510ade2d013ac4d3028f506a2eec477c46b91e93e804916471d",
+    "1440-closed-profile-spatial-6.r.png": "3749bea3f938a5dc6bf4c2dd2f5d0e88a08a5862dc42764498851a7f0bd55c11",
+    "1440-spatial-bishop-g2-surface-6.r.png": "ed422ae75922f311d41c7b4f55a596ddc9fa3e632806c0f5b820f89b49dd0ded",
+    "600-closed-profile-planar-10.r.png": "0f567d5c6ba3cdcb239a4a6ab2721d350697d53a53faeae71db335ffdb0893d2",
+    "600-closed-profile-spatial-6.r.png": "9d7763adb6487577365206a87c68e2e111b7ed6ac5a7ca2999dac2f277805fe9",
+    "600-spatial-bishop-g2-surface-6.r.png": "caf877324f0232a2105af04443f5a0ff94cacc3503955ad1a08a4b9c72a494ff",
+    "README.md": "05862a628af2644ad1ca9e44383413fc61a9318619b559575c7362a9bd0001ad",
+    "check-profile-solid-browser.mjs": "c40b61066e1794b567ff84732f06ac9f782399fc9b3c936a742507f770ff9c37",
+    "check-spatial-bishop-browser.mjs": "66e4c6493713556f635b1ee4228bfb494c082e9c08f229ce4cf3920980502b8e",
+    "closed-profile-planar-10.step": "999c80f74aacbdd61d2c5e5d4208242e8c17fc5053077c83b6f2b5095fa260c0",
+    "closed-profile-planar-12.step": "36003970645fa5fd57f8378d43c359fb36e990702f5417e012920eaa6c140776",
+    "closed-profile-planar-6.step": "162fbf38868fbe6b92180b57cc130270903e8fd59546827e3bce566c72d90de0",
+    "closed-profile-planar-7.step": "8fff0817ddd9b1fabd6030ad7ee4e75b2c1f25a3f8c050ed26a7fa3aeb9807c6",
+    "closed-profile-spatial-10.step": "89786c99a755d67ab303c7460a9bebdb8c220a4173f6761227a18cad0a5eecb8",
+    "closed-profile-spatial-12.step": "e4536503161129e44202b8010dee661659b5ee36a151a33404237b9435bef3e0",
+    "closed-profile-spatial-6.step": "1335e9cb34dd1e34e8cc62b09990fe2c3867f8fab157949024f42cddbc9c8264",
+    "closed-profile-spatial-7.step": "e99e2bdffb1949cda316334145ccb211fe6ad5824f6e38167cfedcd1f123f077",
+    "freeze-tests.log.gz": "1173265b10eda719e8c53216dab5ec05edca302497d44634ad69fdfa7b4f9be1",
+    "manifest.json.gz": "b77d3ad83ccaded2583b050ffa5ff430049b054d2da3e1fc32f019a7f9c51016",
+    "native-bridge-tests.log.gz": "1412531285762d9791a0a3162aebf25d0cab4c7f8ccf9a5396a5d89a4213e253",
+    "native-nurbs-tests.log.gz": "1f5916f27940ac591a85a43c0e6fa4b26a31294a03ca25a5f019292af32dc4e8",
+    "opencascade-sweep.json": "51f903fa91468206fa66f3b0018a92fbecd7aac8d6c2a23bebcfd18ec0e6bbef",
+    "product-build.log.gz": "70f9fd81b03ff3eb3cbe5767c0824d3c974f573ba51f876d6059e2f9111d1d16",
+    "solid-browser-report.json": "14dc00a296f864c53dacd181b67c4175da3daea6292a28aa32976aa6360a911d",
+    "step-oracle.log.gz": "de07ee6bcd1d0940c9cf859a63ee72a6d4463cdf7ba340c8076abb1e8ec0a8c9",
+    "surface-browser-report.json": "d7ca1f796d8b25ba24ecfa26ff4dad8eaceda901de21cc15bcf0f596321289b4",
+    "wasm-build.log.gz": "68d66209ddb86306a6d74a3151fbad83939e4dd8ef8ecfcbd2132c29946776ce",
+    "wasm-profile-tests.log.gz": "1e7e151a2ef60eccfbf8ce645314fd2547c9c5cea4569de161fe51382bd0f414"
+  },
+  "compressedFiles": {
+    "wasm-build.log.gz": {
+      "decodedSha256": "6445e24845d0e8183aae08f004e42c191563d0d472644f83de85ed39f27e22e0",
+      "decodedBytes": 7162
+    },
+    "native-nurbs-tests.log.gz": {
+      "decodedSha256": "55cd9ccc09cf4905c194a9162b278ef4811afc4ea68e0e8ea8f2e7e9c80adf8b",
+      "decodedBytes": 74065
+    },
+    "native-bridge-tests.log.gz": {
+      "decodedSha256": "36243b8e3817873c2071e91bfecdfe6fa4bd9a69c95b27f009f43969da081f05",
+      "decodedBytes": 31026
+    },
+    "wasm-profile-tests.log.gz": {
+      "decodedSha256": "63e6c4fabc984fff1482478786d9a9c12366c7b0b02dfa7047b8c28211298f6b",
+      "decodedBytes": 258
+    },
+    "freeze-tests.log.gz": {
+      "decodedSha256": "5fb3427b726415998fc564f3423370929fb5b85376a4acf0e2423ff43bc41d2a",
+      "decodedBytes": 260
+    },
+    "product-build.log.gz": {
+      "decodedSha256": "003b8c113b1eb7b8ebf01795ef8261a14a1e22fc0ba61232ff5ff75ee5b878af",
+      "decodedBytes": 12837
+    },
+    "step-oracle.log.gz": {
+      "decodedSha256": "51f903fa91468206fa66f3b0018a92fbecd7aac8d6c2a23bebcfd18ec0e6bbef",
+      "decodedBytes": 15215
+    },
+    "manifest.json.gz": {
+      "decodedSha256": "ddca416dee27633f23e3b325a1b9d9dc3c426f73a1aea26e162528e4efb8e994",
+      "decodedBytes": 4756392
+    }
+  }
+}

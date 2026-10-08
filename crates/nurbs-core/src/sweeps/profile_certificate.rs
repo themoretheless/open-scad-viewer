@@ -10,6 +10,10 @@ use super::progressive_miter::{scalar_certificate as scalar, vector_certificate 
 use crate::sweep_support::interval_vec3::{add, cross, div, dot_tight as dot, norm, scale, sub};
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I, surface::Surface};
 type V = [I; 3];
+#[path = "profile_frame_premises.rs"]
+mod frame_premises;
+#[path = "profile_spatial_frame.rs"]
+mod spatial_frame;
 
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -197,6 +201,7 @@ struct Reference<'a> {
     initial_tangent: V,
     coordinates: Vec<V>,
     closed: bool,
+    chart: Option<spatial_frame::Chart>,
 }
 impl Reference<'_> {
     // For Bishop transport, |N'| and |B'| are bounded by |T'|. In
@@ -273,6 +278,11 @@ impl Reference<'_> {
             let beta = dot(self.initial, plane)?;
             let normal = add(scale(cross(plane, tangent)?, alpha)?, scale(plane, beta)?)?;
             (normal, cross(tangent, normal)?)
+        } else if let Some(chart) = &self.chart {
+            match chart.frame(range, tangent, remaining, used)? {
+                Some(frame) => frame,
+                None => return Ok(None),
+            }
         } else if range == [0., 0.] {
             (self.initial, self.initial_side)
         } else if let Some(frame) = self.open_frame(range[1], remaining, used)? {
@@ -416,33 +426,24 @@ pub fn certify(
                 .all(|p| p.len() == 3 && p[0] > 0. && p[1] == 0. && p[2] == 0.),
         "Profile certificate requires finite 3D inputs",
     )?;
-    let mut plane = (0..3).find(|&k| {
-        path.control_points
-            .iter()
-            .all(|p| p[k] == path.control_points[0][k])
-    });
-    if retained.periodic_v && plane.is_some() {
-        let [a, b] = path.domain();
-        let clamped = path.knots[..=path.degree].iter().all(|&k| k == a)
-            && path.knots[path.control_points.len()..]
+    let closed = retained.periodic_v || super::progressive_sweep::path_is_closed(path)?;
+    let mut premise_work = 0usize;
+    let mut plane = (0..3)
+        .find(|&k| {
+            path.control_points
                 .iter()
-                .all(|&k| k == b);
-        let p = &path.control_points[0];
-        let incoming = &path.control_points[path.control_points.len() - 2];
-        let outgoing = &path.control_points[1];
-        let aligned = clamped
-            && p == path.control_points.last().unwrap()
-            && (0..3).any(|axis| {
-                (0..3).all(|k| k == axis || incoming[k] == p[k] && outgoing[k] == p[k])
-                    && (incoming[axis] < p[axis] && p[axis] < outgoing[axis]
-                        || incoming[axis] > p[axis] && p[axis] > outgoing[axis])
-            });
-        // Without exact endpoint tangent agreement, zero planar holonomy is
-        // not an admissible premise. The unit-frame envelope still includes
-        // every possible closing correction.
-        if !aligned {
-            plane = None;
-        }
+                .all(|p| p[k] == path.control_points[0][k])
+        })
+        .map(|axis| std::array::from_fn(|k| I::point(if k == axis { 1. } else { 0. })))
+        .or_else(|| frame_premises::plane(&path.control_points, max_cells, &mut premise_work));
+    let closing_tangent_exact = !closed
+        || frame_premises::closing(
+            path,
+            max_cells.saturating_sub(premise_work),
+            &mut premise_work,
+        );
+    if !closing_tangent_exact {
+        plane = None;
     }
     let method = if plane.is_some() {
         "interval-planar-bishop-frame"
@@ -479,19 +480,21 @@ pub fn certify(
             && path.knots.iter().filter(|&&v| v == k).count() >= path.degree
         {
             // A full-multiplicity Bezier join has these authored endpoint
-            // controls. Equal transverse coordinates and an equal signed axis
-            // direction prove tangent alignment without tolerance snapping.
+            // controls. Exact projected collinearity and a shared signed direction
+            // prove tangent agreement without rounded differences or snapping.
             let p = &path.control_points[span];
             let a = &path.control_points[span - 1];
             let b = &path.control_points[span + 1];
             let aligned = path.knots.iter().filter(|&&v| v == k).count() == path.degree
-                && (0..3).any(|axis| {
-                    (0..3).all(|j| j == axis || (a[j] == p[j] && p[j] == b[j]))
-                        && ((a[axis] < p[axis] && p[axis] < b[axis])
-                            || (a[axis] > p[axis] && p[axis] > b[axis]))
-                });
+                && frame_premises::aligned(
+                    a,
+                    p,
+                    b,
+                    max_cells.saturating_sub(premise_work),
+                    &mut premise_work,
+                );
             if !aligned {
-                return Ok(unresolved(0, "continuous-path-tangent-unproved"));
+                return Ok(unresolved(premise_work, "continuous-path-tangent-unproved"));
             }
         }
     }
@@ -502,7 +505,10 @@ pub fn certify(
         return Ok(unresolved(0, "initial-frame-unresolved"));
     };
     let b0 = cross(t0, n0)?;
-    let mut cells = 1;
+    if premise_work >= max_cells {
+        return Ok(unresolved(premise_work, "cell-budget-exhausted"));
+    }
+    let mut cells = 1 + premise_work;
     let mut used = 0;
     let start = values(path, [0., 0.], max_cells - cells, &mut used)?;
     cells += used;
@@ -517,15 +523,50 @@ pub fn certify(
             Ok([dot(q, n0)?, dot(q, b0)?, dot(q, t0)?])
         })
         .collect::<Result<Vec<_>>>()?;
+    let mut chart_work = 0;
+    let chart = if plane.is_none() && closing_tangent_exact {
+        let radius = coordinates
+            .iter()
+            .map(|&q| norm(q).map(|r| r.hi))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .fold(0_f64, f64::max);
+        spatial_frame::Chart::build(
+            path,
+            t0,
+            n0,
+            closed,
+            budget / (16. * (radius + 1.)),
+            (max_cells - cells) / 3,
+            &mut chart_work,
+        )
+        .unwrap_or(None)
+    } else {
+        None
+    };
+    cells += chart_work;
+    let method = if chart.is_some() {
+        "interval-connection-bishop-frame"
+    } else {
+        method
+    };
+    let unresolved = |cells, reason| Report {
+        error_upper: None,
+        cells,
+        within_budget: false,
+        method,
+        reason: Some(reason),
+    };
     let reference = Reference {
         path,
         scale: law,
-        plane: plane.map(|axis| std::array::from_fn(|k| I::point(if k == axis { 1. } else { 0. }))),
+        plane,
         initial: n0,
         initial_side: b0,
         initial_tangent: t0,
         coordinates,
-        closed: retained.periodic_v || super::progressive_sweep::path_is_closed(path)?,
+        closed,
+        chart,
     };
     // Equal-weight one-span lines and affine laws give an affine ideal sweep.
     // Its distance to each affine retained segment is convex, hence endpoints
@@ -728,176 +769,5 @@ fn affine_points(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::sweeps::progressive_sweep::{
-        Options, Orientation, Spacing, Sweep, constant_vector_law,
-    };
-    fn curve(p: &[[f64; 3]], w: &[f64], d: [f64; 2]) -> Curve {
-        Curve {
-            degree: p.len() - 1,
-            knots: [vec![d[0]; p.len()], vec![d[1]; p.len()]].concat(),
-            control_points: p.iter().map(|p| p.to_vec()).collect(),
-            weights: w.to_vec(),
-            periodic: false,
-        }
-    }
-    fn retained(p: &Curve, path: &Curve, s: &Curve, n: [f64; 3], count: usize) -> Surface {
-        let twist = constant_vector_law([0.; 3]).unwrap();
-        let sweep = Sweep::new(
-            p,
-            path,
-            s,
-            &twist,
-            Options {
-                normal: n,
-                orientation: Orientation::RotationMinimizing,
-                spacing: Spacing::Parameter,
-                initial_sections: count,
-                max_sections: count,
-                max_deviation: 1.,
-            },
-        )
-        .unwrap();
-        let mut result = crate::surface::loft(&sweep.sections_at(count).unwrap()).unwrap();
-        for k in &mut result.knots_v {
-            *k /= (count - 1) as f64;
-        }
-        result
-    }
-    #[test]
-    fn affine_rational_profile_has_rounding_inclusive_continuous_bound() {
-        let p = curve(
-            &[[1., 2., 0.], [2., 3., 1.], [4., 1., 0.]],
-            &[1., 0.25, 3.],
-            [2., 7.],
-        );
-        let path = curve(&[[0., 0., 0.], [0., 0., 5.]], &[2., 2.], [-4., 9.]);
-        let s = curve(&[[1., 0., 0.], [2., 0., 0.]], &[3., 3.], [10., 12.]);
-        let surface = retained(&p, &path, &s, [1., 0., 0.], 6);
-        let r = certify(&p, &path, &s, [1., 0., 0.], &surface, 1e-11, 1000).unwrap();
-        assert!(r.within_budget, "{r:?}");
-        assert!(r.error_upper.unwrap() > 0. && r.error_upper.unwrap() < 1e-11);
-        for u in [2., 2.7, 4.2, 7.] {
-            for v in [0., 0.13, 0.77, 1.] {
-                let source = p.evaluate(u).unwrap().point;
-                let actual = surface.evaluate(u, v).unwrap().point;
-                let expected = [
-                    (1. + v) * source[0],
-                    (1. + v) * source[1],
-                    5. * v + (1. + v) * source[2],
-                ];
-                let error = (0..3)
-                    .map(|k| (actual[k] - expected[k]).powi(2))
-                    .sum::<f64>()
-                    .sqrt();
-                assert!(error <= r.error_upper.unwrap());
-            }
-        }
-    }
-    #[test]
-    fn budgets_and_changed_retained_geometry_never_publish_partial_bounds() {
-        let p = curve(&[[1., 0., 0.], [2., 0., 0.]], &[1., 1.], [0., 1.]);
-        let path = curve(&[[0., 0., 0.], [0., 0., 5.]], &[1., 1.], [0., 1.]);
-        let s = constant_vector_law([1., 0., 0.]).unwrap();
-        let surface = retained(&p, &path, &s, [1., 0., 0.], 5);
-        for limit in [0, 1, 3] {
-            let r = certify(&p, &path, &s, [1., 0., 0.], &surface, 1e-9, limit).unwrap();
-            assert!(!r.within_budget && r.error_upper.is_none());
-            assert!(r.cells <= limit);
-        }
-        let mut changed = surface;
-        changed.control_points[0][2][0] += 1.;
-        let r = certify(&p, &path, &s, [1., 0., 0.], &changed, 0.01, 1000).unwrap();
-        assert!(!r.within_budget && r.error_upper.unwrap() >= 1.);
-    }
-    #[test]
-    fn planar_curved_source_is_bounded_between_stations() {
-        let p = curve(&[[1., 0., 0.], [2., 0., 0.]], &[1., 2.], [0., 1.]);
-        let path = curve(
-            &[[0., 0., 0.], [0., 0.08, 2.5], [0., 0., 5.]],
-            &[1., 1., 1.],
-            [-2., 3.],
-        );
-        let s = constant_vector_law([1., 0., 0.]).unwrap();
-        let surface = retained(&p, &path, &s, [1., 0., 0.], 9);
-        let r = certify(&p, &path, &s, [1., 0., 0.], &surface, 0.01, 10000).unwrap();
-        assert!(r.within_budget, "{r:?}");
-        for i in 0..=200 {
-            let v = i as f64 / 200.;
-            let e = path.evaluate(-2. + 5. * v).unwrap();
-            let q = surface.evaluate(0.37, v).unwrap().point;
-            // X is a constant exact Bishop normal; the weighted profile is
-            // independent of path curvature, so this oracle needs no frame code.
-            let x = p.evaluate(0.37).unwrap().point[0];
-            let d = [q[0] - x, q[1] - e.point[1], q[2] - e.point[2]];
-            assert!(d.iter().map(|x| x * x).sum::<f64>().sqrt() <= r.error_upper.unwrap());
-        }
-    }
-    #[test]
-    fn open_spatial_frame_bound_is_tight_and_parameter_invariant() {
-        let make = |domain| {
-            curve(
-                &[
-                    [0., 0., 0.],
-                    [0.002, 0., 1.],
-                    [0., 0.003, 2.],
-                    [0.004, 0.001, 3.],
-                ],
-                &[1.; 4],
-                domain,
-            )
-        };
-        let evaluate = |path: &Curve, closed| {
-            let tangent = initial_tangent(path).unwrap();
-            let normal = unit(
-                sub(
-                    point(&[1., 0., 0.]),
-                    scale(tangent, dot(point(&[1., 0., 0.]), tangent).unwrap()).unwrap(),
-                )
-                .unwrap(),
-            )
-            .unwrap();
-            let r = Reference {
-                path,
-                scale: path,
-                plane: None,
-                initial: normal,
-                initial_side: cross(tangent, normal).unwrap(),
-                initial_tangent: tangent,
-                coordinates: vec![],
-                closed,
-            };
-            let mut used = 0;
-            (r.open_frame(1., 100, &mut used).unwrap(), used)
-        };
-        let a = make([0., 1.]);
-        let b = make([-4., 9.]);
-        let (Some((an, ab)), used) = evaluate(&a, false) else {
-            panic!("missing bound")
-        };
-        let (Some((bn, bb)), _) = evaluate(&b, false) else {
-            panic!("missing reparameterized bound")
-        };
-        assert!(used > 0);
-        for (x, y) in an.into_iter().chain(ab).zip(bn.into_iter().chain(bb)) {
-            assert!(x.hi - x.lo < 0.1);
-            assert!((x.lo - y.lo).abs() < 1e-10 && (x.hi - y.hi).abs() < 1e-10);
-        }
-        assert!(evaluate(&a, true).0.is_none());
-    }
-    #[test]
-    fn hidden_stationary_tangent_is_unresolved() {
-        let p = curve(&[[1., 0., 0.], [2., 0., 0.]], &[1., 1.], [0., 1.]);
-        let path = curve(
-            &[[0., 0., 0.], [0., 0., 1.], [0., 0., -1.], [0., 0., 0.]],
-            &[1.; 4],
-            [0., 1.],
-        );
-        let s = constant_vector_law([1., 0., 0.]).unwrap();
-        let mut surface = crate::surface::extrude(&p, [0., 0., 1.]).unwrap();
-        surface.knots_v = vec![0., 0., 1., 1.];
-        let r = certify(&p, &path, &s, [1., 0., 0.], &surface, 100., 100).unwrap();
-        assert!(!r.within_budget && r.error_upper.is_none());
-    }
-}
+#[path = "tests/profile_certificate_tests.rs"]
+mod tests;

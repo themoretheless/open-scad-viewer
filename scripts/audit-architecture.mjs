@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto'
+import {FROZEN_ARCHIVES} from './qualificationFrozenArchives.mjs'
 // Architecture ratchet: source-file size limits and Rust crate layering.
 // Existing violations are pinned in `architecture-baseline.json`; a pinned
 // file may shrink but never grow, and a fixed violation must leave the
@@ -38,7 +40,14 @@ export function measureSizes(root, files) {
     if (limit === undefined || SIZE_EXCLUDE.some(pattern => pattern.test(path))) continue
     const full = resolve(root, path)
     if (!existsSync(full)) continue
-    const lines = countLines(readFileSync(full, 'utf8'))
+    const bytes = readFileSync(full)
+    // Historical executors are immutable evidence, not evolving source.
+    if (FROZEN_ARCHIVES[path] !== undefined) {
+      if (FROZEN_ARCHIVES[path] !== createHash('sha256').update(bytes).digest('hex'))
+        throw new Error(`${path}: immutable qualification archive hash changed`)
+      continue
+    }
+    const lines = countLines(bytes.toString('utf8'))
     if (lines > limit) sizes[path] = lines
   }
   return sizes

@@ -1,0 +1,83 @@
+{
+  "schema": "profile-solid-browser/1",
+  "scope": "Finite retained-body lifecycle scenarios. Held dispatch checks cancellation, not interruption latency or GPU qualification.",
+  "geometryWasmSha256": "8cecb75d2b4ed4e58e9c4c91bb940181d5cb5ae22fb2834546fcf816b2337cdf",
+  "distIndexSha256": "d1827a9c5e457106b345c95b8bfb85f95c83715586f40e70195312d9ef5540e1",
+  "selectionCatalogSha256": "b9807444c644d3342922cbf557b0fd684c80ee5d7de00b10c1942ad92f012f15",
+  "cases": [
+    {
+      "width": 1440,
+      "file": "closed-profile-planar-10.r",
+      "sourceSha256": "e322189087f98031a002e4ef08ce70ac3cdd4fd4269701ae81a560e1870cac82",
+      "checks": [
+        "native-body-evidence",
+        "build-cancellation",
+        "solid-cancellation",
+        "source-change",
+        "solid-publication",
+        "visible-gpu-draw",
+        "restoration",
+        "refusal-preserves-body",
+        "recovery"
+      ],
+      "errors": [],
+      "status": "passed"
+    },
+    {
+      "width": 1440,
+      "file": "closed-profile-spatial-6.r",
+      "sourceSha256": "f7a0b27c8ecf2ca506e54be84a3d308fd558697c221fdc78ea230dd8cc2f4801",
+      "checks": [
+        "native-body-evidence",
+        "build-cancellation",
+        "solid-cancellation",
+        "source-change",
+        "solid-publication",
+        "visible-gpu-draw",
+        "restoration",
+        "refusal-preserves-body",
+        "recovery"
+      ],
+      "errors": [],
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "file": "closed-profile-planar-10.r",
+      "sourceSha256": "e322189087f98031a002e4ef08ce70ac3cdd4fd4269701ae81a560e1870cac82",
+      "checks": [
+        "native-body-evidence",
+        "build-cancellation",
+        "solid-cancellation",
+        "source-change",
+        "solid-publication",
+        "visible-gpu-draw",
+        "restoration",
+        "refusal-preserves-body",
+        "recovery"
+      ],
+      "errors": [],
+      "status": "passed"
+    },
+    {
+      "width": 600,
+      "file": "closed-profile-spatial-6.r",
+      "sourceSha256": "f7a0b27c8ecf2ca506e54be84a3d308fd558697c221fdc78ea230dd8cc2f4801",
+      "checks": [
+        "native-body-evidence",
+        "build-cancellation",
+        "solid-cancellation",
+        "source-change",
+        "solid-publication",
+        "visible-gpu-draw",
+        "restoration",
+        "refusal-preserves-body",
+        "recovery"
+      ],
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "browser": "151.0.7922.34",
+  "passed": true
+}
