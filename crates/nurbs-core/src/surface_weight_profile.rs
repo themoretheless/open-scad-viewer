@@ -57,6 +57,17 @@ impl ProfileBoundary<'_, '_> {
         self.boundary
     }
 }
+/// Complete angular coverage of two affine parameter lines. This does not
+/// establish that the lines are the same B-rep edge.
+pub struct ProfilePathReport {
+    pub aligned: Option<bool>,
+    pub cells: usize,
+    pub spans: usize,
+    pub accepted_cells: usize,
+    pub upper_sine_squared: Option<f64>,
+    pub pending: Vec<[f64; 2]>,
+    pub reason: &'static str,
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -215,6 +226,96 @@ impl<'source> WeightProfile<'source> {
         } else {
             Ok(out)
         }
+    }
+    /// Adaptively cover the entire [0,1] correspondence of two affine UV lines.
+    /// Endpoint coordinates are exact binary64 inputs; interval arithmetic
+    /// encloses every mapped point. Both endpoints stay in interval coverage.
+    pub fn inspect_original_path(
+        &self,
+        original: &Surface,
+        endpoints: [[[f64; 2]; 2]; 2],
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<ProfilePathReport> {
+        check(
+            (1..=100000).contains(&max_cells)
+                && (1..=100000).contains(&max_spans)
+                && threshold.is_finite()
+                && (0. ..1.).contains(&threshold),
+            "Bound complete profile path work",
+        )?;
+        for (side, s) in [self.source, original].into_iter().enumerate() {
+            let rectangle = std::array::from_fn(|a| {
+                [
+                    endpoints[side][0][a].min(endpoints[side][1][a]),
+                    endpoints[side][0][a].max(endpoints[side][1][a]),
+                ]
+            });
+            crate::normal_alignment::validate_rectangle(s, rectangle, max_spans)?;
+        }
+        let mut out = ProfilePathReport {
+            aligned: None,
+            cells: 0,
+            spans: 0,
+            accepted_cells: 0,
+            upper_sine_squared: None,
+            pending: vec![[0., 1.]],
+            reason: "profile-path-work-limit",
+        };
+        let mut upper = 0_f64;
+        while let Some(q) = out.pending.pop() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(q);
+                return Ok(out);
+            }
+            let mut domains = [[[0.; 2]; 2]; 2];
+            for side in 0..2 {
+                for axis in 0..2 {
+                    let a = endpoints[side][0][axis];
+                    let b = endpoints[side][1][axis];
+                    let r = if a == b {
+                        I::point(a)
+                    } else {
+                        I::point(a)
+                            .add(I::new(q[0], q[1])?.mul(I::point(b).sub(I::point(a))?)?)?
+                            .intersect(a.min(b), a.max(b))?
+                    };
+                    domains[side][axis] = [r.lo, r.hi];
+                }
+            }
+            out.cells += 1;
+            let r =
+                self.inspect_original_normals(original, domains, threshold, max_spans - out.spans)?;
+            out.spans += r.spans;
+            if r.aligned == Some(true) {
+                upper = upper.max(r.sine_squared_interval.unwrap()[1]);
+                out.accepted_cells += 1;
+                continue;
+            }
+            if r.aligned == Some(false) {
+                out.pending.push(q);
+                out.aligned = Some(false);
+                out.reason = "profile-path-angular-mismatch";
+                return Ok(out);
+            }
+            if r.reason == "span-limit" {
+                out.pending.push(q);
+                return Ok(out);
+            }
+            let mid = q[0] + (q[1] - q[0]) * 0.5;
+            if mid <= q[0] || mid >= q[1] {
+                out.pending.push(q);
+                out.reason = "profile-path-resolution-limit";
+                return Ok(out);
+            }
+            out.pending.push([mid, q[1]]);
+            out.pending.push([q[0], mid]);
+        }
+        out.aligned = Some(true);
+        out.upper_sine_squared = Some(upper);
+        out.reason = "profile-path-tangent-planes-qualified";
+        Ok(out)
     }
     pub(crate) fn homogeneous_on(
         &self,
@@ -541,6 +642,52 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn adaptive_profile_path_retains_pending_coverage() {
+        let s = surface();
+        let profile = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        let line = [[[0., 0.], [1., 0.]], [[0., 0.], [1., 0.]]];
+        let r = profile
+            .inspect_original_path(&s, line, 1e-12, 1, 2)
+            .unwrap();
+        assert_eq!(r.aligned, Some(true));
+        assert!(r.pending.is_empty());
+        let r = profile
+            .inspect_original_path(&s, line, 1e-12, 1, 1)
+            .unwrap();
+        assert_eq!(r.aligned, None);
+        assert_eq!(r.pending, vec![[0., 1.]]);
+        let mut tilted = surface();
+        for row in &mut tilted.control_points {
+            for p in row {
+                p[2] = p[1];
+            }
+        }
+        let r = profile
+            .inspect_original_path(&tilted, line, 1e-12, 100, 200)
+            .unwrap();
+        assert_eq!(r.aligned, Some(false));
+        assert_eq!(r.pending, vec![[0., 1.]]);
+    }
+    #[test]
+    fn adaptive_curved_path_covers_all_subintervals() {
+        let mut s = surface();
+        s.control_points[1][1][2] = 1.;
+        let profile = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        let line = [[[0., 0.5], [1., 0.5]], [[0., 0.5], [1., 0.5]]];
+        let limited = profile
+            .inspect_original_path(&s, line, 1e-4, 2, 1000)
+            .unwrap();
+        assert_eq!(limited.aligned, None);
+        assert!(!limited.pending.is_empty());
+        let full = profile
+            .inspect_original_path(&s, line, 1e-4, 1000, 2000)
+            .unwrap();
+        assert_eq!(full.aligned, Some(true));
+        assert!(full.pending.is_empty());
+        assert!(full.cells > 1 && full.accepted_cells > 1);
+        assert!(full.upper_sine_squared.unwrap() <= 1e-4);
     }
     #[test]
     fn proposed_original_tangent_planes_require_complete_work() {

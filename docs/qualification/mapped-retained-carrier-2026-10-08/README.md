@@ -540,3 +540,24 @@ At seam midpoint V=0.5, the corrected/original tangent planes qualify with
 squared-sine upper bound 2.7218457621120856e-25. The actual annular regression
 passes and explicitly keeps the finite segment unresolved. A point result does
 not establish whole-seam tangency.
+
+## Complete adaptive corrected/original seam angle coverage
+
+`WeightProfile::inspect_original_path` covers both affine UV lines over the
+entire canonical [0,1] interval. Outward coordinate maps include endpoints;
+every accepted cell compares complete normal products. Cell and span limits
+retain the remaining canonical intervals, and only an empty queue yields a
+qualified angular result. The API does not claim positional edge identity or
+shell orientation from supplied line coordinates.
+
+Ten profile tests pass, including a curved line requiring subdivision, retained
+pending work, angular mismatch and incomplete normal coverage. The actual
+annular face 0 U=0 / face 5 U=1 seam with V running from 0 to 1 qualifies at
+squared-sine tolerance 1e-6: 14697 inspected cells, 29394 normal spans, 7349
+accepted intervals, zero pending intervals, upper bound
+9.996374481646285e-7. The fixture asserts complete coverage and tolerance.
+
+This qualifies this corrected/original seam's tangent-plane angle only.
+Other seams, singular end transitions, corrected volume/wall/self-intersection
+and STEP admission remain outstanding; no original pending wall pair or whole
+body is promoted. The implementation remains native, outside packaged WASM.

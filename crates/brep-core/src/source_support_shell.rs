@@ -427,6 +427,15 @@ mod tests {
             [[[0.,0.],[0.5,0.5]],[[1.,1.],[0.5,0.5]]],1e-6,16).unwrap();
         eprintln!("corrected profile seam midpoint aligned={:?} sine={:?}",point.aligned,point.sine_squared_interval);
         assert_eq!(point.aligned,Some(true));
+        let whole=profile.inspect_original_path(neighbor,
+            [[[0.,0.],[0.,1.]],[[1.,0.],[1.,1.]]],1e-6,50000,100000).unwrap();
+        eprintln!("corrected whole seam aligned={:?} upper={:?} cells={} spans={} accepted={} pending={} reason={}",
+            whole.aligned,whole.upper_sine_squared,whole.cells,whole.spans,whole.accepted_cells,whole.pending.len(),whole.reason);
+        assert_eq!(whole.aligned,Some(true));
+        assert!(whole.pending.is_empty());
+        assert!(whole.upper_sine_squared.unwrap()<=1e-6);
+        assert_eq!(whole.cells,14697);assert_eq!(whole.spans,29394);
+
 
         let mut exact=proposal_limits();exact.controls=44;exact.fragments=4;
         assert!(crate::source_profile_body::prepare(&body,&specs,exact).unwrap().proposal.is_some());
