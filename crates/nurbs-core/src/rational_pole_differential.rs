@@ -434,6 +434,33 @@ mod tests {
             let normal_report =
                 crate::factored_surface_normals::prepare(&s, end, 10_000_000).unwrap();
             let normals = normal_report.certificate.unwrap();
+            let near = if end { [1. - 1e-12, 1.] } else { [0., 1e-12] };
+            let pair = [[near, [0., 1e-12]], [near, [0.245, 0.245 + 1e-12]]];
+            let excluded = crate::surface_self_chord::rational_pole_pair_exclusion(
+                &s, pair, &c, &normals, 1e-4, 7,
+            )
+            .unwrap();
+            // A wide mean-matrix enclosure contains a singular matrix; refuse
+            // rather than infer a denominator from the planar fixture alone.
+            assert!(!excluded.0 && excluded.1 <= 7);
+            let narrow = [[near, [0., 1e-12]], [near, [0.1, 0.1 + 1e-12]]];
+            let local = crate::surface_self_chord::rational_pole_pair_exclusion(
+                &s, narrow, &c, &normals, 1e-4, 7,
+            )
+            .unwrap();
+            assert!(local.0 && local.1 <= 7);
+            assert_eq!(
+                crate::surface_self_chord::rational_pole_pair_exclusion(
+                    &s, pair, &c, &normals, 1e-4, 5
+                )
+                .unwrap(),
+                (false, 5)
+            );
+            assert!(crate::surface_self_chord::rational_pole_pair_exclusion(
+                &foreign, pair, &c, &normals, 1e-4, 7
+            )
+            .is_err());
+
             let limited = crate::surface_self_chord_coverage::qualify_with_rational_pole(
                 &s,
                 0.1,

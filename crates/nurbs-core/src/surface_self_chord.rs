@@ -89,6 +89,114 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     }
     Ok(best)
 }
+/// For chord=M z, |n.chord|² <= ||n^T M||² |z|² while
+/// |chord|² >= sigma_min(M)² |z|². Cauchy--Binet bounds sigma_min
+/// from all separated minors. No endpoint normal is inferred from samples.
+fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
+    let mut determinant = I::point(0.);
+    for [a, b] in [[0, 1], [0, 2], [1, 2]] {
+        let d = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
+        if let Some(x) = separated_square(d)? {
+            determinant = determinant.add(x)?;
+        }
+    }
+    if determinant.lo <= 0. {
+        return Ok(1.);
+    }
+    let mut trace = I::point(0.);
+    let mut normal_squared = I::point(0.);
+    for k in 0..3 {
+        if let Some(x) = separated_square(n[k])? {
+            normal_squared = normal_squared.add(x)?;
+        }
+        for a in 0..2 {
+            let upper = j[k][a].lo.abs().max(j[k][a].hi.abs());
+            trace = trace.add(I::point(upper).mul(I::point(upper))?)?;
+        }
+    }
+    if normal_squared.lo <= 0. {
+        return Ok(1.);
+    }
+    let mut numerator = I::point(0.);
+    for a in 0..2 {
+        let mut dot = I::point(0.);
+        for k in 0..3 {
+            dot = dot.add(n[k].mul(j[k][a])?)?;
+        }
+        let upper = dot.lo.abs().max(dot.hi.abs());
+        numerator = numerator.add(I::point(upper).mul(I::point(upper))?)?;
+    }
+    Ok(numerator
+        .mul(trace)?
+        .div(normal_squared.mul(determinant)?)?
+        .hi
+        .min(1.))
+}
+/// Pair-specific exclusion, not an intrinsic certificate for the convex union.
+/// Five differential restrictions and up to two endpoint-normal restrictions.
+pub(crate) fn rational_pole_pair_exclusion(
+    s: &Surface,
+    pair: [[[f64; 2]; 2]; 2],
+    differential: &crate::rational_pole_differential::Certificate<'_>,
+    normals: &crate::factored_surface_normals::Certificate<'_>,
+    sine: f64,
+    max_spans: usize,
+) -> Result<(bool, usize)> {
+    check(
+        std::ptr::eq(s, differential.surface())
+            && std::ptr::eq(s, normals.surface())
+            && differential.end() == normals.end(),
+        "Use original pole facts for this pair",
+    )?;
+    check(
+        sine.is_finite() && (0. ..1.).contains(&sine),
+        "Valid pole pair sine threshold",
+    )?;
+    if max_spans < 5 {
+        return Ok((false, 0));
+    }
+    let union = std::array::from_fn(|a| {
+        [
+            pair[0][a][0].min(pair[1][a][0]),
+            pair[0][a][1].max(pair[1][a][1]),
+        ]
+    });
+    let Some(mut j) = differential.bounds(union)? else {
+        return Ok((false, 5));
+    };
+    for a in 0..2 {
+        let scale = j
+            .iter()
+            .map(|r| r[a].lo.abs().max(r[a].hi.abs()))
+            .fold(0_f64, f64::max);
+        if scale >= f64::MIN_POSITIVE && scale.is_finite() {
+            for row in &mut j {
+                row[a] = row[a].div(I::point(scale))?;
+            }
+        }
+    }
+    let threshold = I::point(1.).sub(I::point(sine))?.lo;
+    let mut used = 5;
+    for endpoint in pair {
+        if used == max_spans {
+            break;
+        }
+        let b = normals.bounds(endpoint)?;
+        used += 1;
+        let scale = b.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
+        if scale < f64::MIN_POSITIVE {
+            continue;
+        }
+        let mut n = [I::point(0.); 3];
+        for k in 0..3 {
+            n[k] = I::new(b[k][0], b[k][1])?.div(I::point(scale))?;
+        }
+        if endpoint_matrix_cosine(j, n)? < threshold {
+            return Ok((true, used));
+        }
+    }
+    Ok((false, used))
+}
 fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     let mut best = cosine_upper(j)?;
     // J D is the same original differential in rescaled parameter coordinates:
@@ -336,6 +444,24 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn endpoint_normal_matrix_preserves_tangent_variation_and_refuses_aligned_chords() {
+        let zero = I::point(0.);
+        let wide = I::new(1., 10.).unwrap();
+        let j = [[wide, zero], [zero, wide], [zero, zero]];
+        assert_eq!(cosine_upper(j).unwrap(), 1.);
+        assert!(endpoint_matrix_cosine(j, [zero, zero, I::point(1.)]).unwrap() < 1e-20);
+        let exact = [[I::point(1.), zero], [zero, I::point(1.)], [zero, zero]];
+        assert_eq!(
+            endpoint_matrix_cosine(exact, [I::point(1.), zero, zero]).unwrap(),
+            1.
+        );
+        assert_eq!(endpoint_matrix_cosine(exact, [zero; 3]).unwrap(), 1.);
+        assert_eq!(
+            endpoint_matrix_cosine([[zero; 2]; 3], [zero, zero, I::point(1.)]).unwrap(),
+            1.
+        );
+    }
     #[test]
     fn combined_minors_strengthen_oblique_differential_lower_bound() {
         let low = I::new(-0.1, 0.1).unwrap();

@@ -279,6 +279,23 @@ fn qualify_impl<'a>(
                 continue;
             }
         }
+        if let (Some(differential), Some(normals)) = (differential, factored) {
+            if out.spans < limits.spans {
+                let (excluded, used) = surface_self_chord::rational_pole_pair_exclusion(
+                    s,
+                    pair,
+                    differential,
+                    normals,
+                    max_sine_squared,
+                    limits.spans - out.spans,
+                )?;
+                out.spans += used;
+                if excluded {
+                    out.direction_exclusions += 1;
+                    continue;
+                }
+            }
+        }
         if let Some(proof) = factored.filter(|_| out.spans < limits.spans) {
             let r = surface_self_chord::qualify_polar_rectangle(
                 s,

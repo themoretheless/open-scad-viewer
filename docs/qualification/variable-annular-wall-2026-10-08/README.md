@@ -503,3 +503,42 @@ A fourth independent test uses direct rational quotient derivatives, nonzero
 first-order tangential V derivatives, both reflected ends, and translated,
 scaled knot domains. Its endpoint frames lie in the prepared interval matrix;
 all source points, weights and knots remain unchanged. Four tests pass.
+
+
+## Endpoint-normal weighted matrix exclusion
+
+A pair-specific check now uses the original factored normal on each endpoint
+rectangle. For chord=M z, Cauchy--Schwarz gives |n.chord|²<=||n^T M||²|z|².
+The same separated minor sum and trace lower-bound sigma_min(M)², so the
+ratio bounds cosine against every enclosed endpoint normal. A fixed positive
+column scaling preserves the inequality. Missing matrix rank or nonzero
+normal lower bounds refuse exclusion. This pair-specific proof is counted as
+a direction exclusion; it never creates an intrinsic certificate for the union.
+Five mean-matrix net restrictions and up to two normal restrictions are charged.
+The earlier intrinsic query is still separate, so this currently duplicates
+five restrictions when that query fails. Preparation budgets remain unchanged.
+
+Thirteen chord/coverage tests and four rational preparation/integration tests
+pass. A matrix with large tangent-plane variation still excludes its plane
+normal; actual aligned chords, zero normals and deficient matrices refuse.
+The rational fixture at U~1e-12 and V separation 0.1 is excluded, including
+reflected exit. V separation 0.245 remains unqualified because independent
+coefficient bounds include a singular mean matrix. The latter refusal is a
+regression, not relaxed or removed to obtain a passing test.
+
+The completed four-body audit retains 4.74999 mm, squared-sine 1e-4,
+1024 cells and 8192 restrictions per pole. Both directions again match:
+
+| Radius order | Face | Cells | Spans | Direction exclusions | Pending |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 513 | 8192 | 191 | 57 |
+| 0.5 → 1.25 | 10 | 503 | 8192 | 195 | 17 |
+| 1.25 → 0.5 | 0 | 512 | 8192 | 204 | 40 |
+| 1.25 → 0.5 | 10 | 500 | 8192 | 180 | 14 |
+
+Pending counts compare different adaptive partitions and do not measure a
+proved fraction or alone establish faster convergence. None of these faces
+is completely certified; retained same-face coverage stays 28/31. Evidence:
+`endpoint-self-wall.json.gz`, its log and both endpoint test logs. A tighter
+correlated rational quotient/mean bound remains needed near the collapsed rail.
+Global wall qualification and WASM/UI packaging remain open.
