@@ -52,3 +52,15 @@ it('rejects missing original face pairs and forged coverage, source or convergen
  const r=structuredClone(cases[3].result);r.coverage.pairs.find((p:any)=>p.reason==='self-pair-unresolved').lowerBoundMm=10
  expect(validWholeWall(wholeWallExpectation(cases[3].request),r)).toBe(false)
 })
+it('accepts current packaged WASM control-hull bounds without weakening pair validation',async()=>{
+ const {inspectWholeWall}=await import('../src/services/solidWholeWall')
+ const c=cases[0],r=inspectWholeWall(c.request),e=wholeWallExpectation(c.request)
+ expect(r.coverage.pairs.some(p=>p.reason==='control-hull-distance-bound')).toBe(true)
+ expect(validWholeWall(e,r)).toBe(true)
+ expect(mainSolidResult(mainSolidExpectation({kind:'wholeWall',options:c.request}),r)).toBe(true)
+ for(const lowerBoundMm of [null,-1,Infinity]){
+  const forged=structuredClone(r)
+  forged.coverage.pairs.find(p=>p.reason==='control-hull-distance-bound')!.lowerBoundMm=lowerBoundMm
+  expect(validWholeWall(e,forged)).toBe(false)
+ }
+})

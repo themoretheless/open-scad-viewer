@@ -1400,3 +1400,16 @@ UI cancellation. Type checking and production packaging passed. The measured
 packed kernel grew from 3,987,584 to 3,997,424 bytes; bundle limits retain their
 previous small margins. Evidence: `packaged-wall-worker.json.gz`,
 `packaged-worker-tests.log.gz`, and `packaged-dist-verify.log.gz`.
+
+### Whole-wall transport compatibility
+
+Current native material-wall coverage can emit `control-hull-distance-bound`
+for distinct original faces. The frontend validator omitted that result kind,
+so it rejected valid box bounds. The transport now accepts it with the same
+finite nonnegative bound and distinct-face checks as other distance bounds.
+A packaged-WASM regression checks the actual new kind and rejects null,
+negative and infinite forged bounds. Four focused tests and all seven native
+whole-wall fixtures plus their seven worker-handler checks passed. Planar box
+and enclosure fixture qualification does not establish general curved walls.
+See `whole-wall-control-hull-worker.json.gz` and
+`whole-wall-control-hull-regression.log.gz`.
