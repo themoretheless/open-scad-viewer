@@ -996,3 +996,28 @@ enclosures are complete, but zero remains possible in every enclosure:
 0 regular cells, 64 pending cells. This proves neither degeneracy nor regularity.
 Adaptive refinement and tighter correlated Hermite bounds are needed before
 interior immersion can be admitted. No closed-body certificate or WASM changed.
+
+## Adaptive transition regularity with factored Hermite derivatives
+
+`inspect_regularity` uses a breadth-first cover of the full requested rectangle.
+A cell is accepted only when its complete normal enclosure excludes zero in
+at least one component. Unresolved cells split without dropping either child.
+Work exhaustion preserves the current cell and every queued domain; resolution
+limits remain pending. Reports never infer regularity from sampled points.
+
+Derivative bounds now use the algebraically identical factorizations
+h00=(1-s)^2(1+2s), h10=s(1-s)^2 and
+H_s=6s(1-s)(P-S)+(1-s)(1-3s)lD. This reduces cancellation and repeated-parameter
+interval inflation without changing geometry.
+
+At the same 1000-cell/4000-span budget the annular transition improved from
+16 accepted / 969 pending cells to 311 accepted / 379 pending cells after
+factoring. Counts refer to adaptive cells, not the previous coarse 8x8 cover.
+Accepted and pending rectangles retain exactly the entire original unit area.
+Pending cells explicitly include the collapsed tip. The control fixture passed
+in 5.49 seconds; all 13 profile tests passed in 0.04 seconds. Zero-cell work
+returns the untouched domain; budgets and incomplete coverage remain explicit.
+
+The full transition is still unqualified: 379 cells require tighter bounds or
+further work, and the tip needs its own supported singularity treatment. Rail
+coincidence, self-intersections, thickness and closed-body admission remain open.

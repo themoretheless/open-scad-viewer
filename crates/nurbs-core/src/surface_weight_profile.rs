@@ -292,20 +292,16 @@ impl ProfileEndTransition<'_, '_> {
             return Ok((None, spent + more));
         };
         let t = I::new(across[0], across[1])?;
-        let t2 = t.mul(t)?;
-        let h00 = I::point(6.).mul(t2)?.sub(I::point(6.).mul(t)?)?;
-        let h10 = I::point(3.)
-            .mul(t2)?
-            .sub(I::point(4.).mul(t)?)?
-            .add(I::point(1.))?
+        let one_minus = I::point(1.).sub(t)?;
+        let h01 = I::point(6.).mul(t)?.mul(one_minus)?;
+        let h10 = one_minus
+            .mul(I::point(1.).sub(I::point(3.).mul(t)?)?)?
             .mul(I::point(self.transverse_scale))?;
-        let h01 = I::point(6.).mul(t)?.sub(I::point(6.).mul(t2)?)?;
         let mut bounds = [[0.; 2]; 3];
         for k in 0..3 {
-            let value = h00
-                .mul(I::new(source[k][0], source[k][1])?)?
-                .add(h10.mul(I::new(d[k][0], d[k][1])?)?)?
-                .add(h01.mul(I::point(self.target[k]))?)?;
+            let value = h01
+                .mul(I::point(self.target[k]).sub(I::new(source[k][0], source[k][1])?)?)?
+                .add(h10.mul(I::new(d[k][0], d[k][1])?)?)?;
             bounds[k] = [value.lo, value.hi];
         }
         Ok((Some(bounds), spent + more))
@@ -348,16 +344,10 @@ impl ProfileEndTransition<'_, '_> {
             return Ok((None, spent + more));
         };
         let t = I::new(across[0], across[1])?;
-        let t2 = t.mul(t)?;
-        let t3 = t2.mul(t)?;
-        let h00 = I::point(2.)
-            .mul(t3)?
-            .sub(I::point(3.).mul(t2)?)?
-            .add(I::point(1.))?;
-        let h10 = t3
-            .sub(I::point(2.).mul(t2)?)?
-            .add(t)?
-            .mul(I::point(self.transverse_scale))?;
+        let one_minus = I::point(1.).sub(t)?;
+        let square = one_minus.mul(one_minus)?;
+        let h00 = square.mul(I::point(1.).add(I::point(2.).mul(t)?)?)?;
+        let h10 = t.mul(square)?.mul(I::point(self.transverse_scale))?;
         let mut bounds = [[0.; 2]; 3];
         for k in 0..3 {
             let value = h00
@@ -395,6 +385,75 @@ impl ProfileEndTransition<'_, '_> {
         }
         Ok((Some(bounds), spent + more))
     }
+    /// Cover the entire requested rectangle with certified regular cells and
+    /// explicit pending cells. Subdivision never discards unresolved domains.
+    pub fn inspect_regularity(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<TransitionRegularityReport> {
+        self.section.rectangle(free)?;
+        check(
+            max_cells <= 100000
+                && max_spans <= 100000
+                && across.iter().all(|x| x.is_finite())
+                && across[0] >= 0.
+                && across[1] <= 1.
+                && across[0] <= across[1],
+            "Bound transition regularity domain and work",
+        )?;
+        let mut queue = std::collections::VecDeque::from([[free, across]]);
+        let mut out = TransitionRegularityReport {
+            regular: Vec::new(),
+            pending: Vec::new(),
+            cells: 0,
+            spans: 0,
+            complete_regular: false,
+            reason: "transition-regularity-work-limit",
+        };
+        while let Some(rect) = queue.pop_front() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let (bounds, spent) = self.normal_bounds(rect[0], rect[1], max_spans - out.spans)?;
+            out.spans += spent;
+            let Some(bounds) = bounds else {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            };
+            if bounds.iter().any(|b| b[0] > 0. || b[1] < 0.) {
+                out.regular.push(rect);
+                continue;
+            }
+            let free_width = self.section.range[1] - self.section.range[0];
+            let axis =
+                usize::from((rect[0][1] - rect[0][0]) / free_width < rect[1][1] - rect[1][0]);
+            let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
+            if mid <= rect[axis][0] || mid >= rect[axis][1] {
+                out.pending.push(rect);
+                continue;
+            }
+            let mut left = rect;
+            left[axis][1] = mid;
+            let mut right = rect;
+            right[axis][0] = mid;
+            queue.push_back(left);
+            queue.push_back(right);
+        }
+        out.complete_regular = out.pending.is_empty();
+        out.reason = if out.complete_regular {
+            "transition-regularity-qualified"
+        } else {
+            "transition-regularity-resolution-limit"
+        };
+        Ok(out)
+    }
     pub fn rail(&self, high: bool) -> ProfileTransitionRail<'_, '_, '_> {
         ProfileTransitionRail {
             transition: self,
@@ -411,6 +470,14 @@ impl ProfileEndTransition<'_, '_> {
             spent,
         ))
     }
+}
+pub struct TransitionRegularityReport {
+    pub regular: Vec<[[f64; 2]; 2]>,
+    pub pending: Vec<[[f64; 2]; 2]>,
+    pub cells: usize,
+    pub spans: usize,
+    pub complete_regular: bool,
+    pub reason: &'static str,
 }
 /// Original side-rail expression bound to the exact transition. It cannot be
 /// substituted by another curve merely because endpoint coordinates overlap.
@@ -1365,6 +1432,26 @@ mod tests {
             Some(true)
         );
         assert!(transition.regular_join([0.2, 0.4], 0).is_err());
+        let empty = transition
+            .inspect_regularity([0., 1.], [0., 1.], 0, 100)
+            .unwrap();
+        assert_eq!(empty.pending, vec![[[0., 1.], [0., 1.]]]);
+        assert_eq!(empty.cells, 0);
+        let refined = transition
+            .inspect_regularity([0., 1.], [0., 1.], 200, 800)
+            .unwrap();
+        let area: f64 = refined
+            .regular
+            .iter()
+            .chain(&refined.pending)
+            .map(|r| (r[0][1] - r[0][0]) * (r[1][1] - r[1][0]))
+            .sum();
+        assert_eq!(area, 1.);
+        assert!(!refined.complete_regular);
+        assert!(!refined.regular.is_empty());
+        assert!(refined.pending.iter().any(|r| r[1][1] == 1.));
+        assert!(refined.cells <= 200 && refined.spans <= 800);
+
         for t in [0., 0.5, 1.] {
             let free = transition
                 .free_derivative_bounds([0.3, 0.3], [t, t], 2)

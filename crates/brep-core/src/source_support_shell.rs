@@ -383,6 +383,11 @@ mod tests {
         assert_eq!(regular_cells+pending_cells.len(),64);
         eprintln!("transition Jacobian regular={} pending={} domains={:?}",regular_cells,pending_cells.len(),pending_cells);
         assert!(transition.normal_bounds([0.2,0.3],[0.2,0.3],3).unwrap().0.is_none());
+        let refined=transition.inspect_regularity([0.,1.],[0.,1.],1000,4000).unwrap();
+        let area:f64=refined.regular.iter().chain(&refined.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(area,1.);assert!(!refined.complete_regular);
+        assert!(refined.pending.iter().any(|r|r[1][1]==1.));
+        eprintln!("adaptive transition regular={} pending={} cells={} spans={}",refined.regular.len(),refined.pending.len(),refined.cells,refined.spans);
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {
