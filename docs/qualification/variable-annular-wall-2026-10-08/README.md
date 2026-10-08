@@ -1666,3 +1666,21 @@ collapsed pole, angular exclusion against another face, whole-wall thickness or
 self-intersection freedom. The next native change should compose source-bound
 factored bounds with the original complete product traversal. The packaged
 normal-product build is still in Binaryen optimization.
+
+### Exploratory composition against distinct original faces
+
+Source-owned exact U² normal certificates were composed with original closed
+normal rectangles for all 50 unresolved distinct pairs involving the two
+prepared faces. The bounded exploratory traversal excludes four complete
+products: zero-based pairs [0,12], [0,13], [2,10], [3,10]. It retains 27 aligned
+regions and 19 cell-budget refusals with their pending closed products. Exact
+preparation charges 37,683,566 work units; per-pair cell and query bounds are
+recorded. The angular interval helper matches the existing native predicate in
+16 reference cases and refuses zero normals. Original surfaces remain unchanged.
+
+This duplicate predicate is confined to the exploratory example. Production
+integration must compose private source-bound certificates through the existing
+native angular predicate, retain the work accounting, and requalify the complete
+Body/bridge/worker path. These four prospective exclusions have not reduced the
+173-pair native admission result and do not prove thickness or self-intersection
+freedom. The packaged normal-product kernel remains in optimization.
