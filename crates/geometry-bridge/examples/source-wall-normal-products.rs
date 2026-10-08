@@ -25,6 +25,10 @@ fn main() {
         }
         if refinement {request["wallCoverage"]["adaptiveSelf"]["refinement"]=json!({
             "cells":100000,"spans":100000,"cellsPerFace":100000,"spansPerFace":100000});}
+        if refinement&&args.get(3).is_some_and(|v|v=="gap") {
+            request["wallCoverage"]["limits"]["gapCells"]=json!(100000);
+            request["wallCoverage"]["limits"]["gapSpans"]=json!(100000);
+        }
         let result=geometry_bridge::dispatch(request.clone()).unwrap();
         assert_eq!(result["admitted"],json!(true));
         let coverage=&result["wallCoverage"];
@@ -60,7 +64,7 @@ fn main() {
             assert!(a["faces"].as_array().unwrap().iter().all(|f|f["qualified"]==json!(true)));
             assert!(a["refinementCells"].as_u64().unwrap()<=100000);
             assert!(a["refinementSpans"].as_u64().unwrap()<=100000);
-            assert_eq!(unresolved,160);
+            if args.get(3).is_some_and(|v|v=="gap") {assert!(unresolved<=160);}else{assert_eq!(unresolved,160);}
         }
         for faces in &previously_proven {
             assert!(pairs.iter().any(|p|&p["faces"]==faces&&p["proven"]==json!(true)));
