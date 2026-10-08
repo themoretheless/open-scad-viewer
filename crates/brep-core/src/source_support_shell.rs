@@ -574,6 +574,35 @@ mod tests {
         assert!(exact_budget.shell.is_some());
         assert!(expression.pairs().iter().all(|p|p.reversed()[0]!=p.reversed()[1]));
 
+        use crate::source_profile_body::ShellFaceKind;
+        let profile=proposal.profile(0).unwrap();
+        for (id,face) in expression.faces().iter().enumerate() {
+            match face.kind() {
+                ShellFaceKind::Original(index) => {
+                    let surface=body.geometry().shell().faces()[index][0].edges()[0].surface();
+                    let u=(surface.knots_u[surface.degree_u]+surface.knots_u[surface.control_points.len()])/2.;
+                    let v=(surface.knots_v[surface.degree_v]+surface.knots_v[surface.control_points[0].len()])/2.;
+                    let domain=[[u;2],[v;2]];
+                    assert!(expression.enclose_support(id,domain,1000,0).unwrap().0.is_none());
+                    let bounds=expression.enclose_support(id,domain,1000,100).unwrap().0.unwrap();
+                    let sample=surface.evaluate(u,v).unwrap().point;
+                    for k in 0..3 {assert!(sample[k]>=bounds[k][0]-1e-12 && sample[k]<=bounds[k][1]+1e-12);}
+                }
+                ShellFaceKind::Retained(end) => {
+                    let parameter=if end==0 {0.5}else{0.95};
+                    let domain=[[parameter;2],[0.5;2]];
+                    assert_eq!(expression.enclose_support(id,domain,1000,100).unwrap(),profile.enclose(domain,100).unwrap());
+                }
+                ShellFaceKind::Transition => {
+                    assert!(expression.enclose_support(id,[[0.5;2],[0.;2]],0,100).unwrap().0.is_none());
+                    let entry=expression.enclose_support(id,[[0.5;2],[0.;2]],1000,100).unwrap();
+                    assert_eq!(entry,profile.section(0,0.75).unwrap().enclose([0.5;2],100).unwrap());
+                    assert!(expression.enclose_support(id,[[0.5;2],[0.5;2]],1000,100).unwrap().0.is_some());
+                }
+            }
+        }
+        assert!(expression.enclose_support(expression.faces().len(),[[0.;2];2],1000,100).is_err());
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

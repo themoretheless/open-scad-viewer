@@ -1992,3 +1992,27 @@ The final combined regression passed in 81.11 seconds after adding exact
 use-budget admission/refusal and opposite traversal assertions. The
 independent vertex-link regression passed, including disconnected closed
 fans, branching, a normal triangle fan and a valid two-edge lens.
+
+
+## Exact expression-shell support position enclosures
+
+ExpressionShell::enclose_support dispatches by the admitted face kind.
+Original faces use outward interval NURBS span enclosures with an explicit
+span allowance checked before evaluation. Retained faces use the exact
+WeightProfile expression, including factored original weights. Transition
+faces reconstruct the owned ProfileSectionBridge and constrained natural
+rails, then evaluate the full transverse Hermite correction. Insufficient
+control or span work returns no enclosure. Invalid face indices and
+out-of-domain parameters refuse.
+
+Coordinates are source (u,v) for original/retained faces and (source free,
+normalized across) for the transition. These conservative bounds cover
+the supporting expression. They do not certify membership of a rectangle
+in the trimmed region or absence of contact between two faces.
+
+The combined annular regression passed in 48.22 seconds. Every unchanged
+original face was checked against a separately evaluated point, the
+transition entry matched the exact profile section enclosure, its
+interior returned a bounded expression, retained dispatch preserved the
+exact profile bounds and zero-work cases returned no enclosure. Native
+cargo check and diff whitespace checks passed. Packaged WASM is unchanged.

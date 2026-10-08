@@ -76,6 +76,98 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     pub fn components(&self) -> usize {
         self.components
     }
+    /// Conservative position enclosure of the exact supporting expression.
+    /// This does not assert that the rectangle lies inside its trimmed region.
+    /// Original/retained coordinates are (u,v); transition coordinates are
+    /// (source free parameter, normalized across parameter).
+    pub fn enclose_support(
+        &self,
+        face: usize,
+        domain: [[f64; 2]; 2],
+        max_controls: usize,
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        use nurbs_core::interval_eval::{evaluate_surface_interval, Interval};
+        if max_controls > 1000000
+            || max_spans > 100000
+            || domain
+                .iter()
+                .any(|r| !r.iter().all(|x| x.is_finite()) || r[0] > r[1])
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SHELL",
+                "Bound support enclosure parameters and work",
+            ));
+        }
+        let kind = self
+            .faces
+            .get(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SHELL", "Unknown expression face"))?
+            .kind;
+        let boundary = self.assembly.patch.rails.face.boundary;
+        let root = boundary.rooted[0];
+        let profile = root.restricted.proposal.profile(root.face).unwrap();
+        match kind {
+            ShellFaceKind::Retained(_) => profile.enclose(domain, max_spans),
+            ShellFaceKind::Transition => {
+                let first = profile.section(root.axis, root.parameters[0])?;
+                let last = profile.section(root.axis, root.parameters[1])?;
+                let width = root.parameters[1] - root.parameters[0];
+                let bridge = nurbs_core::normal_alignment::ProfileSectionBridge::new(
+                    first, last, [width; 2],
+                )?;
+                let (constrained, _) = bridge.constrain_original_rails(max_controls)?;
+                let Some(constrained) = constrained else {
+                    return Ok((None, 0));
+                };
+                constrained.enclose_with_transverse_correction(domain[0], domain[1], max_spans)
+            }
+            ShellFaceKind::Original(index) => {
+                let original = root.restricted.proposal.body.geometry().shell();
+                let surface = original.faces()[index][0].edges()[0].surface();
+                let spans = [
+                    (
+                        &surface.knots_u,
+                        surface.degree_u,
+                        surface.control_points.len(),
+                    ),
+                    (
+                        &surface.knots_v,
+                        surface.degree_v,
+                        surface.control_points[0].len(),
+                    ),
+                ];
+                let mut counts = [0usize; 2];
+                for axis in 0..2 {
+                    let (knots, degree, count) = spans[axis];
+                    if domain[axis][0] < knots[degree] || domain[axis][1] > knots[count] {
+                        return Err(Error::new(
+                            "BREP_PROFILE_SHELL",
+                            "Keep support rectangle in active knot domain",
+                        ));
+                    }
+                    counts[axis] = (degree..count)
+                        .filter(|&i| {
+                            knots[i] < knots[i + 1]
+                                && knots[i] <= domain[axis][1]
+                                && knots[i + 1] >= domain[axis][0]
+                        })
+                        .count();
+                }
+                let needed = counts[0] * counts[1];
+                if needed > max_spans {
+                    return Ok((None, 0));
+                }
+                let result = evaluate_surface_interval(
+                    surface,
+                    Interval::new(domain[0][0], domain[0][1])?,
+                    Interval::new(domain[1][0], domain[1][1])?,
+                )?;
+                let bounds = std::array::from_fn(|i| [result[i].lo, result[i].hi]);
+                Ok((Some(bounds), needed))
+            }
+        }
+    }
 }
 pub struct ShellAssemblyReport<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     pub shell: Option<ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>>,
