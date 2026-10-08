@@ -218,5 +218,22 @@ It gives no additional full-chart certificates at that budget.
 `self-wall-gram4096.*.gz` preserves all unresolved original domains.
 The subsequent 20000-cell run separately caps spans at 100000;
 the diagnostic example now records both independent actual budgets.
-The larger run is still pending, so its partial results are not
-counted as qualification of all four specimens here.
+The larger run has completed; its complete results are recorded below.
+
+## Remaining regular side charts qualified
+
+All four original specimens fully qualify faces 16,17,24,28 with the
+combined-minor bound and 20000-cell/100000-span caps. Their cell
+counts are 12253,7197,10265,13867 and span counts
+62437,36314,51523,66069 respectively. All have zero pending domains.
+The threshold remains 4.74999 mm and squared-sine tolerance 1e-4.
+Original model serialization remains unchanged for every case.
+
+Combining these four distinct source charts with the previous native
+results gives retained full same-face qualification for 28/31 charts
+in each specimen. Middle chart 5 and singular end charts 0/10 remain
+unqualified. This is not a global thickness certificate: distinct
+source-face wall pairs, material chord coverage and a proved minimum
+interval are still required. General fillets, named-part acceptance
+and packaging the new native logic into WASM/UI remain open.
+Evidence: `self-wall-gram20000.json.gz` and its completed log.
