@@ -494,9 +494,14 @@ impl<'a> Certificate<'a> {
     /// lambda proves unique U for every point of the entire path. This refuses
     /// when the enlarged original chart does not contain that path.
     pub fn coordinate_path_bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+        Ok(self.coordinate_path_report(domain)?.0)
+    }
+    pub(crate) fn coordinate_path_report(&self, domain: [[f64; 2]; 2])
+        -> Result<(Option<[[I; 2]; 3]>, usize)> {
         let d = self.normalized_domain(domain)?;
         let mut extended = d;
         extended[0] = [0., I::point(d[0][1]).mul(I::point(4.))?.hi.min(1.)];
+        let mut used = 1;
         let weight = normal_alignment::restrict_hull(
             &self.weight,
             [self.weight.len() - 1, self.weight[0].len() - 1],
@@ -504,16 +509,18 @@ impl<'a> Certificate<'a> {
             extended,
         )?;
         if weight[0].lo <= 0. {
-            return Ok(None);
+            return Ok((None, used));
         }
         // Endpoint X is an integral from the pole, so its derivative bound
         // must cover that entire prefix, not only the endpoint rectangle.
         let mut prefix = d;
         prefix[0][0] = 0.;
+        used += 1;
         let endpoint = normal_alignment::rational_quotient_hull(&self.lambda, prefix)?[0];
+        used += 1;
         let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
-            return Ok(None);
+            return Ok((None, used));
         }
         let (minimum, maximum) = if lambda.lo > 0. {
             (lambda.lo, endpoint.hi)
@@ -523,24 +530,26 @@ impl<'a> Certificate<'a> {
         let available = I::point(extended[0][1]).mul(I::point(minimum))?;
         let needed = I::point(d[0][1]).mul(I::point(maximum))?;
         if available.lo < needed.hi {
-            return Ok(None);
+            return Ok((None, used));
         }
+        used += 1;
         let Some(ratio) =
             normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
         else {
-            return Ok(None);
+            return Ok((None, used));
         };
+        used += 1;
         let Some(second) =
             normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
         else {
-            return Ok(None);
+            return Ok((None, used));
         };
         let mut j = [[I::point(0.); 2]; 3];
         for k in 0..3 {
             j[k][0] = self.a[k].add(I::new(0., extended[0][1])?.mul(ratio[k])?)?;
             j[k][1] = second[k];
         }
-        Ok(Some(j))
+        Ok((Some(j), used))
     }
     /// Confine the inverse-coordinate path between two local U boundaries.
     /// Six net restrictions are required, separate from the pole-prefix path.
@@ -633,6 +642,10 @@ impl<'a> Certificate<'a> {
     /// Columns enclosing the weighted mean chord matrix and both endpoint tangent
     /// frames. A separated signed longitudinal derivative is required everywhere.
     pub fn bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+        Ok(self.bounds_report(domain)?.0)
+    }
+    pub(crate) fn bounds_report(&self, domain: [[f64; 2]; 2])
+        -> Result<(Option<[[I; 2]; 3]>, usize)> {
         let d = self.normalized_domain(domain)?;
         let hull = |net: &Net| {
             normal_alignment::restrict_hull(
@@ -642,15 +655,20 @@ impl<'a> Certificate<'a> {
                 d,
             )
         };
+        let mut used = 1;
         let w = hull(&self.weight)?[0];
         check(w.lo > 0., "Positive original rational pole denominator")?;
         let quotient = |net: &Net| normal_alignment::rational_quotient_hull(net, d);
+        used += 1;
         let lambda = quotient(&self.lambda)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
-            return Ok(None);
+            return Ok((None, used));
         }
+        used += 1;
         let alpha = quotient(&self.alpha)?[0];
+        used += 1;
         let eh = quotient(&self.e)?;
+        used += 1;
         let bh = quotient(&self.b)?;
         let first = I::new(0., d[0][1])?.div_signed(lambda)?;
         let second = alpha.div_signed(lambda)?.mul(I::new(0., 1.)?)?;
@@ -661,7 +679,7 @@ impl<'a> Certificate<'a> {
             j[k][0] = self.a[k].add(e.mul(first)?)?;
             j[k][1] = b.sub(e.mul(second)?)?;
         }
-        Ok(Some(j))
+        Ok((Some(j), used))
     }
 }
 #[cfg(test)]
@@ -911,6 +929,13 @@ mod tests {
         let refused = c.local_coordinate_path_report(local, 3.).unwrap();
         assert!(refused.0.is_none());
         assert_eq!(refused.1, 1);
+        let prefix_refused = c.coordinate_path_report(local).unwrap();
+        assert!(prefix_refused.0.is_none());
+        assert_eq!(prefix_refused.1, 3);
+        let uv_refused = c.bounds_report([[0., 0.8], [0., 0.1]]).unwrap();
+        assert!(uv_refused.0.is_none());
+        assert_eq!(uv_refused.1, 2);
+
         let accepted = c.local_coordinate_path_report(local, 0.25).unwrap();
         assert!(accepted.0.is_some());
         assert_eq!(accepted.1, 6);
@@ -940,7 +965,7 @@ mod tests {
         let normals = prepared.certificate.unwrap();
         let pair = [[[0.8, 0.805], [0., 0.005]], [[0.845, 0.85], [0.095, 0.1]]];
         let report =
-            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 12)
+            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 10)
                 .unwrap();
         assert!(
             report.excluded
@@ -949,22 +974,22 @@ mod tests {
                 && report.local_path_attempted
                 && !report.coordinate_path_available
         );
-        assert_eq!(report.spans, 12);
+        assert_eq!(report.spans, 10);
         let cached = normals.pair_bounds(pair).unwrap(); // Two paid restrictions.
         let reused = crate::surface_self_chord::rational_pole_pair_report_cached(
-            &s, pair, &c, &normals, 1e-4, 11, Some(&cached)).unwrap();
+            &s, pair, &c, &normals, 1e-4, 9, Some(&cached)).unwrap();
         assert!(reused.excluded && reused.local_path_excluded);
-        assert_eq!(reused.spans, 11);
+        assert_eq!(reused.spans, 9);
         let no_matrix_budget = crate::surface_self_chord::rational_pole_pair_report_cached(
-            &s, pair, &c, &normals, 1e-4, 10, Some(&cached)).unwrap();
-        assert!(!no_matrix_budget.excluded && no_matrix_budget.spans <= 10);
+            &s, pair, &c, &normals, 1e-4, 8, Some(&cached)).unwrap();
+        assert!(!no_matrix_budget.excluded && no_matrix_budget.spans <= 8);
         assert!(crate::surface_self_chord::rational_pole_pair_report_cached(
             &s, [pair[0]; 2], &c, &normals, 1e-4, 0, Some(&cached)).is_err());
 
         let limited =
-            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 11)
+            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 9)
                 .unwrap();
-        assert!(!limited.excluded && limited.spans == 11 && limited.local_path_available);
+        assert!(!limited.excluded && limited.spans == 9 && limited.local_path_available);
 
         let negative = c
             .local_coordinate_path_bounds([[0.01, 0.02], [0., 0.1]])

@@ -950,3 +950,21 @@ already exclude 8/24 pairs via local inverse charts on faces 0/10; the
 corresponding early-secant audit excluded zero this way. This establishes
 that the added chart proof can exclude new pairs, not whole-face coverage
 or a percentage gain. Those partial cases retain 8/13 pending pairs.
+
+## Tight path audit complete; all pair matrix accounting
+
+The 24ad9f5d audit completed at unchanged 1024/8192 limits: forward radii
+retain 8/13 pending pairs, reverse radii 9/15, identical in both spatial
+directions. Local inverse paths exclude 8/24 pairs for forward and 29/23
+for reverse radii on faces 0/10. No pole face qualified. These counts
+describe proofs found under a changed traversal, not area percentages.
+
+Pair matrix accounting now also reports executed prefix and UV weighted
+restrictions. Tests verify early failures at three and two restrictions,
+respectively; successful paths retain all original restrictions. Each mode
+still reserves its worst-case cost before execution. The independent local
+fixture now spends three prefix + six local + one endpoint-normal
+restriction: ten succeeds, nine refuses. With both endpoint bounds paid
+upstream, nine additional restrictions succeed and eight refuse. Seven
+pole and thirteen chord tests passed. Original predicates and geometric
+thresholds are unchanged; whole-face/global wall safety remains unproven.

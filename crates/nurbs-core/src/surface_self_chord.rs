@@ -221,11 +221,11 @@ pub(crate) fn rational_pole_pair_report_cached(
             local_attempted = true;
         }
         let (matrix, spent) = match mode {
-            0 => (differential.coordinate_path_bounds(union)?, 5),
+            0 => differential.coordinate_path_report(union)?,
             1 => differential.local_coordinate_path_report(union, 3.)?,
             3 => differential.local_coordinate_path_report(union, 1.)?,
             4 => differential.local_coordinate_path_report(union, 0.25)?,
-            _ => (differential.bounds(union)?, 5),
+            _ => differential.bounds_report(union)?,
         };
         used += spent;
         if local_path && matrix.is_some() {
