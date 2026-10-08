@@ -14,3 +14,7 @@ rotated cuboid corner, not every command or arbitrary fillet geometry.
 
 The receipt binds source hashes, the prior kernel and individual reports. The
 factored-normal kernel was still optimizing; these runs do not qualify it.
+
+Extended mouse and keyboard checks preserve 13px input text across camera zoom
+and a 1100×800 viewport resize. Invalid text reports a local numeric error and
+blocks apply without changing the document; valid unit input recovers and applies.

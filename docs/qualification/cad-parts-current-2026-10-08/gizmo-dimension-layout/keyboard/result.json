@@ -7,6 +7,8 @@
   "oversizeRefusal": true,
   "localized": true,
   "reduceRadiusRecovery": true,
+  "inlineQuantityRecovery": true,
+  "dimensionZoomAndResize": true,
   "undoRedo": true,
   "reload": true,
   "applyWithoutRecompute": true,

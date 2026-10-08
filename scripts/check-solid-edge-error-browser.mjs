@@ -190,7 +190,26 @@ try{
  assert.ok(unselected.every(color=>color==='#89baff'))
  for(const edge of ids)assert.equal(await solid.locator(`[data-topology-edge="${edge}"]`).getAttribute('stroke'),'#f87171')
  await page.screenshot({path:path.join(directory,'error.png')})
- await enterText(solid.getByRole('textbox',{name:'Размер у манипулятора, мм',exact:true}),'1 mm')
+ const inline=solid.getByRole('textbox',{name:'Размер у манипулятора, мм',exact:true})
+ await activate(solid.getByRole('button',{name:'Приблизить 3d',exact:true}))
+ assert.equal(await inline.evaluate(input=>getComputedStyle(input).fontSize),'13px')
+ await activate(solid.getByRole('button',{name:'Отдалить 3d',exact:true}))
+ await page.setViewportSize({width:1100,height:800})
+ await page.waitForFunction(()=>{
+  const label=document.querySelector('.gizmo-dimension'),host=label?.closest('.canvas-wrap')
+  if(!label||!host)return false
+  const a=label.getBoundingClientRect(),b=host.getBoundingClientRect()
+  return a.left>=b.left&&a.right<=b.right&&a.top>=b.top&&a.bottom<=b.bottom
+ })
+ assert.equal(await inline.evaluate(input=>getComputedStyle(input).fontSize),'13px')
+ await page.setViewportSize({width:1440,height:1000})
+ await enterText(inline,'bad')
+ assert.equal(await inline.getAttribute('aria-invalid'),'true')
+ assert.ok((await solid.locator('.gizmo-dimension').innerText()).includes('Введите конечное число'))
+ assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+ assert.deepEqual(await doc('invalid-quantity'),before)
+ await enterText(inline,'1 mm')
+ assert.equal(await inline.getAttribute('aria-invalid'),'false')
  assert.equal(await amount.inputValue(),'1')
  await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
  const requestsBeforeApply=await page.evaluate(()=>window.__edgeRequests)
@@ -200,7 +219,7 @@ try{
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await doc('undo'),before)
  await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await doc('redo'),after)
  await page.reload();await solid.getByRole('button',{name:after.bodies[0].name,exact:true}).waitFor();await ready();assert.deepEqual(await doc('reloaded'),after)
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,keyboardNumericInput:inputMode==='keyboard',contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,keyboardNumericInput:inputMode==='keyboard',contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,inlineQuantityRecovery:true,dimensionZoomAndResize:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
