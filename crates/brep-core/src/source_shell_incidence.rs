@@ -1068,17 +1068,21 @@ mod tests {
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
-        root_partition_control(false, false);
+        root_partition_control(false, false, false);
     }
     #[test]
     fn irrational_root_partition_preserves_closed_body_and_exact_source_topology() {
-        root_partition_control(true, false);
+        root_partition_control(true, false, false);
     }
     #[test]
     fn curved_shell_preserves_roots_and_replays_inverse_contacts_volume() {
-        root_partition_control(true, true);
+        root_partition_control(true, true, false);
     }
-    fn root_partition_control(irrational: bool, curved: bool) {
+    #[test]
+    fn mapped_root_partitions_qualify_complete_chain_without_complete_fragments() {
+        root_partition_control(false, false, true);
+    }
+    fn root_partition_control(irrational: bool, curved: bool, mapped: bool) {
         use crate::source_boundary_fragment::Role;
         let (mut faces, mut pairs) = tetrahedron();
         if curved {
@@ -1291,7 +1295,11 @@ mod tests {
             world_reversed: old.world_reversed,
             cutters: [None, None],
         });
-        let r = assemble_regions(&regions, &pairs, 100_000_000).unwrap();
+        let r = if mapped {
+            let maps=pairs.iter().enumerate().map(|(pair,p)|AffineMaps {pair,
+                ranges:p.world_reversed.map(|reversed|if reversed {[[1.,1.],[0.,1.]]} else {[[0.,1.],[1.,1.]]})}).collect::<Vec<_>>();
+            assemble_regions_with_maps(&regions,&pairs,&[],&maps,100000000,10000).unwrap()
+        } else {assemble_regions(&regions, &pairs, 100_000_000).unwrap()};
         assert!(r.shell.is_some(), "{} {:?}", r.reason, r.uncertain_pair);
         let shell = r.shell.unwrap();
         crate::source_shell_restore::assert_replay(&shell);
@@ -1301,6 +1309,17 @@ mod tests {
         assert_eq!(network.endpoints, 14);
         assert_eq!(network.spans, 14);
         let root_vertex = network.vertices.iter().find(|v| v.ends.len() == 2).unwrap();
+        if !curved {
+            let halves=root_vertex.ends.iter().map(|e|e[0]).collect::<Vec<_>>();
+            for address in shell.uses()[halves[0]] {
+                assert!(crate::source_allowed_contact::complete_shared_chain(&shell,&halves,address.face));
+                for &half in &halves {
+                    assert!(!shell.edges()[half].covers_complete_canonical_source());
+                    assert!(shell.edges()[half].maps_complete_canonical_source());
+                    assert!(!crate::source_allowed_contact::complete_shared_chain(&shell,&[half],address.face));
+                }
+            }
+        }
         if curved {
             assert!(shell.faces().iter().all(|face| face[0].edges()[0].surface().degree_u==2));
             assert!(shell.edges().iter().any(|edge|edge.world().degree==2));

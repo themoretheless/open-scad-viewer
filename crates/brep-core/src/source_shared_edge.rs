@@ -30,11 +30,16 @@ impl SharedEdge {
                 matches!(endpoint, Endpoint::Parameter(value) if *value == t)
             })
         });
+        complete_uses && self.maps_complete_canonical_source()
+    }
+    /// Full original composition, independently of the actual retained ends.
+    /// This is not a retained edge or ordered-chain coverage certificate.
+    pub(crate) fn maps_complete_canonical_source(&self) -> bool {
         match self.ranges {
-            Some(ranges) => complete_uses && ranges.iter().all(|r| {
+            Some(ranges) => ranges.iter().all(|r| {
                 (r[0][0] == 0. && r[1][0] == r[1][1]) || (r[1][0] == 0. && r[0][0] == r[0][1])
             }),
-            None => complete_uses,
+            None => true,
         }
     }
     pub(crate) fn from_mapped(

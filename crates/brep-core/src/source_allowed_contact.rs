@@ -113,12 +113,13 @@ pub(crate) fn plane(s: &Surface, used: &mut u64, budget: u64) -> Result<Option<[
     }
     Ok(None)
 }
-fn complete(shell: &Shell, indices: &[usize], face: usize) -> bool {
+pub(crate) fn complete_shared_chain(shell: &Shell, indices: &[usize], face: usize) -> bool {
     // Direct root-restricted uses may jointly cover one original carrier.
     // The ordered chain and exact endpoint joins below establish that union.
-    // Affinely mapped carriers need their own complete canonical range.
+    // Mapped original compositions must cover the canonical carrier; retained
+    // coverage comes from the complete ordered chain below, not one fragment.
     if indices.iter().any(|&i| shell.edges()[i].ranges().is_some()
-        && !shell.edges()[i].covers_complete_canonical_source()) {return false;}
+        && !shell.edges()[i].maps_complete_canonical_source()) {return false;}
     let mut addresses = indices
         .iter()
         .filter_map(|&i| shell.uses()[i].iter().find(|a| a.face == face).copied())
@@ -227,7 +228,7 @@ pub fn certify(
                     && shell.uses()[i].iter().all(|a| faces.contains(&a.face))
             })
             .collect::<Vec<_>>();
-        if indices[0] != index || !faces.iter().all(|&f| complete(shell, &indices, f)) {
+        if indices[0] != index || !faces.iter().all(|&f| complete_shared_chain(shell, &indices, f)) {
             continue;
         }
         let endpoints: [[_; 3]; 2] =
