@@ -177,6 +177,45 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
+    /// Compare complete proposed-profile and original-surface normal bounds.
+    /// This proves only tangent-plane angle over the supplied rectangles;
+    /// shared position, seam ownership and orientation require separate gates.
+    pub fn inspect_original_normals(
+        &self,
+        original: &Surface,
+        domains: [[[f64; 2]; 2]; 2],
+        max_sine_squared: f64,
+        max_spans: usize,
+    ) -> Result<crate::normal_alignment::PairReport> {
+        check(
+            max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+            "Finite squared-sine threshold below one",
+        )?;
+        crate::normal_alignment::validate_rectangle(original, domains[1], max_spans)?;
+        let (a, used) = self.normal_bounds(domains[0], max_spans)?;
+        let mut out = crate::normal_alignment::PairReport {
+            aligned: None,
+            sine_squared_interval: None,
+            normal_components: [a, None],
+            spans: used,
+            reason: "span-limit",
+        };
+        if a.is_none() || used == max_spans {
+            return Ok(out);
+        }
+        let (b, spent) =
+            crate::normal_alignment::normal_bounds(original, domains[1], max_spans - used)?;
+        out.spans += spent;
+        out.normal_components[1] = b;
+        if let (Some(a), Some(b)) = (a, b) {
+            let mut compared =
+                crate::normal_alignment::inspect_pair_bounds([a, b], max_sine_squared)?;
+            compared.spans = out.spans;
+            Ok(compared)
+        } else {
+            Ok(out)
+        }
+    }
     pub(crate) fn homogeneous_on(
         &self,
         span: [usize; 2],
@@ -502,6 +541,50 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn proposed_original_tangent_planes_require_complete_work() {
+        let s = surface();
+        let profile = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        let domains = [[[0., 1.], [0., 0.]], [[0., 1.], [0., 0.]]];
+        let aligned = profile
+            .inspect_original_normals(&s, domains, 1e-12, 2)
+            .unwrap();
+        assert_eq!(aligned.aligned, Some(true));
+        assert_eq!(aligned.spans, 2);
+        let short = profile
+            .inspect_original_normals(&s, domains, 1e-12, 1)
+            .unwrap();
+        assert_eq!(short.aligned, None);
+        assert_eq!(short.reason, "span-limit");
+        let mut tilted = surface();
+        for row in &mut tilted.control_points {
+            for p in row {
+                p[2] = p[1];
+            }
+        }
+        let mismatch = profile
+            .inspect_original_normals(&tilted, domains, 1e-12, 2)
+            .unwrap();
+        assert_eq!(mismatch.aligned, Some(false));
+        let mut collapsed = surface();
+        for row in &mut collapsed.control_points {
+            for p in row {
+                p[1] = 0.;
+            }
+        }
+        assert_eq!(
+            profile
+                .inspect_original_normals(&collapsed, domains, 1e-12, 2)
+                .unwrap()
+                .aligned,
+            None
+        );
+        assert!(
+            profile
+                .inspect_original_normals(&s, domains, f64::NAN, 2)
+                .is_err()
+        );
     }
     #[test]
     fn profile_normals_cover_exact_rational_derivatives() {

@@ -416,6 +416,18 @@ mod tests {
             assert_eq!(refused.fragments,missing);
             assert_eq!(refused.reason,"profile-body-work-limit");
         }
+        let neighbor=body.geometry().shell().regions().unwrap()[5].loops()[0][0].surface();
+        let profile=proposal.profile(0).unwrap();
+        let seam=profile.inspect_original_normals(neighbor,
+            [[[0.,0.],[0.49,0.51]],[[1.,1.],[0.49,0.51]]],1e-6,16).unwrap();
+        eprintln!("corrected profile middle seam aligned={:?} sine={:?} reason={}",seam.aligned,seam.sine_squared_interval,seam.reason);
+        assert!(seam.normal_components.iter().all(|n|n.is_some()));
+        assert_eq!(seam.aligned,None);
+        let point=profile.inspect_original_normals(neighbor,
+            [[[0.,0.],[0.5,0.5]],[[1.,1.],[0.5,0.5]]],1e-6,16).unwrap();
+        eprintln!("corrected profile seam midpoint aligned={:?} sine={:?}",point.aligned,point.sine_squared_interval);
+        assert_eq!(point.aligned,Some(true));
+
         let mut exact=proposal_limits();exact.controls=44;exact.fragments=4;
         assert!(crate::source_profile_body::prepare(&body,&specs,exact).unwrap().proposal.is_some());
         let mut missing=proposal_limits();missing.controls=43;

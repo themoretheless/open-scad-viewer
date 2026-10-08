@@ -522,3 +522,21 @@ checks incomplete work and knot coverage. All 755 NURBS lib tests pass, with
 two existing ignored tests. This supplies differential bounds for subsequent
 corrected seam/wall admission; it does not itself qualify the corrected body or
 its singular poles. Packaged WASM remains unchanged.
+
+## Proposed/original tangent-plane comparison
+
+`WeightProfile::inspect_original_normals` compares complete target-profile and
+original-surface normal enclosures under one shared span budget. It retains
+indeterminate results for incomplete work and singular normals, and does not
+claim shared position, seam ownership or oriented normals from an angle test.
+Eight profile tests pass, including parallel, tilted, collapsed and underbudget
+controls.
+
+The actual annular face 0 / face 5 seam on V=[0.49,0.51] yields squared-sine
+bounds [0,0.007973550652571522], so a 1e-6 threshold remains unproven. This is
+interval dependency over a finite segment; the segment is not promoted to a
+qualified seam. Adaptive complete-seam coverage remains required.
+At seam midpoint V=0.5, the corrected/original tangent planes qualify with
+squared-sine upper bound 2.7218457621120856e-25. The actual annular regression
+passes and explicitly keeps the finite segment unresolved. A point result does
+not establish whole-seam tangency.
