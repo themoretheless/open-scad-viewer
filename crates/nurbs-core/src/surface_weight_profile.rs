@@ -1702,9 +1702,29 @@ mod tests {
             let exact=u*u*u*u*free*free;
             let full=corrected.enclose_with_transverse_correction([free;2],[across;2],32).unwrap().0.unwrap();
             assert!(full[2][0]<=exact && exact<=full[2][1]);
+            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[across;2],72).unwrap();
+            assert_eq!(spent,72);
+            let jet=jet.unwrap();
+            let expected=[[0.,1.,2.*u.powi(4)*free],[0.25,0.,u.powi(3)*free*free]];
+            for axis in 0..2 {for k in 0..3 {assert!(jet[axis][k][0]<=expected[axis][k] && expected[axis][k]<=jet[axis][k][1]);}}
+            assert!(corrected.derivatives_with_transverse_correction([free;2],[across;2],71).unwrap().0.is_none());
+
             let old=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
             assert!(exact<old[2][0] || exact>old[2][1],"position-only correction must differ on this reference");
         }}
+        for free in [0.,1.] {
+            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[0.,1.],1).unwrap();
+            assert_eq!(spent,1);
+            let jet=jet.unwrap();
+            for across in [0.,0.5,1.] {
+                let u: f64=0.5+0.25*across;
+                let expected=[[0.,1.,2.*u.powi(4)*free],[0.25,0.,u.powi(3)*free*free]];
+                for axis in 0..2 {for k in 0..3 {
+                    assert!(jet[axis][k][0]<=expected[axis][k] && expected[axis][k]<=jet[axis][k][1]);
+                }}
+            }
+            assert!(corrected.derivatives_with_transverse_correction([free;2],[0.,1.],0).is_err());
+        }
     }
     #[test]
     fn bridge_mixed_jet_matches_independent_bilinear_surface() {

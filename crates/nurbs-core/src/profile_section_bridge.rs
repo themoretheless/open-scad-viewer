@@ -638,6 +638,151 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         }
         Ok((Some(result.map(|v| [v.lo, v.hi])), spent))
     }
+    /// First jets of the full side Hermite expression, not of the linear
+    /// position-only correction. Shares every source query's work allowance.
+    pub fn derivatives_with_transverse_correction(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
+        self.bridge.validate(free, across, budget)?;
+        if across == [0., 0.] || across == [1., 1.] {
+            return self.bridge.derivative_bounds(free, across, budget);
+        }
+        let section = self.bridge.section(false);
+        let range = section.range();
+        for high in [false, true] {
+            if free == [range[usize::from(high)]; 2] {
+                let (jet, used) = section
+                    .profile()
+                    .derivative_bounds(self.source_rail_domain(high, across)?, budget)?;
+                let Some(jet) = jet else {
+                    return Ok((None, used));
+                };
+                let mut out = [[[0.; 2]; 3]; 2];
+                for k in 0..3 {
+                    out[0][k] = jet[k][1 - section.axis()];
+                    let v = I::new(jet[k][section.axis()][0], jet[k][section.axis()][1])?
+                        .mul(I::point(self.bridge.scales[0]))?;
+                    out[1][k] = [v.lo, v.hi];
+                }
+                return Ok((Some(out), used));
+            }
+        }
+        let (base, mut spent) = self.bridge.derivative_bounds(free, across, budget)?;
+        let Some(base) = base else {
+            return Ok((None, spent));
+        };
+        let mut out = [[I::point(0.); 3]; 2];
+        for axis in 0..2 {
+            for k in 0..3 {
+                out[axis][k] = I::new(base[axis][k][0], base[axis][k][1])?;
+            }
+        }
+        let width = I::point(range[1]).sub(I::point(range[0]))?;
+        let t = I::new(free[0], free[1])?
+            .sub(I::point(range[0]))?
+            .div(width)?;
+        let q = I::point(1.).sub(t)?;
+        let h = [
+            q.mul(q)?.mul(I::point(1.).add(I::point(2.).mul(t)?)?)?,
+            t.mul(t)?.mul(I::point(3.).sub(I::point(2.).mul(t)?)?)?,
+        ];
+        let g = [
+            t.mul(q)?.mul(q)?.mul(width)?,
+            I::point(-1.).mul(t)?.mul(t)?.mul(q)?.mul(width)?,
+        ];
+        let dh = [
+            I::point(-6.).mul(t)?.mul(q)?.div(width)?,
+            I::point(6.).mul(t)?.mul(q)?.div(width)?,
+        ];
+        let dg = [
+            q.mul(I::point(1.).sub(I::point(3.).mul(t)?)?)?,
+            t.mul(I::point(3.).mul(t)?.sub(I::point(2.))?)?,
+        ];
+        for high in [false, true] {
+            let domain = self.source_rail_domain(high, across)?;
+            let rail_free = [range[usize::from(high)]; 2];
+            let mut values = Vec::new();
+            for query in 0..8 {
+                if spent == budget {
+                    return Ok((None, spent));
+                }
+                let (value, used) = match query {
+                    0 => self.source_rail(high, across, budget - spent)?,
+                    1 => self.bridge.rail(high).enclose(across, budget - spent)?,
+                    2 | 4 => {
+                        let (j, used) = section
+                            .profile()
+                            .derivative_bounds(domain, budget - spent)?;
+                        let mut v = [[0.; 2]; 3];
+                        if let Some(j) = j {
+                            for k in 0..3 {
+                                let axis = if query == 2 {
+                                    1 - section.axis()
+                                } else {
+                                    section.axis()
+                                };
+                                let scale = if query == 2 {
+                                    1.
+                                } else {
+                                    self.bridge.scales[0]
+                                };
+                                let x =
+                                    I::new(j[k][axis][0], j[k][axis][1])?.mul(I::point(scale))?;
+                                v[k] = [x.lo, x.hi];
+                            }
+                            (Some(v), used)
+                        } else {
+                            (None, used)
+                        }
+                    }
+                    3 | 5 => {
+                        let (j, used) =
+                            self.bridge
+                                .derivative_bounds(rail_free, across, budget - spent)?;
+                        (j.map(|j| j[usize::from(query == 5)]), used)
+                    }
+                    6 => {
+                        let (j, used) = section
+                            .profile()
+                            .mixed_derivative_bounds(domain, budget - spent)?;
+                        let mut v = [[0.; 2]; 3];
+                        if let Some(j) = j {
+                            for k in 0..3 {
+                                let x = I::new(j[k][0], j[k][1])?
+                                    .mul(I::point(self.bridge.scales[0]))?;
+                                v[k] = [x.lo, x.hi];
+                            }
+                            (Some(v), used)
+                        } else {
+                            (None, used)
+                        }
+                    }
+                    _ => self
+                        .bridge
+                        .mixed_derivative_bounds(rail_free, across, budget - spent)?,
+                };
+                spent += used;
+                let Some(value) = value else {
+                    return Ok((None, spent));
+                };
+                values.push(value);
+            }
+            let i = usize::from(high);
+            for k in 0..3 {
+                let v = |i: usize| I::new(values[i][k][0], values[i][k][1]);
+                out[0][k] = out[0][k]
+                    .add(dh[i].mul(v(0)?.sub(v(1)?)?)?)?
+                    .add(dg[i].mul(v(2)?.sub(v(3)?)?)?)?;
+                out[1][k] = out[1][k]
+                    .add(h[i].mul(v(4)?.sub(v(5)?)?)?)?
+                    .add(g[i].mul(v(6)?.sub(v(7)?)?)?)?;
+            }
+        }
+        Ok((Some(out.map(|axis| axis.map(|v| [v.lo, v.hi]))), spent))
+    }
     pub fn derivative_bounds(
         &self,
         free: [f64; 2],

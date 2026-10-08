@@ -1281,3 +1281,21 @@ positions and work refusal. All 16 profile tests passed.
 The new expression still needs first-derivative bounds, full-seam normal
 qualification and renewed interior regularity/injectivity. No Body or WASM
 admission follows from these position tests.
+
+## First jets of the full side Hermite expression
+
+`derivatives_with_transverse_correction` differentiates both Hermite error
+fields using original profile first and mixed jets and bridge first and mixed
+jets. Interior queries share 72 spans on the references; 71 refuses. Side
+boundaries specialize to the original profile jet with the exact across
+scale, while section boundaries specialize to the original bridge jet.
+
+The independent quartic patch verifies both derivatives at nine interior
+points. Its complete side intervals are also enclosed with one source span,
+checking analytic values at both endpoints and the midpoint. A zero side
+span allowance produces the source API's invalid-budget error. All 16 profile
+tests passed in 2.23 seconds.
+
+This is native derivative support for the new expression. Full-domain normals,
+regularity, injectivity and neighboring Body seam ownership still require
+qualification before sewing or exposing this bridge through WASM/UI.
