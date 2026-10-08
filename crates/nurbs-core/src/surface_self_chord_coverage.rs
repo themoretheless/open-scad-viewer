@@ -91,18 +91,21 @@ fn secant_exclusion(
     max_spans: usize,
     factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
 ) -> Result<(bool, usize)> {
-    secant_exclusion_cached(s, pair, boxes, sine, max_spans, factored, None)
+    secant_exclusion_cached(s, pair, boxes, sine, max_spans, factored, None, None)
 }
 fn secant_exclusion_cached(
     s: &Surface, pair: Pair, boxes: [&Vec<[f64; 2]>; 2], sine: f64,
     max_spans: usize,
     factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
     cached: Option<&crate::factored_surface_normals::PairBounds<'_>>,
+    original: Option<&normal_alignment::OriginalPairBounds<'_>>,
 ) -> Result<(bool, usize)> {
     let components = if let Some(cache) = cached {
         let proof = factored.ok_or(crate::input("Missing original normal proof"))?;
         crate::check(std::ptr::eq(s, proof.surface()), "Use original normal source")?;
         Some(cache.components(proof, pair)?)
+    } else if let Some(cache)=original {
+        Some(cache.components(s,pair)?)
     } else { None };
     let mut d = [I::point(0.); 3];
     for k in 0..3 {
@@ -285,6 +288,7 @@ fn qualify_impl<'a>(
         }
         out.cells += 1;
         let mut pair_normals = None;
+        let mut original_normals = None;
         let union = std::array::from_fn(|axis| {
             [
                 pair[0][axis][0].min(pair[1][axis][0]),
@@ -335,12 +339,13 @@ fn qualify_impl<'a>(
                     }
                 }
             } else {
-                let r = normal_alignment::inspect_pair(
-                    [s, s],
+                let (r,cache) = normal_alignment::inspect_original_pair_cached(
+                    s,
                     pair,
                     threshold,
                     limits.spans - out.spans,
                 )?;
+                original_normals=cache;
                 out.spans += r.spans;
                 if r.aligned == Some(false) {
                     out.angular_exclusions += 1;
@@ -359,7 +364,7 @@ fn qualify_impl<'a>(
                 out.distance_exclusions += 1;
                 continue;
             }
-            if out.spans < limits.spans {
+            if out.spans < limits.spans || pair_normals.is_some() || original_normals.is_some() {
                 let (excluded, used) = secant_exclusion_cached(
                     s,
                     pair,
@@ -368,6 +373,7 @@ fn qualify_impl<'a>(
                     limits.spans - out.spans,
                     factored,
                     pair_normals.as_ref(),
+                    original_normals.as_ref(),
                 )?;
                 out.spans += used;
                 if excluded {
@@ -377,10 +383,10 @@ fn qualify_impl<'a>(
             }
         }
         if let Some(matrix) = ordinary_matrix {
-            if out.spans < limits.spans {
+            if out.spans < limits.spans || pair_normals.is_some() || original_normals.is_some() {
                 let cached = factored.zip(pair_normals.as_ref());
                 let (excluded,used) = matrix.exclude_pair(pair,max_sine_squared,
-                    limits.spans-out.spans,cached)?;
+                    limits.spans-out.spans,cached,original_normals.as_ref())?;
                 out.spans += used;
                 if excluded {
                     out.direction_exclusions += 1;
@@ -535,7 +541,7 @@ mod tests {
         assert!(excluded && used == 1);
         let cache = proof.pair_bounds(pair).unwrap();
         assert_eq!(secant_exclusion_cached(&s, pair, [&a, &b], 1e-6, 0,
-            Some(&proof), Some(&cache)).unwrap(), (true, 0));
+            Some(&proof), Some(&cache), None).unwrap(), (true, 0));
         assert!(cache.components(&proof, [pair[0]; 2]).is_err());
         let other = s.clone();
         let other_proof = crate::factored_surface_normals::prepare(&other, false, 1_000_000)
@@ -572,6 +578,17 @@ mod tests {
         let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100, None).unwrap();
         assert!(excluded);
         assert!(used > 0 && used <= 100);
+        let (paid,cache)=normal_alignment::inspect_original_pair_cached(&s,pair,1e-6,100).unwrap();
+        assert!(paid.spans>0);
+        let cache=cache.unwrap();
+        assert_eq!(secant_exclusion_cached(&s,pair,[&a,&b],1e-6,0,None,None,
+            Some(&cache)).unwrap(),(true,0));
+        let foreign=s.clone();
+        assert!(secant_exclusion_cached(&foreign,pair,[&a,&b],1e-6,0,None,None,
+            Some(&cache)).is_err());
+        assert!(secant_exclusion_cached(&s,[pair[0];2],[&a,&a],1e-6,0,None,None,
+            Some(&cache)).is_err());
+
         assert_eq!(
             secant_exclusion(&s, pair, [&a, &b], 1e-6, 0, None).unwrap(),
             (false, 0)

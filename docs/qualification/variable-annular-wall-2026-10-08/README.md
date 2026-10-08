@@ -1224,3 +1224,15 @@ and reverse exits retain seven at 4387 / 100000. Both spatial directions
 match. Complete JSON and logs are archived with all remaining rectangles.
 This predates the ordinary mean-matrix and algebraic precondition changes.
 Distinct-face wall pairs and global wall thickness remain unqualified.
+
+## Paid original endpoint normal reuse
+
+Ordinary angular inspection now seals its two complete original normal
+enclosures with private source and pair ownership. Secant and mean-matrix
+projection reuse these same boxes without extra restrictions. No cache is
+created for an incomplete pair. Source and exact endpoint rectangles are
+validated before a zero-budget refusal; copied foreign geometry is rejected.
+Already-paid boxes can be projected even when the remaining query budget
+is zero. Independent curved graph and planar polynomial regressions verify
+zero additional restrictions, foreign-source and wrong-pair refusals, and
+missing-work refusal. This changes work accounting, not geometric tolerance.

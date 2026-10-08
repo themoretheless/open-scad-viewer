@@ -34,6 +34,7 @@ impl MeanMatrix<'_> {
         &self, pair: [[[f64; 2]; 2]; 2], sine: f64, max_spans: usize,
         cached: Option<(&crate::factored_surface_normals::Certificate<'_>,
             &crate::factored_surface_normals::PairBounds<'_>)>,
+        original: Option<&normal_alignment::OriginalPairBounds<'_>>,
     ) -> Result<(bool,usize)> {
         check(sine.is_finite() && (0. ..1.).contains(&sine)
             && pair.iter().all(|rect| (0..2).all(|a| rect[a][0].is_finite()
@@ -43,6 +44,8 @@ impl MeanMatrix<'_> {
         let components = if let Some((proof,bounds))=cached {
             check(std::ptr::eq(self.surface,proof.surface()),"Use original mean-path normal source")?;
             Some(bounds.components(proof,pair)?)
+        } else if let Some(bounds)=original {
+            Some(bounds.components(self.surface,pair)?)
         } else { None };
         let mut j=self.jacobian;
         for a in 0..2 {
@@ -675,13 +678,25 @@ mod tests {
         assert!(r.complete && r.certificate.is_none());
         let matrix=r.mean_matrix.unwrap();
         let pair=[[[0.,0.1],[0.,0.1]],[[0.8,0.9],[0.8,0.9]]];
-        assert_eq!(matrix.exclude_pair(pair,1e-4,0,None).unwrap(),(false,0));
-        assert_eq!(matrix.exclude_pair(pair,1e-4,1,None).unwrap(),(true,1));
-        assert!(matrix.exclude_pair([[[0.,1.01],[0.,1.]],pair[1]],1e-4,0,None).is_err());
+        assert_eq!(matrix.exclude_pair(pair,1e-4,0,None,None).unwrap(),(false,0));
+        assert_eq!(matrix.exclude_pair(pair,1e-4,1,None,None).unwrap(),(true,1));
+        let (paid,cache)=normal_alignment::inspect_original_pair_cached(&s,pair,1e-4,2).unwrap();
+        assert_eq!(paid.spans,2);
+        let cache=cache.unwrap();
+        assert_eq!(matrix.exclude_pair(pair,1e-4,0,None,Some(&cache)).unwrap(),(true,0));
+        assert!(cache.components(&s,[pair[0];2]).is_err());
+        let foreign=s.clone();
+        assert!(cache.components(&foreign,pair).is_err());
+        let (_,incomplete_cache)=normal_alignment::inspect_original_pair_cached(&s,pair,1e-4,1).unwrap();
+        assert!(incomplete_cache.is_none());
+        let foreign_matrix=qualify_rectangle(&foreign,[[0.,1.];2],1e-4,1).unwrap().mean_matrix.unwrap();
+        assert!(foreign_matrix.exclude_pair(pair,1e-4,0,None,Some(&cache)).is_err());
+
+        assert!(matrix.exclude_pair([[[0.,1.01],[0.,1.]],pair[1]],1e-4,0,None,None).is_err());
         let mut collapsed=s.clone();
         for row in &mut collapsed.control_points {for point in row {point.fill(0.);}}
         let collapsed=qualify_rectangle(&collapsed,[[0.,1.];2],1e-4,1).unwrap();
-        assert_eq!(collapsed.mean_matrix.unwrap().exclude_pair(pair,1e-4,2,None)
+        assert_eq!(collapsed.mean_matrix.unwrap().exclude_pair(pair,1e-4,2,None,None)
             .unwrap(),(false,0));
         let mut multiple=s.clone();multiple.degree_u=1;
         multiple.knots_u=vec![0.,0.,0.5,1.,1.];

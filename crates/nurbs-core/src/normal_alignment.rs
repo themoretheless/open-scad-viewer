@@ -558,6 +558,30 @@ pub struct PairReport {
     pub spans: usize,
     pub reason: &'static str,
 }
+/// Paid complete original normal boxes, bound to one immutable source and pair.
+pub(crate) struct OriginalPairBounds<'a> {
+    surface: &'a Surface,
+    pair: [[[f64; 2]; 2]; 2],
+    components: [[[f64; 2]; 3]; 2],
+}
+impl OriginalPairBounds<'_> {
+    pub(crate) fn components(&self, surface: &Surface, pair: [[[f64; 2]; 2]; 2])
+        -> Result<[[[f64; 2]; 3]; 2]> {
+        check(std::ptr::eq(self.surface,surface) && self.pair==pair,
+            "Use original paid normal source and endpoint pair")?;
+        Ok(self.components)
+    }
+}
+pub(crate) fn inspect_original_pair_cached(
+    surface: &Surface, pair: [[[f64; 2]; 2]; 2], sine: f64, budget: usize,
+) -> Result<(PairReport, Option<OriginalPairBounds<'_>>)> {
+    let report=inspect_pair([surface,surface],pair,sine,budget)?;
+    let cached=match report.normal_components {
+        [Some(a),Some(b)] => Some(OriginalPairBounds{surface,pair,components:[a,b]}),
+        _ => None,
+    };
+    Ok((report,cached))
+}
 pub fn inspect_pair(
     surfaces: [&Surface; 2],
     domains: [[[f64; 2]; 2]; 2],
