@@ -229,7 +229,11 @@ pub(crate) fn jacobian_on(
         [s.knots_v[v], s.knots_v[v + 1]],
     ];
     let mut net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
-    let origin = &s.control_points[u - p][v - q];
+    // Translation is only numerical preconditioning: any finite constant
+    // cancels from the exact quotient derivative. A local origin reduces
+    // dependency widths; no derivative bound is inferred from this point.
+    let origin = s.evaluate_validated(domain[0][0]*0.5+domain[0][1]*0.5,
+        domain[1][0]*0.5+domain[1][1]*0.5)?.point;
     for row in &mut net {
         for h in row {
             for k in 0..3 {
@@ -865,6 +869,23 @@ pub(crate) fn inspect_pair_bounds(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn locally_centered_rational_derivatives_enclose_independent_evaluations() {
+        for offset in [0.,1_000_000.] {
+            let s=Surface{degree_u:2,degree_v:2,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+                control_points:(0..3).map(|u|(0..3).map(|v|vec![offset+u as f64,offset+v as f64,offset+(u*v) as f64]).collect()).collect(),
+                weights:vec![vec![1.,0.7,1.],vec![0.9,0.63,0.9],vec![1.,0.7,1.]],periodic_u:false,periodic_v:false};
+            for domain in [[[0.1,0.3],[0.7,0.9]],[[0.49,0.51],[0.49,0.51]]] {
+                let j=super::jacobian_on(&s,[2,2],domain).unwrap();
+                for u in 0..=8 {for v in 0..=8 {
+                    let t=|a:[f64;2],n:usize|a[0]+(a[1]-a[0])*n as f64/8.;
+                    let (du,dv)=s.evaluate(t(domain[0],u),t(domain[1],v)).unwrap().first_derivatives().unwrap();
+                    for k in 0..3 {for a in 0..2 {let d=[du,dv][a][k];assert!(j[k][a].lo<=d&&d<=j[k][a].hi);}}
+                }}
+            }
+        }
+    }
+
     use super::*;
     fn plane() -> Surface {
         Surface {

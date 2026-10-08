@@ -417,7 +417,7 @@ fn qualify_impl<'a>(
                 }
             }
         }
-        if let Some(matrix) = ordinary_matrix {
+        if let Some(matrix) = ordinary_matrix.as_ref() {
             if out.spans < limits.spans || pair_normals.is_some() || original_normals.is_some() {
                 let cached = factored.zip(pair_normals.as_ref());
                 let (excluded,used) = matrix.exclude_pair(pair,max_sine_squared,
@@ -429,6 +429,37 @@ fn qualify_impl<'a>(
                     continue;
                 }
             }
+        }
+        if let Some(matrix)=ordinary_matrix.as_ref() {
+            // Both orders retain all endpoints; a successful path excludes
+            // the complete original pair, including its exchanged order.
+            let mut excluded=false;
+            for endpoints in [pair,[pair[1],pair[0]]] {
+                if out.spans==limits.spans {break;}
+                let (u,reused)=rectangles.qualify([union[0],endpoints[0][1]],limits.spans-out.spans)?;
+                out.spans+=u.spans;out.complete_rectangle_cache_hits+=usize::from(reused);
+                let Some(u)=u.mean_matrix else {continue};
+                if out.spans==limits.spans {break;}
+                let (v,reused)=rectangles.qualify([endpoints[1][0],union[1]],limits.spans-out.spans)?;
+                out.spans+=v.spans;out.complete_rectangle_cache_hits+=usize::from(reused);
+                let Some(v)=v.mean_matrix else {continue};
+                let path=matrix.coordinate_path(endpoints,&u,&v)?;
+                // Normal caches are indexed by the original endpoint order.
+                let (done,used)=path.exclude_pair(pair,max_sine_squared,
+                    limits.spans-out.spans,factored.zip(pair_normals.as_ref()),original_normals.as_ref())?;
+                out.spans+=used;
+                if done {excluded=true;break;}
+                if !done {
+                    let chord=path.chord_bounds()?;
+                    let zero=vec![[0.,0.];3];
+                    let (done,used)=secant_exclusion_cached(s,pair,[&zero,&chord],max_sine_squared,
+                        limits.spans-out.spans,factored,pair_normals.as_ref(),original_normals.as_ref())?;
+                    out.spans+=used;
+                    if done {excluded=true;break;}
+                }
+
+            }
+            if excluded {out.direction_exclusions+=1;continue;}
         }
         if let (Some(differential), Some(normals)) = (differential, factored) {
             if out.spans < limits.spans {

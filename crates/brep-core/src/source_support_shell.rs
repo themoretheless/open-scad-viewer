@@ -222,6 +222,14 @@ mod tests {
         crate::source_wall_self_coverage::extend_with_pole_facts(&body,9.99,1e-6,&mut extension,extension_limits,1).unwrap();
         assert!(extension.all_self_pairs_qualified());
         assert_eq!((extension.pole_exact_work,extension.pole_cells,extension.pole_spans),(0,0,0));
+        assert!(crate::source_wall_self_coverage::refine_unqualified(&twin,9.99,1e-6,&mut extension,extension_limits).is_err());
+        assert!(crate::source_wall_self_coverage::refine_unqualified(&body,10.01,1e-6,&mut extension,extension_limits).is_err());
+        assert!(crate::source_wall_self_coverage::refine_unqualified(&body,9.99,2e-6,&mut extension,extension_limits).is_err());
+        crate::source_wall_self_coverage::refine_unqualified(&body,9.99,1e-6,&mut extension,extension_limits).unwrap();
+        assert!(extension.all_self_pairs_qualified());
+        assert_eq!((extension.refinement_cells,extension.refinement_spans),(0,0));
+        assert!(crate::source_wall_self_coverage::refine_unqualified(&body,9.99,1e-6,&mut extension,extension_limits).is_err());
+
 
         for wrong_owner in [true,false] {
             let make_facts=||crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,

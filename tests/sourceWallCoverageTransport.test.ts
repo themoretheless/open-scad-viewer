@@ -146,3 +146,29 @@ it('binds additional pole proofs to requested budgets and additive work',()=>{
  const clone=coverageExpectation(e);clone.adaptiveSelf!.pole!.cells=1
  expect(e.adaptiveSelf.pole!.cells).toBe(20)
 })
+
+it('requires requested refinement accounting without granting whole-wall proof',()=>{
+ const e=structuredClone(request)
+ e.adaptiveSelf={planeControls:100,cells:1,spans:1,cellsPerFace:1,spansPerFace:1,
+  refinement:{cells:10,spans:10,cellsPerFace:10,spansPerFace:10}}
+ const r=result();r.request=structuredClone(e)
+ r.adaptiveSelf={faces:Array.from({length:6},(_,face)=>({face,qualified:true,reason:face===0?'source-self-wall-refinement-qualified':'source-self-wall-planar-excluded',cells:face===0?3:0,spans:face===0?4:0,pending:0,uncertain:null})),planeControls:24,cells:3,spans:4,refinementCells:3,refinementSpans:4,allSelfPairsQualified:true}
+ for(const p of r.pairs)if(p.faces[0]===p.faces[1])p.reason='source-wall-self-certified'
+ r.pairs[1].proven=false;r.pairs[1].reason='source-wall-pair-unproven';r.wholeWallQualified=false;r.lowerMm=null;r.reason='source-wall-coverage-unproven'
+ expect(validCoverage(e,r,6,key)).toBe(true)
+ for(const counter of ['refinementCells','refinementSpans'] as const){
+  for(const value of [undefined,11,-1,1.5]){
+   const bad=structuredClone(r);bad.adaptiveSelf![counter]=value
+   expect(validCoverage(e,bad,6,key)).toBe(false)
+  }
+ }
+ const stale=structuredClone(e);delete stale.adaptiveSelf!.refinement
+ const unrequested=structuredClone(r);unrequested.request=stale
+ expect(validCoverage(stale,unrequested,6,key)).toBe(false)
+ const forged=structuredClone(r);forged.wholeWallQualified=true;forged.lowerMm=e.minimumMm
+ expect(validCoverage(e,forged,6,key)).toBe(false)
+ for(const name of ['cells','spans','cellsPerFace','spansPerFace'] as const){
+  const bad=structuredClone(e);bad.adaptiveSelf!.refinement![name]=0
+  expect(()=>coverageExpectation(bad)).toThrow()
+ }
+})

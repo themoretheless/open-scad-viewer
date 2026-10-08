@@ -85,14 +85,22 @@ fn main(){
   faces.push(json!({"face":face,"qualified":r.certificate.is_some(),"cells":r.cells,"spans":r.spans,"pending":r.pending,"reason":r.reason,"normalExactWork":normals.work,"differentialExactWork":differential.work,"unresolvedPairs":r.unresolved_pairs}));
  }
  let mut adapter=brep_core::source_wall_self_coverage::qualify(body,5.99,1e-6,
-  brep_core::source_wall_self_coverage::Limits{plane_controls:1000000,cells:10000,spans:100000,cells_per_face:512,spans_per_face:4096}).unwrap();
+  brep_core::source_wall_self_coverage::Limits{plane_controls:1000000,cells:50000,spans:100000,cells_per_face:8192,spans_per_face:10000}).unwrap();
  let previous:Vec<_>=adapter.certificates().iter().map(|c|c.face()).collect();
  brep_core::source_wall_self_coverage::extend_with_pole_facts(body,5.99,1e-6,&mut adapter,
   brep_core::source_wall_self_coverage::Limits{plane_controls:1,cells:100000,spans:100000,cells_per_face:4096,spans_per_face:100000},100000000).unwrap();
  assert!(previous.iter().all(|face|adapter.certificates().iter().any(|c|c.face()==*face)));
+ if args.get(3).is_some_and(|v|v=="refine") {
+  let retained:Vec<_>=adapter.certificates().iter().map(|c|c.face()).collect();
+  brep_core::source_wall_self_coverage::refine_unqualified(body,5.99,1e-6,&mut adapter,
+   brep_core::source_wall_self_coverage::Limits{plane_controls:1,cells:100000,spans:100000,cells_per_face:100000,spans_per_face:100000}).unwrap();
+  assert!(retained.iter().all(|face|adapter.certificates().iter().any(|c|c.face()==*face)));
+  eprintln!("refinement cells={} spans={} qualified={}",adapter.refinement_cells,adapter.refinement_spans,adapter.certificates().len());
+ }
+
  assert!(adapter.pole_exact_work<=100000000&&adapter.pole_cells<=100000&&adapter.pole_spans<=100000);
  eprintln!("adapter exact={} extra cells={} spans={} qualified={}",adapter.pole_exact_work,adapter.pole_cells,adapter.pole_spans,adapter.certificates().len());
- let adapter_report=json!({"poleExactWork":adapter.pole_exact_work,"cells":adapter.cells,"spans":adapter.spans,"poleCells":adapter.pole_cells,"poleSpans":adapter.pole_spans,
+ let adapter_report=json!({"refinementCells":adapter.refinement_cells,"refinementSpans":adapter.refinement_spans,"allSelfPairsQualified":adapter.all_self_pairs_qualified(),"poleExactWork":adapter.pole_exact_work,"cells":adapter.cells,"spans":adapter.spans,"poleCells":adapter.pole_cells,"poleSpans":adapter.pole_spans,
   "faces":adapter.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,"pending":f.pending,"reason":f.reason})).collect::<Vec<_>>()});
  assert_eq!(before,body.definition().unwrap());
  std::fs::write(&args[2],value_codec::to_string_pretty(&json!({"scope":"Native restored original Body selected pole faces, almost-normal self-chord coverage only","minimumMm":5.99,"maxSineSquared":1e-6,"definitionUnchanged":true,"adapter":adapter_report,"faces":faces})).unwrap()).unwrap();

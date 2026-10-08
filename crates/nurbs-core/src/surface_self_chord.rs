@@ -31,7 +31,37 @@ pub(crate) struct MeanMatrix<'a> {
     domain: [[f64; 2]; 2],
     jacobian: [[I; 2]; 3],
 }
+pub(crate) struct CoordinatePath<'a>{matrix:MeanMatrix<'a>,pair:[[[f64;2];2];2]}
+impl CoordinatePath<'_>{
+    pub(crate) fn chord_bounds(&self)->Result<Vec<[f64;2]>> {
+        let delta=[I::new(self.pair[1][0][0],self.pair[1][0][1])?.sub(I::new(self.pair[0][0][0],self.pair[0][0][1])?)?,
+            I::new(self.pair[1][1][0],self.pair[1][1][1])?.sub(I::new(self.pair[0][1][0],self.pair[0][1][1])?)?];
+        (0..3).map(|k|{let d=self.matrix.jacobian[k][0].mul(delta[0])?.add(self.matrix.jacobian[k][1].mul(delta[1])?)?;Ok([d.lo,d.hi])}).collect()
+    }
+    pub(crate) fn exclude_pair(&self,pair:[[[f64;2];2];2],sine:f64,max_spans:usize,
+        cached:Option<(&crate::factored_surface_normals::Certificate<'_>,&crate::factored_surface_normals::PairBounds<'_>)>,
+        original:Option<&normal_alignment::OriginalPairBounds<'_>>)->Result<(bool,usize)> {
+        check(pair==self.pair||pair==[self.pair[1],self.pair[0]],"Keep original coordinate path endpoints")?;
+        self.matrix.exclude_pair(pair,sine,max_spans,cached,original)
+    }
+}
 impl MeanMatrix<'_> {
+    /// Integrate U on A's V strip, then V on B's U strip. Each
+    /// column bounds its entire path for all endpoints in A x B.
+    pub(crate) fn coordinate_path(&self, pair:[[[f64;2];2];2],
+        u_path:&MeanMatrix<'_>,v_path:&MeanMatrix<'_>)->Result<CoordinatePath<'_>> {
+        let union=std::array::from_fn(|a|[pair[0][a][0].min(pair[1][a][0]),pair[0][a][1].max(pair[1][a][1])]);
+        check(pair.iter().all(|rect|rect.iter().all(|axis|axis[0].is_finite()&&axis[1].is_finite()&&axis[0]<=axis[1]))
+            && std::ptr::eq(self.surface,u_path.surface)&&std::ptr::eq(self.surface,v_path.surface)
+            && (0..2).all(|a|self.domain[a][0]<=union[a][0]&&union[a][1]<=self.domain[a][1])
+            && u_path.domain[0][0]<=union[0][0]&&union[0][1]<=u_path.domain[0][1]
+            && u_path.domain[1][0]<=pair[0][1][0]&&pair[0][1][1]<=u_path.domain[1][1]
+            && v_path.domain[0][0]<=pair[1][0][0]&&pair[1][0][1]<=v_path.domain[0][1]
+            && v_path.domain[1][0]<=union[1][0]&&union[1][1]<=v_path.domain[1][1],
+            "Coordinate path matrices must cover original endpoint strips")?;
+        Ok(CoordinatePath{pair,matrix:MeanMatrix{surface:self.surface,domain:union,
+            jacobian:std::array::from_fn(|k|[u_path.jacobian[k][0],v_path.jacobian[k][1]])}})
+    }
     pub(crate) fn exclude_pair(
         &self, pair: [[[f64; 2]; 2]; 2], sine: f64, max_spans: usize,
         cached: Option<(&crate::factored_surface_normals::Certificate<'_>,
@@ -670,6 +700,52 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rational_coordinate_chords_enclose_independent_surface_evaluations() {
+        let s=Surface{degree_u:2,degree_v:2,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+            control_points:(0..3).map(|u|(0..3).map(|v|vec![u as f64,v as f64,(u*v) as f64]).collect()).collect(),
+            weights:vec![vec![1.,0.7,1.],vec![0.9,0.63,0.9],vec![1.,0.7,1.]],periodic_u:false,periodic_v:false};
+        let original=qualify_rectangle(&s,[[0.,1.];2],1e-6,1).unwrap().mean_matrix.unwrap();
+        let initial=[[[0.1,0.3],[0.7,0.9]],[[0.7,0.9],[0.1,0.3]]];
+        for pair in [initial,[initial[1],initial[0]]]{
+            let u=qualify_rectangle(&s,[[0.1,0.9],pair[0][1]],1e-6,1).unwrap().mean_matrix.unwrap();
+            let v=qualify_rectangle(&s,[pair[1][0],[0.1,0.9]],1e-6,1).unwrap().mean_matrix.unwrap();
+            let bounds=original.coordinate_path(pair,&u,&v).unwrap().chord_bounds().unwrap();
+            for i in 0..3 {for j in 0..3 {for k in 0..3 {for l in 0..3 {
+                let t=|axis:[f64;2],n:usize|axis[0]+(axis[1]-axis[0])*n as f64/2.;
+                let a=s.evaluate(t(pair[0][0],i),t(pair[0][1],j)).unwrap().point;
+                let b=s.evaluate(t(pair[1][0],k),t(pair[1][1],l)).unwrap().point;
+                for axis in 0..3 {let chord=b[axis]-a[axis];assert!(bounds[axis][0]<=chord&&chord<=bounds[axis][1]);}
+            }}}}
+        }
+    }
+    #[test]
+    fn coordinate_path_requires_same_source_and_complete_endpoint_strips() {
+        let s=Surface{degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let pair=[[[0.,0.2],[0.,0.2]],[[0.8,1.],[0.8,1.]]];
+        let full=qualify_rectangle(&s,[[0.,1.];2],1e-6,1).unwrap().mean_matrix.unwrap();
+        let u=qualify_rectangle(&s,[[0.,1.],[0.,0.2]],1e-6,1).unwrap().mean_matrix.unwrap();
+        let v=qualify_rectangle(&s,[[0.8,1.],[0.,1.]],1e-6,1).unwrap().mean_matrix.unwrap();
+        let path=full.coordinate_path(pair,&u,&v).unwrap();
+        assert_eq!(path.exclude_pair(pair,1e-6,1,None,None).unwrap(),(true,1));
+        assert!(path.exclude_pair([pair[0],pair[0]],1e-6,1,None,None).is_err());
+        let chord=path.chord_bounds().unwrap();
+        for (axis,bound) in chord.iter().enumerate(){
+            if axis<2 {assert!(bound[0]<=0.6&&bound[1]>=1.);assert!(bound[0]>0.59&&bound[1]<1.01);}
+            else {assert!(bound[0]<=0.&&bound[1]>=0.);assert!(bound[0]>-1e-12&&bound[1]<1e-12);}
+        }
+
+        let short=qualify_rectangle(&s,[[0.,0.5],[0.,0.2]],1e-6,1).unwrap().mean_matrix.unwrap();
+        assert!(full.coordinate_path(pair,&short,&v).is_err());
+        let twin=s.clone();
+        let foreign=qualify_rectangle(&twin,[[0.,1.];2],1e-6,1).unwrap().mean_matrix.unwrap();
+        assert!(full.coordinate_path(pair,&foreign,&v).is_err());
+        assert!(full.coordinate_path(pair,&u,&foreign).is_err());
+        let mut invalid=pair;invalid[0][0]=[0.2,0.];assert!(full.coordinate_path(invalid,&u,&v).is_err());
+        invalid[0][0]=[f64::NAN,0.2];assert!(full.coordinate_path(invalid,&u,&v).is_err());
+    }
     #[test]
     fn original_mean_matrix_excludes_planar_tangent_variation_with_bounded_normals() {
         let s=Surface { degree_u:2,degree_v:1,

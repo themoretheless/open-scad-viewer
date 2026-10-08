@@ -189,7 +189,16 @@ pub fn restore(v: Value) -> Result<Value> {
                 }
                 Some((extra,exact))
             };
-            Some((limits,pole))
+            let refinement=if a["refinement"].is_null(){None}else{
+                let p=&a["refinement"];
+                let extra=brep_core::source_wall_self_coverage::Limits{plane_controls:1,
+                    cells:field(p,"cells")?,spans:field(p,"spans")?,cells_per_face:field(p,"cellsPerFace")?,spans_per_face:field(p,"spansPerFace")?};
+                if [extra.cells,extra.spans,extra.cells_per_face,extra.spans_per_face].iter().any(|n|!(1..=100000).contains(n)){
+                    return Err(super::input("Choose bounded additional regular self-wall work"));
+                }
+                Some(extra)
+            };
+            Some((limits,pole,refinement))
         };
         let products=if o["normalProducts"].is_null() {
             brep_core::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0}
@@ -260,15 +269,18 @@ pub fn restore(v: Value) -> Result<Value> {
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
     let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors)|->Result<Value>{
-        let (facts,self_report)=if let Some((limits,pole))=self_work {
+        let (facts,self_report)=if let Some((limits,pole,refinement))=self_work {
             let mut report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
             if let Some((extra,exact))=pole {
                 brep_core::source_wall_self_coverage::extend_with_pole_facts(body,minimum,work.max_sine_squared,&mut report,extra,exact)?;
             }
+            if let Some(extra)=refinement {
+                brep_core::source_wall_self_coverage::refine_unqualified(body,minimum,work.max_sine_squared,&mut report,extra)?;
+            }
             let diagnostics=json!({"faces":report.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,
                 "reason":f.reason,"cells":f.cells,"spans":f.spans,"pending":f.pending,"uncertain":f.uncertain,"unresolvedPairs":f.unresolved_pairs,"endpointExchangeSymmetric":true})).collect::<Vec<_>>(),
-                "planeControls":report.plane_controls,"cells":report.cells+report.pole_cells,"spans":report.spans+report.pole_spans,
-                "poleExactWork":report.pole_exact_work,"poleCells":report.pole_cells,"poleSpans":report.pole_spans,
+                "planeControls":report.plane_controls,"cells":report.cells+report.pole_cells+report.refinement_cells,"spans":report.spans+report.pole_spans+report.refinement_spans,
+                "refinementCells":report.refinement_cells,"refinementSpans":report.refinement_spans,"poleExactWork":report.pole_exact_work,"poleCells":report.pole_cells,"poleSpans":report.pole_spans,
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
@@ -553,6 +565,23 @@ mod tests {
         for key in ["exactWork","cells","spans","cellsPerFace","spansPerFace"] {
             for value in [json!(0),json!(100000001)] {
                 let mut bad=pole_option.clone();bad["adaptiveSelf"]["pole"][key]=value;
+                assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
+                    "definition":wire_definition.clone(),"limits":config(1),"wallCoverage":bad})).is_err());
+            }
+        }
+
+        let mut refined_option=adaptive_option.clone();
+        refined_option["adaptiveSelf"]["refinement"]=json!({"cells":1,"spans":1,"cellsPerFace":1,"spansPerFace":1});
+        let refined=super::super::dispatch(json!({"op":"cad_source_body_restore",
+            "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
+            "wallCoverage":refined_option.clone()})).unwrap();
+        assert_eq!(refined["wallCoverage"]["request"],refined_option);
+        for counter in ["refinementCells","refinementSpans"] {
+            assert!(refined["wallCoverage"]["adaptiveSelf"][counter].as_u64().unwrap()<=1);
+        }
+        for key in ["cells","spans","cellsPerFace","spansPerFace"] {
+            for value in [json!(0),json!(100001)] {
+                let mut bad=refined_option.clone();bad["adaptiveSelf"]["refinement"][key]=value;
                 assert!(super::super::dispatch(json!({"op":"cad_source_body_restore",
                     "definition":wire_definition.clone(),"limits":config(1),"wallCoverage":bad})).is_err());
             }

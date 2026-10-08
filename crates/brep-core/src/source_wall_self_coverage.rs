@@ -49,6 +49,9 @@ pub struct Report<'a> {
     body: &'a Body,
     minimum_mm: f64,
     max_sine_squared: f64,
+    refinement_attempted: bool,
+    pub refinement_cells: usize,
+    pub refinement_spans: usize,
     pub pole_exact_work: u64,
     pub pole_cells: usize,
     pub pole_spans: usize,
@@ -100,7 +103,7 @@ pub fn qualify<'a>(
     }
     let regions = body.geometry().shell().regions().unwrap();
     let mut out = Report {
-        body, minimum_mm, max_sine_squared,
+        body, minimum_mm, max_sine_squared, refinement_attempted:false, refinement_cells:0, refinement_spans:0,
         pole_exact_work:0, pole_cells:0, pole_spans:0,
         faces: Vec::with_capacity(regions.len()),
         plane_controls: 0,
@@ -234,6 +237,40 @@ pub fn extend_with_pole_facts<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:
         out.faces[face].cells=spent_cells;out.faces[face].spans=spent_spans;
         if let Some(c)=r.certificate {
             out.faces[face]=Face{face,qualified:true,reason:"source-self-wall-pole-qualified",cells:spent_cells,spans:spent_spans,
+                pending:0,uncertain:None,unresolved_pairs:Vec::new()};
+            out.certificates.push(FaceCertificate{body,face,minimum_mm,max_sine_squared,adaptive:Some(c)});
+        }
+    }
+    Ok(())
+}
+
+/// Independently bounded ordinary refinement retains all accepted facts.
+pub fn refine_unqualified<'a>(body:&'a Body,minimum_mm:f64,max_sine_squared:f64,
+    out:&mut Report<'a>,limits:Limits)->Result<()> {
+    if !std::ptr::eq(out.body,body)||out.minimum_mm!=minimum_mm||out.max_sine_squared!=max_sine_squared
+        ||out.refinement_attempted||out.refinement_cells!=0||out.refinement_spans!=0
+        ||[limits.cells,limits.spans,limits.cells_per_face,limits.spans_per_face].iter().any(|n|!(1..=100000).contains(n))
+        ||out.faces.len()!=body.geometry().shell().faces().len()
+        ||out.faces.iter().enumerate().any(|(i,f)|i!=f.face)
+        ||out.certificates.iter().any(|c|!std::ptr::eq(c.body,body)||c.minimum_mm!=minimum_mm||c.max_sine_squared!=max_sine_squared) {
+        return Err(Error::new("BREP_SOURCE_SELF_WALL_INPUT","Use owned original self facts and bounded refinement"));
+    }
+    out.refinement_attempted=true;
+    for face in 0..out.faces.len(){
+        if out.certificates.iter().any(|c|c.face==face){continue;}
+        let cells=limits.cells_per_face.min(limits.cells-out.refinement_cells);
+        let spans=limits.spans_per_face.min(limits.spans-out.refinement_spans);
+        if cells==0||spans==0 {break;}
+        let surface=body.geometry().shell().regions().unwrap()[face].loops()[0][0].surface();
+        let r=adaptive::qualify(surface,minimum_mm,max_sine_squared,adaptive::Limits{cells,spans})?;
+        out.refinement_cells+=r.cells;out.refinement_spans+=r.spans;
+        let spent_cells=out.faces[face].cells.checked_add(r.cells)
+            .ok_or_else(||Error::new("BREP_SOURCE_SELF_WALL_INPUT","Invalid cumulative refinement work"))?;
+        let spent_spans=out.faces[face].spans.checked_add(r.spans)
+            .ok_or_else(||Error::new("BREP_SOURCE_SELF_WALL_INPUT","Invalid cumulative refinement work"))?;
+        out.faces[face].cells=spent_cells;out.faces[face].spans=spent_spans;
+        if let Some(c)=r.certificate {
+            out.faces[face]=Face{face,qualified:true,reason:"source-self-wall-refinement-qualified",cells:spent_cells,spans:spent_spans,
                 pending:0,uncertain:None,unresolved_pairs:Vec::new()};
             out.certificates.push(FaceCertificate{body,face,minimum_mm,max_sine_squared,adaptive:Some(c)});
         }
