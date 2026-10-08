@@ -21,17 +21,20 @@ impl SharedEdge {
         self.ranges
     }
     pub fn covers_complete_canonical_source(&self) -> bool {
+        // Composition identity covers original curves, not their retained
+        // fragments. Actual owned ends must also cover each complete domain.
+        let complete_uses=self.uses.iter().all(|fragment| {
+            let domain=fragment.curve().domain();
+            let expected=if fragment.reversed() {[domain[1],domain[0]]} else {domain};
+            fragment.endpoints().iter().zip(expected).all(|(endpoint,t)| {
+                matches!(endpoint, Endpoint::Parameter(value) if *value == t)
+            })
+        });
         match self.ranges {
-            Some(ranges) => ranges.iter().all(|r| {
+            Some(ranges) => complete_uses && ranges.iter().all(|r| {
                 (r[0][0] == 0. && r[1][0] == r[1][1]) || (r[1][0] == 0. && r[0][0] == r[0][1])
             }),
-            None => self.uses.iter().all(|fragment| {
-                let domain=fragment.curve().domain();
-                let expected=if fragment.reversed() {[domain[1],domain[0]]} else {domain};
-                fragment.endpoints().iter().zip(expected).all(|(endpoint,t)| {
-                    matches!(endpoint, Endpoint::Parameter(value) if *value == t)
-                })
-            }),
+            None => complete_uses,
         }
     }
     pub(crate) fn from_mapped(

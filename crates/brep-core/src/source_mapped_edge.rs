@@ -374,6 +374,48 @@ mod tests {
     }
     const RANGES: [Range; 2] = [[[0., 1.], [1., 1.]], [[1., 4.], [3., 4.]]];
     #[test]
+    fn full_affine_composition_does_not_make_a_retained_fragment_complete() {
+        let (sa,sb,a,mut b,world)=fixture();
+        b.control_points=a.control_points.clone();
+        let ranges=[[[0.,1.],[1.,1.]];2];
+        let fa=Fragment::new(&sa,&a,Endpoint::Parameter(2.5),Endpoint::Parameter(3.5)).unwrap();
+        let fb=Fragment::new(&sb,&b,Endpoint::Parameter(16.),Endpoint::Parameter(12.)).unwrap();
+        let partial=qualify(&world,[&fa,&fb],ranges,[None;2],100000000,0).unwrap().edge.unwrap();
+        assert!(!partial.covers_complete_canonical_source(),"Original full affine carriers retain only the middle half");
+        let restored=crate::source_shared_edge_restore::restore(partial.definition(),
+            crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap().edge.unwrap();
+        assert!(!restored.covers_complete_canonical_source());
+        let fa=Fragment::new(&sa,&a,Endpoint::Parameter(2.),Endpoint::Parameter(4.)).unwrap();
+        let fb=Fragment::new(&sb,&b,Endpoint::Parameter(18.),Endpoint::Parameter(10.)).unwrap();
+        let full=qualify(&world,[&fa,&fb],ranges,[None;2],100000000,0).unwrap().edge.unwrap();
+        assert!(full.covers_complete_canonical_source());
+        let root=|s:&Surface,c:&Curve,x:f64,selector:[f64;2]| {
+            let cutter=Curve::from_polyline(vec![vec![x,-1.],vec![x,1.]]).unwrap();
+            let p=crate::source_contact_point::qualify(s,c,&cutter,[selector,[0.4,0.6]],10000).unwrap().point.unwrap();
+            Endpoint::Crossing {point:p,role:Role::Boundary}
+        };
+        let fa=Fragment::new(&sa,&a,root(&sa,&a,0.4,[2.7,2.9]),root(&sa,&a,0.6,[3.1,3.3])).unwrap();
+        let fb=Fragment::new(&sb,&b,root(&sb,&b,0.6,[14.7,14.9]),root(&sb,&b,0.4,[13.1,13.3])).unwrap();
+        let owned=qualify(&world,[&fa,&fb],ranges,[None;2],100000000,0).unwrap().edge.unwrap();
+        assert!(!owned.covers_complete_canonical_source());
+        let restored=crate::source_shared_edge_restore::restore(owned.definition(),
+            crate::source_shared_edge_restore::Limits {mapping_cells_per_use:10000,exact_work:100000000,driver_cells:10000}).unwrap().edge.unwrap();
+        assert!(!restored.covers_complete_canonical_source());
+    }
+    #[test]
+    fn reversed_affine_carriers_preserve_full_and_partial_retained_coverage() {
+        let (sa,sb,mut a,mut b,world)=fixture();
+        a.control_points.reverse();b.control_points=a.control_points.clone();
+        let ranges=[[[1.,1.],[0.,1.]];2];
+        for full in [false,true] {
+            let ends=if full {[[2.,4.],[18.,10.]]} else {[[2.5,3.5],[16.,12.]]};
+            let fa=Fragment::new(&sa,&a,Endpoint::Parameter(ends[0][0]),Endpoint::Parameter(ends[0][1])).unwrap();
+            let fb=Fragment::new(&sb,&b,Endpoint::Parameter(ends[1][0]),Endpoint::Parameter(ends[1][1])).unwrap();
+            let e=qualify(&world,[&fa,&fb],ranges,[None;2],100000000,0).unwrap().edge.unwrap();
+            assert_eq!(e.covers_complete_canonical_source(),full);
+        }
+    }
+    #[test]
     fn different_geometric_coverage_has_exact_fixed_and_mixed_owned_ends() {
         let (sa, sb, a, b, world) = fixture();
         let fa =
