@@ -361,6 +361,22 @@ mod tests {
             assert!(r.iter().any(|r|r[0]>0.||r[1]<0.),"cut support normal unresolved at {i}: {r:?}");
         }
         eprintln!("corrected pole cut U=0.75 midpoint={:?} regularIntervals=64",middle);
+        for (high,index,neighbor) in [(false,0,1),(true,1,2)] {
+            let report=proposal.cut_endpoint(0,0,0.75,high,index,16).unwrap();
+            let endpoint=report.endpoint.expect(report.reason);
+            assert!(std::ptr::eq(endpoint.proposal(),&proposal));assert_eq!(endpoint.faces(),[0,neighbor]);
+            assert_eq!(endpoint.edge(),index);assert_eq!(endpoint.definition()["parameter"],value_codec::json!(0.75));
+            let own=cut.enclose([if high {1.}else{0.};2],1).unwrap().0.unwrap();
+            let world=endpoint.world_bounds();
+            for k in 0..3 {assert!(own[k][0]<=world[k][1]&&world[k][0]<=own[k][1]);}
+            eprintln!("owned cut endpoint edge={} canonical={:?} neighborUV={:?} world={:?} spans={}",index,
+                endpoint.canonical_bounds(),endpoint.neighbor_uv_bounds(),world,report.spans);
+            let short=proposal.cut_endpoint(0,0,0.75,high,index,1).unwrap();
+            assert!(short.endpoint.is_none());assert_eq!(short.reason,"profile-cut-work-limit");
+        }
+        assert!(proposal.cut_endpoint(0,0,0.75,false,5,16).unwrap().endpoint.is_none());
+        assert!(proposal.cut_endpoint(0,2,0.75,false,0,16).is_err());
+
         let report=proposal.qualify_edge(1,100,1e-6,2,4).unwrap();
         assert!(report.seam.is_none());assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
         let r=report.angular.unwrap();assert_eq!((r.cells,r.spans,r.accepted_cells),(2,4,1));

@@ -715,3 +715,30 @@ support normal enclosures excluding zero. Thirteen profile tests and the
 native actual section/pole/endpoint regression pass. These bounds prepare a
 regular new junction boundary; adjacent retained-face cuts, cap construction,
 sewing, embedding and volume qualification remain required.
+
+## Owned new cut endpoints on neighboring retained faces
+
+`Proposal::cut_endpoint` binds a section end to an exact original Body edge and
+both original retained uses. The proposed incident pcurve must be an affine
+constant-weight curve on the preserved natural boundary; its neighboring
+pcurve may be nonlinear. Source definitions must match both owned face regions.
+The cut coordinate supplies an exact parameter recipe: original curve parameter
+and canonical carrier parameter are enclosed with outward arithmetic, then
+mapped onto the neighbor and original world carrier. Both mapped parameters
+must lie inside the guaranteed retained endpoint ranges, including conservative
+root enclosures. Otherwise no owned endpoint is returned.
+
+The private endpoint retains proposal identity, actual edge address, section
+coordinate and a replayable definition recipe. Returned coordinate intervals
+are diagnostic enclosures of that recipe, not new rounded vertices or cached
+ownership certificates. Complete curve-span work is required; foreign edge,
+invalid axis and missing-work controls refuse.
+
+For annular face 0, cut U=0.75, the V=0 end maps onto edge 0 / neighbor face 1
+at canonical [0.24999999999999753,0.25000000000000205], neighbor UV
+[[19.709782279111632,19.709782279111653],
+[1.9365251050974668,1.9365251050975405]]. The V=1 end maps onto edge 1 /
+neighbor face 2 at canonical [0.7499999999999988,0.750000000000001], neighbor UV
+[[0.7499999999999892,0.7500000000000108],[1,1]]. Each uses two curve spans.
+The native actual cut/pole/endpoint regression passes. New adjacent trim paths,
+cap geometry and closed-body admission remain required.

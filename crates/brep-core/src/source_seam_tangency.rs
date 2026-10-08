@@ -47,7 +47,7 @@ fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
         })
     })
 }
-fn map(edge: &SharedEdge, side: usize, parameter: I) -> Result<I> {
+pub(crate) fn map(edge: &SharedEdge, side: usize, parameter: I) -> Result<I> {
     let d = edge.uses()[side].curve().domain();
     let range = ranges(edge)[side];
     let first = I::point(range[0][0]).div(I::point(range[0][1]))?;

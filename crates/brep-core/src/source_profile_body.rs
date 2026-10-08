@@ -54,7 +54,169 @@ pub struct SeamReport<'p, 'b> {
     pub angular: Option<nurbs_core::normal_alignment::ProfilePathReport>,
     pub reason: &'static str,
 }
+/// An owned new section end with an exact source-parameter recipe. Interval
+/// coordinates enclose that recipe; they are not rounded replacement vertices.
+pub struct CutEndpoint<'p, 'b> {
+    proposal: &'p Proposal<'b>,
+    face: usize,
+    neighbor: usize,
+    edge: usize,
+    axis: usize,
+    parameter: f64,
+    high: bool,
+    canonical: [f64; 2],
+    neighbor_uv: [[f64; 2]; 2],
+    world: [[f64; 2]; 3],
+}
+impl CutEndpoint<'_, '_> {
+    pub fn proposal(&self) -> &Proposal<'_> {
+        self.proposal
+    }
+    pub fn faces(&self) -> [usize; 2] {
+        [self.face, self.neighbor]
+    }
+    pub fn edge(&self) -> usize {
+        self.edge
+    }
+    pub fn canonical_bounds(&self) -> [f64; 2] {
+        self.canonical
+    }
+    pub fn neighbor_uv_bounds(&self) -> [[f64; 2]; 2] {
+        self.neighbor_uv
+    }
+    pub fn world_bounds(&self) -> [[f64; 2]; 3] {
+        self.world
+    }
+    pub fn definition(&self) -> value_codec::Value {
+        value_codec::json!({"version":1,"kind":"owned-profile-section-end","face":self.face,
+            "edge":self.edge,"axis":self.axis,"parameter":self.parameter,"highFreeEnd":self.high})
+    }
+}
+pub struct CutEndpointReport<'p, 'b> {
+    pub endpoint: Option<CutEndpoint<'p, 'b>>,
+    pub spans: usize,
+    pub reason: &'static str,
+}
 impl<'a> Proposal<'a> {
+    /// Bind a new section end to both retained original edge uses. The selected
+    /// use must be affine on a preserved natural boundary; its neighbor may
+    /// have a nonlinear pcurve. No world-distance test grants ownership.
+    pub fn cut_endpoint<'p>(
+        &'p self,
+        face: usize,
+        axis: usize,
+        parameter: f64,
+        high: bool,
+        index: usize,
+        max_spans: usize,
+    ) -> Result<CutEndpointReport<'p, 'a>> {
+        use nurbs_core::interval_eval::Interval as I;
+        let profile = self
+            .profile(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose a proposed face"))?;
+        let section = profile.section(axis, parameter)?;
+        let shell = self.body.geometry().shell();
+        let addresses = shell
+            .uses()
+            .get(index)
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose an owned edge"))?;
+        if max_spans > 100000 {
+            return Err(Error::new("BREP_PROFILE_CUT", "Bound cut parameter work"));
+        }
+        let mut out = CutEndpointReport {
+            endpoint: None,
+            spans: 0,
+            reason: "profile-cut-carrier-unproven",
+        };
+        let Some(side) = addresses.iter().position(|u| u.face == face) else {
+            return Ok(out);
+        };
+        let edge = &shell.edges()[index];
+        let regions = shell.regions().unwrap();
+        if (0..2).any(|i| {
+            !same(
+                edge.uses()[i].surface(),
+                regions[addresses[i].face].loops()[0][0].surface(),
+            )
+        }) {
+            return Ok(out);
+        }
+        let use_ = &edge.uses()[side];
+        let c = use_.curve();
+        let boundary = section.range()[usize::from(high)];
+        if !edge.maps_complete_canonical_source()
+            || !same(use_.surface(), profile.source())
+            || c.periodic
+            || c.degree != 1
+            || c.control_points.len() != 2
+            || c.weights[0] != c.weights[1]
+            || c.control_points
+                .iter()
+                .any(|p| p.len() != 2 || p[1 - axis] != boundary)
+            || c.control_points[0][axis] == c.control_points[1][axis]
+        {
+            return Ok(out);
+        }
+        let ends = [c.control_points[0][axis], c.control_points[1][axis]];
+        if parameter < ends[0].min(ends[1]) || parameter > ends[0].max(ends[1]) {
+            return Ok(out);
+        }
+        let normalized = I::point(parameter)
+            .sub(I::point(ends[0]))?
+            .div_signed(I::point(ends[1]).sub(I::point(ends[0]))?)?
+            .intersect(0., 1.)?;
+        let d = c.domain();
+        let t = I::point(d[0])
+            .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        let canonical = crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?;
+        for current in 0..2 {
+            let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
+            let ends = edge.uses()[current].parameter_bounds();
+            if t.lo < ends[0][1].min(ends[1][1]) || t.hi > ends[0][0].max(ends[1][0]) {
+                out.reason = "profile-cut-retained-parameter-unproven";
+                return Ok(out);
+            }
+        }
+        let neighbor = 1 - side;
+        let nc = edge.uses()[neighbor].curve();
+        let t = crate::source_seam_tangency::inverse(edge, neighbor, canonical)?;
+        let world = edge.world();
+        let d = world.domain();
+        let w = I::point(d[0])
+            .add(canonical.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        for (curve, t) in [(nc, t), (world, w)] {
+            let spent = (curve.degree..curve.control_points.len())
+                .filter(|&i| {
+                    curve.knots[i] < curve.knots[i + 1]
+                        && curve.knots[i] <= t.hi
+                        && curve.knots[i + 1] >= t.lo
+                })
+                .count();
+            if spent > max_spans - out.spans {
+                out.reason = "profile-cut-work-limit";
+                return Ok(out);
+            }
+            out.spans += spent;
+        }
+        let uv = nurbs_core::interval_eval::evaluate_interval(nc, t)?;
+        let point = nurbs_core::interval_eval::evaluate_interval(world, w)?;
+        out.endpoint = Some(CutEndpoint {
+            proposal: self,
+            face,
+            neighbor: addresses[neighbor].face,
+            edge: index,
+            axis,
+            parameter,
+            high,
+            canonical: [canonical.lo, canonical.hi],
+            neighbor_uv: [[uv[0].lo, uv[0].hi], [uv[1].lo, uv[1].hi]],
+            world: std::array::from_fn(|k| [point[k].lo, point[k].hi]),
+        });
+        out.reason = "profile-cut-endpoint-owned";
+        Ok(out)
+    }
     /// Derive both UV paths from private original carrier ownership and compare
     /// each incident face's actual original or proposed weight representation.
     pub fn qualify_seam<'p>(
