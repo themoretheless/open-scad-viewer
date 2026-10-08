@@ -936,6 +936,32 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
+    /// Adaptive complete coverage of exact profile normals on a rectangle.
+    /// A nonzero component proves immersion; zero-containing cells stay pending.
+    pub fn inspect_regularity(&self,domain:[[f64;2];2],max_cells:usize,max_spans:usize)->Result<TransitionRegularityReport> {
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
+        check(max_cells<=100000,"Bound profile regularity cell work")?;
+        let mut out=TransitionRegularityReport{regular:Vec::new(),pending:Vec::new(),cells:0,spans:0,complete_regular:false,reason:"profile-regularity-work-limit"};
+        let mut queue=std::collections::VecDeque::from([domain]);
+        while let Some(rect)=queue.pop_front() {
+            if out.cells==max_cells || out.spans==max_spans {out.pending.push(rect);out.pending.extend(queue);return Ok(out);}
+            out.cells+=1;
+            let (normal,spent)=self.normal_bounds(rect,max_spans-out.spans)?;out.spans+=spent;
+            let Some(normal)=normal else {out.pending.push(rect);out.pending.extend(queue);return Ok(out);};
+            if normal.iter().any(|r|r[0]>0. || r[1]<0.) {out.regular.push(rect);continue;}
+            let normalized=std::array::from_fn::<_,2,_>(|axis|{
+                let width=domain[axis][1]-domain[axis][0];
+                if width==0. {0.}else{(rect[axis][1]-rect[axis][0])/width}
+            });
+            let axis=usize::from(normalized[1]>normalized[0]);
+            let mid=rect[axis][0]*0.5+rect[axis][1]*0.5;
+            if mid<=rect[axis][0] || mid>=rect[axis][1] {out.pending.push(rect);continue;}
+            let mut left=rect;left[axis][1]=mid;let mut right=rect;right[axis][0]=mid;
+            queue.push_front(right);queue.push_front(left);
+        }
+        out.complete_regular=out.pending.is_empty();
+        out.reason=if out.complete_regular {"profile-regularity-qualified"}else{"profile-regularity-resolution-limit"};Ok(out)
+    }
     /// Compare complete proposed-profile and original-surface normal bounds.
     /// This proves only tangent-plane angle over the supplied rectangles;
     /// shared position, seam ownership and orientation require separate gates.
@@ -1512,6 +1538,24 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn profile_rectangle_regularity_preserves_singular_coverage() {
+        let mut s=surface();
+        let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        let domain=[[0.,0.75],[0.,1.]];
+        assert!(profile.inspect_regularity(domain,1,1).unwrap().complete_regular);
+        let refused=profile.inspect_regularity(domain,0,1).unwrap();
+        assert_eq!(refused.pending,vec![domain]);assert!(!refused.complete_regular);
+        assert!(profile.inspect_regularity([[0.8,0.2],[0.,1.]],10,10).is_err());
+        // Bilinear collapsed edge: S(u,v)=(u,u*v,0), singular at u=0.
+        s.control_points[0][1]=vec![0.,0.,0.];
+        let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        assert!(profile.inspect_regularity([[0.25,1.],[0.,1.]],100,100).unwrap().complete_regular);
+        let report=profile.inspect_regularity([[0.,1.],[0.,1.]],31,31).unwrap();
+        assert!(!report.complete_regular);assert!(!report.pending.is_empty());
+        let area:f64=report.regular.iter().chain(&report.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
+        assert!(report.pending.iter().any(|r|r[0][0]==0.));
     }
     #[test]
     fn adaptive_profile_path_retains_pending_coverage() {

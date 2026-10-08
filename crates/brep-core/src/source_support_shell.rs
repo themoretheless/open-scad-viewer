@@ -475,6 +475,14 @@ mod tests {
             assert!(std::ptr::eq(exterior.section(),&section));
             assert!(!exterior.kept_loop().is_empty());
             assert!(!exterior.removed_loop().is_empty());
+            let cover=exterior.inspect_regularity(128,256).unwrap();
+            let area:f64=cover.regular.iter().chain(&cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+            assert!((area-if high {0.1}else{0.75}).abs()<1e-12);
+            assert!(cover.cells<=128 && cover.spans<=256);
+            if !high {assert!(cover.complete_regular);assert!(cover.pending.is_empty());}
+            eprintln!("retained profile high={high} regular={} pending={} cells={} spans={}",cover.regular.len(),cover.pending.len(),cover.cells,cover.spans);
+            let refused=exterior.inspect_regularity(0,256).unwrap();
+            assert!(!refused.complete_regular);assert_eq!(refused.pending.len(),1);
             let expected=if high {1.}else{0.};
             assert!(exterior.kept_loop().iter().any(|f|f.curve().control_points.iter().all(|p|p[0]==expected)));
             assert!(!exterior.removed_loop().iter().any(|f|f.curve().control_points.iter().all(|p|p[0]==expected)));

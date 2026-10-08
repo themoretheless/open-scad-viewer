@@ -1756,3 +1756,33 @@ qualification before a closed Body can be admitted. Native-only.
 
 The final owner-refusal regression passed in 44.03 seconds, including
 complete transition interior coverage (328 accepted, zero pending).
+
+## Retained exact-profile regularity coverage
+
+WeightProfile::inspect_regularity now adaptively covers a supplied source
+rectangle using fresh exact-profile normal hulls. A nonzero component admits
+a cell. Work exhaustion, zero-containing normals and resolution limits
+retain every unresolved rectangle, including untouched queued siblings.
+The coverage is diagnostic immersion evidence; it does not prove global
+injectivity or admit the surrounding Body.
+
+ExteriorSection::inspect_regularity derives a rectangle containing its
+entire qualified exterior source region. It evaluates the owned profile,
+not inherited original Surface normals. Entry covers the natural chart up
+to its cut; terminal covers the chart after its cut.
+
+An independent bilinear patch S(u,v)=(u,u*v,0) proves that a region away
+from the collapsed u=0 edge completes, while a region including that edge
+retains pending coverage. Accepted plus pending area stays 1. Zero work
+refuses and invalid rectangle ordering errors. The full 20-test profile
+suite passed in 16.23 seconds.
+
+On the annular fixture with 128 cells/256 spans, entry completes with
+46 accepted rectangles, zero pending, 91 cells and 91 spans. Terminal has
+59 accepted, 11 pending, 128 cells and 128 spans. Both reports cover their
+entire requested region (areas 0.75 and 0.1). Terminal regularity remains
+unproven, including its original singular boundary; no retained-face or
+closed Body certificate is issued from the incomplete cover. Native-only.
+
+The final combined regression, explicitly requiring complete entry-region
+regularity, passed in 40.83 seconds. The initial run passed in 41.65 seconds.
