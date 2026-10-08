@@ -595,6 +595,11 @@ it('qualifies bounded retained face products without losing prior proofs through
 it('qualifies mixed retained wall products through real WASM and preserves every earlier proof',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),results=[]
+ if(process.env.CAD_MIXED_WALL_UI_DOCUMENT){
+  await warmGeometryKernel()
+  const record=createSourceBodyRecord('annular-mixed-wall','Кольцевая деталь — контроль толщины',{...base,displaySegments:8})
+  writeFileSync(process.env.CAD_MIXED_WALL_UI_DOCUMENT,serializeDirectDocument({...emptyDirectDocument(),sourceBodies:[record]}))
+ }
  try{for(const mixed of [false,true]){
   const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
    normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
