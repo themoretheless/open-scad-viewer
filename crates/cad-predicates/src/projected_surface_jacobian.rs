@@ -253,6 +253,16 @@ pub fn rational_surface_projected_jacobian_row(
 ) -> Result<Decision, InputError> {
     compute(ctx, surface, axes, Some(row), None, false)
 }
+/// One complete coefficient row with outward magnitude enclosures. Callers
+/// must cover all rows before treating the result as a whole-chart net.
+pub fn rational_surface_projected_jacobian_row_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    axes: [usize; 2],
+    row: usize,
+) -> Result<Decision, InputError> {
+    compute(ctx, surface, axes, Some(row), None, true)
+}
 
 /// One exact coefficient, for bounded refinement of an exhausted row query.
 pub fn rational_surface_projected_jacobian_coefficient(
@@ -322,6 +332,10 @@ mod tests {
             assert_eq!(net.len(), 3);
             assert!(net.iter().all(|row| row.len() == 3));
             assert_eq!(net[0][0], selected);
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let row =
+                rational_surface_projected_jacobian_row_bounds(&mut ctx, &leaves, axes, 0).unwrap();
+            assert_eq!(row.coefficient_bounds.unwrap(), vec![net[0].clone()]);
             assert!(whole.signs.unwrap().iter().flatten().all(|s| *s
                 == if axes == [0, 1] {
                     Sign::Positive

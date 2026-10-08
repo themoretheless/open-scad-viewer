@@ -253,3 +253,25 @@ original plane normal signs/magnitudes, agreement with the selected
 coefficient query and complete refusal at insufficient work. Evidence:
 `normal-grid-tests.log.gz`. The remaining pole factor and continuous
 secant qualifications still need to consume and verify this native API.
+
+## Entire pole normal numerator factor verified
+
+The original whole-grid single-context queries reach ResourceLimit on
+these higher-degree poles. The new row-bound API permits complete
+row queries and original exact coefficient queries when a row exhausts
+its context. Seven predicate tests pass including whole/row/selected
+coefficient agreement and exhausted-work refusal.
+
+The original diagnostic now checks every row and every column for
+all three normal components at both ends of each of the four bodies.
+All eight original grids are complete, and their first two Bernstein
+rows are exactly zero for every column, proving the common U^2
+factor. Exit inputs are reversed copies and original model definitions
+are verified unchanged. This extends earlier rail-only factor checks
+to the full meridian domain; it does not prove a regular pole plane,
+G1 continuity, self-chord exclusion or global wall thickness.
+
+`annular-pole-normal-grid.*.gz` retains the failed bounded full query;
+`annular-pole-normal-grid-refined.*.gz` retains complete grids and
+exact work totals. These verified grids are the next input to bounded
+limiting-normal and secant qualification.
