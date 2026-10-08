@@ -572,15 +572,43 @@ impl OriginalPairBounds<'_> {
         Ok(self.components)
     }
 }
+pub(crate) struct OriginalNormalCache<'a> {
+    surface: &'a Surface,
+    rectangles: std::collections::HashMap<[[u64;2];2],[[f64;2];3]>,
+}
+impl<'a> OriginalNormalCache<'a> {
+    pub(crate) fn new(surface:&'a Surface)->Self {
+        Self{surface,rectangles:std::collections::HashMap::new()}
+    }
+    pub(crate) fn inspect_pair(&mut self,pair:[[[f64;2];2];2],sine:f64,budget:usize)
+        ->Result<(PairReport,Option<OriginalPairBounds<'a>>,usize)> {
+        // Validate both original rectangles even if no new query is needed.
+        for rect in pair {validate_input(self.surface,rect,[1.,0.,0.],sine,budget.max(1))?;}
+        let mut components=[None;2];let mut spent=0;let mut hits=0;
+        for (index,rect) in pair.into_iter().enumerate() {
+            let key=rect.map(|axis|axis.map(f64::to_bits));
+            if let Some(bounds)=self.rectangles.get(&key) {
+                components[index]=Some(*bounds);hits+=1;
+            } else if spent<budget {
+                let (bounds,used)=normal_bounds(self.surface,rect,budget-spent)?;
+                spent+=used;components[index]=bounds;
+                if let Some(bounds)=bounds {self.rectangles.insert(key,bounds);}
+            }
+        }
+        let [Some(a),Some(b)]=components else {
+            return Ok((PairReport{aligned:None,sine_squared_interval:None,
+                normal_components:components,spans:spent,reason:"span-limit"},None,hits));
+        };
+        let mut report=inspect_pair_bounds([a,b],sine)?;report.spans=spent;
+        Ok((report,Some(OriginalPairBounds{surface:self.surface,pair,components:[a,b]}),hits))
+    }
+}
+#[cfg(test)]
 pub(crate) fn inspect_original_pair_cached(
     surface: &Surface, pair: [[[f64; 2]; 2]; 2], sine: f64, budget: usize,
 ) -> Result<(PairReport, Option<OriginalPairBounds<'_>>)> {
-    let report=inspect_pair([surface,surface],pair,sine,budget)?;
-    let cached=match report.normal_components {
-        [Some(a),Some(b)] => Some(OriginalPairBounds{surface,pair,components:[a,b]}),
-        _ => None,
-    };
-    Ok((report,cached))
+    let (report,cache,_)=OriginalNormalCache::new(surface).inspect_pair(pair,sine,budget)?;
+    Ok((report,cache))
 }
 pub fn inspect_pair(
     surfaces: [&Surface; 2],

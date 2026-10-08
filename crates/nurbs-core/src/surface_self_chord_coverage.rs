@@ -81,6 +81,7 @@ pub struct Report<'a> {
     /// Subset of direction exclusions proved by the original mean matrix.
     pub mean_matrix_exclusions: usize,
     pub complete_rectangle_cache_hits: usize,
+    pub original_normal_rectangle_cache_hits: usize,
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
@@ -307,6 +308,7 @@ fn qualify_impl<'a>(
         direction_exclusions: 0,
         mean_matrix_exclusions: 0,
         complete_rectangle_cache_hits: 0,
+        original_normal_rectangle_cache_hits: 0,
         distance_exclusions: 0,
         pending: 1,
         uncertain: None,
@@ -316,6 +318,7 @@ fn qualify_impl<'a>(
     let mut pending = vec![[domain, domain]];
     let mut intrinsic = Vec::new();
     let mut rectangles=RectangleCache::new(s,max_sine_squared);
+    let mut normal_rectangles=normal_alignment::OriginalNormalCache::new(s);
     while let Some(pair) = pending.pop() {
         if out.cells == limits.cells || out.spans == limits.spans {
             pending.push(pair);
@@ -370,12 +373,12 @@ fn qualify_impl<'a>(
                     }
                 }
             } else {
-                let (r,cache) = normal_alignment::inspect_original_pair_cached(
-                    s,
+                let (r,cache,hits) = normal_rectangles.inspect_pair(
                     pair,
                     threshold,
                     limits.spans - out.spans,
                 )?;
+                out.original_normal_rectangle_cache_hits+=hits;
                 original_normals=cache;
                 out.spans += r.spans;
                 if r.aligned == Some(false) {
@@ -591,6 +594,28 @@ mod tests {
         let (report,reused)=partial.qualify(domain,2).unwrap();
         assert!(report.complete && !reused && report.spans==2);
         assert!(partial.qualify(domain,0).unwrap().1);
+    }
+    #[test]
+    fn original_normal_cache_retains_complete_rectangles_but_not_partial_pairs() {
+        let s=graph();
+        let pair=[[[0.,0.1],[0.,0.1]],[[0.8,0.9],[0.8,0.9]]];
+        let mut cache=normal_alignment::OriginalNormalCache::new(&s);
+        let (first,proof,hits)=cache.inspect_pair(pair,1e-6,1).unwrap();
+        assert_eq!((first.spans,proof.is_some(),hits),(1,false,0));
+        let (missing,proof,hits)=cache.inspect_pair(pair,1e-6,0).unwrap();
+        assert_eq!((missing.spans,proof.is_some(),hits),(0,false,1));
+        let (paid,proof,hits)=cache.inspect_pair(pair,1e-6,1).unwrap();
+        assert_eq!((paid.spans,proof.is_some(),hits),(1,true,1));
+        let (free,proof,hits)=cache.inspect_pair([pair[1],pair[0]],1e-6,0).unwrap();
+        assert_eq!((free.spans,proof.is_some(),hits),(0,true,2));
+        assert_eq!(paid.sine_squared_interval,free.sine_squared_interval);
+        assert!(cache.inspect_pair([[[0.,1.01],[0.,1.]],pair[1]],1e-6,0).is_err());
+        assert!(cache.inspect_pair(pair,f64::NAN,0).is_err());
+        let foreign=s.clone();
+        assert!(proof.unwrap().components(&foreign,[pair[1],pair[0]]).is_err());
+        let (_,foreign_proof,hits)=normal_alignment::OriginalNormalCache::new(&foreign)
+            .inspect_pair(pair,1e-6,0).unwrap();
+        assert!(foreign_proof.is_none() && hits==0);
     }
     fn graph() -> Surface {
         Surface {

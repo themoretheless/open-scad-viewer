@@ -1274,3 +1274,21 @@ representatives remain. Reverse radii use 2072 restrictions, reuse 318
 rectangles, and make 99 mean-matrix exclusions; 13 remain. Both spatial
 directions match. These finite-budget results do not qualify any additional
 face. Full schema-2 JSON and logs are archived.
+
+## Original normal rectangles reused across pairs
+
+An in-call cache binds one immutable original surface. It retains only
+complete original normal enclosures keyed by exact parameter rectangle
+bits. Angular inspection creates an opaque pair fact only when both original
+rectangles are available. A first completed endpoint can be reused later
+without promoting its missing partner to coverage. Both rectangles and
+tolerance are validated even when query budget is zero. Reversed endpoints
+reuse the same boxes; pair facts still reject foreign source and pair.
+Twenty-one chord/coverage tests and seven normal-alignment tests pass.
+The independent partial-pair regression checks one paid endpoint, refusal
+with its partner missing, one additional paid endpoint, free exchanged pair,
+and invalid rectangle/NaN/foreign-source refusal. Report field
+originalNormalRectangleCacheHits counts endpoint box reuse, separately from
+derivative rectangle reuse. Tolerances and outward enclosure rules remain
+unchanged. The full 100000-cell / 100000-restriction middle audit is running
+with the preceding derivative-cache version.
