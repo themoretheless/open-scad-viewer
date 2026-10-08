@@ -1483,6 +1483,19 @@ mod tests {
             .map(|r| (r[0][1] - r[0][0]) * (r[1][1] - r[1][0]))
             .sum();
         assert_eq!(area, 1.);
+        // Cell and derivative exhaustion are independent stop conditions.
+        // Every stop must retain all uncovered regions of this real fold.
+        for cells in [0,1,2,7] {
+            for spans in [0,1,61,1220] {
+                let stopped=corrected.inspect_transverse_corrected_injectivity_from_rails(
+                    [0.,1.],[0.,1.],[[0.,1.,0.],[1.,0.,0.]],cells,spans).unwrap();
+                assert!(!stopped.complete_regular);
+                assert!(stopped.cells<=cells && stopped.spans<=spans);
+                let area:f64=stopped.regular.iter().chain(&stopped.pending)
+                    .map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+                assert_eq!(area,1.);
+            }
+        }
     }
     #[test]
     fn common_source_difference_tightens_translated_bridge_jet() {
