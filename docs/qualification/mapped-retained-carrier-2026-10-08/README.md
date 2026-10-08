@@ -2677,3 +2677,10 @@ projection proves positivity. Reversing B retains the genuine interior zero.
 All eight bridge tests passed in 1.38 seconds, including folded-patch refusal
 and both work-limit coverage stop conditions. Full native confirmation of
 this new column intersection remains pending.
+
+The pre-column-intersection run with 2000 cells / 100000 spans emitted
+516 accepted cells and 127 pending rectangles after 1159 cells, with exactly
+100000 spans consumed. Pending parameter area was 0.0113525390625
+(1.13525390625%). This is a derivative-budget stop, not the 2000-cell stop
+and not a geometric intersection witness. Its result is the comparison
+baseline for the new shared-displacement projected-column intersection.
