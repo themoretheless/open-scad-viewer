@@ -554,6 +554,90 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             .profile()
             .enclose(self.source_rail_domain(high, across)?, budget)
     }
+    /// Position enclosure for the full side Hermite correction. This is a
+    /// distinct expression from `enclose`: its normals and regularity must be
+    /// qualified separately before assembly.
+    pub fn enclose_with_transverse_correction(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.bridge.validate(free, across, budget)?;
+        let range = self.bridge.section(false).range();
+        if across == [0., 0.] || across == [1., 1.] {
+            return self.bridge.enclose(free, across, budget);
+        }
+        for high in [false, true] {
+            if free == [range[usize::from(high)]; 2] {
+                return self.source_rail(high, across, budget);
+            }
+        }
+        let (base, mut spent) = self.bridge.enclose(free, across, budget)?;
+        let Some(base) = base else {
+            return Ok((None, spent));
+        };
+        let width = I::point(range[1]).sub(I::point(range[0]))?;
+        let t = I::new(free[0], free[1])?
+            .sub(I::point(range[0]))?
+            .div(width)?;
+        let q = I::point(1.).sub(t)?;
+        let position_weights = [
+            q.mul(q)?.mul(I::point(1.).add(I::point(2.).mul(t)?)?)?,
+            t.mul(t)?.mul(I::point(3.).sub(I::point(2.).mul(t)?)?)?,
+        ];
+        let tangent_weights = [
+            t.mul(q)?.mul(q)?.mul(width)?,
+            I::point(-1.).mul(t)?.mul(t)?.mul(q)?.mul(width)?,
+        ];
+        let mut result = [I::point(0.); 3];
+        for k in 0..3 {
+            result[k] = I::new(base[k][0], base[k][1])?;
+        }
+        for high in [false, true] {
+            let section = self.bridge.section(false);
+            let mut values = Vec::new();
+            for query in 0..4 {
+                if spent == budget {
+                    return Ok((None, spent));
+                }
+                let (value, used) = match query {
+                    0 => self.source_rail(high, across, budget - spent)?,
+                    1 => self.bridge.rail(high).enclose(across, budget - spent)?,
+                    2 => {
+                        let (jet, used) = section.profile().derivative_bounds(
+                            self.source_rail_domain(high, across)?,
+                            budget - spent,
+                        )?;
+                        (
+                            jet.map(|j| j.map(|component| component[1 - section.axis()])),
+                            used,
+                        )
+                    }
+                    _ => {
+                        let (jet, used) = self.bridge.derivative_bounds(
+                            [range[usize::from(high)]; 2],
+                            across,
+                            budget - spent,
+                        )?;
+                        (jet.map(|j| j[0]), used)
+                    }
+                };
+                spent += used;
+                let Some(value) = value else {
+                    return Ok((None, spent));
+                };
+                values.push(value);
+            }
+            for k in 0..3 {
+                let v = |i: usize| I::new(values[i][k][0], values[i][k][1]);
+                result[k] = result[k]
+                    .add(position_weights[usize::from(high)].mul(v(0)?.sub(v(1)?)?)?)?
+                    .add(tangent_weights[usize::from(high)].mul(v(2)?.sub(v(3)?)?)?)?;
+            }
+        }
+        Ok((Some(result.map(|v| [v.lo, v.hi])), spent))
+    }
     pub fn derivative_bounds(
         &self,
         free: [f64; 2],

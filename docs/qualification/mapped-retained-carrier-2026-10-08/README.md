@@ -1260,3 +1260,24 @@ the full parameter rectangle, insufficient work and an invalid domain are
 covered. The 15 profile tests passed in 5.10 seconds. This supplies the mixed
 jet needed to differentiate the forthcoming side transverse-field correction;
 that correction and renewed whole-seam/body qualification remain open.
+
+## Full side Hermite position expression
+
+`enclose_with_transverse_correction` is a separate expression query. It adds
+Hermite free-coordinate weights of source-position errors and source-free-jet
+errors to the original bridge. Both side positions and free jets therefore
+match the original source expressions algebraically. Section positions remain
+specialized to the original sections. Interior point queries consume 32
+spans on the references; 31 refuses. This query does not reuse the normals or
+regularity certificates of the position-only correction.
+
+An independent polynomial patch S(u,v)=[u,v,u^4*v^2] checks nine interior
+points. Its quadratic dependence on the free coordinate is exactly recovered
+by the full side Hermite expression. The position-only correction excludes
+the expected value at those same samples, so the reference exercises the
+transverse correction. The rational planar reference also checks nine
+positions and work refusal. All 16 profile tests passed.
+
+The new expression still needs first-derivative bounds, full-seam normal
+qualification and renewed interior regularity/injectivity. No Body or WASM
+admission follows from these position tests.

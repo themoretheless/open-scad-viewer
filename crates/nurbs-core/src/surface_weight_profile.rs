@@ -1684,6 +1684,29 @@ mod tests {
         assert!(cut.transverse_bounds([0., 1.], 2).unwrap().0.is_some());
     }
     #[test]
+    fn transverse_rail_correction_restores_independent_quartic_patch() {
+        let mut s=surface();
+        s.degree_u=4;s.degree_v=2;
+        s.knots_u=vec![0.,0.,0.,0.,0.,1.,1.,1.,1.,1.];
+        s.knots_v=vec![0.,0.,0.,1.,1.,1.];
+        s.control_points=(0..5).map(|i|(0..3).map(|j|
+            vec![i as f64/4.,j as f64/2.,if i==4 && j==2 {1.}else{0.}]
+        ).collect()).collect();
+        s.weights=vec![vec![1.;3];5];
+        let p=qualify_weight_profile(&s,[0,0],15).unwrap().0.unwrap();
+        let bridge=crate::normal_alignment::ProfileSectionBridge::new(
+            p.section(0,0.5).unwrap(),p.section(0,0.75).unwrap(),[0.25;2]).unwrap();
+        let corrected=bridge.constrain_original_rails(100).unwrap().0.unwrap();
+        for free in [0.2,0.5,0.8] {for across in [0.2,0.5,0.8] {
+            let u=0.5+0.25*across;
+            let exact=u*u*u*u*free*free;
+            let full=corrected.enclose_with_transverse_correction([free;2],[across;2],32).unwrap().0.unwrap();
+            assert!(full[2][0]<=exact && exact<=full[2][1]);
+            let old=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
+            assert!(exact<old[2][0] || exact>old[2][1],"position-only correction must differ on this reference");
+        }}
+    }
+    #[test]
     fn bridge_mixed_jet_matches_independent_bilinear_surface() {
         let mut s = surface();
         s.weights = vec![vec![1.,1.],vec![1.,1.]];
@@ -1716,6 +1739,9 @@ mod tests {
         for free in [0.,0.3,1.] {for across in [0.,0.5,1.] {
             let bounds=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
             let u=0.5+0.25*across;let expected=[4.*u/(1.+3.*u),free,0.];
+            let full=corrected.enclose_with_transverse_correction([free;2],[across;2],32).unwrap().0.unwrap();
+            for k in 0..3 {assert!(full[k][0]<=expected[k]&&expected[k]<=full[k][1]);}
+
             for k in 0..3 {assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1]);}
             let derivative=corrected.derivative_bounds([free;2],[across;2],36).unwrap().0.unwrap();
             let expected=[[0.,1.,0.],[1./(1.+3.*u).powi(2),0.,0.]];
@@ -1725,6 +1751,8 @@ mod tests {
 
         }}
         assert!(corrected.enclose([0.3;2],[0.5;2],13).unwrap().0.is_none());
+        assert!(corrected.enclose_with_transverse_correction([0.3;2],[0.5;2],31).unwrap().0.is_none());
+
         assert!(bridge.constrain_original_rails(0).unwrap().0.is_none());
     }
     #[test]
