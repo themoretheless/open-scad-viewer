@@ -96,7 +96,25 @@ fn main() {
             let bounds=[nurbs_core::surface_distance::rectangle_bounds(surfaces[0],uv[0]).unwrap(),
                 nurbs_core::surface_distance::rectangle_bounds(surfaces[1],uv[1]).unwrap()];
             let distance=nurbs_core::surface_distance::enclosure_distance(&bounds[0],&bounds[1]).unwrap();
-            json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1]})
+            let corners=std::array::from_fn(|side|std::array::from_fn(|axis|{
+                let s=surfaces[side];let (k,p,n)=if axis==0{(&s.knots_u,s.degree_u,s.control_points.len())}
+                    else{(&s.knots_v,s.degree_v,s.control_points[0].len())};
+                k[n]-uv[side][axis][1]<uv[side][axis][0]-k[p]
+            }));
+            let mut attempts=Vec::new();let mut corner_spans=0;
+            'proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                if x==0&&y==0&&z==0 {continue;}
+                let projection=[x as f64,y as f64,z as f64];
+                match nurbs_core::surface_self_chord::qualify_corner_chords(surfaces,corners,*uv,projection,1e-6,64) {
+                    Ok((cert,used))=>{corner_spans+=used;let excluded=cert.is_some();
+                        attempts.push(json!({"projection":projection,"spans":used,"excluded":excluded}));
+                        if excluded {break 'proposals;}
+                    }
+                    Err(e)=>{attempts.push(json!({"error":e.to_string()}));break 'proposals;}
+                }
+            }}}
+            json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1],
+                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans})
         }).collect();
         results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,

@@ -686,6 +686,18 @@ mod original_corner_chord_tests {
         assert!(qualify_corner_chords([&a,&b],[[false;2];2],[[[0.,0.1];2];2],[1.,1.,0.],1e-6,4).is_err());
         assert!(qualify_corner_chords([&a,&a],[[false;2];2],[[[0.,0.1];2];2],[f64::NAN,0.,0.],1e-6,4).is_err());
     }
+    #[test]
+    fn covers_reflected_affine_parameter_domains_without_rebinding_sources() {
+        let mut a=plane(-1.);let b=plane(1.);
+        a.control_points.reverse();a.weights.reverse();
+        for row in &mut a.control_points {row.reverse();}
+        for row in &mut a.weights {row.reverse();}
+        a.knots_u=vec![2.,2.,5.,5.];a.knots_v=vec![-4.,-4.,2.,2.];
+        let rects=[[[4.9,5.],[1.9,2.]],[[0.,0.1];2]];
+        let (cert,used)=qualify_corner_chords([&a,&b],[[true;2],[false;2]],rects,[1.,1.,0.],1e-6,3).unwrap();
+        assert!(cert.is_some());assert_eq!(used,3);
+        assert!(qualify_corner_chords([&b,&a],[[false;2],[true;2]],[rects[1],rects[0]],[-1.,-1.,0.],1e-6,3).unwrap().0.is_some());
+    }
 }
 /// Excludes nonzero geometric chords using S_v=t² B on an exactly verified
 /// collapsed Bezier rail. Along a straight UV segment, averaged S_u and the
