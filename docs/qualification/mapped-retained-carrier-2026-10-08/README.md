@@ -164,3 +164,27 @@ The prepared paths remain bound to the original Body and ordered face pair.
 - Native source-support tests: 17 passed; additional automatic anchor selection
   and zero-budget refusal regression passed. No WASM/worker/UI qualification
   of this update has been performed yet, and no runtime speedup is claimed.
+
+
+## Automatic anchors: packaged worker and current UI
+
+Production WASM SHA-256:
+`3ad1975343ec8db427089d3f06d713ab8c870f287fa754fdb04f29fc7d017dcb`,
+12,142,818 bytes. The package audit confirms its exact Brotli/Base85 round trip;
+28 real source-body worker tests pass (133.80 seconds overall), including
+native/worker comparison of cells, spans, normals, domains, exact preparation,
+queries, qualified pairs and pending products. Historical forged-response,
+cancellation and late-result tests are included in that suite.
+
+Current UI reloaded this package, restored the control body, prepared original
+edges, cancelled a whole-wall request, and completed a fresh request at 5.99 mm.
+It shows 28 unqualified pairs, mixed 17/45, 2714 pending UV products, self 27/27,
+localized refusal and scene uncertainty highlights. `mixed-wall-auto-anchor-ui.jpg`
+records that result. The result Retry control completes a fresh request with the same 28/17/2714/27 result.
+Whole-wall admission remains false. This is wall-control qualification, not
+completion of general fillets or independent bracket/flange/enclosure acceptance.
+
+Distribution: 152 artifacts, 8,415,805 asset bytes plus 15,439,210 raw WASM bytes
+= 23,855,015 bytes. Geometry chunk 4,050,304 bytes; named geometry budget retains
+608-byte margin, total asset budget retains 761-byte margin. Other budgets stay
+unchanged. Vue and MCP type checks pass. No end-to-end speedup is claimed.
