@@ -410,6 +410,10 @@ mod tests {
             if n.iter().any(|r|r[0]>0.||r[1]<0.) {bridge_regular+=1;}
         }}
         eprintln!("noncollapsed bridge coarse regular={bridge_regular} pending={}",64-bridge_regular);
+        let cover=bridge.inspect_regularity([0.,1.],[0.,1.],1000,8000).unwrap();
+        assert!(cover.complete_regular,"{} pending={}",cover.reason,cover.pending.len());
+        let area:f64=cover.regular.iter().chain(&cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
+        eprintln!("noncollapsed bridge adaptive regular={} pending={} cells={} spans={}",cover.regular.len(),cover.pending.len(),cover.cells,cover.spans);
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

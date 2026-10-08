@@ -1091,3 +1091,28 @@ This supplies a noncollapsed transition construction for a subsequent corner
 patch. The specific terminal section is a control example, not a finished
 end cap. Side-rail ownership, terminal corner geometry, interior refinement,
 self-intersections, thickness and closed-body/WASM integration remain open.
+
+## Complete regularity cover of the noncollapsed control bridge
+
+Bridge transverse derivatives now combine the two opposite position terms
+as 6s(1-s)(S1-S0), retaining exact expression identity while removing absolute
+coordinate cancellation. `inspect_regularity` adaptively covers the full
+requested rectangle; only complete nonzero normal enclosures qualify a cell.
+Budget exhaustion retains every unproved queued domain.
+
+The actual annular U=0.75 to U=0.9 bridge now completes its full closed unit
+parameter rectangle: 478 regular cells, 0 pending, 955 visited cells and
+7640 source spans. The regression requires complete coverage and unit area.
+Both natural boundaries remain included; there is no collapsed-tip exclusion.
+The original coarse 8x8 cover still has 64 unresolved cells, so this result
+comes from adaptive full-cell proofs rather than sampled normals.
+
+The rational planar bridge also qualifies its entire rectangle with a larger
+12000-cell/96000-span allowance; zero-cell work preserves the untouched
+domain. All 13 profile tests passed in 0.64 seconds; the actual control
+fixture passed in 9.36 seconds.
+
+This qualifies local immersion of this bridge only. It does not prove global
+injectivity, self-intersection freedom, thickness, neighbor side-rail identity,
+terminal corner closure or a sewn Body. Those remain required before WASM/UI
+admission, general geometry claims or the full CAD objective can be complete.

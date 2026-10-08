@@ -170,13 +170,21 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
         let mut across_d = free_d;
         for k in 0..3 {
             for (term, (side, slot)) in [(0, 0), (0, 1), (1, 0), (1, 1)].into_iter().enumerate() {
-                across_d[k] = across_d[k]
-                    .add(d[term].mul(I::new(data[side][slot][k][0], data[side][slot][k][1])?)?)?;
+                if slot == 1 {
+                    across_d[k] = across_d[k].add(
+                        d[term].mul(I::new(data[side][slot][k][0], data[side][slot][k][1])?)?,
+                    )?;
+                }
                 free_d[k] = free_d[k].add(h[term].mul(I::new(
                     data[side][slot + 2][k][0],
                     data[side][slot + 2][k][1],
                 )?)?)?;
             }
+        }
+        for k in 0..3 {
+            let difference = I::new(data[1][0][k][0], data[1][0][k][1])?
+                .sub(I::new(data[0][0][k][0], data[0][0][k][1])?)?;
+            across_d[k] = across_d[k].add(d[2].mul(difference)?)?;
         }
         let mut bounds = [[0.; 2]; 3];
         for k in 0..3 {
@@ -188,5 +196,67 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
             bounds[k] = [n.lo, n.hi];
         }
         Ok((Some(bounds), spent))
+    }
+    /// Complete adaptive cover. Regularity is proved only by nonzero full-cell
+    /// normal bounds; all unproved rectangles survive budget exhaustion.
+    pub fn inspect_regularity(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        self.validate(free, across, max_spans)?;
+        check(max_cells <= 100000, "Bound bridge cell work")?;
+        let mut out = crate::surface_weight_profile::TransitionRegularityReport {
+            regular: Vec::new(),
+            pending: Vec::new(),
+            cells: 0,
+            spans: 0,
+            complete_regular: false,
+            reason: "section-bridge-regularity-work-limit",
+        };
+        let mut queue = std::collections::VecDeque::from([[free, across]]);
+        while let Some(rect) = queue.pop_front() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let (bounds, spent) = self.normal_bounds(rect[0], rect[1], max_spans - out.spans)?;
+            out.spans += spent;
+            let Some(bounds) = bounds else {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            };
+            if bounds.iter().any(|r| r[0] > 0. || r[1] < 0.) {
+                out.regular.push(rect);
+                continue;
+            }
+            let range = self.section(false).range();
+            let axis = usize::from(
+                (rect[0][1] - rect[0][0]) / (range[1] - range[0]) < rect[1][1] - rect[1][0],
+            );
+            let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
+            if mid <= rect[axis][0] || mid >= rect[axis][1] {
+                out.pending.push(rect);
+                continue;
+            }
+            let mut left = rect;
+            left[axis][1] = mid;
+            let mut right = rect;
+            right[axis][0] = mid;
+            queue.push_back(left);
+            queue.push_back(right);
+        }
+        out.complete_regular = out.pending.is_empty();
+        out.reason = if out.complete_regular {
+            "section-bridge-regularity-qualified"
+        } else {
+            "section-bridge-regularity-resolution-limit"
+        };
+        Ok(out)
     }
 }
