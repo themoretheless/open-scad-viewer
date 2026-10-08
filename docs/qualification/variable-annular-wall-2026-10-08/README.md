@@ -1101,3 +1101,21 @@ Its first positive-direction / forward-radius case has a full entry face
 certificate (2721 cells / 70628 restrictions) and seven remaining exit
 face obligations after 4245 cells / 100000 restrictions. The remaining
 three prototype cases are not yet completed. No global wall safety follows.
+
+## Proven local margin classifications
+
+A pair exclusion now records the margin of its actually successful local
+inverse path. Coverage aggregates local_margin_exclusions for margins
+[3,1,.25], and audit JSON exports localMarginExclusions. Non-local and
+unexcluded paths have no winning margin. These counts classify accepted
+proofs; they do not measure area or assert a global wall minimum. The
+independent rational path regression confirms its original three-width
+proof classification. Seven pole / sixteen chord tests and example
+compilation passed. The ordering and admission predicates are unchanged.
+
+The deep audit still running predates this reporting change. Both forward
+radius entry faces now have complete original-chart certificates with
+2721 cells / 70628 restrictions and zero pending pairs, for spatial
+directions ±1. The positive-direction exit still has seven pending pairs
+at 100000 restrictions. Negative exit and reverse-radius cases are not
+yet completed; no all-prototype or global wall qualification is claimed.

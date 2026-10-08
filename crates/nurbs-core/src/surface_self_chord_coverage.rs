@@ -39,6 +39,8 @@ pub struct Report<'a> {
     pub coordinate_path_attempts: usize,
     pub coordinate_path_refusals: usize,
     pub local_coordinate_path_exclusions: usize,
+    /// Qualified local paths by proven margin: three, one, quarter width.
+    pub local_margin_exclusions: [usize; 3],
     pub local_coordinate_path_attempts: usize,
     pub local_coordinate_path_refusals: usize,
     pub polar_factor_refusals: usize,
@@ -258,6 +260,7 @@ fn qualify_impl<'a>(
         coordinate_path_attempts: 0,
         coordinate_path_refusals: 0,
         local_coordinate_path_exclusions: 0,
+        local_margin_exclusions: [0; 3],
         local_coordinate_path_attempts: 0,
         local_coordinate_path_refusals: 0,
         polar_factor_refusals: 0,
@@ -386,6 +389,11 @@ fn qualify_impl<'a>(
                     usize::from(r.coordinate_path_attempted && !r.coordinate_path_available);
                 out.coordinate_path_exclusions += usize::from(r.coordinate_path_excluded);
                 out.local_coordinate_path_exclusions += usize::from(r.local_path_excluded);
+                if let Some(margin) = r.local_path_margin {
+                    let index = [3., 1., 0.25].iter().position(|m| *m == margin)
+                        .expect("Only original proven local path margins are reported");
+                    out.local_margin_exclusions[index] += 1;
+                }
                 out.local_coordinate_path_attempts += usize::from(r.local_path_attempted);
                 out.local_coordinate_path_refusals +=
                     usize::from(r.local_path_attempted && !r.local_path_available);

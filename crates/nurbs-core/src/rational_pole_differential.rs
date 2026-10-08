@@ -975,6 +975,7 @@ mod tests {
                 && !report.coordinate_path_available
         );
         assert_eq!(report.spans, 10);
+        assert_eq!(report.local_path_margin, Some(3.));
         let cached = normals.pair_bounds(pair).unwrap(); // Two paid restrictions.
         let reused = crate::surface_self_chord::rational_pole_pair_report_cached(
             &s, pair, &c, &normals, 1e-4, 9, Some(&cached)).unwrap();

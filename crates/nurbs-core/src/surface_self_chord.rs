@@ -184,6 +184,7 @@ pub(crate) struct PairExclusion {
     pub coordinate_path_attempted: bool,
     pub coordinate_path_available: bool,
     pub local_path_excluded: bool,
+    pub local_path_margin: Option<f64>,
     pub local_path_attempted: bool,
     pub local_path_available: bool,
 }
@@ -317,6 +318,8 @@ pub(crate) fn rational_pole_pair_report_cached(
                     coordinate_path_attempted: attempted,
                     coordinate_path_available: available,
                     local_path_excluded: local_path,
+                    local_path_margin: match mode { 1 => Some(3.), 3 => Some(1.),
+                        4 => Some(0.25), _ => None },
                     local_path_attempted: local_attempted,
                     local_path_available: local_available,
                 });
@@ -330,6 +333,7 @@ pub(crate) fn rational_pole_pair_report_cached(
         coordinate_path_attempted: attempted,
         coordinate_path_available: available,
         local_path_excluded: false,
+        local_path_margin: None,
         local_path_attempted: local_attempted,
         local_path_available: local_available,
     })
