@@ -1,0 +1,112 @@
+{
+  "node": "v26.10.0",
+  "zlib": "1.2.12",
+  "brotli": "1.2.0",
+  "scope": "Production quality=11/window=24 Brotli+length header+Base85, excluding JS wrapper. Signature comparison covers export names/kinds, not full ABI types or geometry correctness.",
+  "artifacts": [
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "wasmBytes": 12131304,
+      "wasmSha256": "34eadf7186ce3561165c624f7ea41192e564827d9559591f7f998f94a8228ceb",
+      "brotliBytes": 3404765,
+      "brotliSha256": "8ce841b1f91fed433a7cb40fe07da066209873b3c327472621c321595a1a24d4",
+      "base85Characters": 4255974,
+      "base85Sha256": "6738586037c93a1e83c654867e0378fb4f521a3458e7e76688448a3c374ce0bf",
+      "imports": [],
+      "exports": [
+        {
+          "name": "abi_alloc",
+          "kind": "function"
+        },
+        {
+          "name": "abi_analyze_solid",
+          "kind": "function"
+        },
+        {
+          "name": "abi_array_field",
+          "kind": "function"
+        },
+        {
+          "name": "abi_array_free",
+          "kind": "function"
+        },
+        {
+          "name": "abi_bvh_build",
+          "kind": "function"
+        },
+        {
+          "name": "abi_export_alloc",
+          "kind": "function"
+        },
+        {
+          "name": "abi_export_append",
+          "kind": "function"
+        },
+        {
+          "name": "abi_export_prepare",
+          "kind": "function"
+        },
+        {
+          "name": "abi_free",
+          "kind": "function"
+        },
+        {
+          "name": "abi_import_mesh",
+          "kind": "function"
+        },
+        {
+          "name": "abi_mesh_field",
+          "kind": "function"
+        },
+        {
+          "name": "abi_mesh_free",
+          "kind": "function"
+        },
+        {
+          "name": "abi_picking_create",
+          "kind": "function"
+        },
+        {
+          "name": "abi_render_mesh",
+          "kind": "function"
+        },
+        {
+          "name": "abi_request",
+          "kind": "function"
+        },
+        {
+          "name": "abi_semantic_edges",
+          "kind": "function"
+        },
+        {
+          "name": "abi_solid_analysis_cancel",
+          "kind": "function"
+        },
+        {
+          "name": "abi_solid_analysis_start",
+          "kind": "function"
+        },
+        {
+          "name": "abi_solid_analysis_step",
+          "kind": "function"
+        },
+        {
+          "name": "abi_solid_placement",
+          "kind": "function"
+        },
+        {
+          "name": "abi_surface_groups",
+          "kind": "function"
+        },
+        {
+          "name": "memory",
+          "kind": "memory"
+        }
+      ],
+      "roundTripExact": true,
+      "sameExportNamesAndKinds": true,
+      "wasmBytesSaved": 0,
+      "base85CharactersSaved": 0
+    }
+  ]
+}

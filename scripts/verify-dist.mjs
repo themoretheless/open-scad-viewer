@@ -111,7 +111,7 @@ const limits = new Map([
 // Owned pole diagnostics: measured geometry 4,039,216; retain 608-byte margin.
 // Original trim classification cache: measured 4,040,296 packed bytes; retain 608-byte margin.
 // Mixed wall products: measured 4,044,604 bytes; retain 608-byte margin.
-const geometryChunkBudget = 4_045_212 // Retained-domain package: measured geometry 4,035,938, total assets 8,388,628 bytes; previous margins retained. Chart-close gap package: measured geometry 4,031,646 and total assets 8,379,070 bytes; previous margins retained. Regular self-wall refinement: measured 4,029,544 bytes; retain 608-byte margin.  Pole self-wall extension: measured 4,028,222 bytes; retain 608-byte margin. Previously: Factored source normals and supporting-line coincidence correction: measured 4,007,202 bytes; retain 608-byte margin.
+const geometryChunkBudget = 4_047_238 // Endpoint chord package: measured geometry 4,046,630, total assets 8,411,216; retain 608-byte geometry and 761-byte total margins. Retained-domain package: measured geometry 4,035,938, total assets 8,388,628 bytes; previous margins retained. Chart-close gap package: measured geometry 4,031,646 and total assets 8,379,070 bytes; previous margins retained. Regular self-wall refinement: measured 4,029,544 bytes; retain 608-byte margin.  Pole self-wall extension: measured 4,028,222 bytes; retain 608-byte margin. Previously: Factored source normals and supporting-line coincidence correction: measured 4,007,202 bytes; retain 608-byte margin.
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
@@ -381,7 +381,7 @@ for (const [name, artifact, compression] of [
 // Owned pole diagnostics: measured total 8,397,323; retain 761-byte margin.
 // Original trim classification cache: measured 8,398,403 asset bytes; retain 761-byte margin.
 // Mixed wall products and transport: measured 8,409,076 assets; retain 761-byte margin.
-const totalBudget = 8_409_837 // Retained-domain package: measured geometry 4,035,938, total assets 8,388,628 bytes; previous margins retained. Chart-close gap package: measured geometry 4,031,646 and total assets 8,379,070 bytes; previous margins retained. Regular self-wall refinement: measured 8,376,968 asset bytes; retain 761-byte margin.  Pole self-wall extension and transport: measured 8,374,409 asset bytes; retain 761-byte margin. Previously: Factored normals, supporting-line correction and dimension overlay: measured 8,352,169 asset bytes; retain 761-byte margin.
+const totalBudget = 8_411_977 // Endpoint chord package: measured geometry 4,046,630, total assets 8,411,216; retain 608-byte geometry and 761-byte total margins. Retained-domain package: measured geometry 4,035,938, total assets 8,388,628 bytes; previous margins retained. Chart-close gap package: measured geometry 4,031,646 and total assets 8,379,070 bytes; previous margins retained. Regular self-wall refinement: measured 8,376,968 asset bytes; retain 761-byte margin.  Pole self-wall extension and transport: measured 8,374,409 asset bytes; retain 761-byte margin. Previously: Factored normals, supporting-line correction and dimension overlay: measured 8,352,169 asset bytes; retain 761-byte margin.
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 
