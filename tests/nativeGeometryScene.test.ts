@@ -1,12 +1,12 @@
 import {describe,it,expect} from 'vitest'
-import {buildTextNurbsScene} from '../src/services/modelGraphTextScene'
+import {buildTextNurbsScene} from '../src/services/rushFrontendScene'
 import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerProtocol'
 import {geometrySceneFromMeshes,meshesFromGeometryScene} from '../src/core/scene'
 import {assertNativeReferenceCurrent,nativeFaceReference,isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {remapNativeFaceSelection} from '../src/services/nativeFaceSelection'
 import type {PickHit} from '../src/services/rendererContracts'
 const surface={id:'patch',op:'surface',degree_u:1,degree_v:1,knots_u:[0,0,1,1],knots_v:[0,0,1,1],control_points:[[[0,0,0],[0,10,0]],[[10,0,0],[10,10,1.12345678912345]]],weights:[[1,1],[1,1]]}
-const document={language:'modelgraph/nurbs-1',units:'mm',parameters:[],nodes:[surface],root:'patch'}
+const document={language:'rush/nurbs-1',units:'mm',parameters:[],nodes:[surface],root:'patch'}
 const hit:PickHit={meshIndex:0,triangleIndex:0,faceId:0,point:[0,0,0],normal:[0,0,1],barycentric:[1,0,0],source:null,backside:false}
 describe('native authority survives scene publication',()=>{
  it('shows a native surface with independent display detail and preserves f64 source',async ()=>{
@@ -42,7 +42,7 @@ describe('native authority survives scene publication',()=>{
   expect(isNativeGeometryArtifact({...result.meshes[0].nativeGeometry,extra:true})).toBe(false)
  })
  it('shows a native B-rep while keeping its six source face IDs',async ()=>{
-  const result=await buildTextNurbsScene({language:'modelgraph/nurbs-1',units:'mm',parameters:[],nodes:[{id:'box',op:'brep_box',min:[0,0,0],max:[2,3,4]}],root:'box'},'preview')
+  const result=await buildTextNurbsScene({language:'rush/nurbs-1',units:'mm',parameters:[],nodes:[{id:'box',op:'brep_box',min:[0,0,0],max:[2,3,4]}],root:'box'},'preview')
   expect(result.meshes[0].nativeGeometry!.kind).toBe('brep')
   expect(new Set(result.meshes[0].faceIds).size).toBe(6)
   expect(result.volume).toBeCloseTo(24)

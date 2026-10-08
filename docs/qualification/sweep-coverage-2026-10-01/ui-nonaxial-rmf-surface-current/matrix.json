@@ -1,0 +1,185 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T07:51:20.867Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "72caaf1a6c2c496da49d2f2c5ed5ac14616a155c52f96cc01a1144c813ed38c3",
+  "artifactProvenance": {
+    "sha256": "72caaf1a6c2c496da49d2f2c5ed5ac14616a155c52f96cc01a1144c813ed38c3",
+    "byteLength": 11025712,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-CtDJKT5u.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "b0ab9fa562a307e69b5082737483439e6d9657bca0f78811397b34df0672c7cc",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r",
+      "sourceSha256": "2e380d84c195fd801c7e95f9921c76f71e66da956e6e1d237123ed78076e24a9",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "closed-refined-two-mm-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "closed-strict-bound-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": []
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r",
+      "sourceSha256": "2e380d84c195fd801c7e95f9921c76f71e66da956e6e1d237123ed78076e24a9",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "closed-refined-two-mm-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "closed-strict-bound-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": []
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "83e553b6edde7180a843412ac69a0e92bb6a2e269605f1c1a9f14d25ad1f4add",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "407bfea7de7b5a63172856327336126eee44c4c8b620300bc6860d1e89f9849c",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

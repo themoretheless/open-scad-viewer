@@ -8,6 +8,7 @@ import {
 } from '../src/services/buildCoordinator'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
+  type GeometrySweepPreview,
   type GeometryBuildFailure,
   type GeometryBuildRequest,
   type GeometryBuildSuccess,
@@ -182,6 +183,7 @@ function emptyMeshWithSourceEnd(end: number): MeshData {
 function harness(options: { grace?: number; timers?: FakeTimers; silence?: number } = {}) {
   const workers: FakeWorker[] = []
   const published: PublishedGeometryBuild[] = []
+  const previews:GeometrySweepPreview[]=[]
   let restarts = 0
   const coordinator = new BuildCoordinator({
     workerFactory: () => {
@@ -190,13 +192,14 @@ function harness(options: { grace?: number; timers?: FakeTimers; silence?: numbe
       return worker
     },
     onPublish: outcome => published.push(outcome),
+    onSweepPreview:preview=>previews.push(preview),
     supersedeGraceMs: options.grace,
     workerSilenceTimeoutMs: options.silence,
     onWorkerRestart: () => { restarts++ },
     timers: options.timers,
     now: () => options.timers?.now ?? 100,
   })
-  return { coordinator, workers, published, get restarts() { return restarts } }
+  return { coordinator, workers, published, previews, get restarts() { return restarts } }
 }
 
 describe('BuildCoordinator', () => {
@@ -842,4 +845,25 @@ describe('coordinator Worker silence recovery', () => {
     recovery.emitMessage(success(buildRequests(recovery)[0]))
     expect(coordinator.state.status).toBe('ready')
   })
+})
+
+
+it('routes current sweep previews separately and drops stale or superseded previews',()=>{
+ const {coordinator,workers,published,previews}=harness({grace:300})
+ coordinator.requestBuild({documentRevision:1,source:'cube(1);',quality:'full'})
+ const first=workers[0]!.messages[0] as GeometryBuildRequest
+ const preview=(request:GeometryBuildRequest)=>({...accepted(request),status:'sweep-preview',phase:'compiling',
+  nodeId:'sweep',sections:5,accepted:false,sampledControlDeviation:.1,budget:.01,meshes:[]})
+ workers[0]!.emitMessage(preview(first))
+ expect(first.acknowledgeSweepPreviews).toBe(true)
+ expect(workers[0]!.messages.at(-1)).toMatchObject({type:'sweep-preview-ack',jobId:first.jobId,sourceSha256:first.sourceSha256,nodeId:'sweep',sections:5})
+ expect(previews).toHaveLength(1)
+ expect(published).toHaveLength(0)
+ expect(coordinator.state.publishedQuality).toBeNull()
+ coordinator.requestBuild({documentRevision:2,source:'cube(2);',quality:'full'})
+ workers[0]!.emitMessage(preview(first))
+ expect(previews).toHaveLength(1)
+ coordinator.cancel('user')
+ workers[0]!.emitMessage(preview(first))
+ expect(previews).toHaveLength(1)
 })

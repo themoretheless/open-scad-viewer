@@ -25,7 +25,7 @@
       "exact control-net materialization for admitted non-periodic piecewise rational maps by homogeneous Bernstein clear-denominator composition with degree/resource accounting",
       "unstructured point-cloud curve and surface fitting with robust pivoted rank handling",
       "global Hausdorff enclosure under explicit chordal/PCA delta-net and Lipschitz remainder assumptions",
-      "Rust WASM TypeScript and ModelGraph product reports"
+      "Rust WASM TypeScript and RushGraph product reports"
     ],
     "excluded": [
       "general curve-curve curve-surface and surface-surface intersection",
@@ -47,7 +47,7 @@
       "crates/nurbs-core/src/lib.rs",
       "crates/nurbs-core/src/tests.rs",
       "src/services/nurbsFoundation.ts",
-      "src/services/modelGraphNurbsKernel.ts",
+      "src/services/rushGraphNurbsKernel.ts",
       "tests/nurbsFoundation.test.ts",
       "scripts/nurbs-foundation-4-oracle.py"
     ],

@@ -51,3 +51,14 @@ src/generated/vr-core/
 !/docs/qualification/sweep-publication-native-owned-2026-10-04/ui*/matrix.json
 !/docs/qualification/sweep-publication-native-owned-2026-10-04/logs/*.log
 src/generated/photogrammetry/.wasm-pack-stamp*
+# Generated qualification evidence stays local; retain summaries and source fixtures.
+docs/qualification/**/*.json
+docs/qualification/**/*.step
+docs/qualification/**/*.png
+docs/qualification/**/*.jpg
+docs/qualification/**/*.cpuprofile
+docs/qualification/**/*.txt
+!docs/qualification/**/matrix.json
+!docs/qualification/**/opencascade-sweep.json
+!docs/qualification/**/occt-report.json
+!docs/qualification/local-artifact-index-2026-10-07.jsonl

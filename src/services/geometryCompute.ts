@@ -1,4 +1,5 @@
 import type { MeshData } from '../core/mesh'
+import {callGeometryRust} from './geometry/kernel'
 
 export type SurfaceInput = Pick<MeshData, 'vertices' | 'indices' | 'transform'>
 export interface GeometryComputeResult {
@@ -24,33 +25,26 @@ export async function cpuSurfaceArea(input: SurfaceInput, signal: AbortSignal): 
     || indices.length > 3_000_000 || v.byteLength > 64 * 1024 * 1024
     || m.length !== 16 || !Array.from(m).every(Number.isFinite)
     || m[12] !== 0 || m[13] !== 0 || m[14] !== 0 || m[15] !== 1) throw new Error('invalid-compute-input')
-  let sum = 0, correction = 0
-  for (let i = 0; i < indices.length; i += 3) {
-    if (i % 6144 === 0) {
-      checkAbort(signal)
-      if (i) await new Promise<void>(resolve => setTimeout(resolve, 0))
-      checkAbort(signal)
+  let state: [number, number] = [0, 0]
+  const matrix = Array.from({length: 4}, (_, i) => Array.from(m.slice(i * 4, i * 4 + 4)))
+  for (let start = 0; start < indices.length; start += 6144) {
+    checkAbort(signal)
+    if (start) await new Promise<void>(resolve => setTimeout(resolve, 0))
+    checkAbort(signal)
+    const end = Math.min(indices.length, start + 6144)
+    // Gather only this batch: transport stays bounded and no full mesh is copied per call.
+    const points = new Float32Array((end - start) * 3)
+    for (let i = start; i < end; i++) {
+      const offset = indices[i]! * 6
+      if (offset >= v.length) throw new Error('invalid-compute-input')
+      points.set(v.subarray(offset, offset + 3), (i - start) * 3)
     }
-    const a = indices[i] * 6, b = indices[i + 1] * 6, c = indices[i + 2] * 6
-    if (a >= v.length || b >= v.length || c >= v.length) throw new Error('invalid-compute-input')
-    const ux = v[b] - v[a], uy = v[b + 1] - v[a + 1], uz = v[b + 2] - v[a + 2]
-    const vx = v[c] - v[a], vy = v[c + 1] - v[a + 1], vz = v[c + 2] - v[a + 2]
-    const x = m[0] * ux + m[1] * uy + m[2] * uz
-    const y = m[4] * ux + m[5] * uy + m[6] * uz
-    const z = m[8] * ux + m[9] * uy + m[10] * uz
-    const X = m[0] * vx + m[1] * vy + m[2] * vz
-    const Y = m[4] * vx + m[5] * vy + m[6] * vz
-    const Z = m[8] * vx + m[9] * vy + m[10] * vz
-    const area = Math.hypot(y * Z - z * Y, z * X - x * Z, x * Y - y * X) / 2
-    if (!Number.isFinite(area)) throw new Error('invalid-compute-input')
-    const corrected = area - correction
-    const next = sum + corrected
-    correction = (next - sum) - corrected
-    sum = next
+    try {
+      state = callGeometryRust<[number, number]>('mesh_world_area', {points, matrix, state})
+    } catch { throw new Error('invalid-compute-input') }
   }
   checkAbort(signal)
-  if (!Number.isFinite(sum)) throw new Error('invalid-compute-input')
-  return sum
+  return state[0]
 }
 
 export const SURFACE_AREA_WGSL = /* wgsl */`

@@ -64,7 +64,7 @@ not a release qualification or a solution to the remaining bundle-size debt.
 
 Two sequential Chrome 156 runs used the existing `exact-solid-browser.mjs`
 runner against the normal production build. Source and geometry hashes for
-all three fixtures match `modelgraph-compiler-browser-repeat/report.json`.
+all three fixtures match `rush-compiler-browser-repeat/report.json`.
 Source build, group replacement, cancellation preserving scene/editor,
 all three mechanical generators and invalid-input recovery passed; neither
 run recorded a page error.

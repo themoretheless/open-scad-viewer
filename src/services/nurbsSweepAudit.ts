@@ -1,7 +1,7 @@
 import {callNurbsRust} from './geometry/nurbs'
 import type {NurbsSurface} from './nurbsSurface'
 import type {NurbsCurve} from './nurbsCurve'
-// Native seam-set budget; every individual native predicate remains
+// Shared orchestration budget; every individual native predicate remains
 // bounded to one million operations.
 export const MAX_SWEEP_SEAM_WORK=2000000
 
@@ -72,14 +72,14 @@ export interface SweepProjectiveSeamAudit {
  * Callers must include closure and all intended joins; no adjacency is inferred. */
 export function inspectSweepProjectiveSeams(patches:NurbsSurface[],seams:SweepSeamDeclaration[],maxWork:number,checkAbort?:()=>void):SweepProjectiveSeamAudit {
   checkAbort?.()
-  const report=callNurbsRust<SweepProjectiveSeamAudit>('sweep_projective_seam_set_audit',{patches,seams,maxWork})
+  const report=callNurbsRust<SweepProjectiveSeamAudit>('sweep_projective_seams_audit',{patches,seams,maxWork})
   checkAbort?.()
   return report
 }
 /** Whole declared seam set with one shared exact-work budget. An empty set
  * carries no positive smoothness claim. Unsupported bases remain unresolved. */
 export function inspectSweepExactSeams(patches:NurbsSurface[],seams:SweepSeamDeclaration[],maxWork:number):SweepExactSeamAudit {
-  return callNurbsRust('sweep_exact_seam_set_audit',{patches,seams,maxWork})
+  return callNurbsRust('sweep_exact_seams_audit',{patches,seams,maxWork})
 }
 export interface SweepSeamAudit {
   allWithinJetBudget: boolean

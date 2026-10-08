@@ -1106,8 +1106,8 @@ dependencies = [
 name = "languages-bridge"
 version = "0.1.0"
 dependencies = [
- "modelgraph-runtime",
- "modelgraph-text",
+ "rush-runtime",
+ "rush-frontend",
  "openscad-core",
  "value-codec",
 ]
@@ -1266,7 +1266,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "modelgraph-runtime"
+name = "rush-runtime"
 version = "0.1.0"
 dependencies = [
  "mechanical-core",
@@ -1274,7 +1274,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "modelgraph-text"
+name = "rush-frontend"
 version = "0.1.0"
 dependencies = [
  "osv-math",

@@ -10,6 +10,7 @@ export interface SweepEmbeddingBudgets {
  maxTrimDomainCells:number
  maxSpans:number
  maxLinearCells:number
+ /** Individually classified pairs; grouped hull proofs consume maxCells. */
  maxPairs:number
  maxCells:number
  maxDomainCells:number
@@ -27,10 +28,24 @@ export interface SweepEmbeddingAudit {
  linearCells:number
  spans:number
  totalPairs:number
+ individualPairs:number
+ groupedPairs:number
+ groupCells:number
+ contactCells:number
+ contactDomainCells:number
+ disjointGroups:SweepDisjointGroup[]
  nextPair:[number,number]|null
  unresolvedFaces:number[]
  pairs:{faces:[number,number];reason:string;allowedBoundary:boolean}[]
  caps:{face:number;capCertified:boolean;allowedBoundaries:[number,number][];unresolvedWalls:number[];reason:string|null}[]
+}
+export interface SweepDisjointGroup {
+ face:number
+ range:[number,number]
+ axis:number
+ firstBeforeRange:boolean
+ firstBounds:[[number,number],[number,number],[number,number]]
+ rangeBounds:[[number,number],[number,number],[number,number]]
 }
 export const DEFAULT_SWEEP_EMBEDDING_BUDGETS:SweepEmbeddingBudgets={
  toleranceUv:1e-8,maxExactWork:1000000,maxTrimPairs:1000,maxTrimCells:10000,
@@ -57,6 +72,12 @@ export interface SweepVolumeAudit {
  allFacesInjective:boolean
  allPairsClassified:boolean
  nextPair:[number,number]|null
+ individualPairs:number
+ groupedPairs:number
+ groupCells:number
+ contactCells:number
+ contactDomainCells:number
+ disjointGroups:SweepDisjointGroup[]
  nesting:null|{rolesConsistent:boolean|null;parents:(number|null)[]|null;totalPairs:number;visitedPairs:number;cells:number;domainCells:number;pairs:{shells:[number,number];reason:string;separationLower:number;boundarySeparationCertified:boolean}[]}
  orientationCells:number
  orientationDomainCells:number
@@ -64,8 +85,10 @@ export interface SweepVolumeAudit {
 }
 export const DEFAULT_SWEEP_VOLUME_BUDGETS:SweepVolumeBudgets={
  ...DEFAULT_SWEEP_EMBEDDING_BUDGETS,
- maxLinearCells:20000,maxTrimPairs:10000,maxTrimCells:100000,maxTrimDomainCells:1000000,
- maxPairs:10000,maxCells:100000,maxDomainCells:1000000,cellsPerPair:1000,domainCellsPerPair:10000,
+ // Support the native 1024-face body ceiling with finite, independently
+ // checked chart and pair budgets. These limits never substitute for proof.
+ maxSpans:1024,maxLinearCells:100000,maxTrimPairs:10000,maxTrimCells:100000,maxTrimDomainCells:1000000,
+ maxPairs:20000,maxCells:200000,maxDomainCells:1000000,cellsPerPair:1000,domainCellsPerPair:10000,
  nestingPairs:1000,nestingCells:100000,nestingDomainCells:1000000,
  orientationCells:100000,orientationDomainCells:1000000,orientationSpans:100,
 }

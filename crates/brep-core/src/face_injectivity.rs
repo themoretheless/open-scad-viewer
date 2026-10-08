@@ -33,14 +33,14 @@ pub struct Report {
     pub faces: Vec<Face>,
 }
 pub fn inspect(model: &Model, max_spans: usize) -> Result<Report> {
-    inspect_impl(model, max_spans, 0, true)
+    inspect_impl(model, max_spans, 0, true, &[])
 }
 /// Independent shared budgets for contraction spans and oblique refinement.
 /// A successful alternative proves the same whole-chart injectivity property.
 pub fn inspect_with_linear(model: &Model, max_spans: usize, max_linear_cells: usize) -> Result<Report> {
-    inspect_impl(model,max_spans,max_linear_cells,false)
+    inspect_impl(model,max_spans,max_linear_cells,false,&[])
 }
-fn inspect_impl(model:&Model,max_spans:usize,max_linear_cells:usize,legacy:bool)->Result<Report> {
+fn inspect_impl(model:&Model,max_spans:usize,max_linear_cells:usize,legacy:bool,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     if max_spans == 0 || max_spans > 100_000 || max_linear_cells > 100_000 {
         return Err(Error::new(
@@ -62,8 +62,8 @@ fn inspect_impl(model:&Model,max_spans:usize,max_linear_cells:usize,legacy:bool)
         };
         let linear = if !result.as_ref().is_some_and(|r| r.proven)
             && report.linear_cells < max_linear_cells {
-            Some(nurbs_core::surface_linear_monotonicity::inspect_candidate(
-                &f.surface, max_linear_cells-report.linear_cells)?)
+            Some(nurbs_core::surface_linear_monotonicity::inspect_candidate_with_hint(
+                &f.surface, proposals.get(face).copied().flatten(), max_linear_cells-report.linear_cells)?)
         } else { None };
         report.linear_cells += linear.as_ref().map_or(0, |r| r.cells);
         report.spans += result.as_ref().map_or(0, |r| r.spans);
@@ -80,6 +80,11 @@ fn inspect_impl(model:&Model,max_spans:usize,max_linear_cells:usize,legacy:bool)
     }
     Ok(report)
 }
+
+pub fn inspect_with_projections(model:&Model,max_spans:usize,max_linear_cells:usize,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
+    inspect_impl(model,max_spans,max_linear_cells,false,proposals)
+}
+
 fn declared_pole(model:&Model,face:usize)->Option<(usize,usize,usize)> {
     let f=&model.faces[face];let s=&f.surface;
     let u=[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]];
@@ -101,6 +106,23 @@ fn declared_pole(model:&Model,face:usize)->Option<(usize,usize,usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[cfg(feature = "codec")]
+    #[ignore = "requires an explicitly supplied retained-model diagnostic fixture"]
+    fn diagnose_retained_model_shared_injectivity_work() {
+        let path = std::env::var("OSV_INJECTIVITY_MODEL").expect("OSV_INJECTIVITY_MODEL");
+        let model: Model = value_codec::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let report = inspect_with_linear(&model, 100000, 100000).unwrap();
+        for face in &report.faces {
+            if let Some(linear) = &face.linear {
+                if linear.cells > 100 || !linear.certified {
+                    eprintln!("face={} contraction={:?} linear={linear:?}", face.face, face.result);
+                }
+            }
+        }
+        eprintln!("all={} spans={} linear_cells={}", report.all_faces_injective, report.spans, report.linear_cells);
+        assert!(report.all_faces_injective);
+    }
     #[test]
     fn retained_hollow_walls_use_shared_oblique_budget_without_overwriting_contraction() {
         let section=|z|vec![
@@ -139,9 +161,9 @@ mod tests {
         sections[last]=correction.curves.unwrap();
         let sections=sections.into_iter().map(|row|row.into_iter().map(|c|vec![c]).collect()).collect::<Vec<_>>();
         let model=crate::rational_section_loft(&sections).unwrap();
-        let limited=inspect_with_linear(&model,1000,10000).unwrap();
+        let limited=inspect_with_linear(&model,1000,1).unwrap();
         assert!(!limited.all_faces_injective);
-        assert!(limited.linear_cells<=10000);
+        assert!(limited.linear_cells<=1);
         let report=inspect_with_linear(&model,1000,20000).unwrap();
         println!("spatial injectivity shared cells: {}",report.linear_cells);
         assert!(report.all_faces_injective,"{report:?}");

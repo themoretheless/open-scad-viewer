@@ -100,16 +100,16 @@
       }
     },
     {
-      "path": "docs/design/modelgraph-nurbs-own-kernel.md",
+      "path": "docs/design/rush-nurbs-own-kernel.md",
       "sha256": "2200e7ace5a697bbd8d78004016b624acdc39f8341b399c0fa9790cee246f2fa",
       "bytes": 24262,
       "future_tool_arguments": {
-        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/modelgraph-nurbs-own-kernel.md",
-        "uri": "project://open-scad-viewer/repository/docs/design/modelgraph-nurbs-own-kernel.md",
-        "title": "ModelGraph NURBS — синтаксис, операции и допустимые параметры",
+        "path": "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/design/rush-nurbs-own-kernel.md",
+        "uri": "project://open-scad-viewer/repository/docs/design/rush-nurbs-own-kernel.md",
+        "title": "RushGraph NURBS — синтаксис, операции и допустимые параметры",
         "wing": "open-scad-viewer",
         "room": "brep-implementation",
-        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/modelgraph-nurbs-own-kernel.md\",\"source_sha256\":\"2200e7ace5a697bbd8d78004016b624acdc39f8341b399c0fa9790cee246f2fa\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
+        "metadata_json": "{\"project\":\"open-scad-viewer\",\"kind\":\"observed-code-checkpoint\",\"verified_at\":\"2026-09-13\",\"source_path\":\"docs/design/rush-nurbs-own-kernel.md\",\"source_sha256\":\"2200e7ace5a697bbd8d78004016b624acdc39f8341b399c0fa9790cee246f2fa\",\"scope\":\"bounded B-rep implementation; see explicit partial/open requirements\",\"full_completion_proved\":false,\"production_brep_provider_available\":false}"
       }
     },
     {

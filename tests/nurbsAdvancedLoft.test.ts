@@ -3,8 +3,8 @@ import {expect,it} from 'vitest'
 import {autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,naturalLoftNurbsCurves,lineNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
 import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
 import {createNaturalBrepSectionLoft,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 const section=(z:number)=>lineNurbsCurve([0,0,z],[1,0,z])
 it('automatically discovers sorted reversed guides and nonuniform stations through WASM',()=>{
  const guides=[lineNurbsCurve([.75,0,2],[.75,0,0]),lineNurbsCurve([.25,0,0],[.25,0,2])]
@@ -31,7 +31,7 @@ it('builds a capped cubic rational solid with an interpolated middle section',()
  expect(mesh.report.closed).toBe(true);expect(mesh.report.signedVolumeMm3).toBeGreaterThan(0)
 })
 it.each(['auto-guided-loft.r','natural-loft-solid.r','g2-loft-surface.r'])('builds the authored %s through Rush',file=>{
- const compiled=(()=>{try{return compileModelGraphText(readFileSync(`examples/rush/${file}`,'utf8'))}catch(error){if(error instanceof Error)error.message+=` (${(error as Error&{path?:string}).path})`;throw error}})()
+ const compiled=(()=>{try{return compileRushFrontend(readFileSync(`examples/rush/${file}`,'utf8'))}catch(error){if(error instanceof Error)error.message+=` (${(error as Error&{path?:string}).path})`;throw error}})()
  const built=buildOwnNurbs(compiled.document,{action:'build'})
  expect(built.report).toBeDefined()
 })
@@ -50,5 +50,5 @@ it('keeps parameter correspondence strict even with a large spatial budget',()=>
  const guide=lineNurbsCurve([.25,0,0],[.75,0,2])
  expect(()=>autoGuidedLoftNurbsCurves([section(0),section(2)],[0,1],[guide],10)).toThrow(/inconsistent U stations/)
  const source=readFileSync('examples/rush/auto-guided-loft.r','utf8')
- expect(()=>compileModelGraphText(source.replace('budget: 0.000001mm','budget: 0.000001mm,parameter_tolerance: 0.00000001mm'))).toThrow()
+ expect(()=>compileRushFrontend(source.replace('budget: 0.000001mm','budget: 0.000001mm,parameter_tolerance: 0.00000001mm'))).toThrow()
 })

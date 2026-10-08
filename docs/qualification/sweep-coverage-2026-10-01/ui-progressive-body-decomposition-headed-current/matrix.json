@@ -1,0 +1,356 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T23:34:27.427Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "81e22eb732a9dad8bb76d6b729c33c4dd9db350203fa806e61143840f22b7ec0",
+  "artifactProvenance": {
+    "sha256": "81e22eb732a9dad8bb76d6b729c33c4dd9db350203fa806e61143840f22b7ec0",
+    "byteLength": 10970819,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-Bj56YPqH.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "e7c50fa78e9ed6b7d9b65a522e437607cdb33b83c7b5ebe1705fe084dc478e5b",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-hollow-boundary.r",
+      "sourceSha256": "3b1dafa530d07e8f4cac0c58620001f578e406378f0c3366e68e949b7de4d092",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "64cd55597bb200c28166f109491a4627ca361c1ff13cd35efcbd6e791e8c2bf0",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-unsegmented-hollow-boundary.r",
+      "sourceSha256": "6e95c9c49001252ac9d8485de470555e5cbf57c37cc52653505409ac649024e7",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 20,
+        "shells": 1,
+        "geometrySha256": "7ddc2f0ba35455cdc0f047de3f8e9fcd9afa066b8f836654f47c918049848607",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-hollow-boundary.r",
+      "sourceSha256": "3b1dafa530d07e8f4cac0c58620001f578e406378f0c3366e68e949b7de4d092",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "64cd55597bb200c28166f109491a4627ca361c1ff13cd35efcbd6e791e8c2bf0",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-unsegmented-hollow-boundary.r",
+      "sourceSha256": "6e95c9c49001252ac9d8485de470555e5cbf57c37cc52653505409ac649024e7",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 20,
+        "shells": 1,
+        "geometrySha256": "7ddc2f0ba35455cdc0f047de3f8e9fcd9afa066b8f836654f47c918049848607",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "942dfbfdada583b9c675af5f8faeee9885a6655c369c41b79a1a0bed54bee836",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "e6e0c6a36a55155e62c03353d2f26131c3c3e0995572d3979c14f0250276b0bb"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

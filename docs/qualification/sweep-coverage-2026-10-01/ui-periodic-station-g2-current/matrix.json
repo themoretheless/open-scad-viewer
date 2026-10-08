@@ -1,0 +1,210 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T23:38:00.998Z",
+  "scope": "Finite retained-miter UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "6fd74d28ee8c1dbabca7c4a43f0a065465b283f5baa584aba87701f999a417bb",
+  "artifactProvenance": {
+    "sha256": "6fd74d28ee8c1dbabca7c4a43f0a065465b283f5baa584aba87701f999a417bb",
+    "byteLength": 11298514,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-Ceiw8Lsq.js"
+    ]
+  },
+  "appSourceSha256": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+  "distIndexSha256": "b88eb6971c72eeb0de33a6c422c82da142ecef32af6e16008ce14f3c46269165",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-miter-reconstructed-periodic-profile.r",
+      "sourceSha256": "4024d86f0bfcd58e15894ecfdb2eebb26967957c9af98cf48e5480029134ef57",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (8) · Стыки вдоль пути: G2  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.900000 mm  / 2.00000 mm  · в допуске"
+      ],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8eb9698fdbbe85538021157c9f38269c15f2157bdf87393d83b2521cca8eee93",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter initial steps exceed face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-miter-reconstructed-periodic-profile.r",
+      "sourceSha256": "4024d86f0bfcd58e15894ecfdb2eebb26967957c9af98cf48e5480029134ef57",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (8) · Стыки вдоль пути: G2  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.900000 mm  / 2.00000 mm  · в допуске"
+      ],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "8eb9698fdbbe85538021157c9f38269c15f2157bdf87393d83b2521cca8eee93",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter initial steps exceed face budget"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "sourceHashes": {
+    "src/App.vue": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "67903c36e69ee42f737e7c17a9bebaf360751845139c868f2d2bd79fd4dbf94f",
+    "src/services/nurbsMiterOwnedBoundary.ts": "c323be51de8360daf985ddf0a041d0337cde31d5113b3f29f86cd429c5f0c477",
+    "crates/brep-core/src/sweep_miter_owned.rs": "273eef1034ac5d252eb48bdba1b0dbaca6b7577a66581242621bef279f1a4818",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "02277939a5a704b5cb40ad94a8b6d529bd9c548b9893685f3341e1cf425a3482",
+    "src/services/nurbsSectionProjection.ts": "f35b5f07bb5e34a89dec8853b7e1881945e8efdfb27f1afdc1044557831662cd",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "18924934f9ff21dbdd64e16fa7c21a19ff43a56d4828577c96ecabc8836897f2",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "388007a5ed8ba7c8a662d9f910f9a72177cb3c768ef048d6f8c89f95eb3ff138",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

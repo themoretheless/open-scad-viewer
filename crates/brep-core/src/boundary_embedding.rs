@@ -22,20 +22,27 @@ pub struct Report {
 /// Every component retains its unresolved entries. Budgets are explicit per
 /// stage; callers must not interpret one successful stage as the whole result.
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
-    inspect_with_linear(model, tolerance_uv, limits, 0)
+    inspect_impl(model,tolerance_uv,limits,0,None,&[],false,true)
 }
 /// Optional independent shared whole-chart oblique injectivity cell budget.
 pub fn inspect_with_linear(model: &Model, tolerance_uv: f64, limits: Limits,
     max_linear_cells: usize) -> Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,max_linear_cells,None)
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,None,&[],false,false)
 }
 /// Explicit cap selection; per-cap budgets are independent of joint audit budgets.
 pub fn inspect_sweep(model: &Model, tolerance_uv: f64, limits: Limits,
     max_linear_cells: usize, caps: &[usize], cap_limits: crate::sweep_cap_contacts::Budgets) -> Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)))
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,
+        if caps.is_empty() {None} else {Some((caps,cap_limits))},&[],true,false)
+}
+pub fn inspect_sweep_with_projections(model: &Model, tolerance_uv: f64, limits: Limits,
+    max_linear_cells: usize, caps: &[usize], cap_limits: crate::sweep_cap_contacts::Budgets,
+    proposals: &[Option<[[i8;3];2]>]) -> Result<Report> {
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,
+        if caps.is_empty() {None} else {Some((caps,cap_limits))},proposals,true,false)
 }
 fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits,
-    max_linear_cells: usize, caps: Option<(&[usize],crate::sweep_cap_contacts::Budgets)>) -> Result<Report> {
+    max_linear_cells: usize, caps: Option<(&[usize],crate::sweep_cap_contacts::Budgets)>, proposals: &[Option<[[i8;3];2]>], sweep_hulls: bool, compatibility: bool) -> Result<Report> {
     // Includes connected shells, vertex fans, opposite edge uses and ownership.
     model.validate()?;
     if model.shells.is_empty() || model.shells.iter().any(|s| !s.closed || s.faces.is_empty()) {
@@ -44,13 +51,16 @@ fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits,
     let agreement = boundary_agreement::verify_exact(model, limits.exact_work)?;
     let trim = face_domain::audit_trim_regions(model, tolerance_uv,
         limits.trim_pairs, limits.trim_cells, limits.trim_domain_cells)?;
-    let faces=if max_linear_cells==0 {crate::face_injectivity::inspect(model,limits.spans)?}
-        else {crate::face_injectivity::inspect_with_linear(model,limits.spans,max_linear_cells)?};
+    let faces = if compatibility {
+        crate::face_injectivity::inspect(model, limits.spans)?
+    } else {
+        crate::face_injectivity::inspect_with_projections(model, limits.spans, max_linear_cells, proposals)?
+    };
     let winding = trim.faces.iter().all(|r| r.as_ref().is_some_and(|r| r.winding.first() == Some(&Some(1))));
     let mut hull_contacts = Vec::new();
     let exact_domain = agreement.all_equal && agreement.all_joins_exact && trim.all_valid
         && winding && faces.all_faces_injective;
-    if exact_domain {
+    if exact_domain && !sweep_hulls {
         // Bound certificate enumeration by the same lexicographic pair prefix.
         let mut visited=0;
         'pairs: for a in 0..model.faces.len() { for b in a+1..model.faces.len() {
@@ -77,7 +87,18 @@ fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits,
             cap_contacts.push((cap,report));
         }
     }
-    let pairs = face_contacts::inspect_with_certificates(model, tolerance_uv, limits.contacts, &hull_contacts,&allowed_caps)?;
+    let pairs = if sweep_hulls {
+        face_contacts::inspect_with_sweep_certificates(model,tolerance_uv,limits.contacts,&hull_contacts,&allowed_caps,exact_domain)?
+    } else {
+        face_contacts::inspect_with_certificates(model,tolerance_uv,limits.contacts,&hull_contacts,&allowed_caps)?
+    };
+    if sweep_hulls {
+        // Contacts are recomputed for the actual scalar traversal. Group gaps
+        // can skip a large prefix without authorizing unvisited contacts.
+        hull_contacts.extend(pairs.pairs.iter().filter_map(|pair|match &pair.boundary {
+            Some(face_contacts::SharedBoundary::ExactHull(c))=>Some(c.clone()),_=>None,
+        }));
+    }
     let intersections = self_intersection::Report { absence_proven: faces.all_faces_injective && pairs.all_pairs_classified, faces, pairs };
     let proven = agreement.all_equal && agreement.all_joins_exact && trim.all_valid
         && winding && intersections.absence_proven

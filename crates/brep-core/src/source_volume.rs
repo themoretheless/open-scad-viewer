@@ -240,10 +240,26 @@ pub fn qualify(geometry: Geometry, limits: Limits) -> Result<Report> {
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
             [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
         ];
-        let planar=crate::source_planar_flux::bound(&geometry,face,limits.axis,limits.origin,
-            limits.absolute_error/(8.*geometry.shell().faces().len() as f64),
-            (limits.cells-out.cells).min(limits.spans-out.spans))?;
-        out.cells+=planar.cells;out.spans+=planar.cells;
+        out.uncertain_face = Some(face);
+        out.uncertain_uv = Some(rectangle);
+        if out.cells == limits.cells || out.spans == limits.spans {
+            return Ok(out);
+        }
+        // Whole-chart flux already has exact coverage and costs one cell.
+        // Green integration is needed only for retained material subsets.
+        let region = &geometry.shell().regions().unwrap()[face];
+        let planar = if region.whole_chart_material() {
+            crate::source_planar_flux::Report { bound: None, cells: 0 }
+        } else {
+            crate::source_planar_flux::bound(&geometry,face,limits.axis,limits.origin,
+                limits.absolute_error/(8.*geometry.shell().faces().len() as f64),
+                (limits.cells-out.cells).min(limits.spans-out.spans))?
+        };
+        // Even an algebraically zero flux visits one original face. Its
+        // coverage cannot bypass the caller's shared face/span budget.
+        let cost = if planar.bound.is_some() { planar.cells.max(1) } else { planar.cells };
+        out.cells += cost;
+        out.spans += cost;
         let fixed=planar.bound.is_some();
         let bound=if let Some(bound)=planar.bound {bound} else {
             let Some(bound)=evaluate(&geometry,face,rectangle,&limits,&mut out)? else {return Ok(out);};

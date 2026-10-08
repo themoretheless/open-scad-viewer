@@ -11,7 +11,7 @@ export interface CircleSweepSectionRepair {sections:NurbsCurve[][]|null;wallDisp
  * control displacement through every ruled wall interpolation. */
 export function repairNurbsCircleSweepSections(sections:NurbsCurve[][],options:{quantum:number;tolerance:number;maxWork:number},checkAbort=()=>{}):CircleSweepSectionRepair {
  checkAbort()
- const report=callNurbsRust<CircleSweepSectionRepair>('sweep_repair_circle_sections',{sections,...options})
+ const report=callNurbsRust<CircleSweepSectionRepair>('sweep_repair_circle_sections',{sections,quantum:options.quantum,tolerance:options.tolerance,maxWork:Number.isFinite(options.maxWork)?options.maxWork:null})
  checkAbort()
  return report
 }

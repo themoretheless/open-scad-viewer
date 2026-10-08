@@ -2,9 +2,12 @@
 //! positions together with per-vertex unit normals and one-ring adjacency; the
 //! engine returns displaced positions and never touches topology. Kernels own
 //! normal/adjacency construction and post-edit validity checks.
-use crate::{Point, Result, codec, fail, finite};
+#[cfg(feature = "codec")]
+use crate::codec;
+use crate::{Point, Result, fail, finite};
 use math_core::{add, dot, norm, scale, sub, unit};
 use std::collections::BTreeSet;
+#[cfg(feature = "codec")]
 use value_codec::{Deserialize, Map, Serialize, Value, error};
 
 /// Radial weight profile over the normalized distance `d = |p - center| / radius`.
@@ -60,11 +63,13 @@ impl Falloff {
         }
     }
 }
+#[cfg(feature = "codec")]
 impl Serialize for Falloff {
     fn to_value(&self) -> Value {
         Value::String(self.name().into())
     }
 }
+#[cfg(feature = "codec")]
 impl<'de> Deserialize<'de> for Falloff {
     fn from_value(value: Value) -> value_codec::Result<Self> {
         value
@@ -131,6 +136,7 @@ impl Symmetry {
         out
     }
 }
+#[cfg(feature = "codec")]
 impl Serialize for Symmetry {
     fn to_value(&self) -> Value {
         let mut object = Map::new();
@@ -139,6 +145,7 @@ impl Serialize for Symmetry {
         Value::Object(object)
     }
 }
+#[cfg(feature = "codec")]
 impl<'de> Deserialize<'de> for Symmetry {
     fn from_value(value: Value) -> value_codec::Result<Self> {
         let mut object = codec::object(value)?;
@@ -234,6 +241,7 @@ impl SculptKind {
         }
     }
     /// Flat wire encoding: `kind` plus `displacement` or `strength`.
+    #[cfg(feature = "codec")]
     fn write(&self, object: &mut codec::Object) {
         object.insert("kind".into(), Value::String(self.name().into()));
         match self {
@@ -245,6 +253,7 @@ impl SculptKind {
             }
         }
     }
+    #[cfg(feature = "codec")]
     fn read(object: &mut codec::Object) -> value_codec::Result<Self> {
         let name: String = codec::required(object, "kind")?;
         if !Self::NAMES.contains(&name.as_str()) {
@@ -296,6 +305,7 @@ impl SculptBrush {
         self.falloff.weight(norm(sub(p, center)) / self.radius)
     }
 }
+#[cfg(feature = "codec")]
 impl Serialize for SculptBrush {
     fn to_value(&self) -> Value {
         let mut object = Map::new();
@@ -307,6 +317,7 @@ impl Serialize for SculptBrush {
         Value::Object(object)
     }
 }
+#[cfg(feature = "codec")]
 impl<'de> Deserialize<'de> for SculptBrush {
     fn from_value(value: Value) -> value_codec::Result<Self> {
         let mut object = codec::object(value)?;
@@ -848,6 +859,7 @@ mod tests {
         assert!(SculptTarget::from_faces(cube, [[0usize, 1, 9].as_slice()]).is_err());
         assert_eq!(SculptTarget::positions(vec![[0.; 3]]).normals.len(), 0);
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn brush_round_trips_through_codec_with_defaults() {
         let brush = SculptBrush {

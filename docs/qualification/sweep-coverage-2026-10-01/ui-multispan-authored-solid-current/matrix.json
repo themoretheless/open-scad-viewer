@@ -1,0 +1,195 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T10:24:48.936Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "f3ff638d8cf96f55ac9f98f011a7852ffa0b06ec15a03cbb872e2a6524ef2af4",
+  "artifactProvenance": {
+    "sha256": "f3ff638d8cf96f55ac9f98f011a7852ffa0b06ec15a03cbb872e2a6524ef2af4",
+    "byteLength": 11061382,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-CuabSxnq.js"
+    ]
+  },
+  "appSourceSha256": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+  "distIndexSha256": "c06b077a3f6b89a1ad08ecd854de200933768d9b6ab92de6fa82b529a664312c",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "authored-multispan-body-boundary.r",
+      "sourceSha256": "319952ef75e3fce763413577fba8f5046091e4608dd2fcbfe0636d5a0fa25877",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 34,
+        "shells": 1,
+        "geometrySha256": "f4a5460e94fa9cdf91dd4a7a2c14be7752a09a2ca5037bb6b7724eeef595834f",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "authored-multispan-body-boundary.r",
+      "sourceSha256": "319952ef75e3fce763413577fba8f5046091e4608dd2fcbfe0636d5a0fa25877",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 34,
+        "shells": 1,
+        "geometrySha256": "f4a5460e94fa9cdf91dd4a7a2c14be7752a09a2ca5037bb6b7724eeef595834f",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "38062fba5c012d99ddb92d7a9bf46705d69e143847072c2aa0b5ba61fe34399b",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "a6bc38bcaf4d695b221ca1ef2a9aaf7ffea722c0c5d9b0084be61fc8472f56fb",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

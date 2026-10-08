@@ -1345,10 +1345,16 @@ pub(crate) fn rounded_profile_curves(
             let (a_min, a_max) = bounds[i];
             let (b_min, b_max) = bounds[j];
             if (0..2).any(|axis| a_max[axis] + source.tolerance_mm < b_min[axis] || b_max[axis] + source.tolerance_mm < a_min[axis]) { continue; }
-            let report = nurbs_core::intersection::intersect_curve_curve(&curves[i], &curves[j], Some(cad_predicates::ToleranceContext::new(spec.clone()).map_err(|_| refuse("Invalid fillet collision tolerance"))?))?;
-            if report["coverage"]["complete"].as_bool() != Some(true)
-                || report["components"].as_array().is_none_or(|components| !components.is_empty()) {
-                return Err(refuse("Fillet boundary collides with a nonadjacent span or separation is unresolved"));
+            let report = nurbs_core::intersection::intersect_curve_curve_report(
+                &curves[i],
+                &curves[j],
+                Some(cad_predicates::ToleranceContext::new(spec.clone())
+                    .map_err(|_| refuse("Invalid fillet collision tolerance"))?),
+            )?;
+            if !report.report.unresolved.is_empty() || !report.report.components.is_empty() {
+                return Err(refuse(
+                    "Fillet boundary collides with a nonadjacent span or separation is unresolved",
+                ));
             }
         }
     }
@@ -1538,6 +1544,7 @@ mod tests {
     use crate::cylinder;
 
     #[test]
+    #[cfg(feature = "codec")]
     fn annular_outer_round_revolves_to_exact_toroidal_faces() {
         let source = crate::tube(20., 5., 6.).unwrap();
         let before = value_codec::to_string(&source).unwrap();
@@ -1574,6 +1581,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn concave_prism_selected_outer_round_has_analytic_volume() {
         let profile = [[0., 0.], [40., 0.], [40., 5.], [5., 5.], [5., 30.], [0., 30.]];
         let source = crate::extrude_polygon(&profile, 0., 20.).unwrap();

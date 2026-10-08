@@ -48,7 +48,7 @@ fn unit(a: [f64; 3]) -> Result<[f64; 3]> {
 fn close(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
     norm(sub(a, b)) <= tolerance
 }
-fn loop_vertices(model: &Model, loop_id: usize) -> Result<Vec<usize>> {
+pub(crate) fn loop_vertices(model: &Model, loop_id: usize) -> Result<Vec<usize>> {
     let wire = model
         .loops
         .get(loop_id)
@@ -194,9 +194,10 @@ fn normalize_ring_edges(polygon: &mut Vec<[f64; 3]>, points: &[[f64; 3]], tolera
     *polygon = normalized;
 }
 
-struct PlanarBoundary {
-    outer: Vec<[f64; 3]>,
-    holes: Vec<Vec<[f64; 3]>>,
+#[derive(Clone)]
+pub(crate) struct PlanarBoundary {
+    pub(crate) outer: Vec<[f64; 3]>,
+    pub(crate) holes: Vec<Vec<[f64; 3]>>,
 }
 
 fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<Model> {
@@ -212,7 +213,7 @@ fn model_from_polygons(polygons: Vec<Vec<[f64; 3]>>, tolerance: f64) -> Result<M
     )
 }
 
-fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64) -> Result<Model> {
+pub(crate) fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64) -> Result<Model> {
     let points: Vec<_> = polygons
         .iter()
         .flat_map(|face| std::iter::once(&face.outer).chain(&face.holes))
@@ -2600,6 +2601,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn topology_ids_survive_preserved_boolean_entities_and_round_trip() {
         let stock = cuboid([0., 0., 0.], [3., 2., 2.]).unwrap();
         let cutter = cuboid([2., 0., 0.], [4., 2., 2.]).unwrap();

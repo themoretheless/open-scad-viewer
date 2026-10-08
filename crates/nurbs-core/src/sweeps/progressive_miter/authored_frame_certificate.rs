@@ -1,10 +1,33 @@
 //! Continuous authored-frame jets from original rational vector laws.
 //! Derivatives use normalized traversal; this alone is not a sweep certificate.
 use super::{scalar_certificate::Status, vector_certificate};
-use crate::sweep_support::interval_vec3::{add, cross, div, dot_tight as dot, scale as mul, sub};
+use crate::numerics::interval_vec3::{add, cross, div, dot_tight as dot, scale as mul, sub};
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I};
 type V = [I; 3];
+mod fixed_path_values;
+mod fixed_normal_path;
+mod planar_principal_phase;
+pub(crate) use planar_principal_phase::{certify_initial_planar_principal_phase,certify_planar_principal_values,certify_planar_principal_control_values,certify_planar_principal_control_trajectories,certify_planar_principal_relative_values};
+mod frenet_path_values;
+pub use frenet_path_values::{certify_frenet_cover,certify_frenet_path_values,certify_frenet_control_values,certify_frenet_planar_control_trajectories,certify_frenet_path,certify_frenet_control_trajectories};
+pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_values,certify_fixed_normal_control_values,certify_fixed_normal_control_trajectories,certify_fixed_normal_cover};
+pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
+pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
+pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
+pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
+mod guided_path_values;
+mod paired_path_values;
+mod guide_width;
+pub use guide_width::{GuideWidthReport, certify_guide_width};
+mod contact_fit;
+pub use contact_fit::{certify_contact_fit, certify_contact_control_trajectories, certify_contact_control_trajectory};
+mod contact_fit_value;
+pub use contact_fit_value::{ContactFitValueReport, certify_contact_fit_value, certify_contact_control_values, certify_contact_control_value};
+pub use guided_path_values::{certify_path_guide_values,certify_path_guide_control_values,certify_path_guide_control_value,certify_path_guide,certify_path_guide_control_trajectories,certify_path_guide_control_trajectory};
+mod trajectory;
+pub use trajectory::{TrajectoriesReport,ControlValuesReport,ControlValueReport, TrajectoryReport, certify_control_trajectory, certify_control_value, certify_control_trajectories, certify_control_values};
 pub use guided_axis::{certify_authored_guide, certify_authored_guide_values};
 #[derive(Clone, Debug)]
 pub struct ValuesReport {
@@ -272,6 +295,12 @@ pub fn certify_guide_values(
     path: [[f64; 2]; 3],
     max_cells: usize,
 ) -> Result<ValuesReport> {
+    certify_guide_values_at(guide,twist,traversal,traversal,tangent,path,max_cells)
+}
+fn certify_guide_values_at(
+    guide:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],
+    tangent:[[f64;2];3],path:[[f64;2];3],max_cells:usize,
+)->Result<ValuesReport>{
     super::validate_law(twist, false)?;
     let rail = vector_certificate::certify_values_traversal(guide, traversal, max_cells, false)?;
     let mut out = ValuesReport {
@@ -284,13 +313,24 @@ pub fn certify_guide_values(
     let Some(rail) = rail.value else {
         return Ok(out);
     };
+    let offset=sub(decode(rail)?,decode(path)?)?;
+    let mut frame=certify_guide_values_from_offset(twist,law_traversal,tangent,offset,max_cells-out.cells)?;
+    frame.cells+=out.cells;
+    Ok(frame)
+}
+fn certify_guide_values_from_offset(
+    twist:&Curve,law_traversal:[f64;2],tangent:[[f64;2];3],offset:V,max_cells:usize,
+)->Result<ValuesReport>{
+    super::validate_law(twist,false)?;
+    let mut out=ValuesReport {status:Status::Unresolved,cells:0,
+        longitudinal:None,transverse:None,binormal:None};
     let charge = (twist.degree..twist.control_points.len())
         .filter(|&i| twist.knots[i] < twist.knots[i + 1])
         .count();
     if charge > max_cells - out.cells {
         return Ok(out);
     }
-    let theta = super::scalar_certificate::value_traversal(twist, traversal, charge)?;
+    let theta = super::scalar_certificate::value_traversal(twist, law_traversal, charge)?;
     out.cells += charge;
     let Some(theta) = theta else {
         return Ok(out);
@@ -303,8 +343,9 @@ pub fn certify_guide_values(
     let Some(t) = normalize(constant(decode(tangent)?))? else {
         return Ok(out);
     };
-    let offset = sub(decode(rail)?, decode(path)?)?;
-    let Some(b) = normalize(constant(cross(t.v, offset)?))? else {
+    // Positive speed cancels in binormal normalization. Use original
+    // velocity directly instead of repeating the interval tangent quotient.
+    let Some(b) = normalize(constant(cross(decode(tangent)?, offset)?))? else {
         return Ok(out);
     };
     let n = cross(b.v, t.v)?;
@@ -422,6 +463,115 @@ pub fn certify(
     out.single_span = a.single_span && b.single_span;
     out.status = Status::Certified;
     out.reason = None;
+    Ok(out)
+}
+
+/// Whole-traversal frame regularity, with one shared budget across adaptive
+/// restrictions of the original laws. This proves nonzero longitudinal and
+/// nonparallel transverse directions, not sweep error or global embedding.
+#[derive(Clone, Debug)]
+pub struct RegularityReport {
+    pub status: Status,
+    pub cells: usize,
+    pub certified_intervals: usize,
+    pub reason: Option<&'static str>,
+    /// Complete ordered traversal cover only; partial work is never published
+    /// as a family of usable frame jets.
+    pub intervals: Option<Vec<RegularFrameInterval>>,
+}
+#[derive(Clone, Debug)]
+pub struct RegularFrameInterval {
+    pub traversal: [f64; 2],
+    pub longitudinal: FrameJet,
+    pub transverse: FrameJet,
+    pub binormal: FrameJet,
+}
+pub fn certify_regularity(
+    longitudinal: &Curve,
+    transverse: &Curve,
+    max_cells: usize,
+) -> Result<RegularityReport> {
+    check(max_cells <= 100000, "Authored frame budget exceeds100000 cells")?;
+    longitudinal.validate()?;
+    transverse.validate()?;
+    certify_frame_cover(max_cells, |interval, remaining| {
+        certify(longitudinal, transverse, interval, remaining)
+    })
+}
+/// Complete twisted authored-frame jet cover. Twist and both direction laws
+/// charge the same adaptive budget; all derivatives use normalized traversal.
+pub fn certify_twisted_cover(
+    longitudinal: &Curve,
+    transverse: &Curve,
+    twist: &Curve,
+    max_cells: usize,
+) -> Result<RegularityReport> {
+    check(max_cells <= 100000, "Authored frame budget exceeds100000 cells")?;
+    longitudinal.validate()?;
+    transverse.validate()?;
+    super::validate_law(twist, false)?;
+    certify_frame_cover(max_cells, |interval, remaining| {
+        certify_twisted(longitudinal, transverse, twist, interval, remaining)
+    })
+}
+/// Whole-traversal fixed frame and independent twist regularity.
+pub fn certify_fixed_cover(path:&Curve,normal:[f64;3],twist:&Curve,max_cells:usize)->Result<RegularityReport>{
+    check(max_cells<=100000,"Fixed frame cover work exceeds100000 cells")?;
+    path.validate()?;super::validate_law(twist,false)?;
+    check(normal.iter().all(|x|x.is_finite())&&path.control_points.iter().all(|p|p.len()==3),"Fixed cover requires finite XYZ source and normal")?;
+    certify_frame_cover(max_cells,|interval,remaining|certify_fixed_path(path,normal,twist,interval,remaining))
+}
+/// Original same-traversal guided frame cover. Independent arc inversions
+/// are not supplied by this cover.
+pub fn certify_guided_cover(path:&Curve,guide:&Curve,twist:&Curve,max_cells:usize)->Result<RegularityReport>{
+    check(max_cells<=100000,"Guided frame cover work exceeds100000 cells")?;
+    path.validate()?;guide.validate()?;super::validate_law(twist,false)?;
+    check([path,guide].iter().all(|c|c.control_points.iter().all(|p|p.len()==3)),"Guided cover requires XYZ source curves")?;
+    certify_frame_cover(max_cells,|interval,remaining|certify_path_guide(path,guide,twist,interval,remaining))
+}
+fn certify_frame_cover(
+    max_cells: usize,
+    mut certify_interval: impl FnMut([f64; 2], usize) -> Result<Report>,
+) -> Result<RegularityReport> {
+    let mut out = RegularityReport {
+        status: Status::Unresolved,
+        cells: 0,
+        certified_intervals: 0,
+        reason: Some("frame-regularity-work-limit"),
+        intervals: None,
+    };
+    let mut pending = vec![[0., 1.]];
+    let mut intervals = Vec::new();
+    while let Some(interval) = pending.pop() {
+        if out.cells == max_cells {
+            return Ok(out);
+        }
+        let report = certify_interval(interval, max_cells - out.cells)?;
+        out.cells += report.cells;
+        if report.status == Status::Certified {
+            out.certified_intervals += 1;
+            intervals.push(RegularFrameInterval {
+                traversal: interval,
+                longitudinal: report.longitudinal.unwrap(),
+                transverse: report.transverse.unwrap(),
+                binormal: report.binormal.unwrap(),
+            });
+            continue;
+        }
+        if report.cells == 0 || out.cells == max_cells {
+            return Ok(out);
+        }
+        let middle = interval[0] + (interval[1] - interval[0]) * 0.5;
+        if middle == interval[0] || middle == interval[1] {
+            out.reason = Some("frame-regularity-subdivision-unresolved");
+            return Ok(out);
+        }
+        pending.push([middle, interval[1]]);
+        pending.push([interval[0], middle]);
+    }
+    out.status = Status::Certified;
+    out.reason = None;
+    out.intervals = Some(intervals);
     Ok(out)
 }
 #[cfg(test)]
@@ -637,4 +787,128 @@ mod tests {
         assert_eq!(r.reason, Some("transverse-nonparallel-unproved"));
         assert_eq!(r.status, Status::Unresolved);
     }
+
+    #[test]
+    fn interior_singularity_between_preview_stations_is_not_a_regular_frame() {
+        // z(t)=(t-3/8)^2: every quarter-grid station is nonzero, while
+        // the original polynomial has an exact zero between those stations.
+        let axis = Curve {
+            degree: 2,
+            knots: vec![2., 2., 2., 10., 10., 10.],
+            control_points: vec![
+                vec![0., 0., 9. / 64.],
+                vec![0., 0., -15. / 64.],
+                vec![0., 0., 25. / 64.],
+            ],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let normal = law(vec![vec![1., 0., 0.]; 2], [31., 41.]);
+        for k in 0..=4 {
+            assert!(axis.evaluate(2. + 2. * k as f64).unwrap().point[2] > 0.);
+        }
+        assert_eq!(axis.evaluate(5.).unwrap().point, vec![0., 0., 0.]);
+        let report = certify(&axis, &normal, [0., 1.], 100).unwrap();
+        assert_eq!(report.status, Status::Unresolved);
+        assert_eq!(report.reason, Some("longitudinal-nonzero-unproved"));
+        assert!(report.longitudinal.is_none() && report.binormal.is_none());
+
+        // A nonzero transverse vector can likewise become parallel to the
+        // fixed axis between the same preview stations.
+        let mut transverse = axis.clone();
+        for pole in &mut transverse.control_points {
+            pole[0] = pole[2];
+            pole[2] = 1.;
+        }
+        let fixed_axis = law(vec![vec![0., 0., 1.]; 2], [7., 9.]);
+        let report = certify(&fixed_axis, &transverse, [0., 1.], 100).unwrap();
+        assert_eq!(report.status, Status::Unresolved);
+        assert_eq!(report.reason, Some("transverse-nonparallel-unproved"));
+        assert!(report.transverse.is_none() && report.binormal.is_none());
+        let whole = certify_regularity(&fixed_axis, &transverse, 100).unwrap();
+        assert_eq!(whole.status, Status::Unresolved);
+        assert!(whole.cells <= 100);
+    }
+
+    #[test]
+    fn whole_frame_regularity_subdivides_original_laws_with_shared_work() {
+        let axis = law(vec![vec![1., 0., 0.], vec![-1., 1., 0.]], [2., 5.]);
+        let normal = law(vec![vec![0., 0., 1.]; 2], [31., 41.]);
+        assert_eq!(certify(&axis, &normal, [0., 1.], 100).unwrap().status, Status::Unresolved);
+        let whole = certify_regularity(&axis, &normal, 1000).unwrap();
+        assert_eq!(whole.status, Status::Certified);
+        assert!(whole.certified_intervals > 1);
+        assert!(whole.cells <= 1000);
+        let cover = whole.intervals.as_ref().unwrap();
+        assert_eq!(cover.len(), whole.certified_intervals);
+        assert_eq!(cover.first().unwrap().traversal[0], 0.);
+        assert_eq!(cover.last().unwrap().traversal[1], 1.);
+        for pair in cover.windows(2) {
+            assert_eq!(pair[0].traversal[1], pair[1].traversal[0]);
+        }
+        let limited = certify_regularity(&axis, &normal, whole.cells - 1).unwrap();
+        assert_eq!(limited.status, Status::Unresolved);
+        assert!(limited.cells < whole.cells);
+        assert!(limited.intervals.is_none());
+        assert_eq!(certify_regularity(&axis, &normal, 0).unwrap().status, Status::Unresolved);
+        #[cfg(feature="transport")]
+        for budget in [0, 1000] {
+            let request = value_codec::json!({
+                "op": "sweep_authored_frame_regularity",
+                "longitudinal": axis,
+                "transverse": normal,
+                "maxCells": budget
+            });
+            let result = crate::transport::dispatch(request).unwrap();
+            assert_eq!(result["regularityCertified"], value_codec::json!(budget > 0));
+            assert_eq!(result["continuousBound"], value_codec::json!(false));
+        }
+    }
+
+    #[test]
+    fn twisted_cover_retains_normalized_second_jets_and_shared_work() {
+        let axis = law(vec![vec![0., 0., 1.]; 2], [2., 5.]);
+        let normal = law(vec![vec![1., 0., 0.]; 2], [31., 41.]);
+        let twist = law(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [17., 19.]);
+        let cover = certify_twisted_cover(&axis, &normal, &twist, 100).unwrap();
+        assert_eq!(cover.status, Status::Certified);
+        assert_eq!(cover.cells, 7);
+        let intervals = cover.intervals.unwrap();
+        assert_eq!(intervals.len(), 1);
+        let jet = &intervals[0].transverse;
+        for k in 0..=16 {
+            let t = k as f64 / 16.;
+            let (s, c) = t.sin_cos();
+            for (bounds, expected) in [
+                (jet.value, [c, s, 0.]),
+                (jet.first, [-s, c, 0.]),
+                (jet.second, [-c, -s, 0.]),
+            ] {
+                for i in 0..3 {
+                    assert!(bounds[i][0] <= expected[i] && expected[i] <= bounds[i][1]);
+                }
+            }
+        }
+        for budget in [0, 6] {
+            let refused = certify_twisted_cover(&axis, &normal, &twist, budget).unwrap();
+            assert_eq!(refused.status, Status::Unresolved);
+            assert!(refused.cells <= budget);
+            assert!(refused.intervals.is_none());
+        }
+    }
+}
+
+pub(crate) use frenet_path_values::certify_frenet_relative_values;
+
+pub(crate) use guided_path_values::{certify_path_guide_relative_values,certify_contact_relative_values};
+
+pub(crate) use guided_path_values::certify_independent_guided_cover;
+
+/// Internal fresh-source frame owner supplies its already charged frame.
+pub(crate) fn relative_control_values_from_frame(
+ scale:&Curve, affine:Option<(&Curve,&Curve)>, qs:&[[[f64;2];3]],
+ station:[f64;2], max_cells:usize, frame:ValuesReport,
+)->Result<ControlValuesReport>{
+ let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
+ trajectory::control_values_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
 }

@@ -68,6 +68,21 @@ export function trimNurbsCurve(curve: NurbsCurve, a: number, b: number): NurbsCu
 export function splitNurbsCurve(curve: NurbsCurve, u: number): [NurbsCurve, NurbsCurve] { return callNurbsRust('curve_split', { curve, u }) }
 export function reverseNurbsCurve(curve: NurbsCurve): NurbsCurve { return callNurbsRust('curve_reverse', { curve }) }
 export function decomposeNurbsCurve(curve: NurbsCurve): { curve: NurbsCurve; domain: [number, number] }[] { return callNurbsRust('curve_decompose', { curve }) }
+/** Conditional parameterwise original-span/retained-Bezier error. Ownership
+ * and complete wall/cap coverage are separate; exhaustion has no partial bound. */
+export interface NurbsDecompositionAudit {
+ errorUpper:number|null;products:number;reason:string|null
+ method:'original-span-bernstein-decomposition';continuousBound:false
+}
+export function inspectNurbsDecomposition(curve:NurbsCurve,span:number,retained:NurbsCurve,maxProducts=10000):NurbsDecompositionAudit {
+ return callNurbsRust('curve_decomposition_audit',{curve,span,retained,maxProducts})
+}
+export interface NurbsDecompositionBatchAudit extends NurbsDecompositionAudit {pairsInspected:number}
+/** Complete maximum under one shared product budget. A refused final span
+ * invalidates the aggregate; previously proved bounds are not returned. */
+export function inspectNurbsDecompositionBatch(pairs:{curve:NurbsCurve;span:number;retained:NurbsCurve}[],maxProducts=100000):NurbsDecompositionBatchAudit {
+ return callNurbsRust('curve_decomposition_batch_audit',{pairs,maxProducts})
+}
 export function elevateNurbsCurve(curve: NurbsCurve, degree: number): NurbsCurve { return callNurbsRust('curve_elevate', { curve, degree }) }
 export function nurbsCurveBounds(curve: NurbsCurve): { min: number[]; max: number[] } { return callNurbsRust('curve_bounds', { curve }) }
 

@@ -10,12 +10,13 @@ pub mod scalar_certificate;
 pub mod trigonometric_certificate;
 pub mod vector_certificate;
 mod law;
-use crate::{Result, check, sweep_support::vec3_ext::norm, curve::Curve};
+mod serialization;
+use crate::{Result, check, core::vec3_ext::norm, curve::Curve, foundation::guards::{Budget, require_finite_point}};
 use law::{law, scalar_bounds, validate_law};
 use math_core::{cross, dot, sub};
 type V = [f64; 3];
 fn unit(v: V) -> Result<V> {
-    crate::sweep_support::vec3_ext::unit(v, "Miter direction must be finite and nonzero")
+    crate::core::vec3_ext::unit(v, "Miter direction must be finite and nonzero")
 }
 fn rotate(n: V, t: V, a: f64) -> V {
     let (s, c) = a.sin_cos();
@@ -123,6 +124,7 @@ impl<'a> Sweep<'a> {
             points.first() != points.last() && points.iter().flatten().all(|x| x.is_finite()),
             "Miter sites must be finite and omit a repeated endpoint",
         )?;
+        require_finite_point(&options.normal, "normal")?;
         check(
             options.miter_limit.is_finite() && options.miter_limit >= 1.,
             "Miter limit must be finite and at least one",
@@ -393,7 +395,10 @@ impl<'a> Sweep<'a> {
         let stations = self.tangents.len() * fine_steps + 1;
         let mut maximum = 0_f64;
         let mut previous = self.at(0, fine_steps)?;
+        // Unified guard as a backstop over the refinement-station budget.
+        let mut guard = Budget::with_iterations(stations + 1)?.guard("miter_preview");
         for i in 1..stations {
+            guard.tick()?;
             let fine = self.at(i, fine_steps)?;
             let j = (i / 4).min(sections.len() - 2);
             let f = (i - 4 * j) as f64 / 4.;
@@ -579,7 +584,11 @@ pub fn approximate(
 ) -> Result<Approximation> {
     let mut levels = Vec::new();
     let mut sections = None;
+    // Unified guard over the adaptive level progression (doubling toward
+    // `max_steps`); the iterator's own stop conditions stay authoritative.
+    let mut guard = Budget::with_iterations(64)?.guard("progressive_miter");
     for level in Sweep::new(profiles, points, scale, twist, options)? {
+        guard.tick()?;
         let level = level?;
         if level.report.accepted {
             sections = Some(level.sections);
@@ -592,6 +601,66 @@ pub fn approximate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn moving_longitudinal_guide_twist_affine_bound_covers_retained_interpolation() {
+        let profiles = [crate::primitives::line([0.1, 0., 0.], [0.2, 0., 0.]).unwrap()];
+        let points = [[0., 0., 0.], [0., 0., 10.]];
+        let vector = |a: V, b: V, domain: [f64; 2]| Curve {
+            degree: 1,
+            knots: vec![domain[0], domain[0], domain[1], domain[1]],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let scale = scalar(1., 1.);
+        let twist = scalar(0., 0.25);
+        let axis = vector([0., 0., 1.], [0., 0.5, 1.], [2., 5.]);
+        let normal = vector([1., 0., 0.], [1., 0., 0.], [7., 9.]);
+        let guide = vector([1., 0., 0.], [1., 0., 10.], [31., 41.]);
+        let axes = vector([1., 1., 1.], [2., 1., 1.], [17., 19.]);
+        let center = vector([0., 0., 0.], [0., 0.125, 0.25], [23., 29.]);
+        let options = Options {
+            normal: [1., 0., 0.], closed: false, miter_limit: 2.,
+            initial_steps: 1, max_steps: 64, max_deviation: 0.01,
+        };
+        let sweep = Sweep::new(&profiles, &points, &scale, &twist, options).unwrap()
+            .with_frame_laws(&axis, &normal).unwrap()
+            .with_orientation_guide(&guide).unwrap()
+            .with_affine_laws(&axes, &center).unwrap();
+        let level = sweep.preview_at(16).unwrap();
+        assert!(level.report.accepted, "{:?}", level.report);
+        assert!(level.report.authored_frames_applied && level.report.orientation_guide_applied
+            && level.report.affine_laws_applied);
+        let upper = level.report.certified_error_upper.unwrap();
+        // Independent closed form: the rail offset is X, perpendicular to the
+        // tilted axis (0,f/2,1). Twist rotates X into its right-handed side.
+        // Point checks falsify the certificate; they do not constitute its proof.
+        for i in 0..16 {
+            for local in [0., 0.125, 0.375, 0.625, 0.875, 1.] {
+                let f = (i as f64 + local) / 16.;
+                let h = (1. + 0.25 * f * f).sqrt();
+                let (s, c) = (0.25 * f).sin_cos();
+                for u in [0., 0.25, 0.5, 0.75, 1.] {
+                    let r = (0.1 + 0.1 * u) * (1. + f);
+                    let side = 0.125 * f;
+                    let longitudinal = 0.25 * f;
+                    let ideal = [r*c - side*s,
+                        (r*s + side*c + longitudinal*0.5*f)/h,
+                        10.*f + (-0.5*f*(r*s + side*c) + longitudinal)/h];
+                    let a = level.sections[i][0].evaluate(u).unwrap().point;
+                    let b = level.sections[i+1][0].evaluate(u).unwrap().point;
+                    let retained = std::array::from_fn(|k| (1.-local)*a[k] + local*b[k]);
+                    assert!(norm(sub(ideal, retained)) <= upper);
+                }
+            }
+        }
+        let exhausted = sweep.certify_level(16, &level.sections, 10000, 0).unwrap();
+        assert!(exhausted.error_upper.is_none());
+        let mut damaged = level.sections.clone();
+        damaged[8][0].control_points[0][0] += 0.125;
+        let audit = sweep.certify_level(16, &damaged, 10000, 128).unwrap();
+        assert!(audit.error_upper.unwrap() >= 0.125);
+    }
     #[test]
     fn guide_affine_generation_certifies_actual_rail_orientation() {
         let profiles=[crate::primitives::line([0.1,0.,0.],[0.2,0.,0.]).unwrap()];let points=[[0.,0.,0.],[0.,0.,10.]];

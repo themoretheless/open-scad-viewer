@@ -1,13 +1,7 @@
+#![doc = include_str!("../README.md")]
 //! Shared bounded 2D sketch solver. Independent of polygon and NURBS geometry.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+#[cfg(feature = "codec")]
+mod serialization;
 pub use math_core::{Error, Result};
 const INVALID_INPUT: &str = "SKETCH_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
@@ -18,39 +12,7 @@ pub struct Circle {
     pub center: usize,
     pub radius: f64,
 }
-impl value_codec::Serialize for Circle {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "center".into(),
-            value_codec::Serialize::to_value(&self.center),
-        );
-        object.insert(
-            "radius".into(),
-            value_codec::Serialize::to_value(&self.radius),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Circle {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let center: usize = value_codec::Deserialize::from_value(
-            object
-                .remove("center")
-                .ok_or_else(|| value_codec::error("Missing field center"))?,
-        )?;
-        let radius: f64 = value_codec::Deserialize::from_value(
-            object
-                .remove("radius")
-                .ok_or_else(|| value_codec::error("Missing field radius"))?,
-        )?;
-        Ok(Self { center, radius })
-    }
-}
+
 #[derive(Clone, Debug)]
 pub enum Constraint {
     Fix {
@@ -111,437 +73,14 @@ pub enum Constraint {
         internal: bool,
     },
 }
-impl value_codec::Serialize for Constraint {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Fix { point, at } => {
-                let mut object = value_codec::Map::new();
-                object.insert("point".into(), value_codec::Serialize::to_value(point));
-                object.insert("at".into(), value_codec::Serialize::to_value(at));
-                object.insert("kind".into(), value_codec::Value::String("fix".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Horizontal { a, b } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("horizontal".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::Vertical { a, b } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("kind".into(), value_codec::Value::String("vertical".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Coincident { a, b } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("coincident".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::Distance { a, b, value } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("value".into(), value_codec::Serialize::to_value(value));
-                object.insert("kind".into(), value_codec::Value::String("distance".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Parallel { a, b, c, d } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("c".into(), value_codec::Serialize::to_value(c));
-                object.insert("d".into(), value_codec::Serialize::to_value(d));
-                object.insert("kind".into(), value_codec::Value::String("parallel".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Perpendicular { a, b, c, d } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("c".into(), value_codec::Serialize::to_value(c));
-                object.insert("d".into(), value_codec::Serialize::to_value(d));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("perpendicular".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::EqualLength { a, b, c, d } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("c".into(), value_codec::Serialize::to_value(c));
-                object.insert("d".into(), value_codec::Serialize::to_value(d));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("equal_length".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::Radius { circle, value } => {
-                let mut object = value_codec::Map::new();
-                object.insert("circle".into(), value_codec::Serialize::to_value(circle));
-                object.insert("value".into(), value_codec::Serialize::to_value(value));
-                object.insert("kind".into(), value_codec::Value::String("radius".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::PointOnCircle { point, circle } => {
-                let mut object = value_codec::Map::new();
-                object.insert("point".into(), value_codec::Serialize::to_value(point));
-                object.insert("circle".into(), value_codec::Serialize::to_value(circle));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("point_on_circle".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::TangentLineCircle { a, b, circle } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert("circle".into(), value_codec::Serialize::to_value(circle));
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("tangent_line_circle".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-            Self::TangentCircles { a, b, internal } => {
-                let mut object = value_codec::Map::new();
-                object.insert("a".into(), value_codec::Serialize::to_value(a));
-                object.insert("b".into(), value_codec::Serialize::to_value(b));
-                object.insert(
-                    "internal".into(),
-                    value_codec::Serialize::to_value(internal),
-                );
-                object.insert(
-                    "kind".into(),
-                    value_codec::Value::String("tangent_circles".into()),
-                );
-                value_codec::Value::Object(object)
-            }
-        }
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Constraint {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value["kind"].as_str().unwrap_or("") {
-            "fix" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let point: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("point")
-                        .ok_or_else(|| value_codec::error("Missing field point"))?,
-                )?;
-                let at: [f64; 2] = value_codec::Deserialize::from_value(
-                    object
-                        .remove("at")
-                        .ok_or_else(|| value_codec::error("Missing field at"))?,
-                )?;
-                Ok(Self::Fix { point, at })
-            }
-            "horizontal" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Horizontal { a, b })
-            }
-            "vertical" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Vertical { a, b })
-            }
-            "coincident" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                Ok(Self::Coincident { a, b })
-            }
-            "distance" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let value: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("value")
-                        .ok_or_else(|| value_codec::error("Missing field value"))?,
-                )?;
-                Ok(Self::Distance { a, b, value })
-            }
-            "parallel" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let c: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("c")
-                        .ok_or_else(|| value_codec::error("Missing field c"))?,
-                )?;
-                let d: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("d")
-                        .ok_or_else(|| value_codec::error("Missing field d"))?,
-                )?;
-                Ok(Self::Parallel { a, b, c, d })
-            }
-            "perpendicular" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let c: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("c")
-                        .ok_or_else(|| value_codec::error("Missing field c"))?,
-                )?;
-                let d: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("d")
-                        .ok_or_else(|| value_codec::error("Missing field d"))?,
-                )?;
-                Ok(Self::Perpendicular { a, b, c, d })
-            }
-            "equal_length" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let c: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("c")
-                        .ok_or_else(|| value_codec::error("Missing field c"))?,
-                )?;
-                let d: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("d")
-                        .ok_or_else(|| value_codec::error("Missing field d"))?,
-                )?;
-                Ok(Self::EqualLength { a, b, c, d })
-            }
-            "radius" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let circle: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("circle")
-                        .ok_or_else(|| value_codec::error("Missing field circle"))?,
-                )?;
-                let value: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("value")
-                        .ok_or_else(|| value_codec::error("Missing field value"))?,
-                )?;
-                Ok(Self::Radius { circle, value })
-            }
-            "point_on_circle" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let point: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("point")
-                        .ok_or_else(|| value_codec::error("Missing field point"))?,
-                )?;
-                let circle: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("circle")
-                        .ok_or_else(|| value_codec::error("Missing field circle"))?,
-                )?;
-                Ok(Self::PointOnCircle { point, circle })
-            }
-            "tangent_line_circle" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let circle: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("circle")
-                        .ok_or_else(|| value_codec::error("Missing field circle"))?,
-                )?;
-                Ok(Self::TangentLineCircle { a, b, circle })
-            }
-            "tangent_circles" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let a: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("a")
-                        .ok_or_else(|| value_codec::error("Missing field a"))?,
-                )?;
-                let b: usize = value_codec::Deserialize::from_value(
-                    object
-                        .remove("b")
-                        .ok_or_else(|| value_codec::error("Missing field b"))?,
-                )?;
-                let internal: bool = value_codec::Deserialize::from_value(
-                    object
-                        .remove("internal")
-                        .ok_or_else(|| value_codec::error("Missing field internal"))?,
-                )?;
-                Ok(Self::TangentCircles { a, b, internal })
-            }
-            _ => Err(value_codec::error("Unknown enum variant")),
-        }
-    }
-}
+
 #[derive(Clone, Debug)]
 pub struct Sketch {
     pub points: Vec<[f64; 2]>,
     pub circles: Vec<Circle>,
     pub constraints: Vec<Constraint>,
 }
-impl value_codec::Serialize for Sketch {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "points".into(),
-            value_codec::Serialize::to_value(&self.points),
-        );
-        object.insert(
-            "circles".into(),
-            value_codec::Serialize::to_value(&self.circles),
-        );
-        object.insert(
-            "constraints".into(),
-            value_codec::Serialize::to_value(&self.constraints),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Sketch {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let points: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
-            object
-                .remove("points")
-                .ok_or_else(|| value_codec::error("Missing field points"))?,
-        )?;
-        let circles: Vec<Circle> = if let Some(v) = object.remove("circles") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            Default::default()
-        };
-        let constraints: Vec<Constraint> = value_codec::Deserialize::from_value(
-            object
-                .remove("constraints")
-                .ok_or_else(|| value_codec::error("Missing field constraints"))?,
-        )?;
-        Ok(Self {
-            points,
-            circles,
-            constraints,
-        })
-    }
-}
+
 #[derive(Clone, Debug)]
 pub struct Solution {
     pub sketch: Sketch,
@@ -552,40 +91,7 @@ pub struct Solution {
     pub degrees_of_freedom: usize,
     pub convergence_certified: bool,
 }
-impl value_codec::Serialize for Solution {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "sketch".into(),
-            value_codec::Serialize::to_value(&self.sketch),
-        );
-        object.insert(
-            "status".into(),
-            value_codec::Serialize::to_value(&self.status),
-        );
-        object.insert(
-            "iterations".into(),
-            value_codec::Serialize::to_value(&self.iterations),
-        );
-        object.insert(
-            "maxResidual".into(),
-            value_codec::Serialize::to_value(&self.max_residual),
-        );
-        object.insert(
-            "residuals".into(),
-            value_codec::Serialize::to_value(&self.residuals),
-        );
-        object.insert(
-            "degreesOfFreedom".into(),
-            value_codec::Serialize::to_value(&self.degrees_of_freedom),
-        );
-        object.insert(
-            "convergenceCertified".into(),
-            value_codec::Serialize::to_value(&self.convergence_certified),
-        );
-        value_codec::Value::Object(object)
-    }
-}
+
 fn length(v: [f64; 2]) -> f64 {
     v[0].hypot(v[1])
 }
@@ -623,7 +129,9 @@ impl Sketch {
                 Constraint::Horizontal { a, b }
                 | Constraint::Vertical { a, b }
                 | Constraint::Coincident { a, b } => point(a) && point(b),
-                Constraint::Distance { a, b, value } => point(a) && point(b) && positive(value),
+                Constraint::Distance { a, b, value } => {
+                    point(a) && point(b) && value.is_finite() && value > 0.
+                }
                 Constraint::Parallel { a, b, c, d }
                 | Constraint::Perpendicular { a, b, c, d }
                 | Constraint::EqualLength { a, b, c, d } => [a, b, c, d].iter().all(|&p| point(p)),
@@ -757,9 +265,32 @@ fn rank(mut a: Vec<Vec<f64>>, n: usize) -> usize {
     }
     row
 }
+/// Bounded numerical solver policy, shared by native and named adapters.
+#[derive(Clone, Copy, Debug)]
+pub struct SolverOptions {
+    pub tolerance: f64,
+    pub max_iterations: usize,
+}
 pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
+    solve_with_options(
+        sketch,
+        SolverOptions {
+            tolerance,
+            max_iterations: 96,
+        },
+    )
+}
+pub fn solve_with_options(sketch: &Sketch, options: SolverOptions) -> Result<Solution> {
+    let SolverOptions {
+        tolerance,
+        max_iterations,
+    } = options;
+    if !(1..=96).contains(&max_iterations) {
+        return Err(error("Invalid solver iteration limit"));
+    }
+
     sketch.validate()?;
-    if !tolerance.is_finite() || !(1e-8..=0.01).contains(&tolerance) {
+    if !tolerance.is_finite() || !(1e-8..=0.1).contains(&tolerance) {
         return Err(error("Invalid solver tolerance"));
     }
     let mut x: Vec<_> = sketch
@@ -780,7 +311,7 @@ pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
             .map(|v| v * v)
             .sum::<f64>()
     };
-    for _ in 0..96 {
+    for _ in 0..max_iterations {
         let residual: Vec<_> = sketch.residual(&x).into_iter().flatten().collect();
         if residual.iter().all(|v| v.abs() <= tolerance) {
             break;
@@ -828,21 +359,7 @@ pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
     for (i, c) in result.circles.iter_mut().enumerate() {
         c.radius = x[sketch.points.len() * 2 + i];
     }
-    let degenerate = sketch.constraints.iter().any(|c| match *c {
-        Constraint::Parallel { a, b, c, d } | Constraint::Perpendicular { a, b, c, d } => {
-            length(subtract(result.points[a], result.points[b])) <= tolerance
-                || length(subtract(result.points[c], result.points[d])) <= tolerance
-        }
-        Constraint::TangentLineCircle { a, b, .. } => {
-            length(subtract(result.points[a], result.points[b])) <= tolerance
-        }
-        Constraint::TangentCircles {
-            a,
-            b,
-            internal: true,
-        } => (result.circles[a].radius - result.circles[b].radius).abs() <= tolerance,
-        _ => false,
-    });
+    let degenerate = !degenerate_constraint_indices(&result, tolerance).is_empty();
     let status = if degenerate {
         "degenerate"
     } else if max > tolerance {
@@ -863,9 +380,167 @@ pub fn solve(sketch: &Sketch, tolerance: f64) -> Result<Solution> {
     })
 }
 
+fn degenerate_constraint_indices(sketch: &Sketch, tolerance: f64) -> Vec<usize> {
+    sketch
+        .constraints
+        .iter()
+        .enumerate()
+        .filter_map(|(i, c)| {
+            let degenerate = match *c {
+                Constraint::Parallel { a, b, c, d } | Constraint::Perpendicular { a, b, c, d } => {
+                    length(subtract(sketch.points[a], sketch.points[b])) <= tolerance
+                        || length(subtract(sketch.points[c], sketch.points[d])) <= tolerance
+                }
+                Constraint::TangentLineCircle { a, b, .. } => {
+                    length(subtract(sketch.points[a], sketch.points[b])) <= tolerance
+                }
+                Constraint::TangentCircles {
+                    a,
+                    b,
+                    internal: true,
+                } => (sketch.circles[a].radius - sketch.circles[b].radius).abs() <= tolerance,
+                _ => false,
+            };
+            degenerate.then_some(i)
+        })
+        .collect()
+}
+
+/// Constraint diagnostics for named sketch adapters, independent of transport.
+#[derive(Clone, Debug)]
+pub struct Diagnostics {
+    pub redundant_equations: usize,
+    pub degenerate_constraints: Vec<usize>,
+    pub constraint_residuals: Vec<f64>,
+    pub inconsistent: bool,
+}
+pub fn solve_with_diagnostics(sketch: &Sketch, tolerance: f64) -> Result<(Solution, Diagnostics)> {
+    solve_with_diagnostics_options(
+        sketch,
+        SolverOptions {
+            tolerance,
+            max_iterations: 96,
+        },
+    )
+}
+pub fn solve_with_diagnostics_options(
+    sketch: &Sketch,
+    options: SolverOptions,
+) -> Result<(Solution, Diagnostics)> {
+    let tolerance = options.tolerance;
+    let solution = solve_with_options(sketch, options)?;
+    let solved = &solution.sketch;
+    let x: Vec<_> = solved
+        .points
+        .iter()
+        .flatten()
+        .copied()
+        .chain(solved.circles.iter().map(|c| c.radius))
+        .collect();
+    let j = jacobian(solved, &x);
+    let jacobian_rank = rank(j.clone(), x.len());
+    let residual: Vec<_> = solution.residuals.iter().flatten().copied().collect();
+    let linear = solved.constraints.iter().all(|c| {
+        matches!(
+            c,
+            Constraint::Fix { .. }
+                | Constraint::Horizontal { .. }
+                | Constraint::Vertical { .. }
+                | Constraint::Coincident { .. }
+        )
+    });
+    let inconsistent = solution.max_residual > tolerance
+        && linear
+        && rank(
+            j.into_iter()
+                .zip(&residual)
+                .map(|(mut row, r)| {
+                    row.push(*r);
+                    row
+                })
+                .collect(),
+            x.len() + 1,
+        ) > jacobian_rank;
+    let degenerate_constraints = degenerate_constraint_indices(solved, tolerance);
+    let diagnostics = Diagnostics {
+        redundant_equations: residual.len().saturating_sub(jacobian_rank),
+        degenerate_constraints,
+        constraint_residuals: solution
+            .residuals
+            .iter()
+            .map(|r| r.iter().map(|x| x.abs()).fold(0., f64::max))
+            .collect(),
+        inconsistent,
+    };
+    Ok((solution, diagnostics))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn solver_iteration_policy_is_bounded() {
+        let sketch = Sketch {
+            points: vec![[1., 1.]],
+            circles: vec![],
+            constraints: vec![Constraint::Fix {
+                point: 0,
+                at: [0., 0.],
+            }],
+        };
+        for limit in [0, 97] {
+            assert!(
+                solve_with_options(
+                    &sketch,
+                    SolverOptions {
+                        tolerance: 1e-6,
+                        max_iterations: limit
+                    }
+                )
+                .is_err()
+            );
+        }
+        let result = solve_with_options(
+            &sketch,
+            SolverOptions {
+                tolerance: 1e-6,
+                max_iterations: 1,
+            },
+        )
+        .unwrap();
+        assert_eq!(result.iterations, 1);
+        assert!(result.max_residual > 1e-6);
+    }
+    #[test]
+    fn diagnostics_distinguish_linear_conflicts_and_redundancy() {
+        let sketch = Sketch {
+            points: vec![[0.2, -0.1], [1., 0.], [0., 1.]],
+            circles: vec![],
+            constraints: vec![
+                Constraint::Fix {
+                    point: 0,
+                    at: [0., 0.],
+                },
+                Constraint::Fix {
+                    point: 0,
+                    at: [10., 0.],
+                },
+            ],
+        };
+        let (solution, report) = solve_with_diagnostics(&sketch, 1e-6).unwrap();
+        assert!(report.inconsistent);
+        assert_eq!(report.redundant_equations, 2);
+        assert_eq!(report.constraint_residuals.len(), 2);
+        assert!(solution.max_residual > 4.9);
+        assert!(report.degenerate_constraints.is_empty());
+        let sketch = Sketch {
+            constraints: vec![],
+            ..sketch
+        };
+        let (solution, report) = solve_with_diagnostics(&sketch, 0.1).unwrap();
+        assert_eq!(solution.degrees_of_freedom, 6);
+        assert!(!report.inconsistent);
+    }
     #[test]
     fn line_circle_tangency() {
         let s = Sketch {

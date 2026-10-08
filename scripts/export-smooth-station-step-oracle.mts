@@ -3,8 +3,8 @@ import {mkdirSync,writeFileSync,readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {createProgressiveMiterBrepProfileBody,smoothCertifiedMiterBody} from '../src/services/geometry/brep'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import type {NurbsBrep} from '../src/services/geometry/brep'
 import {exportDirectStepV5} from '../src/services/cadNurbsStep'
 import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
@@ -27,7 +27,7 @@ const cases=[false,true,'rush','rush-sharp','rush-guide','rush-moving','rush-clo
   let source=readFileSync(`examples/rush/${sourceFile}`,'utf8')
   if(mode==='rush-moving')source=source.replace('cap_correction_tolerance:','circle_correction_tolerance:1e-9mm,circle_correction_max_work:100000,cap_correction_tolerance:')
   if(mode==='rush-guide'||mode==='rush-moving')source=source.replace(/\.brep_tessellate\(\d+\)/,'.brep_smooth_miter_stations(wall_tolerance:1mm,quantum:0.0000000000004547473508864641mm,max_work:1000000,max_deviation:2mm).brep_tessellate(4)')
-  const graph=compileModelGraphText(source).document
+  const graph=compileRushFrontend(source).document
   const node=graph.nodes.find(n=>n.op==='brep_smooth_miter_stations')!
   const built=buildOwnNurbs(graph,{action:'build'})
   const {kind,...model}=built.report.definitions[node.id] as unknown as NurbsBrep & {kind:string}

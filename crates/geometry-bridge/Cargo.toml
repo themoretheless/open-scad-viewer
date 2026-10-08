@@ -10,30 +10,36 @@ crate-type = ["rlib"]
 
 [features]
 default = []
-gpu = ["dep:gpu-compute", "dep:compute-core"]
-cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda"]
+gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
+cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
 
 [dependencies]
-gcode-core = { path = "../gcode-core" }
-math-core = { package = "osv-math", path = "../math-core" }
-compute-core = { path = "../compute-core", optional = true }
-gpu-compute = { path = "../gpu-compute", optional = true }
-value-codec = { path = "../value-codec" }
-geometry-ops = { path = "../geometry-ops" }
-mechanical-core = { path = "../mechanical-core" }
-mechanics-core = { path = "../mechanics-core" }
-sketch-core = { path = "../sketch-core" }
-brep-topology = { path = "../brep-topology" }
-brep-core = { path = "../brep-core" }
-cad-predicates = { path = "../cad-predicates" }
-planar-geometry = { path = "../planar-geometry" }
+gcode-core = { workspace = true }
+laser-core = { workspace = true }
+mesh-io = { workspace = true }
+mesh-topology = { workspace = true }
+mesh-query = { workspace = true }
+mesh-section = { workspace = true }
+math-core = { workspace = true }
+compute-core = { workspace = true, optional = true }
+gpu-compute = { workspace = true, optional = true }
+value-codec = { workspace = true }
+geometry-ops = { workspace = true, features = ["codec"] }
+manifold-core = { workspace = true }
+manifold-ops = { workspace = true }
+mechanical-core = { workspace = true, features = ["codec"] }
+mechanics-core = { workspace = true }
+sketch-core = { workspace = true, features = ["codec"] }
+brep-topology = { workspace = true, features = ["codec"] }
+brep-core = { workspace = true, features = ["codec"] }
+cad-predicates = { workspace = true, features = ["codec"] }
+planar-geometry = { workspace = true }
 resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
-subdivision-core = { path = "../subdivision-core" }
-sdf-core = { path = "../sdf-core" }
-nurbs-core = { path = "../nurbs-core" }
-polygon-core = { path = "../polygon-core" }
-slicer-core = { path = "../slicer-core" }
-laser-core = { path = "../laser-core" }
+subdivision-core = { workspace = true, features = ["codec"] }
+sdf-core = { workspace = true, features = ["codec"] }
+nurbs-core = { workspace = true, features = ["transport"] }
+polygon-core = { workspace = true, features = ["codec"] }
+slicer-core = { workspace = true }
 usvg = { version = "0.47.0", default-features = false, features = ["text"] }
 svgtypes = "0.16.1"
 base64 = "0.22"
@@ -46,4 +52,4 @@ zune-jpeg = "0.5.8"
 simplecss = "0.2.2"
 ttf-parser = "0.25.1"
 
-[dev-dependencies]
+

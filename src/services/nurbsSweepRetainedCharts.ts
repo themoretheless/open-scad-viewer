@@ -1,6 +1,6 @@
 import type {NurbsBrep} from './geometry/brep'
 import type {SurfaceLinearInjectivityAudit} from './nurbsSweepAudit'
-import {callGeometryRust} from './geometry/kernel'
+import {callNurbsRust} from './geometry/nurbs'
 export interface SweepRetainedChartEvidence {
  allChartsCertified:boolean
  cells:number
@@ -11,7 +11,7 @@ export interface SweepRetainedChartEvidence {
 /** Actual decomposed B-rep wall charts; the cell budget is shared across them. */
 export function inspectSweepRetainedWallCharts(model:NurbsBrep,capFaces:number[],maxCells:number,checkAbort=()=>{}):SweepRetainedChartEvidence {
  checkAbort()
- const report=callGeometryRust<SweepRetainedChartEvidence>('brep_sweep_retained_wall_charts_audit',{model,capFaces,maxCells})
+ const report=callNurbsRust<SweepRetainedChartEvidence>('brep_sweep_retained_charts_audit',{model,capFaces,maxCells})
  checkAbort()
  return report
 }

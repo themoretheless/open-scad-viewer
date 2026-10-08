@@ -3,7 +3,7 @@ pub(crate) use crate::mesh_render::RenderMesh;
 use crate::{Result, encode, field, input};
 use planar_geometry::rings::{self as planar, Rings};
 use polygon_core::Mesh;
-use polygon_core::solid::{boolean, modeling, primitives as solid, section};
+use polygon_core::solid::{boolean, modeling, primitives as solid};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{Value, json};
 #[derive(Clone)]
@@ -118,6 +118,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
         });
         return Ok(Value::Null);
     }
+    if action == "minkowski_profiles" {
+        let ids: Vec<u32> = field(&v, "ids")?;
+        let shapes = ids.into_iter().map(get).collect::<Result<Vec<_>>>()?;
+        let profiles = shapes.iter().map(|shape| profile(shape)).collect::<Result<Vec<_>>>()?;
+        return put(Shape::Profile(modeling::minkowski_profiles(&profiles)?));
+    }
     if action == "cube" {
         return put(Shape::Solid(solid::cube(
             field(&v, "size")?,
@@ -141,6 +147,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
     }
     if action == "mesh" {
         return put(Shape::Solid(solid::clean(field(&v, "mesh")?)?));
+    }
+    if action == "square" || action == "circle" {
+        let rings = if action == "square" {
+            planar_geometry::primitives::rectangle(field(&v, "size")?, field(&v, "center")?)?
+        } else {
+            planar_geometry::primitives::circle(field(&v, "radius")?, field(&v, "segments")?)?
+        };
+        return put(Shape::Profile(planar::planar(&rings, &vec![], "union")?));
     }
     if action == "profile" {
         let mut rings: Rings = field(&v, "rings")?;
@@ -218,7 +232,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
             return put(Shape::Profile(rings));
         }
-        let solids = shapes.iter().map(|s| solid(s)).collect::<Result<Vec<_>>>()?;
+        let solids = shapes
+            .iter()
+            .map(|s| solid(s))
+            .collect::<Result<Vec<_>>>()?;
         let m = if action == "hull" {
             solid::hull3_refs(&solids)?
         } else if op == "compose" {
@@ -317,9 +334,43 @@ pub fn dispatch(v: Value) -> Result<Value> {
             Ok(json!(ids))
         }
         "transform" => {
-            let m: [[f64; 4]; 4] = field(&v, "matrix")?;
+            let m: [[f64; 4]; 4] = match v["operation"].as_str() {
+                Some("translate") => math_core::affine::translation(field(&v, "offset")?),
+                Some("scale") => math_core::affine::scaling(field(&v, "factors")?),
+                Some("solid_matrix") => math_core::affine::solid_column_major(field(&v, "values")?),
+                Some("planar_matrix") => {
+                    math_core::affine::planar_column_major(field(&v, "values")?)
+                }
+                Some("solid_matrix_projective") => {
+                    math_core::affine::solid_column_major(field(&v, "values")?)
+                }
+                Some("rotate") => math_core::affine::euler_degrees(field(&v, "angles")?),
+                Some("mirror") => match math_core::affine::reflection(field(&v, "normal")?) {
+                    Some(matrix) => matrix,
+                    None => {
+                        return put(match &*shape {
+                            Shape::Solid(_) => Shape::Solid(Mesh {
+                                positions: vec![],
+                                indices: vec![],
+                                uv: None,
+                            }),
+                            Shape::Profile(_) => Shape::Profile(vec![]),
+                        });
+                    }
+                },
+                None => field(&v, "matrix")?,
+                Some(_) => return Err(input("Unknown affine operation")),
+            };
+            if m.iter().flatten().any(|v| !v.is_finite()) {
+                return Err(input("Invalid affine matrix"));
+            }
             match &*shape {
                 Shape::Solid(s) => {
+                    if v["operation"].as_str() == Some("solid_matrix_projective") {
+                        return put(Shape::Solid(s.transform_projective(m)?));
+                    }
+                    // The pinned Manifold transform contract consumes only the
+                    // affine 3x4 portion and ignores the authored fourth row.
                     if m.iter().flatten().any(|v| !v.is_finite()) {
                         return Err(input("Invalid affine matrix"));
                     }
@@ -392,11 +443,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
             put(Shape::Solid(m))
         }
-        "project" => put(Shape::Profile(section::project(solid(&shape)?)?)),
-        "slice" => put(Shape::Profile(section::slice(
-            solid(&shape)?,
-            field(&v, "height")?,
-        )?)),
+        "project" => put(Shape::Profile(
+            mesh_section::project(&solid(&shape)?.view()).map_err(crate::legacy_mesh_error)?,
+        )),
+        "slice" => put(Shape::Profile(
+            mesh_section::slice(&solid(&shape)?.view(), field(&v, "height")?)
+                .map_err(crate::legacy_mesh_error)?,
+        )),
         "minkowski" => {
             let b = get(field(&v, "other")?)?;
             put(Shape::Solid(minkowski(solid(&shape)?, solid(&b)?)?))
@@ -530,7 +583,13 @@ impl VertexTree {
         while let Some(i) = stack.pop() {
             let node = &self.nodes[i as usize];
             let support: f64 = (0..3)
-                .map(|k| if n[k] >= 0. { n[k] * node.hi[k] } else { n[k] * node.lo[k] })
+                .map(|k| {
+                    if n[k] >= 0. {
+                        n[k] * node.hi[k]
+                    } else {
+                        n[k] * node.lo[k]
+                    }
+                })
                 .sum();
             let guard = 1e-12 * (support.abs() + d.abs() + 1.);
             if support - d <= eps - guard {

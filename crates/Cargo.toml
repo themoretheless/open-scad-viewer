@@ -1,5 +1,50 @@
 [workspace]
-members = ["vr-core", "value-codec", "math-core", "cad-predicates", "gpu-compute", "compute-core", "tensor-core", "compute-cuda", "compute-mlx", "raster-core", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "nurbs-core", "polygon-core", "gcode-core", "gcode-optimize", "laser-core", "printer-core", "printer-cli", "slicer-core", "mechanics-core", "mechanical-core", "openscad-core", "geometry-bridge", "geometry-wasm", "languages-bridge", "languages-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
+members = [
+    "vr-core",
+    "value-codec",
+    "math-core",
+    "manifold-core",
+    "manifold-ops",
+    "mesh-topology",
+    "mesh-query",
+    "mesh-section",
+    "mesh-io",
+    "cad-predicates",
+    "gpu-compute",
+    "compute-core",
+    "tensor-core",
+    "compute-cuda",
+    "compute-mlx",
+    "raster-core",
+    "rush-runtime",
+    "rush-frontend",
+    "sketch-core",
+    "geometry-ops",
+    "planar-geometry",
+    "brep-topology",
+    "brep-core",
+    "nurbs-core",
+    "polygon-core",
+    "gcode-core",
+    "gcode-optimize",
+    "laser-core",
+    "printer-core",
+    "printer-cli",
+    "slicer-core",
+    "mechanics-core",
+    "mechanical-core",
+    "openscad-core",
+    "geometry-bridge",
+    "geometry-wasm",
+    "languages-bridge",
+    "languages-wasm",
+    "wasm-brotli",
+    "subdivision-core",
+    "sdf-core",
+    "photogrammetry-core",
+    "photogrammetry-ffi",
+    "photogrammetry-wasm",
+]
 resolver = "3"
 exclude = ["vendor/usvg", "vendor/resvg"]
 
@@ -14,10 +59,49 @@ rust-version = "1.98"
 publish = false
 
 [workspace.dependencies]
+laser-core = { version = "0.1.0", path = "laser-core" }
+brep-core = { version = "0.1.0", path = "brep-core", default-features = false }
+cad-predicates = { version = "0.1.0", path = "cad-predicates", default-features = false }
+gcode-core = { version = "0.1.0", path = "gcode-core" }
+gcode-optimize = { version = "0.1.0", path = "gcode-optimize" }
+geometry-bridge = { version = "0.1.0", path = "geometry-bridge" }
+languages-bridge = { version = "0.1.0", path = "languages-bridge" }
+manifold-core = { version = "0.1.0", path = "manifold-core" }
+manifold-ops = { version = "0.1.0", path = "manifold-ops" }
+mechanics-core = { version = "0.1.0", path = "mechanics-core" }
+rush-runtime = { version = "0.1.0", path = "rush-runtime" }
+rush-frontend = { version = "0.1.0", path = "rush-frontend" }
+nurbs-core = { version = "0.1.0", path = "nurbs-core", default-features = false }
+openscad-core = { version = "0.1.0", path = "openscad-core" }
+photogrammetry-core = { version = "0.1.0", path = "photogrammetry-core" }
+photogrammetry-ffi = { version = "0.1.0", path = "photogrammetry-ffi" }
+printer-core = { version = "0.1.0", path = "printer-core" }
+slicer-core = { version = "0.1.0", path = "slicer-core" }
+# Internal crate paths and versions have one owner. Adapters opt into codecs.
+polygon-core = { version = "0.1.0", path = "polygon-core", default-features = false }
+math-core = { package = "osv-math", version = "0.1.0", path = "math-core" }
+value-codec = { version = "0.1.0", path = "value-codec" }
+geometry-ops = { version = "0.1.0", path = "geometry-ops", default-features = false }
+planar-geometry = { version = "0.1.0", path = "planar-geometry" }
+brep-topology = { version = "0.1.0", path = "brep-topology", default-features = false }
+mesh-topology = { version = "0.1.0", path = "mesh-topology" }
+mesh-query = { version = "0.1.0", path = "mesh-query" }
+mesh-section = { version = "0.1.0", path = "mesh-section" }
+mesh-io = { version = "0.1.0", path = "mesh-io" }
+sketch-core = { version = "0.1.0", path = "sketch-core", default-features = false }
+subdivision-core = { version = "0.1.0", path = "subdivision-core", default-features = false }
+sdf-core = { version = "0.1.0", path = "sdf-core", default-features = false }
+mechanical-core = { version = "0.1.0", path = "mechanical-core", default-features = false }
+tensor-core = { version = "0.1.0", path = "tensor-core" }
+gpu-compute = { version = "0.1.0", path = "gpu-compute" }
+compute-core = { version = "0.1.0", path = "compute-core" }
+compute-cuda = { version = "0.1.0", path = "compute-cuda" }
+compute-mlx = { version = "0.1.0", path = "compute-mlx" }
+
 wgpu = { version = "30", default-features = false, features = ["wgsl", "std"] }
 naga = { version = "30", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
-rbench = { git = "https://github.com/themoretheless/rbench", branch = "release" }
+rbench = { version = "0.1.0", git = "https://github.com/themoretheless/rbench", branch = "release" }
 
 [profile.release]
 opt-level = "s"
@@ -36,6 +120,19 @@ opt-level = 3
 # Hot geometry kernels: measured against the workspace size profile (same
 # precedent as photogrammetry-core above).
 [profile.release.package.polygon-core]
+opt-level = 3
+
+# Mesh kernels extracted from polygon-core retain its measured release profile.
+[profile.release.package.mesh-topology]
+opt-level = 3
+
+[profile.release.package.mesh-query]
+opt-level = 3
+
+[profile.release.package.mesh-section]
+opt-level = 3
+
+[profile.release.package.mesh-io]
 opt-level = 3
 
 [profile.release.package.brep-core]

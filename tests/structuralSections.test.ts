@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {extrudePolygonProfile} from '../src/services/geometry/polygon'
-import {inspectStructuralSections} from '../src/services/structuralSections'
+import {inspectStructuralSections,sectionTorsion} from '../src/services/structuralSections'
 import {mainSolidResult,isBoundaryConnectivity} from '../src/services/mainSolidProtocol'
 
 const outer=[[0,0],[10,0],[10,10],[0,10]]
@@ -80,4 +80,35 @@ it('classifies closed cavities separately from material islands and refuses cont
   expect(touching.materialAudit.status).toBe('unresolved')
   expect(touching.connectivity.materialConnectivity).toBe('not-established')
   expect(mainSolidResult({...expected,stations:[-1]},touching)).toBe(true)
+})
+
+it('reports principal axes for sections through WASM',()=>{
+  const solid=inspectStructuralSections(build(),'z',[5])
+  const p=solid.sections[0].properties
+  const i=10*10**3/12
+  expect(p?.isotropic).toBe(true)
+  expect(p?.i1Mm4).toBeCloseTo(i,6)
+  expect(p?.i2Mm4).toBeCloseTo(i,6)
+  expect(p?.r1Mm).toBeCloseTo(Math.sqrt(i/100),9)
+  expect(p?.w1Mm3).toBeCloseTo(i/5,6)
+  // Elongated section: maximum moment about the vertical axis.
+  const plate=extrudePolygonProfile({outer:[[0,0],[40,0],[40,20],[0,20]],holes:[]},[0,0,10])
+  const q=inspectStructuralSections(plate,'z',[5]).sections[0].properties
+  expect(q?.isotropic).toBe(false)
+  expect(q?.i1Mm4).toBeCloseTo(20*40**3/12,4)
+  expect(q?.i2Mm4).toBeCloseTo(40*20**3/12,4)
+  expect(Math.abs(q?.principalAngleRad??0)).toBeCloseTo(Math.PI/2,9)
+})
+
+it('computes thin-walled torsion constants through WASM',()=>{
+  const r=sectionTorsion(
+    [{a:[0,0],b:[100,0],thicknessMm:5}],
+    [{centerline:[[0,0],[100,0],[100,50],[0,50]],thicknessMm:[5,5,5,5]}],
+  )
+  const open=100*125/3, closed=4*5000*5000/60
+  expect(r.openMm4).toBeCloseTo(open,6)
+  expect(r.closedMm4).toBeCloseTo(closed,3)
+  expect(r.totalMm4).toBeCloseTo(open+closed,3)
+  expect(()=>sectionTorsion([{a:[0,0],b:[0,0],thicknessMm:5}],[])).toThrow()
+  expect(()=>sectionTorsion([],[{centerline:[[0,0],[1,0],[2,0]],thicknessMm:[1,1,1]}])).toThrow()
 })

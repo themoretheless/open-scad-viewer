@@ -23,20 +23,20 @@ fn exact_segments(c: &Curve) -> Option<Vec<Curve>> {
         return None;
     }
     if c.periodic {
-        return crate::sweep_support::exact_curve_segments::inspect(c);
+        return crate::exact_curve_segments::inspect(c);
     }
     if c.knots[..=c.degree].iter().any(|k| *k != c.knots[c.degree])
         || c.knots[n..].iter().any(|k| *k != c.knots[n])
     {
-        return crate::sweep_support::exact_curve_segments::inspect(c);
+        return crate::exact_curve_segments::inspect(c);
     }
     for knot in &c.knots[c.degree + 1..n] {
         if c.knots.iter().filter(|k| *k == knot).count() != c.degree {
-            return crate::sweep_support::exact_curve_segments::inspect(c);
+            return crate::exact_curve_segments::inspect(c);
         }
     }
     Some(
-        crate::sweep_support::audit::curve_span_domains(c)
+        crate::certificates::audit::curve_span_domains(c)
             .into_iter()
             .map(|(i, _)| Curve {
                 degree: c.degree,
@@ -91,15 +91,56 @@ pub fn inspect(
         return Ok(out);
     };
     out.plane_axis = Some(axis);
+    // A rational Bernstein pole can contain 1/3 even though its homogeneous
+    // coefficients are exact dyadics. A common exact integer change of units
+    // can make that pole representable. Simplicity and loop containment are
+    // invariant under this positive bijection; this never changes the model
+    // or supplies a geometric error bound. All loops use the same chart.
+    let mut chart = None;
+    for scale in [1., 3., 5., 7., 15., 21., 35., 105.] {
+        if scale != 1. {
+            if out.cells == max_cells {
+                out.reason = Some("contour-budget-exhausted");
+                return Ok(out);
+            }
+            out.cells += 1;
+        }
+        let pieces = loops
+            .iter()
+            .map(|contour| {
+                contour
+                    .iter()
+                    .map(|curve| {
+                        if scale == 1. {
+                            exact_segments(curve)
+                        } else {
+                            exact_segments(&crate::exact_curve_segments::scaled_curve(
+                                curve, scale,
+                            )?)
+                        }
+                    })
+                    .collect::<Option<Vec<_>>>()
+            })
+            .collect::<Option<Vec<_>>>();
+        if let Some(pieces) = pieces {
+            chart = Some((scale, pieces));
+            break;
+        }
+    }
+    let Some((scale, chart)) = chart else {
+        out.reason = Some("contour-decomposition-unproved");
+        return Ok(out);
+    };
+    let tolerance = tolerance * scale;
+    if !tolerance.is_finite() {
+        out.reason = Some("contour-decomposition-unproved");
+        return Ok(out);
+    }
     let mut projected = Vec::with_capacity(loops.len());
     let mut segments = 0;
-    for contour in loops {
+    for contour in chart {
         let mut uv_loop = Vec::new();
-        for curve in contour {
-            let Some(pieces) = exact_segments(curve) else {
-                out.reason = Some("contour-decomposition-unproved");
-                return Ok(out);
-            };
+        for pieces in contour {
             segments += pieces.len();
             if segments > 256 {
                 out.reason = Some("contour-segment-budget-exhausted");
@@ -217,6 +258,59 @@ pub fn inspect(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exact_common_units_certify_nonuniform_periodic_domain_without_rounding() {
+        let curve = Curve {
+            degree: 2,
+            knots: (0..=8).map(|x| x as f64).collect(),
+            control_points: [
+                [1., 0., 0.],
+                [0., 1., 0.],
+                [-1., 0., 0.],
+                [0., -1., 0.],
+                [1., 0., 0.],
+                [0., 1., 0.],
+            ]
+            .map(Vec::from)
+            .to_vec(),
+            weights: vec![1., 0.5, 1., 1., 1., 0.5],
+            periodic: true,
+        };
+        let before = curve.clone();
+        assert!(exact_segments(&curve).is_none());
+        let mut hole = curve.clone();
+        for p in &mut hole.control_points {
+            for x in p {
+                *x *= 0.25;
+            }
+        }
+        let loops = [vec![curve.clone()], vec![hole]];
+        let r = inspect(&loops, 1e-6, 10000, 10000).unwrap();
+        assert!(r.cap_domain_certified, "{r:?}");
+        assert!(
+            !inspect(&loops, 1e-6, 0, 10000)
+                .unwrap()
+                .cap_domain_certified
+        );
+        assert!(
+            !inspect(&loops, 1e-6, 10000, 0)
+                .unwrap()
+                .cap_domain_certified
+        );
+        let mut open = curve.clone();
+        open.control_points[5][0] = 0.125;
+        open.periodic = false;
+        assert!(
+            !inspect(&[vec![open]], 1e-6, 10000, 10000)
+                .unwrap()
+                .cap_domain_certified
+        );
+        assert_eq!(curve, before);
+        let off_grid = f64::from_bits(1f64.to_bits() + 1);
+        let mut rounded = curve;
+        rounded.control_points[0][0] = off_grid;
+        assert!(crate::exact_curve_segments::scaled_curve(&rounded, 3.).is_none());
+    }
     fn square(x: f64, y: f64, size: f64) -> Vec<Curve> {
         let points = [
             [x, y, 0.],

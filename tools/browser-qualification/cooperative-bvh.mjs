@@ -39,7 +39,7 @@ try {
   assert.deepEqual(pageErrors,[])
   assert.equal(result.cancelled.length,4)
   const hashes={}
-  for(const file of ['crates/polygon-core/src/solid/bvh.rs','crates/polygon-core/src/solid/edges.rs','crates/polygon-core/src/solid/edges/cooperative.rs','crates/geometry-bridge/src/mesh_analysis.rs','crates/geometry-bridge/src/mesh.rs','crates/geometry-bridge/src/abi.rs','crates/geometry-wasm/src/lib.rs','src/services/geometry/meshAnalysis.ts','src/services/cadKernelOps.ts','src/services/openscadParser.ts','public/wasm/geometry-kernel.wasm','tools/browser-qualification/cooperative-bvh.ts','tools/browser-qualification/cooperative-bvh.worker.ts','tools/browser-qualification/cooperative-bvh.mjs']) {
+  for(const file of ['crates/polygon-core/src/solid/bvh.rs','crates/polygon-core/src/solid/edges.rs','crates/mesh-topology/src/edges/cooperative.rs','crates/mesh-topology/src/edges.rs','crates/mesh-query/src/bvh.rs','crates/geometry-bridge/src/mesh_analysis.rs','crates/geometry-bridge/src/mesh.rs','crates/geometry-bridge/src/abi.rs','crates/geometry-wasm/src/lib.rs','src/services/geometry/meshAnalysis.ts','src/services/cadKernelOps.ts','src/services/openscadParser.ts','public/wasm/geometry-kernel.wasm','tools/browser-qualification/cooperative-bvh.ts','tools/browser-qualification/cooperative-bvh.worker.ts','tools/browser-qualification/cooperative-bvh.mjs']) {
     hashes[file]=createHash('sha256').update(await readFile(file)).digest('hex')
   }
   await mkdir(output,{recursive:true})

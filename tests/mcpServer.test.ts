@@ -7,7 +7,7 @@ import {
   type JSONRPCMessage,
   type McpServer,
 } from '@modelcontextprotocol/server'
-import { createModelGraphMcpServer as createOpenScadMcpServer } from '../src/mcp/createModelGraphServer'
+import { createRushGraphMcpServer as createOpenScadMcpServer } from '../src/mcp/createRushGraphServer'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
 import {
   persistedFailureStatus,
@@ -121,31 +121,31 @@ describe('OpenSCAD MCP server', () => {
   it('advertises tools and persists a model exposed as an MCP resource', async () => {
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
-    expect(initialize.instructions).toContain('First call modelgraph_language')
+    expect(initialize.instructions).toContain('First call rush_language')
     const listed = await request('tools/list') as {
       tools: Array<{ name: string; annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean } }>
     }
     expect(listed.tools.map(tool => tool.name).sort()).toEqual([
       'mesh_convert',
-      'modelgraph_check',
-      'modelgraph_compile',
-      'modelgraph_export',
-      'modelgraph_generate',
-      'modelgraph_interference',
-      'modelgraph_language',
-      'modelgraph_modify',
-      'modelgraph_nurbs_build',
-      'modelgraph_nurbs_compile',
-      'modelgraph_nurbs_evaluate',
-      'modelgraph_nurbs_export',
-      'modelgraph_nurbs_intersect',
-      'modelgraph_nurbs_language',
-      'modelgraph_report',
-      'modelgraph_set_parameters',
-      'modelgraph_svg_export',
-      'modelgraph_svg_extrude',
-      'modelgraph_svg_preview',
-      'modelgraph_text_compile',
+      'rush_check',
+      'rush_compile',
+      'rush_export',
+      'rush_generate',
+      'rush_interference',
+      'rush_language',
+      'rush_modify',
+      'rush_nurbs_build',
+      'rush_nurbs_compile',
+      'rush_nurbs_evaluate',
+      'rush_nurbs_export',
+      'rush_nurbs_intersect',
+      'rush_nurbs_language',
+      'rush_report',
+      'rush_set_parameters',
+      'rush_svg_export',
+      'rush_svg_extrude',
+      'rush_svg_preview',
+      'rush_frontend_compile',
       'openscad_analyze',
       'openscad_brep_capabilities',
       'openscad_build_history',
@@ -1136,50 +1136,50 @@ describe('OpenSCAD MCP server', () => {
   })
 })
 
-describe('ModelGraph MCP language workflow', () => {
+describe('RushGraph MCP language workflow', () => {
   it('serves a model-ready schema and compiles, edits and checks a structured model', async () => {
-    const { MODELGRAPH_EXAMPLE } = await import('../src/services/modelGraph')
+    const { RUSH_GRAPH_EXAMPLE } = await import('../src/services/rushGraph')
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
-    expect(initialize.instructions).toContain('First call modelgraph_language')
-    const resource = await request('resources/read', { uri: 'openscad://language/modelgraph-1' }) as { contents: Array<{ text: string }> }
+    expect(initialize.instructions).toContain('First call rush_language')
+    const resource = await request('resources/read', { uri: 'openscad://language/rush-1' }) as { contents: Array<{ text: string }> }
     const contract = JSON.parse(resource.contents[0].text)
-    expect(contract.language).toBe('modelgraph/1')
+    expect(contract.language).toBe('rush/ir-1')
     expect(contract.schema.additionalProperties).toBe(false)
     expect(contract.guide).toContain('lexical closures')
     expect(contract.guide).toContain('type_policy:')
-    const modified = await request('tools/call', {name:'modelgraph_modify', arguments:{
-      document:{language:'modelgraph/1',units:'mm',parameters:[],nodes:[{id:'b',op:'box',size:[10,10,10]}],root:'b'},
+    const modified = await request('tools/call', {name:'rush_modify', arguments:{
+      document:{language:'rush/ir-1',units:'mm',parameters:[],nodes:[{id:'b',op:'box',size:[10,10,10]}],root:'b'},
       modification:{operation:'split',axis:'z',position:4},
     }}) as {isError?:boolean;structuredContent:{results:Array<{analysis:{volume:number}}>}}
     expect(modified.isError).not.toBe(true)
     expect(modified.structuredContent.results[0].analysis.volume).toBeCloseTo(400,6)
     expect(modified.structuredContent.results[1].analysis.volume).toBeCloseTo(600,6)
 
-    const assembly = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.assembly_example } }) as { isError?: boolean; structuredContent: { assembly_components: Array<{ id: string; matrix: number[] }>; analysis: { meshCount: number } } }
+    const assembly = await request('tools/call', { name: 'rush_check', arguments: { document: contract.assembly_example } }) as { isError?: boolean; structuredContent: { assembly_components: Array<{ id: string; matrix: number[] }>; analysis: { meshCount: number } } }
     expect(assembly.isError).toBe(false)
     expect(assembly.structuredContent.analysis.meshCount).toBe(2)
     expect(assembly.structuredContent.assembly_components[1].matrix[11]).toBeCloseTo(5.3)
-    const sketch = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.sketch_example } }) as { isError?: boolean; structuredContent: { sketch_solutions: Array<{ status: string }>; analysis: { volume: number } } }
+    const sketch = await request('tools/call', { name: 'rush_check', arguments: { document: contract.sketch_example } }) as { isError?: boolean; structuredContent: { sketch_solutions: Array<{ status: string }>; analysis: { volume: number } } }
     expect(sketch.isError).toBe(false)
     expect(sketch.structuredContent.sketch_solutions[0].status).toBe('solved')
     expect(sketch.structuredContent.analysis.volume).toBeCloseTo(600, 3)
-    const typed = await request('tools/call', { name: 'modelgraph_compile', arguments: { document: contract.units_example } }) as { structuredContent: { document: unknown; document_sha256: string; constraint_report: Array<{ passed: boolean }> } }
+    const typed = await request('tools/call', { name: 'rush_compile', arguments: { document: contract.units_example } }) as { structuredContent: { document: unknown; document_sha256: string; constraint_report: Array<{ passed: boolean }> } }
     expect(typed.structuredContent.constraint_report[0].passed).toBe(true)
-    const rejected = await request('tools/call', { name: 'modelgraph_set_parameters', arguments: { document: typed.structuredContent.document, expected_document_sha256: typed.structuredContent.document_sha256, updates: [{ id: 'wall', value: 0.6 }] } }) as { isError: boolean; structuredContent: { error: { code: string; details: unknown[] } } }
+    const rejected = await request('tools/call', { name: 'rush_set_parameters', arguments: { document: typed.structuredContent.document, expected_document_sha256: typed.structuredContent.document_sha256, updates: [{ id: 'wall', value: 0.6 }] } }) as { isError: boolean; structuredContent: { error: { code: string; details: unknown[] } } }
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('constraint_failed')
     expect(rejected.structuredContent.error.details).toContainEqual(expect.objectContaining({ id: 'minimumWall', actual: 0.6, expected: 1.2, passed: false }))
-    const functional = await request('tools/call', { name: 'modelgraph_check', arguments: { document: contract.functional_example } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    const functional = await request('tools/call', { name: 'rush_check', arguments: { document: contract.functional_example } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
     expect(functional.isError).toBe(false)
     expect(functional.structuredContent.analysis.volume).toBeCloseTo(24)
-    const report = await request('tools/call', { name: 'modelgraph_report', arguments: { document: contract.units_example } }) as { content: Array<{ type: string }>; structuredContent: { images_status: string; references: Array<{ node_id: string | null }> } }
+    const report = await request('tools/call', { name: 'rush_report', arguments: { document: contract.units_example } }) as { content: Array<{ type: string }>; structuredContent: { images_status: string; references: Array<{ node_id: string | null }> } }
     expect(report.structuredContent.images_status).toBe('rendered')
     expect(report.content.filter(item => item.type === 'image')).toHaveLength(3)
     expect(report.structuredContent.references.some(item => item.node_id === 'plate')).toBe(true)
-    const compiled = await request('tools/call', { name: 'modelgraph_compile', arguments: { document: MODELGRAPH_EXAMPLE } }) as { structuredContent: { document: unknown; document_sha256: string } }
-    const changed = await request('tools/call', { name: 'modelgraph_set_parameters', arguments: { document: compiled.structuredContent.document, expected_document_sha256: compiled.structuredContent.document_sha256, updates: [{ id: 'width', value: 50 }] } }) as { structuredContent: { document: unknown } }
-    const checked = await request('tools/call', { name: 'modelgraph_check', arguments: { document: changed.structuredContent.document } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    const compiled = await request('tools/call', { name: 'rush_compile', arguments: { document: RUSH_GRAPH_EXAMPLE } }) as { structuredContent: { document: unknown; document_sha256: string } }
+    const changed = await request('tools/call', { name: 'rush_set_parameters', arguments: { document: compiled.structuredContent.document, expected_document_sha256: compiled.structuredContent.document_sha256, updates: [{ id: 'width', value: 50 }] } }) as { structuredContent: { document: unknown } }
+    const checked = await request('tools/call', { name: 'rush_check', arguments: { document: changed.structuredContent.document } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
     expect(checked.isError).toBe(false)
     expect(checked.structuredContent.analysis.volume).toBeGreaterThan(11000)
   })
@@ -1188,10 +1188,10 @@ describe('ModelGraph MCP language workflow', () => {
 describe('Mechanical generators over MCP',()=>{
   it('generates readable models, returns individual planetary parts and exports a thread',async()=>{
     const {request}=await connectedServer()
-    const resource=await request('resources/read',{uri:'openscad://language/modelgraph-mechanical'}) as {contents:Array<{text:string}>}
+    const resource=await request('resources/read',{uri:'openscad://language/rush-mechanical'}) as {contents:Array<{text:string}>}
     expect(JSON.parse(resource.contents[0].text).examples.thread).toBeTruthy()
     for(const kind of ['gear','planetary_gears','thread']) {
-      const response=await request('tools/call',{name:'modelgraph_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
+      const response=await request('tools/call',{name:'rush_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
       expect(response.isError,JSON.stringify(response.structuredContent).slice(0,500)).not.toBe(true)
       expect(response.structuredContent.analysis.volume).toBeGreaterThan(0)
       expect(response.content.filter(c=>c.type==='image'), `${kind}: ${JSON.stringify({
@@ -1206,16 +1206,16 @@ describe('Mechanical generators over MCP',()=>{
       if (kind === 'planetary_gears') expect(previewHash).not.toBe(primaryHash)
       else expect(previewHash).toBe(primaryHash)
       if(kind==='planetary_gears')expect(response.structuredContent.mechanical_parts).toHaveLength(5)
-      const exported=await request('tools/call',{name:'modelgraph_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
+      const exported=await request('tools/call',{name:'rush_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
       expect(exported.isError).not.toBe(true)
       expect(Buffer.from(exported.content[0].resource.blob,'base64').readUInt32LE(0)).toBe(0x04034b50)
     }
-    const small=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:8}}) as {isError?:boolean;structuredContent:{mechanical_reports:unknown[]}}
+    const small=await request('tools/call',{name:'rush_generate',arguments:{kind:'gear',teeth:8}}) as {isError?:boolean;structuredContent:{mechanical_reports:unknown[]}}
     expect(small.isError).not.toBe(true)
     expect(small.structuredContent.mechanical_reports).toEqual([expect.objectContaining({
       teeth: 8, minimum_external_teeth_without_undercut: 18, root_transition: 'radial_below_base_circle',
     })])
-    const rejected=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:2}}) as {isError:boolean;structuredContent:{error:{code:string}}}
+    const rejected=await request('tools/call',{name:'rush_generate',arguments:{kind:'gear',teeth:2}}) as {isError:boolean;structuredContent:{error:{code:string}}}
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('invalid_mechanical_geometry')
   },30000)

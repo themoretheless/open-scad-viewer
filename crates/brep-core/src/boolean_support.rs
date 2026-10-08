@@ -158,7 +158,7 @@ pub(crate) fn simplify(a: &Model, b: &Model, operation: &str) -> Result<Option<M
             }
         }));
     }
-    if value_codec::Serialize::to_value(&a.0) == value_codec::Serialize::to_value(&b.0) {
+    if a.0 == b.0 {
         return Ok(Some(match operation {
             "difference" | "xor" => empty()?,
             _ => a.clone(),

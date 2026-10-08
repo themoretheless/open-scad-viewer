@@ -3,6 +3,10 @@ import type { RationalReparameterization } from './nurbsFoundation'
 import { type NurbsCurve } from './nurbsCurve'
 import { type NurbsSurface } from './nurbsSurface'
 import { callNurbsRust } from './geometry/nurbs'
+import {inspectAuthoredFrameRegularity,type AuthoredFrameRegularity} from './nurbsAuthoredFrameRegularity'
+import {inspectRetainedPatchRegularity,type RetainedPatchRegularity} from './nurbsRetainedPatchRegularity'
+import {inspectFrenetFrameRegularity,type FrenetFrameRegularity} from './nurbsFrenetFrameRegularity'
+import {inspectFixedNormalFrameRegularity,type FixedNormalFrameRegularity} from './nurbsFixedNormalFrameRegularity'
 /** Rational sphere surface; its poles are intentional parameter singularities. */
 export const sphereNurbsSurface = (center: [number,number,number], radius: number): NurbsSurface => callNurbsRust('surface_sphere',{center,radius})
 /** Circular cylinder side, without caps. */
@@ -132,12 +136,17 @@ export interface ProgressiveSweepOptions {
  maxDeviation:number
  lengthTolerance?:number
  lengthMaxCells?:number
+ rmfTransportSteps?:number
+ errorMaxCells?:number
+ errorMaxProducts?:number
 }
-/** Complete orientation independent of guide tangent; sampled regularity only. */
+/** Complete orientation independent of path tangent; native reports distinguish
+ * certified retained-patch error from sampled transport acceptance. */
 export interface AuthoredProgressiveSweepOptions extends Omit<ProgressiveSweepOptions,'orientation'> {
  orientation:'authored'
  frameAxis:NurbsVectorLaw
  frameNormal:NurbsVectorLaw
+ frameRegularityMaxCells?:number
 }
 export type ProgressiveSurfaceSweepOptions=ProgressiveSweepOptions|AuthoredProgressiveSweepOptions
 /** A spatial rail controls normal direction; this does not force profile contact. */
@@ -162,32 +171,114 @@ export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisSc
  center_law:options.centerLaw?{degree:options.centerLaw.degree,knots:options.centerLaw.knots,controlPoints:options.centerLaw.values,weights:options.centerLaw.weights,periodic:false}:null,
 })
 export interface ProgressiveSweepReport {
+ authoredFrameRegularity?:AuthoredFrameRegularity
+ retainedPatchRegularity?:RetainedPatchRegularity
+ sourceFrameRegularity?:FrenetFrameRegularity|FixedNormalFrameRegularity
+ sourceFrameSmoothness?:ProgressiveOriginalFrameSmoothness
+ closedSourceFrameSmoothnessC1?:ProgressiveClosedPathFrameSmoothness
+ closedSourceFrameSmoothness?:ProgressiveClosedAuthoredFrameSmoothness|ProgressiveClosedPathFrameSmoothness|ProgressiveClosedGuidedFrameSmoothness
+ retainedDecompositionSmoothness?:ProgressiveRetainedDecompositionJoins
+ retainedDecompositionG1Fallback?:ProgressiveRetainedDecompositionSmoothness
  accepted:boolean
  sections:number
  stations:number
+ continuousErrorUpper:number|null
+ /** Maximum of certified profiles; does not certify unresolved profiles. */
+ knownProfileErrorUpper:number|null
+ /** Original stored end contours; excludes decomposition, correction and filled caps. */
+ originalSectionEndpointErrorUpper?:number|null
+ /** Retained end contours including decomposition; excludes correction/filled caps. */
+ endpointContourErrorUpper?:[number,number]|null
+ errorCertificateCells:number
+ decompositionProducts:number
+ errorCertificateReason:string|null
+ continuousErrorScope:'retained-patches-relative-to-original-profile-transport'
  sampledControlDeviation:number
  budget:number
  closedPath:boolean
  lengthResidualUpper:number|null
- continuousBound:false
- roundingCertified:false
+ continuousBound:boolean
+ roundingCertified:boolean
  seamContinuity:'C0'|'open'
  method:'progressive-fourfold-section-refinement'
 }
+/** Attach a separate whole-law Rust premise without changing native admission. */
+const sweepAngularLawCurve=(twist:NurbsScaleLaw):NurbsCurve=>({degree:twist.degree,knots:twist.knots,
+ controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false})
+function withSweepFrameRegularity<T extends {patches:NurbsSurface[]|null;report:ProgressiveSweepReport;levels?:ProgressiveSweepReport[]}>(result:T,options:ProgressiveGuidedSurfaceSweepOptions,path:NurbsCurve,twist:NurbsScaleLaw,profiles:NurbsCurve[],scale:NurbsScaleLaw):T {
+ const smoothness=inspectProgressiveOriginalFrameSmoothness(profiles,path,scale,twist,options,2,10000,1000000)
+ result.report.sourceFrameSmoothness=smoothness
+ for(const level of result.levels??[])level.sourceFrameSmoothness=smoothness
+ if(result.report.closedPath&&options.orientation==='authored'){
+  const closed=inspectProgressiveClosedAuthoredFrameSmoothness(profiles,path,scale,twist,options,2,10000,1000000)
+  result.report.closedSourceFrameSmoothness=closed
+  for(const level of result.levels??[])level.closedSourceFrameSmoothness=closed
+ }
+
+ if(result.report.closedPath&&!('frameAxis' in options&&options.frameAxis)&&!('orientationGuide' in options&&options.orientationGuide)&&['rmf','fixed_normal','corrected_frenet'].includes(options.orientation??'rmf')){
+  const closed=inspectProgressiveClosedPathFrameSmoothness(profiles,path,scale,twist,options,2,10000,1000000)
+  result.report.closedSourceFrameSmoothness=closed
+  for(const level of result.levels??[])level.closedSourceFrameSmoothness=closed
+  if(!closed.closedSourceFrameSmoothnessCertified){
+   const c1=inspectProgressiveClosedPathFrameSmoothness(profiles,path,scale,twist,options,1,10000,1000000)
+   result.report.closedSourceFrameSmoothnessC1=c1
+   for(const level of result.levels??[])level.closedSourceFrameSmoothnessC1=c1
+  }
+ }
+
+ if(result.report.closedPath&&'orientationGuide' in options&&options.orientationGuide&&!('frameAxis' in options&&options.frameAxis)){
+  const closed=inspectProgressiveClosedGuidedFrameSmoothness(profiles,path,scale,twist,options,2,10000,1000000)
+  result.report.closedSourceFrameSmoothness=closed
+  for(const level of result.levels??[])level.closedSourceFrameSmoothness=closed
+ }
+
+ // Native retained Jacobian proof remains independent of refinement admission.
+ // Audit published levels; rejected previews can request the separate API.
+ if(result.report.accepted&&result.patches?.length){
+  const regularity=inspectRetainedPatchRegularity(result.patches,10000)
+  result.report.retainedPatchRegularity=regularity
+  const last=result.levels?.at(-1)
+  if(last)last.retainedPatchRegularity=regularity
+  const fallback=inspectProgressiveRetainedDecompositionSmoothness(profiles,path,scale,twist,options,
+   result.report.sections,1,1000000)
+  const decomposition={...fallback.g2,profilePatchRanges:fallback.profilePatchRanges}
+  result.report.retainedDecompositionSmoothness=decomposition
+  if(last)last.retainedDecompositionSmoothness=decomposition
+  result.report.retainedDecompositionG1Fallback=fallback
+  if(last)last.retainedDecompositionG1Fallback=fallback
+  if(!('orientationGuide' in options)&&options.orientation==='frenet'){
+   const frame=inspectFrenetFrameRegularity(path,sweepAngularLawCurve(twist),10000)
+   result.report.sourceFrameRegularity=frame
+   if(last)last.sourceFrameRegularity=frame
+  }else if(!('orientationGuide' in options)&&options.orientation==='fixed_normal'){
+   const frame=inspectFixedNormalFrameRegularity(path,options.normal,sweepAngularLawCurve(twist),10000)
+   result.report.sourceFrameRegularity=frame
+   if(last)last.sourceFrameRegularity=frame
+  }
+ }
+ if(options.orientation!=='authored')return result
+ const frame=sweepFrameLawPayload(options)
+ const regularity=inspectAuthoredFrameRegularity(frame.frame_axis!,frame.frame_normal!,options.frameRegularityMaxCells??10000)
+ result.report.authoredFrameRegularity=regularity
+ for(const level of result.levels??[])level.authoredFrameRegularity=regularity
+ return result
+}
+const progressiveSweepSourcePayload=(path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,construction=false)=>({path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
+ ...(!construction||options.rmfTransportSteps===undefined?{}:{rmf_transport_steps:options.rmfTransportSteps}),
+ ...(!construction||options.errorMaxCells===undefined?{}:{error_max_cells:options.errorMaxCells}),
+ ...(!construction||options.errorMaxProducts===undefined?{}:{error_max_products:options.errorMaxProducts}),
+ scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
+ twist:sweepAngularLawCurve(twist),normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',
+ initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,
+ length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
 export interface ProgressiveSweepResult {patches:NurbsSurface[]|null;report:ProgressiveSweepReport;levels:ProgressiveSweepReport[]}
 /** Simultaneous scale/twist; twist values use degrees, normalized traversal. */
 export const progressiveSweepNurbsPatches=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveSweepResult=>
- callNurbsRust('surface_progressive_sweep',{profile,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+ withSweepFrameRegularity(callNurbsRust('surface_progressive_sweep',{ profile,...progressiveSweepSourcePayload(path,scale,twist,options,true)}),options,path,twist,[profile],scale)
 export interface ProgressiveMultiSweepResult extends ProgressiveSweepResult {profilePatchRanges:[number,number][]|null}
 /** Shared stations/budget for ordered curves; preserves boundaries, without sewing or caps. */
 export const progressiveSweepNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveMultiSweepResult=>
- callNurbsRust('surface_progressive_sweep_profiles',{profiles,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+ withSweepFrameRegularity(callNurbsRust('surface_progressive_sweep_profiles',{ profiles,...progressiveSweepSourcePayload(path,scale,twist,options,true)}),options,path,twist,profiles,scale)
 export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMiterReport> {
  preview:true
  patches:NurbsSurface[]
@@ -196,10 +287,167 @@ export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMit
 }
 /** One preview level; unaccepted patches are not construction results. */
 export const previewProgressiveNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number):ProgressiveSweepPreview<ProgressiveSweepReport>=>
- callNurbsRust('surface_progressive_sweep_level',{preview_sections:sections,profiles,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+ withSweepFrameRegularity(callNurbsRust('surface_progressive_sweep_level',{ preview_sections:sections,profiles,...progressiveSweepSourcePayload(path,scale,twist,options,true)}),options,path,twist,profiles,scale)
+export interface ProgressiveRetainedStationSeams {
+ requestedOrder:1|2
+ allStationSeamsCertified:boolean
+ exactWork:number
+ seams:{patch:number;station:number;closure:boolean;c0Identity:boolean;certified:boolean;regularityCertified:boolean;exactWork:number;reason:string}[]
+ reason:string|null
+ method:'exact-retained-station-strip-jets'
+ scope:'retained-station-seams-only'
+ sourceFrameSmoothnessCertified:false
+ profileJoinsCertified:false
+ capJoinsCertified:false
+ solidCertified:false
+}
+/** Native full-domain retained seam audit; source-frame and Solid proofs remain separate. */
+export const inspectProgressiveRetainedStationSeams=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number,order:1|2,maxExactWork:number):ProgressiveRetainedStationSeams=>
+ callNurbsRust('surface_progressive_sweep_station_seams',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),preview_sections:sections,order,maxExactWork})
+export interface ProgressiveRetainedProfileJoin {
+ requestedOrder:1|2
+ leftPatch:number
+ rightPatch:number
+ profilePatchRanges:[number,number][]
+ certified:boolean
+ exactIdentity:boolean
+ regularityCertified:boolean
+ exactWork:number
+ reason:string
+ method:'exact-retained-profile-strip-jets'
+ scope:'explicit-retained-profile-join-only'
+ allProfileJoinsCertified:false
+ sourceFrameSmoothnessCertified:false
+ capJoinsCertified:false
+ continuousBound:false
+ solidCertified:false
+}
+/** Rust reconstructs the requested level and checks this explicit uMax/uMin pair. */
+export const inspectProgressiveRetainedProfileJoin=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number,leftPatch:number,rightPatch:number,order:1|2,transverseScale:number,maxExactWork:number):ProgressiveRetainedProfileJoin=>
+ callNurbsRust('surface_progressive_sweep_profile_join',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),preview_sections:sections,leftPatch,rightPatch,order,transverseScale,maxExactWork})
+export interface ProgressiveRetainedDecompositionJoins {
+ requestedOrder:1|2
+ expectedJoins:number
+ checkedJoins:number
+ coverageComplete:boolean
+ decompositionJoinsCertified:boolean
+ exactWork:number
+ joins:{leftPatch:number;rightPatch:number;certified:boolean;exactIdentity:boolean;regularityCertified:boolean;exactWork:number;reason:string}[]
+ reason:string|null
+ profilePatchRanges:[number,number][]
+ method:'exact-retained-decomposition-strip-jets'
+ scope:'within-source-profile-decomposition-only'
+ allProfileJoinsCertified:false
+ closedProfileSeamsCertified:false
+ sourceFrameSmoothnessCertified:false
+ capJoinsCertified:false
+ continuousBound:false
+ solidCertified:false
+}
+/** Native ownership extraction and all internal decomposition joins share one budget. */
+export const inspectProgressiveRetainedDecompositionJoins=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number,order:1|2,transverseScale:number,maxExactWork:number):ProgressiveRetainedDecompositionJoins=>
+ callNurbsRust('surface_progressive_sweep_decomposition_joins',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),preview_sections:sections,order,transverseScale,maxExactWork})
+export interface ProgressiveRetainedDecompositionSmoothness {
+ g2:Omit<ProgressiveRetainedDecompositionJoins,'profilePatchRanges'>
+ g1:Omit<ProgressiveRetainedDecompositionJoins,'profilePatchRanges'>|null
+ decompositionG1Certified:boolean
+ exactWork:number
+ maxExactWork:number
+ profilePatchRanges:[number,number][]
+ method:'exact-retained-decomposition-smoothness'
+ scope:'within-source-profile-decomposition-only'
+ allProfileJoinsCertified:false
+ closedProfileSeamsCertified:false
+ sourceFrameSmoothnessCertified:false
+ capJoinsCertified:false
+ continuousBound:false
+ solidCertified:false
+}
+/** Native G2 with budget reserved for an independently complete G1 fallback. */
+export const inspectProgressiveRetainedDecompositionSmoothness=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number,transverseScale:number,maxExactWork:number):ProgressiveRetainedDecompositionSmoothness=>
+ callNurbsRust('surface_progressive_sweep_decomposition_smoothness',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),preview_sections:sections,transverseScale,maxExactWork})
+export interface ProgressiveOriginalFrameSmoothness {
+ requestedOrder:1|2
+ sourceFrameSmoothnessCertified:boolean
+ cells:number
+ exactWork:number
+ reason:string|null
+ method:'original-frame-continuity-and-nondegeneracy-cover'
+ scope:'open-original-frame-only'
+ retainedSeamsCertified:false
+ profileJoinsCertified:false
+ capJoinsCertified:false
+ continuousBound:false
+ solidCertified:false
+}
+/** Original frame proof is computed exclusively by Rust, independently of retained surface seams. */
+export const inspectProgressiveOriginalFrameSmoothness=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,order:1|2,maxCells:number,maxExactWork:number):ProgressiveOriginalFrameSmoothness=>
+ callNurbsRust('surface_progressive_sweep_frame_smoothness',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),order,maxCells,maxExactWork})
+export interface ProgressiveClosedAuthoredFrameSmoothness {
+ requestedOrder:1|2
+ closedSourceFrameSmoothnessCertified:boolean
+ cells:number
+ exactWork:number
+ reason:string|null
+ method:'exact-original-authored-endpoint-jets-and-frame-cover'
+ scope:'closed-original-authored-frame-only'
+ pathSeamCertified:false
+ retainedSeamsCertified:false
+ profileJoinsCertified:false
+ capJoinsCertified:false
+ continuousBound:false
+ solidCertified:false
+}
+/** Rust original closed-frame proof; it is independent of the path and retained surface seam. */
+export const inspectProgressiveClosedAuthoredFrameSmoothness=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,order:1|2,maxCells:number,maxExactWork:number):ProgressiveClosedAuthoredFrameSmoothness=>
+ callNurbsRust('surface_progressive_sweep_closed_frame_smoothness',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),order,maxCells,maxExactWork})
+export interface ProgressiveClosedPathFrameSmoothness extends Omit<ProgressiveClosedAuthoredFrameSmoothness,'method'|'scope'> {
+ method:'exact-original-path-twist-endpoint-jets-and-frame-cover'
+ scope:'closed-original-path-frame-only'
+}
+/** Rust proof of the closed original path frame; retained joins remain separate. */
+export const inspectProgressiveClosedPathFrameSmoothness=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,order:1|2,maxCells:number,maxExactWork:number):ProgressiveClosedPathFrameSmoothness=>
+ callNurbsRust('surface_progressive_sweep_closed_path_frame_smoothness',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),order,maxCells,maxExactWork})
+export interface ProgressiveClosedGuidedFrameSmoothness extends Omit<ProgressiveClosedAuthoredFrameSmoothness,'method'|'scope'> {
+ method:'exact-original-guided-endpoint-jets-and-joint-frame-cover'
+ scope:'closed-original-guided-frame-only'
+}
+/** Rust proof of the closed original guided frame; retained joins remain separate. */
+export const inspectProgressiveClosedGuidedFrameSmoothness=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,order:1|2,maxCells:number,maxExactWork:number):ProgressiveClosedGuidedFrameSmoothness=>
+ callNurbsRust('surface_progressive_sweep_closed_guided_frame_smoothness',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),order,maxCells,maxExactWork})
+export interface ProgressiveSweepIdealCapDomains {
+ idealCapDomainsCertified:boolean
+ localDomainCertified:boolean
+ sourcePlaneAxis:number|null
+ endpointFrameAxes:[[[number,number],[number,number],[number,number]],[[number,number],[number,number],[number,number]]]|null
+ cells:number;pairs:number;exactWork:number;reason:string|null
+ method:'original-progressive-endpoint-material-domains'
+ continuousBound:false;retainedCapRegionsCertified:false;globalEmbeddingCertified:false;solidCertified:false
+}
+/** Original material domains only. All geometry/proofs are evaluated in Rust. */
+export function inspectProgressiveSweepIdealCapDomains(
+ profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,
+ options:ProgressiveGuidedSurfaceSweepOptions,loopSizes:number[],
+ budgets={tolerance:.001,maxPairs:1000,maxCells:10000,maxExactWork:1000000},
+):ProgressiveSweepIdealCapDomains {
+ return callNurbsRust('surface_progressive_sweep_cap_domains',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),loopSizes,...budgets})
+}
+export interface ProgressiveSweepCapProjection {
+ capProjectionCertified:boolean;idealCapDomainsCertified:boolean
+ endpointNormals:ProgressiveSweepIdealCapDomains['endpointFrameAxes']
+ normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null
+ cells:number;exactWork:number;reason:string|null
+ method:'original-progressive-endpoint-plane-projection'
+ continuousBound:false;retainedCapRegionsCertified:false;globalEmbeddingCertified:false;solidCertified:false
+}
+/** Plane projection only; no cap ownership or boundary error promotion. */
+export function inspectProgressiveSweepCapProjection(
+ profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,
+ options:ProgressiveGuidedSurfaceSweepOptions,loopSizes:number[],caps:[NurbsSurface,NurbsSurface],
+ budgets={tolerance:.001,maxPairs:1000,maxCells:10000,maxExactWork:1000000},
+):ProgressiveSweepCapProjection {
+ return callNurbsRust('surface_progressive_sweep_cap_projection',{profiles,...progressiveSweepSourcePayload(path,scale,twist,options),loopSizes,caps,...budgets})
+}
 export interface ProgressiveSweepStreamOptions {
  /** Worker cancellation state, sampled at the same boundaries as signal. */
  shouldAbort?:()=>boolean
@@ -216,7 +464,7 @@ export interface ProgressiveMiterOptions {
  retainedDecompositionBudgets?:{maxProducts:number;maxFaces:number}
  capProjectionBudgets?:{maxCells:number;maxExactWork:number}
  circleCorrection?:{quantum:number;tolerance:number;maxWork:number}
- capCorrection?:{quantum:number;tolerance:number;maxWork:number}
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean}
  capWallMaxWalls?:number
  contourAuditBudgets?:{tolerance:number;maxPairs:number;maxCells:number}
  retainedWallMaxInjectivityCells?:number
@@ -320,7 +568,7 @@ export async function* streamProgressiveMiterNurbsProfiles(profiles:NurbsCurve[]
 export async function* streamProgressiveNurbsProfiles(
  profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,
  options:ProgressiveGuidedSurfaceSweepOptions,stream:ProgressiveSweepStreamOptions={},
-):AsyncGenerator<ProgressiveSweepPreview,ProgressiveMultiSweepResult,void> {
+):AsyncGenerator<ProgressiveSweepPreview<ProgressiveSweepReport>,ProgressiveMultiSweepResult,void> {
  const checkAbort=()=>{
   stream.signal?.throwIfAborted()
   if(stream.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')

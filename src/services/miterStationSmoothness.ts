@@ -1,5 +1,5 @@
-import {callGeometryRust} from './geometry/kernel'
 import type {NurbsBrep} from './geometry/brep'
+import {callNurbsRust} from './geometry/nurbs'
 import type {SweepProjectiveSeamAudit} from './nurbsSweepAudit'
 export interface MiterStationSmoothness {
  method:'retained-miter-station-joins'
@@ -16,10 +16,11 @@ export interface MiterStationSmoothness {
  stationG1Certified:boolean
  stationG2Certified:boolean
 }
-/** Native retained topology extraction and shared G2/G1 work accounting. */
+/** Retained topology ownership, exact admission and shared budgets are native.
+ * Abort checks bracket the synchronous call; they do not interrupt native work. */
 export function inspectMiterStationSmoothness(model:NurbsBrep,capFaces:number[],maxWork=2000000,checkAbort?:()=>void):MiterStationSmoothness {
  checkAbort?.()
- const report=callGeometryRust<MiterStationSmoothness>('brep_miter_station_smoothness_audit',{model,capFaces,maxWork})
+ const report=callNurbsRust<MiterStationSmoothness>('brep_miter_station_smoothness_audit',{model,capFaces,maxWork})
  checkAbort?.()
  return report
 }

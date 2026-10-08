@@ -40,6 +40,7 @@ import {
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
 import { projectMeshModelerFaces } from '../services/meshModelerProjection'
+import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
@@ -64,6 +65,18 @@ const document = shallowRef(history.document)
 const undoable = ref(false)
 const redoable = ref(false)
 const error = ref('')
+const kernelReady = ref(isGeometryKernelReady())
+// Mesh can open before Solid or the source viewport has warmed the shared WASM.
+// Publishing readiness invalidates projections that were requested while cold.
+watch(() => props.open, async open => {
+  if (!open || kernelReady.value) return
+  try {
+    await warmGeometryKernel()
+    kernelReady.value = true
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  }
+}, { immediate: true })
 const selection = ref('')
 const selectMode = ref<MeshSelectMode>('object')
 const selectedVerts = ref<number[]>([])
@@ -125,7 +138,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
-  if (!selected.value) return null
+  if (!kernelReady.value || !selected.value) return null
   const base = meshObjectStats(selected.value.mesh)
   return { ...base, edges: buildEdgeList(selected.value.mesh).length }
 })
@@ -632,7 +645,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
-const scene = computed(() => document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
 const sceneFaces = computed(() => scene.value.flatMap(object =>
   object.tris.map(tri => ({ ...tri, objectId: object.id })),
@@ -677,6 +690,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
         <button type="button" class="tool-icon" :title="label('Панель свойств', 'Properties panel')" :aria-label="label('Панель свойств', 'Properties panel')" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg></button>
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
+        <span v-else-if="!kernelReady" role="status">{{ label('Подготовка геометрии…', 'Preparing geometry…') }}</span>
       </div>
       <ModelingGridControls :locale="locale" />
       <WorkspaceActionBar v-if="selected" :label="label('Действия над объектом', 'Object actions')">

@@ -502,7 +502,10 @@ fn triangulate_boundary(
             .iter()
             .map(|wire| wire.iter().map(|p| p.uv).collect())
             .collect::<Vec<_>>(),
-    )?;
+    ).inspect_err(|_error| {
+        #[cfg(test)]
+        eprintln!("triangulation boundary outer={:?} holes={:?}",outer.iter().map(|p|p.uv).collect::<Vec<_>>(),holes.iter().map(|w|w.iter().map(|p|p.uv).collect::<Vec<_>>()).collect::<Vec<_>>());
+    })?;
     let mut out = FaceMesh {
         uv: vec![],
         shared: vec![],
@@ -1246,6 +1249,24 @@ mod registry_tests {
             },
             brep_core::TopologyIds::default(),
         )
+    }
+    #[test]
+    fn corrected_fixed_normal_hollow_body_tessellates_original_boundary() {
+        use nurbs_core::{primitives::line,progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let ring=|points:[[f64;3];4]|(0..4).map(|i|line(points[i],points[(i+1)%4]).unwrap()).collect();
+        let loops=vec![ring([[0.,0.,0.],[0.1,0.,0.],[0.1,0.1,0.],[0.,0.1,0.]]),
+            ring([[0.025,0.025,0.],[0.025,0.075,0.],[0.075,0.075,0.],[0.075,0.025,0.]])];
+        let path=nurbs_core::core::curve::Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![0.,1.,1.]],weights:vec![1.;3],periodic:false};
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let axes=constant_vector_law([2.,3.,1.]).unwrap();let center=constant_vector_law([0.;3]).unwrap();
+        let body=brep_core::analytic::progressive_profile_body_with_evidence_and_correction(&loops,&path,&scale,&twist,Some((&axes,&center)),None,None,
+            Options {normal:[1.,0.,0.],orientation:Orientation::FixedNormal,spacing:Spacing::ArcLength {tolerance:0.001,max_cells:100000},initial_sections:3,max_sections:17,max_deviation:2.},
+            Some(brep_core::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000})).unwrap();
+        assert_eq!(body.boundary_error_within_budget,Some(true));
+        for detail in [1,2,4,8] {
+            let built=nurbs(&body.model,detail).unwrap_or_else(|e|panic!("detail={detail}: {e:?}"));
+            assert!(built.built.report.closed,"detail={detail}");
+        }
     }
     #[test]
     fn periodic_step_sphere_tessellates_with_shared_seam_and_poles() {

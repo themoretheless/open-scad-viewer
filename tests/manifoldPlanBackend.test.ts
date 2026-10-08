@@ -393,6 +393,10 @@ function fakeKernel(options: FakeKernelOptions = {}): {
       if (options.failTransform) throw new Error('fake transform failure')
       return result(3)
     },
+    transform3Projective: () => {
+      if (options.failTransform) throw new Error('fake transform failure')
+      return result(3)
+    },
     boolean2: () => result(2),
     boolean3: () => result(3),
     hull2: () => result(2),

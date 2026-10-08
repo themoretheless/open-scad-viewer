@@ -7,7 +7,7 @@
  *
  * A root that the recorder marked inexact is refused by name rather than approximated.
  */
-import { buildOwnNurbs } from '../modelGraphNurbsKernel'
+import { buildOwnNurbs } from '../rushGraphNurbsKernel'
 import { brepGearFaceCount, type NurbsBrep } from '../geometry/brep'
 import { normalizePolygonMesh } from '../geometry/polygon'
 import type { DirectBody } from '../directModeling'
@@ -65,7 +65,7 @@ function buildExactSolidBody(
     )
   }
   const document = {
-    language: 'modelgraph/nurbs-1',
+    language: 'rush/nurbs-1',
     units: 'mm',
     parameters: [],
     nodes: reachable,

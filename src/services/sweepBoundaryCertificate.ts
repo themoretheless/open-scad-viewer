@@ -19,5 +19,10 @@ export interface SweepBoundaryCertificate {
  reason:'invalid-budget'|'wall-bound-unproved'|'filled-cap-bound-unproved'|'boundary-budget-exceeded'|null
 }
 export function composeSweepBoundaryCertificate(wall:number|null,caps:[number,number]|null,closed:boolean,budget:number):SweepBoundaryCertificate {
- return {...callNurbsRust<SweepBoundaryCertificate>('sweep_boundary_certificate',{wall:wall===null||!Number.isFinite(wall)?null:wall,caps:caps?.map(value=>Number.isFinite(value)?value:null)??null,closed,budget:Number.isFinite(budget)?budget:null}),budget}
+ // Preserve the caller's budget as request metadata; all proof decisions are native.
+ // The binary codec cannot encode NaN/infinity. Null preserves a missing
+ // numerical premise, which Rust classifies conservatively as unproved.
+ const wire=(value:number|null)=>value!==null&&Number.isFinite(value)?value:null
+ const report=callNurbsRust<SweepBoundaryCertificate>('sweep_boundary_certificate',{wall:wire(wall),caps:caps?.map(wire)??null,closed,budget:wire(budget)})
+ return {...report,budget}
 }

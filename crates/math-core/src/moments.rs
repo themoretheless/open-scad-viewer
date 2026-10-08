@@ -382,7 +382,7 @@ mod tests {
             .collect();
         let got = point_fit_plane(&points, Acceleration::Cpu).unwrap();
         let want = orient_normal([-0.25, 0.5, 1.]);
-        for axis in 0..3 {
+        for (axis, _) in want.iter().enumerate() {
             assert!((got.normal[axis] - want[axis]).abs() < 1e-10);
         }
         assert!(got.rms_distance < 1e-10);

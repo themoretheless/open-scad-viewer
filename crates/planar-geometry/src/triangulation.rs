@@ -153,7 +153,98 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
     // Keep scans contiguous, but do not revisit the same rejected prefix after
     // every removal. Benchmarked against indexed linked-list traversal.
     let mut cursor = 0;
-    let eps = 1e-12;
+    // These are the exact binary64 coordinates of the display boundary. This
+    // context proves mesh decisions only, not original CAD/source geometry.
+    let source = cad_predicates::SourceArena::authored(
+        "display-triangulation-boundary",
+        1,
+        positions
+            .iter()
+            .flatten()
+            .map(|v| cad_predicates::AuthoredScalar::Binary64Bits(v.to_bits()))
+            .collect(),
+    )
+    .map_err(|_| crate::error("Invalid triangulation predicate source"))?;
+    let tolerance = cad_predicates::ToleranceContext::default_valid();
+    let refs: Vec<_> = (0..positions.len())
+        .map(|i| [source.leaf(2 * i).unwrap(), source.leaf(2 * i + 1).unwrap()])
+        .collect();
+    let orientation =
+        |a: usize, b: usize, c: usize, work: &mut usize| -> Result<cad_predicates::Sign> {
+            // Equal-coordinate axes establish exact collinearity directly from
+            // source bits; avoid expansion construction for sampled straight edges.
+            *work = work.saturating_add(1);
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
+            let [pa, pb, pc] = [positions[a], positions[b], positions[c]];
+            if pa == pb
+                || pb == pc
+                || pa == pc
+                || (pa[0] == pb[0] && pb[0] == pc[0])
+                || (pa[1] == pb[1] && pb[1] == pc[1])
+            {
+                return Ok(cad_predicates::Sign::Zero);
+            }
+            // For normal differences/products the standard binary64 orient2d
+            // forward error is less than 8*EPSILON*(|left|+|right|).
+            // This deliberately loose bound includes subtraction/product/sum
+            // rounding; underflow, overflow and cancellation use exact fallback.
+            *work = work.saturating_add(16);
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
+            let dx = pa[0] - pc[0];
+            let dy = pa[1] - pc[1];
+            let ex = pb[0] - pc[0];
+            let ey = pb[1] - pc[1];
+            let left = dx * ey;
+            let right = dy * ex;
+            let determinant = left - right;
+            let regular = |v: f64| v == 0. || v.is_normal();
+            let product_regular =
+                |p: f64, a: f64, b: f64| p.is_normal() || (p == 0. && (a == 0. || b == 0.));
+            let magnitude = left.abs() + right.abs();
+            let error = 8. * f64::EPSILON * magnitude;
+            if [dx, dy, ex, ey].into_iter().all(regular)
+                && product_regular(left, dx, ey)
+                && product_regular(right, dy, ex)
+                && determinant.is_normal()
+                && magnitude.is_finite()
+                && error.is_normal()
+                && determinant.abs() > error
+            {
+                return Ok(if determinant > 0. {
+                    cad_predicates::Sign::Positive
+                } else {
+                    cad_predicates::Sign::Negative
+                });
+            }
+            let mut context = cad_predicates::PredicateContext::new(
+                &source,
+                &tolerance,
+                cad_predicates::Limits {
+                    max_work: (MAX_WORK.saturating_sub(*work) as u64).min(cad_predicates::MAX_WORK),
+                    ..Default::default()
+                },
+                None,
+            );
+            let decision = cad_predicates::orient2d(&mut context, refs[a], refs[b], refs[c])
+                .map_err(|_| crate::error("Invalid triangulation predicate reference"))?;
+            *work = work.saturating_add(context.work_used() as usize);
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
+            match decision.outcome {
+                cad_predicates::Outcome::Sign(sign) => Ok(sign),
+                cad_predicates::Outcome::Indeterminate(_) => Err(crate::error(
+                    "Profile triangulation predicate could not be proved",
+                )),
+            }
+        };
     while remaining.len() > 3 {
         let n = remaining.len();
         let mut selected = None;
@@ -170,25 +261,30 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
                 remaining[(i + 1) % n],
             );
             let (pa, pb, pc) = (positions[a], positions[b], positions[c]);
-            if cross2(sub2(pb, pa), sub2(pc, pb)) <= eps {
+            if orientation(a, b, c, work)? != cad_predicates::Sign::Positive {
                 continue;
             }
             let min = [pa[0].min(pb[0]).min(pc[0]), pa[1].min(pb[1]).min(pc[1])];
             let max = [pa[0].max(pb[0]).max(pc[0]), pa[1].max(pb[1]).max(pc[1])];
-            let blocked = remaining.iter().any(|&v| {
+            let mut blocked = false;
+            for &v in &remaining {
                 *work += 1;
                 let p = positions[v];
-                p != pa
+                if p != pa
                     && p != pb
                     && p != pc
                     && p[0] >= min[0]
                     && p[0] <= max[0]
                     && p[1] >= min[1]
                     && p[1] <= max[1]
-                    && cross2(sub2(pb, pa), sub2(p, pa)) >= -eps
-                    && cross2(sub2(pc, pb), sub2(p, pb)) >= -eps
-                    && cross2(sub2(pa, pc), sub2(p, pc)) >= -eps
-            });
+                    && orientation(a, b, v, work)? != cad_predicates::Sign::Negative
+                    && orientation(b, c, v, work)? != cad_predicates::Sign::Negative
+                    && orientation(c, a, v, work)? != cad_predicates::Sign::Negative
+                {
+                    blocked = true;
+                    break;
+                }
+            }
             check(
                 *work <= MAX_WORK,
                 "Profile triangulation work budget exceeded",
@@ -205,14 +301,9 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
         remaining.remove(index);
         cursor = index % remaining.len();
     }
-    let (a, b, c) = (
-        positions[remaining[0]],
-        positions[remaining[1]],
-        positions[remaining[2]],
-    );
-    let final_area = cross2(sub2(b, a), sub2(c, a));
     check(
-        final_area.is_finite() && final_area > 0.,
+        orientation(remaining[0], remaining[1], remaining[2], work)?
+            == cad_predicates::Sign::Positive,
         "Profile has a degenerate final triangle",
     )?;
     indices.extend(remaining.into_iter().map(|i| i as u32));

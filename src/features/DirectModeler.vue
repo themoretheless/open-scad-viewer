@@ -1137,6 +1137,11 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
 }
 function surfaceConstructionError(error:unknown):string {
  const message=error instanceof Error?error.message:String(error)
+ if(advancedOp.value==='nurbs-offset'){
+  if(message.includes('explicit profile join'))return label('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».','The curve has a corner. Choose Bevel or a trim mode under Joins.')
+  if(message.includes('XY plane'))return label('Нужна кривая в плоскости XY с постоянной Z. Выберите плоскую кривую.','Select a curve in an XY plane with constant Z.')
+  if(message.includes('budget')||message.includes('limit'))return label('Предел вычисления достигнут. Увеличьте допуск или разделите кривую.','Calculation limit reached. Increase tolerance or split the curve.')
+ }
  if(advancedOp.value==='nurbs-point-trim'){
   if(message.includes('ambiguous or unresolved'))return pointTrimPick.value?label('Попадание в проекции неоднозначно. Поверните вид или выберите другую точку.','The projected pick is ambiguous. Rotate the view or choose another point.'):label('Ближайшая точка неоднозначна. Выберите другую точку разреза.','The nearest point is ambiguous. Choose another cut point.')
   if(message.includes('capture distance'))return label('Точка вне допуска. Приблизьте её к кривой или увеличьте допуск.','Outside capture distance. Move closer to the curve or increase the distance.')
@@ -1877,8 +1882,8 @@ async function importFile(event: Event) {
   const text=await file.text()
   if(!current())return
   const parsed=JSON.parse(text)
-  if(parsed?.language==='modelgraph/nurbs-1'){
-   const next=await historyWorker.run({kind:'modelGraphImport',document:history.document,text,group:activeGroup.value||undefined})
+  if(parsed?.language==='rush/nurbs-1'){
+   const next=await historyWorker.run({kind:'rushGraphImport',document:history.document,text,group:activeGroup.value||undefined})
    if(!current())return
    const {validateLocked,added}=prepareCommit(next)
    const applied=await target.commitAsync(async()=>next,validateLocked)
@@ -3424,6 +3429,12 @@ function removeGroup(name: string) {
 
 const DEFAULT_GROUP_SOURCE = 'cube([20, 20, 20], center = true);\n'
 
+function openNewGroupFromMenu(event: MouseEvent) {
+  const menu = (event.currentTarget as HTMLElement).closest('details')
+  if (menu) menu.open = false
+  openGroupDialog(null)
+}
+
 /** The source lives in the host's left panel; this only chooses what to open there. */
 function openGroupDialog(name: string | null) {
   if (name === null) {
@@ -3641,8 +3652,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
       <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+        <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
-        <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
+        <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button type="button" :disabled="svgBusy" @click="svgInput?.click()">{{ label('Импорт SVG как профили', 'Import SVG as profiles') }}</button>

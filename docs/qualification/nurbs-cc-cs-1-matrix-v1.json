@@ -6,7 +6,7 @@
   "rows": [
     {"id": "CCCS-CURVE-CURVE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "src/services/nurbsFoundation.ts", "tests/nurbsFoundation.test.ts"]},
     {"id": "CCCS-CURVE-SURFACE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "src/services/nurbsFoundation.ts", "tests/nurbsFoundation.test.ts"]},
-    {"id": "CCCS-PRODUCT", "status": "Complete", "evidence": ["src/mcp/modelGraphNurbsTools.ts", "src/services/modelGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
+    {"id": "CCCS-PRODUCT", "status": "Complete", "evidence": ["src/mcp/rushGraphNurbsTools.ts", "src/services/rushGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
   ],
   "blockingOpenRows": []
 }

@@ -72,6 +72,23 @@ pub fn inspect(
 /// Used only after the volume audit's fresh pair certificates prove every
 /// cross-shell face pair disjoint. Exact clamped edge poles need no rounded
 /// surface-evaluation witness or quantitative clearance estimate.
+pub(crate) fn inspect_certified_boundaries(a:&Model,b:&Model,tolerance_uv:f64,
+    max_cells:usize,max_domains:usize)->Result<Report> {
+    let mut report=Report {
+        boundary_separation_certified:false,
+        boundary:shell_distance::ShellDistance {
+            lower_bound_mm:0.,upper_bound_mm:None,faces:None,witness:None,converged:false,
+            reason:"fresh-face-separation-no-distance-bound",pairs:a.faces.len()*b.faces.len(),
+            evaluated_pairs:0,cells:0,domain_cells:0,
+        },
+        witness_parity:[None,None],reason:"boundary-witness-unavailable",
+    };
+    // Qualitative separation was already charged by the embedding audit. It
+    // does not need an additional approximate distance search, and supplies
+    // neither a clearance value nor a distance witness.
+    classify_exact_boundary_witnesses(a,b,&mut report,tolerance_uv,max_cells,max_domains)?;
+    Ok(report)
+}
 pub(crate) fn classify_exact_boundary_witnesses(a:&Model,b:&Model,report:&mut Report,
     tolerance_uv:f64,max_cells:usize,max_domains:usize)->Result<()> {
     let witness=|model:&Model|->Option<[f64;3]>{

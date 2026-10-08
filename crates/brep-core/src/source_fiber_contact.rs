@@ -762,7 +762,9 @@ mod tests {
         assert!(audit
             .pairs
             .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.as_ref().is_some_and(|c| c.edges().len() == 2)));
+            .any(|p| p.faces == [0, 2]
+                && (p.fiber.as_ref().is_some_and(|c| c.edges().len() == 2)
+                    || p.ruled_projection.as_ref().is_some_and(|c| c.edges().len() == 2 && c.faces() == [0, 2]))));
         assert!(source_shell_incidence::assemble_regions_with_root_planes(
             &regions,
             &pairs,
@@ -1001,7 +1003,9 @@ mod tests {
         assert!(audit
             .pairs
             .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.is_some()));
+            .any(|p| p.faces == [0, 2]
+                && (p.fiber.as_ref().is_some_and(|c| c.edges().len() == 1)
+                    || p.ruled_projection.as_ref().is_some_and(|c| c.edges().len() == 1 && c.faces() == [0, 2]))));
     }
     #[test]
     fn extended_canonical_carriers_preserve_closed_source_shell() {

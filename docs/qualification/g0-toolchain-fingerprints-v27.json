@@ -69,7 +69,7 @@
     {
       "id": "crates-workspace-manifest",
       "path": "crates/Cargo.toml",
-      "sha256": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+      "sha256": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
       "byteLength": 2433
     },
     {
@@ -399,19 +399,19 @@
     {
       "id": "own-rust-cad-v17-evidence",
       "path": "docs/qualification/own-rust-cad-v17.json",
-      "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+      "sha256": "76ed9a91c3a699852cd143867b5191e7afabfaed4c4a6f8bc6a45b30efc40b3f",
       "byteLength": 3465
     },
     {
       "id": "own-rust-cad-v18-evidence",
       "path": "docs/qualification/own-rust-cad-v18.json",
-      "sha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
+      "sha256": "330d1204cac180d545849ab4a56fa96c6f89d63fa9bfb2f7295472cccd3421a9",
       "byteLength": 3457
     },
     {
       "id": "own-rust-cad-v19-evidence",
       "path": "docs/qualification/own-rust-cad-v19.json",
-      "sha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
+      "sha256": "b417b8633ab5aed4a072a4a6230e0b0c7236abeeefef572838c30bb3e816f178",
       "byteLength": 3503
     }
   ],
@@ -447,5 +447,5 @@
       "note": "Current bytes are newly bound in v27; v26 remains archived. Re-freeze after main added sketch dimensions and G2 bridge curves to geometry-bridge (72a9a6e); kernel rebuilt path-independently on the merged sources; notices, npm and Rust lockfiles byte-identical to evidence v18; own-Rust source bundle differs only by the new operations registered in geometry-bridge lib.rs; oracle v3 44/44 unchanged; G1 contract unchanged, reset clean-run work."
     }
   ],
-  "previousFingerprintSha256": "ea2ec44a572c785a597d88f2ab308cfd3b7b5fbdb007b9a088f2a8b4b6baed40"
+  "previousFingerprintSha256": "e057878f43054367c167585840c3f682aa564ec0027da5eae867e6acda7bb66e"
 }

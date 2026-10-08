@@ -75,7 +75,7 @@ describe('exact solids from source', () => {
     // The spinner used to be a sampled polygon prototype; its gears are now
     // the brep_gear builtin, so the Solid workspace gets sun, ring and 18
     // planets as NURBS bodies.
-    const source = readFileSync(new URL('../examples/modelgraph-text/planetary-spinner.mg', import.meta.url), 'utf8')
+    const source = readFileSync(new URL('../examples/rush-frontend/planetary-spinner.r', import.meta.url), 'utf8')
     const result = await evaluate(source)
     expect(result.meshes.length).toBeGreaterThan(0)
     const plan = result.exactSolids!
@@ -85,9 +85,9 @@ describe('exact solids from source', () => {
     expect(bodies.every(b => b.brep && b.brep.faces.length > 8)).toBe(true)
   }, 120000)
 
-  it('lowers a helical ModelGraph gear through the same builtin', async () => {
+  it('lowers a helical RushGraph gear through the same builtin', async () => {
     const result = await evaluate([
-      '// @modelgraph-text/1',
+      '// @rush/1',
       'wheel = gear(teeth: 24, module: 1.5mm, thickness: 8mm, helix_angle: 30deg, herringbone: true, bore: 5mm)',
       'show wheel',
     ].join('\n'))
@@ -98,7 +98,7 @@ describe('exact solids from source', () => {
 
   it('records the second language too, since it compiles through the same evaluator', async () => {
     const result = await evaluate([
-      '// @modelgraph-text/1',
+      '// @rush/1',
       'part = box(10mm, 10mm, 10mm)',
       'show part',
     ].join('\n'))

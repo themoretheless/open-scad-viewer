@@ -3,10 +3,18 @@
 use super::{Result, Value, field};
 use brep_core::face_contacts::Limits;
 use value_codec::json;
+fn group_output(report:&brep_core::face_contacts::Report)->Value {
+    json!(report.disjoint_groups.iter().map(|c|json!({"face":c.face,"range":c.range,
+        "axis":c.axis,"firstBeforeRange":c.first_before_range,
+        "firstBounds":c.first_bounds,"rangeBounds":c.range_bounds})).collect::<Vec<_>>())
+}
 pub fn diagnose_sweep_volume(v:Value)->Result<Value> {
+    diagnose_sweep_volume_with_projections(v,&[])
+}
+pub(super) fn diagnose_sweep_volume_with_projections(v:Value,proposals:&[Option<[[i8;3];2]>])->Result<Value> {
     let model:brep_core::Model=field(&v,"model")?;
     let cap=field::<Value>(&v,"capBudgets")?;
-    let r=brep_core::volume_validity::inspect_sweep(&model,field(&v,"toleranceUv")?,
+    let r=brep_core::volume_validity::inspect_sweep_with_projections(&model,field(&v,"toleranceUv")?,
         brep_core::volume_validity::Limits {
             boundary:brep_core::boundary_embedding::Limits {
                 exact_work:field(&v,"maxExactWork")?,trim_pairs:field(&v,"maxTrimPairs")?,
@@ -25,11 +33,16 @@ pub fn diagnose_sweep_volume(v:Value)->Result<Value> {
             max_walls:field(&cap,"maxWalls")?,max_exact_work:field(&cap,"maxExactWork")?,
             max_chart_cells:field(&cap,"maxChartCells")?,max_trim_pairs:field(&cap,"maxTrimPairs")?,
             max_trim_cells:field(&cap,"maxTrimCells")?,max_trim_domain_cells:field(&cap,"maxTrimDomainCells")?,
-        })?;
+        },proposals)?;
     Ok(json!({"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
         "nextPair":r.boundary.intersections.pairs.next_pair,
+        "individualPairs":r.boundary.intersections.pairs.pairs.len(),
+        "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
+        "groupCells":r.boundary.intersections.pairs.group_cells,
+        "contactCells":r.boundary.intersections.pairs.cells,"contactDomainCells":r.boundary.intersections.pairs.domain_cells,
+        "disjointGroups":group_output(&r.boundary.intersections.pairs),
         "nesting":r.nesting.as_ref().map(|n|json!({"rolesConsistent":n.roles_consistent,
             "parents":n.parents,"totalPairs":n.total_pairs,"visitedPairs":n.pairs.len(),
             "cells":n.cells,"domainCells":n.domain_cells,
@@ -64,6 +77,9 @@ pub fn diagnose_sweep_embedding(v:Value)->Result<Value> {
         "linearCells":r.intersections.faces.linear_cells,"spans":r.intersections.faces.spans,
         "allPairsClassified":r.intersections.pairs.all_pairs_classified,
         "totalPairs":r.intersections.pairs.total_pairs,"nextPair":r.intersections.pairs.next_pair,
+        "individualPairs":r.intersections.pairs.pairs.len(),"groupedPairs":r.intersections.pairs.grouped_pairs,
+        "groupCells":r.intersections.pairs.group_cells,"disjointGroups":group_output(&r.intersections.pairs),
+        "contactCells":r.intersections.pairs.cells,"contactDomainCells":r.intersections.pairs.domain_cells,
         "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"reason":p.reason,
             "allowedBoundary":p.boundary.is_some()})).collect::<Vec<_>>(),
         "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f|
@@ -129,8 +145,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
+            (witness,r.cells+p.hull_cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,
@@ -143,7 +159,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         }),"witness":witness,"cells":cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})
     }).collect::<Vec<_>>();
     let mut output = json!({"method":"interval-trimmed-face-contacts","scope":"distinct-face-pairs","solidGeometryStatus":"not-certified",
-        "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len(),"nextPair":report.next_pair,
+        "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len()-report.grouped_pairs,"nextPair":report.next_pair,
+        "groupedPairs":report.grouped_pairs,"groupCells":report.group_cells,"disjointGroups":group_output(&report),
         "allPairsVisited":report.next_pair.is_none(),"allPairsDisjoint":report.all_pairs_disjoint,"allPairsClassified":report.all_pairs_classified,"sharedBoundaryPairCount":shared_boundaries,
         "contactPairCount":contacts,"disjointPairCount":disjoint,"unresolvedPairCount":unresolved_pairs,
         "unresolvedBoxCount":unresolved_boxes,"exportedBoxCount":exported,"boxesTruncated":exported<unresolved_boxes,

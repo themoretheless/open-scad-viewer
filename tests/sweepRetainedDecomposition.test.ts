@@ -3,6 +3,35 @@ import {expect,it} from 'vitest'
 import type {NurbsCurve} from '../src/services/nurbsCurve'
 import {createRationalBrepSectionLoft,createProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCapDecomposition} from '../src/services/sweepRetainedCorrespondence'
+it('binds periodic hollow profiles with joint authored frame, guide and affine laws through Rush',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-frame-guide-affine-hollow.r','utf8')).document
+ const before=structuredClone(graph)
+ const curves=graph.nodes.filter(n=>n.op==='curve')
+ expect(curves.filter(c=>c.periodic)).toHaveLength(2)
+ const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ expect(built.report.construction![node.id]).toMatchObject({authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,boundaryCertificate:{withinBudget:true}})
+ expect(JSON.parse(built.nativeGeometry!.geometryJson).sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
+ expect(graph).toEqual(before)
+})
+it.each([
+ ['collapsed authored axis','values: [[0,0,2],[0,0,2]]','values: [[0,0,0],[0,0,0]]','Miter direction must be finite and nonzero'],
+ ['parallel guide','control_points: [[1mm,0mm,0mm],[1mm,0mm,10mm]]','control_points: [[0mm,0mm,0mm],[0mm,0mm,10mm]]','Miter direction must be finite and nonzero'],
+ ['zero affine scale','values: [[2,1,1],[2,1,1]]','values: [[0,1,1],[0,1,1]]','scale must be positive'],
+])('refuses periodic joint-mode %s without mutating its source graph',async(_name,from,to,reason)=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const source=readFileSync('examples/rush/miter-periodic-frame-guide-affine-hollow.r','utf8')
+ expect(source).toContain(from)
+ const graph=compileRushFrontend(source.replace(from,to)).document
+ const before=structuredClone(graph)
+ expect(()=>buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})).toThrow(reason)
+ expect(graph).toEqual(before)
+})
 it('covers exactly closed periodic hollow profiles through the complete boundary constructor',async()=>{
  const outer:NurbsCurve={degree:2,knots:Array.from({length:9},(_,i)=>i),controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],weights:Array(6).fill(1),periodic:true}
  const hole:NurbsCurve={...structuredClone(outer),controlPoints:outer.controlPoints.slice().reverse().map(p=>p.map(x=>x*.25))}
@@ -14,11 +43,16 @@ it('covers exactly closed periodic hollow profiles through the complete boundary
  expect(body.retainedDecomposition?.certified).toBe(true)
  expect(body.retainedCapDecomposition?.certified).toBe(true)
  expect(body.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true,reason:null})
+ expect(body.profileSmoothness).toMatchObject({extractionComplete:true,profileG1Certified:true,profile:{exactG1G2Certified:true,certifiedOrder:2}})
+ expect(body.profileSmoothness.profile.seams).toHaveLength(8)
+ const {inspectMiterProfileSmoothness}=await import('../src/services/miterProfileSmoothness')
+ const exhausted=inspectMiterProfileSmoothness(body.model,[body.model.faces.length-2,body.model.faces.length-1],body.profileSmoothness.totalExactWork-1)
+ expect(exhausted.profile.exactG1G2Certified).toBe(false)
  expect(loops).toEqual(before)
  const {readFileSync}=await import('node:fs')
- const {compileModelGraphText}=await import('../src/services/modelGraphText')
- const {buildOwnNurbs}=await import('../src/services/modelGraphNurbsKernel')
- const graph=compileModelGraphText(readFileSync('examples/rush/miter-periodic-hollow.r','utf8')).document
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-hollow.r','utf8')).document
  const curves=graph.nodes.filter(n=>n.op==='curve')
  expect(curves).toHaveLength(2)
  for(const curve of curves)expect(curve).toMatchObject({periodic:true})
@@ -40,9 +74,9 @@ it('covers an unclamped hollow source through retained walls, filled caps and th
  expect(body.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true,reason:null})
  expect(loops).toEqual(before)
  const {readFileSync}=await import('node:fs')
- const {compileModelGraphText}=await import('../src/services/modelGraphText')
- const {buildOwnNurbs}=await import('../src/services/modelGraphNurbsKernel')
- const graph=compileModelGraphText(readFileSync('examples/rush/miter-unclamped-hollow.r','utf8')).document
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const graph=compileRushFrontend(readFileSync('examples/rush/miter-unclamped-hollow.r','utf8')).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction![node.id]).toMatchObject({continuousBound:true,boundaryCertificate:{withinBudget:true}})
@@ -170,4 +204,63 @@ it('requires complete actual wall domains on the exact coefficient route',()=>{
  expect(inspectSweepRetainedCorrespondence(shiftedStart,sections,false).exact).toBe(true)
  const incomplete=structuredClone(model);incomplete.shells[0]!.faces.pop()
  expect(inspectSweepRetainedCorrespondence(incomplete,sections,false)).toMatchObject({exact:false,wallErrorUpper:null,reason:'retained-body-face-coverage-unproved'})
+})
+
+it('certifies filled caps and admits the original moving-axis periodic Rush fixture into Solid',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r','utf8')).document
+ const before=structuredClone(graph)
+ const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ expect(built.report.construction![node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,boundaryCertificate:{withinBudget:true},sectionCorrection:{reason:'automatic-bounded-cap-planarity'}})
+ const model=JSON.parse(built.nativeGeometry!.geometryJson).geometry
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
+ expect(graph).toEqual(before)
+})
+
+
+it('refuses periodic moving-axis endpoint correction when retained wall regularity is unproved',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-corrected.r','utf8')
+ const graph=compileRushFrontend(source.replace('initial_steps: 16', 'retained_wall_max_injectivity_cells: 1000, initial_steps: 16')).document
+ const before=structuredClone(graph)
+ expect(()=>buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})).toThrow('Corrected progressive miter retained wall regularity unproved')
+ expect(graph).toEqual(before)
+})
+
+it('certifies the moving-axis periodic Rush body with explicit authored-plane caps',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
+ const graph=compileRushFrontend(source).document,before=structuredClone(graph)
+ const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
+ expect(node).toHaveProperty('cap_correction_authored_frame',true)
+ expect(node).toHaveProperty('initial_steps',1)
+ const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ expect(built.report.construction![node.id]).toMatchObject({steps:16,continuousBound:true,boundaryCertificate:{withinBudget:true}})
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,JSON.parse(built.nativeGeometry!.geometryJson).geometry)).toMatchObject({solidGeometryCertified:true})
+ expect(graph).toEqual(before)
+})
+
+it.each([
+ ['retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 1000','Corrected progressive miter retained wall regularity unproved'],
+ ['cap_correction_authored_frame: true','cap_correction_authored_frame: false','Miter cap correction unproved: projection-unproved'],
+ ['cap_correction_max_work: 1000000','cap_correction_max_work: 0','Miter authored cap correction unproved: work-limit'],
+ ['cap_correction_tolerance: 0.000000001mm,','', 'Miter cap correction requires a displacement tolerance'],
+])('refuses authored cap mode mutation %s',async(from,to,reason)=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
+ expect(source).toContain(from)
+ const graph=compileRushFrontend(source.replace(from,to)).document,before=structuredClone(graph)
+ expect(()=>buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})).toThrow(reason)
+ expect(graph).toEqual(before)
 })

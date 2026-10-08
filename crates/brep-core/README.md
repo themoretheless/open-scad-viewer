@@ -4,6 +4,45 @@
 curves, and surfaces. Validation checks incidence and sampled geometry
 agreement; it does not claim general solid-geometric certification.
 
+## Native model and wire boundary
+
+The root module owns the native model and topology validation. Serialization
+and explicit migration of legacy identity tables live in `serialization.rs`.
+Curve and surface support identity is computed from typed rational definitions in
+`rational_identity.rs`; its frozen v1 signature preserves existing persisted
+IDs byte for byte, including numeric formatting. Use `default-features = false`
+for native geometry, operations and typed reports without `value-codec`. The
+default `codec` feature preserves serialized models, JSON report adapters and
+snapshot/history APIs; workspace application consumers enable it explicitly.
+
+`nurbs_ss_general::branch_graph_from_surface_intersection` consumes the native
+NURBS surface-intersection report directly. Branch kinds, contact classes,
+coedge trims, UV traces and correspondence are typed; graph construction and
+`rational_traces_from_branch_graph` use no dynamic values. Existing JSON entry
+points decode into the same native graph. A different tolerance context is
+refused; incomplete coverage and singular contacts cannot authorize topology
+through the graph query. Boolean mutation authority remains deferred.
+`coverage_verifier::verify_general_ss_native_coverage` audits the typed report
+under an independently supplied tolerance context and retains the actual number
+of unresolved parameter boxes. It avoids copying branches or UV sample arrays;
+the JSON coverage entry point lives in the serialization adapter.
+Intersection, mass-property, analytic-feature and transaction encoders live
+in their `serialization` modules. The analytic intersection families also keep
+wire implementations in child modules, separate from recognition and geometry.
+
+Transaction snapshot/history encoding lives in `transactions::serialization`;
+existing snapshot methods and history functions retain their API. Authorized
+healing checks idempotence through native structural equality of the complete
+model, geometry, identity tables and change set, without constructing JSON values.
+
+The general multispan Boolean path reads typed NURBS intersection components,
+contact classes and UV endpoints directly. Exact operand comparison also uses
+native geometry and incidence; neither step constructs dynamic codec values.
+
+Rounded-profile collision checks consume typed NURBS curve intersections:
+nonadjacent spans must have no intersections and no unresolved parameter boxes.
+The check does not encode the report or decode its coverage/component fields.
+
 ## Solid operations
 
 - `extrude_polygon(profile, z_min, z_max)` and
@@ -90,6 +129,9 @@ agreement; it does not claim general solid-geometric certification.
   contacts; out-of-matrix pairs refuse. `nurbs_ss_g6` is R1.1
   (`nurbs-ss-bezier-le3/1`: Bezier deg≤3 elevated to bicubic).
 - `trim_sew` provides chart classification + exact sew without auto-heal.
+- `feature_family::constant_fillet_family` selects the host-compatible annular,
+  layered-prism or simple-prism author from typed geometry. This is a routing
+  hint; the selected feature author still validates geometry and certifies output.
 - `analytic_features` publishes AnalyticComplete fillet/chamfer/shell/solid-loft
   under their QualificationPlans (faceted ≠ analytic). Constructor STEP lives in
   `step_interchange`; freeform bicubic open-face STEP in `nurbs_step_interchange`
@@ -155,7 +197,7 @@ support half-spaces and native Booleans. They preserve authored boundaries and
 IDs where geometric correspondence supports inheritance. Curved, concave,
 consumed and empty cases are explicit errors; curved shell/offset remains open.
 Solid routes its Push/Pull, Shell and Split controls through these operations for
-B-rep bodies. Body dragging preserves the B-rep and its IDs. ModelGraph affine
+B-rep bodies. Body dragging preserves the B-rep and its IDs. RushGraph affine
 transforms retain authored carriers and IDs, reverse shell face uses for
 reflections, and reject singular or numerically unresolved matrices.
 
@@ -173,16 +215,16 @@ Geometry-only intersection APIs are documented in
 They retain parameter traces and unresolved regions without authorizing Boolean
 topology decisions.
 
-## ModelGraph / MCP
+## RushGraph / MCP
 
-The `modelgraph/nurbs-1` schema exposes `brep_cylinder`, `brep_frustum`,
+The `rush/nurbs-1` schema exposes `brep_cylinder`, `brep_frustum`,
 `brep_tube`, `brep_sphere`, `brep_torus`, `brep_extrude`, `brep_revolve`, `brep_boolean`, `brep_chamfer`,
 `brep_fillet`, and `brep_tessellate`. Text calls support the same construction
 path, with Boolean methods `brep_union`, `brep_subtract`, `brep_intersection`.
 The normal NURBS MCP compile/build/export tools use these nodes too.
 
 ```text
-// @modelgraph-text/1
+// @rush/1
 show brep_tube(10mm, 7mm, 20mm).brep_tessellate(16)
 ```
 
@@ -246,3 +288,36 @@ The shared revision engine rejects mixed admission policies during typed history
 restoration. Five kernel transaction tests pass in debug/release; eight topology
 tests pass in debug and topology module-only Clippy passes. History archives do
 not yet contain cad-predicates construction DAGs or connect to UI project saves.
+
+### Rational section walls and planar caps
+
+`rational_section_loft(sections)` builds retained rational ruled walls, shared
+edge incidence and two audited planar trimmed caps. Sections contain an outer
+loop followed by oppositely oriented holes; corresponding nonperiodic curves
+must have matching Bezier span degree and weights. Exact endpoint joins are
+required. Limits: 2..1025 sections,1..16 loops,64 spans per section, and shared
+B-rep face/entity budgets. Reverse station travel reverses shell senses.
+
+`progressive_profile_body(loops,path,scale,twist,options)` composes the progressive
+NURBS transport with that topology constructor, only after all profile curves
+pass the aggregate sampled deviation budget. Refinement is bounded by available
+wall faces. Closed paths use `periodic_section_loft`: at least four sections
+including an identical repeated seam section; seam vertices/edges are reused.
+Each hole produces an inner shell, with no cap faces. The seam is C0; G1/G2
+and global embedding are not certified.
+Cap simplicity/orientation/nesting/separation must be proven by trim-region
+audit; unresolved caps refuse. Manifold incidence and sampled geometry agreement
+do not prove side regularity or absence of global self-intersections.
+
+`progressive_authored_profile_body` composes complete rational orientation laws
+with affine scale/center laws. Accepted station curves feed the same retained
+rational open/periodic body constructor. Endpoint regions must still pass cap
+audit; global wall embedding and continuous frame regularity are uncertified.
+The JSON/TS/Rush body APIs accept authored frame laws as for surface sweeps.
+
+`progressive_guided_profile_body` composes a spatial orientation rail with
+optional shared contact anchor `(flattened_profile_index,profile_parameter)`.
+Aggregate admission and retained section construction use the same guide,
+anchor and affine laws; open/periodic topology and face budgets are retained.
+JSON/TS/Rush body APIs expose these optional fields. Contact remains sampled;
+continuous contact and global embedding are uncertified.

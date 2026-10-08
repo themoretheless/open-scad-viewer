@@ -16,10 +16,42 @@ Two independent domain libraries live in the Cargo workspace under `crates/`:
 - `nurbs-core`: rational curves and surfaces, analytic derivatives, knot/degree edits, iso-curves, extrusion, revolution and lofts.
 - `polygon-core`: owned triangle meshes, polygonal UV meshing, boundary loops, topology inspection, affine transforms, fixed-vector thickening and STL output. It accepts plain imported meshes and arbitrary parametric samplers, without depending on NURBS.
 
-`geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in ModelGraph. A full NURBS B-rep modeler is not implemented. Both ModelGraph and the legacy OpenSCAD route now use the repository-owned Rust CAD kernel; no external CAD runtime or fallback is loaded.
+`geometry-bridge` adapts the two libraries and exposes a shared WASM transport. NURBS surfaces become derived meshes with UV samples; mesh boundary loops become exact degree-one NURBS curves that can construct new surfaces. This does not reconstruct smooth NURBS surfaces from arbitrary meshes. The polygon library implements bounded numerical BSP union, intersection and difference for closed oriented meshes, also exposed as `mesh_boolean` in RushGraph. A full NURBS B-rep modeler is not implemented. Both RushGraph and the legacy OpenSCAD route now use the repository-owned Rust CAD kernel; no external CAD runtime or fallback is loaded.
 
-The ModelGraph Text frontend and canonical graph compiler also run in Rust.
+The Rush frontend and runtime run in Rust (`rush-frontend` and `rush-runtime`). Rush owns source parsing, stable part IDs, parameter controls, graph evaluation, mechanical generators and NURBS lowering. Source documents use `// @rush/1` and `.r`; the runtime uses `rush/ir-1` and `rush/nurbs-1` as intermediate representations. Retired source headers and graph language tags are rejected.
 The legacy OpenSCAD evaluator and host/renderer adapters remain TypeScript.
+Stable OpenSCAD circle and sweep subdivision rules (`$fn/$fa/$fs`) live in
+`openscad-core::fragments`; TS adapts authored values and renders native warning
+events. Automatic extrusion slices and resize ratios also use typed Rust rules.
+The viewer-subset segment rounding and preview/full caps are also shared Rust
+rules, called by the TS evaluator, semantic lowerer and native evaluator.
+The native geometry integration API records normalized solid expressions in
+`geometry-ops::solid_program` and executes them in `polygon-core::solid::program`.
+Its current viewer-subset coverage is cube, sphere, cylinder, translation, rotation,
+scaling, reflection, affine matrices and boolean operations, including evaluated
+user modules and loops. The stable profile currently records cubes, spheres, cylinders, translation, rotation,
+scaling, reflection, affine matrices and Booleans through shared parameter and transform plans, including
+explicit empty operands and singular transforms. It also records square, circle and
+polygon profiles, planar Booleans, affine profile transforms and linear extrusion
+with deferred Rust subdivision. Native rotation extrusion also handles signed angles,
+negative-X profiles, holes and axis poles. Native profile offsets share production
+round, miter and chamfer joins. Both profile and solid programs also support hulls
+through the existing 2D and 3D kernels. Polygon contours use the even-odd fill rule;
+host tests cover holes, invalid contours and extrusion warnings. Remaining
+geometry modules return positioned unsupported-operation diagnostics.
+The production OpenSCAD route still uses the TS evaluator while this coverage grows.
+Body snap targets run in Rust: `geometry-ops` owns target deduplication and circle hints,
+`mesh-topology` owns display feature edges and area-weighted centers, and `brep-core`
+owns exact curve sampling and coplanar edge suppression. The bridge composes these
+results; the TS adapter retains the body cache and original curve references.
+Transparent BSP construction and triangle clipping belong to `geometry-ops::transparency`.
+The WASM adapter uploads a whole scene as f64 attributes and copies detached arrays
+of node planes, links, owners and vertices. It releases each native result. The renderer
+retains camera traversal and writes into reusable GPU upload storage. Native limits
+bound both fragment growth and the number of partition/insertion operations.
+Repeat transport and constructor measurements with `npm run bench:transparency`.
+Local warmed Node/WASM evidence is saved in `docs/qualification/native-transparency-2026-10-01.json`;
+it excludes startup and GPU upload and uses an explicit 500,000-operation budget for large scenes.
 The mesh engine is the workspace CAD kernel (`own-rust-cad-v1`) with an exact
 WASM SHA-256 fingerprint. A foreign Manifold comparison bench, if needed, lives
 only in `tools/manifold-bench` and is not a product dependency.
@@ -53,7 +85,7 @@ before compilation, including optional network loading. See the
 [artifact integrity contract and startup measurements](docs/design/wasm-artifact-integrity-2026-09-20.md).
 An artifact identity is not a qualification record.
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and ModelGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust uses floating `nightly` via `rust-toolchain.toml`.
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and RushGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust uses floating `nightly` via `rust-toolchain.toml`.
 
 ## Authored B-rep modeling
 
@@ -88,10 +120,10 @@ intersections remain explicit. Planar booleans support concave outlines and face
 holes, including rotated operands and chained operations. Analytic fillets remain
 unsupported; the explicit faceted-cylinder option retains planar Boolean use.
 The same constructors, supported booleans, chamfers, and faceted fillets are available
-through ModelGraph Text and the NURBS MCP tools. See the precise
+through Rush and the NURBS MCP tools. See the precise
 [operation envelope](crates/brep-core/README.md) and the full
 [completion audit](docs/design/brep-completion-status.md).
-Try the [curved Boolean example](examples/brep/curved-boolean.mg)
+Try the [curved Boolean example](examples/brep/curved-boolean.r)
 in the viewer's Code mode, or choose **B-rep pocket enclosure** in the example
 gallery for a raised boss and blind pocket with a 2 mm floor.
 
@@ -136,7 +168,7 @@ yet connected to geometric construction or the shared WASM runtime.
   including `// [min:step:max]` sliders and choice lists.
 - Built-in function reference from the editor toolbar, command palette, or F1:
   searchable RU/EN descriptions, signatures, parameters, and copyable examples
-  for OpenSCAD and ModelGraph Text. It opens in the current document's language;
+  for OpenSCAD and Rush. It opens in the current document's language;
   select a function name in the editor and press F1 to look it up.
 - Binary STL and OBJ export with object transforms baked into the result, plus
   ASCII STL, 3MF, PLY, OFF and AMF from the export selector.
@@ -581,15 +613,15 @@ prerequisites. The MCP sidecar has its own
 
 ## Docs
 
-- [ModelGraph/1 model prompt](docs/languages/modelgraph-1-prompt.md) — the MCP functional modeling language: pure functions, lexical closures, immutable lists and geometry values, bounded evaluation, and examples. Read `openscad://language/modelgraph-1` from MCP for the same guide and JSON Schema. Regenerate artifacts with `node --import tsx scripts/export-modelgraph-language.mjs`.
+- [Rush IR/1 model prompt](docs/languages/rush-1-prompt.md) — the MCP functional modeling language: pure functions, lexical closures, immutable lists and geometry values, bounded evaluation, and examples. Read `openscad://language/rush-1` from MCP for the same guide and JSON Schema. Regenerate artifacts with `node --import tsx scripts/export-rush-language.mjs`.
 - [architecture.md](architecture.md) — the current module map, worker/kernel design, and active technical debt.
 - [recommendation.md](docs/recommendation.md) — the live prioritized backlog (P0 correctness → P3 process).
 - [docs/review-of-main-rewrite.md](docs/review-of-main-rewrite.md) — the 7-role panel review of this rewrite: what was fixed immediately, what remains, and the convergence plan with the feature branch (`claude/top-issues-architecture-sync-00p2q9`).
 - [docs/research/mcp-ten-agent-review.md](docs/research/mcp-ten-agent-review.md) — ten MCP reviews, implemented decisions, rejected scope, and the ranked next stage.
 
-## ModelGraph LLM plugin
+## RushGraph LLM plugin
 
-[Local client packages and remote HTTP setup](integrations/modelgraph/README.md) cover Claude Desktop, Claude Code, Cursor, VS Code, Codex and an HTTP endpoint for web clients. Generate local configurations with `node scripts/package-modelgraph-plugin.mjs`.
+[Local client packages and remote HTTP setup](integrations/rush/README.md) cover Claude Desktop, Claude Code, Cursor, VS Code, Codex and an HTTP endpoint for web clients. Generate local configurations with `node scripts/package-rush-plugin.mjs`.
 
 ## SVG creation and conversion
 
@@ -625,7 +657,7 @@ failure is reported, and a second tab cannot silently overwrite a newer draft.
 
 **Add extrusion to model** appends self-contained SCAD with an editable height
 in millimeters to an OpenSCAD document and starts a full build. Editable native
-ModelGraph output is available through MCP as described below. The source is checked against the remaining
+RushGraph output is available through MCP as described below. The source is checked against the remaining
 workspace capacity before insertion. The default **Vector outlines** mode handles fills, holes,
 clip paths, markers and strokes with caps, joins and dash patterns. Curves are
 flattened at the selected tolerance in millimeters. Paint colors do not affect
@@ -652,14 +684,14 @@ the selected mesh's kernel face identity and verifies planarity. Curved-surface
 unwrapping is not implemented. CAD SVG exports crop to contour bounds;
 reimport preserves size and holes, not the original world-space origin.
 
-MCP exposes `modelgraph_svg_preview(svg, ...)`, `modelgraph_svg_extrude(svg,
-height, ...)` with a full geometry check, and `modelgraph_svg_export(document,
+MCP exposes `rush_svg_preview(svg, ...)`, `rush_svg_extrude(svg,
+height, ...)` with a full geometry check, and `rush_svg_export(document,
 axis?, face?)`. Preview/extrusion accept `dpi`, `tolerance`, `geometryMode`,
 `rasterSize`, `alphaThreshold` and optional base64 `fonts`. Extrusion returns
 conversion warnings along with the SCAD, contour SVG and measured geometry.
-With `includeModelGraph: true`, extrusion also returns a validated editable
-ModelGraph document with a height parameter, preserving holes and nested islands.
-Both representations undergo full builds. This option uses ModelGraph's own
+With `includeRushGraph: true`, extrusion also returns a validated editable
+RushGraph document with a height parameter, preserving holes and nested islands.
+Both representations undergo full builds. This option uses RushGraph's own
 limits (including 256 points per polygon and 128 nodes) and reports a conversion
 error if the profile cannot fit; SCAD remains the default representation.
 `face` contains zero-based `meshIndex` and `triangleIndex` from a full build.

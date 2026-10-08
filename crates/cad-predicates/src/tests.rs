@@ -13,6 +13,24 @@ fn arena(values: &[f64]) -> SourceArena {
     )
     .unwrap()
 }
+
+#[test]
+fn identical_expansion_subtraction_is_exact_and_still_charged() {
+    let source = arena(&[1.]);
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let a = Expansion::scalar(1. + f64::EPSILON)
+        .mul(&Expansion::scalar(1. - f64::EPSILON), &mut ctx).unwrap();
+    let before = ctx.work_used();
+    assert_eq!(a.sub(&a.clone(), &mut ctx).unwrap().sign(), Sign::Zero);
+    assert!(ctx.work_used() > before);
+    assert_eq!(a.sub(&Expansion::scalar(1.), &mut ctx).unwrap().sign(), Sign::Negative);
+    let mut exhausted = PredicateContext::new(&source, &tolerance, Limits {max_work: 0, ..Limits::default()}, None);
+    assert!(matches!(a.sub(&a, &mut exhausted), Err(Reason::ResourceLimit)));
+    let cancelled = AtomicBool::new(true);
+    let mut interrupted = PredicateContext::new(&source, &tolerance, Limits::default(), Some(&cancelled));
+    assert!(matches!(a.sub(&a, &mut interrupted), Err(Reason::Cancelled)));
+}
 fn pair(arena: &SourceArena, offset: usize) -> [LeafRef; 2] {
     [arena.leaf(offset).unwrap(), arena.leaf(offset + 1).unwrap()]
 }
@@ -26,6 +44,20 @@ fn decision(source: &SourceArena, limits: Limits) -> Decision {
         pair(source, 4),
     )
     .unwrap()
+}
+
+#[test]
+fn direction_dot_retains_cancellation_and_refuses_work_exhaustion() {
+    let source=arena(&[0.,0.,0.,1.+f64::EPSILON,1.,0.,0.,0.,0.,1.-f64::EPSILON,-1.,0.]);
+    let tolerance=ToleranceContext::default_valid();
+    let refs=|i:usize|std::array::from_fn(|k|source.leaf(3*i+k).unwrap());
+    let mut ctx=PredicateContext::new(&source,&tolerance,Limits::default(),None);
+    let result=direction_dot3d(&mut ctx,refs(0),refs(1),refs(2),refs(3)).unwrap();
+    // Exact dot is -2^-104, although rounded multiplication yields zero.
+    assert_eq!(result.outcome,Outcome::Sign(Sign::Negative));
+    assert_eq!(result.stage,Stage::ExactExpansion);
+    let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work:0,..Limits::default()},None);
+    assert!(matches!(direction_dot3d(&mut ctx,refs(0),refs(1),refs(2),refs(3)).unwrap().outcome,Outcome::Indeterminate(_)));
 }
 
 #[test]
@@ -266,6 +298,7 @@ fn residual_classification_requires_matching_enclosure_and_respects_gray_band() 
 }
 
 #[test]
+#[cfg(feature = "codec")]
 fn portable_tolerance_identity_round_trips_and_detects_policy_changes() {
     let context = ToleranceContext::from_brep_tolerance_mm(1e-6).unwrap();
     let json = value_codec::to_string(&context).unwrap();
@@ -285,6 +318,7 @@ fn portable_tolerance_identity_round_trips_and_detects_policy_changes() {
 }
 
 #[test]
+#[cfg(feature = "codec")]
 fn serialized_tolerance_identity_cannot_be_substituted() {
     let context = ToleranceContext::from_brep_tolerance_mm(1e-6).unwrap();
     let mut value = value_codec::Serialize::to_value(&context);

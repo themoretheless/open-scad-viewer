@@ -1,0 +1,105 @@
+{
+  "purpose": "Exact preservation of both historical qualification/release inputs during integration; no new qualification claim.",
+  "files": [
+    {
+      "sourcePath": "docs/qualification/cad-roadmap-2026-09-28/nurbs-offset-info-2026-10-01/status.md",
+      "side": "integration-head",
+      "sha256": "891db58819dd952461fe4ff857976f55a9e456ebab073f11482656ac87a4edce"
+    },
+    {
+      "sourcePath": "docs/qualification/cad-roadmap-2026-09-28/nurbs-offset-info-2026-10-01/status.md",
+      "side": "incoming-preservation",
+      "sha256": "6612996ea78b7632e6788309a9dfe5c842b71a8995221491b6a0bcfd94a19c39"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v35-g1-v52-refreeze-review.md",
+      "side": "integration-head",
+      "sha256": "7c731bb20808e79b750d1a2e3bc30adb247f7ffa8df46f5643c56ee4a405d480"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v35-g1-v52-refreeze-review.md",
+      "side": "incoming-preservation",
+      "sha256": "63b4cc539b86fd90304c492daaeb1b7b3d4ed822a8c3efa302ff8d047a0e3e47"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v36-g1-v53-refreeze-review.md",
+      "side": "integration-head",
+      "sha256": "1128f32ece26df16c263df33f1558c67744e9aaa5612e06ee1b11b7f3c2c4344"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v36-g1-v53-refreeze-review.md",
+      "side": "incoming-preservation",
+      "sha256": "349b1a6c9abb7286908da90a6be69662d84b0d1fe48d1feeb47b7ed444257c8a"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v37-g1-v54-refreeze-review.md",
+      "side": "integration-head",
+      "sha256": "d5ceb5b0aebf727060a3fbf11251cdc45a5fb7d25710e97b38b5eee2a9dba43d"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v37-g1-v54-refreeze-review.md",
+      "side": "incoming-preservation",
+      "sha256": "6b148d54753d9648cf470d9147fd52b2f4e0bc1851d179029e1ce48a0c48837d"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v38-g1-v55-refreeze-review.md",
+      "side": "integration-head",
+      "sha256": "4ea726ab32ee4e68c96c478422b105e93705e0407819d0559302a7bf8194374a"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v38-g1-v55-refreeze-review.md",
+      "side": "incoming-preservation",
+      "sha256": "57be2778b9f224826fe1e19a4a2a753d91c264b1b54c019297f571ed2a666cca"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v39-g1-v56-refreeze-review.md",
+      "side": "integration-head",
+      "sha256": "48fa42d9c10e296625513236da6d5f841426bf23f1208b3fec74a8d37087ae8f"
+    },
+    {
+      "sourcePath": "docs/qualification/g0-v39-g1-v56-refreeze-review.md",
+      "side": "incoming-preservation",
+      "sha256": "9f5919209d1b3e110ef8e52aaf30595df26d9ff0648d043cbba7d19c0d1f1a29"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v27.mjs",
+      "side": "integration-head",
+      "sha256": "55c25d85e82967e7c936c5d49f3af8f4c3989883855a014c700bfc46695aa099"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v27.mjs",
+      "side": "incoming-preservation",
+      "sha256": "3d45eb1529beb369913a276c7aec4f72f546e3decde913ebe6cbebd4603c19fd"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v28.mjs",
+      "side": "integration-head",
+      "sha256": "fc0a3f05ea543b707f8c9816dbb54832aaf9d849fd60abfe15517c0411babc59"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v28.mjs",
+      "side": "incoming-preservation",
+      "sha256": "476fc97a822ca43d402197352dafea75970bfc6cc7414674ca9509fe786c245e"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v29.mjs",
+      "side": "integration-head",
+      "sha256": "c99ea1bf4c9fc2164f45fa770f70637a17c10c99d849ebcebce3f80b88ecb3f0"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v29.mjs",
+      "side": "incoming-preservation",
+      "sha256": "870f66d24c100994c743a82acb6aaf87c8e7e62271240334a5c507b87bd16816"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v31.mjs",
+      "side": "integration-head",
+      "sha256": "89bf84555487bbdcc00fe0e465a372a94d3c9a71c0f0780a997d8796c8ecf1e4"
+    },
+    {
+      "sourcePath": "scripts/release-own-rust-v31.mjs",
+      "side": "incoming-preservation",
+      "sha256": "8a70002e725f9bc39f62814465cd33033cba15d9ad27e4a592b71aeb328e3158"
+    }
+  ]
+}

@@ -74,7 +74,7 @@ pub fn covers_boundary(s: &Surface, p: &crate::curve::Curve, boundary: Boundary)
     {
         return Ok(false);
     }
-    let domains = crate::sweep_support::audit::surface_domains(s);
+    let domains = crate::certificates::audit::surface_domains(s);
     let value = domains[axis][usize::from(matches!(boundary, Boundary::UMax | Boundary::VMax))];
     let other = 1 - axis;
     let [lo, hi] = domains[other];
@@ -228,10 +228,13 @@ mod tests {
             periodic: false,
         };
         assert!(covers_boundary(&natural, &q, Boundary::VMin).unwrap());
+        #[cfg(feature="transport")]
+        {
         let request = value_codec::json!({"op":"sweep_boundary_coverage_audit","surface":natural,"uv":q,"boundary":"vMin"});
         let report = crate::transport::dispatch(request).unwrap();
         assert_eq!(report["wholeBoundaryCovered"], true);
         assert_eq!(report["injectivityCertified"], false);
+        }
     }
     #[test]
     fn whole_wall_exclusion_distinguishes_boundaries_and_unresolved_crossings() {

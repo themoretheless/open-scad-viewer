@@ -1,4 +1,58 @@
 use super::*;
+
+#[test]
+fn contact_union_work_exhaustion_keeps_only_known_profile_refusal_bound() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    for profile_count in [32,64] {
+    let profiles=vec![profile.clone();profile_count];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let guide=crate::primitives::line([2.,0.,0.],[2.,0.,10.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    let opts=Options {max_sections:9,max_deviation:1e-30,..options()};
+    let level=MultiSweep::new(&profiles,&path,&scale,&twist,opts).unwrap()
+        .with_contact_guide(&guide,0,1.).unwrap().preview_at(9).unwrap();
+    assert!(!level.report.accepted);
+    assert_eq!(level.report.sampled_control_deviation,0.);
+    if profile_count==32 {
+        // Reused original position/offset work now fits this complete union;
+        // a proven upper above the tiny tolerance still refuses acceptance.
+        assert!(level.report.continuous_bound);
+        assert!(level.report.continuous_error_upper.unwrap()>opts.max_deviation);
+    }else{
+        assert!(!level.report.continuous_bound);
+        assert!(level.report.continuous_error_upper.is_none());
+    }
+    assert!(level.report.known_profile_error_upper.unwrap()>opts.max_deviation);
+    assert!(level.report.error_certificate_cells<=10000);
+    }
+}
+
+#[test]
+fn contact_anchor_preserves_original_reference_profile_across_all_contours() {
+    let profiles = vec![
+        crate::primitives::line([0.5, 0., 0.], [1., 0., 0.]).unwrap(),
+        crate::primitives::line([1., 0., 0.], [2., 0., 0.]).unwrap(),
+    ];
+    let path = crate::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let guide = crate::primitives::line([2., 0., 0.], [2., 0., 10.]).unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let multi = MultiSweep::new(&profiles, &path, &scale, &twist, options())
+        .unwrap().with_contact_guide(&guide, 1, 1.).unwrap();
+    for sweep in &multi.sweeps {
+        let (source, parameter) = sweep.contact_source.unwrap();
+        assert!(std::ptr::eq(source, &profiles[1]));
+        assert_eq!(parameter, 1.);
+        assert_eq!(sweep.contact_point, Some([2., 0., 0.]));
+        let fitted = sweep.contact_fit_jet([0.25, 0.5], 100).unwrap();
+        assert!(fitted.reason.is_none());
+        let value = fitted.fit.unwrap().value.unwrap();
+        assert!(value[0] <= 1. && 1. <= value[1]);
+    }
+    let reoriented = multi.with_orientation_guide(&guide).unwrap();
+    assert!(reoriented.sweeps.iter().all(|s| s.contact_source.is_none() && s.contact_point.is_none()));
+}
 fn law(a: f64, b: f64) -> Curve {
     Curve {
         degree: 1,
@@ -17,6 +71,23 @@ fn options() -> Options {
         max_sections: 129,
         max_deviation: 0.001,
     }
+}
+#[test]
+fn authored_whole_frame_regularity_is_separate_from_sampled_acceptance() {
+    use crate::sweeps::progressive_miter::scalar_certificate::Status;
+    let profile = crate::primitives::line([1., 0., 0.], [2., 0., 0.]).unwrap();
+    let path = crate::primitives::line([0.; 3], [0., 0., 10.]).unwrap();
+    let scale = law(1., 1.);
+    let twist = law(0., 0.);
+    let axis = constant_vector_law([0., 0., 1.]).unwrap();
+    let normal = constant_vector_law([1., 0., 0.]).unwrap();
+    let plain = Sweep::new(&profile, &path, &scale, &twist, options()).unwrap();
+    assert!(plain.authored_frame_regularity(100).unwrap().is_none());
+    let authored = Sweep::new_authored(&profile, &path, &scale, &twist, &axis, &normal, options()).unwrap();
+    assert_eq!(authored.authored_frame_regularity(100).unwrap().unwrap().status, Status::Certified);
+    assert_eq!(authored.authored_frame_regularity(0).unwrap().unwrap().status, Status::Unresolved);
+    assert_eq!(authored.authored_frame_jet_cover(100).unwrap().unwrap().status, Status::Certified);
+    assert!(plain.authored_frame_jet_cover(100).unwrap().is_none());
 }
 fn point(patches: &[Surface], u: f64, v: f64) -> V {
     let patch = patches
@@ -660,10 +731,51 @@ fn authored_frame_transport_requires_both_laws_and_preserves_metadata() {
         "max_sections":17,"max_deviation":0.001});
     let result = crate::transport::dispatch(request.clone()).unwrap();
     assert_eq!(result["report"]["accepted"], json!(true));
-    assert_eq!(result["report"]["continuousBound"], json!(false));
+    assert_eq!(result["report"]["continuousBound"], json!(true));
+    assert_eq!(result["report"]["roundingCertified"], json!(true));
+    assert!(result["report"]["continuousErrorUpper"].as_f64().unwrap()<0.001);
+    assert_eq!(result["report"]["continuousErrorScope"],json!("retained-patches-relative-to-original-profile-transport"));
     let mut incomplete = request;
     incomplete["frame_normal"] = json!(null);
     assert!(crate::transport::dispatch(incomplete).is_err());
+}
+
+#[test]
+fn authored_multi_profile_level_shares_error_work_and_discards_partial_bound() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    let profiles=vec![profile;64];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let axis=constant_vector_law([0.,0.,1.]).unwrap();
+    let normal=constant_vector_law([1.,0.,0.]).unwrap();
+    let scale=law(1.,1.);
+    let twist=law(0.,0.);
+    let options=Options {orientation:Orientation::Fixed,initial_sections:3,max_sections:9,..options()};
+    let small=MultiSweep::new(&profiles[..2],&path,&scale,&twist,options).unwrap().with_frame_laws(&axis,&normal).unwrap().preview_at(9).unwrap();
+    assert!(small.report.continuous_bound);
+    assert!(small.report.original_section_endpoint_error_upper.is_some());
+    assert!(small.report.endpoint_contour_error_upper.is_some());
+    assert!(small.report.continuous_error_upper.unwrap()<options.max_deviation);
+    // Batch source sharing admits the former 32-profile exhaustion fixture.
+    // Preserve that success alongside a genuinely exhausted shared budget.
+    let shared=MultiSweep::new(&profiles[..32],&path,&scale,&twist,options).unwrap().with_frame_laws(&axis,&normal).unwrap().preview_at(9).unwrap();
+    assert!(shared.report.continuous_bound && shared.report.accepted);
+    assert!(shared.report.continuous_error_upper.unwrap()<options.max_deviation);
+    assert!(shared.report.error_certificate_cells<=10000);
+    let large=MultiSweep::new(&profiles,&path,&scale,&twist,options).unwrap().with_frame_laws(&axis,&normal).unwrap().preview_at(9).unwrap();
+    assert!(!large.report.continuous_bound);
+    assert!(large.report.continuous_error_upper.is_none());
+    assert!(large.report.original_section_endpoint_error_upper.is_none());
+    assert!(large.report.endpoint_contour_error_upper.is_none());
+    assert!(large.report.error_certificate_cells<=10000);
+    assert!(large.report.error_certificate_reason.is_some());
+    assert!(large.report.known_profile_error_upper.is_some());
+    let strict=Options {max_deviation:1e-30,..options};
+    let rejected=MultiSweep::new(&profiles,&path,&scale,&twist,strict).unwrap().with_frame_laws(&axis,&normal).unwrap().preview_at(9).unwrap();
+    assert_eq!(rejected.report.sampled_control_deviation,0.);
+    assert!(!rejected.report.accepted);
+    assert!(!rejected.report.continuous_bound);
+    assert!(rejected.report.continuous_error_upper.is_none());
+    assert!(rejected.report.known_profile_error_upper.unwrap()>strict.max_deviation);
 }
 
 #[test]
@@ -866,8 +978,13 @@ fn shared_contact_anchor_preserves_hole_widths_and_restarts_aggregate_grid() {
         .unwrap()
         .with_contact_guide(&rail, 0, 1.)
         .unwrap();
-    let level = sweep.next().unwrap().unwrap();
-    assert!(level.report.accepted);
+    let mut level = sweep.next().unwrap().unwrap();
+    assert!(level.report.continuous_bound);
+    assert!(!level.report.accepted);
+    assert!(level.report.continuous_error_upper.unwrap() > level.report.budget);
+    while !level.report.accepted {
+        level = sweep.next().unwrap().unwrap();
+    }
     for i in 0..level.report.sections {
         let f = i as f64 / (level.report.sections - 1) as f64;
         for (index, ratio) in [(0, 1.), (1, 0.5)] {
@@ -964,7 +1081,7 @@ fn independent_preview_levels_preserve_iterator_state_and_admission() {
         let encoded = preview.to_value();
         assert_eq!(encoded["preview"], json!(true));
         assert_eq!(encoded["report"]["accepted"], json!(false));
-        assert_eq!(encoded["report"]["continuousBound"], json!(false));
+        assert_eq!(encoded["report"]["continuousBound"], json!(true));
     }
 }
 
@@ -1008,6 +1125,78 @@ fn corrected_frenet_resolves_zero_initial_curvature_from_the_first_principal_nor
     for section in sections { assert!((section.control_points[1][2]-2.).abs()<1e-10); }
 }
 
+#[test]
+fn corrected_planar_initial_phase_is_source_owned_across_section_counts(){
+    // C(t)=(t,t^3-2t^4,0): the initial curvature vanishes, its source
+    // principal limit is +Y, but curvature at the first coarse station is
+    // negative for counts 2/3/5 and positive for count 9.
+    let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![0.25,0.,0.],vec![0.5,0.,0.],vec![0.75,0.25,0.],vec![1.,-1.,0.]],None).unwrap();
+    let profile=crate::primitives::line([0.,0.25,0.25],[0.,0.5,0.5]).unwrap();
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    let axes=constant_vector_law([1.25,0.75,1.]).unwrap();let center=constant_vector_law([0.125,0.25,0.]).unwrap();
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,Options {normal:[0.,0.,1.],orientation:Orientation::CorrectedFrenet,
+        spacing:Spacing::Parameter,initial_sections:2,max_sections:17,max_deviation:10.}).unwrap().with_affine_laws(&axes,&center).unwrap();
+    for count in [2,3,5,9,17]{
+        let sections=sweep.sections_at(count).unwrap();
+        for (j,pole) in sections[0].control_points.iter().enumerate(){
+            assert!((pole[1]-(1.25*(j as f64+1.)*0.25+0.125)).abs()<1e-12,"{count}/{pole:?}");
+            assert!((pole[2]-(0.75*(j as f64+1.)*0.25+0.25)).abs()<1e-12,"{count}/{pole:?}");
+        }
+    }
+}
+
+#[test]
+fn corrected_frenet_planar_antiparallel_step_preserves_binormal() {
+    // Regular planar quartic: endpoint tangents are opposite and parallel to
+    // the endpoint chord. Double reflection's second direction is zero.
+    let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![1.,0.,0.],
+        vec![1.,1.,0.],vec![2.,0.,0.],vec![1.,0.,0.]],None).unwrap();
+    assert!(crate::curve_regularity::inspect(&path,10000).unwrap().spanwise_regular);
+    let profile=crate::primitives::line([0.,0.,1.],[0.,0.,2.]).unwrap();
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,Options {
+        orientation:Orientation::CorrectedFrenet,normal:[0.,0.,1.],
+        initial_sections:2,max_sections:17,..options()
+    }).unwrap();
+    for count in [2,3,5,9,17] {
+        for section in sweep.sections_at(count).unwrap() {
+            assert!((section.control_points[0][2]-1.).abs()<1e-10,"count={count}");
+            assert!((section.control_points[1][2]-2.).abs()<1e-10,"count={count}");
+        }
+    }
+}
+
+#[test]
+fn corrected_frenet_nonaxial_plane_preserves_offsets_for_both_spacings() {
+    let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![1.,-1.,0.],
+        vec![2.,0.,-2.],vec![2.,-2.,0.],vec![1.,-1.,0.]],None).unwrap();
+    assert!(crate::curve_regularity::inspect(&path,10000).unwrap().spanwise_regular);
+    let before=path.clone();
+    let profile=crate::primitives::line([1.,1.,1.],[2.,2.,2.]).unwrap();
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    for spacing in [Spacing::Parameter,Spacing::ArcLength{tolerance:0.001,max_cells:100000}] {
+        let sweep=Sweep::new(&profile,&path,&scale,&twist,Options {
+            orientation:Orientation::CorrectedFrenet,normal:[1.,1.,1.],spacing,
+            initial_sections:2,max_sections:17,..options()
+        }).unwrap();
+        for count in [2,3,5,9,17] {
+            let (parameters,_)=sweep.parameters(count).unwrap();
+            for (i,section) in sweep.sections_at(count).unwrap().iter().enumerate() {
+                let position=path.evaluate(parameters[i]).unwrap().point;
+                for (j,p) in section.control_points.iter().enumerate() {
+                    let expected:V=std::array::from_fn(|k|position[k]+(j+1) as f64);
+                    assert!(norm(sub([p[0],p[1],p[2]],expected))<1e-10,"{spacing:?}/{count}");
+                }
+            }
+        }
+        assert!(sweep.certify_original_frame_smoothness(2,10000,1000000).unwrap().source_frame_smoothness_certified);
+    }
+    assert_eq!(path.control_points,before.control_points);
+    assert_eq!(path.weights,before.weights);
+    let mut spatial=path.clone();spatial.control_points[2][2]=(-2_f64).next_up();
+    assert!(!super::source_plane::certify(&spatial,[1.,1.,1.],1000000).unwrap().proved);
+}
+
 
 #[test]
 fn corrected_frenet_closes_a_rational_circle_with_full_turn_twist() {
@@ -1045,4 +1234,149 @@ fn corrected_frenet_handles_a_c1_straight_to_curved_join_without_a_defined_secon
         }
     }
     assert!(Sweep::new(&profile,&path,&scale,&twist,Options{orientation:Orientation::Frenet,..opts}).unwrap().sections_at(9).is_err());
+}
+
+
+#[test]
+fn exact_identity_affine_laws_preserve_geometry_with_rational_weights_and_validation() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let scale=law(1.,1.);
+    let twist=law(0.,0.);
+    let axes=Curve {degree:2,knots:vec![2.,2.,2.,4.,7.,7.,7.],
+        control_points:vec![vec![1.;3];4],weights:vec![1.,2.,0.5,3.],periodic:false};
+    let mut center=axes.clone();
+    center.control_points=vec![vec![0.;3];4];
+    center.knots=vec![-3.,-3.,-3.,0.,9.,9.,9.];
+    let original=Sweep::new(&profile,&path,&scale,&twist,options()).unwrap();
+    let identity=Sweep::new(&profile,&path,&scale,&twist,options()).unwrap().with_affine_laws(&axes,&center).unwrap();
+    let a=original.sections(9).unwrap().0;
+    let b=identity.sections(9).unwrap().0;
+    for (a,b) in a.iter().zip(&b) {
+        assert_eq!(a.control_points,b.control_points);
+        assert_eq!(a.weights,b.weights);
+    }
+    let mut near=axes.clone();
+    near.control_points[1][0]=1_f64.next_up();
+    assert!(Sweep::new(&profile,&path,&scale,&twist,options()).unwrap().with_affine_laws(&near,&center).unwrap().affine_laws.is_some());
+    let mut near_center=center.clone();near_center.control_points[1][0]=f64::MIN_POSITIVE;
+    assert!(Sweep::new(&profile,&path,&scale,&twist,options()).unwrap().with_affine_laws(&axes,&near_center).unwrap().affine_laws.is_some());
+    for bad_weight in [0.,-1.,f64::NAN] {
+        let mut bad=axes.clone();bad.weights[1]=bad_weight;
+        assert!(Sweep::new(&profile,&path,&scale,&twist,options()).unwrap().with_affine_laws(&bad,&center).is_err());
+    }
+    let mut bad=center.clone();bad.knots[3]=10.;
+    assert!(Sweep::new(&profile,&path,&scale,&twist,options()).unwrap().with_affine_laws(&axes,&bad).is_err());
+}
+
+
+#[test]
+fn rational_straight_eight_profiles_keep_full_error_inside_shared_default_work(){
+    let outer=[[0.,0.,0.],[2.,0.,0.],[2.,2.,0.],[0.,2.,0.]];
+    let hole=[[0.5,0.5,0.],[0.5,1.5,0.],[1.5,1.5,0.],[1.5,0.5,0.]];
+    let profiles:Vec<_>=[outer,hole].into_iter().flat_map(|p|(0..4).map(move |i|crate::primitives::line(p[i],p[(i+1)%4]).unwrap())).collect();
+    let path=Curve {degree:3,knots:vec![2.,2.,2.,2.,5.,5.,5.,5.],
+        control_points:vec![vec![0.;3],vec![0.,0.,1.],vec![0.,0.,7.],vec![0.,0.,10.]],weights:vec![1.,2.,2.,1.],periodic:false};
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    let axes=constant_vector_law([2.,3.,1.]).unwrap();let center=constant_vector_law([0.125,-0.25,0.]).unwrap();
+    for orientation in [Orientation::CorrectedFrenet,Orientation::RotationMinimizing] {
+      for spacing in [Spacing::Parameter,Spacing::ArcLength {tolerance:0.001,max_cells:100000}] {
+        let opt=Options {normal:[1.,0.,1.],orientation,spacing,initial_sections:3,max_sections:129,max_deviation:0.01};
+        let level=MultiSweep::new(&profiles,&path,&scale,&twist,opt).unwrap().with_affine_laws(&axes,&center).unwrap().preview_at(65).unwrap();
+        assert!(level.report.continuous_bound,"{orientation:?}/{spacing:?}/{:?}",level.report);
+        assert!(level.report.continuous_error_upper.unwrap()<=0.01,"{:?}",level.report);
+        assert!(level.report.error_certificate_cells<=10000);
+      }
+    }
+}
+
+#[test]
+fn fixed_normal_multi_profile_level_shares_error_work_and_discards_partial_bound() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    let profiles=vec![profile;64];
+    let path=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+    let scale=law(1.,1.);
+    let twist=law(0.,0.);
+    let options=Options {orientation:Orientation::FixedNormal,initial_sections:3,max_sections:33,..options()};
+    let small=MultiSweep::new(&profiles[..2],&path,&scale,&twist,options).unwrap().preview_at(33).unwrap();
+    assert!(small.report.continuous_bound);
+    assert!(small.report.continuous_error_upper.unwrap()<options.max_deviation);
+    let large=MultiSweep::new(&profiles,&path,&scale,&twist,options).unwrap().preview_at(33).unwrap();
+    assert!(!large.report.continuous_bound);
+    assert!(large.report.continuous_error_upper.is_none());
+    assert!(large.report.error_certificate_cells<=10000);
+    assert!(large.report.error_certificate_reason.is_some());
+    assert!(large.report.known_profile_error_upper.is_some());
+    let strict=Options {max_deviation:1e-30,..options};
+    let rejected=MultiSweep::new(&profiles,&path,&scale,&twist,strict).unwrap().preview_at(33).unwrap();
+    assert_eq!(rejected.report.sampled_control_deviation,0.);
+    assert!(!rejected.report.accepted);
+    assert!(!rejected.report.continuous_bound);
+    assert!(rejected.report.continuous_error_upper.is_none());
+    assert!(rejected.report.known_profile_error_upper.unwrap()>strict.max_deviation);
+}
+
+#[test]
+fn frenet_knot_principal_direction_jump_is_not_hidden_by_source_enclosure(){
+    // C1 tangent at the knot, but left principal normal is Y and right is Z.
+    let path=Curve {degree:2,knots:vec![0.,0.,0.,0.5,1.,1.,1.],
+        control_points:vec![vec![0.,0.25,0.],vec![0.25,0.,0.],vec![0.75,0.,0.],vec![1.,0.,0.25]],
+        weights:vec![1.;4],periodic:false};
+    let profile=crate::primitives::line([0.,1.,1.],[0.,2.,1.]).unwrap();
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    let opt=Options {orientation:Orientation::Frenet,initial_sections:3,max_sections:3,..options()};
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,opt).unwrap();
+    assert!(sweep.sections(3).is_err());
+    assert!(sweep.frenet_patch_error_bound(3,10000,1000000).is_err());
+}
+
+
+#[test]
+fn frenet_multi_profile_level_shares_error_work_and_discards_partial_bound() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    let profiles=vec![profile;64];
+    let path=Curve {degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],control_points:vec![vec![0.;3],vec![1./3.,0.,0.],vec![2./3.,1./3.,0.],vec![1.,1.,1.]],weights:vec![1.;4],periodic:false};
+    let scale=law(1.,1.);
+    let twist=law(0.,0.);
+    // This test exercises the shared certificate work budget, using the same
+    // 1 mm admission budget as the public multi-profile regression.
+    let options=Options {orientation:Orientation::Frenet,initial_sections:3,max_sections:33,max_deviation:1.,..options()};
+    let small=MultiSweep::new(&profiles[..2],&path,&scale,&twist,options).unwrap().preview_at(33).unwrap();
+    assert!(small.report.continuous_bound);
+    assert!(small.report.continuous_error_upper.unwrap()<options.max_deviation);
+    let large=MultiSweep::new(&profiles,&path,&scale,&twist,options).unwrap().preview_at(33).unwrap();
+    assert!(!large.report.continuous_bound);
+    assert!(large.report.continuous_error_upper.is_none());
+    assert!(large.report.error_certificate_cells<=10000);
+    assert!(large.report.error_certificate_reason.is_some());
+    assert!(large.report.known_profile_error_upper.is_some());
+    let strict=Options {max_deviation:1e-30,..options};
+    let rejected=MultiSweep::new(&profiles,&path,&scale,&twist,strict).unwrap().preview_at(33).unwrap();
+    assert!(!rejected.report.accepted);
+    assert!(!rejected.report.continuous_bound);
+    assert!(rejected.report.continuous_error_upper.is_none());
+    assert!(rejected.report.known_profile_error_upper.unwrap()>strict.max_deviation);
+}
+
+
+#[test]
+fn retained_regularity_is_separate_from_error_admission_across_frame_modes(){
+    let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.5,0.,0.],vec![1.,1.,0.]],weights:vec![1.;3],periodic:false};
+    let profile=crate::primitives::line([0.,0.1,0.1],[0.,0.2,0.1]).unwrap();
+    let scale=law(1.,1.);let twist=law(0.,0.);
+    for orientation in [Orientation::Fixed,Orientation::FixedNormal,Orientation::Frenet,Orientation::CorrectedFrenet,Orientation::RotationMinimizing]{
+        let opt=Options {orientation,normal:[0.,0.,1.],initial_sections:3,max_sections:17,max_deviation:1e-30,..options()};
+        let level=Sweep::new(&profile,&path,&scale,&twist,opt).unwrap().preview_at(17).unwrap();
+        assert!(!level.report.accepted);
+        let regular=level.certify_retained_regularity(10000).unwrap();
+        assert!(regular.spanwise_regular,"{orientation:?}: {regular:?}");
+        assert!(!level.report.accepted,"R must not mutate E admission");
+        let exhausted=level.certify_retained_regularity(0).unwrap();
+        assert!(!exhausted.spanwise_regular);
+        assert_eq!(exhausted.unresolved_patches.len(),level.patches.len());
+        let profiles=[profile.clone(),profile.clone()];
+        let multi=MultiSweep::new(&profiles,&path,&scale,&twist,opt).unwrap().preview_at(17).unwrap();
+        assert!(multi.certify_retained_regularity(10000).unwrap().spanwise_regular);
+        // Coincident profiles intentionally remain R regular; this is not I.
+    }
 }

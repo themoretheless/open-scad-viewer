@@ -67,13 +67,13 @@
     {
       "id": "crates-workspace-manifest",
       "path": "crates/Cargo.toml",
-      "sha256": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+      "sha256": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
       "byteLength": 2433
     },
     {
       "id": "crates-lockfile",
       "path": "crates/Cargo.lock",
-      "sha256": "845ecc2077260479526e05b7c88d9113c6c8bf7677caa51e033c73faef10f32c",
+      "sha256": "2e6ce5f98b7696916ff5bd497a9d23d8d42163244f788859c1546f9f7b9be361",
       "byteLength": 77792
     },
     {
@@ -397,7 +397,7 @@
     {
       "id": "own-rust-cad-v17-evidence",
       "path": "docs/qualification/own-rust-cad-v17.json",
-      "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+      "sha256": "76ed9a91c3a699852cd143867b5191e7afabfaed4c4a6f8bc6a45b30efc40b3f",
       "byteLength": 3465
     }
   ],
@@ -443,5 +443,5 @@
       "note": "Current bytes are newly bound in v25; v24 remains archived. Re-freeze after the WASM build became path-independent (--remap-path-prefix for cargo home and checkout root) so every checkout rebuilds the frozen kernel bytes; also binds package.json (qual:shader-library), the 253d7700 compute crates and Cargo.lock entries outside the kernel graph, and the renderer fixes. Own-Rust kernel sources, notices and npm lockfile byte-identical to evidence v16, G1 contract unchanged, reset clean-run work."
     }
   ],
-  "previousFingerprintSha256": "b7cc6981df661eb4376aff55df31fa2ebee8d26789657c886b583506d2af6871"
+  "previousFingerprintSha256": "beca44f0d41f5672bbd88acd66bee3c03ac51f73b4eaa32283d2afe8721cd889"
 }

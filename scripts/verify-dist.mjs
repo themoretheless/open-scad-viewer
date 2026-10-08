@@ -126,7 +126,8 @@ const jsChunkBudgets = [
   [/^assets\/renderer-[^/]+\.js$/, 132_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
-  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
+  // Rational-surface and transform-plan language kernels: measured 516,458 bytes.
+  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 517_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
   // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.
@@ -291,7 +292,7 @@ for (const [name, artifact, compression] of [
 // The workspace redesign (single top bar with an export dialog, dock tabs, per-mode command palettes,
 // icon toolbars and the Solid WebGPU display layer) adds ~57 kB to the eager index chunk
 // (5308461 -> 5406747 bytes measured; the geometry chunk is unchanged), so the total budget moves once.
-// Splitting the OpenSCAD and ModelGraph frontends into their own kernel (language-kernel-bytes)
+// Splitting the OpenSCAD and RushGraph frontends into their own kernel (language-kernel-bytes)
 // trades ~150 kB of total distribution for a geometry kernel that drops from 8811985 to 6591424
 // bytes unpacked: it instantiates on the main thread again, and a session that never compiles
 // source never fetches the 445 kB language chunk (5406202 -> 5557245 bytes measured).
@@ -329,7 +330,7 @@ for (const [name, artifact, compression] of [
 // Surface construction worker and refinement report validation: measured 6,860,202 bytes.
 // Matching and seam preparation worker reports: measured 6,862,039 bytes.
 // Worker display preparation and cancellation: measured 6,889,592 asset bytes.
-// Worker ModelGraph import: measured 6,894,083 asset bytes.
+// Worker RushGraph import: measured 6,894,083 asset bytes.
 // Cancellable surface-boundary report and protocol: measured 6,896,876 asset bytes.
 // Worker surface display queue and retry controls: measured 6,900,283 asset bytes.
 // Retained profile display queue and protocol add about 3 kB of UI/worker code.

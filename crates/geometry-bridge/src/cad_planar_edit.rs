@@ -1,5 +1,5 @@
 //! Transactional retained-body planar edits using native display selection.
-use super::{Result, Value, brep, cad_face_selection, cad_mesh_topology, encode, field, input};
+use super::{Result, Value, brep, cad_face_selection, encode, field, input};
 pub fn edit(v: Value) -> Result<Value> {
     let body: Value = field(&v, "body")?;
     if body.get("brep").is_none() {
@@ -15,8 +15,10 @@ pub fn edit(v: Value) -> Result<Value> {
     if !amount.is_finite() {
         return Err(input("Enter a finite distance."));
     }
-    let topology = cad_mesh_topology::topology(value_codec::json!({"mesh":body["mesh"].clone()}))?;
-    let displayed: Vec<Value> = field(&topology, "faces")?;
+    let mesh: polygon_core::Mesh = field(&body, "mesh")?;
+    mesh.validate()?;
+    let displayed = mesh_topology::planar::topology(mesh.view())
+        .map_err(|e| input(e.message))?.faces;
     let mut faces = Vec::new();
     for index in selected {
         let face = displayed
@@ -24,7 +26,7 @@ pub fn edit(v: Value) -> Result<Value> {
             .ok_or_else(|| input("Select a face."))?;
         let select = if action=="push" {cad_face_selection::select_cap} else {cad_face_selection::select};
         let id = select(
-            value_codec::json!({"body":body.clone(),"triangles":face["triangles"].clone()}),
+            value_codec::json!({"body":body.clone(),"triangles":face.triangles}),
         )?;
         let id: usize = value_codec::from_value(id).map_err(|e| input(e.to_string()))?;
         if !faces.contains(&id) {
@@ -61,6 +63,7 @@ pub fn edit(v: Value) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::cad_mesh_topology;
     use super::*;
     #[test]
     fn cap_selection_is_scoped_and_preserves_input_on_success_and_failure() {

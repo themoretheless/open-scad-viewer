@@ -200,6 +200,9 @@ it('rounds complete enclosure chains without opening its cavity through the WASM
  }
  const angle=.37,c=Math.cos(angle),s=Math.sin(angle)
  const placed=transformNurbsBrep(model,[[c,-s,0,7],[0,0,-1,11],[s,c,0,-3],[0,0,0,1]])
+ const routed=solidExactEdgeFeature({...body,brep:placed,mesh:tessellateNurbsBrep(placed)},edges,1,'fillet','brep')
+ expect(routed.evidence.certificate.capability).toBe('exact-layered-prism-edge-fillet/1')
+ expect(routed.evidence.audit.ok).toBe(true)
  expect(analyzeNurbsBrep(exactLayeredPrismFillet(placed,edges,1).model).signedVolumeMm3).toBeCloseTo(7152-(1-Math.PI/4)*20,4)
  expect(()=>exactLayeredPrismFillet(model,edges,8)).toThrow()
  expect(()=>exactLayeredPrismFillet(model,[edges[0]],1)).toThrow()

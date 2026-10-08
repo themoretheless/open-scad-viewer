@@ -91,7 +91,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
     case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
-    case 'modelGraphImport':return (await import('./solidModelGraphImport')).importSolidModelGraph(job.document,job.text,job.group)
+    case 'rushGraphImport':return (await import('./solidRushGraphImport')).importSolidRushGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
     case 'curveChainInspection':return (await import('./inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)
     case 'trimmedCurveOffset':return (await import('./solidTrimmedCurveOffset')).offsetTrimmedSolidCurve(job.document,job.options)

@@ -209,5 +209,5 @@
       "note": "Current bytes are newly bound in v11; v10 remains archived. Bind append-only V7 exact finite blend successors and rebuilt own-Rust WASM while preserving prior freezes and retaining zero G0/G1 qualification claims."
     }
   ],
-  "previousFingerprintSha256": "cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3"
+  "previousFingerprintSha256": "110d719fb119a2a495f02f843f054c9a29ba814159e3540a7ba0b2c7f62f5494"
 }

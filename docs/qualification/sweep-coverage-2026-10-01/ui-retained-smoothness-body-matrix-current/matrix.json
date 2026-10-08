@@ -1,0 +1,43 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T08:20:56.019Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "5f2126b49a6fe7dc3913919a5a0a483ce0291f06472993b38a051982508018a7",
+  "artifactProvenance": {
+    "sha256": "5f2126b49a6fe7dc3913919a5a0a483ce0291f06472993b38a051982508018a7",
+    "byteLength": 11033476,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-By3Vd3AW.js"
+    ]
+  },
+  "appSourceSha256": "d0f7850722dd36a27a39d6f3060ca26774a8d6023d7c88bcfb90b6a951abdb2a",
+  "distIndexSha256": "f4b5632cafffa786bb004b3cd7784c1f63dacaf61f02f238283927b3d74911fd",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "sourceSha256": "171d5efcc4a7c076a24182f7a03127299e6a57e0f81b018a1b97a81f0ee8a41f",
+      "assertions": [],
+      "pageErrors": [],
+      "status": "failed",
+      "error": "Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[accept=\".scad,.r,text/plain\"]')\u001b[22m\n",
+      "bodyText": "OpenSCAD Viewer\nmodel.scad\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n▾\n5\n6\n7\n▾\n8\n9\n10\n▾\n11\n12\n// OpenSCAD primitives — rendered with a real geometry kernel\ncube([20, 15, 10]);\n\ntranslate([30, 0, 8])\n  sphere(r = 8, $fn = 32);\n\ntranslate([0, 28, 0])\n  cylinder(h = 18, r = 7, $fn = 32);\n\ntranslate([30, 28, 0])\n  cylinder(h = 18, r1 = 8, r2 = 3, $fn = 6);\n\n\nОбъекты 4\nТреугольники 1 116\nОбъём 9 375,63\nПлощадь 3 994,72\nГотово · 208 ms\nWebGPU · интерактивный\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms · draw 1 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "d0f7850722dd36a27a39d6f3060ca26774a8d6023d7c88bcfb90b6a951abdb2a",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "b16bf54c9fb6337c2807bb1f6ee5f8bc715f9eb1fd935ef37c4c5f4c5720dce6",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "0419e02871427a7bd8dc9e47766f6d5dde874f9e983cf4c86ad9ffafa0c6d823",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true
+}
