@@ -943,7 +943,7 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
-    /// Normal divided by the exact normalized collapsed-U factor^(2*power-1).
+    /// Normal divided by exact longitudinal and transverse collapsed-U factors.
     /// This is a factored interior/pole-limit diagnostic, not immersion at the pole.
     pub fn factored_pole_normal_bounds(&self,domain:[[f64;2];2],high:bool,max_spans:usize)->Result<(Option<ProfilePoleNormal>,usize)> {
         crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
@@ -956,6 +956,13 @@ impl<'source> WeightProfile<'source> {
         let pole=&s.control_points[if high {n}else{0}][0];
         let power=(0..=n).take_while(|step|s.control_points[if high {n-step}else{*step}].iter().all(|p|p==pole)).count();
         if power==0 || power>n || max_spans<6 {return Ok((None,0));}
+        // Separable profile weights make each constant control row independent
+        // of V. More such rows can vanish transversely than coincide at the pole.
+        let transverse=(0..=n).take_while(|step|{
+            let row=&s.control_points[if high {n-step}else{*step}];row.iter().all(|p|p==&row[0])
+        }).count().min(n);
+        let queries=if transverse>power {7}else{6};
+        if max_spans<queries {return Ok((None,0));}
         let choose=|n:usize,k:usize|->u64 {(0..k).fold(1,|value,i|value*(n-i) as u64/(i+1) as u64)};
         let m=n-power;let mut reduced=vec![vec![[I::point(0.);4];q+1];m+1];
         for i in 0..=m {for j in 0..=q {
@@ -971,7 +978,24 @@ impl<'source> WeightProfile<'source> {
         let hull=crate::normal_alignment::homogeneous_jet_hull;
         let a=hull(&reduced,[m,q],span,domain,[0,0])?;
         let au=hull(&reduced,[m,q],span,domain,[1,0])?;
-        let av=hull(&reduced,[m,q],span,domain,[0,1])?;
+        let (transverse_position,transverse_derivative)=if transverse==power {
+            (a,hull(&reduced,[m,q],span,domain,[0,1])?)
+        } else {
+            // Subtract each row's own constant V baseline. Its rational blend
+            // depends on U only, so its V derivative vanishes identically.
+            let degree=n-transverse;let mut net=vec![vec![[I::point(0.);4];q+1];degree+1];
+            for i in 0..=degree {for j in 0..=q {
+                let original=if high {i}else{i+transverse};
+                let ratio=I::point(choose(n,original) as f64).div(I::point(choose(degree,i) as f64))?;
+                let weight=I::point(self.row[original]).mul(I::point(self.column[j]))?.div(I::point(self.pivot))?;
+                for k in 0..3 {
+                    let base=s.control_points[original][0][k];let value=s.control_points[original][j][k];
+                    let difference=if value==base {I::point(0.)}else{I::point(value).sub(I::point(base))?};
+                    net[i][j][k]=difference.mul(weight)?.mul(ratio)?;
+                }
+            }}
+            (hull(&net,[degree,q],span,domain,[0,0])?,hull(&net,[degree,q],span,domain,[0,1])?)
+        };
         let w=hull(&full,[n,q],span,domain,[0,0])?[3];
         let wu=hull(&full,[n,q],span,domain,[1,0])?[3];
         let wv=hull(&full,[n,q],span,domain,[0,1])?[3];
@@ -982,7 +1006,7 @@ impl<'source> WeightProfile<'source> {
         let mut first=[I::point(0.);3];let mut second=first;
         for k in 0..3 {
             first[k]=derivative.mul(a[k])?.mul(w)?.add(factor.mul(au[k].mul(w)?.sub(a[k].mul(wu)?)?)?)?;
-            second[k]=av[k].mul(w)?.sub(a[k].mul(wv)?)?;
+            second[k]=transverse_derivative[k].mul(w)?.sub(transverse_position[k].mul(wv)?)?;
         }
         let denominator=w.mul(w)?.mul(w)?.mul(w)?;
         let mut components=[[0.;2];3];
@@ -990,7 +1014,7 @@ impl<'source> WeightProfile<'source> {
             let normal=first[i].mul(second[j])?.sub(first[j].mul(second[i])?)?.div(denominator)?;
             components[k]=[normal.lo,normal.hi];
         }
-        Ok((Some(ProfilePoleNormal{components,high,power:2*power-1,point:[pole[0],pole[1],pole[2]]}),6))
+        Ok((Some(ProfilePoleNormal{components,high,power:power+transverse-1,point:[pole[0],pole[1],pole[2]]}),queries))
     }
     /// Cover the exact normal after collapsed-U factor removal. Completion
     /// proves the interior and nonzero scaled limits, never a smooth pole.
@@ -1003,7 +1027,7 @@ impl<'source> WeightProfile<'source> {
             if out.cells==max_cells || max_spans-out.spans<6 {out.pending.push(rect);out.pending.extend(queue);return Ok(out);}
             out.cells+=1;
             let (normal,spent)=self.factored_pole_normal_bounds(rect,high,max_spans-out.spans)?;out.spans+=spent;
-            let Some(normal)=normal else {out.pending.push(rect);out.pending.extend(queue);out.reason="profile-pole-factor-recipe-unproven";return Ok(out);};
+            let Some(normal)=normal else {out.pending.push(rect);out.pending.extend(queue);out.reason=if max_spans-out.spans<7 {"profile-pole-factor-work-limit"}else{"profile-pole-factor-recipe-unproven"};return Ok(out);};
             out.power=Some(normal.power);out.point=Some(normal.point);
             if normal.components.iter().any(|r|r[0]>0. || r[1]<0.) {out.regular.push(rect);continue;}
             let width=std::array::from_fn::<_,2,_>(|axis|{
@@ -1648,6 +1672,32 @@ mod tests {
         }
         let s=surface();let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
         assert!(p.factored_pole_normal_bounds([[0.,1.],[0.,1.]],true,6).unwrap().0.is_none());
+    }
+    #[test]
+    fn independent_transverse_collapse_factor_matches_quadratic_reference() {
+        for high in [false,true] {
+            let mut s=surface();s.degree_u=2;s.knots_u=vec![0.,0.,0.,1.,1.,1.];
+            let rows=vec![vec![vec![0.,0.,0.];2],vec![vec![0.5,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]];
+            s.control_points=if high {rows.into_iter().rev().collect()}else{rows};s.weights=vec![vec![1.;2];3];
+            let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+            let domain=[[0.,1.],[0.,1.]];
+            assert!(p.factored_pole_normal_bounds(domain,high,6).unwrap().0.is_none());
+            let (normal,spent)=p.factored_pole_normal_bounds(domain,high,7).unwrap();let normal=normal.unwrap();
+            assert_eq!(spent,7);assert_eq!(normal.power,2);
+            let expected=if high {-1.}else{1.};
+            assert!(normal.components[2][0]<=expected && expected<=normal.components[2][1]);
+            assert!(normal.components[2][0]>0. || normal.components[2][1]<0.);
+            assert!(p.inspect_factored_pole_regularity(domain,high,1,7).unwrap().complete_factored);
+            s.weights=vec![vec![1.,4.];3];
+            let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+            // S=(f,f^2*4v/(1+3v),0), factored normal z=+/-4/(1+3v)^2.
+            for v in [0.,0.5,1.] {
+                let normal=p.factored_pole_normal_bounds([[0.,1.],[v;2]],high,7).unwrap().0.unwrap();
+                let expected=(if high {-4.}else{4.})/(1.+3.*v).powi(2);
+                assert!(normal.components[2][0]<=expected && expected<=normal.components[2][1]);
+                assert!(normal.components[2][0]>0. || normal.components[2][1]<0.);
+            }
+        }
     }
     #[test]
     fn adaptive_factored_pole_cover_keeps_refusal_and_full_area() {

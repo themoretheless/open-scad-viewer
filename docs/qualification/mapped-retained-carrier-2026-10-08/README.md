@@ -1850,3 +1850,41 @@ first-power removal. Sample pending rectangles reach U intervals near
 additional transverse collapse factor or higher-order singular structure;
 it does not justify increasing the budget or declaring completion. The
 next step is exact transverse numerator factor qualification.
+
+## Independent transverse collapsed-row factor
+
+The exact profile normal factor now distinguishes p coincident pole rows
+from r rows that are individually constant across V. Exact separable
+profile weights make each such row independent of V even when its point
+differs from the pole. Subtracting each original row's own V baseline
+produces E=f^r*B; the removed baseline's rational blend depends on U only.
+Consequently Su=f^(p-1)*A and Sv=f^r*C, giving normal factor f^(p+r-1).
+This supersedes the earlier sufficient but incomplete f^(2p-1) removal.
+
+When r=p the existing six-query formula is retained. When r>p a separately
+reduced transverse numerator requires seven homogeneous jet hull queries.
+Outward binomial ratios, exact row/column/pivot expressions and original
+control differences remain authoritative. Insufficient work refuses, and
+adaptive coverage preserves pending rectangles when the seventh query
+cannot be afforded.
+
+Independent references cover S=(u,u^2*v,0), both low/high collapsed ends,
+and a rational V blend S=(f,f^2*4v/(1+3v),0). Their factored normal is
+respectively (0,0,+/-1) or (0,0,+/-4/(1+3v)^2), with removed power 2.
+The final 24-test profile suite passed in 22.44 seconds.
+
+For the annular terminal region the corrected factor is power 2. All 11
+ordinary-normal pending cells have nonzero factored normals. Complete
+adaptive coverage now requires only 4 accepted rectangles, zero pending,
+7 cells and 49 queries, covering area 0.1. Pole-normal point hulls at
+V=0,0.5,1 are nonzero after the second-power removal. The initial combined
+native regression passed in 90.28 seconds.
+
+This qualifies regularity in the interior and nonzero scaled pole limits.
+It does not turn the singular boundary into a smooth pole, establish a
+common tangent plane, admit retained-face global embedding or construct
+a closed Body. Those gates and whole-body qualification remain required.
+
+The strengthened native regression explicitly requiring complete terminal
+factored coverage, zero pending and power 2 passed in 43.90 seconds.
+Packaged WASM remains unchanged.

@@ -484,18 +484,20 @@ mod tests {
             if high {
                 let profile=proposal.profile(0).unwrap();let mut factored_regular=0;
                 for domain in &cover.pending {
-                    let (normal,spent)=profile.factored_pole_normal_bounds(*domain,true,6).unwrap();assert_eq!(spent,6);
+                    let (normal,spent)=profile.factored_pole_normal_bounds(*domain,true,7).unwrap();assert!((6..=7).contains(&spent));
                     let normal=normal.unwrap();assert_eq!(normal.point,[20.,0.,6.]);
                     if normal.components.iter().any(|r|r[0]>0. || r[1]<0.) {factored_regular+=1;}
                 }
                 eprintln!("retained terminal factored normal accepted={} pending={}",factored_regular,cover.pending.len()-factored_regular);
                 let factored=exterior.inspect_factored_pole_regularity(true,2048,12288).unwrap();
                 assert_eq!(factored.point,Some([20.,0.,6.]));
+                assert!(factored.complete_factored,"entire retained terminal factored cover must qualify");
+                assert!(factored.pending.is_empty());assert_eq!(factored.power,Some(2));
                 let area:f64=factored.regular.iter().chain(&factored.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
                 assert!((area-0.1).abs()<1e-12);
                 eprintln!("terminal factored cover complete={} regular={} pending={} cells={} spans={} power={:?}",factored.complete_factored,factored.regular.len(),factored.pending.len(),factored.cells,factored.spans,factored.power);
                 for free in [0.,0.5,1.] {
-                    let normal=profile.factored_pole_normal_bounds([[1.;2],[free;2]],true,6).unwrap().0.unwrap();
+                    let normal=profile.factored_pole_normal_bounds([[1.;2],[free;2]],true,7).unwrap().0.unwrap();
                     eprintln!("pole scaled normal free={free} components={:?}",normal.components);
                 }
                 eprintln!("factored pending sample={:?}",&factored.pending[..factored.pending.len().min(3)]);
