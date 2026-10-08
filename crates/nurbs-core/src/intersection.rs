@@ -566,6 +566,15 @@ fn admit_coincidence(input: &CurveIntersectionBox<'_>, report: &mut Report) -> R
         ha[0][1] / ha[0][3],
         ha[0][2] / ha[0][3],
     ];
+    // Parallel directions do not imply a common supporting line. Require
+    // every second-curve control to lie on the first supporting line before
+    // projecting intervals; otherwise subdivision must establish separation.
+    if hb.iter().any(|h| {
+        let delta = [h[0]/h[3]-origin[0], h[1]/h[3]-origin[1], h[2]/h[3]-origin[2]];
+        norm3(cross3(da, delta)) > floor.max(1e-12)
+    }) {
+        return Ok(false);
+    }
     let dir = da;
     let mut a_params: Vec<(f64, f64)> = ta
         .into_iter()
@@ -1755,6 +1764,18 @@ pub fn resource_boundary_probe(degree: usize, controls: usize) -> Result<Value> 
 #[cfg(test)]mod bounded_curve_tests {
  use super::*;
  fn line(a:[f64;3],b:[f64;3])->Curve{Curve::from_polyline(vec![a.to_vec(),b.to_vec()]).unwrap()}
+ #[test]fn parallel_offset_lines_are_not_coincident(){
+  let a=line([0.,0.,0.],[10.,10.,0.]);
+  let b=line([0.,1.,0.],[10.,11.,0.]);
+  for (first,second) in [(&a,&b),(&b,&a)] {
+   let report=intersect_curve_curve(first,second,None).unwrap();
+   assert_eq!(report["coverage"]["complete"].as_bool(),Some(true));
+   assert!(report["components"].as_array().unwrap().is_empty());
+  }
+  let overlap=line([2.,2.,0.],[8.,8.,0.]);
+  let report=intersect_curve_curve(&a,&overlap,None).unwrap();
+  assert_eq!(report["components"][0]["kind"],"overlap");
+ }
  #[test]fn default_budget_keeps_existing_report_identical(){
   let a=line([0.,0.,0.],[2.,2.,0.]);let b=line([0.,2.,0.],[2.,0.,0.]);
   assert_eq!(intersect_curve_curve(&a,&b,None).unwrap(),intersect_curve_curve_bounded(&a,&b,None,8192).unwrap());
