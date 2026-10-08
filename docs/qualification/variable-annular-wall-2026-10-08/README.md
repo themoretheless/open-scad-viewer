@@ -868,3 +868,22 @@ and pending counts are not percentages of qualified area. The unchanged
 1024/8192 prototype audit is running as annular-all-cache-self-wall. Whole
 wall qualification remains unproven until that audit and the remaining
 same-face/distinct-face obligations succeed.
+
+## Angular/secant cache audit completed
+
+The pair-cache audit completed for all four unchanged original prototypes at
+1024 cells / 8192 restrictions. Both spatial directions matched. Forward
+radii retain 9/14 pending pairs on faces 0/10; reverse radii retain 9/12.
+No pole face qualified. Archives annular-pair-cache-self-wall JSON/logs
+belong to df2fb62c, before early angular ordering. Preparation work remains
+separate; no whole-wall minimum or improved area percentage is asserted.
+
+## Early original Cartesian exclusion
+
+Original position distance and cached endpoint secant alignment are now
+checked immediately after angular separation, before the three pole mean
+matrices. Their bounds, thresholds and accounting are unchanged. This is
+only a change in proof scheduling. Thirteen chord/coverage tests passed,
+including the rational-cylinder short-normal-chord counterexample and
+insufficient-budget rejection. The unchanged 1024/8192 audit runs as
+annular-early-secant-self-wall; its result is pending.

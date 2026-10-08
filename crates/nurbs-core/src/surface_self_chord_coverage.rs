@@ -337,6 +337,34 @@ fn qualify_impl<'a>(
                 }
             }
         }
+        // Cheap original position/secant bounds often exclude separated cells
+        // before constructing any of the three pole mean matrices.
+        let work = span_count(s, pair[0]) + span_count(s, pair[1]);
+        if work <= limits.spans - out.spans {
+            let a = surface_distance::rectangle_bounds(s, pair[0])?;
+            let b = surface_distance::rectangle_bounds(s, pair[1])?;
+            out.spans += work;
+            if surface_distance::enclosure_distance(&a, &b)?.0 >= minimum_mm {
+                out.distance_exclusions += 1;
+                continue;
+            }
+            if out.spans < limits.spans {
+                let (excluded, used) = secant_exclusion_cached(
+                    s,
+                    pair,
+                    [&a, &b],
+                    max_sine_squared,
+                    limits.spans - out.spans,
+                    factored,
+                    pair_normals.as_ref(),
+                )?;
+                out.spans += used;
+                if excluded {
+                    out.direction_exclusions += 1;
+                    continue;
+                }
+            }
+        }
         if let (Some(differential), Some(normals)) = (differential, factored) {
             if out.spans < limits.spans {
                 let r = surface_self_chord::rational_pole_pair_report_cached(
@@ -380,32 +408,6 @@ fn qualify_impl<'a>(
                 out.polar_exclusions += 1;
                 intrinsic.push(c);
                 continue;
-            }
-        }
-        let work = span_count(s, pair[0]) + span_count(s, pair[1]);
-        if work <= limits.spans - out.spans {
-            let a = surface_distance::rectangle_bounds(s, pair[0])?;
-            let b = surface_distance::rectangle_bounds(s, pair[1])?;
-            out.spans += work;
-            if surface_distance::enclosure_distance(&a, &b)?.0 >= minimum_mm {
-                out.distance_exclusions += 1;
-                continue;
-            }
-            if out.spans < limits.spans {
-                let (excluded, used) = secant_exclusion_cached(
-                    s,
-                    pair,
-                    [&a, &b],
-                    max_sine_squared,
-                    limits.spans - out.spans,
-                    factored,
-                    pair_normals.as_ref(),
-                )?;
-                out.spans += used;
-                if excluded {
-                    out.direction_exclusions += 1;
-                    continue;
-                }
             }
         }
         if out.spans == limits.spans {
