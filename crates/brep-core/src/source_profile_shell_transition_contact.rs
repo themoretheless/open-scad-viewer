@@ -244,6 +244,9 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     &trace,1,max_controls)?.expect("whole ruled neighbor trace is strictly monotone in Y");
                 assert!(std::ptr::eq(monotone.trace(),&trace));
                 assert!(monotone.increasing() && monotone.coordinate()==1);
+                assert_eq!(monotone.parameter_domain(),trace.curve().domain());
+                eprintln!("transition curved neighbor monotoneY range={:?} domain={:?}",
+                    monotone.coordinate_range(),monotone.parameter_domain());
                 eprintln!(
                     "transition curved neighbor exactTrace=true curveDegree={} curveDomain={:?}",
                     trace.curve().degree,

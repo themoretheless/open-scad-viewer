@@ -124,6 +124,17 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
     pub(crate) fn increasing(&self) -> bool {
         self.increasing
     }
+    /// Exact coordinate image of the complete original trace. Clamping
+    /// preserves endpoint coordinates even with unequal positive weights.
+    pub(crate) fn coordinate_range(&self) -> [f64; 2] {
+        let c = self.trace.curve();
+        let a = c.control_points[0][self.coordinate];
+        let b = c.control_points[c.control_points.len() - 1][self.coordinate];
+        [a.min(b), a.max(b)]
+    }
+    pub(crate) fn parameter_domain(&self) -> [f64; 2] {
+        self.trace.curve().domain()
+    }
 }
 pub(crate) fn certify_monotone_coordinate<'t, 's>(
     trace: &'t Certificate<'s>,
@@ -178,6 +189,8 @@ mod tests {
         assert!(std::ptr::eq(proof.trace(), &trace));
         assert_eq!(proof.coordinate(), 1);
         assert!(proof.increasing());
+        assert_eq!(proof.coordinate_range(), [0., 4.]);
+        assert_eq!(proof.parameter_domain(), [2., 5.]);
         assert_eq!(proof.trace().curve().knots, vec![2., 2., 2., 5., 5., 5.]);
         assert!(certify_monotone_coordinate(&trace, 1, 1).unwrap().is_none());
         assert!(certify_monotone_coordinate(&trace, 2, 2).is_err());
