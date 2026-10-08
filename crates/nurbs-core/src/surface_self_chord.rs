@@ -1,6 +1,6 @@
 //! Sufficient whole-chart exclusion of chords aligned with endpoint normals.
 //! Original rational derivative bounds cover every nonempty knot rectangle.
-use crate::{Result, check, distance_bounds::Interval as I, normal_alignment, surface::Surface};
+use crate::{check, distance_bounds::Interval as I, normal_alignment, surface::Surface, Result};
 
 pub struct Certificate<'a> {
     surface: &'a Surface,
@@ -42,6 +42,35 @@ fn separated_square(x: I) -> Result<Option<I>> {
         (lower * lower).next_down().max(0.),
         (upper * upper).next_up(),
     )?))
+}
+fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
+    let mut variation = I::point(0.);
+    for row in j {
+        for x in row {
+            let width = I::point(x.hi).sub(I::point(x.lo))?;
+            variation = variation.add(width.mul(width)?)?;
+        }
+    }
+    let mut best = 1_f64;
+    for [a, b] in [[0, 1], [0, 2], [1, 2]] {
+        let det = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
+        let Some(det_squared) = separated_square(det)? else {
+            continue;
+        };
+        if det_squared.lo <= 0. {
+            continue;
+        }
+        let mut norm = I::point(0.);
+        for axis in [a, b] {
+            for direction in 0..2 {
+                let upper = j[axis][direction].lo.abs().max(j[axis][direction].hi.abs());
+                norm = norm.add(I::point(upper).mul(I::point(upper))?)?;
+            }
+        }
+        let ratio = variation.mul(norm)?.div(det_squared)?;
+        best = best.min(ratio.hi);
+    }
+    Ok(best)
 }
 /// If J ranges in H, the chord is M*delta with M in H by integration along
 /// the straight parameter segment. A uniformly nonsingular coordinate minor
@@ -141,32 +170,37 @@ pub fn qualify_rectangle<'a>(
     }
     out.complete = true;
     let mut j = [[I::point(0.); 2]; 3];
-    let mut variation = I::point(0.);
     for k in 0..3 {
         for a in 0..2 {
             j[k][a] = I::new(hull[k][a][0], hull[k][a][1])?;
-            let width = I::point(j[k][a].hi).sub(I::point(j[k][a].lo))?;
-            variation = variation.add(width.mul(width)?)?;
         }
     }
-    let mut best = 1_f64;
-    for [a, b] in [[0, 1], [0, 2], [1, 2]] {
-        let det = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
-        let Some(det_squared) = separated_square(det)? else {
-            continue;
-        };
-        if det_squared.lo <= 0. {
-            continue;
-        }
-        let mut norm = I::point(0.);
-        for axis in [a, b] {
-            for direction in 0..2 {
-                let upper = j[axis][direction].lo.abs().max(j[axis][direction].hi.abs());
-                norm = norm.add(I::point(upper).mul(I::point(upper))?)?;
+    let mut best = cosine_upper(j)?;
+    // J D is the same original differential in rescaled parameter coordinates:
+    // chord = M D (D^-1 delta), and n.(J D)=0. The intrinsic inequality
+    // therefore applies unchanged to any fixed positive diagonal D.
+    let scales: [f64; 2] = std::array::from_fn(|a| {
+        1. / j
+            .iter()
+            .map(|row| row[a].lo.abs().max(row[a].hi.abs()))
+            .fold(0_f64, f64::max)
+    });
+    if scales.iter().all(|s| s.is_finite() && *s > 0.) {
+        let mut balanced = j;
+        let mut finite = true;
+        for k in 0..3 {
+            for a in 0..2 {
+                match j[k][a].mul(I::point(scales[a])) {
+                    Ok(x) => balanced[k][a] = x,
+                    Err(_) => finite = false,
+                }
             }
         }
-        let ratio = variation.mul(norm)?.div(det_squared)?;
-        best = best.min(ratio.hi);
+        if finite {
+            if let Ok(bound) = cosine_upper(balanced) {
+                best = best.min(bound);
+            }
+        }
     }
     out.cosine_squared_upper = Some(best);
     let threshold = I::point(1.).sub(I::point(max_sine_squared))?;
@@ -184,6 +218,62 @@ pub fn qualify_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn parameter_units_preserve_curved_chord_bounds_and_rejections() {
+        let mut old_bound_refused = false;
+        for height in [0.01, 2.] {
+            let original = graph(height);
+            for scales in [
+                [1048576., 0.00000095367431640625],
+                [0.00000095367431640625, 1048576.],
+            ] {
+                let mut s = original.clone();
+                for x in &mut s.knots_u {
+                    *x *= scales[0];
+                }
+                for x in &mut s.knots_v {
+                    *x *= scales[1];
+                }
+                if height == 0.01 {
+                    let derivative = normal_alignment::jacobian_on(
+                        &s,
+                        [s.degree_u, s.degree_v],
+                        [[0., scales[0]], [0., scales[1]]],
+                    )
+                    .unwrap();
+                    old_bound_refused |= cosine_upper(derivative).unwrap() >= 1.;
+                }
+                let r = qualify(&s, 1e-6, 1).unwrap();
+                if height == 2. {
+                    assert!(r.certificate.is_none());
+                    continue;
+                }
+                let proof = r
+                    .certificate
+                    .expect("Affine parameter units must not hide an intrinsic exclusion");
+                assert!(std::ptr::eq(proof.surface(), &s));
+                for a in 0..16 {
+                    for b in 0..16 {
+                        if a == b {
+                            continue;
+                        }
+                        let u = a as f64 / 15.;
+                        let v = b as f64 / 15.;
+                        let dx = v - u;
+                        let dz = 0.01 * (v * v - u * u);
+                        let nx = -0.02 * u;
+                        let cosine2 =
+                            (nx * dx + dz).powi(2) / ((nx * nx + 1.) * (dx * dx + dz * dz));
+                        assert!(cosine2 <= proof.cosine_squared_upper());
+                    }
+                }
+            }
+        }
+        assert!(
+            old_bound_refused,
+            "Regression must exercise a previously inconclusive parameter scaling"
+        );
+    }
     fn graph(height: f64) -> Surface {
         Surface {
             degree_u: 2,

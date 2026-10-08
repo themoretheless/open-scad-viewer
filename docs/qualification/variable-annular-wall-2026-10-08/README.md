@@ -102,3 +102,24 @@ shell independently proves outward orientation on its first attempted ray.
 reasons. This supersedes the initial low-budget volume failure while preserving
 that evidence. It does not certify global minimum wall thickness, unique regular
 pole tangency, general fillets or named-part STEP acceptance.
+
+## Balanced intrinsic differential bound
+
+The native self-chord inequality now also evaluates a fixed positive diagonal
+rescaling of derivative columns. With D diagonal, chord=M D (D^-1 delta) and
+n.(J D)=0; the original intrinsic inequality therefore remains valid. All
+products and ratios use outward intervals. The original bound is retained,
+and the smaller of two proved upper bounds is used. Unsupported or nonfinite
+balancing does not weaken the original proof.
+
+Nine native intrinsic/adaptive tests pass. An affine parameter-unit regression
+uses an independent parabola chord oracle; it explicitly demonstrates an
+inconclusive original bound and a successful balanced certificate for the same
+original geometry. Strong curvature, collapsed/discontinuous charts and a
+rational half-cylinder with a short exact normal chord remain refused.
+
+Repeating the same eleven annular faces at the same 1024-cell budget gives no
+additional certificates. The balanced report is preserved as evidence; total
+coverage remains 18/31. The change improves parameter-unit robustness, but
+these annular charts still require a stronger geometric exclusion or further
+complete adaptive work. No new WASM/UI package is claimed for this change.
