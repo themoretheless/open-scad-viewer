@@ -418,6 +418,24 @@ mod tests {
         eprintln!("original reused adaptive wall pairs={} unresolved={} cells={} normals={}",
             reused.pairs.len(),reused.pairs.iter().filter(|p|!p.proven).count(),reused.cells,reused.normal_spans);
         assert!(reused.enumeration_complete);assert!(reused.certificate.is_none());
+        for product_cells in [1,50000] {
+            let refined=crate::source_wall_coverage::qualify_with_self_facts_and_normal_products(
+                &body,5.99,crate::source_wall_coverage::Limits{
+                    pairs:378,plane_controls:10000,normal_spans:20000,
+                    gap:crate::source_face_gap::Limits{cells:1000,spans:2000},max_sine_squared:1e-6},
+                Vec::new(),crate::source_wall_coverage::NormalProductLimits{
+                    cells:product_cells,cells_per_pair:128}).unwrap();
+            let unresolved=refined.pairs.iter().filter(|p|!p.proven).count();
+            eprintln!("native normal-product cells={} normals={} unresolved={}",
+                refined.normal_product_cells,refined.normal_spans,unresolved);
+            assert!(refined.enumeration_complete);assert!(refined.certificate.is_none());
+            assert!(refined.normal_product_cells<=product_cells&&refined.normal_spans<=20000);
+            if product_cells==50000 {assert!(unresolved<257,"full-product exclusions improve original whole-wall coverage");}
+            for previous in reused.pairs.iter().filter(|p|p.proven&&p.faces[0]!=p.faces[1]) {
+                assert!(refined.pairs.iter().any(|p|p.faces==previous.faces&&p.proven),
+                    "retain previously confirmed distinct pairs {:?}",previous.faces);
+            }
+        }
         for pair in &reused.pairs {
             let adjacent=body.geometry().shell().uses().iter().any(|u|
                 (u[0].face==pair.faces[0]&&u[1].face==pair.faces[1])||

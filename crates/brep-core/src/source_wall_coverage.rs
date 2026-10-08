@@ -14,6 +14,10 @@ pub struct Pair {
     pub reason: &'static str,
     pub proven: bool,
 }
+pub struct NormalProductLimits {
+    pub cells: usize,
+    pub cells_per_pair: usize,
+}
 pub struct Certificate<'a> {
     body: &'a Body,
     minimum_mm: f64,
@@ -51,6 +55,7 @@ pub struct Report<'a> {
     pub enumeration_complete: bool,
     pub plane_controls: usize,
     pub normal_spans: usize,
+    pub normal_product_cells: usize,
     pub cells: usize,
     pub spans: usize,
     pub reason: &'static str,
@@ -76,6 +81,21 @@ pub fn qualify_with_self_facts<'a>(
     limits: Limits,
     facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
 ) -> Result<Report<'a>> {
+    qualify_with_self_facts_and_normal_products(body,minimum_mm,limits,facts,
+        NormalProductLimits{cells:0,cells_per_pair:0})
+}
+/// Optional bounded full-chart normal exclusions. Zero cells preserves the
+/// original scheduling; only a completely excluded product proves a pair.
+pub fn qualify_with_self_facts_and_normal_products<'a>(
+    body:&'a Body, minimum_mm:f64, limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits,
+) -> Result<Report<'a>> {
+    if products.cells>100000 || products.cells_per_pair>100000
+        || (products.cells==0)!=(products.cells_per_pair==0) {
+        return Err(Error::new("BREP_SOURCE_WALL_NORMAL_PRODUCT_LIMIT",
+            "Choose bounded total and per-pair normal product work"));
+    }
     if !minimum_mm.is_finite()
         || minimum_mm <= 0.
         || !(1..=100000).contains(&limits.pairs)
@@ -124,6 +144,7 @@ pub fn qualify_with_self_facts<'a>(
         enumeration_complete: false,
         plane_controls: 0,
         normal_spans: 0,
+        normal_product_cells: 0,
         cells: 0,
         spans: 0,
         reason: "source-wall-coverage-unproven",
@@ -195,6 +216,17 @@ pub fn qualify_with_self_facts<'a>(
                     if r.aligned == Some(false) {
                         pair.reason = "source-wall-normal-pair-excluded";
                         pair.proven = true;
+                    }
+                    if !pair.proven && out.normal_product_cells<products.cells {
+                        let r=before[a].inspect_product(&mut after[0],
+                            [domain(surfaces[a]),domain(surfaces[b])],threshold,
+                            products.cells_per_pair.min(products.cells-out.normal_product_cells),
+                            limits.normal_spans-out.normal_spans)?;
+                        out.normal_product_cells+=r.cells;out.normal_spans+=r.spans;
+                        if r.excluded {
+                            pair.reason="source-wall-normal-pair-excluded";
+                            pair.proven=true;
+                        }
                     }
                 }
                 // An admitted shared boundary prevents full-chart clearance from

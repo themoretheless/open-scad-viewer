@@ -1,6 +1,7 @@
 /** Transport checks only. Original coefficient proofs remain native. */
 export interface SourceWallCoverageOptions {
  minimumMm:number
+ normalProducts?:{cells:number;cellsPerPair:number}
  adaptiveSelf?:{planeControls:number;cells:number;spans:number;cellsPerFace:number;spansPerFace:number}
  limits:{pairs:number;planeControls:number;normalSpans:number;gapCells:number;gapSpans:number;maxSineSquared:number}
 }
@@ -9,11 +10,13 @@ export interface SourceWallCoverageResult {
  request:SourceWallCoverageOptions;wholeWallQualified:boolean;lowerMm:number|null
  enumerationComplete:boolean;totalPairs:number
  pairs:{faces:[number,number];proven:boolean;reason:string}[]
- planeControls:number;normalSpans:number;cells:number;spans:number;reason:string
+ planeControls:number;normalSpans:number;normalProductCells?:number;cells:number;spans:number;reason:string
 }
 const count=(n:unknown,max:number)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=max
 export function coverageExpectation(o:SourceWallCoverageOptions):SourceWallCoverageOptions {
  if(!o||!Number.isFinite(o.minimumMm)||o.minimumMm<=0||!o.limits)throw new Error('Invalid continuous wall coverage request')
+ if(o.normalProducts&&(!count(o.normalProducts.cells,100000)||o.normalProducts.cells<1
+  ||!count(o.normalProducts.cellsPerPair,100000)||o.normalProducts.cellsPerPair<1))throw new Error('Invalid normal product work')
  const w=o.limits
  for(const [name,max] of [['pairs',100000],['planeControls',1000000],['normalSpans',100000],['gapCells',100000],['gapSpans',100000]] as const)
   if(!count(w[name],max)||w[name]<1)throw new Error('Invalid continuous wall coverage work')
@@ -27,6 +30,8 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
  if(!r||key(r.request)!==key(e)||!count(faces,4096)||faces<2||typeof r.wholeWallQualified!=='boolean'
   ||typeof r.enumerationComplete!=='boolean'||!Array.isArray(r.pairs))return false
  const total=faces*(faces+1)/2,expected=Math.min(total,e.limits.pairs)
+ if(e.normalProducts?!count(r.normalProductCells,e.normalProducts.cells)
+  :r.normalProductCells!==undefined&&r.normalProductCells!==0)return false
  if(r.totalPairs!==total||r.pairs.length!==expected||r.enumerationComplete!==(expected===total)
   ||!count(r.planeControls,e.limits.planeControls)||!count(r.normalSpans,e.limits.normalSpans)
   ||!count(r.cells,e.limits.gapCells)||!count(r.spans,e.limits.gapSpans))return false

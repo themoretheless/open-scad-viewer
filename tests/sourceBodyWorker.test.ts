@@ -405,10 +405,11 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
 it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const [pairs,adaptive] of [[1,false],[378,false],[378,true]] as const){
+ for(const [pairs,adaptive,products] of [[1,false,false],[378,false,false],[378,true,false],[378,false,true]] as const){
   const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
    ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096}}:{}),
-   limits:{pairs,planeControls:10000,normalSpans:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
+   ...(products?{normalProducts:{cells:50000,cellsPerPair:128}}:{}),
+   limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(options),r)).toBe(true)
   const coverage=r.wallCoverage!;expect(coverage.request).toEqual(options.wallCoverage)
@@ -416,9 +417,13 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   expect(coverage.enumerationComplete).toBe(pairs===378)
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
-   if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
+   if(products){
+    expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(177)
+    expect(coverage.normalProductCells).toBeGreaterThan(0)
+    expect(coverage.normalProductCells).toBeLessThanOrEqual(50000)
+   }else if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
-   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(adaptive?36:42)
+   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(products?3922:adaptive?36:42)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
   }
   if(adaptive){

@@ -8,6 +8,17 @@ function result():SourceWallCoverageResult {
  return {request:structuredClone(request),wholeWallQualified:true,lowerMm:9.99,enumerationComplete:true,totalPairs:21,pairs,planeControls:24,normalSpans:30,cells:3,spans:3,reason:'source-whole-wall-lower-qualified'}
 }
 describe('continuous original wall coverage transport',()=>{
+ it('requires explicit normal product accounting and bounded requests',()=>{
+  const option={...structuredClone(request),normalProducts:{cells:500,cellsPerPair:128}}
+  expect(coverageExpectation(option)).toEqual(option)
+  const r=result();r.request=option
+  expect(validCoverage(option,r,6,key)).toBe(false)
+  r.normalProductCells=500;expect(validCoverage(option,r,6,key)).toBe(true)
+  r.normalProductCells=501;expect(validCoverage(option,r,6,key)).toBe(false)
+  for(const cells of [0,-1,100001,NaN,1.5])expect(()=>coverageExpectation({...option,normalProducts:{cells,cellsPerPair:128}})).toThrow()
+  const legacy=result();legacy.normalProductCells=1
+  expect(validCoverage(request,legacy,6,key)).toBe(false)
+ })
  it('binds threshold and complete canonical pairs',()=>{
   expect(validCoverage(request,result(),6,key)).toBe(true)
   for(const mutate of [(r:SourceWallCoverageResult)=>r.request.minimumMm++,r=>r.lowerMm=10,r=>r.pairs[3].faces=[1,1],r=>r.pairs[3].proven=false,r=>r.cells=101,r=>delete r.pairs[3]]) {

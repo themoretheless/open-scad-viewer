@@ -1595,3 +1595,21 @@ This API is not yet integrated into whole-wall admission or the packaged WASM.
 The 253-pair whole-wall result above therefore remains unchanged. Integration
 must charge traversal cells and normal restrictions explicitly and preserve the
 source ownership and all remaining obligations.
+
+### Whole-wall native integration of normal products
+
+An optional explicit normal-product budget now reaches the native admission
+calculation through the bridge. Total product cells and normal restrictions are
+charged separately; a complete excluded product uses the existing native normal
+pair exclusion. The legacy request preserves its scheduling with zero product
+work. The transport requires bounded product accounting whenever it was requested
+and rejects unexpected product work for legacy requests.
+
+The original annular-body radius/tangency/admission regression passed. Without
+adaptive self facts, one product cell leaves 257 pairs unproven (42 normal
+restrictions); a 50,000-cell total / 128-cell per-pair limit leaves 177 unproven
+pairs, spending 14,769 cells and 3,922 restrictions. Every previously confirmed
+distinct pair remains confirmed. Neither produces a whole-wall certificate.
+Seven transport tests passed and the native bridge compiled. A stricter real-WASM
+worker case is prepared but has not passed on a newly packaged artifact yet.
+The currently packaged kernel and UI still use the preceding implementation.

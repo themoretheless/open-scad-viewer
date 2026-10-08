@@ -1,0 +1,15 @@
+{
+  "scope": "Native whole-wall normal product integration; packaged WASM and UI not yet qualified",
+  "normal-product-integration-tests.log.gz": {
+    "uncompressedSha256": "d99d0bdb6ffa46257fe99b193ddf22725f3ede5bf8baf42b97975ad1c6ddea68",
+    "bytes": 14561
+  },
+  "normal-product-transport-tests.log.gz": {
+    "uncompressedSha256": "4d11171b3a0e17fad3e6dc238da3779469ba3095184daddf9ef9c0feb9735a7a",
+    "bytes": 259
+  },
+  "normal-product-bridge-check.log.gz": {
+    "uncompressedSha256": "67bfe181bf12f5a5f1e70c950a40a917d3334b4be22345245e84e78e23a8cbb6",
+    "bytes": 10256
+  }
+}
