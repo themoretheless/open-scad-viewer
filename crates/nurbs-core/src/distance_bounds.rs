@@ -40,14 +40,21 @@ impl Interval {
             self.hi * b.hi,
         ];
         numeric(
-            p.iter().all(|x| x.is_finite()),
+            p[0].is_finite() && p[1].is_finite() && p[2].is_finite() && p[3].is_finite(),
             "Distance product exceeded numeric range",
         )?;
         Self::new(
-            p.iter().copied().fold(f64::INFINITY, f64::min).next_down(),
-            p.iter()
-                .copied()
-                .fold(f64::NEG_INFINITY, f64::max)
+            f64::INFINITY
+                .min(p[0])
+                .min(p[1])
+                .min(p[2])
+                .min(p[3])
+                .next_down(),
+            f64::NEG_INFINITY
+                .max(p[0])
+                .max(p[1])
+                .max(p[2])
+                .max(p[3])
                 .next_up(),
         )
     }
@@ -109,4 +116,90 @@ pub enum DistanceStopReason {
     PrecisionLimit,
     EmptyDomain,
     DomainWorkLimit,
+}
+
+#[cfg(test)]
+mod product_regression {
+    use super::*;
+    fn previous_product(a: Interval, b: Interval) -> Result<Interval> {
+        let p = [a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi];
+        numeric(
+            p.iter().all(|x| x.is_finite()),
+            "Distance product exceeded numeric range",
+        )?;
+        Interval::new(
+            p.iter().copied().fold(f64::INFINITY, f64::min).next_down(),
+            p.iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .next_up(),
+        )
+    }
+    #[test]
+    fn product_is_bit_identical_for_signed_zero_subnormals_large_bounds_and_refusals() {
+        let values = [
+            -f64::MAX,
+            -1e100,
+            -1.,
+            -f64::MIN_POSITIVE,
+            -f64::from_bits(1),
+            -0.,
+            0.,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            1.,
+            1e100,
+            f64::MAX,
+        ];
+        let mut intervals = Vec::new();
+        for lo in values {
+            for hi in values {
+                if lo <= hi {
+                    intervals.push(Interval::new(lo, hi).unwrap());
+                }
+            }
+        }
+        intervals.extend([
+            Interval::point(f64::NAN),
+            Interval::point(f64::INFINITY),
+            Interval::point(f64::NEG_INFINITY),
+        ]);
+        for &a in &intervals {
+            for &b in &intervals {
+                let old = previous_product(a, b);
+                let new = a.mul(b);
+                match (old, new) {
+                    (Ok(old), Ok(new)) => {
+                        assert_eq!(old.lo.to_bits(), new.lo.to_bits(), "{a:?} {b:?}");
+                        assert_eq!(old.hi.to_bits(), new.hi.to_bits(), "{a:?} {b:?}");
+                    }
+                    (Err(_), Err(_)) => {}
+                    _ => panic!("Changed numeric refusal for {a:?} {b:?}"),
+                }
+            }
+        }
+    }
+    #[test]
+    #[ignore = "Explicit paired debug microbenchmark; not application latency"]
+    fn paired_product_microbenchmark() {
+        use std::{hint::black_box, time::Instant};
+        let a = Interval::new(-0.3, 0.7).unwrap();
+        let b = Interval::new(0.2, 0.9).unwrap();
+        for round in 0..3 {
+            let start = Instant::now();
+            for _ in 0..100000 {
+                black_box(previous_product(black_box(a), black_box(b)).unwrap());
+            }
+            let old = start.elapsed();
+            let start = Instant::now();
+            for _ in 0..100000 {
+                black_box(black_box(a).mul(black_box(b)).unwrap());
+            }
+            eprintln!(
+                "round={round} products=100000 old_us={} scalar_us={}",
+                old.as_micros(),
+                start.elapsed().as_micros()
+            );
+        }
+    }
 }

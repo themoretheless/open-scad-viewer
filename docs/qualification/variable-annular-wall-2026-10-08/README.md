@@ -1158,3 +1158,27 @@ annular-intrinsic-gram-middle-self-wall. Whole-wall safety remains unproven.
 The preceding tight-first 1024/8192 prototype audit completed and is
 archived separately. Its JSON includes all four unchanged models, every
 unresolved pair and the proven local margin classifications.
+
+## Scalar interval product and full NURBS regression
+
+A one-second live debug qualification sample identified iterator overhead
+in finite checking and four-product extrema. Interval::mul now uses scalar
+checks and the exact same left-to-right min/max order, including initial
+infinities, outward rounding and numeric refusals. The differential edge
+regression covers signed zeros, subnormals, huge bounds and invalid inputs.
+Paired debug 100000-product runs: old 19331/20005/20352 µs, scalar
+5651/6296/6856 µs. This is not a UI/release or whole-qualification speedup.
+The complete NURBS suite passed: 708 passed, zero failures, two ignored
+benchmarks; the product benchmark was also run explicitly.
+
+## Direct lower deep audit completed
+
+The b30b5def audit completed all four unchanged originals at 12500 cells
+and 100000 restrictions, before later intrinsic/scheduling/report changes.
+Both forward-radius entry faces qualify completely: 2721 cells, 70628
+restrictions, zero pending. Both forward exits retain seven pending pairs
+after 4245 cells / 100000 restrictions. Both reverse entries retain five
+after 3941 / 100000; both reverse exits retain five after 4099 / 100000.
+All four original serialization comparisons passed. Complete JSON/logs
+are archived. Middle face, distinct-face wall pairs and the global minimum
+remain separate open obligations. Current intrinsic middle audit is live.

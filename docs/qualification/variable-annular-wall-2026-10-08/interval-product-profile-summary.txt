@@ -1,0 +1,4 @@
+One-second sample of the live debug deep qualification process: 681 main-thread samples.
+Top-of-stack iterator frames in Interval::mul: finite predicate 101, maximum fold 70, minimum fold 66.
+This is an instantaneous sample, not an application latency benchmark or a release profile.
+No machine identifiers or raw addresses are retained here.
