@@ -90,7 +90,30 @@ fn main() {
             },
         )
         .unwrap();
-        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some()}));
+        let uv = r.uncertain_uv.expect("unresolved original rectangle");
+        let shell = body.geometry().shell();
+        let surfaces = [
+            shell.faces()[a][0].edges()[0].surface(),
+            shell.faces()[b][0].edges()[0].surface(),
+        ];
+        let bounds = [
+            nurbs_core::surface_distance::rectangle_bounds(surfaces[0], uv[0]).unwrap(),
+            nurbs_core::surface_distance::rectangle_bounds(surfaces[1], uv[1]).unwrap(),
+        ];
+        let gap = nurbs_core::surface_distance::enclosure_distance(&bounds[0], &bounds[1]).unwrap();
+        let point_uv = uv.map(|rect| {
+            rect.map(|axis| {
+                let t = axis[0] * 0.5 + axis[1] * 0.5;
+                [t, t]
+            })
+        });
+        let points = [
+            nurbs_core::surface_distance::rectangle_bounds(surfaces[0], point_uv[0]).unwrap(),
+            nurbs_core::surface_distance::rectangle_bounds(surfaces[1], point_uv[1]).unwrap(),
+        ];
+        let point_gap =
+            nurbs_core::surface_distance::enclosure_distance(&points[0], &points[1]).unwrap();
+        results.push(json!({"faces":[a,b],"reason":r.reason,"cells":r.cells,"spans":r.spans,"uncertainUv":r.uncertain_uv,"qualified":r.certificate.is_some(),"bounds":bounds,"gapInterval":[gap.0,gap.1],"midpointBounds":points,"midpointGapInterval":[point_gap.0,point_gap.1]}));
     }
     std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results})).unwrap()).unwrap();
 }
