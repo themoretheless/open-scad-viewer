@@ -1540,3 +1540,7 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
     });
     Ok(out)
 }
+
+#[path="source_profile_shell.rs"]
+mod assembled_shell;
+pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport};

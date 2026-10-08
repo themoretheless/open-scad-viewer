@@ -1960,3 +1960,35 @@ remain required. Native-only.
 The final combined regression passed in 49.97 seconds. All four outer
 SharedEdges restore from their mixed Crossing/Carrier endpoint definitions
 with identical source recipes, followed by fresh admission.
+
+
+## Closed oriented expression-shell incidence
+
+OuterEdgeAssembly::assemble_shell replaces the selected original face by
+its two admitted retained regions and the admitted exact transition face.
+Both neighbor contours are subdivided at the owned roots; unchanged faces,
+inner loops, original shared edges and collapsed pole uses are preserved.
+Four newly admitted outer edges, two middle rails and two section contacts
+are remapped to the resulting directed use addresses. Every use must have
+exactly one paired edge or one admitted collapsed pole; paired traversal
+must be opposite. Source contour joins are freshly checked.
+
+Endpoint union and the vertex link graph are rebuilt from the final use
+incidence. Each vertex must have one connected degree-two link, rejecting
+branching and two closed fans touching at one vertex. Component count is
+preserved; the replacement adds four vertices, six edges and two faces.
+The use allowance is checked before cloning the complete shell. The
+private ExpressionShell borrows its admitted OuterEdgeAssembly, so callers
+cannot construct an admission from public report numbers.
+
+The combined native annular regression passed in 72.33 seconds: 120 uses,
+all remapped and closed, including the original collapsed poles. This is
+closed oriented manifold incidence. Global embedding, distinct-face
+contacts, volume, radius and wall thickness are not admitted by this
+stage. Geometry evaluation/serialization and packaged WASM integration
+remain required.
+
+The final combined regression passed in 81.11 seconds after adding exact
+use-budget admission/refusal and opposite traversal assertions. The
+independent vertex-link regression passed, including disconnected closed
+fans, branching, a normal triangle fan and a valid two-edge lens.

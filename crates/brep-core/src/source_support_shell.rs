@@ -560,6 +560,20 @@ mod tests {
         let outer=outer.assembly.expect(outer.reason);
         assert!(std::ptr::eq(outer.patch(),&patch));assert_eq!(outer.edges().len(),4);
         assert_eq!(outer.retained_factored(),[None,Some(1)]);
+        assert!(outer.assemble_shell(0).unwrap().shell.is_none());
+        let assembled=outer.assemble_shell(1000).unwrap();
+        eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
+        let expression=assembled.shell.expect(assembled.reason);
+        assert!(std::ptr::eq(expression.assembly(),&outer));
+        assert_eq!(expression.faces().len(),body.geometry().shell().faces().len()+2);
+        assert_eq!(expression.pairs().len(),body.geometry().shell().edges().len()+6);
+        assert_eq!(expression.poles().len(),body.geometry().shell().poles().len());
+        assert_eq!(expression.components(),1);
+        assert!(outer.assemble_shell(assembled.uses-1).unwrap().shell.is_none());
+        let exact_budget=outer.assemble_shell(assembled.uses).unwrap();
+        assert!(exact_budget.shell.is_some());
+        assert!(expression.pairs().iter().all(|p|p.reversed()[0]!=p.reversed()[1]));
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();
