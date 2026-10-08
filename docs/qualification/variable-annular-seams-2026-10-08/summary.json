@@ -1,0 +1,762 @@
+[
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 29
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 1337
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 15,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 17
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 17,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 2047
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 41
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 3057
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 29
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 1337
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 15,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 17
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 17,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 2047
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 41
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      0.5,
+      1.25
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 3057
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 21
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 637
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 15,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 19
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 17,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 2307
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 83
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      0.3,
+      0.7,
+      0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 4999
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 0,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 21
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 2,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 637
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 15,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 19
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 17,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 2307
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 25,
+    "interval": [
+      0.0,
+      0.95
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": true,
+    "visited": 83
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.0,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 511
+  },
+  {
+    "radii": [
+      1.25,
+      0.5
+    ],
+    "sweeps": [
+      -0.3,
+      -0.7,
+      -0.4
+    ],
+    "edge": 27,
+    "interval": [
+      0.05,
+      1.0
+    ],
+    "positionsProven": true,
+    "tangentPlanesProven": false,
+    "visited": 4999
+  }
+]
