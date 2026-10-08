@@ -2741,3 +2741,10 @@ and retains its immutable requested target. Tests check both identities and
 retain a target touching the exact original endpoint. All three exact-trace
 tests passed (0.01 seconds). These reports remain conservative candidate
 covers, not complete pair-contact certificates. Native filtering is running.
+
+Native trace-filter diagnostics now transport the actual owned carrier-root
+UV intervals into the neighbor trace's nonlinear parameter axis. They retain
+candidate portions outside the definitely interior shared-rail interval,
+including both uncertain endpoint bands. No midpoint replaces a root and no
+candidate list grants contact authority. Compilation passed; native results
+for these root-chart diagnostics are still pending.

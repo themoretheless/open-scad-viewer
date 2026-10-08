@@ -255,6 +255,19 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         assert!(candidates.cells<=128);
                         assert!(std::ptr::eq(candidates.owner(),&monotone));
                         assert_eq!(candidates.target(),bounds[1]);
+                        let owned=self.assembly.patch.rails.face.boundary.rooted[rail];
+                        let neighbor_side=1-owned.points[0].source_side();
+                        let root_parameters=owned.points.each_ref().map(|p|
+                            p.uv_bounds()[neighbor_side][1-trace.linear_axis()]);
+                        let inner=[root_parameters[0][1].min(root_parameters[1][1]),
+                            root_parameters[0][0].max(root_parameters[1][0])];
+                        let exterior_candidates=candidates.domains.iter().flat_map(|d| {
+                            let mut pieces=Vec::new();
+                            if d[0]<=inner[0] {pieces.push([d[0],d[1].min(inner[0])]);}
+                            if d[1]>=inner[1] {pieces.push([d[0].max(inner[1]),d[1]]);}
+                            pieces
+                        }).collect::<Vec<_>>();
+                        eprintln!("transition neighbor rootParameters={root_parameters:?} exteriorCandidates={exterior_candidates:?}");
                         eprintln!("transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
                             bounds[1],candidates.domains,candidates.cells);
                     }
