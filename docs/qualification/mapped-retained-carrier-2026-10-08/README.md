@@ -305,3 +305,31 @@ coverage or a complete wall certificate. Whole-wall qualification remains false.
 The artifact `mixed-wall-shared-transverse-native.json` retains native pair
 statuses and unresolved original UV products. All 17 source-support-shell tests
 passed. This work has not yet replaced the qualified WASM/worker/UI artifact.
+
+## Packaged shared carrier proof through WASM, worker and UI
+
+The native batch/proposal/shared-carrier changes are now packaged in WASM SHA
+`7525a8b08323619859bc129839db70df68e924c5a8fcd27e67a8e17feab8f63b`,
+12,160,834 raw bytes. Production Brotli+Base85 audit verifies exact roundtrip,
+zero external imports and the export surface. The 28 real source-body worker
+suite tests pass in 110.99 seconds; the mixed control compares every ordered
+pair's status, cells and pending count, plus all aggregate derivative/normal/
+domain/exact/factor budgets against the native shared-transverse artifact.
+The suite also retains cancellation, stale response and forged transport gates.
+These tests are selected source-body scenarios, not the full P0 command matrix.
+
+Current UI restored the control body, prepared source edges, selected edge zero,
+set minimum thickness 5.99 mm, canceled the first whole-wall request, then
+completed a fresh request and Retry. Both results show 28 unqualified pairs,
+17/45 additional mixed pairs, 2247 pending mixed products and self 27/27, with
+localized incomplete-wall diagnosis and orange scene highlights. No console
+errors were observed. `mixed-wall-shared-carrier-ui.jpg` records the Retry result;
+worker and package audit artifacts preserve the exact shipped SHA.
+
+Vue and MCP typechecks pass. Dist verification passes 152 artifacts: 8,420,991
+asset bytes + 15,457,226 raw WASM bytes = 23,878,217 total. Only geometry chunk
+and total asset budgets changed for measured 5186-byte growth; prior 608-byte
+chunk and 761-byte total margins remain. Other budgets are unchanged. No runtime
+speedup or complete wall/fillet qualification is claimed. Original general
+fillets, unsupported carrier maps, outstanding wall pairs, full part acceptance
+and the wider P0/P2/P3 roadmap remain open.
