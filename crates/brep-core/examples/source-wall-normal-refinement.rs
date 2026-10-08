@@ -60,6 +60,29 @@ fn factored_corners(proof:&nurbs_core::factored_surface_normals::Certificate<'_>
     }}
     value_codec::json!(rows)
 }
+fn factored_nonzero(proof:&nurbs_core::factored_surface_normals::Certificate<'_>,domain:[[f64;2];2],limit:usize)->value_codec::Value {
+    assert!((1..=100000).contains(&limit));
+    let mut pending=vec![domain];let mut excluded=Vec::new();let mut cells=0;
+    let mut reason="cell-limit";
+    while cells<limit && !pending.is_empty() {
+        let rect=pending.pop().unwrap();cells+=1;
+        let bounds=proof.bounds(rect).unwrap();
+        if bounds.iter().any(|b|b[0]>0.||b[1]<0.) {excluded.push(rect);continue;}
+        let axis=if (rect[0][1]-rect[0][0])/(domain[0][1]-domain[0][0])
+            >=(rect[1][1]-rect[1][0])/(domain[1][1]-domain[1][0]) {0}else{1};
+        let mid=rect[axis][0]*0.5+rect[axis][1]*0.5;
+        if !(rect[axis][0]<mid&&mid<rect[axis][1]) {
+            pending.push(rect);reason="resolution-limit";break;
+        }
+        let mut left=rect;let mut right=rect;left[axis][1]=mid;right[axis][0]=mid;
+        pending.push(right);pending.push(left);
+    }
+    let complete=pending.is_empty();
+    if complete {reason="factored-direction-nonzero";}
+    value_codec::json!({"complete":complete,"cells":cells,"limit":limit,
+        "reason":reason,"nonzeroRectangles":excluded,"unresolvedRectangles":pending,
+        "scope":"Factored limiting direction only; no regular tangent plane or body certificate"})
+}
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let cell_limit: usize = args.get(4).map(|v|v.parse().unwrap()).unwrap_or(128);
@@ -98,7 +121,9 @@ fn main() {
                             assert!(std::ptr::eq(c.surface(),surface));c.bounds(domain).unwrap()
                         });
                         let corners=report.certificate.as_ref().map(|c|factored_corners(c,domain));
-                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"cornerNormalBounds":corners,"parameterExchanged":axis==1,"boundaryOrder":boundary_order(surface,end)})
+                        let nonzero=report.certificate.as_ref().map(|c|factored_nonzero(c,domain,128));
+                        let tiny=report.certificate.as_ref().map(|c|factored_nonzero(c,domain,1));
+                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"cornerNormalBounds":corners,"nonzeroDirectionCoverage":nonzero,"oneCellDirectionCoverage":tiny,"parameterExchanged":axis==1,"boundaryOrder":boundary_order(surface,end)})
                     }
                     Err(error)=>value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":false,"error":error.to_string(),"boundaryOrder":boundary_order(surface,end)}),
                 };
@@ -128,6 +153,22 @@ fn main() {
 mod tests {
     use super::*;
     #[test]
+    fn factored_direction_budget_refusal_keeps_closed_split_children() {
+        let s=Surface{degree_u:3,degree_v:1,knots_u:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            knots_v:vec![0.,0.,1.,1.],periodic_u:false,periodic_v:false,
+            control_points:vec![vec![vec![0.,0.,0.];2],vec![vec![0.,0.,0.];2],
+                vec![vec![0.,0.,0.],vec![0.,1./3.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]],
+            weights:vec![vec![1.;2];4]};
+        let prepared=nurbs_core::factored_surface_normals::prepare(&s,false,100_000_000).unwrap();
+        let proof=prepared.certificate.unwrap();
+        let r=factored_nonzero(&proof,[[0.,1.];2],1);
+        assert_eq!(r["complete"].as_bool(),Some(false));
+        assert_eq!(r["reason"].as_str(),Some("cell-limit"));
+        assert_eq!(r["nonzeroRectangles"],value_codec::json!([]));
+        assert_eq!(r["unresolvedRectangles"],value_codec::json!([
+            [[0.5,1.],[0.,1.]],[[0.,0.5],[0.,1.]]]));
+    }
+    #[test]
     fn unresolved_coefficients_never_establish_a_zero_row_or_hide_a_nonzero_one() {
         assert_eq!(classify_boundary_rows([false,true],[false,false]),"nonzero-boundary-row");
         assert_eq!(classify_boundary_rows([true,false],[false,true]),"unproven");
@@ -154,6 +195,10 @@ mod tests {
         let corners=factored_corners(&proof,[[0.,1.];2]);
         assert_eq!(corners.as_array().unwrap().len(),4);
         assert!(corners.as_array().unwrap().iter().all(|p|p["nonzeroDirectionProven"].as_bool()==Some(true)));
+        let nonzero=factored_nonzero(&proof,[[0.,1.];2],1);
+        assert_eq!(nonzero["complete"].as_bool(),Some(true));
+        assert_eq!(nonzero["cells"].as_u64(),Some(1));
+        assert_eq!(nonzero["nonzeroRectangles"],value_codec::json!([[[0.,1.],[0.,1.]]]));
         for (surface,reason) in [(&regular,"nonzero-boundary-row"),(&linear,"exact-linear-boundary-factor"),(&quadratic,"at-least-quadratic-boundary-factor")] {
             assert_eq!(boundary_order(surface,false)["reason"].as_str(),Some(reason));
             assert_eq!(boundary_order(surface,true)["reason"].as_str(),Some("nonzero-boundary-row"));

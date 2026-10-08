@@ -1649,3 +1649,20 @@ normal bounds are the next useful check. No original chart or certificate was
 rebound. Four example tests passed, including quadratic/cubic order distinction
 and source-owned corner bounds. The product sweep in this diagnostic artifact
 uses only one cell per pair and is not an improved wall qualification.
+
+### Complete factored limiting direction coverage
+
+Closed subdivision confirms a nonzero factored normal direction across each of
+the two prepared original charts in five queried cells (three accepted closed
+rectangles). A one-cell budget refuses both and retains both closed split
+children. The ledger covers the original chart; a 65×65 bookkeeping grid also
+checks the saved partitions. The direction claim follows interval bounds over
+complete rectangles, not grid samples. Five example tests passed, including an
+actual remaining zero direction and refusal without losing either child.
+
+These diagnostics use private source-owned exact quadratic certificates. They
+prove limiting direction nonvanishing, not a unique regular tangent plane at a
+collapsed pole, angular exclusion against another face, whole-wall thickness or
+self-intersection freedom. The next native change should compose source-bound
+factored bounds with the original complete product traversal. The packaged
+normal-product build is still in Binaryen optimization.
