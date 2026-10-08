@@ -155,3 +155,24 @@ public-report mutation resistance, and refusal to assert whole-wall coverage
 while curved self or distinct face pairs remain unresolved. Evidence:
 `secant-source-body-tests.log.gz`. This fixed-radius body regression does not
 replace the four variable-radius specimen audits or named-part acceptance.
+
+## Expanded original pair coverage
+
+The four-body repeat at 4096 cells/32768 spans per selected regular face
+proves complete same-face coverage for faces 7 and 8 in every specimen.
+Face 7 uses 1689 cells/7312 spans and face 8 uses 1083 cells/4877 spans.
+Both retain the original 4.74999 mm threshold and squared-sine tolerance
+1e-4, with zero pending domains. Combining these two distinct faces with
+the previously recorded 18/31 full-chart results gives 20/31 per specimen.
+Eight other regular faces remain unresolved at the expanded budget.
+
+Separately, face 5 remains unresolved even at 10000 cells/80000 allowed
+spans: the two radius orders leave 19 and 11 pending domains, spending
+50617 and 49906 spans respectively. Direction exclusions number 2303
+and 1937. These facts do not prove a thin wall or global wall safety.
+Singular end faces 0/10 remain outside this regular-face audit.
+
+Both completed reports and logs are preserved in
+`self-wall-secant-regular4096.*.gz` and `self-wall-secant-face5.*.gz`.
+Original model serialization is checked unchanged for every case.
+No new WASM/UI package is claimed for this native change.
