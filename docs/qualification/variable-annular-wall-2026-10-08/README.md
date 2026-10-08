@@ -902,3 +902,19 @@ interval. These are mathematically valid intersections: the exact blend is
 convex. Four normal tests passed, including independent original cubic
 normals and constant high-degree coefficient hulls at closed endpoints.
 This improvement has not yet been qualified on the prototype bodies.
+
+## Early Cartesian audit completed
+
+The 372c3ed8 audit completed on all four prototypes at 1024 cells / 8192
+restrictions. Forward radii retain 6/17 pending pairs on faces 0/10; reverse
+radii retain 7/15, identical for both spatial directions. No pole face
+qualified. The first unresolved forward entry pair is
+U[.125,.25] V[.25,.5] versus U[.25,.5] V[.5,.75]. Its exit pair is
+U[0,.015625] V[.25,.28125] versus U[.0625,.09375] V[.34375,.375].
+These finite rectangles require stronger path/frame bounds; traversal
+counts alone do not establish either safety or a thin witness.
+
+The thirteen chord tests after convex normal restriction also passed.
+The convex prototype audit is still running; its first completed cases
+have exactly the same classified counts as the early Cartesian audit.
+No whole-wall safety or qualification improvement is inferred.
