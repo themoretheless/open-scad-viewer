@@ -1,0 +1,578 @@
+{
+  "automatic": {
+    "cells": 36393,
+    "domainCells": 278419,
+    "normalSpans": 13661,
+    "pairs": [
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          1
+        ],
+        "normalProducts": 1,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 268
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          2
+        ],
+        "normalProducts": 501,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 21
+      },
+      {
+        "cells": 739,
+        "faces": [
+          0,
+          4
+        ],
+        "normalProducts": 169,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          5
+        ],
+        "normalProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 398
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          6
+        ],
+        "normalProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 37
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          7
+        ],
+        "normalProducts": 479,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 35
+      },
+      {
+        "cells": 147,
+        "faces": [
+          0,
+          9
+        ],
+        "normalProducts": 23,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          23
+        ],
+        "normalProducts": 1,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 268
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          0,
+          24
+        ],
+        "normalProducts": 344,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 45
+      },
+      {
+        "cells": 577,
+        "faces": [
+          0,
+          26
+        ],
+        "normalProducts": 111,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          1,
+          5
+        ],
+        "normalProducts": 39,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 200
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          2,
+          5
+        ],
+        "normalProducts": 485,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 9
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          2,
+          7
+        ],
+        "normalProducts": 483,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 59
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          2,
+          24
+        ],
+        "normalProducts": 87,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 471
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          3,
+          8
+        ],
+        "normalProducts": 471,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 83
+      },
+      {
+        "cells": 7,
+        "faces": [
+          3,
+          17
+        ],
+        "normalProducts": 2,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          3,
+          25
+        ],
+        "normalProducts": 230,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 330
+      },
+      {
+        "cells": 53,
+        "faces": [
+          4,
+          5
+        ],
+        "normalProducts": 8,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          5,
+          6
+        ],
+        "normalProducts": 16,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 152
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          5,
+          7
+        ],
+        "normalProducts": 460,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 9
+      },
+      {
+        "cells": 237,
+        "faces": [
+          5,
+          9
+        ],
+        "normalProducts": 46,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          5,
+          10
+        ],
+        "normalProducts": 4,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 340
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          5,
+          11
+        ],
+        "normalProducts": 3,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 273
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          5,
+          12
+        ],
+        "normalProducts": 492,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 21
+      },
+      {
+        "cells": 63,
+        "faces": [
+          5,
+          14
+        ],
+        "normalProducts": 10,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 199,
+        "faces": [
+          5,
+          15
+        ],
+        "normalProducts": 16,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 131,
+        "faces": [
+          5,
+          23
+        ],
+        "normalProducts": 16,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          6,
+          10
+        ],
+        "normalProducts": 54,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 154
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          7,
+          10
+        ],
+        "normalProducts": 363,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 5
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          7,
+          12
+        ],
+        "normalProducts": 449,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 109
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          8,
+          13
+        ],
+        "normalProducts": 492,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 41
+      },
+      {
+        "cells": 177,
+        "faces": [
+          9,
+          10
+        ],
+        "normalProducts": 24,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          10,
+          11
+        ],
+        "normalProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 449
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          10,
+          12
+        ],
+        "normalProducts": 357,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 17
+      },
+      {
+        "cells": 707,
+        "faces": [
+          10,
+          14
+        ],
+        "normalProducts": 169,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          10,
+          15
+        ],
+        "normalProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 417
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          10,
+          16
+        ],
+        "normalProducts": 0,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 551
+      },
+      {
+        "cells": 581,
+        "faces": [
+          10,
+          18
+        ],
+        "normalProducts": 111,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          12,
+          16
+        ],
+        "normalProducts": 230,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 330
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          13,
+          17
+        ],
+        "normalProducts": 87,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 471
+      },
+      {
+        "cells": 7,
+        "faces": [
+          13,
+          25
+        ],
+        "normalProducts": 2,
+        "qualified": true,
+        "reason": "source-wall-pair-qualified",
+        "unresolvedProducts": 0
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          16,
+          20
+        ],
+        "normalProducts": 123,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 433
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          17,
+          21
+        ],
+        "normalProducts": 148,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 406
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          20,
+          24
+        ],
+        "normalProducts": 123,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 433
+      },
+      {
+        "cells": 1024,
+        "faces": [
+          21,
+          25
+        ],
+        "normalProducts": 148,
+        "qualified": false,
+        "reason": "source-wall-pair-work-limit",
+        "unresolvedProducts": 406
+      }
+    ],
+    "spans": 56100,
+    "wholeWallQualified": false
+  },
+  "results": [
+    {
+      "cells": 4096,
+      "domainCells": 10000,
+      "faces": [
+        0,
+        1
+      ],
+      "normalProducts": 1,
+      "normalSpans": 1834,
+      "qualified": false,
+      "reason": "source-wall-pair-work-limit",
+      "spans": 8122,
+      "unresolvedProducts": 1458
+    },
+    {
+      "cells": 4096,
+      "domainCells": 10000,
+      "faces": [
+        0,
+        2
+      ],
+      "normalProducts": 1966,
+      "normalSpans": 824,
+      "qualified": false,
+      "reason": "source-wall-pair-work-limit",
+      "spans": 4260,
+      "unresolvedProducts": 63
+    },
+    {
+      "cells": 4096,
+      "domainCells": 10000,
+      "faces": [
+        0,
+        5
+      ],
+      "normalProducts": 0,
+      "normalSpans": 377,
+      "qualified": false,
+      "reason": "source-wall-pair-work-limit",
+      "spans": 8192,
+      "unresolvedProducts": 1858
+    },
+    {
+      "cells": 53,
+      "domainCells": 464,
+      "faces": [
+        4,
+        5
+      ],
+      "normalProducts": 8,
+      "normalSpans": 38,
+      "qualified": true,
+      "reason": "source-wall-pair-qualified",
+      "spans": 78,
+      "unresolvedProducts": 0
+    },
+    {
+      "cells": 4096,
+      "domainCells": 10000,
+      "faces": [
+        16,
+        20
+      ],
+      "normalProducts": 325,
+      "normalSpans": 434,
+      "qualified": false,
+      "reason": "source-wall-pair-work-limit",
+      "spans": 7542,
+      "unresolvedProducts": 1767
+    }
+  ]
+}

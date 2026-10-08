@@ -171,6 +171,12 @@ mod tests {
         assert!(crate::source_retained_face_gap::qualify(&body,[0,2],100.,options()).unwrap().certificate.is_none());
         let too_thin=crate::source_wall_pair::qualify(&body,[0,1],30.01,mixed_options()).unwrap();
         assert!(too_thin.certificate.is_none());assert!(!too_thin.unresolved_products.is_empty());
+        // UV resolution is a refusal boundary, never a thickness certificate.
+        let mut coarse=mixed_options();coarse.tolerance_uv=100.;
+        let stopped=crate::source_wall_pair::qualify(&body,[0,1],30.01,coarse).unwrap();
+        assert!(stopped.certificate.is_none());assert_eq!(stopped.reason,"source-wall-pair-resolution-limit");
+        assert_eq!(stopped.cells,1);assert_eq!(stopped.unresolved_products.len(),1);
+
         assert!(crate::source_wall_pair::qualify(&body,[0,1],29.99,mixed_options()).unwrap().certificate.is_some());
         let coverage_options=||crate::source_wall_coverage::Limits{pairs:21,plane_controls:10000,normal_spans:10000,gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:1e-6};
         let no_products=||crate::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0};
@@ -362,8 +368,10 @@ mod tests {
             crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
                 cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();
         assert!(numerical.certificate.is_none());
-        assert_eq!(numerical.reason,"source-wall-pair-numeric-limit");
-        assert!(!numerical.unresolved_products.is_empty());assert_eq!(numerical.normal_spans,10000);
+        // The UV stop now avoids the former underflow path; work remains unproven.
+        assert_eq!(numerical.reason,"source-wall-pair-work-limit");
+        assert_eq!(numerical.cells,4096);
+        assert!(!numerical.unresolved_products.is_empty());assert!(numerical.normal_spans<=10000);
         let shell=body.geometry().shell();
         let flat_at=|z:f64|shell.faces().iter().enumerate().filter_map(|(i,w)| {
             let s=w[0].edges()[0].surface();

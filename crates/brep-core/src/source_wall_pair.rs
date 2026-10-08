@@ -228,7 +228,7 @@ pub fn qualify<'a>(
             .filter(|&(side, axis)| {
                 let r = uv[side][axis];
                 let t = r[0] * 0.5 + r[1] * 0.5;
-                r[0] < t && t < r[1]
+                r[1] - r[0] > limits.tolerance_uv && r[0] < t && t < r[1]
             })
             .max_by(|&(s, a), &(t, b)| {
                 let width = |(s, a): (usize, usize)| {
