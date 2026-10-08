@@ -2769,3 +2769,14 @@ no certificate is transferred merely from equal-looking diagnostics.
 Native diagnostics now request the original source's XY Jordan certificate
 within declared nonzero work/cell budgets. Compilation passed; qualification
 of this original-source certificate has not yet been observed.
+
+Native full neighbor monotonicity completed successfully in 546.97 seconds.
+The first full-expression scalar filter was unhelpful: the unsplit Y enclosure
+[-55.20937163996749,33.99841160034473] kept the entire [0,3] wall trace.
+This is interval overestimation, not a measured geometric extent. Diagnostics
+now enclose a complete 8-by-8 partition of the corrected transition and union
+all 64 Y bounds before intersecting the original broad enclosure. All cells
+must return complete bounds within one shared span budget; otherwise the
+original broad target is retained. Grid endpoint values are reused exactly,
+including the original domain extremes. The new native run also checks the
+original-source projected Jordan route; both results remain unverified.

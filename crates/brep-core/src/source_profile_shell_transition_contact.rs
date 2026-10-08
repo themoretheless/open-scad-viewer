@@ -256,10 +256,25 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     [root.parameters[1]-root.parameters[0];2])?;
                 if let Some(bridge)=bridge.constrain_original_rails(max_controls)?.0 {
                     if let Some(bounds)=bridge.enclose_with_transverse_correction(domain[0],domain[1],max_spans)?.0 {
-                        let candidates=monotone.coordinate_preimage(bounds[1],128)?;
+                        let mut target=bounds[1];
+                        let mut tiled=[f64::INFINITY,f64::NEG_INFINITY];
+                        let mut spent=0;let mut complete=true;
+                        let split=|axis:usize,i:usize|if i==0 {domain[axis][0]} else if i==8 {domain[axis][1]}
+                            else {domain[axis][0]+(domain[axis][1]-domain[axis][0])*(i as f64/8.)};
+                        for i in 0..8 {for j in 0..8 {
+                            let (cell,used)=bridge.enclose_with_transverse_correction(
+                                [split(0,i),split(0,i+1)],[split(1,j),split(1,j+1)],max_spans-spent)?;
+                            spent+=used;
+                            if let Some(cell)=cell {
+                                tiled[0]=tiled[0].min(cell[1][0]);tiled[1]=tiled[1].max(cell[1][1]);
+                            } else {complete=false;}
+                        }}
+                        if complete {target=[target[0].max(tiled[0]),target[1].min(tiled[1])];}
+                        eprintln!("transition full tiled Y complete={complete} target={target:?} spans={spent}");
+                        let candidates=monotone.coordinate_preimage(target,128)?;
                         assert!(candidates.cells<=128);
                         assert!(std::ptr::eq(candidates.owner(),&monotone));
-                        assert_eq!(candidates.target(),bounds[1]);
+                        assert_eq!(candidates.target(),target);
                         let owned=self.assembly.patch.rails.face.boundary.rooted[rail];
                         let neighbor_side=1-owned.points[0].source_side();
                         let root_parameters=owned.points.each_ref().map(|p|
@@ -267,7 +282,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         let exterior_candidates=candidates.exterior_domains(root_parameters)?;
                         eprintln!("transition neighbor rootParameters={root_parameters:?} exteriorCandidates={exterior_candidates:?}");
                         eprintln!("transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
-                            bounds[1],candidates.domains,candidates.cells);
+                            target,candidates.domains,candidates.cells);
                     }
                 }
                 eprintln!("transition curved neighbor monotoneY range={:?} domain={:?}",
