@@ -72,7 +72,7 @@ fn main(){
   let r=nurbs_core::surface_self_chord_coverage::qualify(surface,5.99,1e-6,
    nurbs_core::surface_self_chord_coverage::Limits{cells,spans}).unwrap();
   eprintln!("face={face} qualified={} cells={} spans={} pending={}",r.certificate.is_some(),r.cells,r.spans,r.pending);
-  cases.push(json!({"face":face,"qualified":r.certificate.is_some(),"cells":r.cells,"spans":r.spans,"pending":r.pending,"reason":r.reason,"unresolvedPairs":r.unresolved_pairs}));
+  cases.push(json!({"face":face,"qualified":r.certificate.is_some(),"cells":r.cells,"spans":r.spans,"pending":r.pending,"reason":r.reason,"intrinsicExclusions":r.intrinsic_exclusions,"directionExclusions":r.direction_exclusions,"angularExclusions":r.angular_exclusions,"distanceExclusions":r.distance_exclusions,"coordinatePathExclusions":r.coordinate_path_exclusions,"localCoordinatePathExclusions":r.local_coordinate_path_exclusions,"localCoordinatePathRefusals":r.local_coordinate_path_refusals,"unresolvedPairs":r.unresolved_pairs}));
  }
  assert_eq!(before,body.definition().unwrap());
  std::fs::write(&args[2],value_codec::to_string_pretty(&json!({"scope":"Native original source-face self-chord budget experiment; no whole-wall or general self-intersection certificate","minimumMm":5.99,"maxSineSquared":1e-6,"definitionUnchanged":true,"limits":{"cells":cells,"spans":spans},"cases":cases})).unwrap()).unwrap();
