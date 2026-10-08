@@ -207,3 +207,113 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         Ok(out)
     }
 }
+
+pub enum OriginalAdditionalProof {
+    Vertex(crate::source_vertex_contact::Certificate),
+    Interior(crate::source_interior_contact::Certificate),
+}
+pub struct OriginalAdditionalContact<'x> {
+    faces: [usize; 2],
+    owners: [&'x ShellFace; 2],
+    proof: OriginalAdditionalProof,
+}
+impl OriginalAdditionalContact<'_> {
+    pub fn faces(&self) -> [usize; 2] {
+        self.faces
+    }
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn proof(&self) -> &OriginalAdditionalProof {
+        &self.proof
+    }
+}
+pub struct OriginalAdditionalReport<'x> {
+    pub certificate: Option<OriginalAdditionalContact<'x>>,
+    pub exact_work: u64,
+    pub spans: usize,
+    pub driver_cells: usize,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    /// Fresh owned-vertex and supported interior-fiber proofs. As with boundary
+    /// transfer, both final face definitions must remain exactly unchanged.
+    pub fn qualify_original_additional_contact(
+        &self,
+        faces: [usize; 2],
+        max_work: u64,
+        max_spans: usize,
+        max_driver_cells: usize,
+    ) -> Result<OriginalAdditionalReport<'_>> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|i| *i >= self.faces.len())
+            || max_work > 100000000
+            || max_spans > 100000
+            || max_driver_cells > 100000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound original vertex/interior pair work",
+            ));
+        }
+        let mut out = OriginalAdditionalReport {
+            certificate: None,
+            exact_work: 0,
+            spans: 0,
+            driver_cells: 0,
+            reason: "expression-original-contact-face-changed",
+        };
+        let Some(original) = self.unchanged_original_pair(faces) else {
+            return Ok(out);
+        };
+        if max_work == 0 {
+            out.reason = "expression-original-contact-work-limit";
+            return Ok(out);
+        }
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let shell = root.restricted.proposal.body.geometry().shell();
+        let report = crate::source_vertex_contact::certify(shell, original, max_work)?;
+        out.exact_work = report.exact_work;
+        out.reason = report.reason;
+        if let Some(proof) = report.certificate {
+            out.certificate = Some(OriginalAdditionalContact {
+                faces,
+                owners: faces.map(|i| &self.faces[i]),
+                proof: OriginalAdditionalProof::Vertex(proof),
+            });
+            out.reason = "expression-unchanged-vertex-contact-qualified";
+            return Ok(out);
+        }
+        for order in [original, [original[1], original[0]]] {
+            if out.exact_work == max_work
+                || out.spans == max_spans
+                || out.driver_cells == max_driver_cells
+            {
+                out.reason = "expression-original-contact-work-limit";
+                return Ok(out);
+            }
+            let report = crate::source_interior_contact::certify_with_linear_chart(
+                shell,
+                order,
+                max_work - out.exact_work,
+                max_spans - out.spans,
+                max_driver_cells - out.driver_cells,
+                0,
+            )?;
+            out.exact_work += report.exact_work;
+            out.spans += report.spans;
+            out.driver_cells += report.driver_cells;
+            out.reason = report.reason;
+            if let Some(proof) = report.certificate {
+                out.certificate = Some(OriginalAdditionalContact {
+                    faces,
+                    owners: faces.map(|i| &self.faces[i]),
+                    proof: OriginalAdditionalProof::Interior(proof),
+                });
+                out.reason = "expression-unchanged-interior-contact-qualified";
+                return Ok(out);
+            }
+        }
+        Ok(out)
+    }
+}

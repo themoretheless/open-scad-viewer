@@ -658,6 +658,7 @@ pub use contacts::{ShellSupportPair, ShellSupportReport, SupportPairReport, Supp
 #[path = "source_profile_shell_original_contact.rs"]
 mod original_contact;
 pub use original_contact::{
+    OriginalAdditionalContact, OriginalAdditionalProof, OriginalAdditionalReport,
     OriginalContactReport, OriginalFiberContact, OriginalFiberProof, OriginalFiberReport,
     OriginalPlanarContact,
 };

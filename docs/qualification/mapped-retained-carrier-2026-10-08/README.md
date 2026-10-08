@@ -2195,3 +2195,28 @@ actual Original expression-face mapping. Retained faces and zero work
 refuse transfer. With 162 trim/world excluded pairs, 10 planar contacts
 and 19 fiber contacts, 215 of the 406 pairs still lack a complete pair
 proof. These are supported fixture results, not full shell qualification.
+
+
+## Fresh owned-vertex and interior-fiber contact transfer
+
+qualify_original_additional_contact uses the same exact final-to-original
+contour identity gate. It freshly attempts source_vertex_contact, then
+source_interior_contact in both face orientations (without linear-chart
+fallback). One shared exact-work allowance covers all attempts, and the
+interior attempts share span and driver allowances. The private resulting
+certificate borrows final face owners and retains the fresh Vertex or
+Interior source certificate.
+
+Integration tries this only after trim/world exclusion, planar contact
+and boundary/paired fibers have failed, avoiding duplicate qualification.
+Source face IDs and actual owner pointers are checked for every admitted
+certificate. Changed faces and zero exact work issue no contact authority.
+
+The first combined native run passed in 65.20 seconds: 45 additional
+vertex/interior pairs were admitted after 10 planar and 19 boundary-fiber
+pairs, using 1041307 exact work, 310 spans and no driver subdivisions.
+The final regression requires these 45 fresh certificates, actual face
+owner identity, source face ID correspondence and reflexive/changed/zero
+work refusal. Combining all independent pair proofs with the 162 excluded
+pairs leaves 170 of 406 pairs without full qualification. Modified source
+contours, exact profile and transition contacts still require admission.
