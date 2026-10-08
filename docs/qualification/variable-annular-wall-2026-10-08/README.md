@@ -1684,3 +1684,10 @@ native angular predicate, retain the work accounting, and requalify the complete
 Body/bridge/worker path. These four prospective exclusions have not reduced the
 173-pair native admission result and do not prove thickness or self-intersection
 freedom. The packaged normal-product kernel remains in optimization.
+
+The factored-product exploratory audit was repeated with both source slots
+exchanged. All 50 targeted pairs were visited; the same four complete exclusions,
+27 aligned-region refusals and 19 cell-budget refusals remain. The angular helper
+also matches the native result after exchange in all 16 reference configurations.
+This checks the exclusion set, not equality of every pending subdivision or a
+complete Body certificate. Production and packaged worker integration remain open.

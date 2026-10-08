@@ -30,6 +30,7 @@ fn angle(bounds:[[[f64;2];3];2],threshold:f64)->Result<Option<bool>>{
 }
 fn main(){
     let args:Vec<_>=std::env::args().collect();
+    let exchanged=args.iter().any(|a|a=="--exchange-endpoints");
     let request:Value=value_codec::from_str(&std::fs::read_to_string(&args[1]).unwrap()).unwrap();
     let classification:Value=value_codec::from_str(&std::fs::read_to_string(&args[2]).unwrap()).unwrap();
     let surfaces:Vec<Surface>=request["definition"]["shell"]["regions"].as_array().unwrap().iter().map(|r|{
@@ -61,7 +62,8 @@ fn main(){
     let records=classification["groups"]["shared-edge"].as_array().unwrap().iter()
         .chain(classification["groups"]["distinct-no-shared-edge"].as_array().unwrap());
     for record in records {
-        let faces:[usize;2]=value_codec::from_value(record["faces"].clone()).unwrap();
+        let mut faces:[usize;2]=value_codec::from_value(record["faces"].clone()).unwrap();
+        if exchanged {faces.reverse();}
         if faces.iter().all(|f|prepared[*f].is_none()) {continue;}
         let original=faces.map(|f|domains[f]);let mut pending=vec![original];
         let mut cells=0;let mut spans=0;let mut factored_queries=0;let mut reason="cell-limit";
@@ -99,7 +101,7 @@ fn main(){
     assert_eq!(before,value_codec::to_string(&surfaces).unwrap());
     std::fs::write(&args[3],value_codec::to_string_pretty(&json!({
         "scope":"Exploratory original factored normal products only; no Body certificate",
-        "completeTargetedAudit":true,"exactWork":exact_work,"preparations":preparations,
+        "completeTargetedAudit":true,"endpointExchanged":exchanged,"exactWork":exact_work,"preparations":preparations,
         "originalSurfacesUnchanged":true,"rows":rows})).unwrap()).unwrap();
 }
 #[cfg(test)]mod tests{
@@ -114,6 +116,7 @@ fn main(){
                 let x=nurbs_core::normal_alignment::normal_bounds(&a,domains[0],10).unwrap().0.unwrap();
                 let y=nurbs_core::normal_alignment::normal_bounds(&b,domains[1],10).unwrap().0.unwrap();
                 assert_eq!(angle([x,y],threshold).unwrap(),native.aligned);
+                assert_eq!(angle([y,x],threshold).unwrap(),native.aligned);
             }
         }
         assert_eq!(angle([[[0.,0.];3];2],1e-6).unwrap(),None);
