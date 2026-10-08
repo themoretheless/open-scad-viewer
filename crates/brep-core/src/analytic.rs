@@ -60,6 +60,8 @@ fn arc_span(radius: f64, z: f64, start: f64, end: f64) -> Curve {
     }
 }
 fn reversed(mut curve: Curve) -> Curve {
+    let [a, b] = curve.domain();
+    curve.knots = curve.knots.iter().rev().map(|k| a + b - k).collect();
     curve.control_points.reverse();
     curve.weights.reverse();
     curve
@@ -856,6 +858,19 @@ pub fn revolve_angle(profile: &[[f64; 2]], angle_degrees: f64) -> Result<Model> 
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reversed_nonuniform_rational_edges_preserve_parameterized_geometry() {
+        let curve = Curve {degree:2,knots:vec![0.,0.,0.,0.25,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![0.3,0.4,0.],vec![0.7,-0.2,0.1],vec![1.,0.,0.]],
+            weights:vec![1.,0.75,1.5,1.],periodic:false};
+        let reversed=super::reversed(curve.clone());
+        assert_eq!(reversed.knots,vec![0.,0.,0.,0.75,1.,1.,1.]);
+        for t in [0.,0.13,0.25,0.43,0.75,0.91,1.] {
+            let a=curve.evaluate(t).unwrap();let b=reversed.evaluate(1.-t).unwrap();
+            for (a,b) in a.point.iter().zip(b.point) {assert!((a-b).abs()<1e-13);}
+            for (a,b) in a.d1.as_ref().unwrap().iter().zip(b.d1.as_ref().unwrap()) {assert!((a+b).abs()<1e-12);}
+        }
+    }
     #[test]
     fn partial_caps_reparameterize_multiple_offset_holes() {
         let mut loops = Vec::new();

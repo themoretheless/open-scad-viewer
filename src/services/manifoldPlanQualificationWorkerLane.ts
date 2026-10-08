@@ -1,3 +1,6 @@
+import { compileGeometryKernelArtifact } from './geometry/kernelCompilation'
+import { assertVerifiedWasmModule } from './wasmArtifact'
+import geometryArtifactIdentity from '../generated/geometry-kernels/identity'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { sha256Hex } from '../core/sha256'
 import {
@@ -76,6 +79,15 @@ export interface ManifoldPlanQualificationWorkerLaneSnapshot {
   readonly workersTerminated: number
 }
 
+let compiledGeometryModule: Promise<WebAssembly.Module> | undefined
+function hostGeometryModule(): Promise<WebAssembly.Module> {
+  compiledGeometryModule ??= compileGeometryKernelArtifact().then(module => {
+    assertVerifiedWasmModule(module, geometryArtifactIdentity)
+    return module
+  }).catch(error => { compiledGeometryModule = undefined; throw error })
+  return compiledGeometryModule
+}
+
 const MAX_DEADLINE_MS = 120_000
 const MAX_GRACE_MS = 1_000
 
@@ -98,6 +110,7 @@ function defaultWorkerFactory(_workerEpoch: number): ManifoldPlanQualificationWo
  * realm is terminated before the caller observes settlement.
  */
 export class ManifoldPlanQualificationWorkerLane {
+  private readonly usesDefaultWorker: boolean
   private readonly workerFactory: (workerEpoch: number) => ManifoldPlanQualificationWorkerLike
   private readonly startupTimeoutMs: number
   private readonly defaultDeadlineMs: number
@@ -111,6 +124,7 @@ export class ManifoldPlanQualificationWorkerLane {
   private workersTerminated = 0
 
   constructor(options: ManifoldPlanQualificationWorkerLaneOptions = {}) {
+    this.usesDefaultWorker = options.workerFactory === undefined
     this.workerFactory = options.workerFactory ?? defaultWorkerFactory
     this.startupTimeoutMs = duration(
       options.startupTimeoutMs ?? 10_000,
@@ -322,16 +336,30 @@ export class ManifoldPlanQualificationWorkerLane {
         return
       }
       startupTimer = setTimeout(() => requestStop('startup'), this.startupTimeoutMs)
-      try {
-        worker.postMessage(request)
-      } catch (error) {
-        settle(null, new ManifoldPlanQualificationWorkerLaneError(
-          'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-          'Manifold plan qualification request could not be posted',
-          workerEpoch,
-          { cause: error },
-        ))
+      const postRequest = (module?: WebAssembly.Module) => {
+        if (settling || stopReason !== null) return
+        try {
+          if (module) worker.postMessage({ type: 'native-geometry-module',
+            module, identity: geometryArtifactIdentity })
+          worker.postMessage(request)
+        } catch (error) {
+          settle(null, new ManifoldPlanQualificationWorkerLaneError(
+            'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+            'Manifold plan qualification request could not be posted',
+            workerEpoch, { cause: error },
+          ))
+        }
       }
+      if (this.usesDefaultWorker) {
+        hostGeometryModule().then(postRequest, error => {
+          if (settling) return
+          settle(null, new ManifoldPlanQualificationWorkerLaneError(
+            'E_MANIFOLD_PLAN_WORKER_STARTUP',
+            'Verified native geometry module could not be prepared',
+            workerEpoch, { cause: error },
+          ))
+        })
+      } else postRequest()
     })
   }
 }

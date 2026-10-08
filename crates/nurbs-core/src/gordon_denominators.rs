@@ -2,7 +2,7 @@
 //! This is algebraic preparation; rounded output still requires retention audit.
 use crate::{Result, check, curve::Curve, numeric, resource};
 
-pub(super) struct Cell {
+pub(crate) struct Cell {
     pub domain: [f64; 2],
     pub denominator: Vec<f64>,
     pub numerators: Vec<Vec<[f64; 3]>>,
@@ -22,7 +22,7 @@ pub(super) fn product(a: &[f64], b: &[f64]) -> Vec<f64> {
 }
 /// Every returned numerator uses the same denominator, without requiring equal
 /// authored weights at any crossing. Source knot spans are partitioned together.
-pub(super) fn prepare(curves: &[Curve]) -> Result<Vec<Cell>> {
+pub(crate) fn prepare(curves: &[Curve]) -> Result<Vec<Cell>> {
     check(!curves.is_empty(), "Common denominator needs curves")?;
     let mut breaks = vec![0., 1.];
     for c in curves {

@@ -16,7 +16,7 @@ import {
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const fingerprintPath = resolve(
   repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v46.json',
+  'docs/qualification/g0-toolchain-fingerprints-v60.json',
 )
 const fingerprintV1Path = resolve(
   repositoryRoot,
@@ -59,10 +59,10 @@ describe('G0 toolchain fingerprints', () => {
   it('uses the frozen G0.2 schema id', () => {
     const doc = JSON.parse(readFileSync(fingerprintPath, 'utf8')) as FingerprintDoc
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v46')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v60')
     expect(doc).toMatchObject({
-      previousFingerprintId: 'g0-toolchain-fingerprints-v45',
-      previousFingerprintSha256: '5158442d6cee645896f12b0f9d3223dd8bb45da1ea9d21c5ad352d0f8c90fb58',
+      previousFingerprintId: 'g0-toolchain-fingerprints-v59',
+      previousFingerprintSha256: '8826205215694feab50858645eefe387d010d07adc3225156be0db010d5e6760',
     })
   })
 
@@ -134,7 +134,7 @@ describe('G0/G1 re-freeze generator', () => {
 
   it('refuses an unrecorded valid WASM edit before publishing any freeze', () => {
     const root = fixture()
-    const path = resolve(root, 'src/generated/geometry-kernels/kernel_bg.wasm')
+    const path = resolve(root, refreshBinaryInputPaths(root)[0]!)
     const bytes = readFileSync(path)
     bytes[bytes.length - 1] ^= 1
     expect(WebAssembly.validate(bytes)).toBe(true)
@@ -143,12 +143,27 @@ describe('G0/G1 re-freeze generator', () => {
     for (const output of Object.values(REFRESH_OUTPUTS)) expect(existsSync(resolve(root, output))).toBe(false)
   })
 
+  it('binds the published release independently of an ignored host rebuild', () => {
+    const root = fixture()
+    const release = readFileSync(resolve(root, refreshBinaryInputPaths(root)[0]!))
+    const host = Buffer.from(release)
+    host[host.length - 1] ^= 1
+    expect(WebAssembly.validate(host)).toBe(true)
+    const hostPath = resolve(root, 'src/generated/geometry-kernels/kernel_bg.wasm')
+    mkdirSync(dirname(hostPath), { recursive: true })
+    writeFileSync(hostPath, host)
+    const publicPath = resolve(root, 'public/wasm/geometry-kernel.wasm')
+    mkdirSync(dirname(publicPath), { recursive: true })
+    writeFileSync(publicPath, host)
+    expect(prepare(root).ownRustWasm.sha256).toBe(sha256(release))
+  })
+
   it('prepares deterministic new versions without creating any artifact or result', () => {
     const root = fixture()
     const first = prepare(root)
     const second = prepare(root)
     expect(first.artifactBytes).toEqual(second.artifactBytes)
-    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v63')
+    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v77')
     expect(first.status).toMatchObject({
       qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
       completedWorkUnits: 0, completedCleanRuns: 0, plannedWorkUnits: 4740,
@@ -205,7 +220,7 @@ describe('G0/G1 re-freeze generator', () => {
   it('refuses a zero-counter freeze when the new candidate already has result bookkeeping', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v63/result.json')
+    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v77/result.json')
     mkdirSync(dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, '{"completedWorkUnits":1}\n')
     expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
@@ -224,9 +239,9 @@ describe('G0/G1 re-freeze generator', () => {
       // Version-only retargeting is reversible; prove this fixture is the exact
       // recorded executor, rather than merely assuming the old behavior survived.
       const historical = readFileSync(resolve(root, path), 'utf8')
-        .replaceAll('semantic-manifold-g1-plan-v63', 'semantic-manifold-g1-plan-v24')
-        .replaceAll('semantic-manifold-g1-candidate-run-v63', 'semantic-manifold-g1-candidate-run-v24')
-        .replace('G1 v63 clean-run', 'G1 v24 clean-run')
+        .replaceAll('semantic-manifold-g1-plan-v77', 'semantic-manifold-g1-plan-v24')
+        .replaceAll('semantic-manifold-g1-candidate-run-v77', 'semantic-manifold-g1-candidate-run-v24')
+        .replace('G1 v77 clean-run', 'G1 v24 clean-run')
       expect(sha256(Buffer.from(historical)))
         .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
       writeFileSync(resolve(root, path), historical)

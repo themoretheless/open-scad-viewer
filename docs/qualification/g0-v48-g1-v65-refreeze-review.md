@@ -1,0 +1,3 @@
+# Complete native CI correction binding
+
+Advance the current own-Rust record to v39, G0 to v48 and G1 to v65 after the full native run exposed an obsolete detail-32 sphere refusal assertion and MLX-C v0.7 ABI changes. Preserve every earlier record, including the intermediate v38/v47/v64 source snapshot, unchanged. The sphere test now verifies the triangle budget and all topology invariants on accepted detail levels. Optional MLX attention and scan calls retain compatibility with the earlier ABI. No G0/G1 gate is closed, no historical qualification result is imported, and clean-run counters remain zero. The published geometry binary remains distinct from ignored host-specific rebuilds.

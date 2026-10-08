@@ -21,6 +21,13 @@ function invocation(mode: string, browser = 'chromium', runIndex = 1, timeoutMs 
 }
 
 describe('browser qualification process supervisor', () => {
+  it.skipIf(process.platform === 'win32')('retains bounded child failure diagnostics', async () => {
+    await expect(superviseBrowserQualification({
+      mode:'actual',browser:'chromium',runIndex:1,
+    }, {platform:'linux',invocation:invocation('unknown')})).rejects.toMatchObject({
+      code:'E_SUPERVISOR_CHILD_EXIT',details:{code:2,childStderr:'unknown fixture mode\n'},
+    })
+  })
   it('accepts only one frozen mode, engine, and clean-run index', () => {
     expect(parseBrowserSupervisorArguments([
       '--mode', 'actual', '--browser', 'webkit', '--run-index', '3',

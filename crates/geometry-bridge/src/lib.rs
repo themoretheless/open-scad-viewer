@@ -16,6 +16,8 @@
 pub mod brep;
 mod miter_smoothness;
 mod sweep_cap_evidence;
+mod sweep_pipeline;
+mod sweep_viewport;
 pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
@@ -516,6 +518,21 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
 
 fn dispatch_local(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
+        "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),
+        "brep_sweep_law_payload" => sweep_pipeline::law_payload(v),
+        "brep_sweep_constructor" => sweep_pipeline::constructor(v),
+        "brep_sweep_stream_start" => sweep_pipeline::stream_start(v),
+        "brep_sweep_stream_next" => sweep_pipeline::stream_next(v),
+        "brep_sweep_stream_release" => sweep_pipeline::stream_release(v),
+        "brep_miter_body" => sweep_pipeline::miter(v),
+        "brep_transform_certified_miter" => sweep_pipeline::transform(v),
+        "brep_smooth_certified_miter" => sweep_pipeline::smooth(v,false),
+        "brep_reconstruct_certified_miter" => sweep_pipeline::smooth(v,true),
+        "brep_progressive_miter_body" => sweep_pipeline::progressive_miter(v),
+        "brep_sweep_release_owner" => sweep_pipeline::release(v),
+        "brep_sweep_solid_admission" => sweep_pipeline::admission(v),
+        "brep_miter_correct_sections" => sweep_pipeline::correct(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"

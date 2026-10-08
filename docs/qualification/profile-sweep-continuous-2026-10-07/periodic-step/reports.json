@@ -1,0 +1,142 @@
+[
+  {
+    "accepted": true,
+    "budget": 0.1,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 2563,
+      "errorUpper": 0.06958749468224791,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 0.10862403328693733,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "dyadic-cubic-closing-strips-exact-predicate",
+      "order": 2,
+      "reason": "exact-regular-bezier-strip-jets",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-uniform-cubic",
+      "vBasisContinuity": "C2",
+      "work": 2268
+    },
+    "seamContinuity": "G2",
+    "sections": 17,
+    "stations": 65
+  },
+  {
+    "accepted": true,
+    "budget": 0.1,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 2563,
+      "errorUpper": 0.06958749468224791,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 0.10862403328693733,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "dyadic-cubic-closing-strips-exact-predicate",
+      "order": 2,
+      "reason": "exact-regular-bezier-strip-jets",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-uniform-cubic",
+      "vBasisContinuity": "C2",
+      "work": 2268
+    },
+    "seamContinuity": "G2",
+    "sections": 17,
+    "stations": 65
+  },
+  {
+    "accepted": true,
+    "budget": 0.1,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 2563,
+      "errorUpper": 0.06958749468224791,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 0.10862403328693733,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "dyadic-cubic-closing-strips-exact-predicate",
+      "order": 2,
+      "reason": "exact-regular-bezier-strip-jets",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-uniform-cubic",
+      "vBasisContinuity": "C2",
+      "work": 2268
+    },
+    "seamContinuity": "G2",
+    "sections": 17,
+    "stations": 65
+  },
+  {
+    "accepted": true,
+    "budget": 0.1,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 2563,
+      "errorUpper": 0.06909309667755398,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 0.10026833841871134,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "dyadic-cubic-closing-strips-exact-predicate",
+      "order": 2,
+      "reason": "exact-regular-bezier-strip-jets",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-uniform-cubic",
+      "vBasisContinuity": "C2",
+      "work": 2268
+    },
+    "seamContinuity": "G2",
+    "sections": 17,
+    "stations": 65
+  }
+]

@@ -1,0 +1,260 @@
+[
+  {
+    "accepted": true,
+    "budget": 0.5,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 1487,
+      "errorUpper": 0.4819979776984391,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "geometryCertificate": {
+      "certified": false,
+      "embedding": {
+        "cells": 16384,
+        "certified": false,
+        "method": "periodic-unwrapped-projection-contraction",
+        "reason": "work-limit",
+        "scope": "surface-modulo-periodic-v"
+      },
+      "maxCellsPerPredicate": 16384,
+      "pairwiseFaceContactsCertified": false,
+      "regularity": {
+        "cells": 5,
+        "certified": true,
+        "interiorBasisC1": true,
+        "scope": "all-original-knot-rectangles",
+        "unresolvedCells": 0
+      },
+      "scope": "single-untrimmed-surface",
+      "solidTopologyCertified": false
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 1.0204169424490457,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "exact-periodic-knot-and-control-identity",
+      "order": 2,
+      "reason": "exact-periodic-basis-and-regularity",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-periodic-collocation",
+      "vBasisContinuity": "C2",
+      "work": 5
+    },
+    "seamContinuity": "G2",
+    "sections": 6,
+    "stations": 21
+  },
+  {
+    "accepted": true,
+    "budget": 0.5,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 1487,
+      "errorUpper": 0.4819979776984391,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "geometryCertificate": {
+      "certified": true,
+      "embedding": {
+        "absoluteWinding": 1,
+        "angularDerivative": [
+          4.844907377001133,
+          7.922535652809913
+        ],
+        "cells": 10,
+        "certified": true,
+        "contractionUpper": 0.24105283012602952,
+        "firstCoordinate": "height",
+        "method": "periodic-unwrapped-projection-contraction",
+        "origin": [
+          0.6772802146636803,
+          1.7763568394002505e-15,
+          0
+        ],
+        "projectionAxes": [
+          0,
+          1
+        ],
+        "reason": "global-periodic-lift-contraction",
+        "rotationUpper": 7.922535652809914,
+        "scope": "surface-modulo-periodic-v"
+      },
+      "maxCellsPerPredicate": 16384,
+      "pairwiseFaceContactsCertified": false,
+      "regularity": {
+        "cells": 5,
+        "certified": true,
+        "interiorBasisC1": true,
+        "scope": "all-original-knot-rectangles",
+        "unresolvedCells": 0
+      },
+      "scope": "single-untrimmed-surface",
+      "solidTopologyCertified": false
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 1.0204169424490457,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "exact-periodic-knot-and-control-identity",
+      "order": 2,
+      "reason": "exact-periodic-basis-and-regularity",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-periodic-collocation",
+      "vBasisContinuity": "C2",
+      "work": 5
+    },
+    "seamContinuity": "G2",
+    "sections": 6,
+    "stations": 21
+  },
+  {
+    "accepted": true,
+    "budget": 0.5,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 1487,
+      "errorUpper": 0.4819979776984391,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "geometryCertificate": {
+      "certified": false,
+      "embedding": {
+        "cells": 16384,
+        "certified": false,
+        "method": "periodic-unwrapped-projection-contraction",
+        "reason": "work-limit",
+        "scope": "surface-modulo-periodic-v"
+      },
+      "maxCellsPerPredicate": 16384,
+      "pairwiseFaceContactsCertified": false,
+      "regularity": {
+        "cells": 5,
+        "certified": true,
+        "interiorBasisC1": true,
+        "scope": "all-original-knot-rectangles",
+        "unresolvedCells": 0
+      },
+      "scope": "single-untrimmed-surface",
+      "solidTopologyCertified": false
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 1.0204169424490457,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "exact-periodic-knot-and-control-identity",
+      "order": 2,
+      "reason": "exact-periodic-basis-and-regularity",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-periodic-collocation",
+      "vBasisContinuity": "C2",
+      "work": 5
+    },
+    "seamContinuity": "G2",
+    "sections": 6,
+    "stations": 21
+  },
+  {
+    "accepted": true,
+    "budget": 0.5,
+    "closedPath": true,
+    "continuousBound": true,
+    "continuousCertificate": {
+      "cells": 1401,
+      "errorUpper": 0.4948786416195736,
+      "globalEmbeddingCertified": false,
+      "maxCells": 16384,
+      "method": "interval-planar-bishop-frame",
+      "reason": null,
+      "regularityCertified": false,
+      "scope": "matched-parameter-profile-deviation",
+      "seamSmoothnessCertified": false,
+      "withinBudget": true
+    },
+    "geometryCertificate": {
+      "certified": true,
+      "embedding": {
+        "absoluteWinding": 1,
+        "angularDerivative": [
+          4.844907377001133,
+          7.922535652809914
+        ],
+        "cells": 10,
+        "certified": true,
+        "contractionUpper": 0.24105283012602927,
+        "firstCoordinate": "height",
+        "method": "periodic-unwrapped-projection-contraction",
+        "origin": [
+          0.6251817366126287,
+          1.3322676295501878e-15,
+          0
+        ],
+        "projectionAxes": [
+          0,
+          1
+        ],
+        "reason": "global-periodic-lift-contraction",
+        "rotationUpper": 7.9225356528099145,
+        "scope": "surface-modulo-periodic-v"
+      },
+      "maxCellsPerPredicate": 16384,
+      "pairwiseFaceContactsCertified": false,
+      "regularity": {
+        "cells": 5,
+        "certified": true,
+        "interiorBasisC1": true,
+        "scope": "all-original-knot-rectangles",
+        "unresolvedCells": 0
+      },
+      "scope": "single-untrimmed-surface",
+      "solidTopologyCertified": false
+    },
+    "method": "double-reflection-fourfold-section-refinement",
+    "sampledControlDeviation": 0.9419233314914264,
+    "seamCertificate": {
+      "certified": true,
+      "exact": true,
+      "method": "exact-periodic-knot-and-control-identity",
+      "order": 2,
+      "reason": "exact-periodic-basis-and-regularity",
+      "regularityCertified": true,
+      "scope": "represented-closing-strip-jets",
+      "stationInterpolation": "cyclic-periodic-collocation",
+      "vBasisContinuity": "C2",
+      "work": 5
+    },
+    "seamContinuity": "G2",
+    "sections": 6,
+    "stations": 21
+  }
+]

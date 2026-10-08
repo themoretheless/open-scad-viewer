@@ -1,0 +1,3 @@
+# Byte-preserving cross-platform checkout
+
+G0 v59 / G1 v76 preserve all earlier records and unchanged Rust/WASM own-Rust v41. The six-host diagnostic passed five environments but Windows refused CRLF-converted YAML before semantic execution. Git attributes now retain LF for YAML, Rust, TOML, lock and Python source files, without changing binary artifacts. The attributes file is bound into the qualification harness, and all bound source paths must declare LF. No runtime hash normalization or byte-check relaxation is introduced. All 4740 full-matrix units restart at zero; all-host probes still complete zero qualification work.

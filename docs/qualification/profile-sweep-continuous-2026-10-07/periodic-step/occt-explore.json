@@ -1,0 +1,22 @@
+[
+  {
+    "maxPointError": 9.930136612989092e-16,
+    "maxJetError": 7.119291619286993e-15,
+    "maxClosingJetError": 8.326672684688674e-16,
+    "valid": true,
+    "faces": 64,
+    "solids": 1,
+    "volume": 5.0260661904029575,
+    "idealRingVolume": 5.026548245743669
+  },
+  {
+    "maxPointError": 5.587142190918335e-13,
+    "maxJetError": 9.21606370917522e-12,
+    "maxClosingJetError": 1.1998402271728992e-11,
+    "valid": true,
+    "faces": 64,
+    "solids": 1,
+    "volume": 5.0260661904163335,
+    "idealRingVolume": 5.026548245743669
+  }
+]

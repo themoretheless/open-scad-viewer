@@ -408,7 +408,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                 }
                 case 'profile_sweep': {
                     const sweep=checkedProfileSweepNurbsSurface(needCurve(n.inputs[0]),needCurve(n.inputs[1]),n.scale,n.normal,n.sections,n.max_deviation);
-                    if(!sweep.report.accepted||!sweep.surface)throw new Error(`Profile sweep sampled refinement ${sweep.report.sampledControlDeviation}mm exceeds ${sweep.report.budget}mm; refine sections or split the path`);
+                    if(!sweep.report.accepted||!sweep.surface)throw new Error(`Profile sweep continuous deviation is unproved within ${sweep.report.budget}mm (${sweep.report.continuousCertificate?.reason ?? "unresolved"}); refine sections or split the path`);
                     constructionReports[key]=sweep.report;
                     result={kind:'surface',data:sweep.surface};break;
                 }

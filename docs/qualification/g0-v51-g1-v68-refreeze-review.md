@@ -1,0 +1,3 @@
+# Observed hosted runners and released kernel materialization
+
+G0 v51 / G1 v68 preserve v50/v67 and all earlier records. Own-Rust v41 is unchanged. Runner discovery 37626657220 observed Ubuntu image 20261004.327.1, macOS 20260907.0337.1, and Windows win25-vs2026 20260925.250.1. Only observed image identities advance; frozen runtime archives and browser trees are preserved. Native worker qualification also materializes committed CAD release bytes before strict clean preflight. Every one of 4740 required work units starts uncompleted; discovery counts as zero. No qualification approval or production cutover is claimed.
