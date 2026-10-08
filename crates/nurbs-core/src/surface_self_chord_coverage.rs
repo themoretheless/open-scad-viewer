@@ -5,6 +5,14 @@ use crate::{
 };
 type Rectangle = [[f64; 2]; 2];
 type Pair = [Rectangle; 2];
+/// On A×A, closed halves L/R yield LL, LR, RR plus the swapped LR.
+/// Normal alignment uses squared angles and distance uses chord length, so
+/// reversing the chord and exchanging its two endpoint tests changes neither.
+fn diagonal_children(rect: Rectangle, axis: usize, mid: f64) -> [Pair; 3] {
+    let mut left=rect; let mut right=rect;
+    left[axis][1]=mid; right[axis][0]=mid;
+    [[left,left],[left,right],[right,right]]
+}
 pub struct Limits {
     pub cells: usize,
     pub spans: usize,
@@ -52,7 +60,8 @@ pub struct Report<'a> {
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
-    /// Every remaining closed endpoint pair in original parameter coordinates.
+    /// Remaining closed pair representatives in original parameter coordinates.
+    /// Each also represents the pair with its endpoints exchanged.
     /// These are unresolved obligations, never asserted geometric defects.
     pub unresolved_pairs: Vec<Pair>,
     pub reason: &'static str,
@@ -469,6 +478,11 @@ fn qualify_impl<'a>(
             out.reason = "self-coverage-resolution-limit";
             break;
         }
+        if pair[0]==pair[1] {
+            let [ll,lr,rr]=diagonal_children(pair[0],axis,mid);
+            pending.push(rr); pending.push(lr); pending.push(ll);
+            continue;
+        }
         let mut left = pair;
         let mut right = pair;
         left[side][axis][1] = mid;
@@ -493,6 +507,23 @@ fn qualify_impl<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn diagonal_split_covers_closed_product_up_to_endpoint_exchange() {
+        let rect=[[0.,1.],[-2.,2.]];
+        for axis in 0..2 {
+            let mid=(rect[axis][0]+rect[axis][1])*0.5;
+            let children=diagonal_children(rect,axis,mid);
+            let points:Vec<_>=[0.,0.25,0.5,0.75,1.].into_iter().flat_map(|u|
+                [-2.,-1.,0.,1.,2.].into_iter().map(move|v|[u,v])).collect();
+            let contains=|r:Rectangle,p:[f64;2]| (0..2).all(|a|r[a][0]<=p[a] && p[a]<=r[a][1]);
+            for &a in &points {for &b in &points {
+                assert!(children.iter().any(|c|
+                    contains(c[0],a)&&contains(c[1],b) || contains(c[0],b)&&contains(c[1],a)));
+            }}
+            assert_eq!(children[0][0][axis][1],mid);
+            assert_eq!(children[2][0][axis][0],mid);
+        }
+    }
     fn graph() -> Surface {
         Surface {
             degree_u: 2,

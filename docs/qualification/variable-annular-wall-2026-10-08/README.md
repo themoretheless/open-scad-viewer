@@ -1236,3 +1236,20 @@ Already-paid boxes can be projected even when the remaining query budget
 is zero. Independent curved graph and planar polynomial regressions verify
 zero additional restrictions, foreign-source and wrong-pair refusals, and
 missing-work refusal. This changes work accounting, not geometric tolerance.
+
+## Closed endpoint exchange coverage
+
+The original ced1acad mean-matrix audit completed all four unchanged models:
+forward middle faces retain 15 pairs after 14565 cells / 100000 restrictions;
+reverse retain 15 after 14633 / 100000. Full JSON/logs are archived. These
+counts describe budget exhaustion and do not establish defects.
+
+The subdivision now treats a diagonal rectangle A×A as LL, LR and RR, with
+LR also representing RL by endpoint exchange. All splits are closed. Chord
+length and squared alignment with either endpoint normal are invariant under
+reversal, so coverage of the representative proves the exchanged pair too.
+The independent product-coverage regression checks both parameter axes,
+interior points, shared split boundaries and diagonal endpoints. The actual
+short normal chord counterexample remains a refusal test. JSON schema 2
+explicitly marks unresolved pairs as representatives including exchange.
+No asymmetric distinct-face operation uses this reduction.

@@ -2,7 +2,8 @@
 //! Distinct face coverage and material volume remain separate requirements.
 fn save_completed_cases(output: &str, cases: &[value_codec::Value]) {
     let report = value_codec::json!({
-        "schema":"cad-annular-self-wall/1",
+        "schema":"cad-annular-self-wall/2",
+        "unresolvedPairsRepresentEndpointExchange":true,
         "scope":"Full original chart intrinsic self-chord exclusion; absence of a certificate remains unresolved, not a thin witness or global wall certificate",
         "maxSineSquared":1e-4,
         "completeAudit":cases.len()==4,
