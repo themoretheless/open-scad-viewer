@@ -430,6 +430,15 @@ mod tests {
         eprintln!("constrained cylinder rail residual=[{},{}]",residual.lo,residual.hi);
         assert!(constrained.enclose([0.4,0.6],[0.4,0.6],14).unwrap().0.is_some());
         assert!(constrained.enclose([0.4,0.6],[0.4,0.6],13).unwrap().0.is_none());
+        assert!(constrained.derivative_bounds([0.5;2],[0.5;2],36).unwrap().0.is_some());
+        assert!(constrained.derivative_bounds([0.5;2],[0.5;2],35).unwrap().0.is_none());
+        for high in [false,true] {
+            let report=constrained.inspect_support_rail_normals(high,[0.5;2],1e-6,37).unwrap();
+            assert_eq!(report.aligned,Some(true));
+            if high {assert!(report.sine_squared_interval.unwrap()[0]>1e-10,"position-only correction still needs a tangent-field correction");}
+            assert_eq!(constrained.inspect_support_rail_normals(high,[0.5;2],1e-6,36).unwrap().aligned,None);
+            eprintln!("constrained rail high={} aligned={:?} sine={:?} spans={}",high,report.aligned,report.sine_squared_interval,report.spans);
+        }
         let mut bridge_regular=0;
         for i in 0..8 {for j in 0..8 {
             let n=bridge.normal_bounds([i as f64/8.,(i+1) as f64/8.],[j as f64/8.,(j+1) as f64/8.],8).unwrap().0.unwrap();

@@ -1694,6 +1694,12 @@ mod tests {
             let bounds=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
             let u=0.5+0.25*across;let expected=[4.*u/(1.+3.*u),free,0.];
             for k in 0..3 {assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1]);}
+            let derivative=corrected.derivative_bounds([free;2],[across;2],36).unwrap().0.unwrap();
+            let expected=[[0.,1.,0.],[1./(1.+3.*u).powi(2),0.,0.]];
+            for axis in 0..2 {for k in 0..3 {
+                assert!(derivative[axis][k][0]<=expected[axis][k]&&expected[axis][k]<=derivative[axis][k][1]);
+            }}
+
         }}
         assert!(corrected.enclose([0.3;2],[0.5;2],13).unwrap().0.is_none());
         assert!(bridge.constrain_original_rails(0).unwrap().0.is_none());

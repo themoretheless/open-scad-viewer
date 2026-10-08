@@ -1216,3 +1216,32 @@ rational planar reference checks the corrected interior positions against
 This is position geometry only. Corrected derivative fields, regularity,
 injectivity, side tangent planes, native shared-edge admission and corner
 closure remain required before the corrected bridge can be sewn into a Body.
+
+## Derivatives of the source-rail position correction
+
+The constrained bridge now encloses both first derivatives using the source
+profile jets and the original bridge jets, with shared work accounting.
+Interior derivative queries require 36 spans on the control fixture; 35
+refuses. Normal comparison against the source profile requires 37 spans;
+36 returns an unresolved report. Construction refuses internal knots whose
+multiplicity permits first-derivative jumps, so endpoint jet specialization
+does not silently assume continuity.
+
+An independent rational planar reference checks both derivatives at nine
+parameter samples against [0,1,0] and [1/(1+3u)^2,0,0]. The 14 profile tests
+passed in 4.00 seconds. The native shell control regression passed in 102.98
+seconds, including the work-refusal assertions.
+
+At the side-rail midpoint, squared sine enclosures are
+[0,2.717103622480158e-23] on the planar side and
+[1.7757096542737398e-9,1.7757127517940984e-9] on the cylindrical side.
+Both pass the configured 1e-6 threshold at that sample. The strictly positive
+cylindrical lower bound proves that position correction alone does not
+produce exact G1 tangency. This comparison uses the source profile support,
+not fresh neighboring Body ownership, and does not qualify the whole seam.
+
+Next, correct the free transverse jets as well as position on both side
+rails, then requalify full-domain regularity, injectivity and seam angles.
+Closed Body assembly, corners, wall thickness, whole-body intersection
+checks and WASM/worker/UI integration remain open. These changes are native
+only; the previously packaged WASM does not contain them.

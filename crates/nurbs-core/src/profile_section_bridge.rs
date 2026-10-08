@@ -60,6 +60,27 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
         if !std::ptr::eq(a.profile(), b.profile()) || a.axis() != b.axis() {
             return Ok((None, 0));
         }
+        let surface = a.profile().source();
+        for (knots, degree, count) in [
+            (
+                &surface.knots_u,
+                surface.degree_u,
+                surface.control_points.len(),
+            ),
+            (
+                &surface.knots_v,
+                surface.degree_v,
+                surface.control_points[0].len(),
+            ),
+        ] {
+            if knots.iter().any(|&k| {
+                k > knots[degree]
+                    && k < knots[count]
+                    && knots.iter().filter(|&&x| x == k).count() >= degree
+            }) {
+                return Ok((None, 0));
+            }
+        }
         let x = a.parameter();
         let y = b.parameter();
         let width = y - x;
@@ -462,12 +483,7 @@ pub struct RailConstrainedBridge<'r, 'a, 'b, 'c, 'd> {
     bridge: &'r ProfileSectionBridge<'a, 'b, 'c, 'd>,
 }
 impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
-    fn source_rail(
-        &self,
-        high: bool,
-        across: [f64; 2],
-        budget: usize,
-    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+    fn source_rail_domain(&self, high: bool, across: [f64; 2]) -> Result<[[f64; 2]; 2]> {
         let a = self.bridge.section(false);
         let b = self.bridge.section(true);
         let t = I::new(across[0], across[1])?;
@@ -491,7 +507,157 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         };
         domain[axis][0] = domain[axis][0].max(chart[0]);
         domain[axis][1] = domain[axis][1].min(chart[1]);
-        a.profile().enclose(domain, budget)
+        Ok(domain)
+    }
+    fn source_rail(
+        &self,
+        high: bool,
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.bridge
+            .section(false)
+            .profile()
+            .enclose(self.source_rail_domain(high, across)?, budget)
+    }
+    pub fn derivative_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
+        self.bridge.validate(free, across, budget)?;
+        if across == [0., 0.] || across == [1., 1.] {
+            return self.bridge.derivative_bounds(free, across, budget);
+        }
+        let (base, mut spent) = self.bridge.derivative_bounds(free, across, budget)?;
+        let Some(base) = base else {
+            return Ok((None, spent));
+        };
+        let mut result = [[I::point(0.); 3]; 2];
+        for axis in 0..2 {
+            for k in 0..3 {
+                result[axis][k] = I::new(base[axis][k][0], base[axis][k][1])?;
+            }
+        }
+        let range = self.bridge.section(false).range();
+        let width = I::point(range[1]).sub(I::point(range[0]))?;
+        let t = I::new(free[0], free[1])?
+            .sub(I::point(range[0]))?
+            .div(width)?;
+        for high in [false, true] {
+            let mut values = Vec::new();
+            for query in 0..4 {
+                if spent == budget {
+                    return Ok((None, spent));
+                }
+                let (bounds, used) = match query {
+                    0 => self.source_rail(high, across, budget - spent)?,
+                    1 => self.bridge.rail(high).enclose(across, budget - spent)?,
+                    2 => {
+                        let section = self.bridge.section(false);
+                        let (j, used) = section.profile().derivative_bounds(
+                            self.source_rail_domain(high, across)?,
+                            budget - spent,
+                        )?;
+                        let mut bounds = [[0.; 2]; 3];
+                        if let Some(j) = j {
+                            for k in 0..3 {
+                                let value =
+                                    I::new(j[k][section.axis()][0], j[k][section.axis()][1])?
+                                        .mul(I::point(self.bridge.scales[0]))?;
+                                bounds[k] = [value.lo, value.hi];
+                            }
+                            (Some(bounds), used)
+                        } else {
+                            (None, used)
+                        }
+                    }
+                    _ => {
+                        let (j, used) = self.bridge.derivative_bounds(
+                            [range[usize::from(high)]; 2],
+                            across,
+                            budget - spent,
+                        )?;
+                        (j.map(|j| j[1]), used)
+                    }
+                };
+                spent += used;
+                let Some(bounds) = bounds else {
+                    return Ok((None, spent));
+                };
+                values.push(bounds);
+            }
+            let weight = if high { t } else { I::point(1.).sub(t)? };
+            let sign = I::point(if high { 1. } else { -1. }).div(width)?;
+            for k in 0..3 {
+                let v = |q: usize| I::new(values[q][k][0], values[q][k][1]);
+                result[0][k] = result[0][k].add(sign.mul(v(0)?.sub(v(1)?)?)?)?;
+                result[1][k] = result[1][k].add(weight.mul(v(2)?.sub(v(3)?)?)?)?;
+            }
+        }
+        Ok((Some(result.map(|axis| axis.map(|r| [r.lo, r.hi]))), spent))
+    }
+    pub fn normal_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (j, spent) = self.derivative_bounds(free, across, budget)?;
+        let Some([a, b]) = j else {
+            return Ok((None, spent));
+        };
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let i = (k + 1) % 3;
+            let l = (k + 2) % 3;
+            let n = I::new(a[i][0], a[i][1])?
+                .mul(I::new(b[l][0], b[l][1])?)?
+                .sub(I::new(a[l][0], a[l][1])?.mul(I::new(b[i][0], b[i][1])?)?)?;
+            bounds[k] = [n.lo, n.hi];
+        }
+        Ok((Some(bounds), spent))
+    }
+    pub fn inspect_support_rail_normals(
+        &self,
+        high: bool,
+        across: [f64; 2],
+        threshold: f64,
+        budget: usize,
+    ) -> Result<crate::normal_alignment::PairReport> {
+        check(
+            threshold.is_finite() && (0. ..1.).contains(&threshold),
+            "Bound constrained rail angle",
+        )?;
+        let free = self.bridge.section(false).range()[usize::from(high)];
+        let (a, mut spent) = self.normal_bounds([free; 2], across, budget)?;
+        let mut out = crate::normal_alignment::PairReport {
+            aligned: None,
+            sine_squared_interval: None,
+            normal_components: [a, None],
+            spans: spent,
+            reason: "constrained-rail-normal-work-limit",
+        };
+        let Some(a) = a else {
+            return Ok(out);
+        };
+        if spent == budget {
+            return Ok(out);
+        }
+        let (b, used) = self
+            .bridge
+            .section(false)
+            .profile()
+            .normal_bounds(self.source_rail_domain(high, across)?, budget - spent)?;
+        spent += used;
+        let Some(b) = b else {
+            out.spans = spent;
+            return Ok(out);
+        };
+        let mut compared = crate::normal_alignment::inspect_pair_bounds([a, b], threshold)?;
+        compared.spans = spent;
+        Ok(compared)
     }
     pub fn enclose(
         &self,
