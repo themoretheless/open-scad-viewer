@@ -98,6 +98,10 @@ Direct source normal-cache controls now verify zero factored budget, one charged
 
 ## Owned normal factors packaged acceptance
 
+### Native positive chord cone predicate
+
+`normal_alignment::positive_chord_cone_excluded` bounds the normal angle of every nonzero positive combination of supplied interval generators. A strict positive projection prevents cancellation; the ratio of normal dot product to that projection bounds the cosine through Cauchy-Schwarz. All generators are validated before early refusal. Zero normal/projection, nonpositive projected generators, possible cancellation and aligned chords supply no exclusion. Two direct tests pass and the complete normal-alignment test filter passes. This is native algebra only: original source derivative paths and exact common-boundary ownership are not yet bound to these generators, so it supplies no new Body certificate or packaged wall proof.
+
 ### Increased per-pair work is not an improvement
 
 World-enclosure replay of all four endpoint-resolution products (none truncated) places them near (18.47759065, 7.65366865, 4.75) or its XY reflection. Original rectangle bounds overlap; box-distance lower bounds are zero and upper bounds range from 9.933294e-8 to 1.374485e-7 mm. These are bounds of unresolved boxes, not a wall witness, measured thickness or permission to discard a contact. Source-boundary dependence and chord-direction control near the endpoints require further proof. `mixed-wall-resolution-world-native.json` preserves every UV rectangle, both original coordinate boxes and their box-distance interval. The inspection example limits world-detail output to 32 products and explicitly marks truncation; full unresolved UV products remain preserved.

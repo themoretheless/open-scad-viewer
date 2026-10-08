@@ -27,6 +27,61 @@ fn norm_squared(x: [I; 3]) -> Result<I> {
     }
     I::new(out.lo.max(0.), out.hi)
 }
+
+/// Exclude normal alignment for every nonzero positive combination of the
+/// supplied direction enclosures. The caller must prove its original chords
+/// belong to this cone; this algebraic predicate does not certify a surface.
+/// A strict positive projection prevents cancellation between generators.
+pub fn positive_chord_cone_excluded(
+    generators: &[[[f64; 2]; 3]], normal: [[f64; 2]; 3],
+    projection: [f64; 3], max_sine_squared: f64,
+) -> Result<bool> {
+    check(!generators.is_empty() && generators.len()<=16
+        && projection.iter().all(|x|x.is_finite())
+        && max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+        "Choose bounded chord generators, a finite projection and an angle below one")?;
+    let n=[I::new(normal[0][0],normal[0][1])?,I::new(normal[1][0],normal[1][1])?,I::new(normal[2][0],normal[2][1])?];
+    let p=projection.map(I::point);
+    let directions:Vec<_>=generators.iter().map(|g|Ok([
+        I::new(g[0][0],g[0][1])?,I::new(g[1][0],g[1][1])?,I::new(g[2][0],g[2][1])?
+    ])).collect::<Result<_>>()?;
+    let n2=norm_squared(n)?;let p2=norm_squared(p)?;
+    if n2.lo<=0. || p2.lo<=0. {return Ok(false);}
+    let mut ratio=0_f64;
+    for g in directions {
+        let mut projected=I::point(0.);let mut normal_dot=I::point(0.);
+        for k in 0..3 {
+            projected=projected.add(g[k].mul(p[k])?)?;
+            normal_dot=normal_dot.add(g[k].mul(n[k])?)?;
+        }
+        if projected.lo<=0. {return Ok(false);}
+        let absolute=normal_dot.lo.abs().max(normal_dot.hi.abs());
+        ratio=ratio.max(I::point(absolute).div(I::point(projected.lo))?.hi);
+    }
+    let cosine_upper=square(I::point(ratio))?.mul(p2)?.div(I::point(n2.lo))?.hi;
+    Ok(cosine_upper<I::point(1.).sub(I::point(max_sine_squared))?.lo)
+}
+
+#[cfg(test)]
+mod positive_chord_cone_tests {
+    use super::positive_chord_cone_excluded as excluded;
+    #[test]
+    fn covers_positive_combinations_and_refuses_cancellation_or_alignment() {
+        let n=[[0.,0.],[0.,0.],[1.,1.]];
+        let g=[[[1.,2.],[-2.,2.],[-0.01,0.01]],[[2.,3.],[-1.,1.],[-0.02,0.02]]];
+        assert!(excluded(&g,n,[1.,0.,0.],1e-6).unwrap());
+        assert!(!excluded(&g,n,[-1.,0.,0.],1e-6).unwrap());
+        assert!(!excluded(&[[[0.,0.],[0.,0.],[1.,2.]]],n,[0.,0.,1.],1e-6).unwrap());
+        assert!(!excluded(&[[[-1.,1.],[0.,0.],[0.,0.]]],n,[1.,0.,0.],1e-6).unwrap());
+        assert!(!excluded(&g,[[0.,0.];3],[1.,0.,0.],1e-6).unwrap());
+    }
+    #[test]
+    fn validates_all_generators_before_any_early_refusal() {
+        let g=[[[0.,0.];3],[[f64::NAN,1.],[0.,0.],[0.,0.]]];
+        assert!(excluded(&g,[[0.,0.],[0.,0.],[1.,1.]],[1.,0.,0.],1e-6).is_err());
+        assert!(excluded(&[],[[0.,0.];3],[1.,0.,0.],1e-6).is_err());
+    }
+}
 type Net = Vec<Vec<[I; 4]>>;
 fn restrict_net(
     net: &Net,
