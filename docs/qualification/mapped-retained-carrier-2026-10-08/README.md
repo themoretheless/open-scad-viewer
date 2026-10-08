@@ -2684,3 +2684,17 @@ The pre-column-intersection run with 2000 cells / 100000 spans emitted
 (1.13525390625%). This is a derivative-budget stop, not the 2000-cell stop
 and not a geometric intersection witness. Its result is the comparison
 baseline for the new shared-displacement projected-column intersection.
+
+### Full XY injectivity confirmed after projected-column correction
+
+The new native run emitted a complete XY cover: 456 accepted rectangles,
+zero pending, 911 cells, 75773 spans. Regular-plus-pending area checks passed.
+The fixed projection is
+[[8.370299227358235,0.9154746877371366,0],
+ [0.058483674244829885,-0.8488064130710989,0]].
+No tolerance or principal-minor condition was weakened. The fixture now
+requires this complete cover and separately requests a fresh owned XY face
+through `qualify_face_from_rails`, verifying owner identity, exact projection,
+and complete regularity. The direct baseline remains unqualified. Complete
+XY injectivity does not yet prove exclusion of the full ruled-neighbor trace
+outside the owned subrail; the combined audit still has 154 pending pairs.

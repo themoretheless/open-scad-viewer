@@ -207,6 +207,14 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
     /// Fresh whole-domain injectivity also proves immersion. Authority remains
     /// attached to this boundary and its exact full-Hermite recipe.
     pub fn qualify_face<'a>(&'a self,projection:[[f64;3];2],controls:usize,cells:usize,spans:usize)->Result<TransitionFaceReport<'a,'s,'p,'b>> {
+        self.qualify_face_policy(projection,controls,cells,spans,false)
+    }
+    /// Fresh full-domain admission with source-rail bounds. A caller's
+    /// diagnostic report cannot create an owned transition face.
+    pub fn qualify_face_from_rails<'a>(&'a self,projection:[[f64;3];2],controls:usize,cells:usize,spans:usize)->Result<TransitionFaceReport<'a,'s,'p,'b>> {
+        self.qualify_face_policy(projection,controls,cells,spans,true)
+    }
+    fn qualify_face_policy<'a>(&'a self,projection:[[f64;3];2],controls:usize,cells:usize,spans:usize,from_rails:bool)->Result<TransitionFaceReport<'a,'s,'p,'b>> {
         let root=self.rooted[0];
         let profile=root.restricted.proposal.profile(root.face).unwrap();
         let sections=[profile.section(root.axis,root.parameters[0])?,profile.section(root.axis,root.parameters[1])?];
@@ -216,7 +224,11 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
         let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(first,last,[width;2])?;
         let (bridge,_)=bridge.constrain_original_rails(controls)?;
         let Some(bridge)=bridge else {return Ok(TransitionFaceReport{face:None,interior:None,reason:"profile-transition-face-recipe-unproven"});};
-        let interior=bridge.inspect_transverse_corrected_injectivity(range,[0.,1.],projection,cells,spans)?;
+        let interior=if from_rails {
+            bridge.inspect_transverse_corrected_injectivity_from_rails(range,[0.,1.],projection,cells,spans)?
+        } else {
+            bridge.inspect_transverse_corrected_injectivity(range,[0.,1.],projection,cells,spans)?
+        };
         let face=if interior.complete_regular {Some(TransitionFace{boundary:self,projection})}else{None};
         let reason=interior.reason;
         Ok(TransitionFaceReport{face,interior:Some(interior),reason})

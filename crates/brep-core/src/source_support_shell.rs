@@ -536,6 +536,8 @@ mod tests {
         assert_eq!(interior.pending.len(),1);
         assert!(boundary.qualify_face([[f64::NAN;3];2],1000,1,100).is_err());
         assert!(boundary.qualify_face([[0.;3];2],0,1,100).unwrap().face.is_none());
+        assert!(boundary.qualify_face_from_rails(projection,1000,0,0).unwrap().face.is_none());
+        assert!(boundary.qualify_face_from_rails([[f64::NAN;3];2],1000,1,100).is_err());
         // This candidate only preconditions XY. Midpoint estimates choose
         // a matrix; fresh whole-expression interval coverage grants authority.
         let xy_det=vectors[0][0]*vectors[1][1]-vectors[1][0]*vectors[0][1];
@@ -545,8 +547,8 @@ mod tests {
         // Diagnose the exact boundary separately from coarse interval cells.
         // A candidate projection may degenerate there even when 3D immersion
         // is proven; point diagnostics never grant contact authority.
-        for across in [0.,0.5,1.] {
-            let (rail,spent)=bridge.first_free_from_rail_bounds([1.,1.],[across,across],1000).unwrap();
+        for across in [[0.,0.],[0.5,0.5],[1.,1.],[0.,1.]] {
+            let (rail,spent)=bridge.first_free_from_rail_bounds([1.,1.],across,1000).unwrap();
             let projected=rail.map(|jet|xy_projection.map(|row| {
                 let mut v=nurbs_core::interval_eval::Interval::point(0.);
                 for k in 0..3 {
@@ -557,7 +559,18 @@ mod tests {
                 }
                 [v.lo,v.hi]
             }));
-            eprintln!("owned XY high rail across={across} projectedFree={projected:?} spans={spent}");
+            eprintln!("owned XY high rail across={across:?} projectedFree={projected:?} spans={spent}");
+            if across==[0.,1.] {
+                let bounds=projected.expect("bounded full source rail");
+                assert!(bounds[0][0]>0.,"whole high rail first principal minor");
+                assert_eq!(spent,1);
+            }
+        }
+        for domain in [[[0.984375,1.],[0.,0.015625]],[[0.984375,1.],[0.5,0.515625]]] {
+            let (second,spent)=bridge.second_free_derivatives_with_transverse_correction(domain[0],domain[1],10000).unwrap();
+            eprintln!("owned XY boundary path second domain={domain:?} bounds={second:?} spans={spent}");
+            let (jet,spent)=bridge.derivatives_with_transverse_correction(domain[0],domain[1],10000).unwrap();
+            eprintln!("owned XY boundary full jet domain={domain:?} bounds={jet:?} spans={spent}");
         }
         let direct_xy=bridge.inspect_transverse_corrected_injectivity(
             [0.,1.],[0.,1.],xy_projection,1000,100000).unwrap();
@@ -566,11 +579,11 @@ mod tests {
         eprintln!("owned transition direct XY pendingArea={} accepted={} pending={} cells={} spans={}",
             area(&direct_xy.pending),direct_xy.regular.len(),direct_xy.pending.len(),direct_xy.cells,direct_xy.spans);
         let xy_report=bridge.inspect_transverse_corrected_injectivity_from_rails(
-            [0.,1.],[0.,1.],xy_projection,1000,100000).unwrap();
+            [0.,1.],[0.,1.],xy_projection,2000,100000).unwrap();
         eprintln!("owned transition XY injectivity qualified={} accepted={} pending={} cells={} spans={} projection={:?}",
             xy_report.complete_regular,xy_report.regular.len(),xy_report.pending.len(),xy_report.cells,xy_report.spans,xy_projection);
         eprintln!("owned transition rail XY pendingArea={} pendingDomains={:?}",area(&xy_report.pending),xy_report.pending);
-        assert!(xy_report.cells<=1000 && xy_report.spans<=100000);
+        assert!(xy_report.cells<=2000 && xy_report.spans<=100000);
         // Budget exhaustion must preserve the entire requested domain. A
         // positive determinant on visited cells cannot hide an omitted region.
         for report in [&direct_xy,&xy_report] {
@@ -581,11 +594,24 @@ mod tests {
                 assert!(r.iter().all(|v|v[0]>=0. && v[1]<=1. && v[0]<v[1]));
             }
         }
-        if xy_report.complete_regular {assert!(xy_report.pending.is_empty() && xy_report.complete_regular);}
+        assert!(xy_report.complete_regular && xy_report.pending.is_empty(),
+            "whole XY transition injectivity must be qualified");
+        let xy_owned=boundary.qualify_face_from_rails(xy_projection,1000,2000,100000).unwrap();
+        let xy_face=xy_owned.face.expect("fresh owned XY transition admission");
+        assert!(std::ptr::eq(xy_face.boundary(),&boundary));
+        assert_eq!(xy_face.projection(),xy_projection);
+        let xy_interior=xy_owned.interior.unwrap();
+        assert!(xy_interior.complete_regular && xy_interior.pending.is_empty());
         let admitted=boundary.qualify_face(projection,1000,1000,61000).unwrap();
         let face=admitted.face.expect("complete interior admission for the owned annular transition");
         assert!(std::ptr::eq(face.boundary(),&boundary));
         assert_eq!(face.projection(),projection);
+        let from_rails=boundary.qualify_face_from_rails(projection,1000,2000,100000).unwrap();
+        let rail_face=from_rails.face.expect("fresh rail-policy admission for owned 3D projection");
+        assert!(std::ptr::eq(rail_face.boundary(),&boundary));
+        assert_eq!(rail_face.projection(),projection);
+        let rail_interior=from_rails.interior.unwrap();
+        assert!(rail_interior.complete_regular && rail_interior.pending.is_empty());
         assert!(face.qualify_rail_incidence(1,1,100).unwrap().incidence.is_none());
         assert!(face.qualify_rail_incidence(100000000,100000,0).unwrap().incidence.is_none());
         let sewn=face.qualify_rail_incidence(100000000,100000,100).unwrap();
