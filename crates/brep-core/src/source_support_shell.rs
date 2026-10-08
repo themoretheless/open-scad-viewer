@@ -212,6 +212,17 @@ mod tests {
             axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
         }).unwrap().body.unwrap();
         assert!(!std::ptr::eq(&body,&twin));
+        let extension_limits=crate::source_wall_self_coverage::Limits{
+            plane_controls:10000,cells:1,spans:1,cells_per_face:1,spans_per_face:1};
+        let mut extension=crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,extension_limits).unwrap();
+        assert!(crate::source_wall_self_coverage::extend_with_pole_facts(&twin,9.99,1e-6,&mut extension,extension_limits,1).is_err());
+        assert!(crate::source_wall_self_coverage::extend_with_pole_facts(&body,10.01,1e-6,&mut extension,extension_limits,1).is_err());
+        assert!(crate::source_wall_self_coverage::extend_with_pole_facts(&body,9.99,2e-6,&mut extension,extension_limits,1).is_err());
+        assert!(crate::source_wall_self_coverage::extend_with_pole_facts(&body,9.99,1e-6,&mut extension,extension_limits,100000001).is_err());
+        crate::source_wall_self_coverage::extend_with_pole_facts(&body,9.99,1e-6,&mut extension,extension_limits,1).unwrap();
+        assert!(extension.all_self_pairs_qualified());
+        assert_eq!((extension.pole_exact_work,extension.pole_cells,extension.pole_spans),(0,0,0));
+
         for wrong_owner in [true,false] {
             let make_facts=||crate::source_wall_self_coverage::qualify(&body,9.99,1e-6,
                 crate::source_wall_self_coverage::Limits{plane_controls:10000,cells:1,spans:1,cells_per_face:1,spans_per_face:1}).unwrap().into_certificates();
