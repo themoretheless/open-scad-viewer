@@ -104,6 +104,8 @@ import { TextureResources } from './textureResources'
 import { fillObjectUniform, fillSceneUniforms } from './uniformFill'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
+import { GpuPicker } from './gpuPicker'
+export { GpuPicker } from './gpuPicker'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -355,6 +357,7 @@ export class WebGPURenderer {
   private csgPreviewTree: GpuCsgTree | null = null
   private csgDepthStencil: GPUTexture | null = null
   private csgDepthStencilView: GPUTextureView | null = null
+  private gpuPicker: GpuPicker | null = null
 
   private meshes: GMesh[] = []
   private readonly nativePicking = new NativePickingCache()
@@ -719,6 +722,29 @@ export class WebGPURenderer {
       })
       this.csgDepthStencilView = this.csgDepthStencil.createView()
     }
+  }
+
+  async gpuPickAt(clientX: number, clientY: number): Promise<number | null> {
+    const canvas = this.canvas, dev = this.dev
+    if (!canvas || !dev || !this.initialized || this.dead || this.lost || this.meshes.length === 0) return null
+    const rect = canvas.getBoundingClientRect()
+    const px = clientX - rect.left
+    const py = clientY - rect.top
+    if (px < 0 || py < 0 || px >= rect.width || py >= rect.height) return null
+
+    if (!this.gpuPicker) {
+      this.gpuPicker = new GpuPicker()
+    }
+
+    const cam = this.cameraState()
+    return this.gpuPicker.pick(dev, this.meshes, {
+      cameraViewProjection: cam.viewProjection,
+      viewportWidth: rect.width,
+      viewportHeight: rect.height,
+      sectionNormal: this.sectionNormal,
+      sectionOffset: this.sectionOffset,
+      sectionEnabled: this.sectionEnabled,
+    }, px, py)
   }
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
@@ -3039,6 +3065,8 @@ export class WebGPURenderer {
     this.csgDepthStencil = null
     this.csgDepthStencilView = null
     this.csgPreviewTree = null
+    this.gpuPicker?.destroy()
+    this.gpuPicker = null
     this.sceneUB?.destroy()
     this.sceneUB = null
     this.morphDummyVB?.destroy()
