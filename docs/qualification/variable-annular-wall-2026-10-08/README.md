@@ -1413,3 +1413,13 @@ whole-wall fixtures plus their seven worker-handler checks passed. Planar box
 and enclosure fixture qualification does not establish general curved walls.
 See `whole-wall-control-hull-worker.json.gz` and
 `whole-wall-control-hull-regression.log.gz`.
+
+The rendered whole-wall panel passed mouse acceptance for box, enclosure and
+curved unresolved fixtures using an isolated current production build. The
+worker proxy holds a request, cancels it via a changed tolerance, then invokes
+the saved obsolete callback with a previously successful result. The UI does
+not restore obsolete thickness. Injected transport failure is localized, Retry
+succeeds, curved refusal remains explicit, and document/reload equality holds.
+This combines real WASM computations with controlled race/failure injection;
+it does not qualify general source-body wall coverage or all P0 commands.
+Evidence: `whole-wall-ui-late-reply.json.gz`.
