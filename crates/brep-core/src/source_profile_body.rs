@@ -1556,3 +1556,7 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
 #[path="source_profile_shell.rs"]
 mod assembled_shell;
 pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,ShellPair,ShellPairKind,ShellAssemblyReport,SupportPairReport,SupportProduct,ShellSupportPair,ShellSupportReport,OriginalContactReport,OriginalPlanarContact,OriginalFiberContact,OriginalFiberReport,OriginalFiberProof,OriginalAdditionalContact,OriginalAdditionalProof,OriginalAdditionalReport,ContactAuditLimits,PairContactProof,AuditedContactPair,ShellContactAudit,TransitionPlaneContact,TransitionPlaneReport};
+
+#[path="source_profile_projected_region.rs"]
+mod projected_region;
+pub use projected_region::{OriginalProjectedRegion,OriginalProjectedRegionReport};

@@ -2780,3 +2780,15 @@ must return complete bounds within one shared span budget; otherwise the
 original broad target is retained. Grid endpoint values are reused exactly,
 including the original domain extremes. The new native run also checks the
 original-source projected Jordan route; both results remain unverified.
+
+A new owned `OriginalProjectedRegion` route pairs the already admitted
+transition with a fresh original-source XY Jordan certificate. It requires
+an interval-proven invertible XY projection, section cuts strictly inside
+the original chart, and no collapsed original boundary in the uncut free
+direction. Exact Hermite boundary specializations then identify the same
+simple projected boundary; injective interiors and Jordan separation identify
+the same planar region. The certificate retains the actual transition owner,
+original certificate and original UV subrectangle. This does not admit a 3D
+Body or a neighbor contact. Zero budgets refuse and invalid tolerances error.
+Compilation passed. Native owner/domain/refusal checks and actual original
+qualification are running; no success is assumed for the original source.

@@ -600,6 +600,17 @@ mod tests {
         let xy_face=xy_owned.face.expect("fresh owned XY transition admission");
         assert!(std::ptr::eq(xy_face.boundary(),&boundary));
         assert_eq!(xy_face.projection(),xy_projection);
+        assert!(xy_face.qualify_original_xy_region(1e-8,0,0).unwrap().certificate.is_none());
+        assert!(xy_face.qualify_original_xy_region(f64::NAN,1,1).is_err());
+        let original_region=xy_face.qualify_original_xy_region(1e-8,10000000,10000).unwrap();
+        eprintln!("owned transition original XY region qualified={} work={} cells={} reason={}",
+            original_region.certificate.is_some(),original_region.exact_work,
+            original_region.boundary_cells,original_region.reason);
+        if let Some(region)=original_region.certificate {
+            assert!(std::ptr::eq(region.face(),&xy_face));
+            assert_eq!(region.original().axes(),[0,1]);
+            assert_eq!(region.source_domain(),[[0.75,0.9],[0.,1.]]);
+        }
         let xy_interior=xy_owned.interior.unwrap();
         assert!(xy_interior.complete_regular && xy_interior.pending.is_empty());
         let admitted=boundary.qualify_face(projection,1000,1000,61000).unwrap();
