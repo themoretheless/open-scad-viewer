@@ -90,9 +90,18 @@ fn main() {
             },
         )
         .unwrap();
+        let regions=body.geometry().shell().regions().expect("original retained regions");
+        let surfaces=faces.map(|f|regions[f].loops()[0][0].surface());
+        let world_products:Vec<_>=r.unresolved_products.iter().take(32).map(|uv|{
+            let bounds=[nurbs_core::surface_distance::rectangle_bounds(surfaces[0],uv[0]).unwrap(),
+                nurbs_core::surface_distance::rectangle_bounds(surfaces[1],uv[1]).unwrap()];
+            let distance=nurbs_core::surface_distance::enclosure_distance(&bounds[0],&bounds[1]).unwrap();
+            json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1]})
+        }).collect();
         results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,
             "domainCells":r.domain_cells,"unresolvedProducts":r.unresolved_products.len(),
+            "unresolvedWorldProducts":world_products,"worldProductsTruncated":r.unresolved_products.len()>32,
             "unresolvedUvProducts":r.unresolved_products,"reason":r.reason}));
     }
     let automatic = if args.get(4).is_some_and(|v| v == "pass") {
