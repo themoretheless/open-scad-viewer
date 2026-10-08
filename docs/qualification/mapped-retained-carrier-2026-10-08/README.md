@@ -2838,3 +2838,9 @@ zero transition-ruled admissions. Compilation passed; the corrected full
 native refusal/audit fixture is running. The next required geometry work is
 projected-Jordan authority for the exact factor-expression WeightProfile,
 including its actual boundary trace; original-surface authority is insufficient.
+
+### Exact factorized-weight projected Jacobian
+
+Added `cad_predicates::factorized_surface_projected_jacobian` for authored Cartesian controls and positive row/column weight factors. The common positive pivot cancels from the rational map. Target weights are multiplied as exact expansions, including nonrepresentable binary64 products; no rounded replacement surface is used. Whole grids and individually selected coefficients share the existing determinant algorithm and budget refusal. This is orientation evidence only, not a Jordan-boundary or shell-contact certificate.
+
+Validation: all 39 cad-predicates library tests pass. New regression covers nonrepresentable 1.1×1.1 products, all selected coefficients, reversed projection, a real fold, nonpositive factors and exhausted budgets. Existing native restricted-profile seam fixture passed (219.87 s), retaining 154 pending contact pairs and counts [154,162,12,23,54,1,0]. No WASM rebuild or UI admission was performed. Remaining work: bind this predicate to the actual WeightProfile orientation certificate and prove its exact boundary before region/contact admission.

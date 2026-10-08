@@ -2,8 +2,8 @@
 //! Consistent coefficients imply strict orientation in the open chart; this
 //! alone proves neither global injectivity nor boundary ownership.
 use crate::{
-    exact_inputs, Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef,
-    PredicateContext, Reason, Sign,
+    Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef, PredicateContext,
+    Reason, Sign, exact_inputs,
 };
 type Poly = Vec<Vec<Expansion>>;
 pub struct Decision {
@@ -120,6 +120,17 @@ fn compute(
     column: Option<usize>,
     with_bounds: bool,
 ) -> Result<Decision, InputError> {
+    compute_weights(ctx, surface, axes, row, column, with_bounds, None)
+}
+fn compute_weights(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    axes: [usize; 2],
+    row: Option<usize>,
+    column: Option<usize>,
+    with_bounds: bool,
+    column_factors: Option<&[LeafRef]>,
+) -> Result<Decision, InputError> {
     if !(2..=9).contains(&surface.len())
         || !(2..=9).contains(&surface[0].len())
         || surface.iter().any(|r| r.len() != surface[0].len())
@@ -137,14 +148,35 @@ fn compute(
         .flat_map(|p| p.iter())
         .map(|&r| ctx.resolve(r).cloned())
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    if let Some(factors) = column_factors {
+        if factors.len() != surface[0].len() {
+            return Err(InputError::InvalidInput(
+                "Invalid factorized weight columns",
+            ));
+        }
+        values.extend(
+            factors
+                .iter()
+                .map(|&r| ctx.resolve(r).cloned())
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+    }
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
     let result = (|| -> Result<(Vec<Vec<Sign>>, Option<Vec<Vec<[f64; 2]>>>), Reason> {
         ctx.charge(values.len() as u64)?;
         let x = exact_inputs(&values, ctx)?;
         let unit = x.last().unwrap();
-        if x[..x.len() - 1]
+        let control_len = surface.len() * surface[0].len() * 4;
+        if x[..control_len]
             .chunks_exact(4)
             .any(|p| p[3].sign() != Sign::Positive)
+        {
+            return Err(Reason::MissingProof);
+        }
+        if column_factors.is_some()
+            && x[control_len..x.len() - 1]
+                .iter()
+                .any(|f| f.sign() != Sign::Positive)
         {
             return Err(Reason::MissingProof);
         }
@@ -154,7 +186,12 @@ fn compute(
         for (u, row) in surface.iter().enumerate() {
             for (v, _) in row.iter().enumerate() {
                 let at = (u * row.len() + v) * 4;
-                let w = &x[at + 3];
+                let weight = if column_factors.is_some() {
+                    x[at + 3].mul(&x[control_len + v], ctx)?
+                } else {
+                    x[at + 3].clone()
+                };
+                let w = &weight;
                 h[0][u][v] = x[at + axes[0]].sub(&x[axes[0]], ctx)?.mul(w, ctx)?;
                 h[1][u][v] = x[at + axes[1]].sub(&x[axes[1]], ctx)?.mul(w, ctx)?;
                 h[2][u][v] = unit.mul(w, ctx)?;
@@ -229,6 +266,44 @@ fn compute(
         work_used: ctx.work_used(),
         context: ctx.identity(),
     })
+}
+
+/// Exact projected Jacobian for separable weights row[u]*column[v]/pivot.
+/// A common positive pivot cancels from the rational map. Products remain
+/// expansions; no rounded target weight is introduced. The caller validates
+/// the positive pivot and clamped Bezier layout. A selected coefficient is
+/// only local evidence; whole-chart orientation requires every coefficient.
+pub fn factorized_surface_projected_jacobian(
+    ctx: &mut PredicateContext<'_>,
+    points: &[Vec<[LeafRef; 3]>],
+    rows: &[LeafRef],
+    columns: &[LeafRef],
+    axes: [usize; 2],
+    index: Option<[usize; 2]>,
+) -> Result<Decision, InputError> {
+    if !(2..=9).contains(&points.len())
+        || rows.len() != points.len()
+        || !(2..=9).contains(&columns.len())
+        || points.iter().any(|r| r.len() != columns.len())
+    {
+        return Err(InputError::InvalidInput(
+            "Invalid factorized projected chart",
+        ));
+    }
+    let surface: Vec<Vec<[LeafRef; 4]>> = points
+        .iter()
+        .enumerate()
+        .map(|(u, row)| row.iter().map(|p| [p[0], p[1], p[2], rows[u]]).collect())
+        .collect();
+    compute_weights(
+        ctx,
+        &surface,
+        axes,
+        index.map(|i| i[0]),
+        index.map(|i| i[1]),
+        false,
+        Some(columns),
+    )
 }
 
 /// All coefficient rows under one bounded predicate context.
@@ -437,13 +512,15 @@ fn derivative_numerator(
         }
         let selected = column.map_or(&net[row][..], |v| &net[row][v..v + 1]);
         let signs = vec![selected.iter().map(Expansion::sign).collect()];
-        let bounds = vec![selected
-            .iter()
-            .map(|x| {
-                let b = x.enclosure(ctx)?;
-                Ok([b.lo, b.hi])
-            })
-            .collect::<Result<Vec<_>, Reason>>()?];
+        let bounds = vec![
+            selected
+                .iter()
+                .map(|x| {
+                    let b = x.enclosure(ctx)?;
+                    Ok([b.lo, b.hi])
+                })
+                .collect::<Result<Vec<_>, Reason>>()?,
+        ];
         let mut scale = Expansion::scalar(1.);
         for _ in 0..if projection.is_some() { 5 } else { 4 } {
             scale = scale.mul(unit, ctx)?;
@@ -635,9 +712,11 @@ mod tests {
                 let scale = d.coefficient_scale.unwrap();
                 assert!(scale[0] > 0.);
                 if coordinate == 1 && row == 4 {
-                    assert!(bounds[0]
-                        .iter()
-                        .all(|b| b[0] <= 2. * scale[1] && b[1] >= 2. * scale[0]));
+                    assert!(
+                        bounds[0]
+                            .iter()
+                            .all(|b| b[0] <= 2. * scale[1] && b[1] >= 2. * scale[0])
+                    );
                 }
                 assert_eq!(bounds.len(), 1);
                 assert_eq!(bounds[0].len(), 2);
@@ -851,6 +930,106 @@ mod tests {
                 .all(|s| *s == Sign::Zero || *s == wanted)
                 && rows.iter().flatten().any(|s| *s == wanted)
         })
+    }
+    fn factorized_check(
+        points: Vec<Vec<[f64; 3]>>,
+        rows: [f64; 2],
+        columns: [f64; 2],
+        axes: [usize; 2],
+        work: u64,
+        index: Option<[usize; 2]>,
+    ) -> Decision {
+        let values: Vec<_> = points
+            .iter()
+            .flatten()
+            .flatten()
+            .copied()
+            .chain(rows)
+            .chain(columns)
+            .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+            .collect();
+        let arena = SourceArena::authored("factorized-jacobian", 1, values).unwrap();
+        let points: Vec<Vec<_>> = points
+            .iter()
+            .enumerate()
+            .map(|(u, row)| {
+                row.iter()
+                    .enumerate()
+                    .map(|(v, _)| std::array::from_fn(|a| arena.leaf((u * 2 + v) * 3 + a).unwrap()))
+                    .collect()
+            })
+            .collect();
+        let rows = [arena.leaf(12).unwrap(), arena.leaf(13).unwrap()];
+        let columns = [arena.leaf(14).unwrap(), arena.leaf(15).unwrap()];
+        let tolerance = ToleranceContext::default_valid();
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: work,
+                ..Limits::default()
+            },
+            None,
+        );
+        factorized_surface_projected_jacobian(&mut ctx, &points, &rows, &columns, axes, index)
+            .unwrap()
+    }
+    #[test]
+    fn factorized_weights_preserve_exact_orientation_and_refuse_partial_work() {
+        let points = vec![
+            vec![[0., 0., 0.], [0., 1., 0.]],
+            vec![[1., 0., 0.], [1., 1., 0.]],
+        ];
+        // 1.1*1.1 is not an exact binary64 weight; this path never flattens it.
+        let full = factorized_check(
+            points.clone(),
+            [1., 1.1],
+            [1., 1.1],
+            [0, 1],
+            1_000_000,
+            None,
+        );
+        assert!(has_orientation(&full, Sign::Positive));
+        let signs = full.signs.unwrap();
+        for (u, row) in signs.iter().enumerate() {
+            for (v, sign) in row.iter().enumerate() {
+                let cell = factorized_check(
+                    points.clone(),
+                    [1., 1.1],
+                    [1., 1.1],
+                    [0, 1],
+                    1_000_000,
+                    Some([u, v]),
+                );
+                assert_eq!(cell.signs.unwrap(), vec![vec![*sign]]);
+            }
+        }
+        assert!(has_orientation(
+            &factorized_check(
+                points.clone(),
+                [1., 1.1],
+                [1., 1.1],
+                [1, 0],
+                1_000_000,
+                None
+            ),
+            Sign::Negative
+        ));
+        for work in [0, 1, 16] {
+            let denied = factorized_check(points.clone(), [1., 1.1], [1., 1.1], [0, 1], work, None);
+            assert!(denied.signs.is_none());
+            assert!(denied.reason.is_some());
+        }
+        let denied = factorized_check(points.clone(), [1., -1.], [1., 1.], [0, 1], 1_000_000, None);
+        assert!(denied.signs.is_none());
+        let folded = vec![
+            vec![[0., 0., 0.], [1., 1., 0.]],
+            vec![[1., 0., 0.], [0., 1., 0.]],
+        ];
+        let d = factorized_check(folded, [1., 1.1], [1., 1.1], [0, 1], 1_000_000, None);
+        let signs = d.signs.unwrap();
+        assert!(signs.iter().flatten().any(|s| *s == Sign::Positive));
+        assert!(signs.iter().flatten().any(|s| *s == Sign::Negative));
     }
     #[test]
     fn independently_bounded_rows_match_whole_original_chart() {
