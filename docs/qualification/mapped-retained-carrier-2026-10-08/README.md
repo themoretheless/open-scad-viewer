@@ -1299,3 +1299,17 @@ tests passed in 2.23 seconds.
 This is native derivative support for the new expression. Full-domain normals,
 regularity, injectivity and neighboring Body seam ownership still require
 qualification before sewing or exposing this bridge through WASM/UI.
+
+## Normals and complete regularity cover of the full correction
+
+`normals_with_transverse_correction` crosses the fresh first jets of the full
+Hermite expression. `inspect_transverse_corrected_regularity` adaptively
+partitions the entire requested rectangle and accepts only cells whose normal
+enclosure excludes zero in at least one component. Every unresolved rectangle
+is retained on work exhaustion or floating-point subdivision limits.
+
+The independent quartic patch has a complete regularity cover of the closed
+unit rectangle. The accepted rectangles have total area one. Zero cell work
+retains exactly the original full rectangle as pending. All 16 profile tests
+passed in 54.47 seconds. The native annular control is being checked separately;
+no result for it is claimed by this reference qualification.

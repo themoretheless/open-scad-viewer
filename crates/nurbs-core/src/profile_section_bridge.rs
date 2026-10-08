@@ -783,6 +783,88 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         }
         Ok((Some(out.map(|axis| axis.map(|v| [v.lo, v.hi]))), spent))
     }
+    pub fn normals_with_transverse_correction(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (jet, spent) = self.derivatives_with_transverse_correction(free, across, budget)?;
+        let Some([a, b]) = jet else {
+            return Ok((None, spent));
+        };
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let i = (k + 1) % 3;
+            let j = (k + 2) % 3;
+            let n = I::new(a[i][0], a[i][1])?
+                .mul(I::new(b[j][0], b[j][1])?)?
+                .sub(I::new(a[j][0], a[j][1])?.mul(I::new(b[i][0], b[i][1])?)?)?;
+            bounds[k] = [n.lo, n.hi];
+        }
+        Ok((Some(bounds), spent))
+    }
+    pub fn inspect_transverse_corrected_regularity(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        self.bridge.validate(free, across, max_spans)?;
+        check(max_cells <= 100000, "Bound bridge cell work")?;
+        let mut out = crate::surface_weight_profile::TransitionRegularityReport {
+            regular: Vec::new(),
+            pending: Vec::new(),
+            cells: 0,
+            spans: 0,
+            complete_regular: false,
+            reason: "transverse-corrected-bridge-regularity-work-limit",
+        };
+        let mut queue = std::collections::VecDeque::from([[free, across]]);
+        while let Some(rect) = queue.pop_front() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let (bounds, spent) =
+                self.normals_with_transverse_correction(rect[0], rect[1], max_spans - out.spans)?;
+            out.spans += spent;
+            let Some(bounds) = bounds else {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            };
+            if bounds.iter().any(|r| r[0] > 0. || r[1] < 0.) {
+                out.regular.push(rect);
+                continue;
+            }
+            let range = self.bridge.section(false).range();
+            let axis = usize::from(
+                (rect[0][1] - rect[0][0]) / (range[1] - range[0]) < rect[1][1] - rect[1][0],
+            );
+            let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
+            if mid <= rect[axis][0] || mid >= rect[axis][1] {
+                out.pending.push(rect);
+                continue;
+            }
+            let mut left = rect;
+            left[axis][1] = mid;
+            let mut right = rect;
+            right[axis][0] = mid;
+            queue.push_back(left);
+            queue.push_back(right);
+        }
+        out.complete_regular = out.pending.is_empty();
+        out.reason = if out.complete_regular {
+            "transverse-corrected-bridge-regularity-qualified"
+        } else {
+            "transverse-corrected-bridge-regularity-resolution-limit"
+        };
+        Ok(out)
+    }
     pub fn derivative_bounds(
         &self,
         free: [f64; 2],
