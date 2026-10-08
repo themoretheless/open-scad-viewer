@@ -571,3 +571,26 @@ analytic quotient oracle, source ownership and budget tests accompany this
 change in expected admission. Evidence: the three `correlated-*-tests.log.gz`
 files. A fresh original four-body audit has been dispatched with unchanged
 1024/8192 limits; no complete pole or whole-wall claim is made before its result.
+
+
+### Completed correlated quotient audit
+
+The original four-body run completed, again with all exact pole preparations
+qualified and no fully qualified pole face. Both directions match:
+
+| Radius order | Face | Cells | Spans | Direction exclusions | Polar exclusions | Pending |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 524 | 8192 | 154 | 40 | 124 |
+| 0.5 → 1.25 | 10 | 494 | 8192 | 155 | 0 | 9 |
+| 1.25 → 0.5 | 0 | 527 | 8192 | 152 | 46 | 109 |
+| 1.25 → 0.5 | 10 | 497 | 8192 | 149 | 0 | 13 |
+
+Uncertain entry pairs now approach U~1e-11 (forward radii) or U~1e-10
+(reverse radii), with V near 0 and 0.393202419. Exit uncertainty is at finite
+U widths. This is a different adaptive partition: pending counts and exclusion
+counts are not a certified fraction or proof of monotonic convergence versus
+previous runs. Whole self-face coverage stays 28/31 and global wall thickness
+is still unqualified. Evidence: `correlated-self-wall.json.gz` and its completed
+log. The next proof must preserve additional coupling in E, alpha and lambda
+or bound the original transverse endpoint difference directly, while retaining
+all exact leading terms and both closed sides of the collapsed diagonal.
