@@ -98,6 +98,10 @@ Direct source normal-cache controls now verify zero factored budget, one charged
 
 ## Owned normal factors packaged acceptance
 
+### Increased per-pair work is not an improvement
+
+Native replay with 4,096 automatic cells per pair and unchanged global budgets adds no new pair proof. Geometric spans exhaust the global 100,000 allowance; cells rise from 30,461 to 51,431, factored queries from 4,562 to 7,865, and remaining visited products from 3,128 to 5,322. Only 12 proofs are visited, versus 13 at 1,024 cells. Previously proven pairs that are visited retain their proof, but late pairs are omitted when global work runs out. The baseline refusals comprise 28 work-limit and four resolution-limit results. Keep production limits unchanged; deeper subdivision alone does not resolve the remaining obligations. Report: `mixed-wall-factor-4096-native.json`. The inspection example accepts an optional automatic cell budget for reproducing this comparison.
+
 Published WASM SHA256 `a3c2cf9037041319f1b3c1fa4cfbc2e220242353ff075865c32312e29117d88e`, 12,131,662 bytes. All 28 actual worker tests pass in 115.52 seconds, including per-pair native comparisons, shared factored query/exact-work counters, cancellation and stale-result controls. Package audit proves exact compression round-trip. Distribution verification passes: 152 artifacts, 8,410,207 asset bytes plus 15,428,054 raw WASM bytes. Geometry and aggregate budgets remain unchanged; the endpoint marker UI budget preserves the existing 879-byte margin over its measured 444,893 bytes. Archive: `mixed-wall-factor-package-audit.json`, `mixed-wall-factor-worker-tests.txt`. Same 13 mixed proofs, 32 unresolved distinct-face pairs and 3,128 pending products; whole-wall admission remains refused.
 
 ## Sharp endpoint diagnostic in the current interface

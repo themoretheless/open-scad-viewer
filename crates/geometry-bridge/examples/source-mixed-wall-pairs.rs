@@ -107,7 +107,7 @@ fn main() {
             tolerance_uv: 1e-8,
         };
         let mut mixed_domains = domains;
-        mixed_domains.cells_per_pair = 1024;
+        mixed_domains.cells_per_pair = args.get(6).map(|v|v.parse::<usize>().expect("automatic product cell limit")).unwrap_or(1024);
         mixed_domains.spans_per_pair = 4096;
         let r = w::qualify_with_mixed_pair_pass(
             body,
