@@ -393,3 +393,42 @@ coefficients for that next step. `rational-derivative-poles.log.gz`
 and `rational-derivative-tests.log.gz` retain execution evidence.
 Retained self-face coverage remains 28/31; no whole-wall or new
 WASM/UI qualification is claimed.
+
+## Exact transverse rational derivative decomposition
+
+New bounded predicate queries compute Q_k d_a - Q_a d_k for
+normalized U or V, with d=P_(1,0)-P_(0,0) taken from the same
+authored original source. The chosen anchor must have exact nonzero
+direction. A floating-point heuristic chooses the anchor index only;
+the direction and cancellation are recomputed by exact expansions.
+Row and selected-coefficient APIs preserve all exact leading terms
+and return no partial row when work is exhausted.
+
+All eight original end charts prove zero leading transverse U row
+and zero first two transverse V rows, for both non-anchor coordinates
+and every V coefficient. This establishes an exact U factor in the
+transverse U numerator and an exact U² factor in transverse V. The
+previously measured nonzero tangential first-order V term is retained.
+No original control point or weight is changed. Original model
+serialization is checked unchanged in every case.
+
+Derivative decisions now include a positive coefficient normalization
+scale. It accounts for shared source normalization and the exact
+Bernstein product scale; transverse expressions have one additional
+power of the shared input scale. This allows magnitude bounds to be
+converted to authored coefficients when the denominator is separated
+from zero. Normal-Jacobian decisions keep this metadata absent.
+
+Nine predicate tests pass. Independent rational fixtures retain a
+nonzero leading tangential term, distinguish an added 1e-12 transverse
+component, compare U/V and row/cell queries, recover authored endpoint
+coefficients (two for the ordinary derivative, one for the transverse
+expression), and refuse insufficient work or a zero anchor. Evidence:
+`transverse-derivative-tests.log.gz` and
+`transverse-derivative-poles.json.gz` with its completed log.
+
+These exact factors still need source-owned preparation, interval
+bounds for the full remaining nets, a separated longitudinal
+derivative, and the weighted mean-chord inequality before they can
+exclude the collapsed diagonal. They do not yet add whole self-face
+certificates or global wall qualification. Retained coverage is 28/31.

@@ -200,6 +200,79 @@ fn main() {
                     }
                 }
                 eprintln!("face={face} rational_derivative_U2_factor={rational_factor}");
+                let pole_direction: [f64; 3] =
+                    std::array::from_fn(|k| s.control_points[1][0][k] - s.control_points[0][0][k]);
+                let anchor = (0..3)
+                    .max_by(|a, b| {
+                        pole_direction[*a]
+                            .abs()
+                            .total_cmp(&pole_direction[*b].abs())
+                    })
+                    .unwrap();
+                let mut transverse_rows = Vec::new();
+                let mut transverse_factors = true;
+                for coordinate in (0..3).filter(|k| *k != anchor) {
+                    for (axis, rows) in [(0, 1), (1, 2)] {
+                        for row in 0..rows {
+                            let mut ctx = PredicateContext::new(
+                                &arena,
+                                &tolerance,
+                                Limits {
+                                    max_work: cad_predicates::MAX_WORK,
+                                    ..Limits::default()
+                                },
+                                None,
+                            );
+                            let d =
+                                cad_predicates::rational_surface_derivative_transverse_row_bounds(
+                                    &mut ctx, &leaves, coordinate, anchor, axis, row,
+                                )
+                                .unwrap();
+                            let coefficient_scale = d.coefficient_scale;
+                            let mut work = d.work_used;
+                            let mut signs = d.signs;
+                            let mut bounds = d.coefficient_bounds;
+                            let columns = 2 * s.degree_v + usize::from(axis == 0);
+                            if signs.is_none() {
+                                let mut ss = Vec::new();
+                                let mut bs = Vec::new();
+                                let mut complete = true;
+                                for column in 0..columns {
+                                    let mut ctx = PredicateContext::new(
+                                        &arena,
+                                        &tolerance,
+                                        Limits {
+                                            max_work: cad_predicates::MAX_WORK,
+                                            ..Limits::default()
+                                        },
+                                        None,
+                                    );
+                                    let d=cad_predicates::rational_surface_derivative_transverse_coefficient_bounds(&mut ctx,&leaves,coordinate,anchor,axis,[row,column]).unwrap();
+                                    work += d.work_used;
+                                    if let (Some(s), Some(b)) = (d.signs, d.coefficient_bounds) {
+                                        ss.push(s[0][0]);
+                                        bs.push(b[0][0]);
+                                    } else {
+                                        complete = false;
+                                        break;
+                                    }
+                                }
+                                if complete {
+                                    signs = Some(vec![ss]);
+                                    bounds = Some(vec![bs]);
+                                }
+                            }
+                            let zero = signs.as_ref().is_some_and(|net| {
+                                net[0].len() == columns && net[0].iter().all(|x| *x == Sign::Zero)
+                            });
+                            transverse_factors &= zero;
+                            transverse_rows.push(value_codec::json!({"coordinate":coordinate,"axis":axis,"row":row,"allExactlyZero":zero,"bounds":bounds,"coefficientScale":coefficient_scale,"work":work}));
+                        }
+                    }
+                }
+                eprintln!(
+                    "face={face} transverse_U1_V2_factors={transverse_factors} anchor={anchor}"
+                );
                 let original = &model.faces[face].surface;
                 let native =
                     nurbs_core::factored_surface_normals::prepare(original, reverse, 100_000_000)
@@ -211,7 +284,7 @@ fn main() {
                     let pole = u[usize::from(reverse)];
                     [[u,v],[[pole,pole],v],[[pole,pole],[v[0],v[0]]],[[pole,pole],[v[1],v[1]]]].map(|domain| value_codec::json!({"domain":domain,"bounds":proof.bounds(domain).unwrap()}))
                 });
-                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components,"rationalDerivativeFactor":{"verified":rational_factor,"rows":derivative_rows},"nativeFactoredNormal":{"qualified":native.certificate.is_some(),"reason":native.reason,"work":native.work,"queries":queries}}));
+                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components,"transverseDerivative":{"verified":transverse_factors,"anchor":anchor,"rows":transverse_rows},"rationalDerivativeFactor":{"verified":rational_factor,"rows":derivative_rows},"nativeFactoredNormal":{"qualified":native.certificate.is_some(),"reason":native.reason,"work":native.work,"queries":queries}}));
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
         }

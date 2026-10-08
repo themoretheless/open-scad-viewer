@@ -11,6 +11,10 @@ pub struct Decision {
     /// Outward enclosures in the same positive homogeneous coefficient scale.
     /// Requested explicitly; sign-only callers retain their original work budget.
     pub coefficient_bounds: Option<Vec<Vec<[f64; 2]>>>,
+    /// Derivative/transverse queries: positive factor multiplying coefficients
+    /// in authored Cartesian/weight units and normalized U/V. Normal Jacobian
+    /// queries currently leave this absent. Divide bounds only when present.
+    pub coefficient_scale: Option<[f64; 2]>,
     pub reason: Option<Reason>,
     pub work_used: u64,
     pub context: ContextIdentity,
@@ -220,6 +224,7 @@ fn compute(
     Ok(Decision {
         signs,
         coefficient_bounds,
+        coefficient_scale: None,
         reason,
         work_used: ctx.work_used(),
         context: ctx.identity(),
@@ -294,7 +299,7 @@ pub fn rational_surface_derivative_numerator_row_bounds(
     axis: usize,
     row: usize,
 ) -> Result<Decision, InputError> {
-    derivative_numerator(ctx, surface, coordinate, axis, row, None)
+    derivative_numerator(ctx, surface, coordinate, axis, row, None, None)
 }
 pub fn rational_surface_derivative_numerator_coefficient_bounds(
     ctx: &mut PredicateContext<'_>,
@@ -303,7 +308,46 @@ pub fn rational_surface_derivative_numerator_coefficient_bounds(
     axis: usize,
     index: [usize; 2],
 ) -> Result<Decision, InputError> {
-    derivative_numerator(ctx, surface, coordinate, axis, index[0], Some(index[1]))
+    derivative_numerator(
+        ctx,
+        surface,
+        coordinate,
+        axis,
+        index[0],
+        Some(index[1]),
+        None,
+    )
+}
+/// Exact transverse component Q_k d_a - Q_a d_k, where d is the
+/// authored pole direction P_(1,0)-P_(0,0). Zero leading coefficients prove
+/// alignment with this fixed source direction; they do not prove wall safety.
+pub fn rational_surface_derivative_transverse_row_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    coordinate: usize,
+    anchor: usize,
+    axis: usize,
+    row: usize,
+) -> Result<Decision, InputError> {
+    derivative_numerator(ctx, surface, coordinate, axis, row, None, Some(anchor))
+}
+pub fn rational_surface_derivative_transverse_coefficient_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    coordinate: usize,
+    anchor: usize,
+    axis: usize,
+    index: [usize; 2],
+) -> Result<Decision, InputError> {
+    derivative_numerator(
+        ctx,
+        surface,
+        coordinate,
+        axis,
+        index[0],
+        Some(index[1]),
+        Some(anchor),
+    )
 }
 fn derivative_numerator(
     ctx: &mut PredicateContext<'_>,
@@ -312,10 +356,12 @@ fn derivative_numerator(
     axis: usize,
     row: usize,
     column: Option<usize>,
+    projection: Option<usize>,
 ) -> Result<Decision, InputError> {
     if !(2..=9).contains(&surface.len())
         || !(2..=9).contains(&surface[0].len())
         || surface.iter().any(|r| r.len() != surface[0].len())
+        || projection.is_some_and(|a| a > 2 || a == coordinate)
         || coordinate > 2
         || axis > 1
         || row >= 2 * (surface.len() - 1) + usize::from(axis == 1)
@@ -332,7 +378,7 @@ fn derivative_numerator(
         .map(|&r| ctx.resolve(r).cloned())
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
-    let result = (|| -> Result<(Vec<Vec<Sign>>, Vec<Vec<[f64; 2]>>), Reason> {
+    let result = (|| -> Result<(Vec<Vec<Sign>>, Vec<Vec<[f64; 2]>>, [f64; 2]), Reason> {
         ctx.charge(values.len() as u64)?;
         let x = exact_inputs(&values, ctx)?;
         let unit = x.last().unwrap();
@@ -355,11 +401,40 @@ fn derivative_numerator(
         }
         let dh = derivative(&h, axis, ctx)?;
         let dw = derivative(&w, axis, ctx)?;
-        let net = difference(
+        let mut net = difference(
             mul(&dh, &w, [Some(row), column], ctx)?,
             mul(&h, &dw, [Some(row), column], ctx)?,
             ctx,
         )?;
+        if let Some(anchor) = projection {
+            let mut ha = h.clone();
+            for u in 0..surface.len() {
+                for v in 0..surface[0].len() {
+                    let at = (u * surface[0].len() + v) * 4;
+                    ha[u][v] = x[at + anchor].sub(&x[anchor], ctx)?.mul(&x[at + 3], ctx)?;
+                }
+            }
+            let da = derivative(&ha, axis, ctx)?;
+            let qa = difference(
+                mul(&da, &w, [Some(row), column], ctx)?,
+                mul(&ha, &dw, [Some(row), column], ctx)?,
+                ctx,
+            )?;
+            let at = surface[0].len() * 4;
+            let direction_anchor = x[at + anchor].sub(&x[anchor], ctx)?;
+            let direction_coordinate = x[at + coordinate].sub(&x[coordinate], ctx)?;
+            if direction_anchor.sign() == Sign::Zero {
+                return Err(Reason::MissingProof);
+            }
+            for v in 0..net[row].len() {
+                if column.is_some_and(|c| c != v) {
+                    continue;
+                }
+                net[row][v] = net[row][v]
+                    .mul(&direction_anchor, ctx)?
+                    .sub(&qa[row][v].mul(&direction_coordinate, ctx)?, ctx)?;
+            }
+        }
         let selected = column.map_or(&net[row][..], |v| &net[row][v..v + 1]);
         let signs = vec![selected.iter().map(Expansion::sign).collect()];
         let bounds = vec![selected
@@ -369,16 +444,27 @@ fn derivative_numerator(
                 Ok([b.lo, b.hi])
             })
             .collect::<Result<Vec<_>, Reason>>()?];
+        let mut scale = Expansion::scalar(1.);
+        for _ in 0..if projection.is_some() { 5 } else { 4 } {
+            scale = scale.mul(unit, ctx)?;
+        }
+        let degree_u = 2 * (surface.len() - 1) - usize::from(axis == 0);
+        let degree_v = 2 * (surface[0].len() - 1) - usize::from(axis == 1);
+        scale = scale
+            .mul(&factors(degree_u, ctx)?[0], ctx)?
+            .mul(&factors(degree_v, ctx)?[0], ctx)?;
+        let scale = scale.enclosure(ctx)?;
         ctx.charge(0)?;
-        Ok((signs, bounds))
+        Ok((signs, bounds, [scale.lo, scale.hi]))
     })();
-    let (signs, coefficient_bounds, reason) = match result {
-        Ok((s, b)) => (Some(s), Some(b), None),
-        Err(r) => (None, None, Some(r)),
+    let (signs, coefficient_bounds, coefficient_scale, reason) = match result {
+        Ok((s, b, scale)) => (Some(s), Some(b), Some(scale), None),
+        Err(r) => (None, None, None, Some(r)),
     };
     Ok(Decision {
         signs,
         coefficient_bounds,
+        coefficient_scale,
         reason,
         work_used: ctx.work_used(),
         context: ctx.identity(),
@@ -389,6 +475,118 @@ fn derivative_numerator(
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn transverse_derivative_retains_small_leading_tangent_and_detects_real_transverse_term() {
+        for perturbation in [0., 1e-12] {
+            let points: Vec<Vec<[f64; 4]>> = (0..3)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| {
+                            [
+                                u as f64 / 2.,
+                                if u == 2 {
+                                    v as f64
+                                } else if u == 1 && v == 1 {
+                                    perturbation
+                                } else {
+                                    0.
+                                },
+                                0.,
+                                if u == 1 && v == 1 { 3. } else { (v + 1) as f64 },
+                            ]
+                        })
+                        .collect()
+                })
+                .collect();
+            let arena = SourceArena::authored(
+                "original-transverse-derivative",
+                1,
+                points
+                    .iter()
+                    .flatten()
+                    .flatten()
+                    .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+                    .collect(),
+            )
+            .unwrap();
+            let leaves = (0..3)
+                .map(|u| {
+                    (0..2)
+                        .map(|v| std::array::from_fn(|k| arena.leaf((u * 2 + v) * 4 + k).unwrap()))
+                        .collect()
+                })
+                .collect::<Vec<_>>();
+            let tolerance = ToleranceContext::default_valid();
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let tangent =
+                rational_surface_derivative_numerator_row_bounds(&mut ctx, &leaves, 0, 1, 1)
+                    .unwrap();
+            assert!(tangent.signs.unwrap()[0].iter().any(|s| *s != Sign::Zero));
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let d =
+                rational_surface_derivative_transverse_row_bounds(&mut ctx, &leaves, 1, 0, 1, 1)
+                    .unwrap();
+            let signs = d.signs.unwrap();
+            let bounds = d.coefficient_bounds.unwrap();
+            let scale = d.coefficient_scale.unwrap();
+            assert!(scale[0] > 0.);
+            assert_eq!(
+                signs[0].iter().all(|s| *s == Sign::Zero),
+                perturbation == 0.
+            );
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let du =
+                rational_surface_derivative_transverse_row_bounds(&mut ctx, &leaves, 1, 0, 0, 0)
+                    .unwrap();
+            assert_eq!(
+                du.signs.unwrap()[0].iter().all(|s| *s == Sign::Zero),
+                perturbation == 0.
+            );
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let endpoint =
+                rational_surface_derivative_transverse_row_bounds(&mut ctx, &leaves, 1, 0, 1, 4)
+                    .unwrap();
+            let scale = endpoint.coefficient_scale.unwrap();
+            assert!(
+                endpoint.coefficient_bounds.unwrap()[0]
+                    .iter()
+                    .all(|b| b[0] <= scale[1] && b[1] >= scale[0]),
+                "source transverse endpoint coefficient is exactly one"
+            );
+            for column in 0..2 {
+                let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+                let cell = rational_surface_derivative_transverse_coefficient_bounds(
+                    &mut ctx,
+                    &leaves,
+                    1,
+                    0,
+                    1,
+                    [1, column],
+                )
+                .unwrap();
+                assert_eq!(cell.signs.unwrap()[0][0], signs[0][column]);
+                assert_eq!(cell.coefficient_bounds.unwrap()[0][0], bounds[0][column]);
+            }
+            let mut ctx = PredicateContext::new(
+                &arena,
+                &tolerance,
+                Limits {
+                    max_work: 1,
+                    ..Limits::default()
+                },
+                None,
+            );
+            let d =
+                rational_surface_derivative_transverse_row_bounds(&mut ctx, &leaves, 1, 0, 1, 1)
+                    .unwrap();
+            assert!(d.signs.is_none() && d.coefficient_bounds.is_none());
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let d =
+                rational_surface_derivative_transverse_row_bounds(&mut ctx, &leaves, 0, 2, 1, 1)
+                    .unwrap();
+            assert!(d.signs.is_none() && d.coefficient_bounds.is_none());
+        }
+    }
     #[test]
     fn rational_derivative_rows_preserve_quadratic_factor_and_refuse_partial_work() {
         // S=(u,2u²v/(1+v),0): V weights vary, but Q_v=(0,2u²,0).
@@ -434,6 +632,13 @@ mod tests {
                 .unwrap();
                 let signs = d.signs.unwrap();
                 let bounds = d.coefficient_bounds.unwrap();
+                let scale = d.coefficient_scale.unwrap();
+                assert!(scale[0] > 0.);
+                if coordinate == 1 && row == 4 {
+                    assert!(bounds[0]
+                        .iter()
+                        .all(|b| b[0] <= 2. * scale[1] && b[1] >= 2. * scale[0]));
+                }
                 assert_eq!(bounds.len(), 1);
                 assert_eq!(bounds[0].len(), 2);
                 assert!(signs[0].iter().all(|s| *s
