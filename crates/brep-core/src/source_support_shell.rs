@@ -349,6 +349,7 @@ mod tests {
         let report=crate::source_profile_body::prepare(&body,&specs,
             crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
         let proposal=report.proposal.unwrap();
+        let mut rooted_seams=Vec::new();
         for (edge,canonical,faces) in [(0,[0.1,0.25],[0,1]),(1,[0.75,0.9],[0,2])] {
             let report=proposal.qualify_edge_interval(edge,canonical,1e-6,100000,100000).unwrap();
             let seam=report.seam.expect(report.angular.reason);
@@ -414,6 +415,29 @@ mod tests {
             eprintln!("root-ended seam edge={edge} carrierSpans={} canonical={:?}",rooted.carrier_spans,rooted_seam.restricted().canonical_interval());
             let limited=proposal.qualify_edge_interval(edge,canonical,1e-6,1,1).unwrap();
             assert!(limited.seam.is_none());assert!(!limited.angular.pending.is_empty());
+            rooted_seams.push(rooted_seam);
+
+        }
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            proposal.profile(0).unwrap().section(0,0.75).unwrap(),proposal.profile(0).unwrap().section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
+        let bridge=bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+        let sides=rooted_seams.iter().map(|root|root.qualify_transition_side(&bridge,1000,1000).unwrap().side.unwrap()).collect::<Vec<_>>();
+        let boundary=crate::source_profile_body::propose_transition_boundary([&sides[1],&sides[0]]).unwrap();
+        assert!(crate::source_profile_body::propose_transition_boundary([&sides[0],&sides[0]]).is_err());
+        assert!(boundary.enclose_edge(4,[0.,1.],1).is_err());
+        assert!(boundary.enclose_edge(0,[-0.1,0.5],1).is_err());
+        assert!(boundary.enclose_edge(0,[0.75,0.25],1).is_err());
+
+        for edge in 0..4 {
+            assert!(boundary.enclose_edge(edge,[0.,1.],1).unwrap().0.is_some());
+            for (t,corner) in [(0.,edge),(1.,(edge+1)%4)] {
+                let bounds=boundary.enclose_edge(edge,[t;2],1).unwrap().0.unwrap();
+                let root=boundary.corners()[corner].world_bounds();
+                for k in 0..3 {assert!(bounds[k][0]<=root[k][1]&&root[k][0]<=bounds[k][1]);}
+                let next=boundary.enclose_edge((edge+1)%4,[0.;2],1).unwrap().0.unwrap();
+                if t==1. {assert_eq!(bounds,next);}
+
+            }
         }
         for canonical in [[0.5,0.5],[-0.1,0.5],[0.5,1.1],[f64::NAN,1.]] {
             assert!(proposal.qualify_edge_interval(0,canonical,1e-6,100,100).is_err());

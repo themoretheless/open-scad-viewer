@@ -140,6 +140,50 @@ pub struct TransitionSideReport<'s,'p,'b> {
     pub regularity:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,
     pub reason:&'static str,
 }
+/// Four exact boundary expression views with root-owned corners. This is a
+/// contour proposal; it does not admit a transition face or a closed Body.
+pub struct TransitionBoundary<'s,'p,'b> {rooted:[&'s RootEndedSeam<'p,'b>;2]}
+impl TransitionBoundary<'_,'_,'_> {
+    pub fn corners(&self)->[&crate::source_carrier_point::Point;4] {
+        [&self.rooted[0].points[0],&self.rooted[0].points[1],&self.rooted[1].points[1],&self.rooted[1].points[0]]
+    }
+    pub fn sides(&self)->[&RootEndedSeam<'_,'_>;2] {self.rooted}
+    /// Low rail, terminal section, reversed high rail, reversed entry section.
+    /// Each segment uses the exact owned profile boundary specialization.
+    pub fn enclose_edge(&self,index:usize,parameter:[f64;2],spans:usize)->Result<(Option<[[f64;2];3]>,usize)> {
+        use nurbs_core::interval_eval::Interval as I;
+        if index>3 || !parameter.iter().all(|x|x.is_finite()) || parameter[0]<0. || parameter[1]>1. || parameter[0]>parameter[1] {
+            return Err(Error::new("BREP_PROFILE_TRANSITION_BOUNDARY","Bound edge index and normalized parameter"));
+        }
+        let root=self.rooted[0];let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let range=profile.section(root.axis,root.parameters[0])?.range();
+        let affine=|ends:[f64;2]|->Result<[f64;2]> {
+            if parameter==[0.,0.] {return Ok([ends[0];2]);}
+            if parameter==[1.,1.] {return Ok([ends[1];2]);}
+            let value=I::point(ends[0]).add(I::new(parameter[0],parameter[1])?.mul(I::point(ends[1]).sub(I::point(ends[0]))?)?)?
+                .intersect(ends[0].min(ends[1]),ends[0].max(ends[1]))?;
+            Ok([value.lo,value.hi])
+        };
+        let mut domain=[[0.;2];2];
+        match index {
+            0=>{domain[root.axis]=affine(root.parameters)?;domain[1-root.axis]=[range[0];2];},
+            1=>{domain[root.axis]=[root.parameters[1];2];domain[1-root.axis]=affine(range)?;},
+            2=>{domain[root.axis]=affine([root.parameters[1],root.parameters[0]])?;domain[1-root.axis]=[range[1];2];},
+            _=>{domain[root.axis]=[root.parameters[0];2];domain[1-root.axis]=affine([range[1],range[0]])?;},
+        }
+        profile.enclose(domain,spans)
+    }
+}
+pub fn propose_transition_boundary<'s,'p,'b>(
+    sides:[&TransitionSide<'s,'p,'b>;2],
+)->Result<TransitionBoundary<'s,'p,'b>> {
+    let a=sides[0].rooted;let b=sides[1].rooted;
+    if !std::ptr::eq(a.restricted.proposal,b.restricted.proposal) || a.face!=b.face
+        || a.axis!=b.axis || a.parameters!=b.parameters || a.high==b.high {
+        return Err(Error::new("BREP_PROFILE_TRANSITION_BOUNDARY","Require opposite sides of one owned transition recipe"));
+    }
+    Ok(TransitionBoundary{rooted:if a.high {[b,a]}else{[a,b]}})
+}
 pub struct RootEndedSeamReport<'p,'b> {
     pub seam:Option<RootEndedSeam<'p,'b>>,pub carrier_spans:usize,
     pub angular:Option<nurbs_core::normal_alignment::ProfilePathReport>,pub reason:&'static str,

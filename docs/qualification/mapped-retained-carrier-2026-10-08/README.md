@@ -1571,3 +1571,30 @@ shared-edge and two-root restoration checks also pass in this regression.
 This binds transition rails to admitted trimmed original edges. It does
 not yet build replacement contours or an admitted closed transition face;
 terminal/corner closure and whole-body qualification remain required.
+
+## Root-owned four-edge transition boundary
+
+TransitionBoundary now joins the two qualified opposite transition sides
+under one immutable Proposal, selected face, section axis and ordered
+section parameters. Input side order is normalized. Duplicate sides and
+mismatched owners or recipes refuse. Four carrier-root corners remain
+owned by the original retained seams.
+
+The contour consists of the low natural rail, terminal source section,
+reversed high rail and reversed entry source section. Its enclosure API
+evaluates the exact owned profile boundary specializations of the full
+Hermite expression. Affine parameter mapping uses outward intervals; exact
+segment endpoints specialize directly to original section coordinates.
+No rounded replacement surface or vertex is introduced.
+
+The final native annular regression passed in 11.87 seconds. All four
+complete edges enclose with one source span. Adjacent endpoint evaluations
+produce identical profile enclosures, and all eight endpoint evaluations
+overlap their corresponding admitted carrier-root world bounds. Overlap
+is a diagnostic check; shared owner, recipe and root identity establish
+endpoint authority. Duplicate sides, invalid edge indices and invalid
+parameter intervals refuse. Existing retained-edge and restore checks pass.
+
+This is a transition boundary proposal. Interior face admission, terminal
+closure, neighboring replacement contours and closed Body admission remain
+open. These changes are native-only and are not in the packaged WASM.
