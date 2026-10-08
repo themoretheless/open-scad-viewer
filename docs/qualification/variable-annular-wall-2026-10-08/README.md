@@ -73,3 +73,19 @@ orientation work. Pair reasons are recorded to distinguish remaining causes.
 cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
   -p brep-core --example variable-annular-volume -- /tmp/volume.json
 ```
+
+## Regular-face refinement
+
+Repeating the eleven regular unresolved charts at 1024 cells/8192 spans per
+face gives no additional certificates in any of the four bodies. The reports
+retain their explicit selected-face list; omitted singular faces 0/10 remain
+unqualified. The verified total remains 18/31, not 29/31.
+
+```sh
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-self-wall -- /tmp/refined.json adaptive 1024 5,7,8,16,17,20,21,24,25,28,29
+```
+
+The next algorithm investigation is derivative-column scaling in the original
+intrinsic chord inequality. Any stronger bound must preserve the full original
+pair domain and pass independent analytic and rejection regressions.
