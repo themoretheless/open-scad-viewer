@@ -111,3 +111,39 @@ known-plane component ratios and resource exhaustion refusal.
 and corner leading magnitudes. Cylinder-side full angular bounds remain open;
 these results do not supply a unique regular tangent plane at the collapsed
 end, a replacement smooth cap, thickness or general source-body admission.
+
+## Whole cylinder-side rail angular bounds
+
+All twelve original cylinder-side rails pass over their complete normalized
+parameter interval, including one-sided limits at the collapsed ends. Maximum
+accepted sine-squared bound is 9.573636078228842e-5 against 1e-4 tolerance.
+Entry/middle/exit require 79/255/157 visited cells respectively. There are no
+unresolved or omitted parameter regions.
+
+Both incident original rational boundary columns have identical Euclidean
+controls and weights. Each is a single clamped Bezier chart; normalized U
+correspondence is exact even when their authored knot domains differ (e.g.
+[0,1] versus [0,3]). No source curve or surface is refitted.
+
+Exact normal numerator rows 0/1 vanish at the collapsed end. The U² factor is
+removed only after exact-zero predicates pass. Bernstein factor coefficients
+are enclosed with outward arithmetic. Both original normal polynomials are
+subdivided on matching dyadic parameter intervals; cross-product and norm
+bounds prove the angular tolerance on every accepted interval. A separate
+positive normalization per surface preserves direction and controls scale.
+The pole itself is not regular; this proves one-sided rail agreement, not a
+unique pole plane or a smooth cap.
+
+Two numerical-regression tests reject orthogonal and singular normals, accept
+antiparallel planes, and preserve shared subdivision midpoint enclosures.
+`cylinder-rails.json.gz` records all accepted intervals and upper bounds.
+
+```sh
+cargo +nightly-2026-09-16 test --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-cylinder-rails
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-cylinder-rails -- /tmp/cylinder-rails.json
+```
+
+Replacement smooth end construction, global thickness, support-patch junctions,
+general fillets and named-part acceptance remain open.
