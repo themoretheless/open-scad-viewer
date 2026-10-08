@@ -1,0 +1,58 @@
+{
+  "scope": "native exact-profile incident seam angles after endpoint preflight",
+  "proposedFaces": [
+    0,
+    5
+  ],
+  "thresholdSineSquared": 1e-06,
+  "qualifiedEdges": [
+    5,
+    6,
+    8,
+    15
+  ],
+  "unresolvedEndpointEdges": [
+    0,
+    1
+  ],
+  "results": [
+    {
+      "edge": 1,
+      "aligned": null,
+      "cells": 2,
+      "normalSpans": 4,
+      "acceptedChecks": 1,
+      "pending": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "reason": "profile-seam-endpoint-normal-unresolved"
+    },
+    {
+      "edge": 8,
+      "aligned": true,
+      "cells": 16149,
+      "normalSpans": 32298,
+      "acceptedChecks": 8076,
+      "pending": [],
+      "upperSineSquared": 9.99720292310633e-07
+    },
+    {
+      "edge": 15,
+      "aligned": true,
+      "cells": 23247,
+      "normalSpans": 46494,
+      "acceptedChecks": 11625,
+      "pending": [],
+      "upperSineSquared": 9.996371266985573e-07
+    }
+  ],
+  "wholeBodyQualified": false,
+  "includedInWasm": false
+}

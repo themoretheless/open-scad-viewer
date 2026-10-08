@@ -647,3 +647,34 @@ inspected canonical endpoint: one cell, four combined spans, no accepted cells,
 three pending intervals (whole carrier and both endpoint checks). The regression
 asserts this refusal separately from the admitted edge 6 proof. These results
 supersede only the previous unsupported-map status of those two edges.
+
+## Remaining incident seams and endpoint preflight
+
+Full funded baseline checks classify edge 1 as unresolved after 44063 cells,
+88126 normal spans, 22021 accepted cells and 21 pending intervals at floating
+parameter resolution. Edges 8 and 15 qualify over their entire carriers.
+
+The affine owned-seam path now checks both literal canonical endpoints under
+the same cell/span quota before full subdivision. A singular or unresolved
+endpoint retains whole-carrier coverage as pending and cannot authorize a
+certificate. Endpoints with insufficient normal work report the work limit.
+Qualified endpoints are included in final angular bounds and work counters.
+
+For proposed faces [0,5], edge 1 now refuses in two cells/four normal spans:
+one regular endpoint accepted, whole [0,1] and endpoint [1,1] pending,
+reason `profile-seam-endpoint-normal-unresolved`. This avoids spending the
+previous 44063 cells on a known endpoint refusal; no accepted geometry expands.
+Edge 8 still qualifies: 16149 cells, 32298 normal spans, 8076 accepted cells,
+upper squared sine 9.99720292310633e-7, no pending intervals. Edge 15 qualifies:
+23247 cells, 46494 normal spans, 11625 accepted cells, upper squared sine
+9.996371266985573e-7, no pending intervals. Both use tolerance 1e-6.
+The original/profile edge 5 result includes endpoint work (14699 cells,
+29398 spans, 7351 accepted cells); its angular upper bound remains unchanged.
+
+Current incident angle qualification covers edges [5,6,8,15]; endpoints of
+[0,1] remain unresolved. This is not whole-body embedding, volume, wall,
+self-intersection or STEP qualification, and remains outside packaged WASM.
+
+All 18 source-support-shell tests pass after endpoint preflight, including the
+explicit singular-endpoint and quota-refusal controls and full incident edge
+5/6/8/15 angular checks. No original Body admission gate was relaxed.

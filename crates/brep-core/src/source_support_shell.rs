@@ -338,6 +338,26 @@ mod tests {
         }
     }
     #[test]
+    fn corrected_seam_endpoint_preflight_preserves_work_refusals() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let specs=[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]},crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
+        let report=crate::source_profile_body::prepare(&body,&specs,
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
+        let proposal=report.proposal.unwrap();
+        let report=proposal.qualify_edge(1,100,1e-6,2,4).unwrap();
+        assert!(report.seam.is_none());assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
+        let r=report.angular.unwrap();assert_eq!((r.cells,r.spans,r.accepted_cells),(2,4,1));
+        assert_eq!(r.pending,vec![[0.,1.],[1.,1.]]);
+        let report=proposal.qualify_edge(1,100,1e-6,1,1).unwrap();
+        assert!(report.seam.is_none());assert_eq!(report.reason,"profile-path-work-limit");
+        assert!(!report.angular.unwrap().pending.is_empty());
+    }
+    #[test]
     fn admitted_annular_body_checks_original_radius_patches() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -436,7 +456,7 @@ mod tests {
             whole.aligned,whole.upper_sine_squared,whole.cells,whole.spans,whole.accepted_cells,whole.pending.len(),whole.reason);
         assert_eq!(whole.aligned,Some(true));assert!(whole.pending.is_empty());
         assert!(certificate.upper_sine_squared()<=certificate.threshold());
-        assert_eq!(whole.cells,14697);assert_eq!(whole.spans,29394);
+        assert_eq!(whole.cells,14699);assert_eq!(whole.spans,29398);
         let both_specs=[specs[0],crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
         let both_report=crate::source_profile_body::prepare(&body,&both_specs,proposal_limits()).unwrap();
         let both=both_report.proposal.expect(both_report.reason);
@@ -455,6 +475,22 @@ mod tests {
                 eprintln!("incident corrected edge {} faces={:?} reason={} pending={:?}",index,
                     [uses[0].face,uses[1].face],audit.reason,audit.angular.map(|r|r.pending));
             }
+        }
+        for index in [1,8,15] {
+            let report=both.qualify_edge(index,100,1e-6,50000,100000).unwrap();
+            let angular=report.angular.expect("owned seam route");
+            if index==1 {
+                assert!(report.seam.is_none());assert_eq!(angular.aligned,None);
+                assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
+                assert!(angular.cells<=2);assert!(!angular.pending.is_empty());
+            } else {assert!(report.seam.is_some());assert_eq!(angular.aligned,Some(true));}
+
+            eprintln!("remaining corrected edge {} aligned={:?} cells={} spans={} accepted={} pending={} reason={} upper={:?}",
+                index,angular.aligned,angular.cells,angular.spans,angular.accepted_cells,angular.pending.len(),report.reason,angular.upper_sine_squared);
+            if let Some(proof)=report.seam {
+                assert_eq!(proof.edge(),index);assert!(std::ptr::eq(proof.proposal(),&both));
+                assert!(angular.pending.is_empty());assert!(proof.upper_sine_squared()<=1e-6);
+            } else {assert!(!angular.pending.is_empty());}
         }
         for index in [0,6] {
             let report=both.qualify_edge(index,100,1e-6,10000,40000).unwrap();

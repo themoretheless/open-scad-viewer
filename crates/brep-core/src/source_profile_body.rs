@@ -159,12 +159,90 @@ impl<'a> Proposal<'a> {
                 })
             })
         });
-        let angular = match self.profile(neighbor) {
-            Some(other) => profile.inspect_profile_path(other, lines, threshold, cells, spans)?,
-            None => {
-                profile.inspect_original_path(map.surfaces()[1], lines, threshold, cells, spans)?
-            }
+        if !(1..=100000).contains(&cells) || !(1..=100000).contains(&spans) {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Bound endpoint and path work",
+            ));
+        }
+        let mut pre = nurbs_core::normal_alignment::ProfilePathReport {
+            aligned: None,
+            cells: 0,
+            spans: 0,
+            accepted_cells: 0,
+            upper_sine_squared: None,
+            pending: vec![[0., 1.]],
+            reason: "profile-path-work-limit",
         };
+        let mut endpoint_upper = 0_f64;
+        for end in 0..2 {
+            if pre.cells == cells || pre.spans == spans {
+                out.reason = pre.reason;
+                out.angular = Some(pre);
+                return Ok(out);
+            }
+            let rectangles = std::array::from_fn(|side| lines[side][end].map(|x| [x, x]));
+            pre.cells += 1;
+            let r = match self.profile(neighbor) {
+                Some(other) => profile.inspect_profile_normals(
+                    other,
+                    rectangles,
+                    threshold,
+                    spans - pre.spans,
+                )?,
+                None => profile.inspect_original_normals(
+                    map.surfaces()[1],
+                    rectangles,
+                    threshold,
+                    spans - pre.spans,
+                )?,
+            };
+            pre.spans += r.spans;
+            if r.aligned != Some(true) {
+                pre.pending.push([end as f64; 2]);
+                pre.reason = if r.reason == "span-limit" {
+                    "profile-path-work-limit"
+                } else if r.aligned == Some(false) {
+                    pre.aligned = Some(false);
+                    "profile-path-angular-mismatch"
+                } else {
+                    "profile-seam-endpoint-normal-unresolved"
+                };
+                out.reason = pre.reason;
+                out.angular = Some(pre);
+                return Ok(out);
+            }
+            endpoint_upper = endpoint_upper.max(r.sine_squared_interval.unwrap()[1]);
+            pre.accepted_cells += 1;
+        }
+        if pre.cells == cells || pre.spans == spans {
+            out.reason = pre.reason;
+            out.angular = Some(pre);
+            return Ok(out);
+        }
+        let mut angular = match self.profile(neighbor) {
+            Some(other) => profile.inspect_profile_path(
+                other,
+                lines,
+                threshold,
+                cells - pre.cells,
+                spans - pre.spans,
+            )?,
+            None => profile.inspect_original_path(
+                map.surfaces()[1],
+                lines,
+                threshold,
+                cells - pre.cells,
+                spans - pre.spans,
+            )?,
+        };
+        angular.cells += pre.cells;
+        angular.spans += pre.spans;
+        angular.accepted_cells += pre.accepted_cells;
+        if let Some(upper) = angular.upper_sine_squared.as_mut() {
+            *upper = upper.max(endpoint_upper);
+        }
+
         out.reason = angular.reason;
         if angular.aligned == Some(true) {
             out.seam = Some(Seam {
