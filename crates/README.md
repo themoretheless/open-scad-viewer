@@ -12,7 +12,10 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 | `planar-geometry` | 2D paths, rings, Pathfinder (**crates.io**) |
 | `brep-topology` | Indexed B-rep incidence only |
 | `nurbs-core` | Rational curves/surfaces |
+| `nurbs-intersect` | Curve/surface intersection queries, evidence and coverage certificates |
 | `brep-core` | CAD B-rep over NURBS |
+| `brep-intersect` | Analytic pair intersections on B-rep models |
+| `cad-step` | STEP and IGES interchange |
 | `polygon-core` | Triangle meshes, UV meshing, mesh CSG |
 | `subdivision-core` | Catmull–Clark cages |
 | `sdf-core` | Implicit fields and extraction |

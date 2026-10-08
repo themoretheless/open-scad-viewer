@@ -16,8 +16,7 @@ pub struct Plane {
 }
 
 impl Plane {
-    #[doc(hidden)]
-    pub fn normalized(self) -> Result<Self> {
+    pub(crate) fn normalized(self) -> Result<Self> {
         if !self.normal.iter().all(|v| v.is_finite()) || !self.offset.is_finite() {
             return Err(invalid(
                 "Plane needs a finite, nonzero normal and finite offset",
@@ -52,8 +51,7 @@ impl Plane {
         }
         Ok(plane)
     }
-    #[doc(hidden)]
-    pub fn distance(self, point: [f64; 3]) -> f64 {
+    pub(crate) fn distance(self, point: [f64; 3]) -> f64 {
         dot(self.normal, point) - self.offset
     }
 }

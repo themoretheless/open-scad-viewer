@@ -140,8 +140,7 @@ pub enum G6Component {
     },
 }
 
-#[doc(hidden)]
-pub fn is_uniform_bicubic_positive(surface: &Surface) -> bool {
+fn is_uniform_bicubic_positive(surface: &Surface) -> bool {
     surface.degree_u == 3 && surface.degree_v == 3 && is_bezier_le3_positive(surface)
 }
 
@@ -268,8 +267,7 @@ fn rational_weights_constant_on_fixed_axis(surface: &Surface, fixed_u: bool) -> 
     }
 }
 
-#[doc(hidden)]
-pub fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
+fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for p in s.control_points.iter().flatten() {

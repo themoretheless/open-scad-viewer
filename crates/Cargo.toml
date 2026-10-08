@@ -41,6 +41,12 @@ opt-level = 3
 [profile.release.package.brep-core]
 opt-level = 3
 
+[profile.release.package.nurbs-intersect]
+opt-level = 3
+
+[profile.release.package.brep-intersect]
+opt-level = 3
+
 [profile.release.package.planar-geometry]
 opt-level = 3
 

@@ -86,9 +86,10 @@ agreement; it does not claim general solid-geometric certification.
 - `analytic_boolean` changes topology only with an all-Complete
   `BooleanCertificate` on the frozen analytic cylinder corpus. Individual
   intersection reports still report `permitsTopologyChange: false`.
-- `analytic_ss` / `coverage_verifier` publish finite Complete plane↔quadric
-  contacts; out-of-matrix pairs refuse. `nurbs_ss_g6` is R1.1
-  (`nurbs-ss-bezier-le3/1`: Bezier deg≤3 elevated to bicubic).
+- `nurbs_intersect::{analytic_ss, coverage_verifier}` publish finite Complete
+  plane↔quadric contacts; out-of-matrix pairs refuse. `nurbs_intersect::nurbs_ss`
+  is R1.1 (`nurbs-ss-bezier-le3/1`: Bezier deg≤3 elevated to bicubic); the
+  Model-bound NURBS Booleans over it stay here in `nurbs_ss_g6`.
 - `trim_sew` provides chart classification + exact sew without auto-heal.
 - `analytic_features` publishes AnalyticComplete fillet/chamfer/shell/solid-loft
   under their QualificationPlans (faceted ≠ analytic). STEP and IGES interchange
@@ -168,9 +169,11 @@ quadrature convergence is not a geometric validity/completeness certificate.
 Solid exposes this through **B-rep properties**. Explicit budgets and convergence
 failures refuse the estimate.
 
-Geometry-only intersection APIs are documented in
-[`nurbs-intersection-queries.md`](../../docs/design/nurbs-intersection-queries.md).
-They retain parameter traces and unresolved regions without authorizing Boolean
+Geometry-only intersection APIs live in the `nurbs-intersect` crate (curve and
+surface queries) and `brep-intersect` (analytic pairs on models); `brep-core`
+keeps the exact recognisers and the sphere–sphere pair. They are documented in
+[`nurbs-intersection-queries.md`](../../docs/design/nurbs-intersection-queries.md)
+and retain parameter traces and unresolved regions without authorizing Boolean
 topology decisions.
 
 ## ModelGraph / MCP

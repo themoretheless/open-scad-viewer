@@ -1,7 +1,8 @@
 # Native NURBS intersection queries
 
-`brep-core::intersections` provides read-only queries against retained rational
-definitions. The Rust/WASM bridge and TypeScript adapter expose the same results:
+The `nurbs-intersect` crate provides read-only queries against retained rational
+definitions (the analytic pair intersections on B-rep models live in
+`brep-intersect`). The Rust/WASM bridge and TypeScript adapter expose the same results:
 
 ```ts
 import {createBrepCylinder} from '../../src/services/geometry/brep'

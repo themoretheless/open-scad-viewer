@@ -31,7 +31,7 @@
     "crates/brep-intersect/src/cone_torus.rs": 1199,
     "crates/brep-intersect/src/cylinder_cylinder.rs": 889,
     "crates/brep-intersect/src/cylinder_torus.rs": 988,
-    "crates/brep-intersect/src/plane_cone.rs": 2083,
+    "crates/brep-intersect/src/plane_cone.rs": 2084,
     "crates/brep-intersect/src/plane_cylinder.rs": 1351,
     "crates/brep-intersect/src/plane_sphere.rs": 958,
     "crates/brep-intersect/src/plane_torus.rs": 1131,

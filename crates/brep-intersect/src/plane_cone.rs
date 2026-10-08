@@ -1310,6 +1310,7 @@ mod tests {
     use super::super::test_utils::rotated_translated;
     use super::*;
 
+
     fn point_of(jet: &[f64]) -> [f64; 3] {
         [jet[0], jet[1], jet[2]]
     }
