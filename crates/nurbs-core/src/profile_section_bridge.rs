@@ -258,6 +258,40 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
             spent,
         ))
     }
+    /// Mixed derivative with respect to the original free parameter and
+    /// normalized bridge coordinate. Uses original expression jets throughout.
+    pub fn mixed_derivative_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.validate(free, across, budget)?;
+        let (data, spent) = self.data(free, budget, true)?;
+        let Some(data) = data else {
+            return Ok((None, spent));
+        };
+        let t = I::new(across[0], across[1])?;
+        let q = I::point(1.).sub(t)?;
+        let d0 = q
+            .mul(I::point(1.).sub(I::point(3.).mul(t)?)?)?
+            .mul(I::point(self.scales[0]))?;
+        let d1 = t
+            .mul(I::point(3.).mul(t)?.sub(I::point(2.))?)?
+            .mul(I::point(self.scales[1]))?;
+        let position = I::point(6.).mul(t)?.mul(q)?;
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let v =
+                |side: usize, slot: usize| I::new(data[side][slot][k][0], data[side][slot][k][1]);
+            let value = position
+                .mul(v(1, 2)?.sub(v(0, 2)?)?)?
+                .add(d0.mul(v(0, 3)?)?)?
+                .add(d1.mul(v(1, 3)?)?)?;
+            bounds[k] = [value.lo, value.hi];
+        }
+        Ok((Some(bounds), spent))
+    }
     pub fn normal_bounds(
         &self,
         free: [f64; 2],

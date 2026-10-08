@@ -1684,6 +1684,29 @@ mod tests {
         assert!(cut.transverse_bounds([0., 1.], 2).unwrap().0.is_some());
     }
     #[test]
+    fn bridge_mixed_jet_matches_independent_bilinear_surface() {
+        let mut s = surface();
+        s.weights = vec![vec![1.,1.],vec![1.,1.]];
+        s.control_points[1][1][2] = 3.; // S(u,v) = [u,v,3uv].
+        let p = qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for axis in [0,1] {
+            let bridge = crate::normal_alignment::ProfileSectionBridge::new(
+                p.section(axis,0.25).unwrap(),p.section(axis,0.75).unwrap(),[0.5;2]).unwrap();
+            for free in [0.,0.3,1.] { for across in [0.,0.5,1.] {
+                let (bounds,spent)=bridge.mixed_derivative_bounds([free;2],[across;2],8).unwrap();
+                assert_eq!(spent,8);
+                let bounds=bounds.unwrap();
+                for (k,expected) in [0.,0.,1.5].into_iter().enumerate() {
+                    assert!(bounds[k][0]<=expected && expected<=bounds[k][1]);
+                }
+            }}
+            let bounds=bridge.mixed_derivative_bounds([0.,1.],[0.,1.],8).unwrap().0.unwrap();
+            assert!(bounds[2][0]<=1.5 && bounds[2][1]>=1.5);
+            assert!(bridge.mixed_derivative_bounds([0.;2],[0.5;2],7).unwrap().0.is_none());
+            assert!(bridge.mixed_derivative_bounds([0.;2],[-0.1,0.5],8).is_err());
+        }
+    }
+    #[test]
     fn original_rail_correction_matches_independent_separable_surface_positions() {
         let mut s=surface();s.weights=vec![vec![2.,2.],vec![8.,8.]];
         let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();

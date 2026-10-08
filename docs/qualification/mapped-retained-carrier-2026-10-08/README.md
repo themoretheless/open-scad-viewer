@@ -1245,3 +1245,18 @@ rails, then requalify full-domain regularity, injectivity and seam angles.
 Closed Body assembly, corners, wall thickness, whole-body intersection
 checks and WASM/worker/UI integration remain open. These changes are native
 only; the previously packaged WASM does not contain them.
+
+## Mixed jet for transverse tangent correction
+
+The two-section bridge now bounds its mixed derivative with respect to the
+original free coordinate and the normalized across coordinate. It combines
+original section tangent and mixed profile jets using differentiated Hermite
+coefficients; no rounded intermediate Surface is introduced. All eight source
+queries share one work allowance. Seven spans refuse on the reference.
+
+An independent bilinear surface S(u,v)=[u,v,3uv] gives mixed bridge derivative
+[0,0,1.5] for section width 0.5. Both section orientations, nine samples each,
+the full parameter rectangle, insufficient work and an invalid domain are
+covered. The 15 profile tests passed in 5.10 seconds. This supplies the mixed
+jet needed to differentiate the forthcoming side transverse-field correction;
+that correction and renewed whole-seam/body qualification remain open.
