@@ -742,3 +742,31 @@ neighbor face 2 at canonical [0.7499999999999988,0.750000000000001], neighbor UV
 [[0.7499999999999892,0.7500000000000108],[1,1]]. Each uses two curve spans.
 The native actual cut/pole/endpoint regression passes. New adjacent trim paths,
 cap geometry and closed-body admission remain required.
+
+## Root-valued source-edge partitions at the new section
+
+`CutEndpoint::split_source_use` creates an unchanged original UV cut line and
+independently certifies its unique intersection with the selected original
+boundary pcurve. Both directed fragments use clones of the same private
+`SourcePoint` root expression. Their full original surface/curve definitions
+remain unchanged. The cut root is transported through the privately admitted
+canonical world carrier into the original neighbor use, retaining strict
+interior ordering and the same cut enclosure on both neighbor range views.
+These neighbor ranges are expression views, not admitted replacement Fragments
+or a new neighbor contour. A zero mapping budget errors before qualification.
+
+Actual edge 0 split root parameters are
+[[0.7499999999999971,0.7500000000000026],
+[0.33333333333333204,0.3333333333333344]]; neighbor cut interval is
+[0.24999999999999564,0.2500000000000046]. Actual edge 1 split roots are
+[[0.2499999999999987,0.25000000000000117],
+[0.6666666666666641,0.6666666666666689]]; neighbor cut interval is
+[0.749999999999997,0.7500000000000033]. Each root uses one mapping cell.
+The actual source-partition regression verifies root-valued shared joins,
+unchanged source curves and equal transported neighboring cut ranges.
+This prepares real selected-face boundary fragments; adjacent new trim paths,
+cap geometry and closed-body qualification remain required.
+Both new selected-face fragments also restore through the existing native
+root-requalification gate. Their joins and full original definitions survive
+the round trip; no cached endpoint bounds authorize restoration. The native
+actual cut/pole/partition/restore regression passes.

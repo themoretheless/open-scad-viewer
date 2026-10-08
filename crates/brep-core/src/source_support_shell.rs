@@ -371,6 +371,22 @@ mod tests {
             for k in 0..3 {assert!(own[k][0]<=world[k][1]&&world[k][0]<=own[k][1]);}
             eprintln!("owned cut endpoint edge={} canonical={:?} neighborUV={:?} world={:?} spans={}",index,
                 endpoint.canonical_bounds(),endpoint.neighbor_uv_bounds(),world,report.spans);
+            let split=endpoint.split_source_use(16).unwrap();
+            let partition=split.partition.expect(split.reason);
+            assert!(std::ptr::eq(partition.endpoint(),&endpoint));
+            let fragments=partition.selected_fragments();assert!(fragments[0].joins(&fragments[1]));
+            assert_eq!(fragments[0].curve(),fragments[1].curve());
+            let restored=fragments.each_ref().map(|f|crate::source_boundary_fragment::restore(f.definition(),16).unwrap());
+            assert!(restored[0].joins(&restored[1]));
+            for i in 0..2 {assert_eq!(restored[i].definition(),fragments[i].definition());}
+
+            let neighbor=partition.neighbor_ranges();assert_eq!(neighbor[0][1],neighbor[1][0]);
+            let point=partition.point();assert_eq!(point.surface(),fragments[0].surface());
+            assert!(matches!(&fragments[0].endpoints()[1],crate::source_boundary_fragment::Endpoint::Crossing{..}));
+            assert!(matches!(&fragments[1].endpoints()[0],crate::source_boundary_fragment::Endpoint::Crossing{..}));
+            assert!(endpoint.split_source_use(0).is_err());
+            eprintln!("owned cut partition edge={} roots={:?} neighborRanges={:?} cells={}",index,
+                point.root_parameters(),neighbor,split.mapping_cells);
             let short=proposal.cut_endpoint(0,0,0.75,high,index,1).unwrap();
             assert!(short.endpoint.is_none());assert_eq!(short.reason,"profile-cut-work-limit");
         }
