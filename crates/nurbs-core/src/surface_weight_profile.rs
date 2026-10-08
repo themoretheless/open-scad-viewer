@@ -248,6 +248,74 @@ impl ProfileEndTransition<'_, '_> {
         }
         Ok((Some(bounds), spent + more))
     }
+    /// Derivative in the transition coordinate, keeping the exact section
+    /// and transverse expressions. Source queries share the span allowance.
+    pub fn across_derivative_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.section.rectangle(free)?;
+        check(
+            max_spans <= 100000
+                && across.iter().all(|x| x.is_finite())
+                && across[0] >= 0.
+                && across[1] <= 1.
+                && across[0] <= across[1],
+            "Bound transition derivative parameters and work",
+        )?;
+        if across == [1., 1.] {
+            return Ok((Some([[0., 0.]; 3]), 0));
+        }
+        if across == [0., 0.] {
+            let (d, spent) = self.section.transverse_bounds(free, max_spans)?;
+            let mut bounds = [[0.; 2]; 3];
+            let Some(d) = d else {
+                return Ok((None, spent));
+            };
+            for k in 0..3 {
+                let value = I::new(d[k][0], d[k][1])?.mul(I::point(self.transverse_scale))?;
+                bounds[k] = [value.lo, value.hi];
+            }
+            return Ok((Some(bounds), spent));
+        }
+        let (source, spent) = self.section.enclose(free, max_spans)?;
+        let Some(source) = source else {
+            return Ok((None, spent));
+        };
+        if spent == max_spans {
+            return Ok((None, spent));
+        }
+        let (d, more) = self.section.transverse_bounds(free, max_spans - spent)?;
+        let Some(d) = d else {
+            return Ok((None, spent + more));
+        };
+        let t = I::new(across[0], across[1])?;
+        let t2 = t.mul(t)?;
+        let h00 = I::point(6.).mul(t2)?.sub(I::point(6.).mul(t)?)?;
+        let h10 = I::point(3.)
+            .mul(t2)?
+            .sub(I::point(4.).mul(t)?)?
+            .add(I::point(1.))?
+            .mul(I::point(self.transverse_scale))?;
+        let h01 = I::point(6.).mul(t)?.sub(I::point(6.).mul(t2)?)?;
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let value = h00
+                .mul(I::new(source[k][0], source[k][1])?)?
+                .add(h10.mul(I::new(d[k][0], d[k][1])?)?)?
+                .add(h01.mul(I::point(self.target[k]))?)?;
+            bounds[k] = [value.lo, value.hi];
+        }
+        Ok((Some(bounds), spent + more))
+    }
+    pub fn rail(&self, high: bool) -> ProfileTransitionRail<'_, '_, '_> {
+        ProfileTransitionRail {
+            transition: self,
+            free: self.section.range[usize::from(high)],
+        }
+    }
     /// At s=0, H=S, dH/dt=dS/dt and dH/ds=l D exactly.
     /// A nonzero support normal therefore proves the same regular tangent
     /// plane along this owned boundary. Nothing is claimed at the tip or rails.
@@ -257,6 +325,35 @@ impl ProfileEndTransition<'_, '_> {
             normal.and_then(|n| n.iter().any(|r| r[0] > 0. || r[1] < 0.).then_some(true)),
             spent,
         ))
+    }
+}
+/// Original side-rail expression bound to the exact transition. It cannot be
+/// substituted by another curve merely because endpoint coordinates overlap.
+pub struct ProfileTransitionRail<'a, 'p, 's> {
+    transition: &'a ProfileEndTransition<'p, 's>,
+    free: f64,
+}
+impl ProfileTransitionRail<'_, '_, '_> {
+    pub fn free_parameter(&self) -> f64 {
+        self.free
+    }
+    pub fn transition(&self) -> &ProfileEndTransition<'_, '_> {
+        self.transition
+    }
+    pub fn enclose(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.transition.enclose([self.free; 2], range, max_spans)
+    }
+    pub fn tangent_bounds(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.transition
+            .across_derivative_bounds([self.free; 2], range, max_spans)
     }
 }
 fn choose(n: usize, k: usize) -> f64 {
@@ -1135,6 +1232,30 @@ mod tests {
             Some(true)
         );
         assert!(transition.regular_join([0.2, 0.4], 0).is_err());
+        for high in [false, true] {
+            let rail = transition.rail(high);
+            let v = if high { 1. } else { 0. };
+            assert!(std::ptr::eq(rail.transition(), &transition));
+            assert_eq!(rail.free_parameter(), v);
+            for t in [0., 0.5, 1.] {
+                let bounds = rail.tangent_bounds([t, t], 2).unwrap().0.unwrap();
+                let source = [0.8, 3. * v / (1. + 2. * v), 0.];
+                let derivative = [0.64, 0., 0.];
+                for k in 0..3 {
+                    let expected = (6. * t * t - 6. * t) * source[k]
+                        + (3. * t * t - 4. * t + 1.) * 0.25 * derivative[k]
+                        + 6. * t
+                        - 6. * t * t;
+                    assert!(bounds[k][0] <= expected && expected <= bounds[k][1]);
+                }
+                assert_eq!(
+                    rail.enclose([t, t], 2).unwrap(),
+                    transition.enclose([v, v], [t, t], 2).unwrap()
+                );
+            }
+            assert!(rail.tangent_bounds([0.2, 0.8], 1).unwrap().0.is_none());
+            assert!(rail.tangent_bounds([-0.1, 0.5], 2).is_err());
+        }
         s.knots_v = vec![0., 0., 0.5, 1., 1.];
         for row in &mut s.control_points {
             let x = row[0][0];

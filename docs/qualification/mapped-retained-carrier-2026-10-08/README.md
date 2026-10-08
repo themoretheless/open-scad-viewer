@@ -956,3 +956,22 @@ This is transition geometry, not a sewn cap. Side rails still need coincidence
 with neighbor replacement contours; the collapsed target has no regularity or
 embedding certificate. Interior Jacobian, self-intersections, thickness,
 corrected shared-edge admission and closed-body/WASM integration remain open.
+
+## Owned transition rails and across derivatives
+
+`ProfileEndTransition::across_derivative_bounds` encloses the derivative of
+the exact Hermite expression with shared source/derivative span work. At the
+section it specializes to the exact scaled transverse derivative; at the
+collapsed target it is exactly zero. `rail(high)` binds each side to this
+immutable transition and original free endpoint. Rail positions and tangents
+query the same expression, without creating an independently rounded Curve.
+
+Analytic rational fixtures check both rails at transition parameters 0, 0.5
+and 1, invalid domains and incomplete work. All 13 profile tests pass in
+0.03 seconds. Actual annular rails preserve section endpoint enclosures and
+the common target [20,0,6]; their positions and derivatives enclose all 64
+intervals covering each rail. The control fixture passes in 2.86 seconds.
+
+The zero tip derivative is explicit evidence of a singular parameterization,
+not a regular-tip certificate. Neighbor rail coincidence, rail tangent planes,
+interior Jacobian, embedding and closed-body admission remain required.

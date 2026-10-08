@@ -361,6 +361,17 @@ mod tests {
             assert_eq!(transition.enclose(free,[0.,0.],1).unwrap(),cut.enclose(free,1).unwrap());
             assert!(transition.enclose(free,[0.,1.],2).unwrap().0.is_some());
         }
+        for high in [false,true] {
+            let rail=transition.rail(high);
+            assert_eq!(rail.enclose([0.,0.],1).unwrap(),cut.enclose([rail.free_parameter();2],1).unwrap());
+            assert_eq!(rail.enclose([1.,1.],0).unwrap().0.unwrap(),[[20.,20.],[0.,0.],[6.,6.]]);
+            assert_eq!(rail.tangent_bounds([1.,1.],0).unwrap().0.unwrap(),[[0.,0.];3]);
+            for i in 0..64 {
+                let range=[i as f64/64.,(i+1) as f64/64.];
+                assert!(rail.enclose(range,2).unwrap().0.is_some());
+                assert!(rail.tangent_bounds(range,2).unwrap().0.is_some());
+            }
+        }
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {
