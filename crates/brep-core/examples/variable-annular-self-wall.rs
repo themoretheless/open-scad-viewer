@@ -68,7 +68,7 @@ fn main() {
                         a.direction_exclusions, a.reason,
                     );
                     Some(
-                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
+                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"polarExclusions":a.polar_exclusions,"polarFactorRefusals":a.polar_factor_refusals,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
                     )
                 } else {
                     None

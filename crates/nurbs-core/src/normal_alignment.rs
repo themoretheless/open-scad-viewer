@@ -28,7 +28,7 @@ fn norm_squared(x: [I; 3]) -> Result<I> {
     I::new(out.lo.max(0.), out.hi)
 }
 type Net = Vec<Vec<[I; 4]>>;
-fn restrict_hull(
+pub(crate) fn restrict_hull(
     net: &Net,
     degrees: [usize; 2],
     span: [[f64; 2]; 2],
@@ -118,7 +118,7 @@ pub(crate) struct JetBounds {
     pub first: [[I; 3]; 2],
     pub second: [[I; 3]; 3],
 }
-fn differentiate_net(
+pub(crate) fn differentiate_net(
     net: &Net,
     degrees: [usize; 2],
     axis: usize,

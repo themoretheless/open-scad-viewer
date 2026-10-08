@@ -16,6 +16,9 @@ pub struct Report<'a> {
     pub reason: &'static str,
 }
 impl<'a> Certificate<'a> {
+    pub(crate) fn end(&self) -> bool {
+        self.end
+    }
     pub fn surface(&self) -> &'a Surface {
         self.surface
     }

@@ -232,6 +232,55 @@ pub fn qualify_rectangle<'a>(
     }
     Ok(out)
 }
+/// Excludes nonzero geometric chords using S_v=t² B on an exactly verified
+/// collapsed Bezier rail. Along a straight UV segment, averaged S_u and the
+/// positive t²-weighted average B lie in the same bounded differential hull.
+/// Thus chord=M*(delta_u,delta_v integral(t²)); the ordinary singular-value
+/// and endpoint-normal variation argument applies to this weighted vector.
+/// If that vector is zero, the geometric chord is zero and is not a wall chord.
+pub fn qualify_polar_rectangle<'a>(
+    s: &'a Surface,
+    domain: [[f64; 2]; 2],
+    end: bool,
+    max_sine_squared: f64,
+    max_spans: usize,
+) -> Result<Report<'a>> {
+    s.validate()?;
+    check(
+        max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+        "Polar chord exclusion requires squared sine in [0,1)",
+    )?;
+    normal_alignment::validate_rectangle(s, domain, max_spans)?;
+    let mut out = Report {
+        certificate: None,
+        spans: 0,
+        complete: false,
+        cosine_squared_upper: None,
+        reason: "polar-chord-work-limit",
+    };
+    if max_spans < 3 {
+        return Ok(out);
+    }
+    let Some(j) = crate::polar_surface_differential::bounds(s, end, domain)? else {
+        out.reason = "polar-chord-factor-unproven";
+        return Ok(out);
+    };
+    out.spans = 3;
+    out.complete = true;
+    let best = cosine_upper(j)?;
+    out.cosine_squared_upper = Some(best);
+    out.reason = "polar-chord-unproven";
+    if best < I::point(1.).sub(I::point(max_sine_squared))?.lo {
+        out.certificate = Some(Certificate {
+            surface: s,
+            domain,
+            max_sine_squared,
+            cosine_squared_upper: best,
+        });
+        out.reason = "polar-chord-normal-excluded";
+    }
+    Ok(out)
+}
 #[cfg(test)]
 mod tests {
     use super::*;

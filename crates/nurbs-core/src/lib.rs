@@ -41,6 +41,7 @@ pub mod radial_bounds;
 pub mod ray_surface;
 pub mod normal_alignment;
 pub mod factored_surface_normals;
+mod polar_surface_differential;
 pub mod curve_surface_agreement;
 pub mod curve_surface_plane;
 pub mod curve_surface_affine;

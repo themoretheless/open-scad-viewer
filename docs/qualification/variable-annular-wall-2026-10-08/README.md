@@ -328,3 +328,38 @@ direction exclusions but leaves 15 or 19 pending domains.
 identity checks. Coverage remains 28/31; a polar intrinsic secant
 argument is needed for the collapsed diagonal, rather than excluding
 that region or treating it as a regular chart.
+
+## Polar differential primitive and verified rational boundary
+
+The native polar primitive proves S_v=t² B when both authored leading
+control rows and weights are constant in V. Original homogeneous
+V derivatives then have exactly zero leading rows, and Bernstein
+factor removal gives bounded B on the closed chart. A nonzero chord
+is a mean differential times (delta_u,delta_v integral(t²)); positive
+weighted averaging preserves the column enclosures. The intrinsic
+normal/chord inequality therefore handles the collapsed diagonal
+without requiring a nonsingular original UV Jacobian.
+
+Three polar tests pass with independent quadratic differential formulas,
+original-source and reversed-end bounds, successful local chord proof
+where the ordinary chart proof refuses, missing-work and absent-factor
+refusal. Twelve existing chord/coverage tests also pass, including true
+normal-chord rejection. Reflected parameter endpoints use outward
+interval operations. The primitive supports clamped Bezier degrees
+2–8 in U and 1–8 in V.
+
+The repeated eight-end 1024-cell audit gives no new complete proofs.
+A separate single-cell support diagnostic records one structural
+factor refusal on every source end. Their V-dependent rational
+weights require factoring the full rational derivative numerator
+H_v W - H W_v, rather than the simpler separate homogeneous factors.
+No unsupported primitive is admitted. Evidence is retained in
+`annular-self-wall-polar-poles.*.gz`, `annular-polar-support.*.gz`,
+and the polar differential/chord test logs.
+
+The middle-face combined-minor 20000-cell/100000-span audit also
+completed for all four specimens. Both radius orders exhaust 100000
+spans at 19586 or 19747 cells, leaving 18 or 11 pending domains.
+No complete certificate is produced (`annular-self-wall-gram-middle.*.gz`).
+Retained coverage stays 28/31. All broad roadmap requirements remain
+open to the extent not separately qualified.

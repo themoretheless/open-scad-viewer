@@ -34,6 +34,8 @@ pub struct Report<'a> {
     pub cells: usize,
     pub spans: usize,
     pub intrinsic_exclusions: usize,
+    pub polar_exclusions: usize,
+    pub polar_factor_refusals: usize,
     pub angular_exclusions: usize,
     pub direction_exclusions: usize,
     pub distance_exclusions: usize,
@@ -201,6 +203,8 @@ fn qualify_impl<'a>(
         cells: 0,
         spans: 0,
         intrinsic_exclusions: 0,
+        polar_exclusions: 0,
+        polar_factor_refusals: 0,
         angular_exclusions: 0,
         direction_exclusions: 0,
         distance_exclusions: 0,
@@ -233,6 +237,25 @@ fn qualify_impl<'a>(
             out.intrinsic_exclusions += 1;
             intrinsic.push(c);
             continue;
+        }
+        if let Some(proof) = factored.filter(|_| out.spans < limits.spans) {
+            let r = surface_self_chord::qualify_polar_rectangle(
+                s,
+                union,
+                proof.end(),
+                max_sine_squared,
+                limits.spans - out.spans,
+            )?;
+            out.spans += r.spans;
+            if r.reason == "polar-chord-factor-unproven" {
+                out.polar_factor_refusals += 1;
+            }
+            if let Some(c) = r.certificate {
+                out.intrinsic_exclusions += 1;
+                out.polar_exclusions += 1;
+                intrinsic.push(c);
+                continue;
+            }
         }
         if let Some(threshold) = necessary.filter(|_| out.spans < limits.spans) {
             let r =
