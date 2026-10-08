@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import {BrowserMemoryQualificationError, serializedError} from './browserMemoryErrors.mjs'
+export {BrowserMemoryQualificationError}
 import { buildQualificationBundle } from './run-browser-qualification.mjs'
 
 import { createReadStream, constants as fsConstants } from 'node:fs'
@@ -35,14 +37,6 @@ const CLEANUP_TIMEOUT_MS = 5_000
 const LATE_SETTLEMENT_DRAIN_TIMEOUT_MS = 5_000
 const MAX_NETWORK_URL_CHARACTERS = 2_048
 
-export class BrowserMemoryQualificationError extends Error {
-  constructor(code, message, details = {}) {
-    super(message)
-    this.name = 'BrowserMemoryQualificationError'
-    this.code = code
-    this.details = Object.freeze({ ...details })
-  }
-}
 
 function exactLoopbackOrigin(origin) {
   try {
@@ -1029,30 +1023,6 @@ export async function runActualBrowserMemoryQualification(config) {
   return record
 }
 
-function serializedError(error) {
-  if (error instanceof AggregateError) {
-    return {
-      name: error.name,
-      code: 'E_AGGREGATE',
-      message: error.message,
-      details: { errors: [...error.errors].map(serializedError) },
-    }
-  }
-  if (error instanceof BrowserMemoryQualificationError) {
-    return {
-      name: error.name,
-      code: error.code,
-      message: error.message,
-      details: error.details,
-    }
-  }
-  return {
-    name: error instanceof Error ? error.name : 'UnknownError',
-    code: 'E_UNEXPECTED',
-    message: error instanceof Error ? error.message : String(error),
-    details: {},
-  }
-}
 
 async function main() {
   try {
