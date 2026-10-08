@@ -1360,3 +1360,25 @@ remains unresolved: 0 accepted cells, 1001 pending rectangles, 1000 cells,
 the geometric enclosure enough for admission. The next correction must
 retain dependencies between the source and bridge error fields rather than
 merely reuse their independently bounded jets.
+
+## Source second partials and common-coordinate differences
+
+The profile exposes every second partial through the same exact homogeneous
+quotient jet, preserving all incident span coverage and explicit work refusal.
+The mixed API delegates to this implementation. An independent rational
+reference checks x''=-24/(1+3u)^3 and zero other partials at nine points;
+invalid axes and incomplete multispan work are covered. Its focused test passed.
+
+`coordinate_difference_bounds` integrates one common derivative enclosure
+to bound the difference between source points at two fixed coordinates.
+It avoids independent absolute-position subtraction, requires continuity
+along the interval, supports reverse traversal and specializes equal
+coordinates to zero. A translated planar reference at coordinate 1e8
+checks the exact difference and a tighter enclosure than direct point-box
+subtraction. Disconnected knot input is rejected during profile qualification.
+The final focused difference test passed. The initial attempted 1e12
+reference exceeded the existing 1e9 coordinate limit and was corrected.
+
+These source queries provide ingredients for a correlated bridge error
+bound; they are not yet integrated into the full correction. The annular
+regularity result remains 1001 pending rectangles until requalification.

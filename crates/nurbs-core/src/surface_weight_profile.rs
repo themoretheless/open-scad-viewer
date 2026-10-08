@@ -760,6 +760,32 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
+    /// Bound S(end,free)-S(start,free) by integrating one common derivative
+    /// enclosure. Absolute position boxes are never subtracted. Continuity
+    /// across the intervening knots is required explicitly.
+    pub fn coordinate_difference_bounds(
+        &self, axis:usize, parameters:[f64;2], free:[f64;2], max_spans:usize,
+    ) -> Result<(Option<[[f64;2];3]>,usize)> {
+        check(axis<2 && parameters.iter().all(|x|x.is_finite()),"Require finite source difference coordinates")?;
+        let mut domain=[free;2];
+        domain[axis]=[parameters[0].min(parameters[1]),parameters[0].max(parameters[1])];
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
+        let knots=if axis==0 {&self.source.knots_u}else{&self.source.knots_v};
+        let degree=if axis==0 {self.source.degree_u}else{self.source.degree_v};
+        if knots.iter().any(|&k|k>=domain[axis][0] && k<=domain[axis][1] && k>knots[degree] && k<knots[knots.len()-degree-1] && knots.iter().filter(|&&v|v==k).count()>degree) {
+            return Ok((None,0));
+        }
+        if parameters[0]==parameters[1] {return Ok((Some([[0.;2];3]),0));}
+        let (jet,spent)=self.derivative_bounds(domain,max_spans)?;
+        let Some(jet)=jet else {return Ok((None,spent));};
+        let scale=I::point(parameters[1]).sub(I::point(parameters[0]))?;
+        let mut out=[[0.;2];3];
+        for k in 0..3 {
+            let v=I::new(jet[k][axis][0],jet[k][axis][1])?.mul(scale)?;
+            out[k]=[v.lo,v.hi];
+        }
+        Ok((Some(out),spent))
+    }
     /// Mixed derivative of the exact profile, needed by transverse transition
     /// fields. Both one-sided knot limits are included in the complete hull.
     pub fn mixed_derivative_bounds(
@@ -767,6 +793,15 @@ impl<'source> WeightProfile<'source> {
         domain: [[f64; 2]; 2],
         max_spans: usize,
     ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.second_derivative_bounds(domain,[0,1],max_spans)
+    }
+    /// Exact profile second partial, including every incident span side.
+    /// Axis pairs [0,0], [0,1], [1,0], [1,1] are supported. This enclosure
+    /// alone does not establish continuity across knots.
+    pub fn second_derivative_bounds(
+        &self, domain:[[f64;2];2], axes:[usize;2], max_spans:usize,
+    ) -> Result<(Option<[[f64;2];3]>,usize)> {
+        check(axes.iter().all(|&a|a<2),"Require two valid second derivative axes")?;
         crate::normal_alignment::validate_rectangle(self.source, domain, max_spans)?;
         let s = self.source;
         let degrees = [s.degree_u, s.degree_v];
@@ -800,8 +835,8 @@ impl<'source> WeightProfile<'source> {
                     &s.control_points[u][v],
                 )?;
                 for k in 0..3 {
-                    hull[k][0] = hull[k][0].min(jet.second[1][k].lo);
-                    hull[k][1] = hull[k][1].max(jet.second[1][k].hi);
+                    hull[k][0] = hull[k][0].min(jet.second[axes[0]+axes[1]][k].lo);
+                    hull[k][1] = hull[k][1].max(jet.second[axes[0]+axes[1]][k].hi);
                 }
                 spent += 1;
             }
@@ -1682,6 +1717,51 @@ mod tests {
         assert!(cut.transverse_bounds([0., 1.], 1).unwrap().0.is_none());
         assert!(cut.tangent_bounds([0., 1.], 2).unwrap().0.is_some());
         assert!(cut.transverse_bounds([0., 1.], 2).unwrap().0.is_some());
+    }
+    #[test]
+    fn source_difference_uses_common_derivative_and_refuses_discontinuity() {
+        let mut s=surface();
+        for row in &mut s.control_points {for p in row {p[0]+=1e8;}}
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for parameters in [[0.5,0.75],[0.75,0.5],[0.5,0.5]] {
+            let (bounds,spent)=p.coordinate_difference_bounds(0,parameters,[0.,1.],1).unwrap();
+            let bounds=bounds.unwrap();
+            let expected=parameters[1]-parameters[0];
+            assert!(bounds[0][0]<=expected&&expected<=bounds[0][1]);
+            if parameters[0]!=parameters[1] {
+                let a=p.enclose([[parameters[0];2],[0.,1.]],1).unwrap().0.unwrap();
+                let b=p.enclose([[parameters[1];2],[0.,1.]],1).unwrap().0.unwrap();
+                assert!(bounds[0][1]-bounds[0][0]<(a[0][1]-a[0][0])+(b[0][1]-b[0][0]));
+            }
+            assert_eq!(spent,usize::from(parameters[0]!=parameters[1]));
+        }
+        s.knots_u=vec![0.,0.,0.5,0.5,1.,1.];
+        s.control_points.insert(1,vec![vec![1e8+0.25,0.,0.],vec![1e8+0.25,1.,0.]]);
+        s.control_points.insert(2,vec![vec![1e8+0.75,0.,0.],vec![1e8+0.75,1.,0.]]);
+        s.weights=vec![vec![1.;2];4];
+        assert!(qualify_weight_profile(&s,[0,0],8).is_err());
+    }
+    #[test]
+    fn rational_profile_second_partials_match_independent_formula() {
+        let mut s=surface();s.weights=vec![vec![2.,2.],vec![8.,8.]];
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        for u in [0.,0.3,1.] {for v in [0.,0.5,1.] {
+            for axes in [[0,0],[0,1],[1,0],[1,1]] {
+                let (bounds,spent)=p.second_derivative_bounds([[u;2],[v;2]],axes,1).unwrap();
+                assert_eq!(spent,1);
+                let bounds=bounds.unwrap();
+                let expected=if axes==[0,0] {[-24./(1.+3.*u).powi(3),0.,0.]}else{[0.;3]};
+                for k in 0..3 {assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1]);}
+            }
+        }}
+        assert!(p.second_derivative_bounds([[0.,1.];2],[0,2],1).is_err());
+        assert_eq!(p.second_derivative_bounds([[0.,1.];2],[0,1],1).unwrap(),p.mixed_derivative_bounds([[0.,1.];2],1).unwrap());
+        s.knots_u=vec![0.,0.,0.5,1.,1.];
+        s.control_points.insert(1,vec![vec![0.5,0.,0.],vec![0.5,1.,0.]]);
+        s.weights.insert(1,vec![4.,4.]);
+        let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+        assert!(p.second_derivative_bounds([[0.,1.];2],[0,0],1).unwrap().0.is_none());
+        assert!(p.second_derivative_bounds([[0.,1.];2],[0,0],2).unwrap().0.is_some());
     }
     #[test]
     fn transverse_rail_correction_restores_independent_quartic_patch() {
