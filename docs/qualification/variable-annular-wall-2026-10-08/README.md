@@ -1623,3 +1623,15 @@ success, localized failure, Retry and exact reload. The screenshot was reviewed.
 This check uses the preceding packaged kernel (253 unproven pairs); the ongoing
 normal-product kernel build is not qualified by this evidence. The truncated
 and successful message branches still require separate rendered scenarios.
+
+### Completed native bridge acceptance
+
+Four complete native bridge requests passed: disabled products and one-cell
+products each leave 257 pairs unproven; full products leave 177; full products
+with private adaptive self facts leave 173. Each enumerates all 378 pairs,
+retains prior confirmed pairs and refuses a whole-wall certificate/lower bound.
+The adaptive case charges 14,769 product cells and 3,916 normal restrictions.
+Its remaining obligations include nine curved self pairs, 162 distinct normal/
+wall pairs, one clearance-resolution refusal and one clearance-work refusal.
+This is thickness coverage evidence for the stated near-normal chord scope,
+not a general self-intersection audit. Packaged-WASM acceptance is still pending.
