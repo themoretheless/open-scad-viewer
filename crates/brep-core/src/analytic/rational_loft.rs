@@ -3,6 +3,8 @@
 use super::*;
 mod smooth_stations;
 pub use smooth_stations::{SmoothStationWalls,smooth_station_walls};
+mod polygon_stations;
+pub use polygon_stations::{PolygonStationWalls, smooth_polygon_station_walls};
 type P = [f64; 3];
 fn err(message: impl Into<String>) -> Error {
     Error::new("BREP_RATIONAL_SWEEP_REFUSED", message)

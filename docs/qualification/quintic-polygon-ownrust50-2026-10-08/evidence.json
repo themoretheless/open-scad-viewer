@@ -1,0 +1,317 @@
+{
+  "schema": "quintic-polygon-local-evidence/1",
+  "ownRustEvidence": "docs/qualification/own-rust-cad-v50.json",
+  "geometryWasmSha256": "1e51fad8f6d95aaa44962b1c1931c6c50b38109583cea9a7521ef8923726475c",
+  "qualificationClaim": "finite-local-cases-only",
+  "g1ResultImported": false,
+  "nativeStepCases": 16,
+  "packagedWasmStepVerified": false,
+  "files": {
+    "nurbs-current.log.gz": {
+      "sha256": "bd3db5bc477d00af8494545eaf9c07568deed7ade3db4be9db7c6c36e2c61676",
+      "byteLength": 16964,
+      "decodedSha256": "c273e3a2ea5f03bd3d1e809b60e1694c014a02c55ac5b3c1d7025fe5a509f452",
+      "decodedByteLength": 74386
+    },
+    "brep-bridge-current.log.gz": {
+      "sha256": "4801c989f800cd76c9b877dbfa839b6a596d5fd24e46444425ad3fb43fd8f9a5",
+      "byteLength": 26352,
+      "decodedSha256": "b1a9d528cfa9017413dd9b97b9a41bad1338d81058aae666fd060e4ef754b6eb",
+      "decodedByteLength": 122353
+    },
+    "matrix-16-current.log.gz": {
+      "sha256": "28622eb9aa09a5c7fc38223c8b32958bbfae82c5d6173c2d79a5981dedebcee9",
+      "byteLength": 1674,
+      "decodedSha256": "d844bace5ac5144dc783dce90be7bb10fb66511c22189eea2dd61d75470f5490",
+      "decodedByteLength": 5933
+    },
+    "bridge-ordered-current.log.gz": {
+      "sha256": "1ad17774a122a11d204805f4a3b45297df1e973ce327c08b7a615b64d6876464",
+      "byteLength": 2053,
+      "decodedSha256": "28b1b8b6dfa4099eb649e7bdf3be77ee9bd36c69d3006083c1c3dac520b3ce25",
+      "decodedByteLength": 6758
+    },
+    "source-prepared.log.gz": {
+      "sha256": "283b34cb1f5574ad02b1fefcafccefcfa5d33b2c9f92e0844e8f305b35e02d32",
+      "byteLength": 2387,
+      "decodedSha256": "f3064982fd88a0face35e0023fca1925e0f1b53d5adbeb0f0762db5cb5deda03",
+      "decodedByteLength": 10819
+    },
+    "source-gap.log.gz": {
+      "sha256": "9815885ea59b7741de44ecb64da6ff0b6a02268759d8dedf8afc5d55d45ec600",
+      "byteLength": 1962,
+      "decodedSha256": "5c38dda4c5d0307c2eecc09788ebae270a457d9f6ceac2c4b337bb2d7b462b38",
+      "decodedByteLength": 6445
+    },
+    "ray-native.log.gz": {
+      "sha256": "ce63df8d5965597d085a29686e6daaf04416d75ae073c852ba2cdc502964c4f2",
+      "byteLength": 1675,
+      "decodedSha256": "c3e5868c1e640809d057ac92de26516aebdc24a4c8adc68d30fca4c591e36a35",
+      "decodedByteLength": 4783
+    },
+    "spatial-regression-next.log.gz": {
+      "sha256": "657b696e36683ffc1d7fb2581b9f890ef8831a22665d1635e6047b72bd4b7ae1",
+      "byteLength": 2293,
+      "decodedSha256": "1c2fbb8bc7734e0fb0bd5a900191d626dac437e6a593970ee276f5286b6059a5",
+      "decodedByteLength": 10602
+    },
+    "cap-regression-next.log.gz": {
+      "sha256": "258df758507d192da82b3caa31a5762a70f3db902c33cec7cf093951dbf8c17e",
+      "byteLength": 2342,
+      "decodedSha256": "f21b14120d12115937cb51ee6f9a38570984d54f57ba02816d2a05a212d3529a",
+      "decodedByteLength": 10502
+    },
+    "inverted-shell-current.log.gz": {
+      "sha256": "1bb0938b200c0616074da61852460c1a449df7450733a59789d21f2117a83a65",
+      "byteLength": 1927,
+      "decodedSha256": "c5f3aa8c114a716c40cd13962f39b9142d219450f9fcfd39a20e2206b2515672",
+      "decodedByteLength": 6340
+    },
+    "wasm-current.log.gz": {
+      "sha256": "82d2716066ad3eebd953ff642e9eeae9323f6b0b6ed7c7d4ed5d4333c259ec60",
+      "byteLength": 1923,
+      "decodedSha256": "afba45e382c35f5e009a5641f40fd3eaf649a66073e4867f53ce0f0df752f889",
+      "decodedByteLength": 7039
+    },
+    "wasm-transport-current.log.gz": {
+      "sha256": "c99f47a273dc37bca7f69ae7e5a30739574fca1c729e21bef04624e87a652126",
+      "byteLength": 212,
+      "decodedSha256": "95f946f0f6c1deb7b005fe54d8a3e2760e3ec77bae43e580c143d0f5d937400a",
+      "decodedByteLength": 261
+    },
+    "dist-current.log.gz": {
+      "sha256": "e884480b4e8303cd0c8f4e7b864679581fbab32dbd962601b808d78a0ba688ae",
+      "byteLength": 108,
+      "decodedSha256": "8c25532d04144f0f68bb8af689f42fdf84eec914db7708cc1ac9ed5fd6559031",
+      "decodedByteLength": 99
+    },
+    "architecture-current.log.gz": {
+      "sha256": "8a11a77a58069e3cfc47fddc16fae4b28a7d070e6efafa5c85b668a383914ab9",
+      "byteLength": 83,
+      "decodedSha256": "0d21c5cc5d373b496edaa4bf52679f1c6f92249d9d14ecd6418c3ee3f523445f",
+      "decodedByteLength": 71
+    },
+    "g1-harness-current.log.gz": {
+      "sha256": "33c46bcd10abff674db455387c4ad22a85281bfe092a2d0e74e9ad2ecef83c7f",
+      "byteLength": 206,
+      "decodedSha256": "aa87594944ad5b84244f4985dc4db7ebd8d3a06b580d01cbaa985b085a334ed4",
+      "decodedByteLength": 256
+    },
+    "freeze-tests.log.gz": {
+      "sha256": "04a53e7f9c4ccc45c18093727a99f3577ca439d0265ec169e4816692177ca178",
+      "byteLength": 501,
+      "decodedSha256": "af98d1aea03c93e19ce9945f89bf5bb845e22253cee5d3a3007e28f2124d1e1c",
+      "decodedByteLength": 838
+    },
+    "record-tests.log.gz": {
+      "sha256": "47e987dc324a45b9d8a2ee6ad63745ec45b01ee677749ea5fb71247bc6d30d8e",
+      "byteLength": 1075,
+      "decodedSha256": "dd04cc4330040cf18af853016493253b33b7436b4e99cfb39187f2be8824038f",
+      "decodedByteLength": 3058
+    },
+    "profile-browser-report.json": {
+      "sha256": "1f32fefe58dc6dbc6d93b4aeafb491ddeea8146f06cf9bac9fe6945785c1192b",
+      "byteLength": 2480
+    },
+    "1440-closed-profile-planar-10.r.png": {
+      "sha256": "69f7b7c0135151561a9cafa694f41e93965a509ddfa3df074e5d80e2f056da31",
+      "byteLength": 111299
+    },
+    "600-closed-profile-spatial-6.r.png": {
+      "sha256": "1b8fa98a815a2089358ebb2088356c712f8e5e250c6b5b7a83bf8bc42ea63af2",
+      "byteLength": 91192
+    },
+    "1440-closed-profile-spatial-6.r.png": {
+      "sha256": "ce637fa14e045c656cd883c90bc4b36c0ed390bc6bf61201290cb72e7a260f52",
+      "byteLength": 109393
+    },
+    "600-closed-profile-planar-10.r.png": {
+      "sha256": "297acec4106b3976538ca5ea6b5fe273c773adc397344415bc0089d9792aa778",
+      "byteLength": 95321
+    },
+    "spatial-browser-report.json": {
+      "sha256": "e43da316c01fcc1033cc469c47f2ad9ed86a7c28b1e7442198f4fe9deb2c7efd",
+      "byteLength": 1225
+    },
+    "1440-spatial-bishop-g2-surface-6.r.png": {
+      "sha256": "ed422ae75922f311d41c7b4f55a596ddc9fa3e632806c0f5b820f89b49dd0ded",
+      "byteLength": 102264
+    },
+    "600-spatial-bishop-g2-surface-6.r.png": {
+      "sha256": "caf877324f0232a2105af04443f5a0ff94cacc3503955ad1a08a4b9c72a494ff",
+      "byteLength": 47303
+    },
+    "raw-wasm-probe.json": {
+      "sha256": "db7192edd9d77fcfb0313e4e5e70f47c0f52e698263c476ee38cc0cb4280ea7c",
+      "byteLength": 796
+    },
+    "step-6/quintic-planar-weighted-6.step": {
+      "sha256": "1e18d2d8216fd6bd3ca97e694a29563171838ce67b6deab42212c457d29687f7",
+      "byteLength": 117935
+    },
+    "step-6/quintic-spatial-weighted-6.step": {
+      "sha256": "05ead0111589e0e2e1fcb9fe237bdeed7a87809524916272982ce7c541f95529",
+      "byteLength": 117989
+    },
+    "step-6/quintic-spatial-unit-6.step": {
+      "sha256": "59325fabf16cee5088605fdc31865f7c77d29c32da282672fb48c7cb6c21ada2",
+      "byteLength": 103229
+    },
+    "step-6/manifest.json.gz": {
+      "sha256": "c729126834ae765b845df46215baf84e5fdda7a2131f1ff7ad81a676ae7ef67d",
+      "byteLength": 103330,
+      "decodedSha256": "4cf6fdf1fc068651d0129cbd17246cda08d11eb6ae17ef3b0f514785954064e7",
+      "decodedByteLength": 1614943
+    },
+    "step-6/opencascade-sweep.json.gz": {
+      "sha256": "48a85119727c568ff8f0e3edff3827d186ad0a8d18b4f6e2298bf69555dde64d",
+      "byteLength": 1248,
+      "decodedSha256": "faa352f39d72923e9b030325afe96b2107eace855e6cb5b65e5e7ef24a9d1807",
+      "decodedByteLength": 7698
+    },
+    "step-6/quintic-planar-unit-6.step": {
+      "sha256": "0f142998917cc73fc5e8e1b6f31e9c042a3706f7dda40c8fad69b35b9256c685",
+      "byteLength": 103175
+    },
+    "step-6/native-bundle.json.gz": {
+      "sha256": "c3510671e77ddcc15de48befe836078ec64c4b82d8559f6fcf7391afacdfbc61",
+      "byteLength": 197894,
+      "decodedSha256": "eb2001a53a8f8f8a0dc87f862294a0b9cb47b80795ac781398624e8dab4aeff5",
+      "decodedByteLength": 1524967
+    },
+    "step-7/quintic-spatial-unit-7.step": {
+      "sha256": "ffc291a43240ba542acbb55d0064e734ee4acef970918eb408f88c888d71dd87",
+      "byteLength": 124053
+    },
+    "step-7/quintic-spatial-weighted-7.step": {
+      "sha256": "8a66d5002235a877d47964fb088d245a3c89769ee8f32f248793afe0c8d89ffc",
+      "byteLength": 141765
+    },
+    "step-7/quintic-planar-weighted-7.step": {
+      "sha256": "1b2ff31f2069dea5d38ac9e1a86773d574210c41aa4a19676d726d339529be85",
+      "byteLength": 141657
+    },
+    "step-7/manifest.json.gz": {
+      "sha256": "e6bf14dd9564dbb8a858f0d8a9094edd6de03b07e1bb44f68d349fbd98f9f404",
+      "byteLength": 114269,
+      "decodedSha256": "434340d61d642ac6cf304e80d20aeb7d2d93582da71c7e55117e801b56a671f4",
+      "decodedByteLength": 1924259
+    },
+    "step-7/opencascade-sweep.json.gz": {
+      "sha256": "a809a2b3b700d15dd3b73598f52da04f2277cbb3a3e109b2a8ee383655b4a4ad",
+      "byteLength": 1259,
+      "decodedSha256": "25b7fa1fcc72f8dc1f1d4c6de32a9bd0b15751b647eca58c8692c58c9ea608a0",
+      "decodedByteLength": 7683
+    },
+    "step-7/quintic-planar-unit-7.step": {
+      "sha256": "3798192740b1c9b5809e8dc87e771b778055749830c28314bbd012b3ef35567c",
+      "byteLength": 123945
+    },
+    "step-7/native-bundle.json.gz": {
+      "sha256": "69e3f8747b32c0a88b0bb852b180abdd056eba1612c8043106d4a26b55a21cc5",
+      "byteLength": 219151,
+      "decodedSha256": "81cd80c11df16a8bfeca9a64e8aa6ecc197caf9517a3f66b782fe48cc9b3966a",
+      "decodedByteLength": 1807965
+    },
+    "step-10/quintic-planar-unit-10.step": {
+      "sha256": "de0b5eea033f82a9724cc27002848774e3f1b0f498f2badf060284f82e647857",
+      "byteLength": 186451
+    },
+    "step-10/quintic-spatial-unit-10.step": {
+      "sha256": "7b804c971a813f3b2b969ff6f5412628c875a0764b3982e8a39e48c7e942c1e0",
+      "byteLength": 186487
+    },
+    "step-10/quintic-spatial-weighted-10.step": {
+      "sha256": "fc10bc5ef1748efb7c7e85371d7b354a8fcc96816d513b5b157ebd662bccc781",
+      "byteLength": 213055
+    },
+    "step-10/manifest.json.gz": {
+      "sha256": "c5140e66ceefd4b306d6f16220098880dbe39df7bbd3fb5731aa69f1cfff6349",
+      "byteLength": 185335,
+      "decodedSha256": "ee4a276e9a3dc8d34bf6a02f28f0ab2a1b4f53705915080f70e8dae9337376ba",
+      "decodedByteLength": 2910461
+    },
+    "step-10/opencascade-sweep.json.gz": {
+      "sha256": "278759214a5ae80fa06d84f85fcef2b31110f2c7af3228057b36206d44c81ccd",
+      "byteLength": 1243,
+      "decodedSha256": "197af9d942aea25deae16454559075369454312a256e6396ca0791f17abf5e0e",
+      "decodedByteLength": 7714
+    },
+    "step-10/quintic-planar-weighted-10.step": {
+      "sha256": "1444b43c286e9367ca22f0986fc13fcfd85bcd53fcb084b2e2a482c0c8a2343e",
+      "byteLength": 213019
+    },
+    "step-10/native-bundle.json.gz": {
+      "sha256": "527061744f1c727267ff4ea5261618c0221858d647e921db1c72bb5a08135035",
+      "byteLength": 357609,
+      "decodedSha256": "444cf58c0aed0fad50bf3184209bc16e03523872273c36a60b083c2a616e6353",
+      "decodedByteLength": 2746201
+    },
+    "step-12/quintic-planar-weighted-12.step": {
+      "sha256": "3b0783c4f161a26155c930258aeb4c250eb643e7ca5f61e4bc5c4583fd5b1454",
+      "byteLength": 260750
+    },
+    "step-12/quintic-spatial-weighted-12.step": {
+      "sha256": "edb4e2052eb91920f53f899bc5943bee86bdfcfeb30ef0435b5052f6ab0484ea",
+      "byteLength": 260804
+    },
+    "step-12/manifest.json.gz": {
+      "sha256": "76b0d162ca9d63117caa9869f54294c2ebaba014e3d8cebb9755167e8274123e",
+      "byteLength": 226135,
+      "decodedSha256": "7e3d03f6a8708ffe659901f6a7a005a0956e59458b73e322556dafe60f35d539",
+      "decodedByteLength": 3558157
+    },
+    "step-12/opencascade-sweep.json.gz": {
+      "sha256": "f39c012e67dee08586987f26cdf92c91ed94650da14556ee3f26bb9940838efb",
+      "byteLength": 1285,
+      "decodedSha256": "717aa717999d4b55e65b3a2761100297c5bed7c65b778dc3a7c7b6e0baef5020",
+      "decodedByteLength": 7691
+    },
+    "step-12/quintic-spatial-unit-12.step": {
+      "sha256": "48fd6631e21058d6ad3c3c0d90fa7fa9876ced8d1ac03c81e27ac04276dc733d",
+      "byteLength": 228332
+    },
+    "step-12/quintic-planar-unit-12.step": {
+      "sha256": "a0618f0fd5213055bf05ed649246e50296da81ab1fe0a3d9af0a8cfbf63f24df",
+      "byteLength": 228278
+    },
+    "step-12/native-bundle.json.gz": {
+      "sha256": "dd4d2cd68bfc7aa64f8867623aaaac3521b1ddb13e2a30ae1610c2fb77a879e6",
+      "byteLength": 437229,
+      "decodedSha256": "9d677665de72ab01b1561ce99deceade35838e555e7b05561f479f9e7cd5f527",
+      "decodedByteLength": 3355155
+    },
+    "executors/verify-polygon-station-step.py": {
+      "sha256": "9edeed495639eea292b2c7554c9493fb3ad3118d056702f9801c1544dbe95d52",
+      "byteLength": 7034
+    },
+    "executors/verify-sweep-step-occt.py": {
+      "sha256": "8a7e805efc7942abaef0ff92b5289317e62da5ce273114a5333f9fbf2ac74113",
+      "byteLength": 27182
+    },
+    "executors/step_rational_basis.py": {
+      "sha256": "92122461e7f701918b70d97a73b81d180d808ce057de0903e97b843360a1ee84",
+      "byteLength": 794
+    },
+    "executors/check-profile-solid-browser.mjs": {
+      "sha256": "c40b61066e1794b567ff84732f06ac9f782399fc9b3c936a742507f770ff9c37",
+      "byteLength": 9229
+    },
+    "executors/check-spatial-bishop-browser.mjs": {
+      "sha256": "66e4c6493713556f635b1ee4228bfb494c082e9c08f229ce4cf3920980502b8e",
+      "byteLength": 4791
+    },
+    "executors/quinticPolygonBody.test.ts": {
+      "sha256": "a779a2e26b405eabe0ce305f9b604797833615c1137c9077823a8527796ea101",
+      "byteLength": 3518
+    },
+    "executors/polygon-station-step.rs": {
+      "sha256": "3343d87893d83360499540ea628fdd365ab4e9d00220f01d236adb2e67a89c8e",
+      "byteLength": 4852
+    },
+    "README.md": {
+      "sha256": "8ffa47b1bc9189bba61b848e0cbe6bfedfddfdd783a72034b3c5e5fbdd01b391",
+      "byteLength": 2803
+    }
+  }
+}

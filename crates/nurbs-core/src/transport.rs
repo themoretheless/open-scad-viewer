@@ -179,7 +179,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             surface_linear_monotonicity::inspect(&surface,projection,max_cells)?
         }else{surface_linear_monotonicity::inspect_candidate(&surface,max_cells)?};
         return Ok(json!({"certified":report.certified,"cells":report.cells,
-            "projection":report.projection,"reason":report.reason,"globalEmbeddingCertified":false}));
+            "projection":report.projection,"rowWeights":report.row_weights,"profileParameterization":report.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower})),"reason":report.reason,"globalEmbeddingCertified":false}));
     }
     if op == "sweep_boundary_coverage_audit" {
         let label=field::<String>(&v,"boundary")?;

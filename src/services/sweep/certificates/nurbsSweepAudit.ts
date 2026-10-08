@@ -229,14 +229,17 @@ export function inspectSweepBoundaryCoverage(surface:NurbsSurface,uv:import('../
  return callNurbsRust('sweep_boundary_coverage_audit',{surface,uv,boundary})
 }
 
+export interface NurbsProfileParameterization {weights:[number,number];derivativeLower:number}
 export interface SurfaceLinearInjectivityAudit {
  certified:boolean
  cells:number
  projection:[[number,number,number],[number,number,number]]
+ rowWeights?:[number,number]
+ profileParameterization?:NurbsProfileParameterization|null
  reason:string|null
  globalEmbeddingCertified:false
 }
-/** One fixed integer projection, certified over every original knot rectangle. */
+/** Fixed native projection and positive row metric, checked over every knot rectangle. */
 export function inspectSurfaceLinearInjectivity(surface:NurbsSurface,maxCells:number,projection?:[[number,number,number],[number,number,number]]):SurfaceLinearInjectivityAudit {
  return callNurbsRust('surface_linear_injectivity_audit',{surface,maxCells,...(projection?{projection}:{})})
 }

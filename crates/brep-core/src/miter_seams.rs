@@ -123,7 +123,7 @@ mod tests {
         let charts = inspect_charts(&model,&caps,100_000).unwrap();
         assert!(charts.certified);
         assert_eq!(charts.charts.len(),model.faces.len()-caps.len());
-        assert_eq!(charts.cells,charts.charts.iter().map(|(_,r)| r.cells).sum());
+        assert_eq!(charts.cells,charts.charts.iter().map(|(_,r)| r.cells).sum::<usize>());
         assert!(!inspect_charts(&model,&caps,0).unwrap().certified);
         assert!(inspect_charts(&model,&[caps[0],caps[0]],100_000).is_err());
         let limited=inspect_profile(&model,&caps,report.total_work-1).unwrap();
