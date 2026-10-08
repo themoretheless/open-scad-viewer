@@ -880,6 +880,9 @@ mod tests {
         }
         assert_eq!(kinds,[153,162,12,23,54,1,1]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(153));
+        if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
+            std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
+        }
         assert_eq!(diagnostics["pairs"].as_array().unwrap().len(),406);
         let binary=value_codec::encode_binary(&diagnostics).unwrap();
         assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);

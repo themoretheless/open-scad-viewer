@@ -12,18 +12,47 @@ fn single_bezier(c: &Curve) -> bool {
         && c.knots[n..].iter().all(|k| *k == c.knots[n])
         && c.knots[0] < c.knots[n]
 }
-fn identical_trace(a: &Curve, b: &Curve) -> bool {
-    if !single_bezier(a) || !single_bezier(b) || a.degree != b.degree {
-        return false;
+fn identical_trace(a: &Curve, b: &Curve, used: &mut u64, max_work: u64) -> Result<bool> {
+    if !single_bezier(a)
+        || !single_bezier(b)
+        || a.degree != b.degree
+        || a.validate().is_err()
+        || b.validate().is_err()
+        || a.weights.iter().chain(&b.weights).any(|w| *w <= 0.)
+    {
+        return Ok(false);
     }
     let n = a.control_points.len();
-    (0..2).any(|reverse| {
-        (0..n).all(|i| {
-            let j = if reverse == 0 { i } else { n - 1 - i };
-            a.control_points[i] == b.control_points[j] && a.weights[i] == b.weights[j]
-        })
-    })
+    for reverse in 0..2 {
+        let index = |i| if reverse == 0 { i } else { n - 1 - i };
+        if !(0..n).all(|i| a.control_points[i] == b.control_points[index(i)]) {
+            continue;
+        }
+        if (0..n).all(|i| a.weights[i] == b.weights[index(i)]) {
+            return Ok(true);
+        }
+        let mut identical = true;
+        for i in 0..n {
+            // Exact homogeneous weight identity; never compare rounded ratios.
+            let points = [
+                [0., 0., 0.],
+                [a.weights[i], b.weights[index(i)], 0.],
+                [a.weights[0], b.weights[index(0)], 0.],
+            ];
+            if crate::source_allowed_contact::orient(&points, Some([0, 1]), used, max_work)?
+                != Some(cad_predicates::Sign::Zero)
+            {
+                identical = false;
+                break;
+            }
+        }
+        if identical {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
+
 pub struct TransitionRuledContact<'x> {
     owners: [&'x ShellFace; 2],
     rail: usize,
@@ -109,15 +138,17 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         else {
             return Ok(out);
         };
-        if original.axes() != [0, 1] || !identical_trace(curve, trace.curve()) {
+        if original.axes() != [0, 1]
+            || !identical_trace(curve, trace.curve(), &mut out.exact_work, max_work)?
+        {
             return Ok(out);
         }
         // The whole wall projects onto this original Jordan boundary. The
         // source subregion (and the transition with the same planar image)
         // can meet it only on the selected natural rail. Fresh carrier proof
         // supplies its full 3D contact ownership, including both cut roots.
-        let edge = root.qualify_incident_edge(max_work, max_drivers)?;
-        out.exact_work = edge.work_used;
+        let edge = root.qualify_incident_edge(max_work - out.exact_work, max_drivers)?;
+        out.exact_work += edge.work_used;
         out.driver_cells = edge.driver_cells;
         let Some(edge) = edge.edge else {
             out.reason = edge.reason;
@@ -190,15 +221,17 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         else {
             return Ok(out);
         };
-        if original.axes() != [0, 1] || !identical_trace(curve, trace.curve()) {
+        if original.axes() != [0, 1]
+            || !identical_trace(curve, trace.curve(), &mut out.exact_work, max_work)?
+        {
             return Ok(out);
         }
         // The whole wall projects onto this original Jordan boundary. The
         // source subregion (and the transition with the same planar image)
         // can meet it only on the selected natural rail. Fresh carrier proof
         // supplies its full 3D contact ownership, including both cut roots.
-        let edge = root.qualify_incident_edge(max_work, max_drivers)?;
-        out.exact_work = edge.work_used;
+        let edge = root.qualify_incident_edge(max_work - out.exact_work, max_drivers)?;
+        out.exact_work += edge.work_used;
         out.driver_cells = edge.driver_cells;
         let Some(edge) = edge.edge else {
             out.reason = edge.reason;
@@ -227,18 +260,29 @@ mod tests {
             weights: vec![1., 0.75, 1.25],
             periodic: false,
         };
+        let matches = |a: &Curve, b: &Curve| identical_trace(a, b, &mut 0, 100000).unwrap();
         let mut b = a.clone();
         b.knots = vec![2., 2., 2., 5., 5., 5.];
         b.control_points.reverse();
         b.weights.reverse();
-        assert!(identical_trace(&a, &b));
+        assert!(matches(&a, &b));
         b.control_points[1][0] = f64::from_bits(b.control_points[1][0].to_bits() + 1);
-        assert!(!identical_trace(&a, &b));
+        assert!(!matches(&a, &b));
         b = a.clone();
         b.weights[1] = f64::from_bits(b.weights[1].to_bits() + 1);
-        assert!(!identical_trace(&a, &b));
+        assert!(!matches(&a, &b));
+        b = a.clone();
+        for weight in &mut b.weights {
+            *weight *= 2.;
+        }
+        assert!(matches(&a, &b));
+        let mut used = 0;
+        assert!(!identical_trace(&a, &b, &mut used, 0).unwrap());
+        assert!(used == 0);
+        b.weights[1] = f64::from_bits(b.weights[1].to_bits() + 1);
+        assert!(!matches(&a, &b));
         b = a.clone();
         b.periodic = true;
-        assert!(!identical_trace(&a, &b));
+        assert!(!matches(&a, &b));
     }
 }
