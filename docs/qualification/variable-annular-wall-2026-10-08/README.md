@@ -55,3 +55,21 @@ An explicit volume audit now accepts separately bounded whole-chart
 injectivity work. Its regression requires embedded boundary, consistent
 material roles and independent outward orientation together; invalid budgets
 are refused. Original default admission behavior remains unchanged.
+
+## Initial explicit-volume result
+
+With explicit chart injectivity work, all four bodies pass original boundary
+agreement, exact joins, trim validity and all 31 face injectivity checks.
+Pair classification remains incomplete under the initial 256-cell/4096-domain
+per-pair budget. Boundary admission therefore refuses volume admission, and
+nesting/orientation stages are correctly not run. No volume claim is made.
+
+`volume-initial.json.gz` preserves the original stage results. A repeat uses
+the earlier successful embedding audit's per-pair 4096-cell/100000-domain
+limits, global 1000000-cell/8000000-domain limits, and explicit independent
+orientation work. Pair reasons are recorded to distinguish remaining causes.
+
+```sh
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-volume -- /tmp/volume.json
+```
