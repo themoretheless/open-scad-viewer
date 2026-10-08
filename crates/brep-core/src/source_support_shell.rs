@@ -391,6 +391,11 @@ mod tests {
         assert!(refined.regular.iter().all(|r|r[1][1]<1.));
         let pending_area:f64=refined.pending.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
         eprintln!("adaptive transition pendingArea={pending_area:.17}");
+        let (tip,tip_spans)=transition.tip_limits(1e-6,8).unwrap();let tip=tip.unwrap();
+        assert_eq!(tip_spans,8);assert_eq!(tip.point,[20.,0.,6.]);
+        assert!(tip.distinct_tangent_limits);assert!(tip.sine_squared_interval.unwrap()[0]>0.999999);
+        eprintln!("transition tip distinct={} sine={:?} normals={:?}",tip.distinct_tangent_limits,tip.sine_squared_interval,tip.components);
+        assert!(transition.tip_limits(1e-6,7).unwrap().0.is_none());
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

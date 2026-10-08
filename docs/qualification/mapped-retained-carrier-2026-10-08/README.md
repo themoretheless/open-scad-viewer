@@ -1043,3 +1043,24 @@ All 13 profile tests passed in 0.04 seconds, and the actual control fixture
 passed in 4.70 seconds. Span exhaustion remains a refusal. The remaining
 45 cells, limiting tip planes, neighbor rail ownership, embedding and
 closed-body admission remain unresolved; no packaged WASM changed.
+
+## Endpoint limiting-plane diagnosis for the collapsed transition
+
+`ProfileEndTransition::tip_limits` compares independently enclosed factored
+normal limits at both original free endpoints. All eight original span queries
+share the work allowance. Incomplete work produces no limit report. Matching
+endpoint limits would still require qualification of the complete tip fan.
+
+The actual annular transition has distinct limiting planes: sine squared lies
+in [0.9999999999581346,1]. This is a geometric counterexample to a regular G1
+point cap, not an interval-budget shortfall. The first limit is essentially
+parallel to the XY plane and the second to the vertical neighbor plane. The
+regression requires this distinction and refuses seven-span work. A rational
+planar reference independently passes coincident endpoint limit planes.
+
+All 13 profile tests passed in 0.04 seconds; the actual control fixture passed
+in 4.80 seconds. The proposed point-collapse transition cannot be admitted as
+a smooth tip by further subdivision alone. Subsequent construction must use
+a noncollapsed terminal boundary and a separate corner patch, or explicitly
+qualify a supported sharp vertex with its full fan, embedding and neighbors.
+Neither route is implemented here. The full CAD objective remains incomplete.

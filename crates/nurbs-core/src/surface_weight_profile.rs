@@ -452,6 +452,42 @@ impl ProfileEndTransition<'_, '_> {
         }
         Ok((Some(bounds), spent))
     }
+    /// Compare two independently enclosed limiting planes at the collapsed
+    /// target. Equal endpoint limits alone do not qualify the full tip fan.
+    pub fn tip_limits(
+        &self,
+        threshold: f64,
+        max_spans: usize,
+    ) -> Result<(Option<ProfilePoleLimits>, usize)> {
+        check(
+            threshold.is_finite() && (0. ..1.).contains(&threshold) && max_spans <= 100000,
+            "Bound transition tip angle and work",
+        )?;
+        let mut normals = [[[0.; 2]; 3]; 2];
+        let mut spent = 0;
+        for end in 0..2 {
+            let (bounds, used) = self.factored_normal_bounds(
+                [self.section.range[end]; 2],
+                [1., 1.],
+                max_spans - spent,
+            )?;
+            spent += used;
+            let Some(bounds) = bounds else {
+                return Ok((None, spent));
+            };
+            normals[end] = bounds;
+        }
+        let compared = crate::normal_alignment::inspect_pair_bounds(normals, threshold)?;
+        Ok((
+            Some(ProfilePoleLimits {
+                point: self.target,
+                components: normals,
+                sine_squared_interval: compared.sine_squared_interval,
+                distinct_tangent_limits: compared.aligned == Some(false),
+            }),
+            spent,
+        ))
+    }
     /// Cover the entire requested rectangle with certified regular cells and
     /// explicit pending cells. Subdivision never discards unresolved domains.
     pub fn inspect_regularity(
@@ -1504,6 +1540,15 @@ mod tests {
             Some(true)
         );
         assert!(transition.regular_join([0.2, 0.4], 0).is_err());
+        let (tip, spent) = transition.tip_limits(1e-6, 8).unwrap();
+        let tip = tip.unwrap();
+        assert_eq!(spent, 8);
+        assert_eq!(tip.point, [1., 1., 1.]);
+        assert!(!tip.distinct_tangent_limits);
+        assert!(tip.sine_squared_interval.unwrap()[1] < 1e-6);
+        assert!(transition.tip_limits(1e-6, 7).unwrap().0.is_none());
+        assert!(transition.tip_limits(f64::NAN, 8).is_err());
+
         let factored = transition
             .factored_normal_bounds([0.3, 0.3], [0.5, 0.5], 4)
             .unwrap()
