@@ -466,6 +466,15 @@ mod tests {
             let section=section.section.expect(section.reason);
             assert!(std::ptr::eq(section.boundary(),&boundary));
             assert_eq!(section.edge_index(),if high {1}else{3});
+            assert!(section.qualify_exterior(0,0).unwrap().region.is_none());
+            let exterior=section.qualify_exterior(1000,1000).unwrap();
+            let exterior=exterior.region.expect(exterior.reason);
+            assert!(std::ptr::eq(exterior.section(),&section));
+            assert!(!exterior.kept_loop().is_empty());
+            assert!(!exterior.removed_loop().is_empty());
+            let expected=if high {1.}else{0.};
+            assert!(exterior.kept_loop().iter().any(|f|f.curve().control_points.iter().all(|p|p[0]==expected)));
+            assert!(!exterior.removed_loop().iter().any(|f|f.curve().control_points.iter().all(|p|p[0]==expected)));
             for loop_ in section.contours().loops() {
                 assert!((0..loop_.len()).all(|i|loop_[i].joins(&loop_[(i+1)%loop_.len()])));
             }

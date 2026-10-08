@@ -1701,3 +1701,30 @@ Remaining work includes selecting and admitting the exterior retained
 regions, matching their directed section uses to the transition, assembling
 the closed expression shell and qualifying whole-body volume/intersections
 and wall thickness. No new WASM is packaged by this stage.
+
+## Exterior section-side qualification
+
+TransitionSection::qualify_exterior classifies both complementary source
+contours against the owned straight section coordinate. Every noncontact
+arc must lie wholly on one side. Original positive-weight control hulls
+prove strict sides for unaffected curves. Arcs ending at the implicit
+section root use fresh whole-source monotonic coordinate-driver proofs
+through source_halfplane_side, preserving the original crossing equation.
+No sampled point or tolerance-based coordinate snap selects a region.
+
+Both loops must be qualified on opposite sides before selecting a kept
+loop. Entry keeps the lower coordinate side; terminal keeps the higher
+side. The private ExteriorSection borrows the bound section and exposes
+kept/removed source-chart loops. Controls and monotonic driver cells share
+explicit total allowances; insufficient work refuses admission.
+
+The regression checks both cuts, owner identity and refusal with zero work.
+It independently checks that entry retains the original coordinate-0 end
+and terminal retains coordinate-1, and that those ends are absent from the
+corresponding removed loops. This qualifies side selection, not profile
+face immersion, simplicity or whole-body embedding. Those checks and
+terminal directed incidence remain required before shell admission.
+
+The final strengthened combined annular regression passed in 57.34 seconds;
+the preceding classification regression passed in 35.24 seconds. Interior
+coverage remains 328 accepted rectangles with zero pending. Native-only.

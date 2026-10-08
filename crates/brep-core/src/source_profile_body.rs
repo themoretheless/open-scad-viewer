@@ -254,11 +254,59 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
 /// Two complementary original source-chart contours at one owned section.
 /// Selection of the retained region and profile-face admission remain separate.
 pub struct TransitionSection<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,high:bool,contours:CutContourProposal}
-impl TransitionSection<'_,'_,'_,'_> {
+impl<'a,'s,'p,'b> TransitionSection<'a,'s,'p,'b> {
+    /// Whole-source convex hulls and monotonic implicit-root side proofs.
+    pub fn qualify_exterior<'r>(&'r self,max_controls:usize,max_driver_cells:usize)->Result<ExteriorSectionReport<'r,'a,'s,'p,'b>> {
+        use crate::source_boundary_fragment::{Endpoint,Role};
+        if max_controls>100000 || max_driver_cells>100000 {return Err(Error::new("BREP_PROFILE_SECTION_REGION","Bound exterior section work"));}
+        let mut out=ExteriorSectionReport{region:None,controls:0,driver_cells:0,reason:"profile-section-exterior-side-unproven"};
+        let recipe=self.boundary.rooted[0];let axis=recipe.axis;let parameter=recipe.parameters[usize::from(self.high)];
+        let mut sides=Vec::new();
+        for wire in &self.contours.loops {
+            let contact=wire.last().unwrap().curve();
+            if contact.degree!=1 || contact.control_points.len()!=2 || contact.control_points.iter().any(|p|p[axis]!=parameter) {return Ok(out);}
+            let a=&contact.control_points[0];let b=&contact.control_points[1];
+            if a[1-axis]==b[1-axis] {return Ok(out);}
+            let coefficient_positive=if axis==1 {b[0]>a[0]}else{b[1]<a[1]};
+            let mut admitted=None;
+            for above in [false,true] {
+                let mut proven=true;
+                for fragment in &wire[..wire.len()-1] {
+                    let crossing=fragment.endpoints().iter().any(|e|matches!(e,Endpoint::Crossing{point,role:Role::Boundary} if point.contact()==contact));
+                    if crossing {
+                        let report=crate::source_halfplane_side::prove(fragment,contact,1,above==coefficient_positive,max_driver_cells-out.driver_cells)?;
+                        out.driver_cells+=report.driver_cells;
+                        if !report.proven {proven=false;break;}
+                    } else {
+                        for p in &fragment.curve().control_points {
+                            if out.controls==max_controls {out.reason="profile-section-exterior-work-limit";return Ok(out);}
+                            out.controls+=1;
+                            if !(if above {p[axis]>parameter}else{p[axis]<parameter}) {proven=false;break;}
+                        }
+                        if !proven {break;}
+                    }
+                }
+                if proven {admitted=Some(above);break;}
+            }
+            let Some(side)=admitted else {return Ok(out);};sides.push(side);
+        }
+        if sides[0]==sides[1] {return Ok(out);}
+        let kept=usize::from(sides[1]==self.high);
+        out.region=Some(ExteriorSection{section:self,kept});
+        out.reason="profile-section-exterior-side-qualified";Ok(out)
+    }
     pub fn boundary(&self)->&TransitionBoundary<'_,'_,'_> {self.boundary}
     pub fn edge_index(&self)->usize {if self.high {1}else{3}}
     pub fn contours(&self)->&CutContourProposal {&self.contours}
 }
+/// Both complementary arcs classified, with the exterior side selected.
+pub struct ExteriorSection<'r,'a,'s,'p,'b> {section:&'r TransitionSection<'a,'s,'p,'b>,kept:usize}
+impl ExteriorSection<'_,'_,'_,'_,'_> {
+    pub fn section(&self)->&TransitionSection<'_,'_,'_,'_> {self.section}
+    pub fn kept_loop(&self)->&[crate::source_boundary_fragment::Fragment] {&self.section.contours.loops[self.kept]}
+    pub fn removed_loop(&self)->&[crate::source_boundary_fragment::Fragment] {&self.section.contours.loops[1-self.kept]}
+}
+pub struct ExteriorSectionReport<'r,'a,'s,'p,'b> {pub region:Option<ExteriorSection<'r,'a,'s,'p,'b>>,pub controls:usize,pub driver_cells:usize,pub reason:&'static str}
 pub struct TransitionSectionReport<'a,'s,'p,'b> {pub section:Option<TransitionSection<'a,'s,'p,'b>>,pub fragments:usize,pub reason:&'static str}
 /// Admitted embedded transition expression with its root-owned contour.
 /// This does not establish closure or embedding of the surrounding Body.
