@@ -210,6 +210,15 @@ export function validSourceBody(e:ReturnType<typeof sourceBodyExpectation>,value
    &&Array.isArray(edge.parameterBounds)&&edge.parameterBounds.length===2&&edge.parameterBounds.every(interval)
    &&Array.isArray(edge.endpointBoxes)&&edge.endpointBoxes.length===2&&edge.endpointBoxes.every(box=>Array.isArray(box)&&box.length===3&&box.every(interval))&&displayValid(edge))
   if(!edgesValid)return false
+  if(seam?.endpointLimits){
+   const d=seam.endpointLimits,edge=r.edges[seam.request.edge]
+   if(!edge)return false
+   const box=edge.endpointBoxes[d.canonical as 0|1]
+   for(const side of d.sides){
+    const point=side.collapsedPoint
+    if(point&&!point.every((n,a)=>n>=box[a]![0]&&n<=box[a]![1]))return false
+   }
+  }
   const anchors=new Map<number,number[]>()
   for(const edge of r.edges){
    if(e.segments===0)continue

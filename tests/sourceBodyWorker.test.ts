@@ -610,6 +610,7 @@ it('diagnoses owned sharp endpoints while preserving regular seam refusals throu
    (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.canonical=1-d.canonical},
    (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.exactWork=100000001},
    (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint=null},
+   (x:SourceBodyResult)=>{x.seamQualification!.endpointLimits!.sides[0]!.collapsedPoint![0]+=1000},
   ]){const x=structuredClone(r);mutate(x);expect(validSourceBody(sourceBodyExpectation(o),x)).toBe(false)}
   results.push({edge,seam})
  }
