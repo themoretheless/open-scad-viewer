@@ -305,12 +305,18 @@ impl ExteriorSection<'_,'_,'_,'_,'_> {
     /// Inspect a rectangle containing the complete qualified exterior region.
     /// No original-surface immersion certificate is inherited by the profile.
     pub fn inspect_regularity(&self,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::TransitionRegularityReport> {
+        let (profile,domain)=self.profile_domain();profile.inspect_regularity(domain,cells,spans)
+    }
+    pub fn inspect_factored_pole_regularity(&self,high:bool,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::ProfilePoleCover> {
+        let (profile,domain)=self.profile_domain();profile.inspect_factored_pole_regularity(domain,high,cells,spans)
+    }
+    fn profile_domain(&self)->(&WeightProfile<'_>,[[f64;2];2]) {
         let recipe=self.section.boundary.rooted[0];
         let profile=recipe.restricted.proposal.profile(recipe.face).unwrap();let source=profile.source();
         let mut domain=[[source.knots_u[source.degree_u],source.knots_u[source.control_points.len()]],
             [source.knots_v[source.degree_v],source.knots_v[source.control_points[0].len()]]];
         domain[recipe.axis][usize::from(!self.section.high)]=recipe.parameters[usize::from(self.section.high)];
-        profile.inspect_regularity(domain,cells,spans)
+        (profile,domain)
     }
     pub fn section(&self)->&TransitionSection<'_,'_,'_,'_> {self.section}
     pub fn kept_loop(&self)->&[crate::source_boundary_fragment::Fragment] {&self.section.contours.loops[self.kept]}

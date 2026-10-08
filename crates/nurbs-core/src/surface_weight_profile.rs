@@ -13,6 +13,11 @@ pub struct WeightProfile<'a> {
 }
 /// Explicit collapsed-boundary normal factor diagnostic, never a smooth pole certificate.
 pub struct ProfilePoleNormal {pub components:[[f64;2];3],pub high:bool,pub power:usize,pub point:[f64;3]}
+/// Coverage of a factored normal, explicitly distinct from pole immersion.
+pub struct ProfilePoleCover {
+    pub regular:Vec<[[f64;2];2]>,pub pending:Vec<[[f64;2];2]>,pub cells:usize,pub spans:usize,
+    pub complete_factored:bool,pub high:bool,pub power:Option<usize>,pub point:Option<[f64;3]>,pub reason:&'static str,
+}
 /// Direction certificate for the exact proposed profile, not its original Surface.
 pub struct ProfileDirection<'a, 's> {
     profile: &'a WeightProfile<'s>,
@@ -987,6 +992,31 @@ impl<'source> WeightProfile<'source> {
         }
         Ok((Some(ProfilePoleNormal{components,high,power:2*power-1,point:[pole[0],pole[1],pole[2]]}),6))
     }
+    /// Cover the exact normal after collapsed-U factor removal. Completion
+    /// proves the interior and nonzero scaled limits, never a smooth pole.
+    pub fn inspect_factored_pole_regularity(&self,domain:[[f64;2];2],high:bool,max_cells:usize,max_spans:usize)->Result<ProfilePoleCover> {
+        crate::normal_alignment::validate_rectangle(self.source,domain,max_spans)?;
+        check(max_cells<=100000,"Bound factored pole cell work")?;
+        let mut out=ProfilePoleCover{regular:Vec::new(),pending:Vec::new(),cells:0,spans:0,complete_factored:false,high,power:None,point:None,reason:"profile-pole-factor-work-limit"};
+        let mut queue=std::collections::VecDeque::from([domain]);
+        while let Some(rect)=queue.pop_front() {
+            if out.cells==max_cells || max_spans-out.spans<6 {out.pending.push(rect);out.pending.extend(queue);return Ok(out);}
+            out.cells+=1;
+            let (normal,spent)=self.factored_pole_normal_bounds(rect,high,max_spans-out.spans)?;out.spans+=spent;
+            let Some(normal)=normal else {out.pending.push(rect);out.pending.extend(queue);out.reason="profile-pole-factor-recipe-unproven";return Ok(out);};
+            out.power=Some(normal.power);out.point=Some(normal.point);
+            if normal.components.iter().any(|r|r[0]>0. || r[1]<0.) {out.regular.push(rect);continue;}
+            let width=std::array::from_fn::<_,2,_>(|axis|{
+                let d=domain[axis][1]-domain[axis][0];if d==0. {0.}else{(rect[axis][1]-rect[axis][0])/d}
+            });
+            let axis=usize::from(width[1]>width[0]);let mid=rect[axis][0]*0.5+rect[axis][1]*0.5;
+            if mid<=rect[axis][0] || mid>=rect[axis][1] {out.pending.push(rect);continue;}
+            let mut left=rect;left[axis][1]=mid;let mut right=rect;right[axis][0]=mid;
+            queue.push_front(right);queue.push_front(left);
+        }
+        out.complete_factored=out.pending.is_empty();
+        out.reason=if out.complete_factored {"profile-pole-factor-cover-qualified"}else{"profile-pole-factor-resolution-limit"};Ok(out)
+    }
     /// Adaptive complete coverage of exact profile normals on a rectangle.
     /// A nonzero component proves immersion; zero-containing cells stay pending.
     pub fn inspect_regularity(&self,domain:[[f64;2];2],max_cells:usize,max_spans:usize)->Result<TransitionRegularityReport> {
@@ -1618,6 +1648,23 @@ mod tests {
         }
         let s=surface();let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
         assert!(p.factored_pole_normal_bounds([[0.,1.],[0.,1.]],true,6).unwrap().0.is_none());
+    }
+    #[test]
+    fn adaptive_factored_pole_cover_keeps_refusal_and_full_area() {
+        let mut s=surface();s.control_points[0][1]=vec![0.,0.,0.];
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();let domain=[[0.,1.],[0.,1.]];
+        let report=p.inspect_factored_pole_regularity(domain,false,1,6).unwrap();
+        assert!(report.complete_factored);assert_eq!(report.power,Some(1));assert_eq!(report.regular,vec![domain]);
+        for (cells,spans) in [(0,6),(1,5)] {
+            let r=p.inspect_factored_pole_regularity(domain,false,cells,spans).unwrap();
+            assert!(!r.complete_factored);assert_eq!(r.pending,vec![domain]);
+        }
+        // A second collapse in V produces a genuinely zero factored normal.
+        s.control_points[1][1]=s.control_points[1][0].clone();
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        let r=p.inspect_factored_pole_regularity(domain,false,15,90).unwrap();
+        assert!(!r.complete_factored);assert!(r.regular.is_empty());
+        let area:f64=r.regular.iter().chain(&r.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
     }
     #[test]
     fn collapsed_profile_normal_factor_matches_rational_reference() {

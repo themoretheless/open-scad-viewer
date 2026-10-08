@@ -1817,3 +1817,36 @@ Native-only; packaged WASM remains unchanged.
 
 The final 22-test profile suite passed in 17.75 seconds, including the
 rational reference. The combined annular regression passed in 65.70 seconds.
+
+## Adaptive factored-pole coverage
+
+WeightProfile::inspect_factored_pole_regularity now covers an entire
+rectangle using fresh exact factored-normal bounds. ProfilePoleCover is
+a separate diagnostic type with complete_factored, removed power, pole
+point and boundary side. It never sets ordinary complete_regular or
+claims a smooth pole. Work and resolution refusals retain all queued
+rectangles; accepted plus pending area covers the requested rectangle.
+
+ExteriorSection derives the containing rectangle from its owned exterior
+region for both ordinary and factored checks. The new report and normal
+types are exported through the existing normal_alignment facade.
+
+Independent tests confirm complete bilinear factored coverage, exact work
+refusal and full pending-area preservation for a patch also collapsed in V,
+where the factored normal is truly zero. The 23-test profile suite passed
+in 14.62 seconds.
+
+The annular terminal rectangle [0.9,1] x [0,1] with 2048 cells and 12288
+jet queries has 201 accepted rectangles and 847 pending, area 0.1 and
+removed power 1. This is a finer adaptive cover than the previous 11-cell
+ordinary-normal remainder; the counts are not directly comparable. Full
+factored regularity remains unproven. The initial combined native run
+passed in 42.52 seconds.
+
+The final region-bound API regression passed in 56.06 seconds. Diagnostic
+point hulls at U=1 and V=0,0.5,1 all contain zero even after the current
+first-power removal. Sample pending rectangles reach U intervals near
+0.9999999999999983 and V widths around 8.88e-16. This points to an
+additional transverse collapse factor or higher-order singular structure;
+it does not justify increasing the budget or declaring completion. The
+next step is exact transverse numerator factor qualification.
