@@ -278,5 +278,61 @@ fn main() {
     } else {
         Value::Null
     };
-    std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results,"coverage":coverage})).unwrap()).unwrap();
+    let mut shared_seams = Vec::new();
+    if args
+        .get(4)
+        .is_some_and(|v| v == "seams" || v == "seams-refined")
+    {
+        for pair in pairs
+            .iter()
+            .filter(|p| p["reason"] == json!("source-wall-pair-unproven"))
+        {
+            let target = [
+                pair["faces"][0].as_u64().unwrap() as usize,
+                pair["faces"][1].as_u64().unwrap() as usize,
+            ];
+            for (edge, uses) in body.geometry().shell().uses().iter().enumerate() {
+                let mut adjacent = uses.map(|u| u.face);
+                adjacent.sort();
+                if adjacent != target {
+                    continue;
+                }
+                let source = &body.geometry().shell().edges()[edge];
+                let tangent = match body.qualify_edge_tangency(
+                    edge,
+                    brep_core::source_seam_tangency::Limits {
+                        max_sine_squared: 1e-6,
+                        cells: 256,
+                        curve_spans: 4096,
+                        normal_spans: 4096,
+                    },
+                ) {
+                    Ok(r) => {
+                        json!({"qualified":r.seam.is_some(),"reason":r.reason,"cells":r.cells,"curveSpans":r.curve_spans,"normalSpans":r.normal_spans,"uncertainCanonical":r.uncertain_canonical,"sineSquaredBounds":r.seam.as_ref().map(|s|s.sine_squared_bounds())})
+                    }
+                    Err(e) => json!({"qualified":false,"error":e.code,"message":e.message}),
+                };
+                let refinement = if args.get(4).is_some_and(|v| v == "seams-refined")
+                    && tangent["reason"] == json!("source-seam-work-limit")
+                {
+                    let r = body
+                        .qualify_edge_tangency(
+                            edge,
+                            brep_core::source_seam_tangency::Limits {
+                                max_sine_squared: 1e-6,
+                                cells: 4096,
+                                curve_spans: 10000,
+                                normal_spans: 10000,
+                            },
+                        )
+                        .unwrap();
+                    json!({"qualified":r.seam.is_some(),"reason":r.reason,"cells":r.cells,"curveSpans":r.curve_spans,"normalSpans":r.normal_spans,"uncertainCanonical":r.uncertain_canonical,"sineSquaredBounds":r.seam.as_ref().map(|s|s.sine_squared_bounds())})
+                } else {
+                    Value::Null
+                };
+                shared_seams.push(json!({"faces":target,"edge":edge,"worldDegree":source.world().degree,"worldControls":source.world().control_points.len(),"completeCanonicalCoverage":source.covers_complete_canonical_source(),"tangency":tangent,"refinement":refinement}));
+            }
+        }
+    }
+    std::fs::write(&args[3],value_codec::to_string_pretty(&json!({"scope":"Original full chart gap obligations; retained trims not witnessed", "pairs":results,"coverage":coverage,"sharedSeams":shared_seams})).unwrap()).unwrap();
 }
