@@ -367,6 +367,23 @@ mod tests {
             let rooted_seam=rooted.seam.expect(rooted.reason);
             assert!(std::ptr::eq(rooted_seam.restricted().proposal(),&proposal));
             assert_eq!(rooted_seam.restricted().edge(),edge);
+            let shared=rooted_seam.qualify_incident_edge(100000000,100000).unwrap();
+            let shared_edge=shared.edge.expect(shared.reason);
+            assert!(shared_edge.uses().iter().all(|u|u.endpoints().iter().all(|e|matches!(e,crate::source_boundary_fragment::Endpoint::Carrier{..}))));
+            let fresh_shared=crate::source_shared_edge_restore::restore(shared_edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();
+            let fresh_shared=fresh_shared.edge.expect(fresh_shared.reason);
+            assert_eq!(fresh_shared.definition(),shared_edge.definition());
+
+            assert!(rooted_seam.qualify_incident_edge(1,1).unwrap().edge.is_none());
+            eprintln!("two-root retained edge={edge} work={} drivers={} rootChecks={}",shared.work_used,shared.driver_cells,shared.root_checks);
+            for fragment in rooted_seam.incident_fragments().unwrap() {
+                assert!(fragment.endpoints().iter().all(|e|matches!(e,crate::source_boundary_fragment::Endpoint::Carrier{..})));
+                let restored=crate::source_boundary_fragment::restore(fragment.definition(),100).unwrap();
+                assert_eq!(restored.definition(),fragment.definition());
+                assert_eq!(restored.reversed(),fragment.reversed());
+                assert!(crate::source_boundary_fragment::restore(fragment.definition(),1).is_err());
+            }
+
             for point in rooted_seam.points() {
                 let q=point.canonical_bounds();let whole=rooted_seam.restricted().canonical_interval();
                 assert!(whole[0]<=q[0]&&q[1]<=whole[1]);

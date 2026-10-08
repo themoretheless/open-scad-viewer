@@ -419,6 +419,8 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
         .filter(|a| a.len() == 2)
         .ok_or_else(|| error("Fragment needs two endpoints"))?;
     let mut remaining = max_mapping_cells;
+    let mut carrier_left=ends.iter().filter(|end|end["kind"].as_str()==Some("carrier")).count();
+    let carrier_count=carrier_left.max(1);
     let mut endpoints = vec![];
     for end in ends {
         let endpoint = match end["kind"].as_str() {
@@ -428,7 +430,8 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
                     .ok_or_else(|| error("Missing original parameter"))?,
             ),
             Some("carrier") => {
-                if remaining == 0 {
+                let allowance=remaining/carrier_left;
+                if allowance == 0 {
                     return Err(error("Carrier restoration work exhausted"));
                 }
                 let side = end["side"]
@@ -440,17 +443,18 @@ pub fn restore(value: Value, max_mapping_cells: usize) -> Result<Fragment> {
                     end["point"].clone(),
                     crate::source_carrier_point::RestoreLimits {
                         edge: crate::source_shared_edge_restore::Limits {
-                            mapping_cells_per_use: remaining,
-                            exact_work: 100_000_000,
-                            driver_cells: 100000,
+                            mapping_cells_per_use: allowance,
+                            exact_work: 100_000_000/carrier_count as u64,
+                            driver_cells: 100000/carrier_count,
                         },
-                        root_mapping_cells: remaining,
-                        spans: 100000,
+                        root_mapping_cells: allowance,
+                        spans: 100000/carrier_count,
                     },
                 )?;
-                // One carrier endpoint per restore: its independently bounded
-                // parent-use and root budgets consume the entire allowance.
-                remaining = 0;
+                // Reserve disjoint budgets for the bounded two original
+                // carrier definitions; unused work never funds a second copy.
+                remaining -= allowance;
+                carrier_left -= 1;
                 let point = report
                     .point
                     .ok_or_else(|| error("Imported carrier endpoint is unqualified"))?;

@@ -1518,3 +1518,30 @@ These facts still do not create the two-root retained incident fragments or
 sew a closed body. Fragment restoration currently allows one Carrier end
 per fragment; bounded two-end restoration and fresh mapped-edge admission
 are the next steps before assembling neighbor contours.
+
+## Two-root incident fragments and fresh retained shared edges
+
+RootEndedSeam now constructs the original interval between its admitted
+carrier roots on both incident uses. It requires strictly separated source
+parameter enclosures and follows each original use's traversal. Both fragment
+ends remain Carrier expressions; no rounded parameter endpoint is created.
+
+Fragment restoration reserves disjoint mapping allowances for both carrier
+ends and divides its fixed exact-work, driver and span caps between their
+original parent definitions. Single-carrier behavior is retained. Every
+root/parent is freshly qualified; insufficient allowance refuses. Nested
+carrier parents remain rejected by the carrier restorer.
+
+`qualify_incident_edge` freshly qualifies both retained compositions against
+the original world curve and original canonical maps. The final annular
+regression passed in 12.61 seconds. Both retained edges qualify and restore
+with identical definitions: edge 0 uses 236260 exact work, edge 1 uses
+109463. No extra endpoint driver/root checks were needed because freshly
+admitted shared carrier-root identity establishes corresponding endpoints.
+Four incident fragments restore with both Carrier ends and original traversal.
+Tiny restore/edge allowances refuse. The five fragment tests and ten shared
+edge tests also passed.
+
+This admits the selected trimmed original 3D edges between two source roots.
+Transition-side binding, replacement contour assembly, terminal/corner
+closure and closed corrected Body admission remain open.

@@ -79,6 +79,33 @@ pub struct RootEndedSeam<'p,'b> {
 impl RootEndedSeam<'_,'_> {
     pub fn restricted(&self)->&RestrictedSeam<'_,'_> {&self.restricted}
     pub fn points(&self)->&[crate::source_carrier_point::Point;2] {&self.points}
+    /// Retain exactly the original interval between both roots on each use.
+    /// Traversal follows the original incident use, preserving opposite sides.
+    pub fn incident_fragments(&self)->Result<[crate::source_boundary_fragment::Fragment;2]> {
+        use crate::source_boundary_fragment::{Fragment,Endpoint};
+        let mut fragments=Vec::new();
+        for side in 0..2 {
+            let source=&self.points[0].edge().uses()[side];
+            let ranges=[self.points[0].parameter_bounds()[side],self.points[1].parameter_bounds()[side]];
+            let order=if ranges[0][1]<ranges[1][0] {[0,1]}else if ranges[1][1]<ranges[0][0] {[1,0]}else {
+                return Err(Error::new("BREP_PROFILE_SEAM","Require strictly ordered carrier ends"));
+            };
+            let order=if source.reversed() {[order[1],order[0]]}else{order};
+            fragments.push(Fragment::new(source.surface(),source.curve(),
+                Endpoint::Carrier{point:Box::new(self.points[order[0]].clone()),side},
+                Endpoint::Carrier{point:Box::new(self.points[order[1]].clone()),side})?);
+        }
+        Ok([fragments.remove(0),fragments.remove(0)])
+    }
+    /// Rebuild shared-edge authority over both retained original uses.
+    pub fn qualify_incident_edge(&self,max_work:u64,max_driver:usize)->Result<crate::source_shared_edge::Report> {
+        let fragments=self.incident_fragments()?;
+        let original=self.points[0].edge();
+        crate::source_mapped_edge::qualify(original.world(),[&fragments[0],&fragments[1]],
+            crate::source_seam_tangency::ranges(original),[None,None],max_work,max_driver)
+    }
+
+
 }
 pub struct RootEndedSeamReport<'p,'b> {
     pub seam:Option<RootEndedSeam<'p,'b>>,pub carrier_spans:usize,
