@@ -23,5 +23,18 @@ preview cancellations, every Undo/Redo state and exact reload. The collector
 checked 422 documents across both input methods, 140 distinct payloads, unique
 topology identities and every snapshot bound within 1e-6 mm. See
 `history/history-audit.json` and its Brotli document archive. Keyboard STEP menu
-export/import/re-export passed six files; independent keyboard measurements
-are still running and are not yet claimed.
+export/import/re-export passed six files; independent OpenCascade measurements passed all six keyboard exports too,
+with the same dimension, volume and solid-validity checks. See `keyboard-step/`.
+
+## Draft recovery and concurrent writers
+
+The current production UI passed the isolated persistent-browser draft suite:
+three concurrent writers preserve local/shared conflict versions and local Undo;
+closing a queued writer does not publish its abandoned state; aborted snapshots
+retain the previous revision; renderer crashes immediately before/after
+publication recover; missing/corrupt caches and heads preserve source state and
+support Retry; real browser quota refusal and large-snapshot Retry pass. The
+same isolated profile survives browser restart. Quota was deliberately set to
+one byte via Chromium's storage override; ordinary disk exhaustion is not
+claimed. See `recovery/report.json` and the hashed JSON snapshot archive.
+This qualifies these persistence scenarios, not the complete P0 command matrix.
