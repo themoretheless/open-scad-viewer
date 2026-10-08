@@ -659,6 +659,28 @@ pub fn qualify_corner_chords<'a>(
         poles[side]=s.control_points[indices[0]][indices[1]].clone();
     }
     check(poles[0].len()==3&&poles[0]==poles[1],"Require exactly equal original corner coordinates")?;
+    qualify_verified_anchor_paths(sources,anchors,rectangles,projection,sine,max_spans)
+}
+/// Connect only anchors already certified on their own immutable originals.
+pub fn qualify_anchored_chords<'a>(
+    anchors:[&SurfaceAnchorCertificate<'a>;2],rectangles:[[[f64;2];2];2],
+    projection:[f64;3],sine:f64,max_spans:usize,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    check(anchors[0].world==anchors[1].world,"Require identical certified world anchors")?;
+    qualify_verified_anchor_paths(anchors.map(|a|a.surface),anchors.map(|a|a.uv),rectangles,projection,sine,max_spans)
+}
+fn qualify_verified_anchor_paths<'a>(sources:[&'a Surface;2],anchors:[[f64;2];2],
+    rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    check((1..=100000).contains(&max_spans)&&projection.iter().all(|x|x.is_finite())
+        &&sine.is_finite()&&(0. ..1.).contains(&sine),"Choose bounded original anchor path work")?;
+    for side in 0..2 {normal_alignment::validate_rectangle(sources[side],rectangles[side],max_spans)?;}
+    let mut signs=[[0.;2];2];
+    for side in 0..2 {for axis in 0..2 {
+        signs[side][axis]=if rectangles[side][axis][0]>=anchors[side][axis] {1.}
+            else if rectangles[side][axis][1]<=anchors[side][axis] {-1.}
+            else{return Ok((None,0));};
+    }}
     let mut spans=0;let mut generators=Vec::new();
     for side in 0..2 {
         if spans==max_spans{return Ok((None,spans));}
@@ -667,7 +689,7 @@ pub fn qualify_corner_chords<'a>(
         spans+=report.spans;
         let Some(matrix)=report.mean_matrix else{return Ok((None,spans));};
         for axis in 0..2 {
-            let sign=(if side==0{-1.}else{1.})*(if high_corners[side][axis]{-1.}else{1.});
+            let sign=(if side==0{-1.}else{1.})*signs[side][axis];
             let mut g=[[0.;2];3];
             for k in 0..3 {let value=matrix.jacobian[k][axis].mul(I::point(sign))?;g[k]=[value.lo,value.hi];}
             generators.push(g);
@@ -731,6 +753,18 @@ mod original_corner_chord_tests {
         assert!(qualify_surface_anchor(&s,[0.25,0.5],[0.25,0.5,1e-15],100000).unwrap().0.is_none());
         assert!(qualify_surface_anchor(&s,[0.25,0.5],[0.25,0.5,0.],0).unwrap().0.is_none());
         assert!(qualify_surface_anchor(&s,[1.25,0.5],[1.25,0.5,0.],100000).unwrap().0.is_none());
+    }
+    #[test]
+    fn paired_interior_anchors_bind_paths_and_refuse_crossing_rectangles() {
+        let a=plane(1.);let b=plane(1.);
+        let first=qualify_surface_anchor(&a,[0.5,0.5],[0.5,0.5,0.],100000).unwrap().0.unwrap();
+        let second=qualify_surface_anchor(&b,[0.5,0.5],[0.5,0.5,0.],100000).unwrap().0.unwrap();
+        let rects=[[[0.4,0.5];2],[[0.5,0.6];2]];
+        let (cert,used)=qualify_anchored_chords([&first,&second],rects,[1.,1.,0.],1e-6,3).unwrap();
+        assert!(cert.is_some());assert_eq!(used,3);
+        assert!(qualify_anchored_chords([&first,&second],[[[0.4,0.6];2];2],[1.,1.,0.],1e-6,3).unwrap().0.is_none());
+        let different=qualify_surface_anchor(&b,[0.25,0.5],[0.25,0.5,0.],100000).unwrap().0.unwrap();
+        assert!(qualify_anchored_chords([&first,&different],rects,[1.,1.,0.],1e-6,3).is_err());
     }
 }
 /// Excludes nonzero geometric chords using S_v=t² B on an exactly verified
