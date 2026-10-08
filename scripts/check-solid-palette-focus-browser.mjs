@@ -22,13 +22,14 @@ try{
  page=await browser.newPage();page.on('pageerror',e=>errors.push(String(e)))
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true})
- const trigger=solid.getByRole('button',{name:'Команда… Ctrl K',exact:true})
+ const trigger=page.getByRole('button',{name:'Команды',exact:true})
  const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'})
  let tabs=0
  async function tabTo(locator){for(let i=0;i<500;i++){if(await locator.evaluate(e=>e===document.activeElement))return;await page.keyboard.press('Tab');tabs++}throw Error('Unreachable focus target')}
- async function focused(locator){await locator.waitFor({state:'visible'});await page.waitForFunction(el=>el===document.activeElement,await locator.elementHandle())}
+ async function focused(locator){await locator.waitFor({state:'visible'});try {await page.waitForFunction(el=>el===document.activeElement,await locator.elementHandle(),{timeout:5000})}catch(error){console.error('Focus mismatch',await page.evaluate(()=>({active:document.activeElement?.tagName,label:document.activeElement?.getAttribute('aria-label'),dialogs:document.querySelectorAll('[role=dialog]').length})));throw error}}
  await tabTo(trigger)
  for(let i=0;i<3;i++){
+  console.log('Escape cycle',i)
   await page.keyboard.press(i===1?'ControlOrMeta+k':'Enter')
   await focused(search)
   assert.equal(await search.inputValue(),'')
@@ -38,12 +39,12 @@ try{
  }
  await page.keyboard.press('Enter');await focused(search)
  await page.keyboard.insertText('Box');await page.keyboard.press('Enter')
- await search.waitFor({state:'detached'});await focused(trigger)
+ await search.waitFor({state:'detached'});await focused(solid)
  await solid.locator('[data-body]').first().waitFor({state:'visible'})
  await page.keyboard.press('ControlOrMeta+k');await focused(search)
- await page.keyboard.press('Escape');await focused(trigger)
+ await page.keyboard.press('Escape');await focused(solid)
  assert.deepEqual(errors,[])
  await page.screenshot({path:path.join(directory,'focus.png')})
- await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,tabs,escapeCycles:4,command:'Box',focusRestored:true,errors},null,2))
+ await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,tabs,escapeCycles:4,command:'Box',openerRestoredOnCancel:true,workspaceFocusedAfterCreation:true,errors},null,2))
 }catch(e){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw e}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

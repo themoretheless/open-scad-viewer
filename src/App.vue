@@ -2612,7 +2612,10 @@ function executeCommand(id: string) {
       break
     case 'sidebar': dockOpen.value = !dockOpen.value; break
     case 'theme': toggleTheme(); break
-    case 'command-palette': paletteOpen.value = !paletteWasOpen; break
+    case 'command-palette':
+      if (paletteWasOpen) paletteOpen.value = false
+      else openCommandPalette()
+      break
     case 'cancel-measure': cancelMeasure(); break
     case 'flip-section': setSectionFlip(!sectionFlip.value); break
     case 'hide-selected':
