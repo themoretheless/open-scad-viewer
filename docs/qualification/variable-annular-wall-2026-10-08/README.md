@@ -722,3 +722,45 @@ Evidence: `split-self-wall.json.gz` and the completed log. Original model
 serialization remains unchanged in every case. Retained whole self-face
 coverage stays 28/31. Distinct-face wall checks, complete minimum wall
 thickness, general arbitrary-body fillets and WASM/UI packaging remain open.
+
+
+## Local inverse-coordinate path confinement
+
+The certificate also prepares original anchor positions relative to the exact
+pole origin, as a positive-weight rational net. Local path queries enlarge U
+on both sides inside the original chart, prove separated signed lambda there,
+and compare the whole endpoint X range with boundary X ranges over every V.
+For increasing X, max(X_left)<=min(X_endpoints) and
+min(X_right)>=max(X_endpoints) prove a unique confined inverse path by the
+intermediate value theorem and monotonicity. Decreasing X uses the signed
+orientation. The constant pole rail and monotonicity justify clipping only
+outward rounding below signed zero when the left boundary is the exact pole.
+No such clipping is used at a finite local boundary.
+
+Six restrictions (lambda, endpoint position, two boundary positions, and two
+correlated frames) are charged for each local attempt, separate from the five
+prefix-path restrictions. Pair evidence records local attempts, availability,
+and actual exclusions. Failed paths retain unresolved coverage. Seven rational
+path tests and thirteen chord tests pass (20 focused tests). Direct rational
+quotient formulas cover increasing and decreasing local charts in a globally
+nonmonotone original surface, plus translated/reflected frames. The invalid
+inverse path at U=.99 remains refused. A pair regression spends exactly 12
+units for prefix refusal, local preparation and one endpoint normal; an
+11-unit budget has no exclusion and keeps its actual charged work.
+
+The four-body run completed with original thresholds, geometry and 1024/8192
+limits; both directions match:
+
+| Radius order | Face | Cells | Local exclusions | Local attempts | Local unavailable | Pending |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 309 | 25 | 239 | 3 | 49 |
+| 0.5 → 1.25 | 10 | 294 | 0 | 292 | 184 | 12 |
+| 1.25 → 0.5 | 0 | 309 | 16 | 238 | 3 | 44 |
+| 1.25 → 0.5 | 10 | 293 | 1 | 293 | 181 | 13 |
+
+No pole face is fully certified. Retained whole self-face coverage remains
+28/31; pending counts belong to different partitions and are not certified
+fractions. Evidence: `local-self-wall.json.gz`, its completed log, and both
+local test logs. Current angular coverage still compares unfactored normals,
+which can vanish on the pole even when sealed factored limits are separated;
+reusing the exact factored limits is the next angular qualification step.

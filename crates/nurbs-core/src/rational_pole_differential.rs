@@ -16,6 +16,7 @@ pub struct Certificate<'a> {
     b: Net,
     e_over_lambda: Net,
     fixed_x: Net,
+    anchor_position: Net,
 }
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
@@ -396,6 +397,17 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
                 weight[u][v][0] = I::point(source.weights[u][v]);
             }
         }
+        let mut anchor_position = empty(p + 1, q + 1);
+        let origin = source.control_points[0][0][anchor];
+        for u in 0..=p {
+            for v in 0..=q {
+                let w = I::point(source.weights[u][v]);
+                anchor_position[u][v][0] = I::point(source.control_points[u][v][anchor])
+                    .sub(I::point(origin))?
+                    .mul(w)?;
+                anchor_position[u][v][3] = w;
+            }
+        }
         let denominator = weight_square(&source.weights)?;
         let lambda = rational_net(scalar(lambda), &denominator)?;
         let alpha = rational_net(scalar(alpha), &denominator)?;
@@ -420,6 +432,7 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
             b,
             e_over_lambda,
             fixed_x,
+            anchor_position,
         }))
     })()?;
     let reason = if prepared.is_some() {
@@ -525,6 +538,73 @@ impl<'a> Certificate<'a> {
         let mut j = [[I::point(0.); 2]; 3];
         for k in 0..3 {
             j[k][0] = self.a[k].add(I::new(0., extended[0][1])?.mul(ratio[k])?)?;
+            j[k][1] = second[k];
+        }
+        Ok(Some(j))
+    }
+    /// Confine the inverse-coordinate path between two local U boundaries.
+    /// Six net restrictions are required, separate from the pole-prefix path.
+    pub fn local_coordinate_path_bounds(
+        &self,
+        domain: [[f64; 2]; 2],
+    ) -> Result<Option<[[I; 2]; 3]>> {
+        let d = self.normalized_domain(domain)?;
+        let width = I::point(d[0][1]).sub(I::point(d[0][0]))?;
+        let margin = I::point(width.hi.max(2_f64.powi(-20))).mul(I::point(3.))?;
+        let extended = [
+            [
+                I::point(d[0][0]).sub(margin)?.lo.max(0.),
+                I::point(d[0][1]).add(margin)?.hi.min(1.),
+            ],
+            d[1],
+        ];
+        let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
+        if lambda.lo <= 0. && lambda.hi >= 0. {
+            return Ok(None);
+        }
+        let orient = |x: I| {
+            if lambda.lo > 0. {
+                Ok(x)
+            } else {
+                I::point(0.).sub(x)
+            }
+        };
+        let mut endpoint =
+            orient(normal_alignment::rational_quotient_hull(&self.anchor_position, d)?[0])?;
+        let mut left = orient(
+            normal_alignment::rational_quotient_hull(
+                &self.anchor_position,
+                [[extended[0][0]; 2], d[1]],
+            )?[0],
+        )?;
+        let right = orient(
+            normal_alignment::rational_quotient_hull(
+                &self.anchor_position,
+                [[extended[0][1]; 2], d[1]],
+            )?[0],
+        )?;
+        if extended[0][0] == 0. {
+            // Exact Q_v/U factors prove the pole rail constant. Monotonicity
+            // then gives signed X>=0; discard only outward rounding below zero.
+            left = I::point(0.);
+            endpoint = I::new(endpoint.lo.max(0.), endpoint.hi)?;
+        }
+        if left.hi > endpoint.lo || right.lo < endpoint.hi {
+            return Ok(None);
+        }
+        let Some(ratio) =
+            normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
+        else {
+            return Ok(None);
+        };
+        let Some(second) =
+            normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
+        else {
+            return Ok(None);
+        };
+        let mut j = [[I::point(0.); 2]; 3];
+        for k in 0..3 {
+            j[k][0] = self.a[k].add(I::new(extended[0][0], extended[0][1])?.mul(ratio[k])?)?;
             j[k][1] = second[k];
         }
         Ok(Some(j))
@@ -701,6 +781,7 @@ mod tests {
             let d = [if end { [6.995, 7.] } else { [2., 2.005] }, [-3., -1.8]];
             let j = c.bounds(d).unwrap().unwrap();
             let path = c.coordinate_path_bounds(d).unwrap().unwrap();
+            let local = c.local_coordinate_path_bounds(d).unwrap().unwrap();
             for u in [0.0001, 0.0005, 0.001] {
                 for v in [0., 0.05, 0.1] {
                     let w = 1. + v + 2. * u * (1. - u) * v;
@@ -716,6 +797,8 @@ mod tests {
                     assert!(j[1][1].contains((yv - yu * xv / xu) / (u * u)));
                     assert!(path[1][0].contains(yu / xu));
                     assert!(path[1][1].contains((yv - yu * xv / xu) / (u * u)));
+                    assert!(local[1][0].contains(yu / xu));
+                    assert!(local[1][1].contains((yv - yu * xv / xu) / (u * u)));
                     if v == 0.05 {
                         assert!(xv.abs() > 0.);
                     }
@@ -795,6 +878,58 @@ mod tests {
         }
     }
     #[test]
+    fn local_inverse_chart_encloses_independent_frames_without_global_monotonicity() {
+        let mut s = source();
+        for v in 0..2 {
+            s.control_points[1][v][0] = -0.5;
+        }
+        let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
+        let d = [[0.8, 0.85], [0., 0.1]];
+        assert!(c.coordinate_path_bounds(d).unwrap().is_none());
+        let j = c.local_coordinate_path_bounds(d).unwrap().unwrap();
+        let prepared = crate::factored_surface_normals::prepare(&s, false, 10_000_000).unwrap();
+        let normals = prepared.certificate.unwrap();
+        let pair = [[[0.8, 0.805], [0., 0.005]], [[0.845, 0.85], [0.095, 0.1]]];
+        let report =
+            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 12)
+                .unwrap();
+        assert!(
+            report.excluded
+                && report.local_path_excluded
+                && report.local_path_available
+                && report.local_path_attempted
+                && !report.coordinate_path_available
+        );
+        assert_eq!(report.spans, 12);
+        let limited =
+            crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 11)
+                .unwrap();
+        assert!(!limited.excluded && limited.spans == 11 && limited.local_path_available);
+
+        let negative = c
+            .local_coordinate_path_bounds([[0.01, 0.02], [0., 0.1]])
+            .unwrap()
+            .unwrap();
+        for (j, parameters) in [(&j, [0.8, 0.825, 0.85]), (&negative, [0.01, 0.015, 0.02])] {
+            for u in parameters {
+                for v in [0., 0.05, 0.1] {
+                    let w = 1. + v + 2. * u * (1. - u) * v;
+                    let wu = 2. * (1. - 2. * u) * v;
+                    let wv = 1. + 2. * u * (1. - u);
+                    let x = -u * (1. + 2. * v) + u * u * (2. + 3. * v);
+                    let y = 2. * u * u * v;
+                    let xu = ((-1. - 2. * v + 2. * u * (2. + 3. * v)) * w - x * wu) / (w * w);
+                    let xv = ((-2. * u + 3. * u * u) * w - x * wv) / (w * w);
+                    let yu = (4. * u * v * w - y * wu) / (w * w);
+                    let yv = (2. * u * u * w - y * wv) / (w * w);
+                    assert_eq!(xu > 0., u > 0.25);
+                    assert!(j[1][0].contains(yu / xu));
+                    assert!(j[1][1].contains((yv - yu * xv / xu) / (u * u)));
+                }
+            }
+        }
+    }
+    #[test]
     fn coordinate_path_bounds_entire_prefix_before_endpoint() {
         // At u=.99 both V sides have derivative ~.2, but their longitudinal
         // positions differ by ~3. One cannot carry the high X across V=1,
@@ -826,6 +961,10 @@ mod tests {
         let c = prepare(&s, false, 10_000_000).unwrap().certificate.unwrap();
         assert!(c
             .coordinate_path_bounds([[0.99, 0.99], [0., 1.]])
+            .unwrap()
+            .is_none());
+        assert!(c
+            .local_coordinate_path_bounds([[0.99, 0.99], [0., 1.]])
             .unwrap()
             .is_none());
     }

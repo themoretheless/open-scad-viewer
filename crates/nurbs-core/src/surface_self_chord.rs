@@ -142,6 +142,9 @@ pub(crate) struct PairExclusion {
     pub coordinate_path_excluded: bool,
     pub coordinate_path_attempted: bool,
     pub coordinate_path_available: bool,
+    pub local_path_excluded: bool,
+    pub local_path_attempted: bool,
+    pub local_path_available: bool,
 }
 #[cfg(test)]
 pub(crate) fn rational_pole_pair_exclusion(
@@ -186,19 +189,29 @@ pub(crate) fn rational_pole_pair_report(
     let mut used = 0;
     let mut attempted = false;
     let mut available = false;
-    for coordinate_path in [true, false] {
-        if max_spans - used < 5 {
+    let mut local_attempted = false;
+    let mut local_available = false;
+    for mode in [0, 1, 2] {
+        let cost = if mode == 1 { 6 } else { 5 };
+        let coordinate_path = mode == 0;
+        if max_spans - used < cost {
             break;
         }
         if coordinate_path {
             attempted = true;
         }
-        let matrix = if coordinate_path {
-            differential.coordinate_path_bounds(union)?
-        } else {
-            differential.bounds(union)?
+        if mode == 1 {
+            local_attempted = true;
+        }
+        let matrix = match mode {
+            0 => differential.coordinate_path_bounds(union)?,
+            1 => differential.local_coordinate_path_bounds(union)?,
+            _ => differential.bounds(union)?,
         };
-        used += 5;
+        used += cost;
+        if mode == 1 && matrix.is_some() {
+            local_available = true;
+        }
         if coordinate_path && matrix.is_some() {
             available = true;
         }
@@ -237,6 +250,9 @@ pub(crate) fn rational_pole_pair_report(
                     coordinate_path_excluded: coordinate_path,
                     coordinate_path_attempted: attempted,
                     coordinate_path_available: available,
+                    local_path_excluded: mode == 1,
+                    local_path_attempted: local_attempted,
+                    local_path_available: local_available,
                 });
             }
         }
@@ -247,6 +263,9 @@ pub(crate) fn rational_pole_pair_report(
         coordinate_path_excluded: false,
         coordinate_path_attempted: attempted,
         coordinate_path_available: available,
+        local_path_excluded: false,
+        local_path_attempted: local_attempted,
+        local_path_available: local_available,
     })
 }
 fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
