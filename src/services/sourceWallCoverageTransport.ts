@@ -1,6 +1,7 @@
 /** Transport checks only. Original coefficient proofs remain native. */
 export interface SourceWallCoverageOptions {
  minimumMm:number
+ factoredNormals?:{exactWork:number;queries:number;cells:number;cellsPerPair:number}
  normalProducts?:{cells:number;cellsPerPair:number}
  adaptiveSelf?:{planeControls:number;cells:number;spans:number;cellsPerFace:number;spansPerFace:number}
  limits:{pairs:number;planeControls:number;normalSpans:number;gapCells:number;gapSpans:number;maxSineSquared:number}
@@ -10,6 +11,7 @@ export interface SourceWallCoverageResult {
  request:SourceWallCoverageOptions;wholeWallQualified:boolean;lowerMm:number|null
  enumerationComplete:boolean;totalPairs:number
  pairs:{faces:[number,number];proven:boolean;reason:string}[]
+ factoredExactWork?:number;factoredQueries?:number;factoredProductCells?:number
  planeControls:number;normalSpans:number;normalProductCells?:number;cells:number;spans:number;reason:string
 }
 const count=(n:unknown,max:number)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=max
@@ -17,6 +19,8 @@ export function coverageExpectation(o:SourceWallCoverageOptions):SourceWallCover
  if(!o||!Number.isFinite(o.minimumMm)||o.minimumMm<=0||!o.limits)throw new Error('Invalid continuous wall coverage request')
  if(o.normalProducts&&(!count(o.normalProducts.cells,100000)||o.normalProducts.cells<1
   ||!count(o.normalProducts.cellsPerPair,100000)||o.normalProducts.cellsPerPair<1))throw new Error('Invalid normal product work')
+ if(o.factoredNormals)for(const name of ['exactWork','queries','cells','cellsPerPair'] as const)
+  if(!count(o.factoredNormals[name],name==='exactWork'?100000000:100000)||o.factoredNormals[name]<1)throw new Error('Invalid factored normal work')
  const w=o.limits
  for(const [name,max] of [['pairs',100000],['planeControls',1000000],['normalSpans',100000],['gapCells',100000],['gapSpans',100000]] as const)
   if(!count(w[name],max)||w[name]<1)throw new Error('Invalid continuous wall coverage work')
@@ -32,6 +36,8 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
  const total=faces*(faces+1)/2,expected=Math.min(total,e.limits.pairs)
  if(e.normalProducts?!count(r.normalProductCells,e.normalProducts.cells)
   :r.normalProductCells!==undefined&&r.normalProductCells!==0)return false
+ for(const [counter,limit] of [['factoredExactWork','exactWork'],['factoredQueries','queries'],['factoredProductCells','cells']] as const)
+  if(e.factoredNormals?!count(r[counter],e.factoredNormals[limit]):r[counter]!==undefined&&r[counter]!==0)return false
  if(r.totalPairs!==total||r.pairs.length!==expected||r.enumerationComplete!==(expected===total)
   ||!count(r.planeControls,e.limits.planeControls)||!count(r.normalSpans,e.limits.normalSpans)
   ||!count(r.cells,e.limits.gapCells)||!count(r.spans,e.limits.gapSpans))return false
@@ -70,7 +76,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
    ||typeof p.proven!=='boolean'||typeof p.reason!=='string'||!p.reason.startsWith('source-'))return false
   const allowed=a===b
    ?p.proven?['source-wall-planar-self-excluded','source-wall-curved-self-excluded','source-wall-self-certified']:['source-wall-curved-self-unproven']
-   :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded','source-face-gap-qualified']
+   :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded',...(e.factoredNormals?['source-wall-factored-normal-pair-excluded']:[]),'source-face-gap-qualified']
     :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit']
   if(!allowed.includes(p.reason))return false
   if(p.reason==='source-wall-self-certified'&&(!adaptive||!adaptive.faces[p.faces[0]]?.qualified))return false

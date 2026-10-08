@@ -1714,3 +1714,24 @@ were updated to measured kernel/worker/UI sizes while preserving their existing
 608/123/879-byte margins and the 761-byte total margin. The four exploratory
 factored-normal exclusions are not in this artifact; full thickness and
 self-intersection certification and the rest of the roadmap remain open.
+
+### Native factored directions integrated into Body and bridge
+
+The source-bound native angular predicate now composes exact U² limiting
+directions. A second pass preserves every regular-normal proof and scheduling.
+Optional `factoredNormals` specifies separate exact preparation work, queries,
+total cells and per-pair cells. No shared boundary is itself an exclusion.
+
+Five original Body/bridge cases preserve 257 / 257 / 177 / 173 unresolved pairs
+and reduce the factored case to **169**. Added zero-based pairs are [0,12],
+[0,13], [2,10], [3,10]. Exact work is 37,683,566; factored queries 484;
+factored cells 3,575. No whole-wall certificate or lower bound is issued.
+The original definition and previously confirmed pairs are preserved.
+
+Cuboid whole-wall regression passes, including a one-unit exact budget with
+identical original pair results. Eight transport tests and Vue typecheck pass;
+missing, excessive or unrequested factored work and proof reasons are rejected.
+`factored-native-body-receipt.json` binds the archived reports and test logs.
+The current packaged WASM/UI still reports 173; rebuilding and actual worker/UI
+qualification remain required. Limiting directions do not assert regular tangent
+planes at collapsed poles or prove general self-intersection freedom.

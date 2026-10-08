@@ -170,6 +170,19 @@ mod tests {
                 }).unwrap();
             eprintln!("original cuboid wall minimum={minimum} reason={} pairs={}/{} cells={} normals={}",
                 report.reason,report.pairs.len(),report.total_pairs,report.cells,report.normal_spans);
+            let factored=crate::source_wall_coverage::qualify_with_self_facts_and_factored_normals(
+                &body,minimum,crate::source_wall_coverage::Limits{pairs,plane_controls:10000,normal_spans,
+                    gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:1e-6},
+                Vec::new(),crate::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0},
+                crate::source_wall_coverage::FactoredNormalLimits{exact_work:1,queries:1,cells:1,cells_per_pair:1}).unwrap();
+            assert_eq!(factored.certificate.is_some(),report.certificate.is_some());
+            assert_eq!(factored.pairs.len(),report.pairs.len());
+            assert_eq!(factored.normal_spans,report.normal_spans);
+            assert!(factored.factored_exact_work<=1);
+            assert_eq!(factored.factored_queries,0);assert_eq!(factored.factored_product_cells,0);
+            for (old,new) in report.pairs.iter().zip(&factored.pairs) {
+                assert_eq!(old.faces,new.faces);assert_eq!(old.proven,new.proven);assert_eq!(old.reason,new.reason);
+            }
             assert_eq!(report.total_pairs,21);
             assert_eq!(report.enumeration_complete,pairs==21);
             assert_eq!(report.certificate.is_some(),success,"{}",report.reason);

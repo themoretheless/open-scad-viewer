@@ -84,3 +84,24 @@ it('retains adaptive pending rectangles without promoting whole-wall qualificati
  }
  r.pairs[0].proven=true;r.pairs[0].reason='source-wall-self-certified';expect(validCoverage(e,r,6,key)).toBe(false)
 })
+
+ describe('factored normal accounting',()=>{
+  it('requires bounded counters and rejects unrequested factored proofs',()=>{
+   const option={...structuredClone(request),factoredNormals:{exactWork:100000000,queries:100,cells:100,cellsPerPair:32}}
+   const key=(v:unknown)=>JSON.stringify(v)
+   const r=result();r.request=structuredClone(option)
+   expect(validCoverage(option,r,6,key)).toBe(false)
+   r.factoredExactWork=10;r.factoredQueries=2;r.factoredProductCells=3
+   r.pairs[1].reason='source-wall-factored-normal-pair-excluded'
+   expect(validCoverage(option,r,6,key)).toBe(true)
+   for(const counter of ['factoredExactWork','factoredQueries','factoredProductCells'] as const){
+    const missing=structuredClone(r);delete missing[counter];expect(validCoverage(option,missing,6,key)).toBe(false)
+    const excessive=structuredClone(r);excessive[counter]=100000001;expect(validCoverage(option,excessive,6,key)).toBe(false)
+   }
+   const legacy=result();legacy.pairs[1].reason=r.pairs[1].reason
+   expect(validCoverage(request,legacy,6,key)).toBe(false)
+   legacy.pairs[1].reason='source-wall-normal-pair-excluded';legacy.factoredQueries=1
+   expect(validCoverage(request,legacy,6,key)).toBe(false)
+   for(const n of [0,-1,NaN,1.5,100000001])expect(()=>coverageExpectation({...option,factoredNormals:{...option.factoredNormals,exactWork:n}})).toThrow()
+  })
+ })

@@ -18,6 +18,13 @@ pub struct NormalProductLimits {
     pub cells: usize,
     pub cells_per_pair: usize,
 }
+/// Optional exact boundary factors; all work is separate from regular normals.
+pub struct FactoredNormalLimits {
+    pub exact_work: u64,
+    pub queries: usize,
+    pub cells: usize,
+    pub cells_per_pair: usize,
+}
 pub struct Certificate<'a> {
     body: &'a Body,
     minimum_mm: f64,
@@ -56,6 +63,9 @@ pub struct Report<'a> {
     pub plane_controls: usize,
     pub normal_spans: usize,
     pub normal_product_cells: usize,
+    pub factored_exact_work: u64,
+    pub factored_queries: usize,
+    pub factored_product_cells: usize,
     pub cells: usize,
     pub spans: usize,
     pub reason: &'static str,
@@ -91,6 +101,22 @@ pub fn qualify_with_self_facts_and_normal_products<'a>(
     facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
     products:NormalProductLimits,
 ) -> Result<Report<'a>> {
+    qualify_with_self_facts_and_factored_normals(body,minimum_mm,limits,facts,products,
+        FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0})
+}
+/// Reuses exact limiting directions only for their immutable original face.
+/// Regular-normal proofs retain their scheduling and are never replaced.
+pub fn qualify_with_self_facts_and_factored_normals<'a>(
+    body:&'a Body, minimum_mm:f64, limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits, factors:FactoredNormalLimits,
+)->Result<Report<'a>> {
+    let enabled=factors.exact_work>0;
+    if factors.exact_work>100_000_000 || factors.queries>100000 || factors.cells>100000
+        || factors.cells_per_pair>100000 || [factors.queries,factors.cells,factors.cells_per_pair]
+            .iter().any(|n|(*n>0)!=enabled) {
+        return Err(Error::new("BREP_SOURCE_WALL_FACTORED_LIMIT","Choose bounded exact, query and product work"));
+    }
     if products.cells>100000 || products.cells_per_pair>100000
         || (products.cells==0)!=(products.cells_per_pair==0) {
         return Err(Error::new("BREP_SOURCE_WALL_NORMAL_PRODUCT_LIMIT",
@@ -145,6 +171,7 @@ pub fn qualify_with_self_facts_and_normal_products<'a>(
         plane_controls: 0,
         normal_spans: 0,
         normal_product_cells: 0,
+        factored_exact_work:0, factored_queries:0, factored_product_cells:0,
         cells: 0,
         spans: 0,
         reason: "source-wall-coverage-unproven",
@@ -165,6 +192,22 @@ pub fn qualify_with_self_facts_and_normal_products<'a>(
     let necessary = geometry::necessary_normal_sine(limits.max_sine_squared)?;
     let mut normal_caches: Vec<_> = surfaces.iter().map(|s|
         nurbs_core::normal_alignment::OriginalNormalCache::new(s)).collect();
+    let mut prepared=Vec::with_capacity(surfaces.len());
+    for surface in &surfaces {
+        let mut certificate=None;
+        if enabled {
+            for end in [false,true] {
+                if out.factored_exact_work==factors.exact_work {break;}
+                // Unsupported charts provide no fact and no exclusion.
+                if let Ok(r)=nurbs_core::factored_surface_normals::prepare(surface,end,
+                    factors.exact_work-out.factored_exact_work) {
+                    out.factored_exact_work+=r.work;
+                    if let Some(c)=r.certificate {certificate=Some(c);break;}
+                }
+            }
+        }
+        prepared.push(certificate);
+    }
     let mut gaps = Vec::new();
     let mut self_chords = Vec::new();
     'pairs: for a in 0..surfaces.len() {
@@ -255,6 +298,25 @@ pub fn qualify_with_self_facts_and_normal_products<'a>(
                 }
             }
             out.pairs.push(pair);
+        }
+    }
+    // A second pass preserves every regular proof and its original scheduling.
+    for pair in &mut out.pairs {
+        let [a,b]=pair.faces;
+        if a!=b && !pair.proven && enabled && out.factored_product_cells<factors.cells
+            && (prepared[a].is_some() || prepared[b].is_some()) {
+            if let Some(threshold)=necessary {
+                let (before,after)=normal_caches.split_at_mut(b);
+                let r=before[a].inspect_product_with_factors(&mut after[0],
+                    [domain(surfaces[a]),domain(surfaces[b])],threshold,
+                    factors.cells_per_pair.min(factors.cells-out.factored_product_cells),
+                    limits.normal_spans-out.normal_spans,
+                    [prepared[a].as_ref(),prepared[b].as_ref()],
+                    factors.queries-out.factored_queries)?;
+                out.factored_product_cells+=r.cells;out.factored_queries+=r.factored_queries;
+                out.normal_spans+=r.spans;
+                if r.excluded {pair.reason="source-wall-factored-normal-pair-excluded";pair.proven=true;}
+            }
         }
     }
     out.enumeration_complete = out.pairs.len() == total_pairs;

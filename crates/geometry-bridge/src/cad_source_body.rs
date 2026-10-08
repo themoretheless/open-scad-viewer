@@ -192,7 +192,19 @@ pub fn restore(v: Value) -> Result<Value> {
             }
             brep_core::source_wall_coverage::NormalProductLimits{cells,cells_per_pair}
         };
-        Some((minimum,work,self_work,products))
+        let factors=if o["factoredNormals"].is_null() {
+            brep_core::source_wall_coverage::FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0}
+        }else{
+            let f=&o["factoredNormals"];
+            let exact_work:u64=field(f,"exactWork")?;let queries:usize=field(f,"queries")?;
+            let cells:usize=field(f,"cells")?;let cells_per_pair:usize=field(f,"cellsPerPair")?;
+            if !(1..=100_000_000).contains(&exact_work)
+                || [queries,cells,cells_per_pair].iter().any(|n|!(1..=100000).contains(n)) {
+                return Err(super::input("Choose bounded factored normal work"));
+            }
+            brep_core::source_wall_coverage::FactoredNormalLimits{exact_work,queries,cells,cells_per_pair}
+        };
+        Some((minimum,work,self_work,products,factors))
     };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
@@ -238,7 +250,7 @@ pub fn restore(v: Value) -> Result<Value> {
             "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
-    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products)|->Result<Value>{
+    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors)|->Result<Value>{
         let (facts,self_report)=if let Some(limits)=self_work {
             let report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
             let diagnostics=json!({"faces":report.faces.iter().map(|f|json!({"face":f.face,"qualified":f.qualified,
@@ -247,12 +259,14 @@ pub fn restore(v: Value) -> Result<Value> {
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
-        let r=brep_core::source_wall_coverage::qualify_with_self_facts_and_normal_products(body,minimum,work,facts,products)?;
+        let r=brep_core::source_wall_coverage::qualify_with_self_facts_and_factored_normals(body,minimum,work,facts,products,factors)?;
         Ok(json!({"request":v["wallCoverage"],"wholeWallQualified":r.certificate.is_some(),
             "lowerMm":r.certificate.as_ref().map(|c|c.minimum_mm()),
             "enumerationComplete":r.enumeration_complete,"totalPairs":r.total_pairs,
             "pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>(),
             "planeControls":r.plane_controls,"normalSpans":r.normal_spans,"normalProductCells":r.normal_product_cells,
+            "factoredExactWork":r.factored_exact_work,"factoredQueries":r.factored_queries,
+            "factoredProductCells":r.factored_product_cells,
             "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report}))
     }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
