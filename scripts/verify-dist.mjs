@@ -108,12 +108,12 @@ const limits = new Map([
 // Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
 // Original annular source proofs and seam transport: measured 3,953,416 bytes; retain 608-byte margin.
 // Source wall native proofs: measured packed geometry 3962910 bytes; retain 608-byte margin.
-const geometryChunkBudget = 4_007_810 // Factored source normals and supporting-line coincidence correction: measured 4,007,202 bytes; retain 608-byte margin.
+const geometryChunkBudget = 4_028_830 // Pole self-wall extension: measured 4,028,222 bytes; retain 608-byte margin. Previously: Factored source normals and supporting-line coincidence correction: measured 4,007,202 bytes; retain 608-byte margin.
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 168_940], // Factored-normal transport: measured 168817 bytes; retain 123-byte margin.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 169_512], // Pole proof counters: measured 169,389 bytes; retain 123-byte margin. Previously: Factored-normal transport: measured 168817 bytes; retain 123-byte margin.
   // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -375,7 +375,7 @@ for (const [name, artifact, compression] of [
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
 // Rebuilt original annular proofs and seam UI: measured 8,243,477 bytes; retain 761-byte margin.
 // Source wall native, transport and UI: measured 8265356 asset bytes; retain 761-byte margin.
-const totalBudget = 8_352_930 // Factored normals, supporting-line correction and dimension overlay: measured 8,352,169 asset bytes; retain 761-byte margin.
+const totalBudget = 8_375_170 // Pole self-wall extension and transport: measured 8,374,409 asset bytes; retain 761-byte margin. Previously: Factored normals, supporting-line correction and dimension overlay: measured 8,352,169 asset bytes; retain 761-byte margin.
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 
