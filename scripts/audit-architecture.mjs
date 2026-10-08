@@ -10,9 +10,7 @@ import {resolve, extname} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 export const SIZE_LIMITS = {'.rs': 800, '.ts': 500, '.mts': 500, '.mjs': 500, '.vue': 400}
-const SIZE_EXCLUDE = [/^crates\/vendor\//, /\/generated\//, /\.golden\.ts$/, /\.d\.ts$/, /(^|\/)tests?\//, /\.test\.[cm]?ts$/,
-  // Append-only re-freeze scripts: one frozen copy per qualification version, never edited.
-  /^scripts\/refresh-qualification-fingerprints-v\d+-v\d+\.mjs$/]
+const SIZE_EXCLUDE = [/^crates\/vendor\//, /\/generated\//, /\.golden\.ts$/, /\.d\.ts$/, /(^|\/)tests?\//, /\.test\.[cm]?ts$/]
 
 // Lower layers never depend on higher ones; same-layer dependencies are allowed.
 export const CRATE_LAYERS = {
