@@ -991,6 +991,16 @@ mod tests {
             [cloned.certificate.as_ref(),None],0).is_err());
         let raw=ca.inspect_product(&mut cb,domains,1e-6,1,0).unwrap();
         assert!(!raw.excluded);assert_eq!(raw.unresolved,vec![domains]);
+        let mut direct_a=OriginalNormalCache::new(&a);let mut direct_b=OriginalNormalCache::new(&b);
+        let (limited,used)=direct_a.inspect_other_with_factors(&mut direct_b,domains,1e-6,1,[Some(c),None],0).unwrap();
+        assert_eq!(used,0);assert_eq!(limited.aligned,None);
+        let (paid,used)=direct_a.inspect_other_with_factors(&mut direct_b,domains,1e-6,1,[Some(c),None],1).unwrap();
+        assert_eq!(used,1);assert_eq!(paid.aligned,Some(false));
+        let (cached,used)=direct_a.inspect_other_with_factors(&mut direct_b,domains,1e-6,0,[Some(c),None],0).unwrap();
+        assert_eq!(used,0);assert_eq!(cached.spans,0);assert_eq!(cached.normal_components,paid.normal_components);
+        assert!(direct_a.inspect_other_with_factors(&mut direct_b,domains,1e-6,0,[cloned.certificate.as_ref(),None],0).is_err());
+        assert!(direct_a.inspect_other_with_factors(&mut direct_b,domains,1e-6,0,[Some(c),None],100001).is_err());
+
     }
     #[test]
     fn closed_product_excludes_only_complete_oblique_normal_coverage() {

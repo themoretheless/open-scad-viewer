@@ -2,6 +2,8 @@
   "automatic": {
     "cells": 30461,
     "domainCells": 314744,
+    "factoredExactWork": 37683566,
+    "factoredQueries": 4562,
     "normalSpans": 11647,
     "pairs": [
       {

@@ -144,7 +144,7 @@ fn main() {
         )
         .unwrap();
         let d = r.mixed.unwrap();
-        json!({"wholeWallQualified":r.certificate.is_some(),"cells":d.cells,"spans":d.spans,
+        json!({"factoredQueries":r.factored_queries,"factoredExactWork":r.factored_exact_work,"wholeWallQualified":r.certificate.is_some(),"cells":d.cells,"spans":d.spans,
             "normalSpans":d.normal_spans,"domainCells":d.domain_cells,
             "pairs":d.pairs.iter().map(|p|json!({"faces":p.retained.faces,"qualified":p.retained.qualified,
                 "reason":p.retained.reason,"cells":p.retained.cells,"normalProducts":p.normal_products,
