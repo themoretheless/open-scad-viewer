@@ -249,7 +249,12 @@ pub(crate) fn rational_pole_pair_report_cached(
     // already been validated and remain immutable throughout all three modes.
     // Charge a restriction only when its endpoint bound is first computed.
     let mut endpoint_bounds = components.map(|values| values.map(Some)).unwrap_or([None; 2]);
-    for mode in [0, 1, 3, 4, 2] {
+    // Start with the tightest independently confined chart; retain wider
+    // alternatives when the endpoint path cannot be confined there.
+    // Small budgets retain the original broad-chart route, which may be
+    // the only confined path when there is no budget for alternatives.
+    let modes = if max_spans >= 25 { [0, 4, 3, 1, 2] } else { [0, 1, 3, 4, 2] };
+    for mode in modes {
         let local_path = matches!(mode, 1 | 3 | 4);
         let cost = if local_path { 6 } else { 5 };
         let coordinate_path = mode == 0;

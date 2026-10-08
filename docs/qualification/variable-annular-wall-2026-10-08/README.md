@@ -1119,3 +1119,22 @@ radius entry faces now have complete original-chart certificates with
 directions ±1. The positive-direction exit still has seven pending pairs
 at 100000 restrictions. Negative exit and reverse-radius cases are not
 yet completed; no all-prototype or global wall qualification is claimed.
+
+## Complete margin classification and tight-first scheduling
+
+The 0711a50f 1024/8192 audit completed with explicit completeAudit=true
+and four original-identity cases. Forward radii have winning-margin counts
+[0,1,30] / [0,6,20] on faces 0/10; reverse radii [0,0,35] / [0,6,22].
+Both spatial directions match. Classified sums equal local exclusions and
+every unresolvedPairs list equals pending, with its last pair matching
+uncertain. Full JSON/log archives retain these checks' source data.
+
+For budgets >=25, pair proofs now try quarter-width, one-width, then
+three-width local charts after the prefix path. Five prefix restrictions,
+three six-restriction local paths and two normal restrictions fit within
+25, so all prior alternatives remain available. Smaller budgets retain
+the previous broad-first order. The independent rational fixture still
+qualifies at ten restrictions and refuses at nine; higher budgets also
+retain its original confined proof. Seven pole and sixteen chord tests
+passed. The fixed 1024/8192 tight-first audit is running separately; no
+whole-wall or performance improvement is claimed before completion.
