@@ -8,6 +8,7 @@ import type {SourceWallResult} from '../services/sourceWallTransport'
 
 import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
+import CadDimensionOverlay from '../components/CadDimensionOverlay.vue'
 import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
 const SolidGcodePanel=defineAsyncComponent(()=>import('./GcodePanel.vue'))
 const SolidLaserPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
@@ -4022,10 +4023,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle :cx="snapMarker[0]" :cy="pane==='2d'?-snapMarker[1]:snapMarker[1]" :r="views[pane]/100" vector-effect="non-scaling-stroke" />
                 <text :x="snapMarker[0]+views[pane]/60" :y="(pane==='2d'?-snapMarker[1]:snapMarker[1])-views[pane]/60" :font-size="views[pane]/50" fill="#77eac5" stroke="none">{{ snapLabel }}</text>
               </g>
-              <foreignObject v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :x="commandAnchor[0]+views['3d']/30" :y="commandAnchor[1]-views['3d']/24" :width="views['3d']/4" :height="views['3d']/12" @pointerdown.stop @wheel.stop>
-                <label class="gizmo-dimension" :class="{ failed: commandFailure }" :style="{ fontSize: views['3d']/36+'px' }"><CadQuantityInput v-model="inlineDimension" :locale="locale" @validity="quantityValidity('inline', $event)" step="0.5" :aria-label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" /> mm</label>
-              </foreignObject>
+
             </svg>
+            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" @validity="quantityValidity('inline',$event)" />
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
@@ -4602,7 +4602,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .workspace-state{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:5px 12px;font-size:11px;color:var(--text-dim);border-bottom:1px solid var(--border)}
 .workspace-state button{font-size:11px;padding:3px 7px}.state-legend{margin-left:auto;display:flex;align-items:center;gap:6px}.state-legend i{width:8px;height:8px;border-radius:2px}.state-hover{border:1px solid #89baff}.state-selected{background:#b496ff}.state-preview{background:#77eac5}
 .command-guidance{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:7px 12px;background:var(--surface);border-bottom:1px solid #77eac5;font-size:12px}.command-guidance.failed{border-color:var(--danger);color:var(--danger)}.command-keys{margin-left:auto;display:flex;align-items:center;gap:6px}.command-keys button{padding:3px 6px}.command-guidance kbd{border:1px solid var(--border);border-radius:3px;padding:1px 4px}
-.gizmo-dimension{display:flex;align-items:center;gap:.3em;background:var(--bg, #252520);color:var(--text, #f5f5f0);border:1px solid #77eac5;border-radius:.3em;padding:.2em;box-sizing:border-box;width:100%;height:85%}.gizmo-dimension :deep(.quantity-field){width:100%}.gizmo-dimension :deep(input){font:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit}.gizmo-dimension.failed{border-color:#f87171}.gizmo-dimension:focus-within{outline:2px solid var(--accent)}
+
 .scene-list .selected-group{color:var(--accent);border-left:2px solid var(--accent)}
 .operation-card small[role=alert]{color:var(--danger);border-left:2px solid var(--danger);padding-left:7px}
 .operation-card>small[role=alert]{position:sticky;top:0;z-index:2;background:var(--surface)}

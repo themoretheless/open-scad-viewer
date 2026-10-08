@@ -163,13 +163,36 @@ try{
  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
  assert.equal(await solid.locator('.command-keys').getByText('Enter',{exact:true}).count(),0)
  assert.equal(await solid.locator('.gizmo-dimension.failed').count(),1)
+ const dimensionLayout=await solid.locator('.gizmo-dimension.failed').evaluate(label=>{
+  const input=label.querySelector('input'),host=label.closest('.canvas-wrap')
+  const l=label.getBoundingClientRect(),i=input.getBoundingClientRect(),h=host.getBoundingClientRect()
+  const style=getComputedStyle(label),font=Number.parseFloat(style.fontSize),inputStyle=getComputedStyle(input)
+  const text=label.querySelector('.dimension-unit'),range=document.createRange();range.selectNodeContents(text)
+  const t=range.getBoundingClientRect()
+  return {inputValue:input.value,inputFont:inputStyle.font,inputPadding:inputStyle.padding,text:{x:t.x,y:t.y,width:t.width,height:t.height},label:{x:l.x,y:l.y,width:l.width,height:l.height},
+   input:{x:i.x,y:i.y,width:i.width,height:i.height},host:{x:h.x,y:h.y,width:h.width,height:h.height},
+   borderToFont:Number.parseFloat(style.borderTopWidth)/font,
+   lineToFont:Number.parseFloat(style.lineHeight)/font}
+ })
+ await writeFile(path.join(directory,'dimension-layout.json'),JSON.stringify(dimensionLayout,null,2)+'\n')
+ assert.ok(dimensionLayout.borderToFont<0.1,'dimension border must scale with its text')
+ assert.ok(dimensionLayout.lineToFont<1.5,'dimension line height must scale with its text')
+ assert.ok(dimensionLayout.text.y>=dimensionLayout.host.y-1)
+ assert.ok(dimensionLayout.text.y+dimensionLayout.text.height<=dimensionLayout.host.y+dimensionLayout.host.height+1,'unit text must fit the SVG host')
+ assert.ok(dimensionLayout.label.x>=dimensionLayout.host.x-1)
+ assert.ok(dimensionLayout.label.x+dimensionLayout.label.width<=dimensionLayout.host.x+dimensionLayout.host.width+1)
+ assert.ok(dimensionLayout.input.y>=dimensionLayout.host.y-1)
+ assert.ok(dimensionLayout.input.y+dimensionLayout.input.height<=dimensionLayout.host.y+dimensionLayout.host.height+1,'dimension input must fit the SVG host')
+
  assert.deepEqual(await doc('failed'),before)
  assert.equal(await solid.locator('.invalid-input-geometry').count(),0)
  const unselected=await solid.locator('[data-topology-edge][aria-pressed="false"]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('stroke')))
  assert.ok(unselected.every(color=>color==='#89baff'))
  for(const edge of ids)assert.equal(await solid.locator(`[data-topology-edge="${edge}"]`).getAttribute('stroke'),'#f87171')
  await page.screenshot({path:path.join(directory,'error.png')})
- await enterText(amount,'1 mm');await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
+ await enterText(solid.getByRole('textbox',{name:'Размер у манипулятора, мм',exact:true}),'1 mm')
+ assert.equal(await amount.inputValue(),'1')
+ await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
  const requestsBeforeApply=await page.evaluate(()=>window.__edgeRequests)
  await activate(solid.getByRole('button',{name:'Готово · Enter',exact:true}));await ready()
  assert.equal(await page.evaluate(()=>window.__edgeRequests),requestsBeforeApply)

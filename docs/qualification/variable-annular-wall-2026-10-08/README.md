@@ -1735,3 +1735,8 @@ missing, excessive or unrequested factored work and proof reasons are rejected.
 The current packaged WASM/UI still reports 173; rebuilding and actual worker/UI
 qualification remain required. Limiting directions do not assert regular tangent
 planes at collapsed poles or prove general self-intersection freedom.
+
+The 169 remaining native obligations are classified in
+`factored-native-unresolved-classification.json`: 9 same-face, 20 shared-edge,
+and 140 distinct pairs without an admitted shared edge. Classification does not
+upgrade an unresolved obligation to a proven pair.

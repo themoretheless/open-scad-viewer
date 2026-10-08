@@ -1,0 +1,33 @@
+{
+  "scope": "Current HTML overlay on previously qualified kernel; not the new factored-normal WASM package",
+  "kernelSha256": "8f28d264385d707057b73f5c303f0842fb5799e43d46f9401b14f97c28d0bfee",
+  "sourceSha256": {
+    "src/features/DirectModeler.vue": "c31c67b46e3ddcb96bfcc8e91175c6635d5318246ce4f390fd2f90c3b6d04ea1",
+    "src/components/CadDimensionOverlay.vue": "4c208080e6d88dd497d10237f63387a434064913dd71caa4f789a108c2a20bc7",
+    "scripts/check-solid-edge-error-browser.mjs": "29b4fd4ded41b42cf47f1d30aa441aee954dc78ace653a1d26a57c1da8768fc3"
+  },
+  "files": {
+    "mouse/result.json": "7b4422d20232c0cff95fa865b5c5391de18572222be7e5bce74265922d19dc16",
+    "mouse/dimension-layout.json": "95870bdd1005c8f0511ed307440f40d33e51af7302d115c0a95c8348be011b2b",
+    "mouse/error.png": "34a03f22c976a8632f840c92e6d7ee34d7f4707ccda4f4b5a18cbd8cea93cf16",
+    "mouse/before.json.gz": "cdc8345de0d232dd0eee9535658910b14488a7e27fd41cfb3cd20cd1c8eacf80",
+    "mouse/failed.json.gz": "cdc8345de0d232dd0eee9535658910b14488a7e27fd41cfb3cd20cd1c8eacf80",
+    "mouse/after.json.gz": "c198bc1729b530ea4b0c6c9921d855fc598cf6eccba1181476e58785adc446c0",
+    "mouse/undo.json.gz": "cdc8345de0d232dd0eee9535658910b14488a7e27fd41cfb3cd20cd1c8eacf80",
+    "mouse/redo.json.gz": "c198bc1729b530ea4b0c6c9921d855fc598cf6eccba1181476e58785adc446c0",
+    "mouse/reloaded.json.gz": "c198bc1729b530ea4b0c6c9921d855fc598cf6eccba1181476e58785adc446c0",
+    "keyboard/result.json": "8f117c3fd5db8990ea5f83a4ae0b8ae39b4fbf7d5faa990cf3927ae7e4f3af0d",
+    "keyboard/dimension-layout.json": "95870bdd1005c8f0511ed307440f40d33e51af7302d115c0a95c8348be011b2b",
+    "keyboard/error.png": "8d9463965f3068b30fd66b9191e81679590df072e06d38a60abcf75cf41fa67b",
+    "keyboard/before.json.gz": "ae0c8d10411a044dfcc2e1fa87aa1d111ea9fad5218349486b2cfb668b5a2501",
+    "keyboard/failed.json.gz": "ae0c8d10411a044dfcc2e1fa87aa1d111ea9fad5218349486b2cfb668b5a2501",
+    "keyboard/after.json.gz": "64ebdae6a69d72cde65d92d0b3a721921165d281577031f45c3d7cf8d604d52d",
+    "keyboard/undo.json.gz": "ae0c8d10411a044dfcc2e1fa87aa1d111ea9fad5218349486b2cfb668b5a2501",
+    "keyboard/redo.json.gz": "64ebdae6a69d72cde65d92d0b3a721921165d281577031f45c3d7cf8d604d52d",
+    "keyboard/reloaded.json.gz": "64ebdae6a69d72cde65d92d0b3a721921165d281577031f45c3d7cf8d604d52d"
+  },
+  "typecheck": {
+    "exitCode": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
