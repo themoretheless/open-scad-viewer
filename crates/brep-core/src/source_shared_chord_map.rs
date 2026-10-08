@@ -44,6 +44,16 @@ impl<'a> SharedBoundary<'a> {
     /// Returns exclusion, original derivative spans, and normal spans consumed.
     pub fn exclude_normal_chords(&self, rectangles:[[[f64;2];2];2], sine:f64,
         max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,false)
+    }
+    /// Optional interval mean integration. It spends up to eight path pieces
+    /// per transverse column and is not selected by automatic wall coverage.
+    pub fn exclude_normal_chords_with_mean(&self, rectangles:[[[f64;2];2];2], sine:f64,
+        max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,true)
+    }
+    fn exclude_normal_chords_impl(&self, rectangles:[[[f64;2];2];2], sine:f64,
+        max_spans:usize,max_normal_spans:usize,mean:bool)->Result<(bool,usize,usize)> {
         if !sine.is_finite()||!(0. ..1.).contains(&sine) {
             return Err(Error::new("BREP_SHARED_CHORD_MAP","Require squared sine in [0,1)"));
         }
@@ -59,12 +69,18 @@ impl<'a> SharedBoundary<'a> {
             let knots=[&s.knots_u,&s.knots_v];let degrees=[s.degree_u,s.degree_v];
             let direction=if self.fixed[side]==knots[axis][degrees[axis]] {1.}else{-1.};
             let sign=direction*if side==0 {-1.}else{1.};
-            let mut path=rectangles[side];
-            path[axis]=[path[axis][0].min(self.fixed[side]),path[axis][1].max(self.fixed[side])];
-            let (proof,used)=nurbs_core::normal_alignment::derivative_path_bounds(s,path,axis,max_spans-spent)?;
+            let (components,used)=if mean {
+                let (proof,used)=nurbs_core::normal_alignment::boundary_mean_bounds(s,rectangles[side],axis,self.fixed[side],8,max_spans-spent)?;
+                (proof.map(|p|p.components()),used)
+            } else {
+                let mut path=rectangles[side];
+                path[axis]=[path[axis][0].min(self.fixed[side]),path[axis][1].max(self.fixed[side])];
+                let (proof,used)=nurbs_core::normal_alignment::derivative_path_bounds(s,path,axis,max_spans-spent)?;
+                (proof.map(|p|p.components()),used)
+            };
             spent+=used;
-            let Some(proof)=proof else{return Ok((false,spent,0));};
-            for (k,r) in proof.components().into_iter().enumerate(){
+            let Some(components)=components else{return Ok((false,spent,0));};
+            for (k,r) in components.into_iter().enumerate(){
                 let g=I::new(r[0],r[1])?.mul(I::point(sign))?;
                 transverse[side][k]=[g.lo,g.hi];
             }

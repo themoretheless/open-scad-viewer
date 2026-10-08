@@ -333,3 +333,30 @@ chunk and 761-byte total margins remain. Other budgets are unchanged. No runtime
 speedup or complete wall/fillet qualification is claimed. Original general
 fillets, unsupported carrier maps, outstanding wall pairs, full part acceptance
 and the wider P0/P2/P3 roadmap remain open.
+
+## Boundary mean integration experiment
+
+Native `boundary_mean_bounds` encloses the averaged original coordinate
+surface derivative by covering each full interval of the normalized path
+parameter. This uses interval integration with exact rational partition weights,
+not sampled quadrature. The private result preserves source, original endpoint
+rectangle, coordinate and natural boundary. Partial span coverage refuses.
+A polynomial quadratic control narrows the mean derivative from the full
+pointwise range [0,2] to a width below 0.26 around the exact mean 1. A rational
+quadratic control covers independently evaluated analytic secants across its
+endpoint interval. Native normal tests: 22 passed, one existing ignored.
+
+An eight-piece transverse integration experiment on the same original annular
+control yields no additional pair/product proof: 17/45, 2247 pending products,
+all previous statuses retained. Derivative work increases 62406 -> 73032;
+other native aggregate counters remain unchanged. The separate 4096-cell
+numerical refusal control exhausted derivative work at cell 3488 instead of
+4096. Its existing stopping regression was preserved, rather than weakened.
+
+Therefore automatic wall coverage retains the original derivative-hull path.
+`SharedBoundary::exclude_normal_chords_with_mean` exposes the optional bounded
+original mean integration for further qualification, with explicit work counts;
+it is not enabled in the automatic UI controller. The experiment artifact is
+native-only and does not replace the qualified 7525a8b0 WASM. The observed lack
+of gain motivates correlated secant bounds rather than a larger integration
+budget. No claim of wall completion or performance improvement follows.

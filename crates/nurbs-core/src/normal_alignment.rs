@@ -648,6 +648,51 @@ pub fn derivative_path_bounds<'a>(s: &'a Surface, domain: [[f64; 2]; 2],
     if spans == 0 { return Ok((None, 0)); }
     Ok((Some(OriginalDerivativeBounds { surface:s, domain, axis, components:hull }), spans))
 }
+/// Original mean derivative along a straight coordinate path from a natural
+/// chart boundary to every point of an endpoint rectangle. Private fields keep
+/// averaged derivatives distinct from pointwise derivative bounds.
+pub struct OriginalBoundaryMean<'a> {
+    surface:&'a Surface, endpoints:[[f64;2];2],axis:usize,boundary:f64,
+    components:[[f64;2];3],
+}
+impl OriginalBoundaryMean<'_> {
+    pub fn surface(&self)->&Surface {self.surface}
+    pub fn endpoints(&self)->[[f64;2];2] {self.endpoints}
+    pub fn axis(&self)->usize {self.axis}
+    pub fn boundary(&self)->f64 {self.boundary}
+    pub fn components(&self)->[[f64;2];3] {self.components}
+}
+/// Interval integration in path parameter t; this is not sampled quadrature.
+/// Every t subinterval encloses its full original derivative and contributes
+/// its exact interval width. All intersected source spans count against budget.
+pub fn boundary_mean_bounds<'a>(s:&'a Surface,endpoints:[[f64;2];2],axis:usize,
+    boundary:f64,pieces:usize,max_spans:usize)->Result<(Option<OriginalBoundaryMean<'a>>,usize)> {
+    check(axis<2&&(1..=16).contains(&pieces),"Bound original coordinate mean integration")?;
+    validate_rectangle(s,endpoints,max_spans)?;
+    let knots=[&s.knots_u,&s.knots_v];let degrees=[s.degree_u,s.degree_v];
+    let counts=[s.control_points.len(),s.control_points[0].len()];
+    let low=knots[axis][degrees[axis]];let high=knots[axis][counts[axis]];
+    check(boundary==low||boundary==high,"Start the mean path at an original natural boundary")?;
+    let delta=I::new(endpoints[axis][0],endpoints[axis][1])?.sub(I::point(boundary))?;
+    let mut mean=[I::point(0.);3];let mut spans=0;
+    for piece in 0..pieces {
+        if spans==max_spans {return Ok((None,spans));}
+        // Integer division uses outward arithmetic; t coverage has no gaps.
+        let a=I::point(piece as f64).div(I::point(pieces as f64))?;
+        let b=I::point((piece+1) as f64).div(I::point(pieces as f64))?;
+        let t=I::new(a.lo.max(0.),b.hi.min(1.))?;
+        let coordinate=I::point(boundary).add(delta.mul(t)?)?.intersect(low,high)?;
+        let mut path=endpoints;path[axis]=[coordinate.lo,coordinate.hi];
+        let (proof,used)=derivative_path_bounds(s,path,axis,max_spans-spans)?;spans+=used;
+        let Some(proof)=proof else{return Ok((None,spans));};
+        let width=I::point(1.).div(I::point(pieces as f64))?;
+        for (k,r) in proof.components().into_iter().enumerate(){
+            mean[k]=mean[k].add(I::new(r[0],r[1])?.mul(width)?)?;
+        }
+    }
+    Ok((Some(OriginalBoundaryMean{surface:s,endpoints,axis,boundary,
+        components:mean.map(|r|[r.lo,r.hi])}),spans))
+}
 pub fn normal_bounds(
     s: &Surface,
     domain: [[f64; 2]; 2],
@@ -1166,6 +1211,29 @@ mod tests {
         jump.weights=vec![vec![1.;2];4];
         assert!(derivative_path_bounds(&jump,domain,0,8).is_err());
         assert!(derivative_path_bounds(&jump,[[0.2,0.5],[1.,1.]],0,8).is_err());
+
+    }
+    #[test]
+    fn boundary_mean_integrates_complete_intervals_and_refuses_missing_work() {
+        let mut s=plane();s.degree_v=2;s.knots_v=vec![0.,0.,0.,1.,1.,1.];
+        s.control_points=vec![vec![vec![0.,0.,0.],vec![0.,0.,0.],vec![0.,1.,0.]],
+            vec![vec![1.,0.,0.],vec![1.,0.,0.],vec![1.,1.,0.]]];s.weights=vec![vec![1.;3];2];
+        let endpoints=[[0.2,0.8],[0.,0.]];
+        let (bound,spans)=boundary_mean_bounds(&s,endpoints,1,1.,8,8).unwrap();
+        let bound=bound.unwrap();assert_eq!(spans,8);assert!(std::ptr::eq(bound.surface(),&s));
+        assert_eq!(bound.endpoints(),endpoints);assert_eq!(bound.axis(),1);assert_eq!(bound.boundary(),1.);
+        let r=bound.components()[1];assert!(r[0]<=1.&&r[1]>=1.);assert!(r[1]-r[0]<0.26);
+        assert!(boundary_mean_bounds(&s,endpoints,1,1.,8,7).unwrap().0.is_none());
+        assert!(boundary_mean_bounds(&s,endpoints,1,0.5,8,8).is_err());
+        assert!(boundary_mean_bounds(&s,endpoints,1,1.,17,100).is_err());
+        s.weights=vec![vec![1.,0.7,1.];2];
+        let rational=boundary_mean_bounds(&s,[[0.2,0.8],[0.,0.2]],1,1.,16,16).unwrap().0.unwrap();
+        for i in 0..=20 {
+            let v=i as f64*0.01;
+            let value=v*v/((1.-v)*(1.-v)+1.4*v*(1.-v)+v*v);
+            let mean=(1.-value)/(1.-v);
+            let r=rational.components()[1];assert!(r[0]<=mean&&mean<=r[1]);
+        }
 
     }
     fn plane() -> Surface {
