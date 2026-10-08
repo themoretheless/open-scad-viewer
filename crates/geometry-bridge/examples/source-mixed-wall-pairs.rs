@@ -165,6 +165,26 @@ fn main() {
                         let excluded=cert.is_some();anchored.push(json!({"projection":projection,"spans":used,"excluded":excluded}));
                         if excluded {break 'anchor_proposals;}
                     }}}
+                    if product_index==0&&args.get(6).is_some_and(|a|a=="polar") {
+                        let differentials:[_;2]=std::array::from_fn(|side|nurbs_core::rational_pole_differential::prepare(surfaces[side],corners[side][0],100000000));
+                        let normal_factors:[_;2]=std::array::from_fn(|side|nurbs_core::factored_surface_normals::prepare(surfaces[side],corners[side][0],100000000));
+                        for side in 0..2 {
+                            polar.push(json!({"pairedPreparationSide":side,
+                                "differentialWork":differentials[side].as_ref().ok().map(|r|r.work),
+                                "normalWork":normal_factors[side].as_ref().ok().map(|r|r.work)}));
+                        }
+                        let ds=differentials.each_ref().map(|r|r.as_ref().ok().and_then(|r|r.certificate.as_ref()));
+                        let ns=normal_factors.each_ref().map(|r|r.as_ref().ok().and_then(|r|r.certificate.as_ref()));
+                        'polar_proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                            if x==0&&y==0&&z==0 {continue;}
+                            let projection=[x as f64,y as f64,z as f64];
+                            match nurbs_core::surface_self_chord::qualify_polar_anchored_chords([&first,&second],*uv,ds,ns,projection,1e-6,64) {
+                                Ok((cert,used))=>{let excluded=cert.is_some();polar.push(json!({"pairedProjection":projection,"spans":used,"excluded":excluded}));
+                                    if excluded {break 'polar_proposals;}}
+                                Err(e)=>{polar.push(json!({"pairedError":e.to_string()}));break 'polar_proposals;}
+                            }
+                        }}}
+                    }
                 }
             }
             json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1],
