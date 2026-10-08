@@ -6,12 +6,12 @@ import {DirectHistory, directBodiesScad, emptyDirectDocument, parseDirectDocumen
 import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {meshToNurbsBrep} from '../src/services/geometry/reconstruction'
 import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerProtocol'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {sceneMeshesToSolidDocument} from '../src/services/solidBridge'
 
 const emptyGraph = (display: boolean) => ({
-  language: 'modelgraph/nurbs-1', units: 'mm',
+  language: 'rush/nurbs-1', units: 'mm',
   nodes: [
     {id: 'box', op: 'brep_box', min: [0, 0, 0], max: [2, 3, 4]},
     {id: 'zero', op: 'brep_boolean', inputs: ['box', 'box'], operation: 'difference'},
@@ -23,7 +23,7 @@ const emptyGraph = (display: boolean) => ({
 it('publishes empty B-rep text as zero scene entities and zero Solid bodies', async () => {
   for (const suffix of ['', '.brep_tessellate(4)']) {
     for (const quality of ['preview', 'full'] as const) {
-      const result = await parseOpenSCAD('// @modelgraph-text/1\na=brep_box([0,0,0],[2mm,3mm,4mm])\nshow a.brep_subtract(a)' + suffix, {quality})
+      const result = await parseOpenSCAD('// @rush/1\na=brep_box([0,0,0],[2mm,3mm,4mm])\nshow a.brep_subtract(a)' + suffix, {quality})
       expect(result.meshes).toEqual([])
       expect(result.warnings).toEqual([])
       expect(result.volume).toBe(0)

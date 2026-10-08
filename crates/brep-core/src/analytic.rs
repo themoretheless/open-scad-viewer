@@ -2,6 +2,9 @@
 //! and preserve ordinary manifold incidence without collapsed pole edges.
 use super::*;
 mod loft;
+mod rational_loft;
+pub use rational_loft::{ProgressiveBodyEvidence,EndpointCapCorrection,progressive_profile_body_with_evidence,progressive_profile_body_with_evidence_and_correction,progressive_profile_body_with_rmf_policy};
+pub use rational_loft::{periodic_section_loft, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, SmoothStationWalls, smooth_station_walls, progressive_profile_body};
 pub(crate) use loft::piecewise_ruled_loft;
 pub use loft::ruled_loft;
 
@@ -1001,6 +1004,7 @@ mod tests {
     }
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn round_solids_have_exact_rational_boundaries_and_shared_topology() {
         for (model, expected_union_volume) in [
             (
@@ -1061,15 +1065,17 @@ mod tests {
         let report = model.validate().unwrap();
         assert_eq!(report.boundary_edge_count, 0);
         assert!(model.edges.iter().all(|e| e.vertices[0] != e.vertices[1]));
-        let encoded = value_codec::to_string(model).unwrap();
-        let restored: Model = value_codec::from_str(&encoded).unwrap();
-        restored.validate().unwrap();
-        assert_eq!(encoded, value_codec::to_string(&restored).unwrap());
+        #[cfg(feature = "codec")]
+        {
+            let encoded = value_codec::to_string(model).unwrap();
+            let restored: Model = value_codec::from_str(&encoded).unwrap();
+            restored.validate().unwrap();
+            assert_eq!(encoded, value_codec::to_string(&restored).unwrap());
+        }
     }
     fn normal(surface: &Surface, u: f64, v: f64) -> [f64; 3] {
         let e = surface.evaluate(u, v).unwrap();
-        let value = value_codec::Serialize::to_value(&e);
-        value_codec::Deserialize::from_value(value["normal"].clone()).unwrap()
+        e.unit_normal().unwrap()
     }
     #[test]
     fn sphere_is_exact_regular_oriented_and_has_ordinary_poles() {
@@ -1135,6 +1141,7 @@ mod tests {
         assert!(sphere(f64::NAN).is_err());
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn cones_have_one_certified_pole_without_artificial_caps() {
         for (bottom, top) in [(3., 0.), (0., 3.)] {
             let model = frustum(bottom, top, 5.).unwrap();
@@ -1262,6 +1269,7 @@ mod tests {
         );
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn axis_profiles_revolve_to_closed_solids_with_explicit_poles() {
         for profile in [
             vec![[0., 0.], [3., 0.], [0., 5.]],
@@ -1276,6 +1284,7 @@ mod tests {
             restored.validate().unwrap();
         }
     }
+    #[cfg(feature = "codec")]
     fn rectangular_surface_volume(model: &Model) -> f64 {
         let quadrature = [
             (0.06943184420297371, 0.17392742256872692),
@@ -1306,6 +1315,7 @@ mod tests {
         volume
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn signed_partial_revolutions_have_exact_caps_and_correct_oriented_volume() {
         for angle in [30., 90., 137., 270., -30., -90., -137., -270., 360., -360.] {
             for inner in [0., 1.] {

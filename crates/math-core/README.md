@@ -601,3 +601,27 @@ together; it improved **1.85× / 2.37× / 1.30×** against the old three-submiss
 transport. CPU remains faster for the smallest case. See
 [method, limitations, medians and p90](benchmarks/nearest-neighbor-metal.md),
 including the initial noisy run and the longer production confirmation.
+
+## Release dependencies
+
+The default CPU API has no runtime dependencies. Cargo still resolves optional
+GPU dependencies when packaging, so a full-feature registry release requires:
+
+1. `tensor-core` and `gpu-compute`.
+2. `compute-core`, `compute-cuda` and `compute-mlx`.
+3. `osv-math`.
+4. `mesh-topology`, then `mesh-query`.
+
+All local dependencies now carry version 0.1.0 requirements, and each package
+has MIT license metadata. Native CUDA loads the driver dynamically; package
+compilation does not prove a GPU device or driver is available. MLX execution
+also requires a supported runtime. Existing benchmark examples retain `rbench`;
+the workspace git dependency carries a registry version for packaging.
+
+### Verification (2026-09-30)
+
+Stable Rust 1.98.1 passes 68 CPU math unit tests, 28 mesh query/topology tests,
+and two mesh documentation examples. Strict Clippy passes across these three
+crates and all targets, including their development dependencies. Packaging
+with local patches checks archive contents and compilation; it does not prove
+that dependencies have been published to crates.io.

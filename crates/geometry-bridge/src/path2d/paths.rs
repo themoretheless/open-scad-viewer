@@ -58,6 +58,10 @@ pub(super) fn dispatch(action: &str, v: &Value) -> Result<Option<Value>> {
             json!({"incoming": incoming, "outgoing": outgoing})
         }
         "reverse" => encode_path(&decode_path(&v["path"])?.reverse()),
+        "normalize_rings" => encode(planar_geometry::rings::normalize(
+            &decode_rings(&v["rings"])?,
+            fill_rule(v)?,
+        )?)?,
         "simplify" => encode_path(&decode_path(&v["path"])?.simplify(field(v, "tolerance")?)?),
         "outline_stroke" => {
             encode_path(&decode_path(&v["path"])?.outline_stroke(field(v, "width")?)?)

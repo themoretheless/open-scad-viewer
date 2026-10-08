@@ -608,7 +608,12 @@ fn exact_analytic_shell_crosses_bridge_with_audited_certificate() {
     assert_eq!(result["certificate"]["complete"], true);
     assert_eq!(result["audit"]["ok"], true);
     assert_eq!(result["namingComplete"], true);
-    assert!(!result["changeSet"]["changes"].as_array().unwrap().is_empty());
+    assert!(
+        !result["changeSet"]["changes"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(before, value_codec::to_string(&model).unwrap());
     assert!(
         dispatch(json!({
@@ -1134,58 +1139,288 @@ fn certified_freeform_mass_crosses_bridge() {
     );
 }
 
-
 #[test]
 fn simple_prism_fillet_bridge_reports_distinct_capability() {
-    let model=brep_core::extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();
-    let edge=model.edges.iter().position(|e| {
-        let [a,b]=e.vertices.map(|v|model.vertices[v].point);
-        a[0]==0. && b[0]==0. && a[1]==0. && b[1]==0. && (a[2]-b[2]).abs()>19.
-    }).unwrap();
+    let model = brep_core::extrude_polygon(
+        &[
+            [0., 0.],
+            [40., 0.],
+            [40., 5.],
+            [5., 5.],
+            [5., 30.],
+            [0., 30.],
+        ],
+        0.,
+        20.,
+    )
+    .unwrap();
+    let edge = model
+        .edges
+        .iter()
+        .position(|e| {
+            let [a, b] = e.vertices.map(|v| model.vertices[v].point);
+            a[0] == 0. && b[0] == 0. && a[1] == 0. && b[1] == 0. && (a[2] - b[2]).abs() > 19.
+        })
+        .unwrap();
     let result=dispatch(json!({"op":"brep_nurbs_exact_simple_prism_fillet","model":encode(model).unwrap(),"edges":[edge],"radius":1.})).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-simple-prism-convex-edge-fillet/1"));
-    assert_eq!(result["certificate"]["complete"],true);
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-simple-prism-convex-edge-fillet/1")
+    );
+    assert_eq!(result["certificate"]["complete"], true);
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
 }
 
 #[test]
 fn annular_fillet_bridge_requires_complete_rim() {
-    let model=brep_core::tube(20.,5.,6.).unwrap();
-    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)|e.curve.degree==2 && e.vertices.iter().all(|v|{
-        let p=model.vertices[*v].point;p[2]>5. && p[0].hypot(p[1])>19.
-    })).map(|(i,_)|i).collect();
-    assert_eq!(edges.len(),4);
-    let encoded=encode(model).unwrap();
+    let model = brep_core::tube(20., 5., 6.).unwrap();
+    let edges: Vec<_> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            e.curve.degree == 2
+                && e.vertices.iter().all(|v| {
+                    let p = model.vertices[*v].point;
+                    p[2] > 5. && p[0].hypot(p[1]) > 19.
+                })
+        })
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(edges.len(), 4);
+    let encoded = encode(model).unwrap();
     let result=dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.})).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-annular-circular-edge-fillet/1"));
-    assert_eq!(result["certificate"]["complete"],true);
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-annular-circular-edge-fillet/1")
+    );
+    assert_eq!(result["certificate"]["complete"], true);
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
     assert!(dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded,"edges":[edges[0]],"radius":1.})).is_err());
 }
 
 #[test]
 fn layered_fillet_bridge_checks_chain_and_cavity() {
-    let outer=brep_core::cuboid([0.,0.,0.],[40.,30.,20.]).unwrap();
-    let cutter=brep_core::cuboid([2.,2.,2.],[38.,28.,22.]).unwrap();
-    let model=brep_core::boolean(&outer,&cutter,"difference").unwrap();
-    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)| e.vertices.iter().all(|v| {
-        let p=model.vertices[*v].point;p[0]==0. && p[1]==0.
-    })).map(|(i,_)|i).collect();
-    assert!(edges.len()>1);
-    let encoded=encode(model).unwrap();
-    let request=json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
-    let result=dispatch(request.clone()).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-layered-prism-edge-fillet/1"));
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
-    let mut extra=request.clone();extra["unexpected"]=json!(true);
+    let outer = brep_core::cuboid([0., 0., 0.], [40., 30., 20.]).unwrap();
+    let cutter = brep_core::cuboid([2., 2., 2.], [38., 28., 22.]).unwrap();
+    let model = brep_core::boolean(&outer, &cutter, "difference").unwrap();
+    let edges: Vec<_> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            e.vertices.iter().all(|v| {
+                let p = model.vertices[*v].point;
+                p[0] == 0. && p[1] == 0.
+            })
+        })
+        .map(|(i, _)| i)
+        .collect();
+    assert!(edges.len() > 1);
+    let encoded = encode(model).unwrap();
+    let request = json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
+    let result = dispatch(request.clone()).unwrap();
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-layered-prism-edge-fillet/1")
+    );
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
+    let mut extra = request.clone();
+    extra["unexpected"] = json!(true);
     assert!(dispatch(extra).is_err());
-    for radius in [0.,-1.,8.] {
-        let mut bad=request.clone();bad["radius"]=json!(radius);
+    for radius in [0., -1., 8.] {
+        let mut bad = request.clone();
+        bad["radius"] = json!(radius);
         assert!(dispatch(bad).is_err());
     }
-    let mut partial=request;partial["edges"]=json!([edges[0]]);
+    let mut partial = request;
+    partial["edges"] = json!([edges[0]]);
     assert!(dispatch(partial).is_err());
+}
+
+#[test]
+fn native_section_preserves_legacy_input_error_code() {
+    let error = dispatch(
+        json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.}),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+    for code in [
+        "MESH_INVALID_INPUT",
+        "MESH_QUERY_INVALID_INPUT",
+        "MESH_SECTION_INVALID_INPUT",
+        "MESH_IO_INVALID_INPUT",
+    ] {
+        let error = crate::legacy_mesh_error(crate::Error::new(code, "the mesh resource budget"));
+        assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+        assert_eq!(error.message, "the polygon resource budget");
+    }
+}
+
+#[test]
+fn corrected_oblique_circle_caps_transport_complete_and_component_scopes() {
+    use nurbs_core::primitives::{circle, line};
+    let outer = circle([0.; 3], [3., 4., 0.], 0.1).unwrap();
+    let hole = circle([0.; 3], [3., 4., 0.], 0.05)
+        .unwrap()
+        .reverse()
+        .unwrap();
+    let request = json!({"op":"brep_nurbs_progressive_profile_body",
+        "loops":[[outer],[hole]],"path":line([0.;3],[3.,4.,0.]).unwrap(),
+        "scale":line([1.,0.,0.],[2.,0.,0.]).unwrap(),
+        "twist":nurbs_core::progressive_sweep::constant_vector_law([0.;3]).unwrap(),
+        "normal":[0.,0.,1.],"orientation":"rmf","spacing":"parameter",
+        "initial_sections":2,"max_sections":2,"max_deviation":0.01,
+        "cap_correction_tolerance":1e-9,"cap_correction_quantum":2_f64.powi(-40),
+        "cap_correction_max_work":1000000});
+    let before = request.clone();
+    let report = dispatch(request.clone()).unwrap();
+    assert_eq!(report["boundaryContinuousBound"].as_bool(), Some(true));
+    assert_eq!(report["boundaryErrorWithinBudget"].as_bool(), Some(true));
+    assert!(report["boundaryErrorUpper"].as_f64().unwrap() <= 0.01);
+    let cap_errors = report["filledCapErrorUpper"].as_array().unwrap();
+    assert_eq!(cap_errors.len(), 2);
+    assert!(
+        cap_errors
+            .iter()
+            .all(|v| v.as_f64().is_some_and(|e| e >= 0. && e <= 0.01))
+    );
+    assert_eq!(report["retainedCaps"]["exact"].as_bool(), Some(true));
+    assert_eq!(
+        report["retainedCaps"]["continuousBound"].as_bool(),
+        Some(false)
+    );
+    assert_eq!(report["globalEmbeddingCertified"].as_bool(), Some(false));
+    assert_eq!(request, before);
+    let mut exhausted = request;
+    exhausted["cap_correction_max_work"] = json!(1);
+    assert!(dispatch(exhausted).is_err());
+}
+
+#[test]
+fn nonplanar_corrected_regular_body_owns_filled_cap_union() {
+    let profile = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.1).unwrap();
+    let path = nurbs_core::paths::bezier(
+        vec![
+            vec![0., 0., 0.],
+            vec![1., 0., 0.],
+            vec![2., 1., 0.],
+            vec![3., 1., 1.],
+        ],
+        None,
+    )
+    .unwrap();
+    let mut scale = nurbs_core::primitives::line([0.; 3], [1., 0., 0.]).unwrap();
+    scale.control_points = vec![vec![1., 0., 0.]; 2];
+    let mut twist = scale.clone();
+    twist.control_points = vec![vec![0.; 3]; 2];
+    let request = value_codec::json!({"op":"brep_nurbs_progressive_profile_body","loops":[[profile]],"path":path,"scale":scale,"twist":twist,
+ "normal":[0.,0.,1.],"orientation":"corrected_frenet","spacing":"parameter","initial_sections":3,"max_sections":129,"max_deviation":0.05,
+ "cap_correction_tolerance":1e-9,"cap_correction_quantum":2_f64.powi(-40),"cap_correction_max_work":1000000});
+    let saved = request.clone();
+    let result = crate::dispatch(request.clone()).unwrap();
+    assert_eq!(request, saved);
+    assert_eq!(result["boundaryContinuousBound"], true, "{result}");
+    assert_eq!(result["boundaryErrorWithinBudget"], true);
+    assert_eq!(result["filledCapErrorUpper"].as_array().unwrap().len(), 2);
+    assert!(result["boundaryErrorUpper"].as_f64().unwrap() <= 0.05);
+    assert_eq!(result["globalEmbeddingCertified"], false);
+    let mut hollow = request.clone();
+    let hole = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.05)
+        .unwrap()
+        .reverse()
+        .unwrap();
+    hollow["loops"]
+        .as_array_mut()
+        .unwrap()
+        .push(value_codec::json!([hole]));
+    for affine in [false, true] {
+        let mut variant = hollow.clone();
+        if affine {
+            let mut axes = scale.clone();
+            axes.control_points = vec![vec![1.25, 0.75, 1.1]; 2];
+            let mut center = scale.clone();
+            center.control_points = vec![vec![0.01, -0.02, 0.03]; 2];
+            variant["axis_scale"] = value_codec::json!(axes);
+            variant["center_law"] = value_codec::json!(center);
+        }
+        let report = crate::dispatch(variant).unwrap();
+        assert_eq!(
+            report["boundaryContinuousBound"], true,
+            "affine={affine}: {report}"
+        );
+        assert_eq!(report["boundaryErrorWithinBudget"], true);
+        assert_eq!(report["filledCapErrorUpper"].as_array().unwrap().len(), 2);
+    }
+}
+
+#[test]
+fn literal_straight_corrected_affine_65_body_keeps_default_error_work() {
+    let ring = |points: Vec<[f64; 3]>| {
+        points
+            .windows(2)
+            .map(|p| nurbs_core::primitives::line(p[0], p[1]).unwrap())
+            .collect::<Vec<_>>()
+    };
+    let outer = ring(vec![
+        [0., 0., 0.],
+        [2., 0., 0.],
+        [2., 2., 0.],
+        [0., 2., 0.],
+        [0., 0., 0.],
+    ]);
+    let hole = ring(vec![
+        [0.5, 0.5, 0.],
+        [0.5, 1.5, 0.],
+        [1.5, 1.5, 0.],
+        [1.5, 0.5, 0.],
+        [0.5, 0.5, 0.],
+    ]);
+    let constant = |v| nurbs_core::progressive_sweep::constant_vector_law(v).unwrap();
+    let result=crate::dispatch(value_codec::json!({"op":"brep_nurbs_progressive_profile_body","loops":[outer,hole],
+ "path":nurbs_core::primitives::line([0.;3],[0.,0.,10.]).unwrap(),"scale":constant([1.,0.,0.]),"twist":constant([0.;3]),
+ "axis_scale":constant([2.,3.,1.]),"center_law":constant([0.125,-0.25,0.]),"normal":[1.,0.,0.],"orientation":"corrected_frenet","spacing":"parameter",
+ "initial_sections":65,"max_sections":65,"max_deviation":0.01})).unwrap();
+    assert_eq!(result["model"]["faces"].as_array().unwrap().len(), 514);
+    assert_eq!(result["boundaryContinuousBound"], true, "{result}");
+    assert_eq!(result["boundaryErrorWithinBudget"], true);
+    assert!(
+        result["approximation"]["report"]["errorCertificateCells"]
+            .as_u64()
+            .unwrap()
+            <= 10000
+    );
+}
+
+#[test]
+fn nonplanar_corrected_regular_arc_body_owns_filled_caps() {
+    let profile = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.1).unwrap();
+    let hole = nurbs_core::primitives::circle([0.; 3], [1., 0., 0.], 0.05)
+        .unwrap()
+        .reverse()
+        .unwrap();
+    let path = nurbs_core::paths::bezier(
+        vec![
+            vec![0., 0., 0.],
+            vec![1., 0., 0.],
+            vec![2., 1., 0.],
+            vec![3., 1., 1.],
+        ],
+        None,
+    )
+    .unwrap();
+    let constant = |v| nurbs_core::progressive_sweep::constant_vector_law(v).unwrap();
+    let result=crate::dispatch(value_codec::json!({"op":"brep_nurbs_progressive_profile_body","loops":[[profile],[hole]],
+ "path":path,"scale":constant([1.,0.,0.]),"twist":constant([0.;3]),"axis_scale":constant([1.25,0.75,1.1]),"center_law":constant([0.01,-0.02,0.03]),
+ "normal":[0.,0.,1.],"orientation":"corrected_frenet","spacing":"arc_length","length_tolerance":1e-6,"length_max_cells":100000,
+ "initial_sections":3,"max_sections":129,"max_deviation":0.05,
+ "cap_correction_tolerance":1e-9,"cap_correction_quantum":2_f64.powi(-40),"cap_correction_max_work":1000000})).unwrap();
+    assert_eq!(result["boundaryContinuousBound"], true, "{result}");
+    assert_eq!(result["boundaryErrorWithinBudget"], true);
+    assert_eq!(result["filledCapErrorUpper"].as_array().unwrap().len(), 2);
+    assert!(result["boundaryErrorUpper"].as_f64().unwrap() <= 0.05);
+    assert_eq!(result["globalEmbeddingCertified"], false);
 }

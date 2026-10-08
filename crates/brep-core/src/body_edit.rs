@@ -254,6 +254,7 @@ pub(crate) fn edit_face(
 mod tests {
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn preserves_standalone_shells_beside_edited_components() {
         let text = include_str!("../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step");
         let (mut model, _, _) = crate::step_interchange_v3::import_step_v9(text).unwrap();
@@ -275,6 +276,7 @@ mod tests {
     }
     #[test]
     #[ignore = "explicit assembly edit timing"]
+    #[cfg(feature = "codec")]
     fn assembly_edit_timing() {
         let count: usize = std::env::var("CAD_BODY_EDIT_COUNT")
             .unwrap_or_else(|_| "64".into())
@@ -327,6 +329,7 @@ mod tests {
         }
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn cylinder_edit_preserves_separate_body_with_cavity() {
         let cavity = crate::operations::boolean(
             &crate::cuboid([10., 10., 10.], [20., 20., 20.]).unwrap(),
@@ -367,6 +370,7 @@ mod tests {
         );
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn mixed_unit_component_push_preserves_other_body_and_identities() {
         let text = include_str!(
             "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"

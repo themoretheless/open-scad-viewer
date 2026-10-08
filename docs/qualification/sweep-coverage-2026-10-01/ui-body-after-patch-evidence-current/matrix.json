@@ -1,0 +1,92 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T16:47:01.098Z",
+  "scope": "Finite retained-miter UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "da10339d24420c5b217f13090fc67c9656c9c21ea938d76d7f177ffa109ad4b9",
+  "appSourceSha256": "68f2c9085cc4d755a1a5892c457d1be68dc3cb2560b0e7e91a614536249fbf77",
+  "distIndexSha256": "a351830aab0be51194ff6b8815faff7804797668e4b6aa0d2984f63af764167e",
+  "cases": [
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-guide-affine-hollow.r",
+      "sourceSha256": "48f1297150370a6d908b0fe07e288148c21e00dc7b7966cb899f6618058681db",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (8) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈1.65330e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "cb688ea511fcaa66dc9aa32d0f052e0b337881efa55f2e7fcedf6ec559c71164",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "68f2c9085cc4d755a1a5892c457d1be68dc3cb2560b0e7e91a614536249fbf77",
+    "src/services/sweepRetainedCorrespondence.ts": "f0a0f00ec67d01c499efbbe82d6dfd4168caf2299b16a7d1447f6305cdef5d1c",
+    "src/services/geometry/brep.ts": "f28b952b97f670d9290a0b592bdb3ffc6af386278dd29909130612448c2ca920",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "b5c4a1c3839baf66292f259804f709b4e7afa137e32ae1d46ba4edafe9cd1e0b"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

@@ -244,6 +244,29 @@ fn is_affine_plane(surface: &Surface, tolerance: f64) -> bool {
                 <= tolerance
         })
 }
+/// Exact affine-in-parameter ruling; curved transverse sampling is retained.
+/// This preview optimization never changes certified Bernstein grid schedules.
+fn exact_linear_ruling(surface: &Surface, coedge: &brep_core::Coedge, edge: &brep_core::Edge) -> bool {
+    let p=&coedge.pcurve;
+    let curve=&edge.curve;
+    if edge.degenerate || p.degree!=1 || p.control_points.len()!=2
+        || p.weights[0]!=p.weights[1] || curve.degree!=1
+        || curve.control_points.len()!=2 || curve.weights[0]!=curve.weights[1] {
+        return false;
+    }
+    let a=&p.control_points[0];let b=&p.control_points[1];
+    let u = a[1]==b[1] && a[0]!=b[0] && surface.degree_u==1
+        && !surface.periodic_u && surface.control_points.len()==2
+        && surface.knots_u.len()==4 && surface.knots_u[0]==surface.knots_u[1]
+        && surface.knots_u[2]==surface.knots_u[3]
+        && surface.weights[0]==surface.weights[1];
+    let v = a[0]==b[0] && a[1]!=b[1] && surface.degree_v==1
+        && !surface.periodic_v && surface.control_points.iter().all(|row|row.len()==2)
+        && surface.knots_v.len()==4 && surface.knots_v[0]==surface.knots_v[1]
+        && surface.knots_v[2]==surface.knots_v[3]
+        && surface.weights.iter().all(|row|row[0]==row[1]);
+    u || v
+}
 #[derive(Clone, Copy)]
 struct BoundarySample {
     /// Authored edges this sample lies on: its own coedge's edge, and for
@@ -259,13 +282,15 @@ struct EdgeSamplingRegistry {
     edges: Vec<Vec<usize>>,
 }
 impl EdgeSamplingRegistry {
-    fn new(model: &brep_core::Model, segments: usize) -> Result<Self> {
+    fn new(model: &brep_core::Model, segments: usize, reduce_linear_rulings: bool) -> Result<Self> {
         let mut schedule = vec![1; model.edges.len()];
         for face in &model.faces {
             let curved = !is_affine_plane(&face.surface, model.tolerance_mm);
             for &wire in std::iter::once(&face.outer).chain(&face.holes) {
                 for coedge in &model.loops[wire].coedges {
-                    if curved || model.edges[coedge.edge].curve.degree > 1 {
+                    let edge=&model.edges[coedge.edge];
+                    if (curved || edge.curve.degree > 1)
+                        && !(reduce_linear_rulings && exact_linear_ruling(&face.surface,coedge,edge)) {
                         schedule[coedge.edge] = segments;
                     }
                 }
@@ -502,7 +527,18 @@ fn triangulate_boundary(
             .iter()
             .map(|wire| wire.iter().map(|p| p.uv).collect())
             .collect::<Vec<_>>(),
-    )?;
+    )
+    .inspect_err(|_error| {
+        #[cfg(test)]
+        eprintln!(
+            "triangulation boundary outer={:?} holes={:?}",
+            outer.iter().map(|p| p.uv).collect::<Vec<_>>(),
+            holes
+                .iter()
+                .map(|w| w.iter().map(|p| p.uv).collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+        );
+    })?;
     let mut out = FaceMesh {
         uv: vec![],
         shared: vec![],
@@ -601,11 +637,15 @@ fn nurbs_with_freeform_note(
     segments: usize,
     freeform_note: FreeformTessNote,
 ) -> Result<Tessellation> {
+    nurbs_with_schedule(model,segments,freeform_note,!matches!(freeform_note,FreeformTessNote::BernsteinCertified))
+}
+fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freeform_note:FreeformTessNote,
+    reduce_linear_rulings:bool)->Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));
     }
-    let mut registry = EdgeSamplingRegistry::new(model, segments)?;
+    let mut registry = EdgeSamplingRegistry::new(model, segments, reduce_linear_rulings)?;
     let mut face_ids = Vec::new();
     let mut closed_triangles = Vec::new();
     for shell in &model.shells {
@@ -694,7 +734,7 @@ pub fn certified_nurbs(
             "Requested two-sided analytic deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
         ))?;
     let deviation = brep_core::analysis::certified_tessellation_deviation(model, segments)?;
-    let tessellation = nurbs(model, segments)?;
+    let tessellation = nurbs_with_schedule(model, segments, FreeformTessNote::SampledUncertified,false)?;
     if tessellation.built.mesh.indices.len() / 3 > max_triangles {
         return Err(nurbs_core::Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",
@@ -1240,6 +1280,113 @@ mod registry_tests {
             },
             brep_core::TopologyIds::default(),
         )
+    }
+    #[test]
+    fn dense_ruled_hollow_preview_preserves_all_faces_and_curved_edge_detail() {
+        let ring=|radius:f64,z:f64|[
+            [[radius,0.],[radius,radius],[0.,radius]],
+            [[0.,radius],[-radius,radius],[-radius,0.]],
+            [[-radius,0.],[-radius,-radius],[0.,-radius]],
+            [[0.,-radius],[radius,-radius],[radius,0.]],
+        ].into_iter().map(|points| nurbs_core::curve::Curve {
+            degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:points.into_iter().map(|p|vec![p[0],p[1],z]).collect(),
+            weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false,
+        }).collect::<Vec<_>>();
+        let sections=(0..128).map(|i| {
+            let z=i as f64/128.;
+            let outer=ring(0.125+z/128.,z);
+            let inner=ring(0.0625,z).into_iter().rev().map(|c|c.reverse().unwrap()).collect();
+            vec![outer,inner]
+        }).collect::<Vec<_>>();
+        let model=brep_core::rational_section_loft(&sections).unwrap();
+        assert_eq!(model.faces.len(),1018);
+        let before=model.clone();
+        let registry=EdgeSamplingRegistry::new(&model,4,true).unwrap();
+        for (edge,samples) in model.edges.iter().zip(&registry.edges) {
+            if edge.curve.degree==2 {assert_eq!(samples.len(),5);}
+        }
+        let preview=nurbs(&model,4).unwrap();
+        assert!(preview.built.mesh.indices.len()/3<=20000);
+        assert_eq!(preview.face_ids.iter().copied().collect::<std::collections::BTreeSet<_>>().len(),1018);
+        assert!(preview.built.report.closed);
+        assert_eq!(preview.built.report.non_manifold_edges,0);
+        assert_eq!(preview.built.report.orientation_conflicts,0);
+        assert_eq!(model,before);
+        let uniform=EdgeSamplingRegistry::new(&model,4,false).unwrap();
+        assert!(uniform.edges.iter().all(|samples|samples.len()==5));
+        assert!(nurbs_with_schedule(&model,4,FreeformTessNote::SampledUncertified,false)
+            .err().unwrap().to_string().contains("20000 triangles"));
+        let face=&model.faces[0];
+        let coedge=model.loops[face.outer].coedges.iter().find(|c|
+            exact_linear_ruling(&face.surface,c,&model.edges[c.edge])).unwrap();
+        let mut weighted=face.surface.clone();
+        weighted.weights[1][0]=weighted.weights[1][0].next_up();
+        assert!(!exact_linear_ruling(&weighted,coedge,&model.edges[coedge.edge]));
+    }
+    #[test]
+    fn corrected_fixed_normal_hollow_body_tessellates_original_boundary() {
+        use nurbs_core::{
+            primitives::line,
+            progressive_sweep::{Options, Orientation, Spacing, constant_vector_law},
+        };
+        let ring = |points: [[f64; 3]; 4]| {
+            (0..4)
+                .map(|i| line(points[i], points[(i + 1) % 4]).unwrap())
+                .collect()
+        };
+        let loops = vec![
+            ring([[0., 0., 0.], [0.1, 0., 0.], [0.1, 0.1, 0.], [0., 0.1, 0.]]),
+            ring([
+                [0.025, 0.025, 0.],
+                [0.025, 0.075, 0.],
+                [0.075, 0.075, 0.],
+                [0.075, 0.025, 0.],
+            ]),
+        ];
+        let path = nurbs_core::core::curve::Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0.; 3], vec![0., 0., 0.5], vec![0., 1., 1.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let scale = constant_vector_law([1., 0., 0.]).unwrap();
+        let twist = constant_vector_law([0.; 3]).unwrap();
+        let axes = constant_vector_law([2., 3., 1.]).unwrap();
+        let center = constant_vector_law([0.; 3]).unwrap();
+        let body = brep_core::analytic::progressive_profile_body_with_evidence_and_correction(
+            &loops,
+            &path,
+            &scale,
+            &twist,
+            Some((&axes, &center)),
+            None,
+            None,
+            Options {
+                normal: [1., 0., 0.],
+                orientation: Orientation::FixedNormal,
+                spacing: Spacing::ArcLength {
+                    tolerance: 0.001,
+                    max_cells: 100000,
+                },
+                initial_sections: 3,
+                max_sections: 17,
+                max_deviation: 2.,
+            },
+            Some(brep_core::analytic::EndpointCapCorrection {
+                quantum: 2_f64.powi(-40),
+                tolerance: 1e-9,
+                max_work: 1000000,
+            }),
+        )
+        .unwrap();
+        assert_eq!(body.boundary_error_within_budget, Some(true));
+        for detail in [1, 2, 4, 8] {
+            let built =
+                nurbs(&body.model, detail).unwrap_or_else(|e| panic!("detail={detail}: {e:?}"));
+            assert!(built.built.report.closed, "detail={detail}");
+        }
     }
     #[test]
     fn periodic_step_sphere_tessellates_with_shared_seam_and_poles() {

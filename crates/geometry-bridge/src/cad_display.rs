@@ -97,7 +97,13 @@ fn smooth(mesh: &Mesh, flat: &[V3]) -> Vec<V3> {
         })
         .collect()
 }
-fn result(mesh: Mesh, map: Option<Vec<usize>>, normals: Vec<V3>, closed: Option<Vec<bool>>, work_closed: Option<Vec<bool>>) -> Result<Value> {
+fn result(
+    mesh: Mesh,
+    map: Option<Vec<usize>>,
+    normals: Vec<V3>,
+    closed: Option<Vec<bool>>,
+    work_closed: Option<Vec<bool>>,
+) -> Result<Value> {
     let mut value = value_codec::Map::new();
     value.insert("closed".into(), encode(closed)?);
     value.insert("workClosed".into(), encode(work_closed)?);
@@ -127,7 +133,9 @@ pub fn prepare(v: Value) -> Result<Value> {
         if model.shells.iter().any(|s| s.closed) && model.shells.iter().any(|s| !s.closed) {
             for detail in [segments, 4, 1].into_iter().chain(2..=32) {
                 if let Ok(tess) = brep::nurbs(&model, detail) {
-                    if tess.built.mesh.positions == mesh.positions && tess.built.mesh.indices == mesh.indices {
+                    if tess.built.mesh.positions == mesh.positions
+                        && tess.built.mesh.indices == mesh.indices
+                    {
                         work_closed = tess.closed_triangles;
                         break;
                     }
@@ -178,19 +186,26 @@ mod tests {
     fn mixed_shell_display_keeps_exact_triangle_ownership() {
         let mut model = brep_core::step_interchange_v3::import_step_v9(include_str!(
             "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
-        )).unwrap().0;
+        ))
+        .unwrap()
+        .0;
         model.bodies.pop();
         model.1.bodies.pop();
         model.shells[1].closed = false;
         let tess = brep::nurbs(&model, 1).unwrap();
-        let expected: Vec<bool> = tess.face_ids.iter().map(|face|
-            model.shells[0].faces.iter().any(|f| f.face == *face)
-        ).collect();
+        let expected: Vec<bool> = tess
+            .face_ids
+            .iter()
+            .map(|face| model.shells[0].faces.iter().any(|f| f.face == *face))
+            .collect();
         assert!(expected.contains(&true) && expected.contains(&false));
-        let output = prepare(json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":4000})).unwrap();
+        let output =
+            prepare(json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":4000}))
+                .unwrap();
         assert_eq!(field::<Vec<bool>>(&output, "closed").unwrap(), expected);
         assert_eq!(field::<Vec<bool>>(&output, "workClosed").unwrap(), expected);
-        let mut limited = json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":1});
+        let mut limited =
+            json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":1});
         let fallback = prepare(limited.clone()).unwrap();
         assert!(fallback["map"].is_null());
         assert_eq!(field::<Vec<bool>>(&fallback, "closed").unwrap(), expected);

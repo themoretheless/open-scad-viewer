@@ -412,5 +412,5 @@
       "note": "Current bytes are newly bound in v22; v21 remains archived. Re-freeze after geometry kernel rebuild 09de2b9c (oracle 44/44 unchanged, no migration); evidence own-rust-cad-v14, G0 fingerprint v22, G1 plan v39; executors retargeted to v39. Working tree carries foreign WIP (gcode-core, TS services/workers) — recorded in review."
     }
   ],
-  "previousFingerprintSha256": "88206f45c60ca20698e20fd3c4a7a1dbca43d70793d7db7eace2c554c0bb97fe"
+  "previousFingerprintSha256": "e42e3f84c1f8b27240641d5be846536a5722b12edb1be8a3b0f1891da2381eef"
 }

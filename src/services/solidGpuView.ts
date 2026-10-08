@@ -138,6 +138,7 @@ export class SolidGpuLayer {
   private transparentBindGroup: GPUBindGroup | null = null
   private transparentVertices: GPUBuffer | null = null
   private transparentTree: TransparentBsp | null = null
+  private transparencyLimited = false
   private transparentData: Float32Array | null = null
   private transparentDirection: number[] | null = null
   private opaqueCount = 0
@@ -158,7 +159,7 @@ export class SolidGpuLayer {
   private frame = 0
   private disposed = false
 
-  constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void) {}
+  constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void, private readonly onTransparencyLimit?:(limited:boolean)=>void) {}
 
   private fail(reason:unknown='WebGPU unavailable'):void {
     if(this.disposed)return
@@ -231,8 +232,8 @@ export class SolidGpuLayer {
     let total = 0
     for (const body of bodies) {const opacity=body.opacity??1;if(!Number.isFinite(opacity)||opacity<0||opacity>1)throw Error('Invalid material opacity');total += body.positions.length / 3}
     const data = new Float32Array(total * 13)
-    this.opaqueCount=0;this.transparentTriangles=[];this.dragOffsets.clear()
-    const ordered=[...bodies.filter(b=>(b.opacity??1)>=1),...bodies.filter(b=>(b.opacity??1)<1)]
+    this.opaqueCount=0;this.transparentTriangles=[];this.dragOffsets.clear();this.transparencyLimited=false;this.onTransparencyLimit?.(false)
+    const ordered=[...bodies.filter(b=>(b.opacity??1)>=1),...bodies.filter(b=>(b.opacity??1)>0&&(b.opacity??1)<1)]
     this.ranges = new Map()
     let offset = 0
     for (const body of ordered) {
@@ -295,7 +296,7 @@ export class SolidGpuLayer {
       }
       device.queue.writeBuffer(buffer, range.start * 13 * 4, slice)
     }
-    try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
+    if(!this.transparencyLimited)try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
     this.requestFrame()
   }
 
@@ -308,7 +309,23 @@ export class SolidGpuLayer {
       const vertices=[0,1,2].map(i=>Array.from(packed.subarray((t.first+i)*13,(t.first+i+1)*13)).map((v,k)=>k<3?v+delta[k]:v))
       return {owner:t.body,triangle:vertices as unknown as TransparentFragment['triangle']}
     })
-    this.transparentTree=new TransparentBsp(fragments)
+    try { this.transparentTree=new TransparentBsp(fragments) } catch(error) {
+      if(!(error instanceof Error)||!/^Transparency (?:(?:input|operation|fragment) limit exceeded|(?:input|output) exceeds transport limit)$/.test(error.message))throw error
+      // Native admission remains bounded. Show the same geometry opaque until the next
+      // scene upload instead of destroying a healthy GPU device for a temporary preview.
+      this.transparencyLimited=true;this.onTransparencyLimit?.(true)
+      for(const triangle of this.transparentTriangles)for(let i=0;i<3;i++)packed[(triangle.first+i)*13+12]=1
+      this.opaqueCount+=this.transparentTriangles.length*3
+      if(this.vertexBuffer){
+        const display=new Float32Array(packed)
+        for(const [id,delta] of this.dragOffsets){
+          const range=this.ranges.get(id)!
+          for(let i=0;i<range.count;i++)for(let k=0;k<3;k++)display[(range.start+i)*13+k]+=delta[k]
+        }
+        this.device.queue.writeBuffer(this.vertexBuffer,0,display)
+      }
+      return
+    }
     this.transparentData=new Float32Array(this.transparentTree.fragmentCount*3*13)
     if(this.transparentTree.fragmentCount)this.transparentVertices=this.device.createBuffer({size:this.transparentTree.fragmentCount*3*13*4,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST})
   }

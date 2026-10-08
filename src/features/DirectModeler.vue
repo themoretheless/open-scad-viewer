@@ -33,6 +33,7 @@ import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBo
 import { rayTriangleDistance } from '../services/math3d'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
+import WorkspaceActionBar from '../components/WorkspaceActionBar.vue'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 import { sameSketchPlane } from '../services/directExtrusion'
 import { useModelingGrid } from '../services/modelingGrid'
@@ -75,6 +76,17 @@ import {isSolidNurbsRefit,type refitSolidNurbs} from '../services/solidCurveRedu
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
+const SketchCleanupControls=defineAsyncComponent(()=>import('../components/SketchCleanupControls.vue'))
+const AssemblyAnimationControls=defineAsyncComponent(()=>import('../components/AssemblyAnimationControls.vue'))
+const DrawingSheetsControls=defineAsyncComponent(()=>import('../components/DrawingSheetsControls.vue'))
+const DirectActionsControls=defineAsyncComponent(()=>import('../components/DirectActionsControls.vue'))
+const LiveBodyPatternControls=defineAsyncComponent(()=>import('../components/LiveBodyPatternControls.vue'))
+const ImageTraceControls=defineAsyncComponent(()=>import('../components/ImageTraceControls.vue'))
+
+const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
+const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
+const CurveOffsetConstructionInfo=defineAsyncComponent(()=>import('../components/CurveOffsetConstructionInfo'))
+const CurveOffsetControls=defineAsyncComponent(()=>import('../components/CurveOffsetControls'))
 const CoonsPreparationControls=defineAsyncComponent(()=>import('../components/CoonsPreparationControls'))
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null; paletteRequest?: number }>()
 const emit = defineEmits<{ backend: [gpu: boolean]; close: []; append: [source: string]; toMesh: []; 'edit-group': [request: { name: string; source: string; replaces: string | null }] }>()
@@ -200,6 +212,9 @@ function toggleSketchPane(open = !sketchPaneOpen.value) {
 // Picking a sketch tool reveals the pane for this session without changing the saved preference.
 watch([mode, tool], ([value]) => { if (value === '2d') sketchPaneOpen.value = true })
 const camera = ref(defaultDirectCamera()), hovered = ref('')
+const animationDocument=shallowRef<DirectDocument|null>(null)
+const animationCanvas=shallowRef<HTMLCanvasElement|null>(null)
+function previewAnimation(value:{document:DirectDocument|null;camera:{yaw:number;pitch:number}}){animationDocument.value=value.document;camera.value=value.camera}
 const { step: grid, enabled: snap, grid: gridSnap, geometry: geometrySnap, guides: guideSnap, keypoints: keypointSnap, relations: relationSnap, radius: snapRadius } = useModelingGrid()
 /**
  * True while a rotate or scale gizmo drag is in flight.
@@ -343,9 +358,9 @@ function setProfileTarget(id:string){
  if(index>0){const ids=[...surfaceInputs.value];[ids[0],ids[index]]=[ids[index],ids[0]];surfaceInputs.value=ids}
 }
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
-const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
+const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
+const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
@@ -588,6 +603,7 @@ function beginAdvanced(kind:typeof advancedOp.value) {
  }
  boxSelect.value=false
  cancelCommand(); advancedOp.value=kind
+ if(kind==='nurbs-offset'){loftPreviewId.value=crypto.randomUUID();mode.value='3d'}
  if(kind==='nurbs-point-trim'){
   pointTrimPick.value=null
   const points=selectedNurbsCurve.value?curvePoints(selectedNurbsCurve.value.curve):[],point=points[Math.floor(points.length/2)]??[0,0,0]
@@ -1044,6 +1060,11 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
 }
 function surfaceConstructionError(error:unknown):string {
  const message=error instanceof Error?error.message:String(error)
+ if(advancedOp.value==='nurbs-offset'){
+  if(message.includes('explicit profile join'))return label('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».','The curve has a corner. Choose Bevel or a trim mode under Joins.')
+  if(message.includes('XY plane'))return label('Нужна кривая в плоскости XY с постоянной Z. Выберите плоскую кривую.','Select a curve in an XY plane with constant Z.')
+  if(message.includes('budget')||message.includes('limit'))return label('Предел вычисления достигнут. Увеличьте допуск или разделите кривую.','Calculation limit reached. Increase tolerance or split the curve.')
+ }
  if(advancedOp.value==='nurbs-point-trim'){
   if(message.includes('ambiguous or unresolved'))return pointTrimPick.value?label('Попадание в проекции неоднозначно. Поверните вид или выберите другую точку.','The projected pick is ambiguous. Rotate the view or choose another point.'):label('Ближайшая точка неоднозначна. Выберите другую точку разреза.','The nearest point is ambiguous. Choose another cut point.')
   if(message.includes('capture distance'))return label('Точка вне допуска. Приблизьте её к кривой или увеличьте допуск.','Outside capture distance. Move closer to the curve or increase the distance.')
@@ -1088,12 +1109,15 @@ watch(advancedOp,()=>{bodyEditRetryVisible.value=false},{flush:'sync'})
 watch(()=>props.open,open=>{if(!open)advancedOp.value=null},{flush:'sync'})
 const bodyEditWorker=createSolidPreviewWorker()
 let bodyEditGeneration=0,bodyEditApplyGeneration:number|null=null
+const chainProject=(point:[number,number,number])=>project(point,'3d')
+const currentChain=shallowRef<{curves:import('../services/solidNurbs').SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null>(null)
+const curveOffsetState=shallowRef<Awaited<ReturnType<typeof import('../services/previewSolidCurveOffset').previewSolidCurveOffset>>|null>(null)
 const bodyEditPending=ref(false),bodyEditResult=shallowRef<DirectDocument|null>(null),bodyEditError=ref('')
-function cancelBodyEdit(){bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
+function cancelBodyEdit(){curveOffsetState.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
 onUnmounted(()=>{cancelBodyEdit();bodyEditWorker.dispose()})
 watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,selection.value,faceIndex.value,edgeIndex.value,JSON.stringify(edgeIndexes.value),JSON.stringify(openingFaces.value),JSON.stringify(surfaceInputs.value),JSON.stringify(selectedIds.value),JSON.stringify(surfaceReversed.value),loftPreviewId.value,activeGroup.value,JSON.stringify(advanced.value),JSON.stringify(pointTrimPick.value),filletSegments.value,JSON.stringify(invalidQuantities.value)],()=>{
  cancelBodyEdit()
- if(!props.open||Object.keys(invalidQuantities.value).length||!(advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isSolidSurfaceBuild(advancedOp.value)||isNurbsMatch(advancedOp.value)||isSolidSceneEdit(advancedOp.value)))return
+ if(!props.open||Object.keys(invalidQuantities.value).length||!(advancedOp.value==='nurbs-offset'||advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isSolidSurfaceBuild(advancedOp.value)||isNurbsMatch(advancedOp.value)||isSolidSceneEdit(advancedOp.value)))return
  const generation=bodyEditGeneration
  const operation=advancedOp.value
  const screenPick=pointTrimPick.value
@@ -1105,6 +1129,11 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
   try {
    // postMessage snapshots this shallow-ref document; avoid a JSON roundtrip on the UI thread.
    const source=document.value
+   if(operation==='nurbs-offset'){
+    const result=await (await import('../services/previewSolidCurveOffset')).previewSolidCurveOffset(bodyEditWorker,source,{...options,createdId:loftPreviewId.value})
+    if(generation===bodyEditGeneration){bodyEditResult.value=result.document;curveOffsetState.value=result}
+    return
+   }
    if(operation==='nurbs-point-trim'){
     const dimension=source.curves?.find((c:SolidNurbsCurve)=>c.id===options.id)?.curve.controlPoints[0]?.length
     const result=await bodyEditWorker.run({kind:'nurbsEdit',document:source,options:screenPick?{kind:'trim-screen-point',id:options.id,...screenPick,keep:options.end}:{kind:'trim-point',id:options.id,point:dimension===2?[options.x,options.y]:[options.x,options.y,options.z],keep:options.end,maxDistance:options.profileGap}})
@@ -1159,7 +1188,7 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
 const advancedPreview = computed(() => {
  if(!advancedOp.value||(advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isNurbsMatch(advancedOp.value))&&bodyEditPending.value)return {document:null,error:'',rawError:'',sweepReport:null}
  if(isSolidSurfaceBuild(advancedOp.value)){const r=surfaceBuildResult.value,error=r?.error||bodyEditError.value;return {document:r?.document??null,error:error?surfaceConstructionError(error):'',rawError:error,sweepReport:r?.report??null}}
- if(advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||isSolidSceneEdit(advancedOp.value))return {document:bodyEditResult.value,error:bodyEditError.value?surfaceConstructionError(bodyEditError.value):'',rawError:bodyEditError.value,sweepReport:null}
+ if(advancedOp.value==='nurbs-offset'||advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||isSolidSceneEdit(advancedOp.value))return {document:bodyEditResult.value,error:bodyEditError.value?surfaceConstructionError(bodyEditError.value):'',rawError:bodyEditError.value,sweepReport:null}
  // Explicit reactive dependencies: history itself intentionally is not reactive.
  void document.value;void selection.value;void faceIndex.value;void edgeIndex.value;void edgeIndexes.value;void openingFaces.value;void advanced.value
  const report:{value:FramedSweepResult['report']|null}={value:null}
@@ -1197,7 +1226,7 @@ function applyAdvanced(){run(()=>{
  const d=structuredClone(advancedPreview.value.document),splitBody=d.bodies.find(b=>b.id==='preview-split');if(splitBody)splitBody.id=crypto.randomUUID()
  const prepared=advancedOp.value==='nurbs-prepare'
  const profileId=(isProfileCommand(advancedOp.value))?surfaceInputs.value[0]:''
- const created=advancedOp.value==='instance-create'?loftPreviewId.value:''
+ const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset')?loftPreviewId.value:''
  commit(d);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
 })}
 const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
@@ -1688,8 +1717,8 @@ async function importFile(event: Event) {
   const text=await file.text()
   if(!current())return
   const parsed=JSON.parse(text)
-  if(parsed?.language==='modelgraph/nurbs-1'){
-   const next=await historyWorker.run({kind:'modelGraphImport',document:history.document,text,group:activeGroup.value||undefined})
+  if(parsed?.language==='rush/nurbs-1'){
+   const next=await historyWorker.run({kind:'rushGraphImport',document:history.document,text,group:activeGroup.value||undefined})
    if(!current())return
    const {validateLocked,added}=prepareCommit(next)
    const applied=await target.commitAsync(async()=>next,validateLocked)
@@ -2010,14 +2039,16 @@ const COARSE_DISPLAY: Pick<DisplayMesh, 'map'> = { map: null }
 // WebGPU layer under the 3D SVG: draws dense, per-pixel shaded surfaces with the same camera; the SVG then only
 // keeps transparent working-mesh polygons for picking plus gizmos and previews.
 const gpuActive = ref(false)
+const gpuTransparencyLimited = ref(false)
 watch(gpuActive,value=>emit('backend',value),{immediate:true})
 let gpuLayer: SolidGpuLayer | null = null
 let gpuResize: ResizeObserver | null = null
 let gpuInitStarted = false
 function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
   if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported()) return
+  animationCanvas.value=el
   gpuInitStarted = true
-  const layer = new SolidGpuLayer(el,()=>{gpuActive.value=false;notice.value=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')})
+  const layer = new SolidGpuLayer(el,()=>{gpuActive.value=false;notice.value=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')},limited=>{gpuTransparencyLimited.value=limited})
   void layer.init().then(ok => {
     if (!ok || !layer.ready) { layer.destroy(); return }
     gpuLayer = layer
@@ -2161,7 +2192,7 @@ watch(() => document.value, () => {
 })
 const selectedGroup = computed(() => documentObjects(document.value).find(o=>o.id===selection.value)?.group ?? '')
 
-const renderBodies=computed(()=>previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value)
+const renderBodies=computed(()=>animationDocument.value?.bodies??(previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value))
 watch([smoothDisplay, kernelReady], () => {
   cancelDisplayPreparation()
   displayCache.clear()
@@ -2670,7 +2701,9 @@ function up(e: PointerEvent) {
 // Command palette: every tool, primitive and context action of the workspace, searchable by its Russian or English name.
 const paletteOpen = ref(false)
 const notice = ref('')
-const dockOpen = ref(storageGet('scad-solid-dock') !== 'false')
+// Creation strips stay out of the way once the scene has content; the Create button brings them back.
+const createOpen = ref(document.value.bodies.length === 0 && document.value.sketches.length === 0)
+const dockOpen = ref(storageGet('scad-solid-dock') === 'true')
 const dockTab = ref<'scene' | 'props'>('scene')
 watch(dockOpen, open => storageSet('scad-solid-dock', String(open)))
 const exactCardOpen = computed({ get: () => dockOpen.value && dockTab.value === 'props', set: open => { if (open) { dockOpen.value = true; dockTab.value = 'props' } else dockTab.value = 'scene' } })
@@ -2706,6 +2739,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('profile-difference','Вычесть области профилей','Subtract profile regions',()=>beginAdvanced('profile-difference'),{enabled:selectedIds.value.length>=2&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&s.closed)),disabledReason:label('Выберите два замкнутых профиля','Select two closed profiles')}),
     cmd('profile-intersection','Пересечь точные профили','Intersect exact profiles',()=>beginAdvanced('profile-intersection'),{enabled:selectedIds.value.length>=2&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&s.closed)),disabledReason:label('Выберите два замкнутых профиля','Select two closed profiles')}),
     cmd('profile-prepare','Собрать профиль','Prepare profile',()=>beginAdvanced('profile-prepare'),{enabled:!!selectedIds.value.length&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&!s.closed&&!s.retainedProfile&&s.analytic?.kind!=='circle')),disabledReason:label('Выберите открытые ломаные и дуги в одной плоскости','Select open polylines and arcs in one plane')}),
+    cmd('nurbs-offset','Смещение NURBS-кривой','Offset NURBS curve',()=>beginAdvanced('nurbs-offset'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-point-trim','Обрезать NURBS по точке','Trim NURBS at point',()=>beginAdvanced('nurbs-point-trim'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-curve-match','Согласовать кривые G1','Match curves G1',()=>beginAdvanced('nurbs-curve-match'),{enabled:!!selectedCurvePair.value,disabledReason:label('Выберите две NURBS-кривые','Select two NURBS curves')}),
     cmd('nurbs-match','Согласовать поверхности G1/G2','Match surfaces G1/G2',()=>beginAdvanced('nurbs-match'),{enabled:!!selectedSurfacePair.value,disabledReason:label('Выберите две NURBS-поверхности','Select two NURBS surfaces')}),
@@ -2857,7 +2891,7 @@ function keydown(e: KeyboardEvent) {
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     const k = e.key.toLowerCase(), tools = { v:'select', r:'rectangle', c:'circle', l:'polyline' } as const
     if (k in tools) beginSketch(tools[k as keyof typeof tools])
-    if (k === 'e') beginExtrude()
+    if (k === 'e') { e.preventDefault(); beginExtrude() }
     if (k === 'f') fit(mode.value,selectedIds.value.length>0)
     if (k === 'g') movingBody.value = !movingBody.value
     if (k === '?') showHelp.value = !showHelp.value
@@ -3056,6 +3090,12 @@ function removeGroup(name: string) {
 
 const DEFAULT_GROUP_SOURCE = 'cube([20, 20, 20], center = true);\n'
 
+function openNewGroupFromMenu(event: MouseEvent) {
+  const menu = (event.currentTarget as HTMLElement).closest('details')
+  if (menu) menu.open = false
+  openGroupDialog(null)
+}
+
 /** The source lives in the host's left panel; this only chooses what to open there. */
 function openGroupDialog(name: string | null) {
   if (name === null) {
@@ -3231,6 +3271,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button class="input-mode-toggle" :aria-pressed="inputMode === 'touch'" :title="label('Переключить управление: тач / мышь', 'Switch controls: touch / mouse')" @click="toggleInputMode">{{ inputMode === 'touch' ? label('Тач', 'Touch') : label('Мышь', 'Mouse') }}</button>
       <button v-if="inputMode === 'touch'" :aria-pressed="touchNavigate" @click="toggleTouchNavigation">{{ label('Навигация', 'Navigate') }}</button>
       <button :aria-pressed="compactWorkspace" @click="compactWorkspace = !compactWorkspace">{{ compactWorkspace ? label('Инструменты', 'Tools') : label('Больше места', 'More space') }}</button>
+      <button class="create-toggle" :aria-pressed="createOpen" :aria-expanded="createOpen" :title="label('Фигуры и примитивы', 'Shapes and primitives')" @click="createOpen = !createOpen">{{ label('Создать', 'Create') }}</button>
+      <span class="ws-count" aria-live="polite">{{ label('Выбрано', 'Selected') }}: {{ selectedIds.length }}</span>
       <button @click="showHelp = !showHelp" title="Keyboard shortcuts">?</button>
       <button class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span v-if="sketchSnapPending" role="status" aria-label="sketch-snap-preparation">{{ label('Готовлю привязки эскизов…','Preparing sketch snaps…') }} <button @click="cancelSketchSnaps">Esc</button></span>
@@ -3261,8 +3303,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
       <details class="file-menu" @keydown.esc="closeFileMenu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+        <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
-        <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
+        <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button type="button" :disabled="svgBusy" @click="svgInput?.click()">{{ label('Импорт SVG как профили', 'Import SVG as profiles') }}</button>
@@ -3281,7 +3324,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
       </div></details>
     </header>
-    <div class="sketch-start-bar" :aria-label="label('От плоской фигуры к объёму', 'From a flat shape to a solid')">
+    <div v-show="createOpen || canExtrudeSketch || choosingSketchFace" class="sketch-start-bar" :aria-label="label('От плоской фигуры к объёму', 'From a flat shape to a solid')">
       <strong>{{ label('Плоские фигуры', 'Flat shapes') }}</strong>
       <button v-for="item in [{ tool: 'rectangle' as const, ru: 'Прямоугольник', en: 'Rectangle', key: 'R' }, { tool: 'circle' as const, ru: 'Круг', en: 'Circle', key: 'C' }, { tool: 'polyline' as const, ru: 'Контур', en: 'Contour', key: 'L' }]" :key="item.tool" type="button" :aria-pressed="tool === item.tool" :title="`${label(item.ru,item.en)} · ${item.key}`" @click="beginSketch(item.tool)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path :d="TOOL_ICONS[item.tool]" /></svg>{{ label(item.ru,item.en) }} · {{ item.key }}
@@ -3293,7 +3336,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span class="subtle">{{ selectedSketch && !selectedSketch.closed ? label('Для объёма нужен замкнутый контур', 'Close the contour to create a solid') : label('Нарисуйте на плоскости → задайте высоту → Enter', 'Draw on a plane → set height → Enter') }}</span>
     </div>
     <div v-if="choosingSketchFace || (workplaneBodyId && tool!=='select')" class="workplane-hint" role="status">{{ choosingSketchFace ? label('Выберите плоскую грань тела в 3D. Esc — отмена.', 'Pick a planar body face in 3D. Esc cancels.') : label('Рисуйте на выделенной грани в 3D или в панели эскиза. Затем нажмите «Выдавить».', 'Draw on the highlighted face in 3D or in the sketch pane, then choose Extrude.') }}</div>
-    <div class="primitive-bar">
+    <div v-show="createOpen" class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
       <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :disabled="!kernelReady" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
       <span class="primitive-divider" aria-hidden="true"></span>
@@ -3347,6 +3390,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 
               <button class="tool-icon" :title="label('Вписать · F', 'Fit · F')" :aria-label="label('Вписать', 'Fit')" @click="fit('2d')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
               <button :disabled="!selectedSketch" @click="exactCardOpen=true">{{ label('Размеры','Dimensions') }}</button>
+              <ImageTraceControls :plane="activePlane" :locale="locale" @trace="sketches=>commit({...document,sketches:[...document.sketches,...sketches]})" />
               <button class="tool-icon" :title="label('Скрыть панель эскизов', 'Hide sketch pane')" :aria-label="label('Скрыть панель эскизов', 'Hide sketch pane')" @click="toggleSketchPane(false)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
             </template>
             <template v-else>
@@ -3383,6 +3427,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
           <ModelingGridControls :locale="locale" snapping />
+          <WorkspaceActionBar v-if="pane === '3d' && selectedBody && !commandActive" :label="label('Действия над телом', 'Body actions')">
+            <span class="ws-name">{{ selectedBody.name || label('Тело', 'Body') }}</span>
+            <span class="ws-sep" aria-hidden="true"></span>
+            <button type="button" :aria-pressed="movingBody" :title="label('Двигать тело · G', 'Move body · G')" @click="movingBody = !movingBody">{{ label('Двигать', 'Move') }}</button>
+            <button type="button" :title="label('Вычесть: A − B', 'Subtract: A − B')" @click="beginSubtract()">{{ label('Вычесть', 'Subtract') }}</button>
+            <button type="button" :aria-pressed="!!isolatedBodyIds.length" @click="toggleBodyIsolation">{{ label('Изолировать', 'Isolate') }}</button>
+            <span class="ws-sep" aria-hidden="true"></span>
+            <button type="button" class="danger" :title="label('Удалить · Del', 'Delete · Del')" @click="remove">{{ label('Удалить', 'Delete') }}</button>
+          </WorkspaceActionBar>
           <div class="canvas-wrap" :class="{'profile-preparation-pane':pane==='2d' && (isProfileCommand(advancedOp)||advancedOp==='offset')}">
             <div class="canvas-viewport">
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" :style="{visibility:gpuActive?'visible':'hidden'}" aria-hidden="true"></canvas>
@@ -3399,7 +3452,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 </g>
                 <path v-for="(loop,i) in workplaneOutline" :key="'workplane-'+i" :d="'M '+loop.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="var(--border)" fill-opacity=".2" stroke="var(--text-dim)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <g v-for="s in visibleSketches" v-show="!(profileBooleanOperation(advancedOp) && advancedPreview.document && surfaceInputs.includes(s.id))" :key="s.id" :pointer-events="objectSelectable(s.id)?undefined:'none'">
-                  <path :d="sketchPath(s,'2d')" fill-rule="evenodd" :class="{ selected: selectedIds.includes(s.id), hovered: hovered === s.id }" @pointerenter="hovered = s.id" @pointerleave="hovered = ''" :fill="selectedIds.includes(s.id) && s.closed ? 'var(--accent)' : 'none'" fill-opacity=".08" pointer-events="all" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, s.id)" />
+                  <path :d="sketchPath(s,'2d')" fill-rule="evenodd" :class="{ selected: selectedIds.includes(s.id), hovered: hovered === s.id }" @pointerenter="hovered = s.id" @pointerleave="hovered = ''" :fill="selectedIds.includes(s.id) && s.closed ? 'var(--accent)' : 'none'" fill-opacity=".08" pointer-events="all" :stroke="s.traceColor??'var(--accent)'" stroke-width="2" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, s.id)" />
                   <template v-if="selection === s.id && tool === 'select' && !s.analytic && !s.retainedProfile"><circle v-for="(p, i) in s.points" :key="i" :cx="p[0]" :cy="-p[1]" :r="views['2d'] / 150" fill="var(--accent)" @pointerdown.stop="down($event, pane, s.id, i)" /></template>
                 </g>
                 <line v-if="operation === 'revolve'" :x1="revolveAxis === 'y' ? revolveOffset : -2000000" :x2="revolveAxis === 'y' ? revolveOffset : 2000000" :y1="revolveAxis === 'x' ? -revolveOffset : -2000000" :y2="revolveAxis === 'x' ? -revolveOffset : 2000000" stroke="#77eac5" stroke-dasharray="8 4" vector-effect="non-scaling-stroke" pointer-events="none" />
@@ -3445,7 +3498,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <polygon v-for="p in polygons.filter(p=>p.id===selectedBody?.id)" :key="'invalid-'+p.key" :points="p.points" fill="none" stroke="var(--danger, #ff6978)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
               </g>
               <g v-if="pane==='3d'" pointer-events="none">
-                <path v-for="s in document.sketches.filter(s=>objectInView(s.id))" :key="'plane-'+s.id" :d="sketchPath(s,'3d')" fill="none" stroke="#77eac5" stroke-opacity=".6" vector-effect="non-scaling-stroke" />
+                <path v-for="s in document.sketches.filter(s=>objectInView(s.id))" :key="'plane-'+s.id" :d="sketchPath(s,'3d')" fill="none" :stroke="s.traceColor??'#77eac5'" stroke-opacity=".6" vector-effect="non-scaling-stroke" />
                 <polygon v-for="p in gpuActive?[...advancedPolygons,...advancedSurfacePolygons,...(!previewReplacesTarget?ghostPolygons:[])]:[]" :key="'advanced-'+p.key" :data-preview-body="p.id" :points="p.points" fill="transparent" stroke="none" />
                 <polygon v-if="splitPlanePoints" :points="splitPlanePoints" fill="#ffc977" fill-opacity=".12" stroke="#ffc977" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" />
               </g>
@@ -3518,6 +3571,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <polyline v-if="pointTrimPreviewPoints.length" data-preview="point-trim" :points="pointTrimPreviewPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="4" vector-effect="non-scaling-stroke" />
                 <circle v-if="pointTrimCut" data-diagnostic="point-trim-cut" :cx="project(pointTrimCut,'3d')[0]" :cy="project(pointTrimCut,'3d')[1]" :r="views['3d']/100" fill="#77eac5" />
               </g>
+              <CurveOffsetPreview v-if="pane==='3d' && currentChain" v-bind="currentChain" :project="chainProject" />
+              <CurveOffsetPreview v-if="pane==='3d' && advancedOp==='nurbs-offset'" :curves="advancedPreview.document?.curves??[]" :id="loftPreviewId" :report="curveOffsetState?.report" :project="chainProject" :sample="curvePoints" />
               <polyline v-if="pane==='3d' && advancedOp==='nurbs-curve-match' && advancedPreview.document" data-preview="curve-match" :points="curvePoints(advancedPreview.document.curves!.find(c=>c.id===surfaceInputs[1])!.curve).map(p=>project([p[0],p[1],p[2]??0],'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane==='3d' && (advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-reduce') && advancedPreview.document" data-preview="curve-reduction" :points="curvePoints(advancedPreview.document.curves!.find(c=>c.id===selection)!.curve).map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d' && surfaceDistance?.value" pointer-events="none" data-measurement="surface-distance">
@@ -3555,7 +3610,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
             <div v-if="advancedOp && pane === (['offset','extend','curve','profile-prepare','profile-union','profile-difference','profile-intersection'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
-              <strong>{{ ({'nurbs-point-trim':label('Обрезать NURBS по точке','Trim NURBS at point'),'profile-difference':label('Вычесть области профилей','Subtract profile regions'),'profile-intersection':label('Пересечь точные профили','Intersect exact profiles'),'profile-union':label('Объединить точные профили','Union exact profiles'),'profile-prepare':label('Собрать профиль','Prepare profile'),'nurbs-curve-match':label('Согласовать кривые G1','Match curves G1'),'nurbs-prepare':label('Подготовить границы','Prepare boundaries'),'nurbs-match':label('Согласовать поверхности G1/G2','Match surfaces G1/G2'),'instance-transform':label('Преобразовать экземпляр','Transform instance'),'instance-create':label('Создать связанный экземпляр','Create linked instance'),'instance-place':label('Разместить экземпляр','Place instance'),'nurbs-surface-rebuild':label('Перестроить поверхность','Rebuild surface'),'nurbs-rebuild':label('Перестроить кривую','Rebuild curve'),'nurbs-patch':label('Coons patch','Coons patch'),'nurbs-surface-reduce':label('Снизить степень поверхности','Reduce surface degree'),'nurbs-reduce':label('Снизить степень кривой','Reduce curve degree'),'nurbs-loft':label('Поверхность по сечениям','NURBS loft'),'nurbs-sweep':label('Перенос профиля по пути','Sweep'),loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
+              <strong>{{ ({'nurbs-offset':label('Смещение NURBS-кривой','Offset NURBS curve'),'nurbs-point-trim':label('Обрезать NURBS по точке','Trim NURBS at point'),'profile-difference':label('Вычесть области профилей','Subtract profile regions'),'profile-intersection':label('Пересечь точные профили','Intersect exact profiles'),'profile-union':label('Объединить точные профили','Union exact profiles'),'profile-prepare':label('Собрать профиль','Prepare profile'),'nurbs-curve-match':label('Согласовать кривые G1','Match curves G1'),'nurbs-prepare':label('Подготовить границы','Prepare boundaries'),'nurbs-match':label('Согласовать поверхности G1/G2','Match surfaces G1/G2'),'instance-transform':label('Преобразовать экземпляр','Transform instance'),'instance-create':label('Создать связанный экземпляр','Create linked instance'),'instance-place':label('Разместить экземпляр','Place instance'),'nurbs-surface-rebuild':label('Перестроить поверхность','Rebuild surface'),'nurbs-rebuild':label('Перестроить кривую','Rebuild curve'),'nurbs-patch':label('Coons patch','Coons patch'),'nurbs-surface-reduce':label('Снизить степень поверхности','Reduce surface degree'),'nurbs-reduce':label('Снизить степень кривой','Reduce curve degree'),'nurbs-loft':label('Поверхность по сечениям','NURBS loft'),'nurbs-sweep':label('Перенос профиля по пути','Sweep'),loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
               <small v-if="advancedPreview.error" role="alert">{{ advancedPreview.error }}</small>
               <small v-if="selectedBody?.brep && (advancedOp==='chamfer' || advancedOp==='edge-fillet' && advanced.filletMode==='constant')">{{ label('Точный B-rep: скругление — полные выпуклые продольные цепочки призмы/корпуса или круговые рёбра фланца; фаска — связанные прямые выпуклые рёбра. Shift добавляет рёбра. При отказе уменьшите радиус или измените набор рёбер.', 'Exact B-rep: fillet complete convex longitudinal chains of a prism/enclosure or circular annular rims; chamfer connected straight convex edges. Shift adds edges. If refused, reduce the radius or change the edge selection.') }}</small>
               <small v-else-if="advancedOp === 'push'">{{ label('Сдвиг плоской грани выпуклого тела или торца цилиндра.', 'Move a planar face of a convex solid or a cylinder end cap.') }}</small>
@@ -3578,18 +3633,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Кривые и отверстия сохраняются. ID — первого профиля. Размеры удаляются; Undo возвращает входы.','Curves, holes and the first profile identity are retained. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <small>{{ label('Прямые и круговые дуги; неоднозначные пересечения отклоняются.','Lines and circular arcs; ambiguous intersections are refused.') }}</small>
               </template>
+              <CurveOffsetControls v-if="advancedOp==='nurbs-offset'" v-model:join="advanced.offsetJoin" v-model:distance="advanced.distance" v-model:tolerance="advanced.maxError" :locale="locale" :state="curveOffsetState" :on-distance-validity="valid=>quantityValidity('distance',valid)" :on-tolerance-validity="valid=>quantityValidity('maxError',valid)" />
               <template v-if="advancedOp==='profile-prepare'">
                 <small>{{ label('Первый выбранный профиль сохраняет ID и свойства. Дуги сохраняют кривизну. Остальные входят в его контур. Размеры удаляются; Undo восстанавливает входы.','The first selected profile keeps its identity and properties. Arcs retain their curvature. The others merge into its contour. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <label class="preparation-tolerance">{{ label('Допуск разрыва, мм','Gap tolerance, mm') }}<CadQuantityInput v-model="advanced.profileGap" :locale="locale" :min="0" :max="1000000" style="width:110px" :aria-label="label('Допуск разрыва, мм','Gap tolerance, mm')" @validity="quantityValidity('profileGap',$event)" /></label>
                 <output v-if="profilePreparation?.value" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
               </template>
-              <template v-if="advancedOp==='nurbs-point-trim'">
-                <small>{{ label('Оранжевый — исходная кривая, зелёный — сохраняемая часть. Щёлкните по исходной кривой или задайте координаты точки разреза.','Orange is the original curve; green is the retained part. Click the original curve or enter the cut point coordinates.') }}</small>
-                <template v-if="!pointTrimPick"><label v-for="axis in (selectedNurbsCurve?.curve.controlPoints[0]?.length===2?['x','y']:['x','y','z']) as ('x'|'y'|'z')[]" :key="axis">{{ axis.toUpperCase() }}<CadQuantityInput v-model="advanced[axis]" :locale="locale" :aria-label="label('Точка разреза ','Cut point ')+axis.toUpperCase()" @validity="quantityValidity('pointTrim'+axis,$event)" /></label></template>
-                <template v-else><output data-testid="point-trim-picked">{{ pointTrimCut?.map(v=>v.toFixed(5)).join(', ') }} · {{ pointTrimPick.radius }} px</output><button @click="pointTrimNumeric">{{ label('Ввести координаты','Enter coordinates') }}</button></template>
-                <label>{{ label('Сохранить конец','Retain endpoint') }}<select v-model="advanced.end" :aria-label="label('Сохранить конец','Retain endpoint')"><option value="start">{{ label('Начало','Start') }}</option><option value="end">{{ label('Конец','End') }}</option></select></label>
-                <label v-if="!pointTrimPick">{{ label('Допуск захвата, мм','Capture distance, mm') }}<CadQuantityInput v-model="advanced.profileGap" :locale="locale" :min="0.000000001" :max="1000000" :aria-label="label('Допуск захвата, мм','Capture distance, mm')" @validity="quantityValidity('pointTrimDistance',$event)" /></label>
-              </template>
+              <CurvePointTrimControls v-if="advancedOp==='nurbs-point-trim'" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :dimension="selectedNurbsCurve?.curve.controlPoints[0]?.length??3" :pick="pointTrimPick" :cut="pointTrimCut" @numeric="pointTrimNumeric" @validity="quantityValidity" />
               <template v-if="advancedOp==='nurbs-curve-match'">
                 <label v-for="(role,i) in [label('A · опорная','A · reference'),label('B · изменяемая','B · edited')]" :key="role">{{ role }}<select v-model="surfaceInputs[i]" :aria-label="role"><option v-for="item in document.curves" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
                 <label>{{ label('Конец A','Endpoint A') }}<select v-model="advanced.curveEndA" :aria-label="label('Конец A','Endpoint A')"><option value="start">{{ label('Начало','Start') }}</option><option value="end">{{ label('Конец','End') }}</option></select></label>
@@ -3675,8 +3725,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             </div>
 
             <div v-if="pane==='3d' && selectedNurbs && (!commandActive || pointEditActive || nativeNurbsPending)" class="operation-card nurbs-card">
-              <strong>{{ selectedNurbsCurve ? label('NURBS-кривая · CV','NURBS curve · CV') : label('NURBS-поверхность · CV','NURBS surface · CV') }}</strong>
-              <small>{{ label('Тяните жёлтые CV прямо в 3D-виде. Перетаскивание идёт в плоскости экрана; точные XYZ и вес — ниже.','Drag yellow CVs directly in the 3D view. Dragging follows the screen plane; exact XYZ and weight are below.') }}</small>
+              <CurveOffsetConstructionInfo :value="selectedNurbsCurve?.offsetConstruction" :locale="locale" :curves="document.curves??[]" :ids="selectedIds" @result="currentChain=$event" />
               <button v-if="selectedCurvePair || selectedSurfacePair" class="primary" @click="matchSelectedG1">{{ selectedSurfacePair?label('G1/G2: A → B','G1/G2: A → B'):label('G1: вторую к первой','G1: match second to first') }}</button>
               <section v-if="selectedSurfacePair" aria-label="surface-distance" class="body-diagnostics">
                 <button @click="surfaceDistanceOpen=!surfaceDistanceOpen" :aria-pressed="surfaceDistanceOpen">{{ label('Расстояние между поверхностями','Distance between surfaces') }}</button>
@@ -3817,7 +3866,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <span class="dock-rail-spacer"></span>
         <button type="button" :aria-label="dockOpen ? label('Свернуть панель', 'Collapse panel') : label('Развернуть панель', 'Expand panel')" :title="dockOpen ? label('Свернуть панель', 'Collapse panel') : label('Развернуть панель', 'Expand panel')" @click="dockOpen = !dockOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path :d="dockOpen ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'"/></svg></button>
       </div>
-      <div v-if="dockOpen" class="dock-body">
+      <div v-show="dockOpen" class="dock-body">
+        <div v-show="dockTab==='props'">
+          <div class="dock-heading">{{ selectedSketch?.name || selectedBody?.name || label('Свойства', 'Properties') }}</div>
+      <AssemblyAnimationControls :document="document" :camera="camera" :canvas="gpuActive?animationCanvas:null" :source-id="selectedBody&&!selectedBody.instance?selectedBody.id:undefined" :locale="locale" @preview="previewAnimation" />
+      <DrawingSheetsControls :document="document" :locale="locale" />
+      <DirectActionsControls :document="document" :locale="locale" @apply="commit" />
+        </div>
         <template v-if="dockTab === 'scene'">
           <div class="dock-heading">
             {{ label('Сцена', 'Scene') }} <span>{{ document.bodies.length + document.sketches.length + (document.curves?.length ?? 0) + (document.surfaces?.length ?? 0) }}</span>
@@ -3856,7 +3911,6 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           </SceneVirtualList>
         </template>
         <template v-else>
-          <div class="dock-heading">{{ selectedSketch?.name || selectedBody?.name || label('Свойства', 'Properties') }}</div>
           <div v-if="selectedSketch || selectedBody" class="dock-props">
       <div v-if="!selectedBody?.instance" class="exact-grid">
         <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
@@ -3870,6 +3924,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button @click="executeSolidCommand('instance-source')">{{ label('Выбрать источник экземпляра','Select instance source') }}</button>
         <button @click="executeSolidCommand('instance-detach')">{{ label('Сделать независимым','Make independent') }}</button>
       </template>
+      <SketchCleanupControls v-if="selectedSketch" :document="document" :source-id="selectedSketch.id" :locale="locale" @apply="commit" />
+      <LiveBodyPatternControls v-if="selectedBody&&!selectedBody.instance" :document="document" :source-id="selectedBody.id" :locale="locale" @apply="commit" />
       <label v-if="selectedBody">{{ label('Цвет материала','Material color') }}<input type="color" :aria-label="label('Цвет материала','Material color')" :value="selectedBody.material?.color ?? '#7094ba'" @change="changeBodyMaterial"></label>
       <template v-if="selectedBody">
         <label>{{ label('Металлическость','Metallic') }}<input type="number" min="0" max="1" step=".1" :aria-label="label('Металлическость','Metallic')" :value="selectedBody.material?.metallic??0" @change="changeMaterialParameter('metallic',$event)"></label>
@@ -4041,6 +4097,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
+    <div v-if="gpuTransparencyLimited" class="notice-bar" role="status" aria-label="gpu-transparency-limit">{{ label('Сложный предпросмотр показан без прозрачности.','Complex preview is shown opaque.') }}</div>
     <div v-if="polygonView.limited" class="notice-bar" role="status" aria-label="transparency-limit">{{ label('Прозрачность приблизительная. Скройте часть сцены.','Transparency is approximate. Hide some objects.') }}</div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
     <div v-else-if="notice" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
@@ -4058,7 +4115,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .sketch-start-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface)}.sketch-start-bar>button{display:inline-flex;align-items:center;gap:6px}.extrude-sketch:not(:disabled){border-color:var(--accent);color:var(--accent)}
 
 .direct-workspace{position:fixed;inset:var(--topbar-h,52px) 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}.canvas-wrap svg text{user-select:none;-webkit-user-select:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.primary:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 88%,var(--text))}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.subtract-card{display:grid;gap:8px}.subtract-field{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px}.subtract-field[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.subtract-field small{color:var(--text-dim);font:11px var(--font-mono,monospace);white-space:normal}.subtract-card>div{display:flex;justify-content:flex-end;gap:6px}.fps-badge{position:absolute;left:14px;bottom:14px;padding:3px 8px;border-radius:5px;background:var(--surface);color:var(--text-dim);font:11px var(--font-mono,monospace);pointer-events:none;opacity:.85}.fps-badge.low{color:var(--danger)}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{width:auto;flex:0 0 auto;padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
-.hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{max-height:calc(100% - 28px);overflow-y:auto;position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card :deep(small){font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card :deep(label){display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card :deep(input){width:90px}.operation-card .preparation-tolerance :deep(.quantity-field){flex:0 0 110px}.operation-card input.surface-match-number{width:110px;flex-shrink:0}.operation-card :deep(input[type=checkbox]){width:auto}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
+.hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{max-height:calc(100% - 28px);overflow-y:auto;position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card :deep(small){font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card :deep(label){min-width:0;display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card :deep(input){width:90px}.operation-card .preparation-tolerance :deep(.quantity-field){flex:0 0 110px}.operation-card input.surface-match-number{width:110px;flex-shrink:0}.operation-card :deep(input[type=checkbox]){width:auto}.operation-card :deep(select){max-width:145px;min-width:0;flex-shrink:1;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
 .nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 
 .compact-workspace .sketch-start-bar,.compact-workspace .primitive-bar{display:none}
@@ -4090,6 +4147,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0;gap:8px;padding:10px}
  .canvas-viewport{min-height:120px}
 }
+
+.dock-body :deep(.modeling-feature){font-size:11px;margin:6px 0}
+.dock-body :deep(.modeling-feature button){font:inherit;color:var(--text);border:1px solid var(--border);border-radius:4px;background:var(--surface);padding:5px 8px}
+.dock-body :deep(.modeling-feature > button){display:block;width:100%;text-align:left;background:transparent;border:0}
+.dock-body :deep(.modeling-feature button:hover){background:var(--surface-hover,var(--surface))}
+.dock-body :deep(.modeling-feature input),.dock-body :deep(.modeling-feature select),.dock-body :deep(.modeling-feature textarea){font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 6px}
+.dock-body :deep(.modeling-feature small){color:var(--text-dim)}
 </style>
 
 <style scoped>
@@ -4102,7 +4166,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 @media(max-width:750px){
   .workspace-bar{flex-wrap:wrap}
   .command-search{flex:1 1 160px;min-width:0}
-  .file-menu>div{max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
+  .file-menu>div{left:0;right:auto;max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
 }
 .direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.primitive-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}.primitive-icon:hover{color:var(--accent)}.tool-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:7px}.tool-icon .tool-tag{font-size:9px;font-weight:700;letter-spacing:.04em}.tool-icon:has(.tool-tag){width:auto;padding:0 7px}.tool-group{display:inline-flex;gap:3px}.tool-divider{width:1px;height:22px;background:var(--border);margin:0 3px}.primitive-divider{width:1px;height:22px;background:var(--border);margin:0 4px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
 .input-hint{padding:5px 12px;color:var(--text-dim);font-size:11px;flex-shrink:0}
@@ -4113,4 +4177,60 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0;gap:8px;padding:10px}
  .canvas-viewport{min-height:120px}
 }
+
+.dock-body :deep(.modeling-feature){font-size:11px;margin:6px 0}
+.dock-body :deep(.modeling-feature button){font:inherit;color:var(--text);border:1px solid var(--border);border-radius:4px;background:var(--surface);padding:5px 8px}
+.dock-body :deep(.modeling-feature > button){display:block;width:100%;text-align:left;background:transparent;border:0}
+.dock-body :deep(.modeling-feature button:hover){background:var(--surface-hover,var(--surface))}
+.dock-body :deep(.modeling-feature input),.dock-body :deep(.modeling-feature select),.dock-body :deep(.modeling-feature textarea){font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 6px}
+.dock-body :deep(.modeling-feature small){color:var(--text-dim)}
+</style>
+
+<style scoped>
+/* Quiet chrome: the app shell already owns title, search and file actions. */
+.direct-workspace { inset: var(--workspace-top, var(--topbar-h, 40px)) 0 var(--statusbar-h, 24px); font-size: 12px; }
+.direct-workspace .workspace-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.direct-workspace .workspace-bar > strong,
+.direct-workspace .workspace-bar > .subtle,
+.direct-workspace .workspace-bar > .command-search { display: none; }
+.direct-workspace .workspace-bar > .file-menu { margin-left: auto; }
+.direct-workspace button:not(.primary), .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
+.direct-workspace button:hover:not(:disabled):not(.primary), .direct-workspace summary:hover { background: var(--hover); }
+.direct-workspace button[aria-pressed="true"]:not(.primary), .direct-workspace button.active:not(.primary) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
+.direct-workspace button:disabled { opacity: .4; }
+.direct-workspace .primitive-bar, .direct-workspace .sketch-start-bar { border-bottom: 1px solid var(--hairline); }
+/* Viewport first: pane tools and grid controls float over the scene instead of taking rows. */
+.direct-workspace .pane { position: relative; }
+.direct-workspace .pane-tools {
+  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
+  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.direct-workspace .pane-tools .tool-icon { width: 30px; height: 30px; }
+.direct-workspace .pane-tools .tool-divider { height: 16px; background: var(--hairline); }
+.direct-workspace .pane > .modeling-grid-controls {
+  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+}
+.direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+.direct-workspace .workspace-state { gap: 6px 10px; padding: 3px 12px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
+.direct-workspace .workspace-state .state-legend { display: none; }
+.direct-workspace .command-guidance {
+  position: absolute; z-index: 6; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: calc(100% - 24px);
+  border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--surface) 98%, transparent); box-shadow: 0 8px 28px rgba(0,0,0,.4);
+}
+.direct-workspace .command-guidance.failed { border-color: var(--danger); }
+.direct-workspace .ws-count { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+@media (max-width: 750px) { .direct-workspace .workspace-bar > .file-menu > div { left: auto; right: 0; } }
+.direct-workspace .splitter { border: 0; background: var(--hairline); }
+.direct-workspace .splitter span { display: none; }
+.direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
+.direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
+
+.dock-body :deep(.modeling-feature){font-size:11px;margin:6px 0}
+.dock-body :deep(.modeling-feature button){font:inherit;color:var(--text);border:1px solid var(--border);border-radius:4px;background:var(--surface);padding:5px 8px}
+.dock-body :deep(.modeling-feature > button){display:block;width:100%;text-align:left;background:transparent;border:0}
+.dock-body :deep(.modeling-feature button:hover){background:var(--surface-hover,var(--surface))}
+.dock-body :deep(.modeling-feature input),.dock-body :deep(.modeling-feature select),.dock-body :deep(.modeling-feature textarea){font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 6px}
+.dock-body :deep(.modeling-feature small){color:var(--text-dim)}
 </style>

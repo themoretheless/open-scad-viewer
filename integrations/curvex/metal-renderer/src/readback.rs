@@ -159,7 +159,16 @@ pub fn verify(device: &wgpu::Device, queue: &wgpu::Queue) -> serde_json::Value {
     assert!(old_pixels == capture(device, queue, &pipeline, &lease, camera));
     cache.prepare(device, &snapshot).unwrap();
     assert_eq!(cache.stats().uploads, 4);
-    let cache_evidence = serde_json::json!({"hits":cache.stats().hits,"uploads":cache.stats().uploads,"evictions":cache.stats().evictions,"edit_changes_pixels":true,"evicted_frame_lease_valid":true,"clear_reuploads":true});
+    cache.set_retention_budget(0);
+    assert_eq!(cache.retained_bytes(), 0);
+    let transient = cache.prepare(device, &snapshot).unwrap();
+    assert_eq!(cache.retained_bytes(), 0);
+    assert!(old_pixels == capture(device, queue, &pipeline, &transient, camera));
+    assert!(old_pixels == capture(device, queue, &pipeline, &lease, camera));
+    cache.set_retention_budget(snapshot.byte_size() * 2);
+    cache.prepare(device, &snapshot).unwrap();
+    assert_eq!(cache.retained_bytes(), snapshot.byte_size());
+    let cache_evidence = serde_json::json!({"hits":cache.stats().hits,"uploads":cache.stats().uploads,"evictions":cache.stats().evictions,"edit_changes_pixels":true,"evicted_frame_lease_valid":true,"clear_reuploads":true,"pressure_shrink_preserves_frame":true,"pressure_recovery":true});
     let mut results = vec![];
     for (zoom, offset) in [
         (1., [0., 0.]),

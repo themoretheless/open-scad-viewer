@@ -8,5 +8,5 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
-photogrammetry-core = { path = "../photogrammetry-core" }
-value-codec = { path = "../value-codec" }
+photogrammetry-core = { workspace = true }
+value-codec = { workspace = true }

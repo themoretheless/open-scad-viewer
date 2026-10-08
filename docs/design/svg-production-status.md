@@ -18,7 +18,7 @@ source and WASM revision; subsequent edits require another qualification run.
 | Non-scaling strokes | `vector-effect="non-scaling-stroke"` preserves intrinsic physical stroke width through affine transforms and nested viewports. Tests cover dashes, caps, joins, holes, text, markers, clipping, paint order and instance-dependent pattern/mask coordinates. Normalized artwork freezes the stroke into filled outlines at the document's intrinsic size. |
 | Import into 3D | Physical dimensions, compound holes, stroked paths and curve tolerance reach full solid builds. The panel appends editable-height SCAD to an OpenSCAD document and requests a full build. Complex rendering effects have an explicit raster silhouette mode. A real-worker test combines CSS-defined geometry and non-scaling strokes with extrusion and projection reimport. |
 | Export and reimport | Artwork and fabrication contours are separate exports. Model projections and planar faces produce millimeter SVG; holes survive reimport. Projection does not overwrite the current artwork. |
-| Editable model output | MCP can additionally produce a validated ModelGraph document with an editable height parameter and independently checked bounds, volume and topology. |
+| Editable model output | MCP can additionally produce a validated RushGraph document with an editable height parameter and independently checked bounds, volume and topology. |
 | Responsive editing | A dedicated worker has cancellation, a hard deadline and recovery. Source, settings, scene and destination changes invalidate stale results. |
 | Draft recovery | Source, unfinished numeric settings and exact font bytes persist through IndexedDB, with bounded storage failure and cross-tab conflict handling. |
 | Resource admission | Source, fonts, decoded images, reference/marker expansion, CSS selector matching, non-scaling paint-resource expansion, geometry, raster work, generated code and transport have explicit limits. Rejected input does not produce a partial model. |
@@ -78,7 +78,7 @@ is an approximation. Colors do not create different extrusion heights.
 Standalone SVG defaults to 96 DPI, while project `import()` retains its 72 DPI
 compatibility convention; explicit physical units preserve scale.
 
-Panel extrusion requires an OpenSCAD document. An editable native ModelGraph
+Panel extrusion requires an OpenSCAD document. An editable native RushGraph
 result is available through the MCP option, with its tighter profile/node
 limits. Projection uses all model bodies, including hidden ones, and ignores
 the section view. Selected-face export requires a planar face. Export crops

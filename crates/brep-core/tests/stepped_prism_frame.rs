@@ -54,12 +54,21 @@ fn sources() -> (Model, Model) {
     )
 }
 
+
 fn roundtrip(model: &Model) -> Model {
+    model.validate().unwrap();
+    #[cfg(feature = "codec")]
+    {
+
     let encoded = value_codec::to_string(model).unwrap();
     let decoded: Model = value_codec::from_str(&encoded).unwrap();
     decoded.validate().unwrap();
     assert_eq!(value_codec::to_string(&decoded).unwrap(), encoded);
     decoded
+
+    }
+    #[cfg(not(feature = "codec"))]
+    { model.clone() }
 }
 
 fn check(model: &Model, expected: f64) {

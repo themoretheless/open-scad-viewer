@@ -37,6 +37,10 @@ pub fn rational_bezier_identity(
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
     let computed = (|| -> Result<BezierIdentity, Reason> {
         ctx.charge(values.len() as u64)?;
+        // Equal authored controls and positive weights define the same rational
+        // Bezier map. Validate exact inputs first; nonrepresentable inputs, limits
+        // and cancellation must still refuse this inexpensive identity proof.
+        let identical = a.len()==b.len() && values[..4*a.len()]==values[4*a.len()..];
         let values = exact_inputs(&values, ctx)?;
         if values
             .chunks_exact(4)
@@ -44,6 +48,7 @@ pub fn rational_bezier_identity(
         {
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         }
+        if identical { return Ok(BezierIdentity::Equal); }
         let binomial = |n: usize, k: usize| -> u64 {
             (0..k).fold(1_u64, |v, i| v * (n - i) as u64 / (i + 1) as u64)
         };
@@ -106,6 +111,21 @@ mod tests {
         rational_bezier_identity(&mut ctx, &refs(0, a.len()), &refs(a.len(), b.len()))
             .unwrap()
             .outcome
+    }
+    #[test]
+    fn identical_authored_controls_keep_cancellation_deadline_and_positive_weight_obligations() {
+        use std::sync::atomic::AtomicBool;
+        use std::time::Instant;
+        let scalars=vec![0.,0.,0.,1.,1.,2.,3.,2.];
+        let source=SourceArena::authored("identical-cancel",1,scalars.iter().map(|v|AuthoredScalar::Binary64Bits(f64::to_bits(*v))).collect()).unwrap();
+        let refs=(0..2).map(|i|std::array::from_fn(|k|source.leaf(4*i+k).unwrap())).collect::<Vec<_>>();
+        let tolerance=ToleranceContext::default_valid();let cancelled=AtomicBool::new(true);
+        let mut ctx=PredicateContext::new(&source,&tolerance,Limits::default(),Some(&cancelled));
+        assert!(matches!(rational_bezier_identity(&mut ctx,&refs,&refs).unwrap().outcome,BezierIdentity::Indeterminate(Reason::Cancelled)));
+        let mut ctx=PredicateContext::new(&source,&tolerance,Limits {deadline:Some(Instant::now()),..Limits::default()},None);
+        assert!(matches!(rational_bezier_identity(&mut ctx,&refs,&refs).unwrap().outcome,BezierIdentity::Indeterminate(Reason::DeadlineExceeded)));
+        let mut bad=[[0.,0.,0.,1.],[1.,2.,3.,2.]];bad[0][3]=0.;
+        assert!(matches!(check(&bad,&bad,Limits::default()),BezierIdentity::Indeterminate(Reason::MissingProof)));
     }
     #[test]
     fn degree_elevation_and_weight_scaling_are_exact() {

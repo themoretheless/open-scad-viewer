@@ -60,21 +60,21 @@ fn check_urls(value: &str) -> Result<()> {
     let check_declaration = |declaration: &str| -> Result<()> {
         if let Some((name, value)) = declaration.split_once(':')
             && name.trim() == "vector-effect"
-                && !matches!(
-                    value.trim().trim_end_matches("!important").trim(),
-                    "none"
-                        | "non-scaling-stroke"
-                        | "inherit"
-                        | "initial"
-                        | "unset"
-                        | "revert"
-                        | "revert-layer"
-                )
-            {
-                return Err(unsupported(
-                    "SVG vector-effect supports none and non-scaling-stroke",
-                ));
-            }
+            && !matches!(
+                value.trim().trim_end_matches("!important").trim(),
+                "none"
+                    | "non-scaling-stroke"
+                    | "inherit"
+                    | "initial"
+                    | "unset"
+                    | "revert"
+                    | "revert-layer"
+            )
+        {
+            return Err(unsupported(
+                "SVG vector-effect supports none and non-scaling-stroke",
+            ));
+        }
         Ok(())
     };
     let mut declaration = String::new();
@@ -475,9 +475,10 @@ fn preflight_inner(
     let mut ids = std::collections::HashMap::new();
     for node in doc.descendants() {
         if let Some(id) = node.attribute("id")
-            && ids.insert(id, node).is_some() {
-                return Err(invalid(format!("Duplicate SVG id {id}")));
-            }
+            && ids.insert(id, node).is_some()
+        {
+            return Err(invalid(format!("Duplicate SVG id {id}")));
+        }
     }
     // Match marker declarations with the same selector implementation as usvg.
     // Union all possible declarations and inherited values instead of resolving
@@ -532,9 +533,10 @@ fn preflight_inner(
                     admit_length(declaration.value);
                 }
                 if declaration.name == "font"
-                    && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
-                        admit_length(font.font_size);
-                    }
+                    && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value)
+                {
+                    admit_length(font.font_size);
+                }
             }
         }
     }
@@ -543,9 +545,10 @@ fn preflight_inner(
             admit_length(declaration.value);
         }
         if declaration.name == "font"
-            && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
-                admit_length(font.font_size);
-            }
+            && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value)
+        {
+            admit_length(font.font_size);
+        }
     }
     let relative_bound = absolute * relative.powi(MAX_DEPTH as i32 + 1);
     let mut primitive_units = std::collections::HashMap::new();
@@ -591,20 +594,21 @@ fn preflight_inner(
         let mut refs = std::collections::HashMap::new();
         let mut add = |property: &str, value: &str| {
             if let Ok(iri) = svgtypes::FuncIRI::from_str(value)
-                && let Some(target) = ids.get(iri.0).filter(|n| n.has_tag_name("marker")) {
-                    let positions = match property {
-                        "marker-start" => 1,
-                        "marker-mid" => 2,
-                        "marker-end" => 4,
-                        _ => 7,
-                    };
-                    refs.entry(target.id())
-                        .or_insert(MarkerLink {
-                            node: *target,
-                            positions: 0,
-                        })
-                        .positions |= positions;
-                }
+                && let Some(target) = ids.get(iri.0).filter(|n| n.has_tag_name("marker"))
+            {
+                let positions = match property {
+                    "marker-start" => 1,
+                    "marker-mid" => 2,
+                    "marker-end" => 4,
+                    _ => 7,
+                };
+                refs.entry(target.id())
+                    .or_insert(MarkerLink {
+                        node: *target,
+                        positions: 0,
+                    })
+                    .positions |= positions;
+            }
         };
         for attr in node.attributes().filter(|a| marker_property(a.name())) {
             add(attr.name(), attr.value());
@@ -637,7 +641,10 @@ fn preflight_inner(
             local_markers.insert(node.id(), refs.into_values().collect::<Vec<_>>());
         }
     }
-    #[expect(clippy::too_many_arguments, reason = "SVG traversal carries explicit inherited rendering state")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "SVG traversal carries explicit inherited rendering state"
+    )]
     fn cost<'a, 'input>(
         node: usvg::roxmltree::Node<'a, 'input>,
         ids: &std::collections::HashMap<&str, usvg::roxmltree::Node<'a, 'input>>,
@@ -857,11 +864,12 @@ fn legacy_source(source: &str, doc: &usvg::roxmltree::Document<'_>, dpi: f64) ->
                     i += 1;
                 }
                 if value[i..].starts_with("px")
-                    && let Ok(n) = value[start..i].parse::<f64>() {
-                        output.push_str(&format!("{}pt", n * 0.75));
-                        i += 2;
-                        continue;
-                    }
+                    && let Ok(n) = value[start..i].parse::<f64>()
+                {
+                    output.push_str(&format!("{}pt", n * 0.75));
+                    i += 2;
+                    continue;
+                }
                 output.push_str(&value[start..i]);
             } else {
                 let c = value[i..].chars().next().unwrap();
@@ -1524,12 +1532,8 @@ impl Geometry {
     fn flatten(&mut self, path: &Path, transform: Matrix) -> Result<Rings> {
         let map = |p: Point| -> [f64; 2] {
             [
-                transform.sx * p.x as f64
-                    + transform.kx * p.y as f64
-                    + transform.tx,
-                transform.ky * p.x as f64
-                    + transform.sy * p.y as f64
-                    + transform.ty,
+                transform.sx * p.x as f64 + transform.kx * p.y as f64 + transform.tx,
+                transform.ky * p.x as f64 + transform.sy * p.y as f64 + transform.ty,
             ]
         };
         let mut contours = Vec::new();
@@ -1598,63 +1602,37 @@ impl Geometry {
         }
         let mut out = Vec::new();
         if let Some(fill) = path.fill()
-            && (clipping || fill.opacity().get() > 0. && Self::painted(fill.paint())?) {
-                let contours = self.flatten(path.data(), ts)?;
-                if !contours.is_empty() {
-                    out.push(Region {
-                        contours,
-                        rule: match fill.rule() {
-                            usvg::FillRule::NonZero => FillRule::NonZero,
-                            usvg::FillRule::EvenOdd => FillRule::EvenOdd,
-                        },
-                    });
-                }
+            && (clipping || fill.opacity().get() > 0. && Self::painted(fill.paint())?)
+        {
+            let contours = self.flatten(path.data(), ts)?;
+            if !contours.is_empty() {
+                out.push(Region {
+                    contours,
+                    rule: match fill.rule() {
+                        usvg::FillRule::NonZero => FillRule::NonZero,
+                        usvg::FillRule::EvenOdd => FillRule::EvenOdd,
+                    },
+                });
             }
+        }
         if !clipping
             && let Some(stroke) = path.stroke()
-                && stroke.opacity().get() > 0. && Self::painted(stroke.paint())? {
-                    if stroke.is_non_scaling() {
-                        // Width, dashes and joins are defined in the outer SVG
-                        // viewport; the result returns to local coordinates so
-                        // the same clips and CAD millimeter transform still apply.
-                        let centerline = path.stroke_centerline().ok_or_else(|| {
-                            invalid("SVG non-scaling stroke transform is invalid")
-                        })?;
-                        if let Some(intervals) = stroke.dasharray() {
-                            check_dash_budget(&centerline, intervals)?;
-                        }
-                        if let Some(outline) =
-                            path.stroke_outline((1. / self.tolerance).clamp(1., 100_000.) as f32)
-                        {
-                            let contours = self.flatten(&outline, ts)?;
-                            if !contours.is_empty() {
-                                out.push(Region {
-                                    contours,
-                                    rule: FillRule::NonZero,
-                                });
-                            }
-                        }
-                        return Ok(out);
-                    }
-                    let style = stroke.to_tiny_skia();
-                    let scale = (ts.sx.hypot(ts.ky)
-                        + ts.kx.hypot(ts.sy))
-                        / self.tolerance;
-                    let resolution = scale.clamp(1., 100_000.) as f32;
-                    let dashed;
-                    let data = if let Some(dash) = &style.dash {
-                        check_dash_budget(path.data(), stroke.dasharray().unwrap())?;
-                        let Some(result) = path.data().dash(dash, resolution) else {
-                            return Ok(out);
-                        };
-                        dashed = result;
-                        &dashed
-                    } else {
-                        path.data()
-                    };
-                    let outline = data
-                        .stroke(&style, resolution)
-                        .ok_or_else(|| invalid("SVG stroke expansion failed"))?;
+            && stroke.opacity().get() > 0.
+            && Self::painted(stroke.paint())?
+        {
+            if stroke.is_non_scaling() {
+                // Width, dashes and joins are defined in the outer SVG
+                // viewport; the result returns to local coordinates so
+                // the same clips and CAD millimeter transform still apply.
+                let centerline = path
+                    .stroke_centerline()
+                    .ok_or_else(|| invalid("SVG non-scaling stroke transform is invalid"))?;
+                if let Some(intervals) = stroke.dasharray() {
+                    check_dash_budget(&centerline, intervals)?;
+                }
+                if let Some(outline) =
+                    path.stroke_outline((1. / self.tolerance).clamp(1., 100_000.) as f32)
+                {
                     let contours = self.flatten(&outline, ts)?;
                     if !contours.is_empty() {
                         out.push(Region {
@@ -1663,6 +1641,33 @@ impl Geometry {
                         });
                     }
                 }
+                return Ok(out);
+            }
+            let style = stroke.to_tiny_skia();
+            let scale = (ts.sx.hypot(ts.ky) + ts.kx.hypot(ts.sy)) / self.tolerance;
+            let resolution = scale.clamp(1., 100_000.) as f32;
+            let dashed;
+            let data = if let Some(dash) = &style.dash {
+                check_dash_budget(path.data(), stroke.dasharray().unwrap())?;
+                let Some(result) = path.data().dash(dash, resolution) else {
+                    return Ok(out);
+                };
+                dashed = result;
+                &dashed
+            } else {
+                path.data()
+            };
+            let outline = data
+                .stroke(&style, resolution)
+                .ok_or_else(|| invalid("SVG stroke expansion failed"))?;
+            let contours = self.flatten(&outline, ts)?;
+            if !contours.is_empty() {
+                out.push(Region {
+                    contours,
+                    rule: FillRule::NonZero,
+                });
+            }
+        }
         Ok(out)
     }
     fn union(regions: Vec<Region>) -> Result<Rings> {

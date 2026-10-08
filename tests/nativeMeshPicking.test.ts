@@ -2,7 +2,7 @@ import {expect,it} from 'vitest'
 import {callGeometryRust} from '../src/services/geometry/kernel'
 import {createPickingSnapshotInKernel} from '../src/services/geometry/meshAnalysis'
 import type {MeshBvhHit} from '../src/services/meshBvh'
-import reference from '../crates/polygon-core/tests/fixtures/bvh-query-parity-v1.json'
+import reference from '../crates/mesh-query/tests/fixtures/bvh-query-parity-v1.json'
 
 it('matches the frozen independent ray-query corpus through the shipped WASM boundary',()=>{
  const handle=createPickingSnapshotInKernel(new Float32Array(reference.vertices),new Uint32Array(reference.indices),3,2)

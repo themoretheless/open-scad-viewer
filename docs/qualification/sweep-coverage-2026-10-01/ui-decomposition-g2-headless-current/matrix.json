@@ -1,0 +1,48 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T13:24:25.718Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "f84ac06ac159a580c80203474a5273680b3c79cc492e62566d85f0f707498739",
+  "artifactProvenance": {
+    "sha256": "f84ac06ac159a580c80203474a5273680b3c79cc492e62566d85f0f707498739",
+    "byteLength": 11075355,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-d82PMt1s.js"
+    ]
+  },
+  "appSourceSha256": "4cbec95d67b8ba6756cdbd2ea2eaee7a815e0b16a1e0cd2795ad62dcc96f7b8c",
+  "distIndexSha256": "846730a61842cf553776df70a17cd719c9bf56bb9e1266247b0792ca1a0e8848",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "decomposed-profile-g2-progressive-sweep.r",
+      "sourceSha256": "15f4cc51787d2c1d2edc3c4aa10b881ed89b263be633f1ac8d020635f75d6e86",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.no-gpu') to be hidden\u001b[22m\n\u001b[2m    63 × locator resolved to visible <div role=\"alert\" class=\"no-gpu\" data-v-1b335fb2=\"\">…</div>\u001b[22m\n",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n▾\n6\n7\n8\n9\n10\n// @rush/1\n// G2 certificate covers internal parts of this profile; caps and profile closure are separate.\nprofile = polyline_curve(points: [[0mm,0mm,0mm],[0.03125mm,0mm,0mm],[0.0625mm,0mm,0mm],[0.09375mm,0mm,0mm],[0.125mm,0mm,0mm],[0.15625mm,0mm,0mm],[0.1875mm,0mm,0mm],[0.21875mm,0mm,0mm],[0.25mm,0mm,0mm],[0.28125mm,0mm,0mm],[0.3125mm,0mm,0mm],[0.34375mm,0mm,0mm],[0.375mm,0mm,0mm],[0.40625mm,0mm,0mm],[0.4375mm,0mm,0mm],[0.46875mm,0mm,0mm],[0.5mm,0mm,0mm],[0.53125mm,0mm,0mm],[0.5625mm,0mm,0mm],[0.59375mm,0mm,0mm],[0.625mm,0mm,0mm],[0.65625mm,0mm,0mm],[0.6875mm,0mm,0mm],[0.71875mm,0mm,0mm],[0.75mm,0mm,0mm],[0.78125mm,0mm,0mm],[0.8125mm,0mm,0mm],[0.84375mm,0mm,0mm],[0.875mm,0mm,0mm],[0.90625mm,0mm,0mm],[0.9375mm,0mm,0mm],[0.96875mm,0mm,0mm],[1mm,0mm,0mm]])\npath = line_curve(start: [0mm,0mm,0mm],end: [0mm,0mm,4mm])\nshow progressive_sweep(profile,path,\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n normal: [1,0,0],orientation: \"fixed\",initial_sections: 2,max_sections: 2,max_deviation: 0.01mm\n).nurbs_patches_tessellate(segments: 2)\n\n\n⚠ Open surface: enclosed volume is undefined.\nОбъекты 1\nТреугольники 512\nОбъём 0\nПлощадь 4\nГотово · 46 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nОшибка sweep-поверхностей относительно исходного переноса профиля: доказана · ≤3.80096e-14 / 0.0100000 mm · C2 исходного кадра: доказана · G2 между частями одного профиля: доказана (31) · Регулярность поверхностей: доказана · Область: сохранённые поверхности\nFailed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists.\nПовторить запуск 3D\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n512 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nCPU · SVG\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб\nWebGPU отключён. Работа продолжена на CPU; можно сохранить проект.\n×"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "4cbec95d67b8ba6756cdbd2ea2eaee7a815e0b16a1e0cd2795ad62dcc96f7b8c",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "4ad514fdec0b882631f64c15913626e9c71e6c2632e987c0fda7a6b3e5da578c",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "8e82c5cce4842c076f6e2d69a7b6c8467d51ece8a434a8a3b03714bcdccf50f2",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

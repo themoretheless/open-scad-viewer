@@ -1,9 +1,16 @@
+import {callGeometryRust} from './geometry/kernel'
+import {pathFromPolygon,simplifyPath,pathToRing} from './geometry/path2d'
 import { svgPreview, svgProfile, contoursSvg, contoursExtrusion, meshSvgContours } from './svgGeometry'
 import { createWorkerHandler } from './workerHandlerRuntime'
 import type { SvgGeometryResult, SvgJob, SvgWorkerRequest, SvgWorkerResponse } from './svgWorkerProtocol'
 
 /** Shared operation composition for browser workers and Node callers. Core SVG semantics stay in svgGeometry. */
 export async function executeSvgJob(job: SvgJob): Promise<SvgGeometryResult> {
+  if(job.kind==='colorContours'){
+    if(!Number.isFinite(job.tolerance)||job.tolerance<.0001||job.tolerance>10)throw Error('Invalid color trace tolerance.')
+    const layers=callGeometryRust<NonNullable<SvgGeometryResult['layers']>>('svg_color_trace',job).map(layer=>({...layer,contours:layer.contours.map(r=>pathToRing(simplifyPath(pathFromPolygon(r,true),job.tolerance),job.tolerance))}))
+    return {svg:job.svg,widthMm:job.widthMm,heightMm:job.heightMm,warnings:['Color trace quantizes the raster palette; contours approximate pixels.'],layers}
+  }
   if (job.kind === 'preview') return svgPreview(job.svg, job.options)
   if (job.kind === 'project') {
     const svg = contoursSvg(await meshSvgContours(job.meshes, { axis: job.axis, face: job.face }))

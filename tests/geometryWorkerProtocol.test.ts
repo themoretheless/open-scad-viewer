@@ -572,3 +572,73 @@ describe('geometry worker protocol validation', () => {
     expect(isGeometryWorkerEvent({ ...succeeded(), meshes: [aliased] })).toBe(false)
   })
 })
+
+
+it('accepts bounded display-only sweep previews and rejects invalid admission metadata',()=>{
+ const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'sweep',sections:5,
+  accepted:false,sampledControlDeviation:.1,budget:.01,meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
+ preview.meshes[0]!.provenance.forEach(run=>run.source=null)
+ expect(isGeometryWorkerEvent(preview)).toBe(true)
+ for(const change of [{sections:1},{sections:1026},{sections:5.5},{budget:-1},
+  {sampledControlDeviation:NaN},{nodeId:''},{accepted:'false'},{phase:'complete'},
+  {accepted:true},{volume:1},{patches:[]},{meshes:[{...triangleMesh(),nativeGeometry:{}}]}]){
+  expect(isGeometryWorkerEvent({...preview,...change})).toBe(false)
+ }
+})
+
+it('carries authored retained-patch rejection even when sampled refinement is within budget',()=>{
+ const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'authored',sections:3,
+  accepted:false,sampledControlDeviation:.001,continuousErrorUpper:.02,budget:.01,
+  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
+ preview.meshes[0]!.provenance.forEach(run=>run.source=null)
+ expect(isGeometryWorkerEvent(preview)).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.005,accepted:true})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:undefined})).toBe(false)
+})
+it('uses scoped partial-profile evidence for admission without fabricating a full continuous bound',()=>{
+ const preview={...envelope,status:'sweep-preview',phase:'compiling',nodeId:'profiles',sections:9,
+  accepted:false,sampledControlDeviation:0,knownProfileErrorUpper:.02,budget:.01,
+  meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
+ preview.meshes[0]!.provenance.forEach(run=>run.source=null)
+ expect(isGeometryWorkerEvent(preview)).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,knownProfileErrorUpper:.005,accepted:true})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.02})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:.03})).toBe(false)
+ for(const upper of [NaN,Infinity,-1,null])expect(isGeometryWorkerEvent({...preview,knownProfileErrorUpper:upper})).toBe(false)
+})
+it('keeps unresolved miter phase previews displayable without accepting aliased error',()=>{
+ const preview={protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,documentRevision:1,jobId:1,quality:'full',sourceSha256:'a'.repeat(64),status:'sweep-preview',phase:'compiling',nodeId:'miter',sections:2,accepted:false,phaseResolved:false,sampledControlDeviation:0,budget:.01,meshes:[{...triangleMesh(),faceIdsAuthoritative:false}]}
+ preview.meshes[0]!.provenance.forEach(run=>run.source=null)
+ expect(isGeometryWorkerEvent(preview)).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,accepted:true})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:'false'})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,continuousErrorUpper:.02})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,continuousErrorUpper:.02,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,continuousErrorUpper:NaN})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,frameTransportCertified:false})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,frameTransportCertified:false,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,frameTransportCertified:'true'})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:null})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:null,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:.02})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,certifiedErrorUpper:.02,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,certifiedErrorUpper:NaN})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper:[0,.01]})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper:null})).toBe(true)
+ for(const endpointContourErrorUpper of [[0],[-1,0],[0,NaN],[0,Infinity],'0,0'])expect(isGeometryWorkerEvent({...preview,endpointContourErrorUpper})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,profileRegularityCertified:false})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,profileRegularityCertified:false,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,wallRegularityCertified:null})).toBe(true)
+ expect(isGeometryWorkerEvent({...preview,phaseResolved:true,wallRegularityCertified:false,accepted:true})).toBe(false)
+ expect(isGeometryWorkerEvent({...preview,wallRegularityCertified:'true'})).toBe(false)
+})
+
+
+it('validates bounded sweep acknowledgements without accepting unknown fields',()=>{
+ const ack={...envelope,type:'sweep-preview-ack',nodeId:'miter',sections:21}
+ expect(isGeometryWorkerRequest(ack)).toBe(true)
+ for(const change of [{sections:1},{sections:1026},{sections:2.5},{nodeId:''},{sourceSha256:'bad'},{quality:'draft'},{extra:true}])expect(isGeometryWorkerRequest({...ack,...change})).toBe(false)
+})

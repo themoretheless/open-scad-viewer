@@ -12,6 +12,8 @@ export type NurbsCurveEnd = 'start' | 'end'
 export type NurbsSurfaceBoundary = 'uMin' | 'uMax' | 'vMin' | 'vMax'
 
 export interface SolidNurbsCurve {
+  offsetRegion?: import('./curveOffsetRegion').CurveOffsetRegion
+  offsetConstruction?: import('./curveOffsetConstruction').CurveOffsetConstruction
   group?: string
   id: string
   name: string

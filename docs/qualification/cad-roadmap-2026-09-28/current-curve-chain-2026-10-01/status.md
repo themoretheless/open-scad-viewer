@@ -1,0 +1,2 @@
+
+Completed qualification on the new emitted WASM: real-worker/current-protocol/edge-mapping tests passed (11 tests). Chromium found four current crossings with visible error strokes; selection changes and CV application cleared the result and strokes. Escape during a held worker reply now cancels globally despite the disabled button losing focus; delivering that late reply cannot restore diagnostics. Browser lifecycle and build passed (133 artifacts, 7,098,268 asset bytes). General rational self-intersection and trimmed offset regions remain open.

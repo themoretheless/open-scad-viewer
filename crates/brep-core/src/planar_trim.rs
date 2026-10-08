@@ -8,7 +8,7 @@
 use nurbs_core::{Error, Result, curve::Curve};
 use std::f64::consts::{PI, TAU};
 
-const MAX_SPANS: usize = 256;
+const MAX_SPANS: usize = brep_topology::MAX_FACES - 2;
 const MAX_FRAGMENTS: usize = 2048;
 type Point = [f64; 2];
 
@@ -31,7 +31,7 @@ fn invalid(message: &str) -> Error {
 fn limit() -> Error {
     Error::new(
         "BREP_RESOURCE_LIMIT",
-        "Planar trim exceeds 256 analytic spans or 2048 fragments",
+        format!("Planar trim exceeds {MAX_SPANS} analytic spans or {MAX_FRAGMENTS} fragments"),
     )
 }
 fn add(a: Point, b: Point) -> Point {
@@ -831,6 +831,12 @@ fn intersections(a: &Span, b: &Span, epsilon: f64, tolerance: f64) -> Result<Vec
 pub fn validate(loops: &[Vec<Curve>], tolerance: f64) -> Result<()> {
     Region::parse(loops, tolerance)?.validate()
 }
+/// Green contribution of an admitted line/circular arc about a shared origin.
+/// This admits the analytic carrier independently of closed-loop topology.
+pub fn span_green_area(curve: &Curve, origin: [f64; 2], tolerance: f64) -> Result<f64> {
+    curve.validate()?;
+    Ok(Span::from_curve(curve.clone(), 0, tolerance, origin)?.area([0., 0.]))
+}
 /// Exact-carrier Green area, with floating-point arithmetic and retained arcs.
 pub fn signed_area(curves: &[Curve], tolerance: f64) -> Result<f64> {
     if curves.is_empty() {
@@ -1520,6 +1526,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn bounded_refusal_preserves_sources_and_does_not_snap_near_coincidence() {
         let a = vec![rectangle(0., 0., 1., 1.)];
         let b = vec![rectangle(0., 1e-9, 1., 1. + 1e-9)];
@@ -1570,6 +1577,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "codec")]
     fn local_queries_preserve_world_outputs_and_refuse_insufficient_parameter_precision() {
         let a = vec![rectangle(10_000., -20_000., 10_001., -19_999.)];
         assert_eq!(

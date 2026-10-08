@@ -1,8 +1,0 @@
-import { writeFileSync } from 'node:fs'
-import { z } from 'zod/v4'
-import { modelGraphNurbsSchema, MODELGRAPH_NURBS_GUIDE, MODELGRAPH_NURBS_EXAMPLE, MODELGRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/modelGraphNurbs.ts'
-const write = (name,value) => writeFileSync(new URL(`../docs/languages/${name}`,import.meta.url),typeof value==='string'?value:JSON.stringify(value,null,2)+'\n')
-write('modelgraph-nurbs-1.schema.json',z.toJSONSchema(modelGraphNurbsSchema))
-write('modelgraph-nurbs-1.example.json',MODELGRAPH_NURBS_EXAMPLE)
-write('modelgraph-nurbs-1.surface.example.json',MODELGRAPH_NURBS_SURFACE_EXAMPLE)
-write('modelgraph-nurbs-1-prompt.md',`# ModelGraph NURBS — инструкция для LLM\n\n${MODELGRAPH_NURBS_GUIDE}\n\n## MCP workflow\n\n1. Read modelgraph_nurbs_language or openscad://language/modelgraph-nurbs-1.\n2. Create a document and call modelgraph_nurbs_compile for graph validation and parameter resolution.\n3. Call modelgraph_nurbs_evaluate for numerical jets, modelgraph_nurbs_build for evaluated definitions, mesh diagnostics and preview images.\n4. Export JSON to preserve rational control data or STL/3MF/AMF from a closed mesh; OBJ/PLY/OFF can represent open meshes. STEP and general curved B-rep booleans are not implemented; planar B-rep booleans are available. Inspect topology and self-intersection status before claiming printability.\n\nThis implementation uses repository-owned Rust geometry kernels with a WASM bridge. Rational B-reps remain authoritative; tessellation is derived display/export data. Jobs use disposable Node processes (two concurrent,30seconds); they do not fall back to another kernel. The browser editor remains SCAD-based; use these tools through local or HTTP MCP.\n`)

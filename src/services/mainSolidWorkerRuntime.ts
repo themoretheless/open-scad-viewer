@@ -1,3 +1,7 @@
+import {exportAssemblyFrames} from './assemblyFrameExport'
+import {sampleAssemblyAnimation} from './assemblyAnimation'
+import {createDrawingSheets,vectorDrawingPdf} from './drawingSheets'
+import {executeDirectTransaction} from './directTransactions'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
 import {inspectFaceContacts} from './solidFaceContacts'
@@ -18,7 +22,6 @@ import {prepareSolidDisplay} from './solidDisplayPreparation'
 import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import {parseDirectDocument} from './directModeling'
 import {applySolidBrepTool} from './solidBrepTool'
-import {applySolidNurbsEdit} from './solidNurbsEdit'
 import {applySolidPointEdit} from './solidPointEdit'
 import {applySolidSketchEdit} from './solidSketchEdit'
 import {applySolidBoolean} from './solidBoolean'
@@ -71,12 +74,20 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
     case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
-    case 'modelGraphImport':return (await import('./solidModelGraphImport')).importSolidModelGraph(job.document,job.text,job.group)
+    case 'rushGraphImport':return (await import('./solidRushGraphImport')).importSolidRushGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
-    case 'nurbsEdit':return applySolidNurbsEdit(job.document,job.options)
+    case 'curveChainInspection':return (await import('./inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)
+    case 'trimmedCurveOffset':return (await import('./solidTrimmedCurveOffset')).offsetTrimmedSolidCurve(job.document,job.options)
+    case 'curveOffset':return (await import('./solidCurveOffset')).offsetSolidCurve(job.document,job.options)
+    case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
     case 'boolean':return applySolidBoolean(job.document,job.options)
+    case 'animationFrames':return exportAssemblyFrames(job.document,job.animation,job.fps)
+    case 'animationSample':return sampleAssemblyAnimation(job.document,job.animation,job.time)
+    case 'drawingPdf':return vectorDrawingPdf(job.sheets)
+    case 'drawingSheets':return createDrawingSheets(job.bodies,job.options)
+    case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'sceneEdit':return applySolidSceneEdit(job.document,job.options)
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
@@ -112,7 +123,7 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
       if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-        || !request.job || !['solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
+        || !request.job || !['solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','rushGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','animationSample','animationFrames','drawingPdf','drawingSheets','transaction','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},

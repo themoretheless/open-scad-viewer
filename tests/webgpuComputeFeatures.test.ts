@@ -143,4 +143,73 @@ describe('WebGPU compute feature negotiation', () => {
     expect(createShaderModule).toHaveBeenCalledWith({ code: linear })
     expect(dispatchWorkgroups).toHaveBeenCalledWith(4, 1, 1)
   })
+
+  it('reuses GPUDevice and cached compute pipelines across multiple jobs without destroying device', async () => {
+    vi.stubGlobal('GPUShaderStage', { COMPUTE: 4 })
+    vi.stubGlobal('GPUBufferUsage', { STORAGE: 1, COPY_SRC: 2, MAP_READ: 4, COPY_DST: 8 })
+    vi.stubGlobal('GPUMapMode', { READ: 1 })
+
+    const createShaderModule = vi.fn(() => ({}))
+    const createComputePipeline = vi.fn(() => ({}))
+    const deviceDestroy = vi.fn()
+    const requestDevice = vi.fn(async () => ({
+      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
+      createShaderModule,
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createComputePipeline,
+      createCommandEncoder: vi.fn(() => ({
+        beginComputePass: () => ({
+          setPipeline: vi.fn(),
+          setBindGroup: vi.fn(),
+          dispatchWorkgroups: vi.fn(),
+          end: vi.fn(),
+        }),
+        copyBufferToBuffer: vi.fn(),
+        finish: vi.fn(() => ({})),
+      })),
+      createBuffer: vi.fn(() => ({
+        destroy: vi.fn(),
+        mapAsync: vi.fn(async () => undefined),
+        getMappedRange: vi.fn(() => new ArrayBuffer(4)),
+        unmap: vi.fn(),
+      })),
+      createBindGroup: vi.fn(() => ({})),
+      destroy: deviceDestroy,
+    }))
+
+    const adapter = {
+      features: new Set(),
+      requestDevice,
+    }
+    vi.stubGlobal('navigator', {
+      gpu: {
+        wgslLanguageFeatures: new Set(),
+        requestAdapter: async () => adapter,
+      },
+    })
+
+    const job = {
+      wgsl: '@compute @workgroup_size(1) fn main() {}',
+      entryPoint: 'main',
+      dispatches: [{
+        buffers: [{ binding: 0, data: new Float32Array(0), output: true }],
+        outputBytes: 4,
+        workgroups: [1, 1, 1] as [number, number, number],
+      }],
+    }
+
+    await runGpuCompute(job)
+    expect(requestDevice).toHaveBeenCalledTimes(1)
+    expect(createShaderModule).toHaveBeenCalledTimes(1)
+    expect(createComputePipeline).toHaveBeenCalledTimes(1)
+    expect(deviceDestroy).not.toHaveBeenCalled()
+
+    // Second call with same adapter and job reuses device and pipeline
+    await runGpuCompute(job)
+    expect(requestDevice).toHaveBeenCalledTimes(1)
+    expect(createShaderModule).toHaveBeenCalledTimes(1)
+    expect(createComputePipeline).toHaveBeenCalledTimes(1)
+    expect(deviceDestroy).not.toHaveBeenCalled()
+  })
 })

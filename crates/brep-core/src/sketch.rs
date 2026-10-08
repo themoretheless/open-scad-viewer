@@ -3,6 +3,7 @@ use crate::{Model, Result, invalid};
 
 pub enum Profile {
     Polygon(Vec<[f64; 2]>),
+    Bezier(planar_geometry::path::BezierPath),
     Circle { center: [f64; 2], radius: f64 },
 }
 
@@ -30,6 +31,17 @@ pub fn extrude(
                 return Err(invalid("Invalid sketch circle center"));
             }
             (crate::cylinder(radius, height.abs())?, center)
+        }
+        Profile::Bezier(path) => {
+            let mut wire = bezier_wire(path)?;
+            if crate::bezier_profile::signed_area(&wire, 1e-7)? < 0. {
+                wire.reverse();
+                for curve in &mut wire {
+                    curve.control_points.reverse();
+                    curve.weights.reverse();
+                }
+            }
+            (crate::prism::extrude(&[wire], 0., height.abs())?, [0., 0.])
         }
         Profile::Polygon(mut points) => {
             if points.len() < 3
@@ -60,6 +72,67 @@ pub fn extrude(
         v,
         [center[0], center[1], base_z + height.min(0.)],
     )
+}
+
+pub fn bezier_wire(path: planar_geometry::path::BezierPath) -> Result<Vec<crate::Curve>> {
+    if !path.closed {
+        return Err(invalid("Bézier extrusion requires a closed path"));
+    }
+    let mut start = path.start;
+    let mut wire = Vec::new();
+    for segment in path.segments {
+        let controls = match segment {
+            planar_geometry::path::PathSegment::Line { to } => vec![start.to_vec(), to.to_vec()],
+            planar_geometry::path::PathSegment::Cubic { c1, c2, to } => {
+                vec![start.to_vec(), c1.to_vec(), c2.to_vec(), to.to_vec()]
+            }
+        };
+        start = segment.end();
+        let degree = controls.len() - 1;
+        wire.push(nurbs_core::curve::Curve {
+            degree,
+            knots: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
+            weights: vec![1.; controls.len()],
+            control_points: controls,
+            periodic: false,
+        });
+    }
+    if start != path.start {
+        return Err(invalid("Bézier closing span must be explicit"));
+    }
+    Ok(wire)
+}
+pub fn extrude_bezier_profiles(
+    paths: Vec<planar_geometry::path::BezierPath>,
+    height: f64,
+    base_z: f64,
+    plane: Option<[[f64; 3]; 3]>,
+) -> Result<Model> {
+    if !height.is_finite()
+        || height.abs() < 1e-5
+        || height.abs() > 1e6
+        || !base_z.is_finite()
+        || base_z.abs() > 1e6
+    {
+        return Err(invalid("Invalid Bézier extrusion height or offset"));
+    }
+    let mut wires = paths
+        .into_iter()
+        .map(bezier_wire)
+        .collect::<Result<Vec<_>>>()?;
+    let (_, depths) = crate::bezier_profile::classify_components(&wires, 1e-7)?;
+    for (wire, depth) in wires.iter_mut().zip(depths) {
+        if (crate::bezier_profile::signed_area(wire, 1e-7)? > 0.) != (depth % 2 == 0) {
+            wire.reverse();
+            for c in wire {
+                c.control_points.reverse();
+                c.weights.reverse();
+            }
+        }
+    }
+    let model = crate::prism::extrude(&wires, 0., height.abs())?;
+    let [origin, u, v] = plane.unwrap_or([[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]]);
+    crate::transform::workplane(&model, origin, u, v, [0., 0., base_z + height.min(0.)])
 }
 
 #[cfg(test)]

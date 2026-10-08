@@ -1,0 +1,203 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T01:58:04.988Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Native probes pause actual geometry abi_request activations and verify Worker destruction; they do not measure unconstrained cancellation latency.",
+  "nativeCancelProbe": true,
+  "geometryWasmSha256": "c5ed9131ddf1d98615df1b2fd53be3d87aabddbc376cb73c04309af9964db830",
+  "artifactProvenance": {
+    "sha256": "c5ed9131ddf1d98615df1b2fd53be3d87aabddbc376cb73c04309af9964db830",
+    "byteLength": 10980071,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-C6jwiabn.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "2e45d3420c18d4b825e7e0438d480498992cf02161d6bd1e07c2a2cacf6b09f9",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-planar-rmf-body-boundary.r",
+      "sourceSha256": "37eb48d8eadfc45009fe80738fa0d80cac8d22a57d16a0dc9e4cf5b2ac506abb",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "d4b136e4d361ba9ec843570881b0d6e6a4920624ab18d320b7b6ab8f18cce8ba",
+          "nativeStack": {
+            "geometryWasmSha256": "c5ed9131ddf1d98615df1b2fd53be3d87aabddbc376cb73c04309af9964db830",
+            "abiRequestFunctionIndex": 87,
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 107680
+                },
+                "url": ""
+              },
+              {
+                "functionName": "T",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1391
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1669
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Ye",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 6678
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 51845
+                },
+                "url": ""
+              },
+              {
+                "functionName": "l",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 50712
+                },
+                "url": ""
+              },
+              {
+                "functionName": "",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 74228
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 74219
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 75846
+                },
+                "url": ""
+              },
+              {
+                "functionName": "oa",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 77935
+                },
+                "url": ""
+              },
+              {
+                "functionName": "aa",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 49955
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Ua",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 96768
+                },
+                "url": ""
+              },
+              {
+                "functionName": "n",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 7,
+                  "columnNumber": 235827
+                },
+                "url": ""
+              }
+            ]
+          },
+          "scope": "Actual geometry abi_request paused by Debugger; Worker destruction, not unconstrained latency"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "viewportEvidence": [],
+      "error": "No live geometry abi_request activation observed; cancellation is unqualified. Samples: [{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false},{\"top\":\"r\",\"scripts\":[\"wasm://wasm/wasm_brotli.wasm-000cd1da\",\"wasm://wasm/008b1a8a\"],\"verifiedGeometry\":false}]",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\n…\nОтмена\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n6\n7\n8\n9\n▾\n10\n11\n12\n13\n14\n15\n// @rush/1\n// Complete closed RMF boundary; Solid separately requires all material audits.\n// This 256-wall body exceeds the default 10000 face-pair audit budget.\na = line_curve(start: [4.9mm,0,-0.1mm],end: [5.1mm,0,-0.1mm])\nb = line_curve(start: [5.1mm,0,-0.1mm],end: [5.1mm,0,0.1mm])\nc = line_curve(start: [5.1mm,0,0.1mm],end: [4.9mm,0,0.1mm])\nd = line_curve(start: [4.9mm,0,0.1mm],end: [4.9mm,0,-0.1mm])\npath = circle_curve(center: [0,0,0],normal: [0,0,1],radius: 5mm)\nshow brep_progressive_sweep([[a,b,c,d]],path,\n orientation: \"rmf\",normal: [0,0,1],\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,360deg],weights: [1,1]},\n initial_sections: 5,max_sections: 129,max_deviation: 0.01mm\n).brep_tessellate(4)\n\n\nОбъекты 1\nТреугольники 8 192\nОбъём 1,26\nПлощадь 25,09\nГотово · 497 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 0,008112 mm\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nWebGPU · интерактивный\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms · draw 1.7 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "942dfbfdada583b9c675af5f8faeee9885a6655c369c41b79a1a0bed54bee836",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "a3a3cc08e084242a816aeae9a66c66e74594f545766d0d0a49aed178c55b1b0c",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "8dea7d959cc3171ed2d839328ab1e9814fb17aab7ad529c2dfadb5e92a20ba93",
+    "scripts/sweep-native-cancel-probe.mjs": "1a6bfa6a071249bda1b296bd2027d6ede098e9212a41d9612eec26e968e5b5ca"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true
+}

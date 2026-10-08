@@ -20,8 +20,8 @@
 В [`0002-permanent-geometry-engine-routing.md`](../adr/0002-permanent-geometry-engine-routing.md)
 и [`geometryExecution.ts`](../../src/core/geometryExecution.ts) зафиксирован whole-job route
 `legacy/current → manifold`, `openscad-viewer/brep-1 → brep`, без fallback.
-В текущем коде есть отдельный собственный путь `modelgraph/nurbs-1`:
-[`modelGraphTextScene.ts`](../../src/services/modelGraphTextScene.ts) вызывает `buildOwnNurbs`,
+В текущем коде есть отдельный собственный путь `rush/nurbs-1`:
+[`rushFrontendScene.ts`](../../src/services/rushFrontendScene.ts) вызывает `buildOwnNurbs`,
 а [`geometryBuildEngine.ts`](../../src/services/geometryBuildEngine.ts) всё ещё объявляет старый B-rep provider неразвёрнутым.
 Это разные границы исполнения. Работающий native API не делает старый provider автоматически qualified.
 
@@ -126,7 +126,7 @@ Body/material ownership сохраняется до наложения прав�
 ## 7. Исполнение, отмена и память браузера
 
 [`geometryRustKernel.ts`](../../src/services/geometryRustKernel.ts) сейчас синхронно декодирует gzip/base64 WASM,
-передаёт запрос JSON и разбирает JSON-ответ. [`modelGraphTextScene.ts`](../../src/services/modelGraphTextScene.ts)
+передаёт запрос JSON и разбирает JSON-ответ. [`rushFrontendScene.ts`](../../src/services/rushFrontendScene.ts)
 разворачивает mesh в отдельные render vertices для треугольников и переводит координаты в Float32.
 При росте моделей измерять всю цепочку: WASM heap + JSON strings + JS arrays + packed render buffers + BVH,
 а не только размер итогового `.wasm`.

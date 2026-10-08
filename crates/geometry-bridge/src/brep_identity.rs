@@ -507,11 +507,12 @@ pub fn validate_operations(operations: &[Value]) -> Result<()> {
             closed.insert(preorder_stack.pop().expect("non-empty stack"));
         }
         if let Some(parent) = parent
-            && (closed.contains(&parent) || preorder_stack.last().copied() != Some(parent)) {
-                return Err(invalid(
-                    "Semantic operations must be in deterministic parent-before-child preorder",
-                ));
-            }
+            && (closed.contains(&parent) || preorder_stack.last().copied() != Some(parent))
+        {
+            return Err(invalid(
+                "Semantic operations must be in deterministic parent-before-child preorder",
+            ));
+        }
         let child_ordinal = bounded_integer(&operation["childOrdinal"], 1_000_000)?;
         let name = bounded_string(&operation["name"], 256)?;
         let category = operation["category"]

@@ -401,3 +401,6 @@ export const sampleGradient = (
     angle: opts.angle,
     spread: opts.spread ?? 'pad',
   })
+
+/** Native arrangement normalization resolves crossings and overlapping segments. */
+export const normalizePathRings=(rings:PathPoint[][],fillRule:PathFillRule='evenodd')=>call<PathPoint[][]>('normalize_rings',{rings,fillRule})

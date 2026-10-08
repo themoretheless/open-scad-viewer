@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v20",
   "successorOf": "docs/qualification/own-rust-cad-v19.json",
-  "previousSha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
+  "previousSha256": "b417b8633ab5aed4a072a4a6230e0b0c7236abeeefef572838c30bb3e816f178",
   "recordedAt": "2026-09-27",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v28 / G1 v45 re-freeze. The only drift since G0 v27 / G1 v44 is tests/manifoldPlanBackend.test.ts, bound in the G1 plan, whose Manifold-isolation file list now includes the ModelingFloorGrid and SketchDimensionPanel components that main added; neither imports manifold-3d. The own-Rust geometry kernel, source bundle, notices and lockfiles are byte-identical to own-rust-cad-v19, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

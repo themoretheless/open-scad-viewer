@@ -465,7 +465,7 @@ fn diagnostic_intersection_returns_original_pair_and_world_point() {
     assert!(hit.triangles[0]<12 && hit.triangles[1]>=12);
     assert!(hit.point.iter().all(|v|*v>=0.5-1e-8 && *v<=1.+1e-8));
     assert!(first_mesh_intersection(&mesh,1e-9,1).is_err());
-    for p in mesh.positions.chunks_exact_mut(3){for v in p{*v=*v*1e-4+100.;}}
+    for p in mesh.positions.as_chunks_mut::<3>().0{for v in p{*v=*v*1e-4+100.;}}
     let scaled=first_mesh_intersection(&mesh,1e-9,100_000).unwrap().unwrap();
     assert_eq!(hit.triangles,scaled.triangles);
     for i in 0..3 {assert!((scaled.point[i]-(100.+hit.point[i]*1e-4)).abs()<1e-10);}

@@ -1,3 +1,6 @@
+import {sha256Hex} from '../core/sha256'
+import {ownNurbsDisplayMesh} from '../services/rushFrontendScene'
+import {tessellateNurbsPatches} from '../services/geometry/reconstruction'
 import {
   defaultGeometryBuildEngine,
   geometryExecutionForError,
@@ -28,6 +31,7 @@ interface ActiveJob {
   request: GeometryBuildRequest
   startedAt: number
   cancelled: GeometryCancelReason | null
+  previewWait?:{nodeId:string;sections:number;release:()=>void}
   initialization: AbortController
 }
 
@@ -204,6 +208,27 @@ async function runBuild(
       purpose: request.quality,
     }, {
       shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,
+      onSweepPreview:async(nodeId,preview)=>{
+        if(job.cancelled!==null||staleReplacement(request)!==undefined)return
+        const data=tessellateNurbsPatches({patches:preview.patches,faceIds:preview.patches.map((_,i)=>i)},4)
+        const {mesh}=ownNurbsDisplayMesh(data,`entity:sweep-preview/${sha256Hex(nodeId)}`)
+        mesh.faceIdsAuthoritative=false
+        const event=jobEvent(request,{status:'sweep-preview',phase:'compiling',nodeId,
+          sections:preview.report.sections,accepted:preview.report.accepted,
+          ...(!('phaseResolved' in preview.report)?{...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{}),...(preview.report.knownProfileErrorUpper!=null?{knownProfileErrorUpper:preview.report.knownProfileErrorUpper}:{})}:{}),
+          ...('phaseResolved' in preview.report?{phaseResolved:preview.report.phaseResolved,frameTransportCertified:preview.report.frameTransportCertified,certifiedErrorUpper:preview.report.certifiedErrorUpper,endpointContourErrorUpper:preview.report.endpointContourErrorUpper,profileRegularityCertified:preview.report.profileRegularityCertified,wallRegularityCertified:preview.report.wallRegularityCertified,continuousErrorUpper:preview.report.continuousErrorUpper}:{}),
+          sampledControlDeviation:preview.report.sampledControlDeviation,budget:preview.report.budget,meshes:[mesh]})
+        if(!isGeometryWorkerEvent(event))throw new Error('Sweep preview exceeds worker payload contract')
+        let acknowledged:Promise<void>|undefined
+        if(request.acknowledgeSweepPreviews)acknowledged=new Promise<void>((resolve,reject)=>{
+          const timer=setTimeout(()=>reject(new Error('Sweep preview acknowledgement timed out')),5000)
+          job.previewWait={nodeId,sections:preview.report.sections,release:()=>{clearTimeout(timer);resolve()}}
+        })
+        try{
+          postEvent(event,meshTransferables([mesh]))
+          if(acknowledged)await acknowledged
+        }finally{job.previewWait?.release();job.previewWait=undefined}
+      },
       onYield: () => {
         // Throttled liveness heartbeat: the build is alive (just heavy). The
         // main thread can distinguish honest long builds from a wedged worker
@@ -354,6 +379,7 @@ function cancelBuild(request: Extract<GeometryWorkerRequest, { type: 'cancel' }>
   // never yields, BuildCoordinator's grace timer replaces this worker and
   // establishes the hard cancellation boundary.
   job.cancelled = request.reason
+  job.previewWait?.release()
   job.initialization.abort()
 }
 
@@ -378,6 +404,10 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   // succeeded/failed/stale/cancelled terminal unless the worker is replaced.
   if (isGeometryWorkerRequest(event.data)) {
     if (event.data.type === 'build') acceptBuild(event.data)
-    else cancelBuild(event.data)
+    else if(event.data.type==='cancel')cancelBuild(event.data)
+    else {
+      const ack=event.data,job=activeJobs.get(ack.jobId),wait=job?.previewWait
+      if(job&&wait&&job.request.documentRevision===ack.documentRevision&&job.request.sourceSha256===ack.sourceSha256&&job.request.quality===ack.quality&&wait.nodeId===ack.nodeId&&wait.sections===ack.sections)wait.release()
+    }
   }
 })

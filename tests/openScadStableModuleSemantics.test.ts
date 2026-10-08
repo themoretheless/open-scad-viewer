@@ -194,4 +194,26 @@ describe('kernel-neutral OpenSCAD 2021 stable module semantics', () => {
     })
     expect(warnings).toEqual([])
   })
+  it('preserves nonfinite offset distances and strict chamfer conversion', () => {
+    for (const r of [NaN, Infinity, -Infinity]) {
+      const result = resolveOpenScadOffset({ r, delta: 2, chamfer: true })
+      expect(result.mode).toBe('radius')
+      expect(Object.is(result.distance, r)).toBe(true)
+      expect(result.joinType).toBe('Round')
+      expect(result.chamfer).toBe(false)
+    }
+    expect(resolveOpenScadOffset({ delta: Infinity, chamfer: 1 })).toEqual({
+      mode: 'delta', distance: Infinity, joinType: 'Miter', chamfer: false,
+    })
+  })
+})
+
+it('matches native fragment rules and warning order with the frozen oracle',async()=>{
+ const {referenceOpenScadFragments,referenceOpenScadSweepFragments}=await import('../benchmarks/rush/openScadFragments-reference')
+ for(const radius of [0,1e-7,1,10,Infinity,NaN])for(const fn of [-1,0,2,10.9,1000,Infinity,NaN])for(const [fa,fs] of [[12,2],[0,-1],[NaN,NaN],[Infinity,Infinity]]){
+  const input={radius,fn,fa,fs},warnings:unknown[]=[],expectedWarnings:unknown[]=[]
+  expect(resolveOpenScadFragments(input,{warn:w=>warnings.push(w)})).toEqual(referenceOpenScadFragments(input,{warn:w=>expectedWarnings.push(w)}))
+  expect(warnings).toEqual(expectedWarnings)
+  for(const sweepDegrees of [0,1,-45,90,360,720,Infinity,NaN])expect(resolveOpenScadSweepFragments({...input,sweepDegrees})).toEqual(referenceOpenScadSweepFragments({...input,sweepDegrees}))
+ }
 })

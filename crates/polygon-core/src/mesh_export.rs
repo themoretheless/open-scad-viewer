@@ -1,154 +1,12 @@
-//! Validated millimeter mesh artifacts. Serialization and numeric admission are native.
-use crate::solid::export_file::Number;
-use crate::{Mesh, Result, check, cross, error, norm, sub};
-use std::fmt::{self, Write};
-
-pub const MAX_BYTES: usize = 4 * 1024 * 1024;
-struct Output(Vec<u8>);
-impl Write for Output {
-    fn write_str(&mut self, text: &str) -> fmt::Result {
-        if text.len() > MAX_BYTES.saturating_sub(self.0.len()) {
-            return Err(fmt::Error);
-        }
-        self.0.try_reserve(text.len()).map_err(|_| fmt::Error)?;
-        self.0.extend_from_slice(text.as_bytes());
-        Ok(())
-    }
-}
-
+//! Compatibility adapters for mesh-io.
+use crate::{Mesh, Result};
+pub use mesh_io::mesh_export::MAX_BYTES;
 pub fn export(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
-    check(
-        matches!(format, "stl" | "stl_binary" | "obj" | "ply" | "off" | "amf"),
-        "Unsupported mesh export format.",
-    )?;
-    check(
-        mesh.indices.len() / 3 <= 100_000,
-        "Mesh export exceeds 100000 triangles.",
-    )?;
-    let report = mesh.inspect()?;
-    check(
-        report.degenerate_triangles == 0
-            && report.non_manifold_edges == 0
-            && report.orientation_conflicts == 0,
-        "Mesh has invalid or inconsistent topology.",
-    )?;
-    if matches!(format, "stl" | "stl_binary" | "amf") {
-        check(
-            report.closed && report.signed_volume_mm3 > 0.,
-            "Printing export requires a closed oriented mesh with positive volume.",
-        )?;
-    }
-    if format == "stl" {
-        let text = mesh.export_stl()?;
-        check(text.len() <= MAX_BYTES, "Export exceeds 4 MiB.")?;
-        return Ok(text.into_bytes());
-    }
-    if format == "stl_binary" {
-        return binary_stl(mesh);
-    }
-    let mut out = Output(Vec::new());
-    let written = (|| -> fmt::Result {
-        match format {
-            "obj" => out.write_str("# ModelGraph; units: millimeter\n")?,
-            "ply" => write!(out, "ply\nformat ascii 1.0\ncomment units millimeter\nelement vertex {}\nproperty double x\nproperty double y\nproperty double z\nelement face {}\nproperty list uchar int vertex_indices\nend_header\n", mesh.positions.len()/3, mesh.indices.len()/3)?,
-            "off" => writeln!(out, "OFF\n{} {} 0", mesh.positions.len()/3, mesh.indices.len()/3)?,
-            "amf" => out.write_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><amf unit=\"millimeter\" version=\"1.1\"><object id=\"0\"><mesh><vertices>")?,
-            _ => unreachable!(),
-        }
-        for p in mesh.positions.as_chunks::<3>().0 {
-            let [x, y, z] = [Number(p[0]), Number(p[1]), Number(p[2])];
-            match format {
-                "obj" => writeln!(out, "v {x} {y} {z}")?,
-                "amf" => write!(
-                    out,
-                    "<vertex><coordinates><x>{x}</x><y>{y}</y><z>{z}</z></coordinates></vertex>"
-                )?,
-                _ => writeln!(out, "{x} {y} {z}")?,
-            }
-        }
-        if format == "amf" {
-            out.write_str("</vertices><volume>")?;
-        }
-        for t in mesh.indices.as_chunks::<3>().0 {
-            let [a, b, c] = [t[0], t[1], t[2]];
-            match format {
-                "obj" => writeln!(out, "f {} {} {}", a + 1, b + 1, c + 1)?,
-                "amf" => write!(
-                    out,
-                    "<triangle><v1>{a}</v1><v2>{b}</v2><v3>{c}</v3></triangle>"
-                )?,
-                _ => writeln!(out, "3 {a} {b} {c}")?,
-            }
-        }
-        if format == "amf" {
-            out.write_str("</volume></mesh></object></amf>")?;
-        }
-        Ok(())
-    })();
-    written.map_err(|_| error("Export exceeds 4 MiB or allocation failed."))?;
-    Ok(out.0)
+    mesh_io::export(&mesh.view(), format).map_err(crate::mesh_error)
 }
-
-/// Print-mesh trio: STL, OBJ, and mesh 3MF. Other mesh codecs stay on [`export`].
 pub fn export_print_mesh(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
-    match format {
-        "stl" | "stl_binary" | "obj" => export(mesh, format),
-        "3mf" => {
-            let report = mesh.inspect()?;
-            check(
-                report.closed
-                    && report.signed_volume_mm3 > 0.
-                    && report.degenerate_triangles == 0
-                    && report.non_manifold_edges == 0
-                    && report.orientation_conflicts == 0,
-                "Printing export requires a closed oriented mesh with positive volume.",
-            )?;
-            crate::package_3mf::export(mesh, &[], false)
-        }
-        _ => Err(error(
-            "Unsupported print mesh format; use stl, stl_binary, obj, or 3mf.",
-        )),
-    }
+    mesh_io::export_print_mesh(&mesh.view(), format).map_err(crate::mesh_error)
 }
-
-fn binary_stl(mesh: &Mesh) -> Result<Vec<u8>> {
-    let size = 84 + mesh.indices.len() / 3 * 50;
-    check(size <= MAX_BYTES, "Export exceeds 4 MiB.")?;
-    let rounded = Mesh {
-        positions: mesh.positions.iter().map(|&v| (v as f32) as f64).collect(),
-        indices: mesh.indices.clone(),
-        uv: None,
-    };
-    check(
-        rounded.positions.iter().all(|v| v.is_finite()),
-        "STL float32 range exceeded.",
-    )?;
-    check(
-        rounded.inspect()?.degenerate_triangles == 0,
-        "Binary STL precision would collapse triangles; use ASCII STL or 3MF.",
-    )?;
-    let mut bytes = Vec::new();
-    bytes
-        .try_reserve_exact(size)
-        .map_err(|_| error("Export allocation failed."))?;
-    bytes.resize(84, 0);
-    let header = b"ModelGraph mesh; coordinates in millimeters";
-    bytes[..header.len()].copy_from_slice(header);
-    bytes[80..84].copy_from_slice(&((mesh.indices.len() / 3) as u32).to_le_bytes());
-    for t in mesh.indices.as_chunks::<3>().0 {
-        let [a, b, c] = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
-        let n = cross(sub(b, a), sub(c, a));
-        let length = norm(n);
-        for value in n.map(|v| v / length).into_iter().chain(a).chain(b).chain(c) {
-            let f = value as f32;
-            check(f.is_finite(), "STL float32 range exceeded.")?;
-            bytes.extend_from_slice(&f.to_le_bytes());
-        }
-        bytes.extend_from_slice(&[0, 0]);
-    }
-    Ok(bytes)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,15 +61,6 @@ mod tests {
                 .contains("collapse")
         );
         assert!(export(&shifted, "stl").is_ok());
-    }
-    #[test]
-    fn bounded_text_never_appends_past_limit() {
-        let mut out = Output(vec![0; MAX_BYTES - 1]);
-        assert!(out.write_str("xx").is_err());
-        assert_eq!(out.0.len(), MAX_BYTES - 1);
-        out.write_str("x").unwrap();
-        assert!(out.write_str("x").is_err());
-        assert_eq!(out.0.len(), MAX_BYTES);
     }
     #[test]
     fn print_mesh_trio_covers_stl_obj_and_3mf() {

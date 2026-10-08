@@ -1,0 +1,504 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-08T04:51:07.558Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.",
+  "nativeCancelProbe": true,
+  "nativeRunningCancelProbe": true,
+  "geometryWasmSha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+  "artifactProvenance": {
+    "sha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+    "byteLength": 11368313,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-CVYYaw0z.js"
+    ]
+  },
+  "appSourceSha256": "f0e9267721e02448e4db46040e1354d365ca49fdd233cb1eb452e7c5c914fc8a",
+  "distIndexSha256": "61fa09f8887e8f854b332be3af0727766be0e1cf32fcf10008522ae436d2069d",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-frenet-body-boundary.r",
+      "sourceSha256": "53a68d445b61ee9776617505f2aa848165ed4f0a247485b31b356319a7baf1ac",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "1494a5078dfd62c9bb46f6d361001e7335ce1505086be31be8ef2bd9d0c5a52f",
+          "nativeStack": {
+            "geometryWasmSha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+            "abiRequestFunctionIndex": 97,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 30.099,
+            "lastSampleToProfileEndMs": 0.092,
+            "profileReceivedAtEpochMs": 1791435070957,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791435070957,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1434,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "1494a5078dfd62c9bb46f6d361001e7335ce1505086be31be8ef2bd9d0c5a52f",
+          "nativeStack": {
+            "geometryWasmSha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+            "abiRequestFunctionIndex": 97,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 18,
+            "nativeSampleCount": 17,
+            "profileDurationMs": 28.763,
+            "lastSampleToProfileEndMs": 0.087,
+            "profileReceivedAtEpochMs": 1791435073560,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791435073560,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 8,
+          "workerDestroyedAfterMs": 1318,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "53a68d445b61ee9776617505f2aa848165ed4f0a247485b31b356319a7baf1ac",
+          "nativeStack": {
+            "geometryWasmSha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+            "abiRequestFunctionIndex": 97,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 26,
+            "nativeSampleCount": 15,
+            "profileDurationMs": 32.888,
+            "lastSampleToProfileEndMs": 0.149,
+            "profileReceivedAtEpochMs": 1791435076589,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791435076589,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 19,
+          "workerDestroyedAfterMs": 160,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "53a68d445b61ee9776617505f2aa848165ed4f0a247485b31b356319a7baf1ac",
+          "nativeStack": {
+            "geometryWasmSha256": "5a3d647f9325f78eb26b0384d911a7a179d40e289a116bec8b9aa953eb509dc3",
+            "abiRequestFunctionIndex": 97,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 14,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 26.682,
+            "lastSampleToProfileEndMs": 1.112,
+            "profileReceivedAtEpochMs": 1791435078342,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791435078342,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 7,
+          "workerDestroyedAfterMs": 242,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "dc4160ffd5a889c13f1d4c5f159e19dbf24595128fe3935d1794cb716db421fb",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Sweep path extent is zero or unrepresentable",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-fixed-normal-body-boundary.r",
+      "sourceSha256": "8da3cb0a4ecb0fedf0259147283b5d19016dc9774377f979150a5793a927ae5e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": "Не удалось записать черновик. Нажмите «Сохранить в браузере» для повторной записи текущего кода."
+      },
+      "error": "No running geometry ABI at profile tail; cancellation is unqualified. Observations: {\"first\":[{\"attempt\":0,\"samples\":37,\"nativeSamples\":1,\"tail\":\"wasm-function[97]\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[\"wasm-function[97]\"],\"wasmFrames\":[{\"name\":\"js-to-wasm:iii:l\",\"scriptId\":\"13\",\"url\":\"wasm://wasm/008b6946\"},{\"name\":\"wasm-function[97]\",\"scriptId\":\"11\",\"url\":\"wasm://wasm/02b5dde6\"}],\"geometryRoots\":1},{\"attempt\":1,\"samples\":17,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0},{\"attempt\":2,\"samples\":15,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0},{\"attempt\":3,\"samples\":17,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0}],\"last\":[{\"attempt\":96,\"samples\":11,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0},{\"attempt\":97,\"samples\":9,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0},{\"attempt\":98,\"samples\":7,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0},{\"attempt\":99,\"samples\":8,\"nativeSamples\":0,\"tail\":\"(idle)\",\"authenticatedGeometryScripts\":1,\"abiRequestFunctionIndex\":97,\"authenticatedFrames\":[],\"wasmFrames\":[],\"geometryRoots\":0}],\"maxNativeSamples\":1}",
+      "bodyText": "sweep-matrix.r\nSolid\nMesh\nПоиск действий\nCtrl K\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n▾\n13\n14\n15\n16\n17\n18\n19\n20\n21\n// @rush/1\n// Original curved FixedNormal arc-length boundary; native Solid audit is separate.\na = line_curve(start: [0,0,0],end: [0.1mm,0,0])\nb = line_curve(start: [0.1mm,0,0],end: [0.1mm,0.1mm,0])\nc = line_curve(start: [0.1mm,0.1mm,0],end: [0,0.1mm,0])\nd = line_curve(start: [0,0.1mm,0],end: [0,0,0])\nh0 = line_curve(start: [0.025mm,0.025mm,0],end: [0.025mm,0.075mm,0])\nh1 = line_curve(start: [0.025mm,0.075mm,0],end: [0.075mm,0.075mm,0])\nh2 = line_curve(start: [0.075mm,0.075mm,0],end: [0.075mm,0.025mm,0])\nh3 = line_curve(start: [0.075mm,0.025mm,0],end: [0.025mm,0.025mm,0])\npath = bezier_curve(points: [[0,0,0],[0,0,0.5mm],[0,1mm,1mm]])\nshow brep_progressive_sweep([[a,b,c,d],[h0,h1,h2,h3]],path,\n cap_correction_tolerance: 0.000000001mm,cap_correction_quantum: 0.0000000000009094947017729282mm,cap_correction_max_work: 1000000,\n orientation: \"fixed_normal\",normal: [1,0,0],spacing: \"arc_length\",\n axis_scale: {degree: 1,knots: [0,0,1,1],values: [[2,3,1],[2,3,1]],weights: [1,1]},\n center_law: {degree: 1,knots: [0,0,1,1],values: [[0,0,0],[0,0,0]],weights: [1,1]},\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 3,max_sections: 17,length_tolerance: 0.001mm,length_max_cells: 100000,max_deviation: 0.0000001mm\n).brep_tessellate(4)\n\n\nProgressive body sampled refinement exceeds budget\nОбъекты 1\nТреугольники 48\nОбъём 0,06\nПлощадь 1,97\nОшибка сборки · 390 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nПоказан предыдущий результат\nWebGPU · интерактивный\nManifold\n↶\n↷\nМышь\nИнструменты\nСоздать\nВыбрано: 0\n?\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nImage Trace\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms · draw 15.2 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "selection": {
+    "startAt": "1440:arc-length-curved-frenet-body-boundary.r",
+    "fullInventory": [
+      "1440:periodic-corrected-frenet-nonplanar-body-boundary.r",
+      "1440:closed-corrected-frenet-nonplanar-body-boundary.r",
+      "1440:closed-corrected-frenet-nonplanar-affine-body-boundary.r",
+      "1440:arc-length-closed-corrected-frenet-nonplanar-body-boundary.r",
+      "1440:corrected-frenet-nonplanar-body-boundary.r",
+      "1440:corrected-frenet-nonplanar-hollow-body-boundary.r",
+      "1440:corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "1440:arc-length-corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "1440:oblique-rmf-circle-hollow-corrected-body-boundary.r",
+      "1440:curved-rmf-circle-hollow-corrected-body-boundary.r",
+      "1440:curved-frenet-circle-hollow-corrected-body-boundary.r",
+      "1440:closed-contact-hollow-body-boundary.r",
+      "1440:closed-arc-length-contact-hollow-body-boundary.r",
+      "1440:closed-arc-length-rational-phase-contact-hollow-body-boundary.r",
+      "1440:closed-antipodal-spatial-rmf-affine-hollow-body.r",
+      "1440:closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r",
+      "1440:closed-periodic-spatial-rmf-multiple-holes-body.r",
+      "1440:closed-periodic-spatial-rmf-parameter-multiple-holes-body.r",
+      "1440:open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r",
+      "1440:closed-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "1440:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "1440:open-spatial-rmf-varying-affine-hollow-corrected-body.r",
+      "1440:open-spatial-rmf-affine-corrected-body-certified.r",
+      "1440:closed-periodic-spatial-rmf-varying-affine-hollow-body.r",
+      "1440:closed-periodic-spatial-rmf-affine-body-certified.r",
+      "1440:closed-spatial-rmf-varying-affine-hollow-body.r",
+      "1440:closed-spatial-rmf-affine-hollow-body-certified.r",
+      "1440:closed-spatial-rmf-affine-body-certified.r",
+      "1440:closed-nonaxial-arc-length-rmf-tube-body-boundary.r",
+      "1440:closed-nonaxial-arc-length-corrected-tube-body-boundary.r",
+      "1440:closed-arc-length-corrected-planar-tube-body-boundary.r",
+      "1440:closed-arc-length-fixed-normal-tube-body-boundary.r",
+      "1440:closed-arc-length-rmf-tube-body-boundary.r",
+      "1440:closed-arc-length-guided-tube-body-boundary.r",
+      "1440:corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "1440:arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "1440:corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "1440:arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "1440:corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "1440:arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "1440:rmf-rational-straight-affine-hollow-body-boundary.r",
+      "1440:arc-length-rmf-rational-straight-affine-hollow-body-boundary.r",
+      "1440:corrected-frenet-straight-affine-hollow-body-boundary.r",
+      "1440:corrected-frenet-inflection-hollow-body-boundary.r",
+      "1440:arc-length-corrected-frenet-inflection-hollow-body-boundary.r",
+      "1440:closed-arc-length-authored-tube-body-boundary.r",
+      "1440:closed-authored-tube-body-boundary.r",
+      "1440:authored-multispan-body-boundary.r",
+      "1440:arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "1440:arc-length-curved-planar-rmf-body-boundary.r",
+      "1440:arc-length-curved-contact-body-boundary.r",
+      "1440:arc-length-curved-guided-body-boundary.r",
+      "1440:arc-length-curved-frenet-body-boundary.r",
+      "1440:arc-length-curved-fixed-normal-body-boundary.r",
+      "1440:arc-length-curved-fixed-body-boundary.r",
+      "1440:arc-length-curved-authored-body-boundary.r",
+      "1440:progressive-hollow-boundary.r",
+      "1440:progressive-unsegmented-hollow-boundary.r",
+      "1440:planar-rmf-body-boundary.r",
+      "1440:closed-planar-rmf-body-boundary.r",
+      "600:periodic-corrected-frenet-nonplanar-body-boundary.r",
+      "600:closed-corrected-frenet-nonplanar-body-boundary.r",
+      "600:closed-corrected-frenet-nonplanar-affine-body-boundary.r",
+      "600:arc-length-closed-corrected-frenet-nonplanar-body-boundary.r",
+      "600:corrected-frenet-nonplanar-body-boundary.r",
+      "600:corrected-frenet-nonplanar-hollow-body-boundary.r",
+      "600:corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "600:oblique-rmf-circle-hollow-corrected-body-boundary.r",
+      "600:curved-rmf-circle-hollow-corrected-body-boundary.r",
+      "600:curved-frenet-circle-hollow-corrected-body-boundary.r",
+      "600:closed-contact-hollow-body-boundary.r",
+      "600:closed-arc-length-contact-hollow-body-boundary.r",
+      "600:closed-arc-length-rational-phase-contact-hollow-body-boundary.r",
+      "600:closed-antipodal-spatial-rmf-affine-hollow-body.r",
+      "600:closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-multiple-holes-body.r",
+      "600:closed-periodic-spatial-rmf-parameter-multiple-holes-body.r",
+      "600:open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r",
+      "600:closed-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "600:open-spatial-rmf-varying-affine-hollow-corrected-body.r",
+      "600:open-spatial-rmf-affine-corrected-body-certified.r",
+      "600:closed-periodic-spatial-rmf-varying-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-affine-body-certified.r",
+      "600:closed-spatial-rmf-varying-affine-hollow-body.r",
+      "600:closed-spatial-rmf-affine-hollow-body-certified.r",
+      "600:closed-spatial-rmf-affine-body-certified.r",
+      "600:closed-nonaxial-arc-length-rmf-tube-body-boundary.r",
+      "600:closed-nonaxial-arc-length-corrected-tube-body-boundary.r",
+      "600:closed-arc-length-corrected-planar-tube-body-boundary.r",
+      "600:closed-arc-length-fixed-normal-tube-body-boundary.r",
+      "600:closed-arc-length-rmf-tube-body-boundary.r",
+      "600:closed-arc-length-guided-tube-body-boundary.r",
+      "600:corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "600:corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "600:corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "600:rmf-rational-straight-affine-hollow-body-boundary.r",
+      "600:arc-length-rmf-rational-straight-affine-hollow-body-boundary.r",
+      "600:corrected-frenet-straight-affine-hollow-body-boundary.r",
+      "600:corrected-frenet-inflection-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-inflection-hollow-body-boundary.r",
+      "600:closed-arc-length-authored-tube-body-boundary.r",
+      "600:closed-authored-tube-body-boundary.r",
+      "600:authored-multispan-body-boundary.r",
+      "600:arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "600:arc-length-curved-planar-rmf-body-boundary.r",
+      "600:arc-length-curved-contact-body-boundary.r",
+      "600:arc-length-curved-guided-body-boundary.r",
+      "600:arc-length-curved-frenet-body-boundary.r",
+      "600:arc-length-curved-fixed-normal-body-boundary.r",
+      "600:arc-length-curved-fixed-body-boundary.r",
+      "600:arc-length-curved-authored-body-boundary.r",
+      "600:progressive-hollow-boundary.r",
+      "600:progressive-unsegmented-hollow-boundary.r",
+      "600:planar-rmf-body-boundary.r",
+      "600:closed-planar-rmf-body-boundary.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:arc-length-curved-frenet-body-boundary.r",
+      "1440:arc-length-curved-fixed-normal-body-boundary.r",
+      "1440:arc-length-curved-fixed-body-boundary.r",
+      "1440:arc-length-curved-authored-body-boundary.r",
+      "1440:progressive-hollow-boundary.r",
+      "1440:progressive-unsegmented-hollow-boundary.r",
+      "1440:planar-rmf-body-boundary.r",
+      "1440:closed-planar-rmf-body-boundary.r",
+      "600:periodic-corrected-frenet-nonplanar-body-boundary.r",
+      "600:closed-corrected-frenet-nonplanar-body-boundary.r",
+      "600:closed-corrected-frenet-nonplanar-affine-body-boundary.r",
+      "600:arc-length-closed-corrected-frenet-nonplanar-body-boundary.r",
+      "600:corrected-frenet-nonplanar-body-boundary.r",
+      "600:corrected-frenet-nonplanar-hollow-body-boundary.r",
+      "600:corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-nonplanar-affine-hollow-body-boundary.r",
+      "600:oblique-rmf-circle-hollow-corrected-body-boundary.r",
+      "600:curved-rmf-circle-hollow-corrected-body-boundary.r",
+      "600:curved-frenet-circle-hollow-corrected-body-boundary.r",
+      "600:closed-contact-hollow-body-boundary.r",
+      "600:closed-arc-length-contact-hollow-body-boundary.r",
+      "600:closed-arc-length-rational-phase-contact-hollow-body-boundary.r",
+      "600:closed-antipodal-spatial-rmf-affine-hollow-body.r",
+      "600:closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-multiple-holes-body.r",
+      "600:closed-periodic-spatial-rmf-parameter-multiple-holes-body.r",
+      "600:open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r",
+      "600:closed-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r",
+      "600:open-spatial-rmf-varying-affine-hollow-corrected-body.r",
+      "600:open-spatial-rmf-affine-corrected-body-certified.r",
+      "600:closed-periodic-spatial-rmf-varying-affine-hollow-body.r",
+      "600:closed-periodic-spatial-rmf-affine-body-certified.r",
+      "600:closed-spatial-rmf-varying-affine-hollow-body.r",
+      "600:closed-spatial-rmf-affine-hollow-body-certified.r",
+      "600:closed-spatial-rmf-affine-body-certified.r",
+      "600:closed-nonaxial-arc-length-rmf-tube-body-boundary.r",
+      "600:closed-nonaxial-arc-length-corrected-tube-body-boundary.r",
+      "600:closed-arc-length-corrected-planar-tube-body-boundary.r",
+      "600:closed-arc-length-fixed-normal-tube-body-boundary.r",
+      "600:closed-arc-length-rmf-tube-body-boundary.r",
+      "600:closed-arc-length-guided-tube-body-boundary.r",
+      "600:corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r",
+      "600:corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r",
+      "600:corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.r",
+      "600:rmf-rational-straight-affine-hollow-body-boundary.r",
+      "600:arc-length-rmf-rational-straight-affine-hollow-body-boundary.r",
+      "600:corrected-frenet-straight-affine-hollow-body-boundary.r",
+      "600:corrected-frenet-inflection-hollow-body-boundary.r",
+      "600:arc-length-corrected-frenet-inflection-hollow-body-boundary.r",
+      "600:closed-arc-length-authored-tube-body-boundary.r",
+      "600:closed-authored-tube-body-boundary.r",
+      "600:authored-multispan-body-boundary.r",
+      "600:arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "600:arc-length-curved-planar-rmf-body-boundary.r",
+      "600:arc-length-curved-contact-body-boundary.r",
+      "600:arc-length-curved-guided-body-boundary.r",
+      "600:arc-length-curved-frenet-body-boundary.r",
+      "600:arc-length-curved-fixed-normal-body-boundary.r",
+      "600:arc-length-curved-fixed-body-boundary.r",
+      "600:arc-length-curved-authored-body-boundary.r",
+      "600:progressive-hollow-boundary.r",
+      "600:progressive-unsegmented-hollow-boundary.r",
+      "600:planar-rmf-body-boundary.r",
+      "600:closed-planar-rmf-body-boundary.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "f0e9267721e02448e4db46040e1354d365ca49fdd233cb1eb452e7c5c914fc8a",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "c611944f6bdca94fa4626c15e7d813decdd438d1fa9bc761b97a0a50edae0f9f",
+    "src/services/nurbsMiterOwnedBoundary.ts": "c323be51de8360daf985ddf0a041d0337cde31d5113b3f29f86cd429c5f0c477",
+    "crates/brep-core/src/sweep_miter_owned.rs": "ba36ded3e1b3b65629ea24e1b2c661b8d3bada9f925b23c4f42875afb237720d",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "bc251d1ff833f05b6f29b421e42e6d3debe0d6e12e8af9166c6f67e19d4e38e2",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "212805f8606bbe48a80063dc6a6154368bf3d9e3ee31c67d6ab46e8725de10ac",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/endpoint_jets.rs": "d925cebe359e5d4cfc27f71b3a6744c0149448f85241983663e95fe478751d68",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "7951b9d4e1c72105782280b5887088f6eda7a468a9107e041410428b29027284",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "94cc6016de96a6c8f7100aeb6c49ca0d8d63a06532f129d9661e59cec96359ca",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "9516c463ece2f5d7fd692b0ed094926e6b6a4d4f821dbd96ee23a38bc76b5505",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "ef9223c0b183452eeee2529d74766b93d18fe5e555ff49c6af911539fb0906d0",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "a8827767784866f05525f71669889eafb3fd6f3d85e7d7805226189f5812a9f4",
+    "src/generated/geometry-kernels/bytes.ts": "4542099f8dd13db426dad7c4c04aeef45159d78fa84a253ad98a3e87d3824281",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "829e044cab02dc411d7321fb1529367a413f4dbda5af1f64e92418938843d9b6",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580",
+    "scripts/sweep-body-matrix-sources.mjs": "c344fd7664ff539c4a08f8b63187682fc1f48a6e519337f5ad0196da78309f59",
+    "crates/geometry-bridge/src/brep.rs": "4d6612521c7d63245da9ccd198cd19b9c77699a4df45d8cd373bbaab72e1907a",
+    "crates/brep-core/src/face_contact_groups.rs": "0c44f471a5938e51cdb0d07a3bb462df3d2dde82b99dab9ebc5af558927bf978",
+    "crates/brep-core/src/face_contacts.rs": "933a9fc7f0a4e0f7d74a8684da652510279d39daa4caca7d23f1faa75c75f3e3",
+    "crates/brep-core/src/boundary_embedding.rs": "dfb8c67fb949b0010ffee35cd1d5b95bee8950621d7e703ac80ca356d00652e0",
+    "crates/brep-core/src/sweep_cap_contacts.rs": "7cc427ec37b091b70641758a2abe19c82286c973a9d1a0226d3c5ad270ff633d",
+    "crates/brep-core/src/shell_nesting.rs": "78a446067366beb6fb811c55291ad8678f583e7f7f37deb23c7d08b02931309d",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "c580a0e56b1e495559eff46a2645cc70a3b4fb287cb258dda60cf851cb7f608a",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/corrected_regular.rs": "1adb7bb87042cbcfbdb8f9e80e4047a7f697ea7e85f0021775fe8463a4115db6",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_pose.rs": "2f805c027078055884a28e68a3e5a4297e8a76cb0f906ee49784f451c512ac0b",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/profile_domain.rs": "e4d3a0770ef8408b98f1495122a16cf1323ea3595267996bd3e5662b007666a3",
+    "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/frenet_path_values.rs": "7d7b13056db4faf83e1cc1b6f0d8e2eabb8e98a876939fb6f7819fcc222c26a1"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

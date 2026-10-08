@@ -49,6 +49,7 @@ fn intervals(model: &Model) -> Vec<[f64; 2]> {
     result.sort_by(|a, b| a[0].total_cmp(&b[0]));
     result
 }
+
 fn check(model: &Model, expected: &[[f64; 2]], area: f64) {
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(intervals(model), expected);
@@ -65,10 +66,13 @@ fn check(model: &Model, expected: &[[f64; 2]], area: f64) {
             |e| e.curve.degree == 2 && e.curve.weights.iter().any(|w| *w != e.curve.weights[0])
         )
     );
+    #[cfg(feature = "codec")]
+    {
     let encoded = value_codec::to_string(model).unwrap();
     let decoded: Model = value_codec::from_str(&encoded).unwrap();
     decoded.validate().unwrap();
     assert_eq!(model.1.faces, decoded.1.faces);
+    }
 }
 #[test]
 fn interval_subtraction_covers_empty_one_and_two_surviving_bodies() {
@@ -143,6 +147,8 @@ fn annular_profiles_keep_holes_in_both_interval_components() {
     );
 }
 #[test]
+
+#[cfg(feature = "codec")]
 fn disjoint_profile_difference_is_identity_and_genuine_steps_have_native_boundaries() {
     let a = cylinder(3., [0., 5.]);
     for height in [[1., 3.], [0., 5.], [-1., 6.]] {

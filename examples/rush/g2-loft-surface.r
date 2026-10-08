@@ -1,0 +1,10 @@
+// @rush/1
+a = line_curve(start: [0mm,0mm,0mm],end: [20mm,0mm,0mm])
+b = line_curve(start: [0mm,0mm,20mm],end: [20mm,0mm,20mm])
+c = line_curve(start: [0mm,0mm,40mm],end: [20mm,0mm,40mm])
+left = line_curve(start: [0mm,-10mm,-40mm],end: [20mm,-10mm,-40mm])
+right = line_curve(start: [0mm,10mm,80mm],end: [20mm,10mm,80mm])
+base = natural_loft_surface(a,b,c,parameters: [0,0.5,1])
+start = natural_loft_surface(left,a,parameters: [0,1])
+end = natural_loft_surface(c,right,parameters: [0,1])
+show loft_match_surface(base,sections: [a,b,c],parameters: [0,0.5,1],budget: 0.000001mm,start_reference: start,end_reference: end,order: 2).tessellate(segments_u: 24,segments_v: 48)

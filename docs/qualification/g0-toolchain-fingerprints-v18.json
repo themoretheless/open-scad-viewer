@@ -534,5 +534,5 @@
       "note": "Current bytes are newly bound in v18; v17 remains archived. Re-freeze committed optimization-series dependency, toolchain, and own-Rust source changes; rebind the rebuilt geometry kernel via own-rust-cad-v10; retarget GitHub executors to v35; preserve the finite G1 contract and reset all clean-run work."
     }
   ],
-  "previousFingerprintSha256": "c331887ec7e77d9d7c641eafa322adf6d6c41e07efcf5d92a9530d4bb1abd9a0"
+  "previousFingerprintSha256": "17b7f871b53e8451c9a1b0dbc1248bbcb41f58b7ff5713dad58e029e35c5ad32"
 }

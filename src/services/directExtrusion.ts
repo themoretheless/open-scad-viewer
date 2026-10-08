@@ -1,4 +1,5 @@
 import {sketchProfile} from './retainedSketchProfile'
+import {callGeometryRust} from './geometry/kernel'
 import { extrudeSketchBrep, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch } from './directModeling'
 import { cross3, xyPlane, type SketchPlane } from './directSketchGeometry'
 import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from './geometry/brep'
@@ -16,6 +17,7 @@ export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: 
   const plane=sketches[0].plane??xyPlane()
   if(sketches.some(s=>!sameSketchPlane(s.plane,plane))) throw Error('All profile contours must lie on the same workplane.')
   if(sketches.length===1&&!sketches[0].retainedProfile)return extrudeSketchBrep(sketches[0],height,offset)
+  if(sketches.some(s=>s.editablePath?.segments.some(segment=>segment.type==='cubic')))return callGeometryRust('brep_nurbs_bezier_profiles_extrude',{sketches,height,baseZ:offset})
   const loops=sketches.flatMap(sketch=>{
     if(sketch.retainedProfile)return sketchProfile(sketch).loops
     if(sketch.analytic?.kind==='circle') {
@@ -50,7 +52,7 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
     positions=result.positions;indices=result.indices;brep=undefined
     if(!indices.length)return null
   }
-  return {...(options.operation==='new'?{id:options.id,name:`${sketches[0].name} · 3D`}:target!),mesh:{positions,indices},...(brep?{brep}:{})}
+  return {...(options.operation==='new'?{id:options.id,name:`${sketches[0].name} · 3D`,...(sketches.every(s=>s.traceColor===sketches[0].traceColor)&&sketches[0].traceColor?{material:{name:'Image Trace',color:sketches[0].traceColor}}:{})}:target!),mesh:{positions,indices},...(brep?{brep}:{})}
 }
 export function applyDirectExtrusionProfile(document: DirectDocument, options: DirectExtrusionOptions): DirectDocument {
   const body=buildDirectExtrusion(document,options)

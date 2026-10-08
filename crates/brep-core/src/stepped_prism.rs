@@ -51,8 +51,8 @@ fn xy(mut c: Curve) -> Curve {
     normalized(c)
 }
 fn curve_key(c: &Curve) -> Result<(String, bool)> {
-    let forward = value_codec::to_string(c).map_err(|e| unsupported(e.to_string()))?;
-    let reverse = value_codec::to_string(&c.reverse()?).map_err(|e| unsupported(e.to_string()))?;
+    let forward = crate::rational_identity::curve_signature(c);
+    let reverse = crate::rational_identity::curve_signature(&c.reverse()?);
     Ok(if forward <= reverse {
         (forward, false)
     } else {

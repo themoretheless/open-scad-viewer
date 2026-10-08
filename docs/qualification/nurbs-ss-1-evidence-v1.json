@@ -8,8 +8,8 @@
     "Rust coincident overlap and parallel empty reports with revoked topology authority",
     "brep-core general BranchGraph without graph-patch iso fixture",
     "TS intersectNurbsSurfaceSurfaceCertified product query",
-    "ModelGraph foundation_successor version nurbs-ss/1",
-    "MCP modelgraph_nurbs_intersect surface_surface mode",
+    "RushGraph foundation_successor version nurbs-ss/1",
+    "MCP rush_nurbs_intersect surface_surface mode",
     "scripts/nurbs-ss-1-oracle.py multiprecision residual oracle"
   ],
   "negativeCorpus": [

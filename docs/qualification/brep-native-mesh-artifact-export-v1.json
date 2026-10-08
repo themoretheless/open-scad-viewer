@@ -1,5 +1,5 @@
 {
-  "scope": "Native admission and serialization of ModelGraph STL, binary STL, OBJ, PLY, OFF, AMF; full B-rep incomplete",
+  "scope": "Native admission and serialization of RushGraph STL, binary STL, OBJ, PLY, OFF, AMF; full B-rep incomplete",
   "tests": {
     "polygonCore": 64,
     "focusedApplicationMcpPacking": 55,

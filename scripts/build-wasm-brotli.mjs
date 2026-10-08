@@ -6,7 +6,7 @@ import {packStampHit, writePackStamp} from './wasm-pack-stamp.mjs'
 import {reproducibleCargo} from './reproducible-cargo.mjs'
 
 /** Build a compression-only bootstrap; it has no geometry dependencies. */
-export function buildWasmBrotli(root, cargoTarget) {
+export function buildWasmBrotli(root, cargoTarget, output = resolve(root, 'src/generated/wasm-brotli')) {
   const reproducible = reproducibleCargo(root)
   const result = spawnSync('cargo', ['build', '--locked', '--release', '--config', 'profile.release.strip="symbols"', '--config', 'profile.release.codegen-units=1', '--config', 'profile.release.panic="abort"', ...reproducible.args, '--target', 'wasm32-unknown-unknown', '--manifest-path', 'crates/wasm-brotli/Cargo.toml'], {
     cwd: root, stdio: 'inherit', env: {...process.env, ...reproducible.env, CARGO_TARGET_DIR: cargoTarget},
@@ -14,7 +14,6 @@ export function buildWasmBrotli(root, cargoTarget) {
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`Brotli decoder build failed (${result.status})`)
   const wasm = readFileSync(resolve(cargoTarget, 'wasm32-unknown-unknown/release/wasm_brotli.wasm'))
-  const output = resolve(root, 'src/generated/wasm-brotli')
   mkdirSync(output, {recursive: true})
   // build-geometry-kernels.mjs and build-photogrammetry.mjs both call this in
   // one `build:geometry` run; the stamp makes the repeat call cheap.

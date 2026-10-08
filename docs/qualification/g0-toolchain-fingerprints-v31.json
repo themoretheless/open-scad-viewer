@@ -73,7 +73,7 @@
     {
       "id": "crates-workspace-manifest",
       "path": "crates/Cargo.toml",
-      "sha256": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+      "sha256": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
       "byteLength": 2433
     },
     {
@@ -403,43 +403,43 @@
     {
       "id": "own-rust-cad-v17-evidence",
       "path": "docs/qualification/own-rust-cad-v17.json",
-      "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+      "sha256": "76ed9a91c3a699852cd143867b5191e7afabfaed4c4a6f8bc6a45b30efc40b3f",
       "byteLength": 3465
     },
     {
       "id": "own-rust-cad-v18-evidence",
       "path": "docs/qualification/own-rust-cad-v18.json",
-      "sha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
+      "sha256": "330d1204cac180d545849ab4a56fa96c6f89d63fa9bfb2f7295472cccd3421a9",
       "byteLength": 3457
     },
     {
       "id": "own-rust-cad-v19-evidence",
       "path": "docs/qualification/own-rust-cad-v19.json",
-      "sha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
+      "sha256": "b417b8633ab5aed4a072a4a6230e0b0c7236abeeefef572838c30bb3e816f178",
       "byteLength": 3503
     },
     {
       "id": "own-rust-cad-v20-evidence",
       "path": "docs/qualification/own-rust-cad-v20.json",
-      "sha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
+      "sha256": "081050d844a1d164f5439a490fd36fcce0ea3d292d4c0755067a46e40f359c06",
       "byteLength": 3179
     },
     {
       "id": "own-rust-cad-v21-evidence",
       "path": "docs/qualification/own-rust-cad-v21.json",
-      "sha256": "e309d0b9381d396536926bb3446ad95549c7ebb7cd091e5af81be45b744a270c",
+      "sha256": "0d6d015dba4fe6e819e805d9aab0ba86d4439b9364f21d586a53d1003c36f002",
       "byteLength": 3422
     },
     {
       "id": "own-rust-cad-v22-evidence",
       "path": "docs/qualification/own-rust-cad-v22.json",
-      "sha256": "35df7d03e21877f77186a6ca2aa2848fcca0a233a3630599f1d547c57e26fa73",
+      "sha256": "7a5fe729ffbf364a65ef5db183862024244be1f15b1380492f567a960eb3f959",
       "byteLength": 3316
     },
     {
       "id": "own-rust-cad-v23-evidence",
       "path": "docs/qualification/own-rust-cad-v23.json",
-      "sha256": "3c189bdaa302e4bff4f407f772c31983a2a5bf6b25873f38775b29f0939d9dc5",
+      "sha256": "e0a15b1d539ef5d0ec37b2aecf23c4c15c4bd5748dbf25add8d1a7db48c2bbcb",
       "byteLength": 3143
     }
   ],
@@ -470,5 +470,5 @@
       "note": "Current bytes are newly bound in v31; v30 remains archived. Re-freeze after the concurrent feature branch edited bound crate sources (including crates/brep-core/src/lib.rs) following the v30/v47 publish; the kernel WASM is byte-identical to v22, the G1 contract is unchanged and clean-run work resets to v48."
     }
   ],
-  "previousFingerprintSha256": "9023a87ca106ebeb71a70d0a7e39e0942b436d4725ac2877f54d1d4f1cd24cff"
+  "previousFingerprintSha256": "b4060979c574571be3b8e6fe99f35b2cc7ef362c67e33e01b9b73ec2753561ed"
 }

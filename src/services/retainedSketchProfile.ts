@@ -13,6 +13,7 @@ export function retainedProfileDisplay(profile:BrepProfile):Point2[][] {
 export function sketchProfile(sketch:DirectSketch):BrepProfile {
  if(sketch.retainedProfile)return validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)
  if(!sketch.closed)throw Error('Exact profile requires closed contours.')
+ if(sketch.editablePath)return authorBrepProfile({kind:'bezier',path:sketch.editablePath})
  if(sketch.analytic?.kind==='circle'){
   const {center,radius}=sketch.analytic
   return transformBrepProfile(authorBrepProfile({kind:'circle',radius}),[1,0,0,0,0,1,0,0,0,0,1,0,center[0],center[1],0,1])
@@ -23,7 +24,7 @@ export function sketchProfile(sketch:DirectSketch):BrepProfile {
 export function withRetainedProfile(sketch:DirectSketch,profile:BrepProfile):DirectSketch {
  if(!profile.loops.length)throw Error('The profile contains no material.')
  const next={...sketch,retainedProfile:profile,points:retainedProfileDisplay(profile)[0],closed:true}
- delete next.analytic;delete next.dimensions
+ delete next.analytic;delete next.dimensions;delete next.editablePath
  return next
 }
 export function combineSketchProfiles(sketches:DirectSketch[],operation:BrepProfileBooleanOperation):DirectSketch {
@@ -41,6 +42,6 @@ export function transformRetainedSketch(sketch:DirectSketch,delta:Point2,angle:n
  let offset=0;for(const curve of curves){curve.controlPoints=transformed.points.slice(offset,offset+curve.controlPoints.length);offset+=curve.controlPoints.length}
  return withRetainedProfile(sketch,validateBrepProfile(profile.loops,'material-left',profile.toleranceMm))
 }
-export function requirePolylineSketch(sketch:DirectSketch){if(sketch.retainedProfile)throw Error('This operation does not yet support retained curve profiles. Edit the source curves or use a supported profile operation.')}
+export function requirePolylineSketch(sketch:DirectSketch){if(sketch.editablePath)throw Error('Edit the source Bézier path before using this polygon-only operation.');if(sketch.retainedProfile)throw Error('This operation does not yet support retained curve profiles. Edit the source curves or use a supported profile operation.')}
 
 export const offsetRetainedSketch=(sketch:DirectSketch,distance:number):DirectSketch=>withRetainedProfile(sketch,offsetBrepProfile(sketchProfile(sketch),distance))

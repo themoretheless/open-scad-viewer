@@ -19,8 +19,8 @@ export function remapPathPrefixFlags(root, env = process.env) {
  * instead of silently losing the remap. The encoded (0x1F-separated) form
  * takes precedence over RUSTFLAGS and keeps paths with spaces intact.
  */
-export function reproducibleCargo(root, env = process.env) {
-  const flags = remapPathPrefixFlags(root, env)
+export function reproducibleCargo(root, env = process.env, extraRustflags = []) {
+  const flags = [...remapPathPrefixFlags(root, env), ...extraRustflags]
   const inherited = env.CARGO_ENCODED_RUSTFLAGS
     ? env.CARGO_ENCODED_RUSTFLAGS.split('\x1f')
     : env.RUSTFLAGS ? env.RUSTFLAGS.split(/\s+/u).filter(Boolean) : null

@@ -1,18 +1,21 @@
+import {expandLiveBodyPatterns} from './liveBodyPattern'
 import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import type {DirectDocument,DirectBody} from './directModeling'
 import {normalizePolygonMesh} from './geometry/polygon'
 import {callGeometryRust} from './geometry/kernel'
 import {stringifyMeshJson} from './meshJson'
-export interface SolidInstanceLink {sourceId:string;matrix:number[][]}
+export interface SolidInstanceLink {sourceId:string;matrix:number[][];pattern?:boolean}
 /** Relative world-space edit about the current mesh bounds center. */
 export function transformSolidInstance(document:DirectDocument,id:string,delta:number[],axis:number[],angle:number,scale:number):DirectDocument {
  const next=resolveSolidInstances(structuredClone(document)),body=next.bodies.find(body=>body.id===id)
  if(!body?.instance)throw Error('Select a linked instance.')
+ if(body.instance.pattern)throw Error('Edit the live pattern parameters or detach the whole pattern.')
  body.instance.matrix=callGeometryRust('cad_instance_transform',{mesh:body.mesh,matrix:body.instance.matrix,delta,axis,angle,scale})
  return resolveSolidInstances(next)
 }
 /** References point directly to an independent source; geometry math stays in Rust. */
 export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstanceBatchCache):DirectDocument {
+ document=expandLiveBodyPatterns(document)
  const bodies=new Map(document.bodies.map(body=>[body.id,body]))
  const groups=new Map<string,DirectBody[]>()
  for(const body of document.bodies){
@@ -57,6 +60,6 @@ export function createSolidInstance(document:DirectDocument,sourceId:string,id:s
 }
 export function detachSolidInstances(document:DirectDocument,ids:readonly string[]):DirectDocument {
  const next=resolveSolidInstances(structuredClone(document))
- for(const body of next.bodies)if(ids.includes(body.id))delete body.instance
+ for(const body of next.bodies)if(ids.includes(body.id)){if(body.instance?.pattern)throw Error('Detach the whole live pattern before editing an individual member.');delete body.instance}
  return next
 }

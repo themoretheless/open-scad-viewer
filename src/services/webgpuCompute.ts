@@ -37,6 +37,24 @@ export interface GpuComputeJob {
   }[]
 }
 
+interface CachedComputePipeline {
+  layout: GPUBindGroupLayout
+  pipeline: GPUComputePipeline
+}
+
+interface CachedComputeContext {
+  adapter: GPUAdapter
+  device: GPUDevice
+  featuresKey: string
+  pipelines: Map<string, CachedComputePipeline>
+}
+
+let activeComputeContext: CachedComputeContext | null = null
+
+export function resetGpuComputeContext(): void {
+  activeComputeContext = null
+}
+
 /** Runs the job; returns one Float32Array per output buffer, in dispatch order. */
 export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]> {
   const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' })
@@ -51,23 +69,50 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
   const requiredFeatures = requiredWebGpuFeaturesForWgsl(wgsl)
   const unsupported = unsupportedWebGpuFeatures(adapter, requiredFeatures)
   if (unsupported.length) throw new Error(`WebGPU adapter lacks required feature(s): ${unsupported.join(', ')}`)
-  const device = await adapter.requestDevice({ requiredFeatures: requiredFeatures as GPUFeatureName[] })
+
+  const featuresKey = [...requiredFeatures].sort().join(',')
+  let context = activeComputeContext
+  if (!context || context.adapter !== adapter || context.featuresKey !== featuresKey) {
+    const device = await adapter.requestDevice({ requiredFeatures: requiredFeatures as GPUFeatureName[] })
+    context = {
+      adapter,
+      device,
+      featuresKey,
+      pipelines: new Map(),
+    }
+    device.lost?.then(() => {
+      if (activeComputeContext?.device === device) {
+        activeComputeContext = null
+      }
+    })
+    activeComputeContext = context
+  }
+  const device = context.device
   const scratch: GPUBuffer[] = []
   try {
-    const module = device.createShaderModule({ code: wgsl })
-    const layout = device.createBindGroupLayout({
-      entries: job.dispatches[0]!.buffers.map(buffer => ({
-        binding: buffer.binding,
-        visibility: GPUShaderStage.COMPUTE,
-        buffer: buffer.uniform
-          ? { type: 'uniform' as GPUBufferBindingType }
-          : { type: buffer.output ? 'storage' as GPUBufferBindingType : 'read-only-storage' as GPUBufferBindingType },
-      })),
-    })
-    const pipeline = device.createComputePipeline({
-      layout: device.createPipelineLayout({ bindGroupLayouts: [layout] }),
-      compute: { module, entryPoint: job.entryPoint },
-    })
+    const layoutKey = job.dispatches[0]!.buffers.map(b => `${b.binding}:${b.uniform ? 'u' : b.output ? 's' : 'ro'}`).join(',')
+    const pipelineKey = `${job.entryPoint}:${layoutKey}:${wgsl}`
+    let cached = context.pipelines.get(pipelineKey)
+    if (!cached) {
+      const module = device.createShaderModule({ code: wgsl })
+      const layout = device.createBindGroupLayout({
+        entries: job.dispatches[0]!.buffers.map(buffer => ({
+          binding: buffer.binding,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: buffer.uniform
+            ? { type: 'uniform' as GPUBufferBindingType }
+            : { type: buffer.output ? 'storage' as GPUBufferBindingType : 'read-only-storage' as GPUBufferBindingType },
+        })),
+      })
+      const pipeline = device.createComputePipeline({
+        layout: device.createPipelineLayout({ bindGroupLayouts: [layout] }),
+        compute: { module, entryPoint: job.entryPoint },
+      })
+      cached = { layout, pipeline }
+      context.pipelines.set(pipelineKey, cached)
+    }
+    const { layout, pipeline } = cached
+
     // Shared inputs (same buffer object in several dispatches) upload once.
     const sharedUploads = new Map<ArrayBufferView | ArrayBuffer, GPUBuffer>()
     const encoder = device.createCommandEncoder()
@@ -128,6 +173,5 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
     })
   } finally {
     scratch.forEach(buffer => buffer.destroy())
-    device.destroy()
   }
 }

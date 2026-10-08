@@ -1,3 +1,9 @@
+import {expandLiveBodyPatterns} from './liveBodyPattern'
+import type {LiveBodyPattern} from './liveBodyPattern'
+import {withEditableSketchPath} from './editableSketchPath'
+import type {BezierPathJson} from './geometry/path2d'
+import {validCurveOffsetRegion} from './curveOffsetRegion'
+import {validCurveOffsetConstruction} from './curveOffsetConstruction'
 import {extrudeSketchProfile} from './directExtrusion'
 import {withRetainedProfile} from './retainedSketchProfile'
 import {validateBrepProfile,type BrepProfile} from './geometry/brepProfile'
@@ -5,7 +11,7 @@ import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import {resolveSolidInstances,type SolidInstanceLink} from './solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
-import { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
+import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from './directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
 import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
@@ -13,15 +19,15 @@ import { stringifyMeshJson } from './meshJson'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
-import type { NurbsBrep } from './geometry/brep'
+import { tessellateNurbsBrep, type NurbsBrep } from './geometry/brep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
-export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
+export interface DirectSketch { traceColor?:string; group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink }
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink; livePattern?: LiveBodyPattern }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
 export interface DirectInterchangeMetadata {
@@ -98,7 +104,9 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     ids.add(item.id)
   }
   for (const s of d.sketches) {
+    if(s.traceColor!==undefined&&(typeof s.traceColor!=='string'||!/^#[0-9a-f]{6}$/i.test(s.traceColor)))throw Error('Invalid traced sketch color.')
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
+    if(s.editablePath!==undefined) Object.assign(s,withEditableSketchPath(s,s.editablePath))
     if(s.retainedProfile){
       if(s.analytic||s.dimensions?.length)throw Error('Retained profiles cannot carry polygon dimensions or a second analytic definition.')
       const profile=validateBrepProfile(s.retainedProfile.loops,'material-left',s.retainedProfile.toleranceMm)
@@ -109,7 +117,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       const {origin,u,v}=s.plane
       if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
     }
-    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > (s.retainedProfile?8192:512) || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
+    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > (s.retainedProfile||s.editablePath?8192:512) || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
     if (s.dimensions !== undefined) {
       if (!Array.isArray(s.dimensions)) throw Error('Invalid sketch dimensions.')
       sketchDimensions(s)
@@ -125,7 +133,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     // A compact instance omits both caches. Partially supplied caches still fail validation.
     if(b.instance&&b.mesh===undefined&&b.brep===undefined){yield;continue}
     const m = b.mesh
-    if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
+    if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > MAX_BODY_MESH_COMPONENTS || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > MAX_BODY_MESH_COMPONENTS || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
     // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
     normalizePolygonMesh(m)
     if (b.brep) {
@@ -150,6 +158,8 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     }
     yield
   }
+  // Expand identities before resource admission, without materializing derived geometry.
+  if(d.bodies.some(body=>body.livePattern!==undefined||body.instance?.pattern!==undefined))d.bodies=expandLiveBodyPatterns(d).bodies
   // Validate serialized caches first, then derive linked geometry from validated sources.
   if(d.bodies.some(body=>body.instance)) {
     // Bound expansion before allocating geometry: a small reference document must not
@@ -170,7 +180,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     d.bodies=resolveSolidInstances(d,instanceCache).bodies
     if(d.bodies.some(body=>body.instance&&!body.mesh.positions.every(finite)))throw Error('Instance placement exceeds document coordinate bounds.')
   }
-  for (const item of d.curves) { validateNurbsCurve(item.curve); yield }
+  for (const item of d.curves) { validateNurbsCurve(item.curve); if(item.offsetRegion!==undefined&&!validCurveOffsetRegion(item.offsetRegion))throw Error('Invalid offset loop membership.'); if(item.offsetConstruction!==undefined&&!validCurveOffsetConstruction(item.offsetConstruction))throw Error('Invalid offset construction evidence.'); yield }
   for (const item of d.surfaces) {
     if (!Number.isInteger(item.segmentsU) || item.segmentsU < 2 || item.segmentsU > 64 ||
         !Number.isInteger(item.segmentsV) || item.segmentsV < 2 || item.segmentsV > 64) throw new Error('Invalid NURBS display tessellation.')
@@ -378,6 +388,10 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if(sketch.retainedProfile)throw Error('Use the exact profile extrusion for retained curves.')
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
+  if(sketch.editablePath){
+    const brep=extrudeSketchBrep(sketch,height)
+    return {id,name:sketch.name+' · 3D',brep,mesh:tessellateNurbsBrep(brep,16)}
+  }
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
   return { id, name: sketch.name + ' · 3D', mesh: { positions: Float64Array.from(worldPoints(Array.from({length:built.positions.length/3},(_,i)=>Array.from(built.positions.slice(i*3,i*3+3))),sketch.plane).flat()), indices: built.indices.slice() } }
 }

@@ -1,0 +1,98 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T11:46:01.622Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "7132c7c81fb02c226bc2e8d48015c3461b28b0a253c93b53f2161e02c0dcbb51",
+  "artifactProvenance": {
+    "sha256": "7132c7c81fb02c226bc2e8d48015c3461b28b0a253c93b53f2161e02c0dcbb51",
+    "byteLength": 11063005,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-D60hdmHx.js"
+    ]
+  },
+  "appSourceSha256": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+  "distIndexSha256": "046808bd07147a04ced3625a3eb3e67f862fbd1c6e5f77f37ab2f2ec66073066",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-authored-tube-body-boundary.r",
+      "sourceSha256": "0e0867b5be317f340f087970224d7d2b24dc610876b826991aa91d30fad7de99",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 128,
+        "shells": 1,
+        "geometrySha256": "ef1fb096f57cf99f7749fde203b39eadc332d30ba2059227adef0b857f6627f6",
+        "renderer": "webgpu"
+      },
+      "error": "Negative fixture must create a zero-length path edge",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n▾\n6\n7\n▾\n8\n9\n10\n11\n12\n13\n14\n15\n// @rush/1\n// Original rotating rational frame; retained boundary and material are audited separately.\nprofile = circle_curve(center: [4mm,0,0],normal: [0,1,0],radius: 0.2mm)\npath = circle_curve(center: [0,0,0],normal: [0,0,1],radius: 4mm)\nshow brep_progressive_sweep([[profile]],path,\n orientation: \"authored\",normal: [0,0,1],\n frame_axis: {degree: 2,knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],\n values: [[0,1,0],[-1,1,0],[-1,0,0],[-1,-1,0],[0,-1,0],[1,-1,0],[1,0,0],[1,1,0],[0,1,0]],\n weights: [1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1]},\n frame_normal: {degree: 1,knots: [0,0,1,1],values: [[0,0,1],[0,0,1]],weights: [1,1]},\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 17,max_sections: 65,max_deviation: 2mm\n).brep_tessellate(4)\n\n\nОбъекты 1\nТреугольники 4 096\nОбъём 3,06\nПлощадь 31,25\nГотово · 313 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 1,197293 mm\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n4 096 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nWebGPU · интерактивный\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nsweep-matrix\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n0 FPS · 0 ms · draw 0 ms\nСцена\n1\nsweep-matrix\n◎\n✎\n×\nBody 1\nB-rep\n●\n◇\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "c36716380fb8c6d82f3ce7b91707c98923dab6995a0a94beacdba46603ac56b9",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "dfb48e2557bcfefea991983d98b9e184fc0f05455016feff5bf9f90da615bbb0",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true
+}

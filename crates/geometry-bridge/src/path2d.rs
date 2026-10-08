@@ -46,7 +46,9 @@ mod tests {
         let points: Vec<[f64; 2]> = field(mesh, "positions").unwrap();
         let indices: Vec<usize> = field(mesh, "indices").unwrap();
         indices
-            .as_chunks::<3>().0.iter()
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|t| {
                 let [a, b, c] = [points[t[0]], points[t[1]], points[t[2]]];
                 ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs() * 0.5
@@ -227,4 +229,8 @@ mod tests {
         assert_eq!(pieces.len(), 1);
         assert_eq!(decode_paths(&pieces[0]).unwrap().len(), 3);
     }
+}
+
+pub(crate) fn authored_path(value: &Value) -> Result<planar_geometry::path::BezierPath> {
+    codec::decode_path(value)
 }

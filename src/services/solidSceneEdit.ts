@@ -19,6 +19,7 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
   case 'instance-create':return createSolidInstance(d,p.id,p.createdId,[[1,0,0,p.x],[0,1,0,p.y],[0,0,1,p.z],[0,0,0,1]])
   case 'instance-place':{
    const body=d.bodies.find(b=>b.id===p.id);if(!body?.instance)throw Error('Select a linked instance.')
+   if(body.instance.pattern)throw Error('Edit the live pattern parameters or detach the whole pattern.')
    body.instance.matrix[0][3]=p.x;body.instance.matrix[1][3]=p.y;body.instance.matrix[2][3]=p.z
    return resolveSolidInstances(d)
   }

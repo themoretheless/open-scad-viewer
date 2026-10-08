@@ -1644,6 +1644,19 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     }
   })
 
+  server.registerTool('openscad_direct_transaction', {
+    title: 'Apply an atomic direct-model action batch',
+    description: 'Execute a version 1 JSON action script (1–80 primitive, sceneEdit, pattern, sketchCleanup, outlineStroke, extrusion, documentEdit or checkpoint actions) on a direct document. Returns a complete document only if every action succeeds. The UI imports or replays the result with one Undo. This does not modify a live UI or saved catalog model.',
+    inputSchema: z.object({document:z.string().max(64*1024*1024),script:z.string().max(16*1024*1024)}).strict(),
+    outputSchema: toolOutputSchema(z.object({document:z.string()})),
+    annotations: {readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+  }, async ({document,script},context) => {
+    try {
+      const {runDirectTransaction}=await import('./directTransaction')
+      return textResult({document:await runDirectTransaction(document,script,context.mcpReq.signal)})
+    } catch(error) { return errorResult(error) }
+  })
+
   server.registerTool('openscad_get_model', {
     title: 'Get OpenSCAD model',
     description: 'Read a saved OpenSCAD model and its current revision from DuckDB.',

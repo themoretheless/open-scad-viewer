@@ -1,10 +1,7 @@
-//! OpenSCAD value evaluator (migration stage 2): a faithful port of the
-//! evaluator half of `src/services/openscadParser.ts` for both language
-//! profiles. Geometry modules contribute accounted shape descriptors (name +
-//! dimension) through the same shape-list algebra as the TS evaluator
-//! (boolean/extrude/hull combine to one, transforms pass through or union per
-//! profile); the real geometry kernels arrive with stage 3 via the shared
-//! `geometry-bridge` handle store.
+//! OpenSCAD value evaluation for both repository language profiles.
+//! Default evaluation accounts shape names and dimensions for diagnostics.
+//! Opt-in recording emits a typed solid program for supported operations;
+//! independent geometry kernels execute that program through the host adapter.
 use crate::ast::*;
 use crate::builtins::{self, BuiltinContext, BuiltinError};
 use crate::lexer::TT;
@@ -41,6 +38,7 @@ pub enum Quality {
 /// Host knobs for one evaluation. `should_abort` is the synchronous
 /// cancellation flag (TS `shouldAbort` polled at statement/loop checkpoints).
 pub struct EvaluatorOptions<'h> {
+    pub record_geometry: bool,
     pub should_abort: Option<&'h dyn Fn() -> bool>,
     /// Unseeded `rands` stream. TS uses `Math.random`; the deterministic
     /// default here is a splitmix64 stream (seeded `rands` is exact either way).
@@ -53,6 +51,7 @@ pub struct EvaluatorOptions<'h> {
 impl Default for EvaluatorOptions<'_> {
     fn default() -> Self {
         Self {
+            record_geometry: false,
             should_abort: None,
             random: None,
             animation_time: 0.0,
@@ -63,6 +62,7 @@ impl Default for EvaluatorOptions<'_> {
 
 /// Result of a successful evaluation.
 pub struct Evaluation {
+    pub geometry: Option<geometry_ops::solid_program::Program>,
     pub shapes: Vec<ShapeDescriptor>,
     pub warnings: Vec<String>,
     pub reduced: bool,
@@ -117,6 +117,9 @@ impl<'a> Ctx<'a> {
 
 /// Shared evaluator state (one per `evaluate` call).
 pub struct Evaluator<'a> {
+    record_geometry: bool,
+    geometry: RefCell<Vec<geometry_ops::solid_program::Node>>,
+    profiles: RefCell<Vec<geometry_ops::profile_program::Node>>,
     units: &'a [u16],
     profile: LanguageProfile,
     quality: Quality,
@@ -161,6 +164,9 @@ impl<'a> Evaluator<'a> {
         collect_functions(statements, &mut functions);
         collect_modules(statements, &mut modules);
         Self {
+            record_geometry: options.record_geometry,
+            geometry: RefCell::new(Vec::new()),
+            profiles: RefCell::new(Vec::new()),
             units,
             profile,
             quality: options.quality,
@@ -178,6 +184,65 @@ impl<'a> Evaluator<'a> {
         }
     }
 
+    fn store_geometry(
+        &self,
+        node: geometry_ops::solid_program::Node,
+        p: usize,
+    ) -> EvalResult<usize> {
+        let mut nodes = self.geometry.borrow_mut();
+        if nodes.len() >= crate::MAX_AST_NODES {
+            return Err(self.error(p, "Native geometry program budget exceeded"));
+        }
+        let id = nodes.len();
+        nodes.push(node);
+        Ok(id)
+    }
+    fn emit_geometry(
+        &self,
+        name: &str,
+        node: geometry_ops::solid_program::Node,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let mut shape = descriptor(name, 3);
+        if self.record_geometry {
+            shape.geometry = Some(self.store_geometry(node, p)?)
+        }
+        Ok(vec![shape])
+    }
+    fn emit_profile(
+        &self,
+        name: &str,
+        node: geometry_ops::profile_program::Node,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let mut shape = descriptor(name, 2);
+        let mut profiles = self.profiles.borrow_mut();
+        if profiles.len() >= crate::MAX_AST_NODES {
+            return Err(self.error(p, "Native profile program budget exceeded"));
+        }
+        shape.profile = Some(profiles.len());
+        profiles.push(node);
+        Ok(vec![shape])
+    }
+    fn affine_geometry(
+        &self,
+        mut shapes: Vec<ShapeDescriptor>,
+        matrix: geometry_ops::solid_program::affine::AffineMatrix,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        if self.record_geometry {
+            for shape in &mut shapes {
+                let input = shape
+                    .geometry
+                    .ok_or_else(|| self.error(p, "Unsupported native geometry input"))?;
+                shape.geometry = Some(self.store_geometry(
+                    geometry_ops::solid_program::Node::Transform { input, matrix },
+                    p,
+                )?);
+            }
+        }
+        Ok(shapes)
+    }
     fn is_stable(&self) -> bool {
         self.profile.is_stable()
     }
@@ -1609,6 +1674,75 @@ impl<'a> Evaluator<'a> {
     }
 
     fn eval_node(&self, node: &'a CallNode, parent: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+        if self.record_geometry
+            && ((self.is_stable()
+                && !matches!(
+                    node.name.as_str(),
+                    "cube"
+                        | "rotate"
+                        | "multmatrix"
+                        | "translate"
+                        | "scale"
+                        | "mirror"
+                        | "cylinder"
+                        | "sphere"
+                        | "square"
+                        | "circle"
+                        | "polygon"
+                        | "linear_extrude"
+                        | "rotate_extrude"
+                        | "projection"
+                        | "resize"
+                        | "polyhedron"
+                        | "offset"
+                        | "hull"
+                        | "minkowski"
+                        | "intersection"
+                        | "difference"
+                        | "union"
+                        | "for"
+                        | "if"
+                        | "let"
+                        | "children"
+                        | "assert"
+                        | "echo"
+                        | "group"
+                        | "render"
+                )
+                && !self.modules.contains_key(&node.name))
+                || (!self.is_stable()
+                    && !matches!(
+                        node.name.as_str(),
+                        "cube"
+                            | "rotate"
+                            | "scale"
+                            | "mirror"
+                            | "multmatrix"
+                            | "sphere"
+                            | "cylinder"
+                            | "translate"
+                            | "union"
+                            | "intersection"
+                            | "difference"
+                            | "for"
+                            | "if"
+                            | "let"
+                            | "children"
+                            | "assert"
+                            | "echo"
+                            | "group"
+                            | "render"
+                    )
+                    && !self.modules.contains_key(&node.name)))
+        {
+            return Err(self.error(
+                node.p,
+                format!(
+                    "Native geometry recording does not yet support {}() for this profile",
+                    node.name
+                ),
+            ));
+        }
         if self.is_stable() && !parent.viewport_root_locked && has_modifier(node, "root") {
             let locked = Ctx {
                 viewport_root_locked: true,
@@ -1652,9 +1786,43 @@ impl<'a> Evaluator<'a> {
             "assert" => self.eval_assert_statement(node, &ctx),
             "cube" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("cube", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("cube", 3)]);
+                    }
+                    use crate::primitive_plan::{Size, box_plan};
+                    let size = match values.get("size") {
+                        None | Some(Value::Undef) => Size::Missing,
+                        Some(Value::Number(value)) => Size::Scalar(*value),
+                        Some(Value::Vector(values)) => {
+                            Size::Vector(values.iter().map(Value::as_number).collect())
+                        }
+                        _ => Size::Invalid,
+                    };
+                    let plan = box_plan(
+                        &size,
+                        true,
+                        matches!(values.get("center"), Some(Value::Bool(true))),
+                    );
+                    if plan.defaulted {
+                        self.warn("cube size was not a scalar or exact 3-component numeric vector; unit size is used".to_string());
+                    }
+                    if plan.empty {
+                        return self.emit_geometry(
+                            "cube",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    return self.emit_geometry(
+                        "cube",
+                        geometry_ops::solid_program::Node::Cube {
+                            size: [plan.dimensions[0], plan.dimensions[1], plan.dimensions[2]],
+                            center: plan.center,
+                        },
+                        node.p,
+                    );
                 }
                 let raw = self.arg(node, "size", 0, Value::Number(1.0), &ctx)?;
                 let size = match &raw {
@@ -1675,14 +1843,47 @@ impl<'a> Evaluator<'a> {
                 if dimensions.iter().any(|v| *v <= 0.0) {
                     return Err(self.error(node.p, "Cube dimensions must be positive"));
                 }
-                self.arg(node, "center", 1, Value::Bool(false), &ctx)?;
-                Ok(vec![descriptor("cube", 3)])
+                let center = truthy(&self.arg(node, "center", 1, Value::Bool(false), &ctx)?);
+                self.emit_geometry(
+                    "cube",
+                    geometry_ops::solid_program::Node::Cube {
+                        size: dimensions,
+                        center,
+                    },
+                    node.p,
+                )
             }
             "sphere" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
+                    let values =
+                        self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("sphere", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("sphere", 3)]);
+                    }
+                    let radius = crate::primitive_plan::radius_pair(
+                        values.get("r").and_then(Value::as_number),
+                        values.get("d").and_then(Value::as_number),
+                    );
+                    if radius.shadowed {
+                        self.warn("sphere uses d; the paired r value has no effect".to_string());
+                    }
+                    if crate::primitive_plan::radial_empty(radius.value) {
+                        return self.emit_geometry(
+                            "sphere",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    let segments = self.stable_fragment_count(&values, &ctx, radius.value)?;
+                    return self.emit_geometry(
+                        "sphere",
+                        geometry_ops::solid_program::Node::Sphere {
+                            radius: radius.value,
+                            segments,
+                        },
+                        node.p,
+                    );
                 }
                 let mut radius = self.arg(node, "r", 0, Value::Undef, &ctx)?;
                 let diameter = self.arg(node, "d", -1, Value::Undef, &ctx)?;
@@ -1698,19 +1899,67 @@ impl<'a> Evaluator<'a> {
                 if r <= 0.0 {
                     return Err(self.error(node.p, "Sphere radius must be positive"));
                 }
-                self.segments(node, &ctx, 32.0, 4.0, r)?;
-                Ok(vec![descriptor("sphere", 3)])
+                let segments = self.segments(node, &ctx, 32.0, 4.0, r)? as usize;
+                self.emit_geometry(
+                    "sphere",
+                    geometry_ops::solid_program::Node::Sphere {
+                        radius: r,
+                        segments,
+                    },
+                    node.p,
+                )
             }
             "cylinder" => {
                 if self.is_stable() {
-                    self.bind_stable_module(
+                    let values = self.bind_stable_module(
                         node,
                         &ctx,
                         &["h", "r1", "r2", "center"],
                         &["r", "d", "d1", "d2", "$fn", "$fa", "$fs"],
                     )?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("cylinder", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("cylinder", 3)]);
+                    }
+                    use crate::primitive_plan::{cylinder_plan, radius_pair};
+                    let number = |name: &str| values.get(name).and_then(Value::as_number);
+                    let common = radius_pair(number("r"), number("d"));
+                    let low = radius_pair(number("r1"), number("d1"));
+                    let high = radius_pair(number("r2"), number("d2"));
+                    for (pair, r, d) in [(common, "r", "d"), (low, "r1", "d1"), (high, "r2", "d2")]
+                    {
+                        if pair.shadowed {
+                            self.warn(format!(
+                                "cylinder uses {d}; the paired {r} value has no effect"
+                            ));
+                        }
+                    }
+                    let plan = cylinder_plan(number("h"), common, low, high);
+                    if plan.ambiguous {
+                        self.warn(
+                            "cylinder combines a shared radius with an end-specific radius"
+                                .to_string(),
+                        );
+                    }
+                    if plan.empty {
+                        return self.emit_geometry(
+                            "cylinder",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    let segments =
+                        self.stable_fragment_count(&values, &ctx, plan.fragment_radius)?;
+                    return self.emit_geometry(
+                        "cylinder",
+                        geometry_ops::solid_program::Node::Cylinder {
+                            height: plan.height,
+                            radii: [plan.radius1, plan.radius2],
+                            segments,
+                            center: matches!(values.get("center"), Some(Value::Bool(true))),
+                        },
+                        node.p,
+                    );
                 }
                 let height = self.finite_number(
                     &self.arg(node, "h", 0, Value::Number(1.0), &ctx)?,
@@ -1757,18 +2006,28 @@ impl<'a> Evaluator<'a> {
                         "Cylinder radii must be non-negative and not both zero",
                     ));
                 }
-                self.arg(node, "center", 3, Value::Bool(false), &ctx)?;
-                self.segments(node, &ctx, 32.0, 3.0, r1.max(r2))?;
-                Ok(vec![descriptor("cylinder", 3)])
+                let center = truthy(&self.arg(node, "center", 3, Value::Bool(false), &ctx)?);
+                let segments = self.segments(node, &ctx, 32.0, 3.0, r1.max(r2))? as usize;
+                self.emit_geometry(
+                    "cylinder",
+                    geometry_ops::solid_program::Node::Cylinder {
+                        height,
+                        radii: [r1, r2],
+                        segments,
+                        center,
+                    },
+                    node.p,
+                )
             }
             "polyhedron" => {
                 if self.is_stable() {
-                    self.bind_stable_module(
+                    let values = self.bind_stable_module(
                         node,
                         &ctx,
                         &["points", "faces", "convexity"],
                         &["triangles"],
                     )?;
+                    if self.record_geometry { return self.record_stable_polyhedron(&values,node); }
                     self.warn_ignored_primitive_children(node);
                     return Ok(vec![descriptor("polyhedron", 3)]);
                 }
@@ -1834,8 +2093,39 @@ impl<'a> Evaluator<'a> {
             }
             "square" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        use crate::primitive_plan::{Size, box_plan};
+                        let size = match values.get("size") {
+                            None | Some(Value::Undef) => Size::Missing,
+                            Some(Value::Number(value)) => Size::Scalar(*value),
+                            Some(Value::Vector(values)) => {
+                                Size::Vector(values.iter().map(Value::as_number).collect())
+                            }
+                            _ => Size::Invalid,
+                        };
+                        let plan = box_plan(
+                            &size,
+                            false,
+                            matches!(values.get("center"), Some(Value::Bool(true))),
+                        );
+                        if plan.defaulted {
+                            self.warn("square size was not a scalar or exact 2-component numeric vector; unit size is used".to_string());
+                        }
+                        return self.emit_profile(
+                            "square",
+                            if plan.empty {
+                                geometry_ops::profile_program::Node::Empty
+                            } else {
+                                geometry_ops::profile_program::Node::Rectangle {
+                                    size: [plan.dimensions[0], plan.dimensions[1]],
+                                    center: plan.center,
+                                }
+                            },
+                            node.p,
+                        );
+                    }
                     return Ok(vec![descriptor("square", 2)]);
                 }
                 let raw = self.arg(node, "size", 0, Value::Number(1.0), &ctx)?;
@@ -1858,8 +2148,37 @@ impl<'a> Evaluator<'a> {
             }
             "circle" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
+                    let values =
+                        self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        let radius = crate::primitive_plan::radius_pair(
+                            values.get("r").and_then(Value::as_number),
+                            values.get("d").and_then(Value::as_number),
+                        );
+                        if radius.shadowed {
+                            self.warn(
+                                "circle uses d; the paired r value has no effect".to_string(),
+                            );
+                        }
+                        if crate::primitive_plan::radial_empty(radius.value) {
+                            self.warn("circle parameters describe an empty object".to_string());
+                            return self.emit_profile(
+                                "circle",
+                                geometry_ops::profile_program::Node::Empty,
+                                node.p,
+                            );
+                        }
+                        let segments = self.stable_fragment_count(&values, &ctx, radius.value)?;
+                        return self.emit_profile(
+                            "circle",
+                            geometry_ops::profile_program::Node::Circle {
+                                radius: radius.value,
+                                segments,
+                            },
+                            node.p,
+                        );
+                    }
                     return Ok(vec![descriptor("circle", 2)]);
                 }
                 let mut radius = self.arg(node, "r", 0, Value::Undef, &ctx)?;
@@ -1881,8 +2200,16 @@ impl<'a> Evaluator<'a> {
             }
             "polygon" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["points", "paths", "convexity"], &[])?;
+                    let values = self.bind_stable_module(
+                        node,
+                        &ctx,
+                        &["points", "paths", "convexity"],
+                        &[],
+                    )?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        return self.record_stable_polygon(&values, node.p);
+                    }
                     return Ok(vec![descriptor("polygon", 2)]);
                 }
                 let points_value = self.arg(node, "points", 0, Value::vector(Vec::new()), &ctx)?;
@@ -1916,7 +2243,10 @@ impl<'a> Evaluator<'a> {
             }
             "translate" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -1930,12 +2260,59 @@ impl<'a> Evaluator<'a> {
                     ]),
                     &ctx,
                 )?;
-                self.vector_value(&raw, node.p, "translate vector")?;
-                self.eval_nodes(&node.children, &ctx, true)
+                let vector = self.vector_value(&raw, node.p, "translate vector")?;
+                let delta = std::array::from_fn(|i| vector.get(i).copied().unwrap_or(0.));
+                let mut shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry {
+                    for shape in &mut shapes {
+                        let input = shape.geometry.ok_or_else(|| {
+                            self.error(node.p, "Unsupported native geometry input")
+                        })?;
+                        shape.geometry = Some(self.store_geometry(
+                            geometry_ops::solid_program::Node::Translate { input, delta },
+                            node.p,
+                        )?);
+                    }
+                }
+                Ok(shapes)
             }
             "rotate" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["a", "v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["a", "v"], &[])?;
+                    if self.record_geometry {
+                        use crate::transform_plan::{
+                            euler_arguments, euler_matrix, scalar_rotation,
+                        };
+                        let axis = values.get("v").filter(|value| !value.is_undef());
+                        let matrix = if let Some(Value::Vector(components)) = values.get("a") {
+                            let numbers =
+                                components.iter().map(Value::as_number).collect::<Vec<_>>();
+                            let plan = euler_arguments(&numbers, components.len());
+                            if !plan.valid {
+                                self.warn("rotate retained its component-wise fallback matrix after a vector conversion problem".to_string());
+                            } else if axis.is_some() {
+                                self.warn("rotate ignores v when a is a vector".to_string());
+                            }
+                            euler_matrix(plan.angles)
+                        } else {
+                            let numbers = match axis {
+                                Some(Value::Vector(components)) => Some(
+                                    components.iter().map(Value::as_number).collect::<Vec<_>>(),
+                                ),
+                                _ => None,
+                            };
+                            let plan = scalar_rotation(
+                                values.get("a").and_then(Value::as_number),
+                                numbers.as_deref(),
+                                axis.is_some(),
+                            );
+                            if !plan.valid {
+                                self.warn("rotate replaced an invalid scalar angle or axis with its neutral/default value".to_string());
+                            }
+                            plan.matrix
+                        };
+                        return self.stable_matrix_geometry(node, &ctx, matrix);
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let angle = self.arg(node, "a", 0, Value::Number(0.0), &ctx)?;
@@ -1979,11 +2356,36 @@ impl<'a> Evaluator<'a> {
                         }
                     }
                 }
+                if self.record_geometry && !shapes.is_empty() {
+                    use geometry_ops::solid_program::affine;
+                    let matrix = if matches!(angle, Value::Vector(_)) {
+                        let v = self.vector_value(&angle, node.p, "rotation")?;
+                        affine::euler_degrees(std::array::from_fn(|i| {
+                            v.get(i).copied().unwrap_or(0.)
+                        }))
+                    } else {
+                        let degrees = self.finite_number(&angle, node.p, "rotation")?;
+                        if axis.is_undef() {
+                            affine::euler_degrees([0., 0., degrees])
+                        } else {
+                            let v = self.vector_value(&axis, node.p, "rotation axis")?;
+                            affine::axis_angle_degrees(
+                                std::array::from_fn(|i| v.get(i).copied().unwrap_or(0.)),
+                                degrees,
+                            )
+                            .ok_or_else(|| self.error(node.p, "Rotation axis cannot be zero"))?
+                        }
+                    };
+                    return self.affine_geometry(shapes, matrix, node.p);
+                }
                 Ok(shapes)
             }
             "scale" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -2007,11 +2409,16 @@ impl<'a> Evaluator<'a> {
                 if [sx, sy, sz].contains(&0.0) {
                     return Err(self.error(node.p, "Scale values cannot be zero"));
                 }
-                self.eval_nodes(&node.children, &ctx, true)
+                let shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                self.affine_geometry(
+                    shapes,
+                    geometry_ops::solid_program::affine::scaling([sx, sy, sz]),
+                    node.p,
+                )
             }
             "resize" => {
                 self.require_stable(node)?;
-                self.bind_stable_module(node, &ctx, &["newsize", "auto", "convexity"], &[])?;
+                let values = self.bind_stable_module(node, &ctx, &["newsize", "auto", "convexity"], &[])?;
                 let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                 if shapes.is_empty() {
                     return Ok(shapes);
@@ -2020,11 +2427,39 @@ impl<'a> Evaluator<'a> {
                 if shapes.iter().any(|s| s.dimension != dimension) {
                     return Err(self.error(node.p, "resize() cannot mix 2D and 3D children"));
                 }
+                if self.record_geometry {
+                    let raw_targets = match values.get("newsize") {
+                        None => Some(Vec::new()),
+                        Some(Value::Vector(values)) => Some(values.iter().map(Value::as_number).collect::<Vec<_>>()),
+                        _ => None,
+                    };
+                    let invalid_newsize = raw_targets.is_none();
+                    let target = |axis:usize| raw_targets.as_ref().and_then(|values| values.get(axis).copied().flatten()).filter(|value| value.is_finite() && *value>0.);
+                    let automatic = |axis:usize| match values.get("auto") {
+                        Some(Value::Bool(true)) => true,
+                        Some(Value::Vector(values)) => matches!(values.get(axis),Some(Value::Bool(true))),
+                        _ => false,
+                    };
+                    let union=self.boolean_shapes(shapes,"union",node.p,"resize")?;
+                    if dimension==2 {
+                        let input=union[0].profile.ok_or_else(|| self.error(node.p,"Unsupported native resize profile"))?;
+                        return self.emit_profile("resize",geometry_ops::profile_program::Node::Resize {
+                            input,invalid_newsize,targets:std::array::from_fn(target),automatic:std::array::from_fn(automatic),
+                        },node.p);
+                    }
+                    let input=union[0].geometry.ok_or_else(|| self.error(node.p,"Unsupported native resize solid"))?;
+                    return self.emit_geometry("resize",geometry_ops::solid_program::Node::Resize {
+                        input,invalid_newsize,targets:std::array::from_fn(target),automatic:std::array::from_fn(automatic),
+                    },node.p);
+                }
                 Ok(shapes)
             }
             "mirror" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -2038,18 +2473,48 @@ impl<'a> Evaluator<'a> {
                     ]),
                     &ctx,
                 )?;
-                self.vector_value(&raw, node.p, "mirror normal")?;
-                self.eval_nodes(&node.children, &ctx, true)
+                let v = self.vector_value(&raw, node.p, "mirror normal")?;
+                let shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry && !shapes.is_empty() {
+                    let matrix =
+                        geometry_ops::solid_program::affine::reflection(std::array::from_fn(|i| {
+                            v.get(i).copied().unwrap_or(0.)
+                        }))
+                        .ok_or_else(|| self.error(node.p, "Mirror normal cannot be zero"))?;
+                    return self.affine_geometry(shapes, matrix, node.p);
+                }
+                Ok(shapes)
             }
             "multmatrix" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["m"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["m"], &[])?;
+                    if self.record_geometry {
+                        let rows = match values.get("m") {
+                            Some(Value::Vector(rows)) => Some(
+                                rows.iter()
+                                    .take(4)
+                                    .map(|row| match row {
+                                        Value::Vector(cells) => cells
+                                            .iter()
+                                            .take(4)
+                                            .map(Value::as_number)
+                                            .collect::<Vec<_>>(),
+                                        _ => Vec::new(),
+                                    })
+                                    .collect::<Vec<_>>(),
+                            ),
+                            _ => None,
+                        };
+                        let plan = crate::transform_plan::authored_matrix(rows.as_deref());
+                        return self.stable_matrix_geometry(node, &ctx, plan.matrix);
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let value = self.arg(node, "m", 0, Value::Undef, &ctx)?;
                 let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                 let has_2d = shapes.iter().any(|s| s.dimension == 2);
                 let has_3d = shapes.iter().any(|s| s.dimension == 3);
+                let mut matrix = geometry_ops::solid_program::affine::IDENTITY;
                 if has_3d || has_2d {
                     let Some(rows) = value.as_vector().cloned() else {
                         return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
@@ -2057,14 +2522,17 @@ impl<'a> Evaluator<'a> {
                     if rows.len() < 3 {
                         return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
                     }
-                    for row in rows.iter() {
+                    for (index, row) in rows.iter().enumerate() {
                         let row = self.vector_value(row, node.p, "matrix row")?;
                         if row.len() < 4 {
                             return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
                         }
+                        if index < 3 {
+                            matrix[index].copy_from_slice(&row[..4]);
+                        }
                     }
                 }
-                Ok(shapes)
+                self.affine_geometry(shapes, matrix, node.p)
             }
             "color" => {
                 let color_value = self.arg(
@@ -2113,6 +2581,36 @@ impl<'a> Evaluator<'a> {
                 if shapes.len() == 1 {
                     return Ok(shapes);
                 }
+                if self.record_geometry {
+                    if dimension == 2 {
+                        let inputs = shapes
+                            .iter()
+                            .map(|shape| {
+                                shape.profile.ok_or_else(|| {
+                                    self.error(node.p, "Unsupported native Minkowski profile")
+                                })
+                            })
+                            .collect::<EvalResult<Vec<_>>>()?;
+                        return self.emit_profile(
+                            "minkowski",
+                            geometry_ops::profile_program::Node::Minkowski { inputs },
+                            node.p,
+                        );
+                    }
+                    let inputs = shapes
+                        .iter()
+                        .map(|shape| {
+                            shape.geometry.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native Minkowski geometry")
+                            })
+                        })
+                        .collect::<EvalResult<Vec<_>>>()?;
+                    return self.emit_geometry(
+                        "minkowski",
+                        geometry_ops::solid_program::Node::Minkowski { inputs },
+                        node.p,
+                    );
+                }
                 shapes.truncate(1);
                 Ok(vec![descriptor("minkowski", dimension)])
             }
@@ -2129,6 +2627,36 @@ impl<'a> Evaluator<'a> {
                     self.warn("hull() ignored child geometry with a different dimension");
                     shapes.retain(|s| s.dimension == dimension);
                 }
+                if self.record_geometry {
+                    if dimension == 2 {
+                        let inputs = shapes
+                            .iter()
+                            .map(|shape| {
+                                shape.profile.ok_or_else(|| {
+                                    self.error(node.p, "Unsupported native hull profile")
+                                })
+                            })
+                            .collect::<EvalResult<Vec<_>>>()?;
+                        return self.emit_profile(
+                            "hull",
+                            geometry_ops::profile_program::Node::Hull { inputs },
+                            node.p,
+                        );
+                    }
+                    let inputs = shapes
+                        .iter()
+                        .map(|shape| {
+                            shape.geometry.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native hull geometry")
+                            })
+                        })
+                        .collect::<EvalResult<Vec<_>>>()?;
+                    return self.emit_geometry(
+                        "hull",
+                        geometry_ops::solid_program::Node::Hull { inputs },
+                        node.p,
+                    );
+                }
                 Ok(vec![descriptor("hull", dimension)])
             }
             "linear_extrude" => {
@@ -2143,6 +2671,13 @@ impl<'a> Evaluator<'a> {
                     None
                 };
                 let sections = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry && sections.is_empty() {
+                    return self.emit_geometry(
+                        "linear_extrude",
+                        geometry_ops::solid_program::Node::Empty,
+                        node.p,
+                    );
+                }
                 let sections = self.boolean_shapes(sections, "union", node.p, "union")?;
                 if sections.is_empty() {
                     return Ok(Vec::new());
@@ -2187,6 +2722,12 @@ impl<'a> Evaluator<'a> {
                     }
                     self.arg(node, "center", -1, Value::Bool(false), &ctx)?;
                 }
+                if self.record_geometry {
+                    if let Some(values) = evaluated {
+                        let fragments = self.stable_fragment_specials(&values, &ctx)?;
+                        return self.record_stable_extrusion(sections, &values, fragments, node.p);
+                    }
+                }
                 Ok(vec![descriptor("linear_extrude", 3)])
             }
             "rotate_extrude" => {
@@ -2214,6 +2755,55 @@ impl<'a> Evaluator<'a> {
                         node.p,
                         "revolve angle",
                     )?;
+                }
+                if self.record_geometry {
+                    if let Some(values) = evaluated {
+                        let angle = values.get("angle").and_then(Value::as_number);
+                        let plan = crate::extrusion_plan::revolution_parameters(
+                            angle,
+                            values.contains_key("angle"),
+                            1.,
+                            1.,
+                        );
+                        if plan.angle_defaulted {
+                            self.warn(
+                                "Invalid rotate_extrude angle was replaced with 360".to_string(),
+                            );
+                        }
+                        if plan.empty {
+                            return self.emit_geometry(
+                                "rotate_extrude",
+                                geometry_ops::solid_program::Node::Empty,
+                                node.p,
+                            );
+                        }
+                        let root = sections[0].profile.ok_or_else(|| {
+                            self.error(node.p, "Unsupported native revolution profile")
+                        })?;
+                        let profile = geometry_ops::profile_program::Program::from_roots(
+                            &self.profiles.borrow(),
+                            &[root],
+                        )
+                        .map_err(|error| self.error(node.p, &error.to_string()))?;
+                        let fragments = self.stable_fragment_specials(&values, &ctx)?;
+                        return self.emit_geometry(
+                            "rotate_extrude",
+                            geometry_ops::solid_program::Node::RevolveProfile {
+                                profile,
+                                angle: plan.angle,
+                                segments: 0,
+                                fragment_policy: Some(geometry_ops::fragment_resolution::Policy {
+                                    fragments,
+                                    maximum: if self.quality == Quality::Preview {
+                                        48
+                                    } else {
+                                        256
+                                    },
+                                }),
+                            },
+                            node.p,
+                        );
+                    }
                 }
                 Ok(vec![descriptor("rotate_extrude", 3)])
             }
@@ -2272,7 +2862,7 @@ impl<'a> Evaluator<'a> {
             }
             "projection" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["cut", "convexity"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["cut", "convexity"], &[])?;
                     let children = self.eval_nodes(&node.children, &ctx, true)?;
                     let solids: Vec<_> = children.iter().filter(|s| s.dimension == 3).collect();
                     if solids.len() != children.len() {
@@ -2280,6 +2870,16 @@ impl<'a> Evaluator<'a> {
                     }
                     if solids.is_empty() {
                         return Ok(Vec::new());
+                    }
+                    if self.record_geometry {
+                        let shapes = solids.into_iter().cloned().collect();
+                        let union = self.boolean_shapes(shapes, "union", node.p, "projection")?;
+                        let input = union[0].geometry.ok_or_else(|| self.error(node.p,"Unsupported native projection input"))?;
+                        let solid = geometry_ops::solid_program::Program::from_roots(&self.geometry.borrow(), &[input])
+                            .map_err(|error| self.error(node.p,error.message))?;
+                        return self.emit_profile("projection", geometry_ops::profile_program::Node::Projection {
+                            solid: Box::new(solid), cut: matches!(values.get("cut"),Some(Value::Bool(true))),
+                        }, node.p);
                     }
                     return Ok(vec![descriptor("projection", 2)]);
                 }
@@ -2297,35 +2897,81 @@ impl<'a> Evaluator<'a> {
             }
             "offset" => {
                 if self.is_stable() {
-                    // Bind for side effects; full join-type resolution arrives
-                    // with the geometry stage.
+                    let mut values = HashMap::new();
                     let r_expression = call_args(node)
                         .iter()
                         .find(|(key, _)| key == "r")
                         .or_else(|| call_args(node).iter().find(|(key, _)| key == "_0"));
-                    for expression in [
-                        r_expression.map(|(_, expression)| expression),
-                        call_args(node)
-                            .iter()
-                            .find(|(key, _)| key == "delta")
-                            .map(|(_, expression)| expression),
-                        call_args(node)
-                            .iter()
-                            .find(|(key, _)| key == "chamfer")
-                            .map(|(_, expression)| expression),
+                    for (name, expression) in [
+                        ("r", r_expression.map(|(_, expression)| expression)),
+                        (
+                            "delta",
+                            call_args(node)
+                                .iter()
+                                .find(|(key, _)| key == "delta")
+                                .map(|(_, expression)| expression),
+                        ),
+                        (
+                            "chamfer",
+                            call_args(node)
+                                .iter()
+                                .find(|(key, _)| key == "chamfer")
+                                .map(|(_, expression)| expression),
+                        ),
                     ]
                     .into_iter()
-                    .flatten()
-                    {
-                        self.eval_expression(expression, &ctx, 0)?;
+                    .filter_map(|(name, expression)| {
+                        expression.map(|expression| (name, expression))
+                    }) {
+                        values.insert(name.to_string(), self.eval_expression(expression, &ctx, 0)?);
                     }
+                    let plan = crate::offset_plan::resolve(
+                        values.get("r").and_then(Value::as_number),
+                        values.get("delta").and_then(Value::as_number),
+                        matches!(values.get("chamfer"), Some(Value::Bool(true))),
+                    );
+                    let segments =
+                        if self.record_geometry && plan.join == crate::offset_plan::Join::Round {
+                            for name in ["$fn", "$fa", "$fs"] {
+                                if let Some((_, expression)) =
+                                    call_args(node).iter().find(|(key, _)| key == name)
+                                {
+                                    values.insert(
+                                        name.to_string(),
+                                        self.eval_expression(expression, &ctx, 0)?,
+                                    );
+                                }
+                            }
+                            self.stable_fragment_count(&values, &ctx, plan.distance.abs())?
+                        } else {
+                            8
+                        };
                     let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                     let mut output = Vec::new();
                     for shape in shapes {
                         if shape.dimension != 2 {
                             return Err(self.error(node.p, "offset() requires 2D children"));
                         }
-                        output.push(descriptor("offset", 2));
+                        if self.record_geometry {
+                            if !plan.distance.is_finite() {
+                                return Err(self.error(node.p, "Invalid offset"));
+                            }
+                            let input = shape.profile.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native offset profile")
+                            })?;
+                            output.extend(self.emit_profile(
+                                "offset",
+                                geometry_ops::profile_program::Node::Offset {
+                                    input,
+                                    distance: plan.distance,
+                                    join: plan.join,
+                                    segments,
+                                },
+                                node.p,
+                            )?);
+                        } else {
+                            output.push(descriptor("offset", 2));
+                        }
                     }
                     return Ok(output);
                 }
@@ -2611,6 +3257,201 @@ impl<'a> Evaluator<'a> {
             .collect())
     }
 
+    fn indexed_rows(&self, values: &HashMap<String,Value<'a>>, name:&str) -> Vec<Vec<Option<f64>>> {
+        match values.get(name) {
+            Some(Value::Vector(rows)) => rows.iter().map(|row| match row {
+                Value::Vector(values)=>values.iter().map(Value::as_number).collect(),
+                _=>Vec::new(),
+            }).collect(),
+            _=>Vec::new(),
+        }
+    }
+    fn record_stable_polyhedron(&self, values:&HashMap<String,Value<'a>>, node:&'a CallNode) -> EvalResult<Vec<ShapeDescriptor>> {
+        let faces_name=if values.get("faces").is_some_and(|v| !v.is_undef()) {"faces"}
+            else if values.get("triangles").is_some_and(|v| !v.is_undef()) {"triangles"} else {"faces"};
+        if faces_name=="triangles" {self.warn("polyhedron triangles is a legacy alias; faces is the stable spelling");}
+        let plan=crate::indexed_primitive::expand_faces(&self.indexed_rows(values,"points"),&self.indexed_rows(values,faces_name),usize::MAX);
+        use crate::indexed_primitive::FaceEvent;
+        for event in &plan.events {
+            match event {
+                FaceEvent::OutOfBounds {..}=>self.warn("polyhedron skipped a face entry whose point index is outside the point vector"),
+                FaceEvent::InvalidPoint {..}=>self.warn("polyhedron stopped after a referenced point failed exact vec2/vec3 conversion"),
+                _=>return Err(self.error(node.p,"Native polyhedron expansion exceeded its input budget")),
+            }
+        }
+        self.warn_ignored_primitive_children(node);
+        if plan.empty {return self.emit_geometry("polyhedron",geometry_ops::solid_program::Node::Empty,node.p);}
+        let packed=geometry_ops::polygon_mesh::reversed_fans(&plan.polygons).map_err(|error|self.error(node.p,error.message))?;
+        if !packed.usable {
+            self.warn("polyhedron() produced no usable finite faces");
+            return self.emit_geometry("polyhedron",geometry_ops::solid_program::Node::Empty,node.p);
+        }
+        self.emit_geometry("polyhedron",geometry_ops::solid_program::Node::Mesh {
+            mesh:geometry_ops::Triangles {positions:packed.vertices,indices:packed.indices.into_iter().map(|index|index as usize).collect()},
+            empty_on_failure:true,
+        },node.p)
+    }
+    fn record_stable_polygon(
+        &self,
+        values: &HashMap<String, Value<'a>>,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let points = self.indexed_rows(values,"points");
+        let paths = self.indexed_rows(values,"paths");
+        let plan = crate::indexed_primitive::expand_polygon(
+            &points,
+            &paths,
+            paths.len(),
+            usize::MAX,
+            usize::MAX,
+        );
+        use crate::indexed_primitive::FaceEvent;
+        for event in &plan.events {
+            match event {
+                FaceEvent::OutOfBounds { .. } => self.warn(
+                    "polygon skipped a path entry whose point index is outside the point vector"
+                        .to_string(),
+                ),
+                FaceEvent::InvalidPoint { .. } => self.warn(
+                    "polygon produced no outlines because a point failed exact vec2 conversion"
+                        .to_string(),
+                ),
+                _ => {
+                    return Err(self.error(p, "Native polygon expansion exceeded its input budget"));
+                }
+            }
+        }
+        let finite = plan
+            .outlines
+            .iter()
+            .flatten()
+            .flatten()
+            .all(|v| v.is_finite());
+        if !plan.empty && !finite {
+            self.warn("polygon() produced no usable finite outlines".to_string());
+        }
+        self.emit_profile(
+            "polygon",
+            if plan.empty || !finite {
+                geometry_ops::profile_program::Node::Empty
+            } else {
+                geometry_ops::profile_program::Node::EvenOddRings(plan.outlines)
+            },
+            p,
+        )
+    }
+
+    fn record_stable_extrusion(
+        &self,
+        sections: Vec<ShapeDescriptor>,
+        values: &HashMap<String, Value<'a>>,
+        mut fragments: [f64; 3],
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        use crate::primitive_plan::Size;
+        let scale = match values.get("scale") {
+            None | Some(Value::Undef) => Size::Missing,
+            Some(Value::Number(value)) => Size::Scalar(*value),
+            Some(Value::Vector(values)) => {
+                Size::Vector(values.iter().map(Value::as_number).collect())
+            }
+            _ => Size::Invalid,
+        };
+        let number = |name: &str| values.get(name).and_then(Value::as_number);
+        let plan = crate::extrusion_plan::parameters(
+            number("height"),
+            values.get("height").is_some_and(|v| !v.is_undef()),
+            &scale,
+            number("twist"),
+            matches!(values.get("center"), Some(Value::Bool(true))),
+            number("slices"),
+        );
+        if plan.height_defaulted {
+            self.warn("Invalid linear_extrude height was replaced with 100".to_string());
+        }
+        if plan.scale_defaulted {
+            self.warn("Invalid linear_extrude scale was replaced with [1, 1]".to_string());
+        }
+        if plan.empty {
+            return self.emit_geometry(
+                "linear_extrude",
+                geometry_ops::solid_program::Node::Empty,
+                p,
+            );
+        }
+        for value in &mut fragments[1..] {
+            if value.is_finite() {
+                *value = value.max(0.01);
+            }
+        }
+        let root = sections
+            .first()
+            .and_then(|shape| shape.profile)
+            .ok_or_else(|| self.error(p, "Unsupported native extrusion profile"))?;
+        let profile =
+            geometry_ops::profile_program::Program::from_roots(&self.profiles.borrow(), &[root])
+                .map_err(|error| self.error(p, &error.to_string()))?;
+        self.emit_geometry(
+            "linear_extrude",
+            geometry_ops::solid_program::Node::ExtrudeProfile {
+                profile,
+                slice_policy: Some(geometry_ops::extrude_slices::Policy {
+                    explicit: plan.explicit_slices,
+                    fragments,
+                    maximum: 512,
+                }),
+                height: plan.height,
+                slices: 0,
+                twist: plan.twist,
+                scale: plan.scale,
+                center: plan.center,
+            },
+            p,
+        )
+    }
+
+    fn stable_fragment_specials(
+        &self,
+        values: &HashMap<String, Value<'a>>,
+        ctx: &Ctx<'a>,
+    ) -> EvalResult<[f64; 3]> {
+        let mut special = [0., 12., 2.];
+        for (index, name) in ["$fn", "$fa", "$fs"].iter().enumerate() {
+            if let Some(value) = values.get(*name) {
+                special[index] = value.as_number().unwrap_or(0.);
+            } else {
+                let resolved = self.resolve_stable_variable(name, ctx)?;
+                if resolved.found {
+                    special[index] = resolved.value.as_number().unwrap_or(0.);
+                }
+            }
+        }
+        Ok(special)
+    }
+
+    fn stable_fragment_count(
+        &self,
+        values: &HashMap<String, Value<'a>>,
+        ctx: &Ctx<'a>,
+        radius: f64,
+    ) -> EvalResult<usize> {
+        let special = self.stable_fragment_specials(values, ctx)?;
+        let maximum = if self.quality == Quality::Preview {
+            48.
+        } else {
+            256.
+        };
+        let resolution =
+            crate::fragments::resolve(radius, special[0], special[1], special[2], maximum);
+        for warning in &resolution.warnings {
+            self.warn(warning.message(maximum as usize));
+        }
+        if resolution.reduced {
+            self.reduced.set(true);
+        }
+        Ok(resolution.fragments as usize)
+    }
+
     fn segments(
         &self,
         node: &'a CallNode,
@@ -2632,40 +3473,30 @@ impl<'a> Evaluator<'a> {
         let requested = if raw.is_undef() || raw.as_number() == Some(0.0) {
             None
         } else {
-            Some(self.finite_number(&raw, node.p, "$fn")?.round())
+            Some(self.finite_number(&raw, node.p, "$fn")?)
         };
-        let max_segments = if self.quality == Quality::Preview {
-            48.0
-        } else {
-            MAX_FN
-        };
-        let preview_fallback = if self.quality == Quality::Preview {
-            fallback.min(24.0)
-        } else {
-            fallback
-        };
-        let mut value = requested.unwrap_or(preview_fallback);
-        if value > max_segments {
+        let selection = crate::fragments::legacy(
+            requested,
+            fallback,
+            minimum,
+            self.quality == Quality::Preview,
+        );
+        if selection.clamped {
             self.warn(format!(
                 "$fn={} was clamped to {} for {} rendering",
-                js_number_to_string(value),
-                js_number_to_string(max_segments),
+                js_number_to_string(selection.before_cap),
+                js_number_to_string(selection.maximum),
                 if self.quality == Quality::Preview {
                     "preview"
                 } else {
                     "full"
                 }
             ));
-            value = max_segments;
         }
-        value = value.max(minimum);
-        if self.quality == Quality::Preview {
-            let full_value = requested.unwrap_or(fallback).min(MAX_FN).max(minimum);
-            if value != full_value {
-                self.reduced.set(true);
-            }
+        if selection.reduced {
+            self.reduced.set(true);
         }
-        Ok(value)
+        Ok(selection.segments)
     }
 
     fn parse_legacy_color(&self, value: &Value, p: usize) -> EvalResult<()> {
@@ -2688,6 +3519,106 @@ impl<'a> Evaluator<'a> {
         }
     }
 
+    fn stable_vector_geometry(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+        value: Option<&Value<'a>>,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        use crate::transform_plan::{VectorTransform, vector_transform};
+        let kind = match node.name.as_str() {
+            "translate" => VectorTransform::Translate,
+            "scale" => VectorTransform::Scale,
+            _ => VectorTransform::Mirror,
+        };
+        let vector = match value {
+            Some(Value::Vector(v)) => Some(v.iter().map(Value::as_number).collect::<Vec<_>>()),
+            _ => None,
+        };
+        let plan = vector_transform(kind, vector.as_deref(), value.and_then(Value::as_number));
+        if !plan.valid {
+            self.warn(
+                match kind {
+                    VectorTransform::Translate => {
+                        "translate uses identity because v is not a finite exact vec2 or vec3"
+                    }
+                    VectorTransform::Scale => {
+                        "scale uses identity because v is not a scalar or exact vec2/vec3"
+                    }
+                    VectorTransform::Mirror => {
+                        "mirror uses its x-normal default because v is not an exact vec2 or vec3"
+                    }
+                }
+                .to_string(),
+            );
+        }
+        self.stable_matrix_geometry(node, ctx, plan.matrix)
+    }
+
+    fn stable_matrix_geometry(
+        &self,
+        node: &'a CallNode,
+        ctx: &Ctx<'a>,
+        matrix: [f64; 16],
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let shapes = self.transform_stable_children(node, ctx)?;
+        self.record_stable_matrix(shapes, matrix, &node.name, node.p)
+    }
+
+    fn record_stable_matrix(
+        &self,
+        shapes: Vec<ShapeDescriptor>,
+        matrix: [f64; 16],
+        name: &str,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let dimension = shapes.first().map_or(3, |shape| shape.dimension);
+        let analysis = crate::transform_plan::analyze(matrix);
+        let singular = if dimension == 2 {
+            analysis.singular2d
+        } else {
+            analysis.singular3d
+        };
+        if singular || analysis.drops_children {
+            if singular {
+                self.warn(format!(
+                    "{name}() produced empty geometry from a singular transform"
+                ));
+            } else {
+                self.warn(format!(
+                    "{name} produced a non-finite matrix, so its child geometry is removed"
+                ));
+            }
+            return if dimension == 2 {
+                self.emit_profile(name, geometry_ops::profile_program::Node::Empty, p)
+            } else {
+                self.emit_geometry(name, geometry_ops::solid_program::Node::Empty, p)
+            };
+        }
+        if dimension == 2 {
+            if !analysis.affine2d {
+                return Err(self.error(p, "Unsupported native projective profile transform"));
+            }
+            let matrix = std::array::from_fn(|row| {
+                std::array::from_fn(|column| analysis.matrix2d[column * 3 + row])
+            });
+            let shape = shapes
+                .first()
+                .ok_or_else(|| self.error(p, "Missing native profile input"))?;
+            let input = shape
+                .profile
+                .ok_or_else(|| self.error(p, "Unsupported native profile input"))?;
+            return self.emit_profile(
+                name,
+                geometry_ops::profile_program::Node::Transform { input, matrix },
+                p,
+            );
+        }
+        let matrix =
+            std::array::from_fn(|row| std::array::from_fn(|column| matrix[column * 4 + row]));
+        self.affine_geometry(shapes, matrix, p)
+    }
+
     fn transform_stable_children(
         &self,
         node: &'a CallNode,
@@ -2705,6 +3636,13 @@ impl<'a> Evaluator<'a> {
         diagnostic_name: &str,
     ) -> EvalResult<Vec<ShapeDescriptor>> {
         if shapes.is_empty() {
+            if self.record_geometry && self.is_stable() {
+                return self.emit_geometry(
+                    diagnostic_name,
+                    geometry_ops::solid_program::Node::Empty,
+                    p,
+                );
+            }
             return Ok(shapes);
         }
         let dimension = shapes[0].dimension;
@@ -2725,6 +3663,47 @@ impl<'a> Evaluator<'a> {
         }
         if shapes.len() == 1 {
             return Ok(shapes);
+        }
+        if self.record_geometry {
+            let operation_kind = match operation {
+                "union" => geometry_ops::solid_program::Boolean::Union,
+                "intersection" => geometry_ops::solid_program::Boolean::Intersection,
+                "difference" => geometry_ops::solid_program::Boolean::Difference,
+                _ => return Err(self.error(p, "Unsupported native boolean")),
+            };
+            if dimension == 2 {
+                let inputs = shapes
+                    .iter()
+                    .map(|shape| {
+                        shape
+                            .profile
+                            .ok_or_else(|| self.error(p, "Unsupported native profile input"))
+                    })
+                    .collect::<EvalResult<Vec<_>>>()?;
+                return self.emit_profile(
+                    operation,
+                    geometry_ops::profile_program::Node::Boolean {
+                        operation: operation_kind,
+                        inputs,
+                    },
+                    p,
+                );
+            }
+            let inputs = shapes
+                .iter()
+                .map(|s| {
+                    s.geometry
+                        .ok_or_else(|| self.error(p, "Unsupported native geometry input"))
+                })
+                .collect::<EvalResult<Vec<_>>>()?;
+            return self.emit_geometry(
+                operation,
+                geometry_ops::solid_program::Node::Boolean {
+                    operation: operation_kind,
+                    inputs,
+                },
+                p,
+            );
         }
         Ok(vec![descriptor(operation, dimension)])
     }
@@ -2758,6 +3737,14 @@ impl<'a> Evaluator<'a> {
                 self.warn("difference() ignored child geometry with a different dimension");
                 return Ok(base);
             }
+            if self.record_geometry {
+                return self.boolean_shapes(
+                    base.into_iter().chain(cutters).collect(),
+                    "difference",
+                    node.p,
+                    "difference",
+                );
+            }
             return Ok(vec![descriptor("difference", base[0].dimension)]);
         }
         let base = self.boolean_shapes(
@@ -2777,6 +3764,23 @@ impl<'a> Evaluator<'a> {
         }
         if base[0].dimension != cutters[0].dimension {
             return Err(self.error(node.p, "difference() cannot mix 2D and 3D children"));
+        }
+        if self.record_geometry {
+            let inputs = [&base[0], &cutters[0]]
+                .iter()
+                .map(|s| {
+                    s.geometry
+                        .ok_or_else(|| self.error(node.p, "Unsupported native geometry input"))
+                })
+                .collect::<EvalResult<Vec<_>>>()?;
+            return self.emit_geometry(
+                "difference",
+                geometry_ops::solid_program::Node::Boolean {
+                    operation: geometry_ops::solid_program::Boolean::Difference,
+                    inputs,
+                },
+                node.p,
+            );
         }
         Ok(vec![descriptor("difference", base[0].dimension)])
     }
@@ -3129,56 +4133,47 @@ impl<'a> Evaluator<'a> {
             Value::Number(_) => vec![value.clone()],
             Value::Vector(items) => items.as_ref().clone(),
             Value::Range { start, step, end } => {
-                if *step == 0.0 || ![start, step, end].iter().all(|v| v.is_finite()) {
-                    self.warn("Invalid children range was ignored");
-                    return Ok(Vec::new());
-                }
-                let forward = *step > 0.0;
-                let epsilon = 1.0_f64.max(start.abs()).max(end.abs()) * 1e-12;
-                let mut output = Vec::new();
-                let mut item = *start;
-                while if forward {
-                    item <= end + epsilon
-                } else {
-                    item >= end - epsilon
-                } {
-                    if output.len() >= MAX_RANGE_ITEMS {
+                match crate::children_selection::expand_range(
+                    *start,
+                    *step,
+                    *end,
+                    MAX_RANGE_ITEMS as u64,
+                ) {
+                    Ok(values) => values.into_iter().map(Value::Number).collect(),
+                    Err(crate::children_selection::RangeIssue::Invalid) => {
+                        self.warn("Invalid children range was ignored");
+                        return Ok(Vec::new());
+                    }
+                    Err(crate::children_selection::RangeIssue::Limit) => {
                         self.warn(format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS)));
                         return Ok(Vec::new());
                     }
-                    output.push(Value::Number(item));
-                    item += step;
                 }
-                output
             }
             _ => {
                 self.warn("children accepts an empty argument list, number, vector, or range");
                 return Ok(Vec::new());
             }
         };
-        let mut selected = Vec::new();
-        for candidate in candidates {
-            let Some(raw) = candidate.as_number() else {
-                self.warn("Non-numeric children index was ignored");
-                continue;
-            };
-            if !raw.is_finite() {
-                self.warn("Non-numeric children index was ignored");
-                continue;
-            }
-            let truncated = raw.trunc();
-            let index = if truncated == 0.0 { 0.0 } else { truncated };
-            if index < 0.0 || index >= child_count as f64 {
-                self.warn(format!(
+        let values = candidates.iter().map(Value::as_number).collect::<Vec<_>>();
+        let selection = crate::children_selection::select(&values, child_count as u64);
+        for issue in selection.issues {
+            match issue {
+                crate::children_selection::Issue::Invalid { .. } => {
+                    self.warn("Non-numeric children index was ignored")
+                }
+                crate::children_selection::Issue::OutOfBounds { index } => self.warn(format!(
                     "Children index {} is outside 0..{}",
                     js_number_to_string(index),
                     child_count.saturating_sub(1)
-                ));
-                continue;
+                )),
             }
-            selected.push(index as usize);
         }
-        Ok(selected)
+        Ok(selection
+            .indices
+            .into_iter()
+            .map(|index| index as usize)
+            .collect())
     }
 
     fn slice_units(&self, start: usize, end: usize) -> String {
@@ -3255,7 +4250,23 @@ impl<'a> Evaluator<'a> {
             ));
         }
         shapes.retain(|s| s.dimension == 3);
+        let geometry = if self.record_geometry {
+            let roots = shapes
+                .iter()
+                .map(|s| {
+                    s.geometry
+                        .ok_or_else(|| self.error(0, "Unsupported native geometry root"))
+                })
+                .collect::<EvalResult<Vec<_>>>()?;
+            Some(geometry_ops::solid_program::Program {
+                nodes: self.geometry.borrow().clone(),
+                roots,
+            })
+        } else {
+            None
+        };
         Ok(Evaluation {
+            geometry,
             shapes,
             warnings: self.warnings.borrow().clone(),
             reduced: self.reduced.get(),
@@ -3273,6 +4284,8 @@ fn descriptor(name: &str, dimension: u8) -> ShapeDescriptor {
     ShapeDescriptor {
         name: name.to_string(),
         dimension,
+        geometry: None,
+        profile: None,
     }
 }
 
@@ -3429,5 +4442,236 @@ pub fn evaluate_source(
         Err(EvalFailure::Error(error)) => Err(error.resolve(&units)),
         Err(EvalFailure::Aborted) => Err(ParseError::new(0, "Evaluation aborted").resolve(&units)),
         Err(EvalFailure::ViewportRoot(_)) => unreachable!("root selection is caught at top level"),
+    }
+}
+
+#[cfg(test)]
+mod profile_recording_tests {
+    use super::*;
+    #[test]
+    fn profile_booleans_keep_operand_order_without_solid_nodes() {
+        let evaluator = Evaluator::new(
+            &[],
+            &[],
+            LanguageProfile::Stable2021,
+            EvaluatorOptions {
+                record_geometry: true,
+                ..Default::default()
+            },
+        );
+        let first = evaluator
+            .emit_profile(
+                "square",
+                geometry_ops::profile_program::Node::Rectangle {
+                    size: [4.; 2],
+                    center: true,
+                },
+                0,
+            )
+            .unwrap();
+        let second = evaluator
+            .emit_profile(
+                "square",
+                geometry_ops::profile_program::Node::Rectangle {
+                    size: [2.; 2],
+                    center: true,
+                },
+                0,
+            )
+            .unwrap();
+        let shapes = evaluator
+            .boolean_shapes([first, second].concat(), "difference", 0, "difference")
+            .unwrap();
+        assert_eq!(shapes[0].dimension, 2);
+        assert_eq!(shapes[0].profile, Some(2));
+        assert!(shapes[0].geometry.is_none());
+        assert!(evaluator.geometry.borrow().is_empty());
+        assert_eq!(
+            evaluator.profiles.borrow()[2],
+            geometry_ops::profile_program::Node::Boolean {
+                operation: geometry_ops::solid_program::Boolean::Difference,
+                inputs: vec![0, 1]
+            }
+        );
+    }
+}
+
+#[cfg(test)]
+mod profile_matrix_tests {
+    use super::*;
+    #[test]
+    fn xy_matrix_ignores_z_collapse_and_preserves_profile_dimension() {
+        let evaluator = Evaluator::new(
+            &[],
+            &[],
+            LanguageProfile::Stable2021,
+            EvaluatorOptions {
+                record_geometry: true,
+                ..Default::default()
+            },
+        );
+        let shapes = evaluator
+            .emit_profile(
+                "square",
+                geometry_ops::profile_program::Node::Rectangle {
+                    size: [2.; 2],
+                    center: true,
+                },
+                0,
+            )
+            .unwrap();
+        let matrix = [
+            2., 0., 0., 0., 0., 3., 0., 0., 0., 0., 0., 0., 4., 5., 6., 1.,
+        ];
+        let shapes = evaluator
+            .record_stable_matrix(shapes, matrix, "scale", 0)
+            .unwrap();
+        assert_eq!(shapes[0].dimension, 2);
+        assert_eq!(
+            evaluator.profiles.borrow()[1],
+            geometry_ops::profile_program::Node::Transform {
+                input: 0,
+                matrix: [[2., 0., 4.], [0., 3., 5.], [0., 0., 1.]]
+            }
+        );
+        let mut collapsed = matrix;
+        collapsed[0] = 0.;
+        let empty = evaluator
+            .record_stable_matrix(shapes, collapsed, "scale", 0)
+            .unwrap();
+        assert_eq!(empty[0].dimension, 2);
+        assert_eq!(
+            evaluator.profiles.borrow()[2],
+            geometry_ops::profile_program::Node::Empty
+        );
+        assert!(evaluator.geometry.borrow().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod extrusion_recording_tests {
+    use super::*;
+    #[test]
+    fn records_profile_and_deferred_policy_with_shared_parameters() {
+        let evaluator = Evaluator::new(
+            &[],
+            &[],
+            LanguageProfile::Stable2021,
+            EvaluatorOptions {
+                record_geometry: true,
+                ..Default::default()
+            },
+        );
+        evaluator
+            .emit_profile(
+                "unused",
+                geometry_ops::profile_program::Node::Circle {
+                    radius: 9.,
+                    segments: 12,
+                },
+                0,
+            )
+            .unwrap();
+        let sections = evaluator
+            .emit_profile(
+                "square",
+                geometry_ops::profile_program::Node::Rectangle {
+                    size: [2.; 2],
+                    center: true,
+                },
+                0,
+            )
+            .unwrap();
+        let values = HashMap::from([
+            ("height".to_string(), Value::Number(3.)),
+            ("twist".to_string(), Value::Number(360.)),
+            ("slices".to_string(), Value::Number(3.9)),
+        ]);
+        let shapes = evaluator
+            .record_stable_extrusion(sections, &values, [12., 12., 2.], 0)
+            .unwrap();
+        assert_eq!(shapes[0].geometry, Some(0));
+        assert_eq!(shapes[0].dimension, 3);
+        let nodes = evaluator.geometry.borrow();
+        let geometry_ops::solid_program::Node::ExtrudeProfile {
+            profile,
+            slice_policy,
+            height,
+            twist,
+            ..
+        } = &nodes[0]
+        else {
+            panic!("Expected profile extrusion")
+        };
+        assert_eq!(*height, 3.);
+        assert_eq!(*twist, 360.);
+        assert_eq!(profile.roots, vec![0]);
+        assert_eq!(profile.nodes.len(), 1);
+        assert_eq!(slice_policy.as_ref().unwrap().explicit, Some(3.));
+        assert_eq!(slice_policy.as_ref().unwrap().fragments, [12., 12., 2.]);
+    }
+}
+
+#[cfg(test)]
+mod polygon_recording_tests {
+    use super::*;
+    fn vector(values: Vec<Value<'static>>) -> Value<'static> {
+        Value::vector(values)
+    }
+    #[test]
+    fn records_even_odd_outlines_and_preserves_conversion_warnings() {
+        let evaluator = Evaluator::new(
+            &[],
+            &[],
+            LanguageProfile::Stable2021,
+            EvaluatorOptions {
+                record_geometry: true,
+                ..Default::default()
+            },
+        );
+        let points = vector(vec![
+            vector(vec![Value::Number(0.), Value::Number(0.)]),
+            vector(vec![Value::Number(2.), Value::Number(0.)]),
+            vector(vec![Value::Number(0.), Value::Number(2.)]),
+        ]);
+        let values = HashMap::from([
+            ("points".to_string(), points),
+            (
+                "paths".to_string(),
+                vector(vec![vector(vec![
+                    Value::Number(0.),
+                    Value::Number(1.),
+                    Value::Number(99.),
+                    Value::Number(2.),
+                ])]),
+            ),
+        ]);
+        let shapes = evaluator.record_stable_polygon(&values, 0).unwrap();
+        assert_eq!(shapes[0].dimension, 2);
+        assert_eq!(
+            evaluator.profiles.borrow()[0],
+            geometry_ops::profile_program::Node::EvenOddRings(vec![vec![
+                [0., 0.],
+                [2., 0.],
+                [0., 2.]
+            ]])
+        );
+        assert_eq!(
+            evaluator.warnings.borrow()[0],
+            "polygon skipped a path entry whose point index is outside the point vector"
+        );
+        let invalid = HashMap::from([(
+            "points".to_string(),
+            vector(vec![vector(vec![Value::Number(0.)])]),
+        )]);
+        evaluator.record_stable_polygon(&invalid, 0).unwrap();
+        assert_eq!(
+            evaluator.profiles.borrow()[1],
+            geometry_ops::profile_program::Node::Empty
+        );
+        assert_eq!(
+            evaluator.warnings.borrow()[1],
+            "polygon produced no outlines because a point failed exact vec2 conversion"
+        );
     }
 }

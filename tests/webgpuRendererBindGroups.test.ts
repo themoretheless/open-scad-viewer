@@ -128,14 +128,16 @@ function harness(options: { meshes?: number; sharedGeometry?: boolean; shadingMo
   internal.bounds = { center: [0, 0, 0], radius: 10, min: [-1, -1, -1], max: [1, 1, 1] }
   const objectGroup = { layout: internal.pipelines.objBGL, entries: [] }
   const sharedVB = {}
+  const sharedIB = {}
+  const sharedEdgeIB = {}
   internal.meshes = Array.from({ length: options.meshes ?? 1 }, () => ({
     morph: undefined,
     morphSlot: {},
     vb: options.sharedGeometry ? sharedVB : {},
-    ib: {},
+    ib: options.sharedGeometry ? sharedIB : {},
     ic: 3,
     bg: objectGroup,
-    edgeIB: {},
+    edgeIB: options.sharedGeometry ? sharedEdgeIB : {},
     edgeIC: 2,
     alpha: options.alpha ?? 1,
     visible: true,

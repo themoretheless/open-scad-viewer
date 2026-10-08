@@ -18,7 +18,7 @@ Public TypeScript entry points: `polygonKernel.ts`, `nurbsConstructors.ts`,
 Rust implementations live in the corresponding crates. WASM integration tests
 are in `tests/nativeModeling.test.ts`.
 
-Compact ModelGraph currently exposes polygon profiles/extrude/revolve/sweep/loft
+Compact RushGraph currently exposes polygon profiles/extrude/revolve/sweep/loft
 and NURBS sweep/aligned loft. Editing, native sketch constraints and new SDF and
 subdivision constructors are public APIs; they are not yet all language commands
 or interactive viewer tools.

@@ -2,7 +2,7 @@ import {constructSolidSurface,buildSolidSurface} from '../src/services/solidSurf
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
-import { importModelGraphNurbs } from '../src/services/solidNurbsImport'
+import { importRushGraphNurbs } from '../src/services/solidNurbsImport'
 import {
   createSolidNurbsCurve,
   createSolidNurbsSurface,
@@ -47,9 +47,9 @@ describe('Solid native NURBS bridge', () => {
     expect(document.bodies).toHaveLength(0)
   })
 
-  it('imports reachable native definitions from ModelGraph/NURBS', () => {
-    const imported = importModelGraphNurbs({
-      language: 'modelgraph/nurbs-1',
+  it('imports reachable native definitions from RushGraph/NURBS', () => {
+    const imported = importRushGraphNurbs({
+      language: 'rush/nurbs-1',
       units: 'mm',
       parameters: [],
       nodes: [{

@@ -23,7 +23,7 @@ export function prepareMainSolidTransfer(response: MainSolidResponse): { respons
     for(const view of [mesh.positions,mesh.indices,mesh.uv])if(view&&ArrayBuffer.isView(view)&&view.buffer instanceof ArrayBuffer)buffers.add(view.buffer)
     return {response,transfer:[...buffers]}
   }
-  if(response.ok && (response.kind==='restoreDocument'||response.kind==='modelGraphImport'||response.kind==='primitive')) {
+  if(response.ok && (response.kind==='restoreDocument'||response.kind==='rushGraphImport'||response.kind==='primitive')) {
     // These jobs parse the complete replacement, so parsed mesh buffers belong
     // exclusively to the response. Deduplicate buffers in case views share backing storage.
     const buffers=new Set<ArrayBuffer>()

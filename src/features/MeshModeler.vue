@@ -5,6 +5,7 @@ import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
+import WorkspaceActionBar from '../components/WorkspaceActionBar.vue'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
@@ -39,6 +40,7 @@ import {
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
 import { projectMeshModelerFaces } from '../services/meshModelerProjection'
+import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
@@ -63,6 +65,18 @@ const document = shallowRef(history.document)
 const undoable = ref(false)
 const redoable = ref(false)
 const error = ref('')
+const kernelReady = ref(isGeometryKernelReady())
+// Mesh can open before Solid or the source viewport has warmed the shared WASM.
+// Publishing readiness invalidates projections that were requested while cold.
+watch(() => props.open, async open => {
+  if (!open || kernelReady.value) return
+  try {
+    await warmGeometryKernel()
+    kernelReady.value = true
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  }
+}, { immediate: true })
 const selection = ref('')
 const selectMode = ref<MeshSelectMode>('object')
 const selectedVerts = ref<number[]>([])
@@ -124,7 +138,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
-  if (!selected.value) return null
+  if (!kernelReady.value || !selected.value) return null
   const base = meshObjectStats(selected.value.mesh)
   return { ...base, edges: buildEdgeList(selected.value.mesh).length }
 })
@@ -429,7 +443,7 @@ async function downloadMesh() {
 
 // Command palette: header actions, object tools and edit operations, filtered to what applies to the current selection.
 const paletteOpen = ref(false)
-const dockOpen = ref(storageGet('scad-mesh-dock') !== 'false')
+const dockOpen = ref(storageGet('scad-mesh-dock') === 'true')
 const dockTab = ref<'scene' | 'props'>('scene')
 watch(dockOpen, open => storageSet('scad-mesh-dock', String(open)))
 const propsOpen = computed({ get: () => dockOpen.value && dockTab.value === 'props', set: open => { if (open) { dockOpen.value = true; dockTab.value = 'props' } else dockTab.value = 'scene' } })
@@ -479,6 +493,7 @@ function onWorkspaceKey(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
   if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } if (propsOpen.value) { propsOpen.value = false; return } emit('close') }
   if ((event.target as HTMLElement).matches('input,textarea,select')) return
+  if (event.key === '\\' && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); dockOpen.value = !dockOpen.value; return }
   const modes: Record<string, MeshSelectMode> = { '1': 'object', '2': 'vertex', '3': 'edge', '4': 'face' }
   if (modes[event.key]) { selectMode.value = modes[event.key]; return }
   if (event.key.toLowerCase() === 'f') resetView()
@@ -630,7 +645,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
-const scene = computed(() => document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
 const sceneFaces = computed(() => scene.value.flatMap(object =>
   object.tris.map(tri => ({ ...tri, objectId: object.id })),
@@ -643,15 +658,16 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
       <strong>{{ label('Mesh', 'Mesh') }}</strong>
       <button type="button" class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span class="hint"></span>
-      <button type="button" class="icon" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
-      <details class="file-menu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+      <span class="ws-count" aria-live="polite">{{ label('Выбрано', 'Selected') }}: {{ selected ? 1 : 0 }}</span>
+      <button type="button" class="icon mesh-undo" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <details class="file-menu mesh-file"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
         <button type="button" :disabled="!selected" @click="downloadStl">{{ label('Скачать STL выбранного', 'Download selected as STL') }}</button>
         <label class="file-row"><select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button></label>
         <button type="button" @click="downloadJson">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <button type="button" :disabled="!document.objects.length" @click="emit('exportToSolid', document)">{{ label('Открыть в Solid', 'Open in Solid') }}</button>
       </div></details>
-      <button type="button" class="icon" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+      <button type="button" class="icon mesh-redo" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="meshCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeMeshCommand" />
 
@@ -674,8 +690,20 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
         <button type="button" class="tool-icon" :title="label('Панель свойств', 'Properties panel')" :aria-label="label('Панель свойств', 'Properties panel')" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg></button>
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
+        <span v-else-if="!kernelReady" role="status">{{ label('Подготовка геометрии…', 'Preparing geometry…') }}</span>
       </div>
       <ModelingGridControls :locale="locale" />
+      <WorkspaceActionBar v-if="selected" :label="label('Действия над объектом', 'Object actions')">
+        <span class="ws-name">{{ selected.name }}</span>
+        <span class="ws-sep" aria-hidden="true"></span>
+        <template v-if="selectMode === 'face'">
+          <button type="button" @click="applyExtrude">{{ label('Выдавить', 'Extrude') }}</button>
+          <button type="button" @click="applyInset">Inset</button>
+        </template>
+        <button type="button" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen">{{ label('Свойства', 'Properties') }}</button>
+        <span class="ws-sep" aria-hidden="true"></span>
+        <button type="button" class="danger" @click="removeSelected">{{ label('Удалить', 'Delete') }}</button>
+      </WorkspaceActionBar>
       <div class="mesh-stage">
       <div class="mesh-stage-view">
       <div class="mesh-view-wrap">
@@ -728,7 +756,6 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
           </g>
         </g>
       </svg>
-      </div>
       </div>
       </div>
       <aside class="side-dock" :class="{ collapsed: !dockOpen }" :aria-label="label('Панель', 'Panel')">
@@ -828,6 +855,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
           </template>
         </div>
       </aside>
+      </div>
     </div>
   </div>
 </template>
@@ -836,7 +864,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .mesh-workspace {
   user-select: none;
   position: fixed;
-  inset: var(--topbar-h, 52px) 0 28px;
+  inset: var(--workspace-top, var(--topbar-h, 40px)) 0 var(--statusbar-h, 24px);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -914,17 +942,49 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .dock-props button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
 .row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .mesh-view { width: 100%; height: 100%; background: var(--canvas-bg); }
-.mesh-view-wrap { position: relative; min-width: 0; min-height: 0; }
+.mesh-view-wrap { position: absolute; inset: 0; min-width: 0; min-height: 0; }
 .mesh-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; pointer-events: none; color: var(--text-dim); padding: 24px; }
 .mesh-empty strong { font-size: 18px; font-weight: 500; }
 .mesh-empty span { font-size: 12px; max-width: 300px; }
-.mesh-view .face { fill: #3d5a80; stroke: #0b1220; stroke-width: 0.15; cursor: pointer; }
+.mesh-view .face { fill: #5c5954; stroke: #1e1d1b; stroke-width: 0.15; cursor: pointer; }
 .mesh-view .face.selected { fill: var(--accent); }
-.mesh-view .edge { stroke: #8ecaff; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
+.mesh-view .edge { stroke: #e9c9a5; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
 .mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
 .mesh-view .vert { fill: #eee; cursor: grab; }
 .mesh-view .vert.selected { fill: #e76f51; }
 .tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; color: var(--text-dim); }
 .stats { font-size: 0.8rem; color: var(--text-dim); }
 .error { color: var(--danger); font-size: 0.85rem; }
+</style>
+
+<style scoped>
+/* Quiet chrome, viewport first: matches the app shell and the Solid workspace. */
+.mesh-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.mesh-bar > strong, .mesh-bar > .command-search { display: none; }
+.mesh-bar button:not(.primary), .mesh-bar summary, .dock-props button:not(.primary) { border-color: transparent; background: transparent; border-radius: 6px; }
+.mesh-bar button:hover:not(:disabled), .mesh-bar summary:hover, .dock-props button:hover:not(:disabled) { background: var(--hover); }
+.mesh-body { position: relative; }
+.pane-tools {
+  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
+  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.pane-tools .tool-icon { width: 30px; height: 30px; border-color: transparent; background: transparent; }
+.pane-tools .tool-icon:hover { background: var(--hover); }
+.pane-tools .tool-icon[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: transparent; }
+.pane-tools .tool-divider { height: 16px; background: var(--hairline); }
+.mesh-body > :deep(.modeling-grid-controls) {
+  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+}
+.mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+</style>
+
+<style scoped>
+/* Same header as Solid: history on the left, selection count, file menu on the right. */
+.mesh-undo { order: 0; }
+.mesh-redo { order: 1; }
+.mesh-bar .hint { order: 2; }
+.mesh-bar .ws-count { order: 3; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.mesh-file { order: 4; }
 </style>

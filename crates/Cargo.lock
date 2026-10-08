@@ -213,6 +213,7 @@ version = "0.1.0"
 dependencies = [
  "brep-topology",
  "cad-predicates",
+ "geometry-ops",
  "nurbs-core",
  "planar-geometry",
  "rbench",
@@ -737,8 +738,14 @@ dependencies = [
  "gpu-compute",
  "image-webp",
  "imagesize",
+ "manifold-core",
+ "manifold-ops",
  "mechanical-core",
  "mechanics-core",
+ "mesh-io",
+ "mesh-query",
+ "mesh-section",
+ "mesh-topology",
  "nurbs-core",
  "osv-math",
  "planar-geometry",
@@ -1106,9 +1113,10 @@ dependencies = [
 name = "languages-bridge"
 version = "0.1.0"
 dependencies = [
- "modelgraph-runtime",
- "modelgraph-text",
+ "geometry-ops",
  "openscad-core",
+ "rush-frontend",
+ "rush-runtime",
  "value-codec",
 ]
 
@@ -1202,6 +1210,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
+name = "manifold-core"
+version = "0.1.0"
+dependencies = [
+ "mesh-topology",
+ "rbench",
+]
+
+[[package]]
+name = "manifold-ops"
+version = "0.1.0"
+dependencies = [
+ "manifold-core",
+ "osv-math",
+ "polygon-core",
+]
+
+[[package]]
 name = "matrixmultiply"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1235,6 +1260,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
+name = "mesh-io"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "mesh-topology",
+ "osv-math",
+]
+
+[[package]]
+name = "mesh-query"
+version = "0.1.0"
+dependencies = [
+ "mesh-topology",
+ "osv-math",
+ "serde_json",
+]
+
+[[package]]
+name = "mesh-section"
+version = "0.1.0"
+dependencies = [
+ "mesh-topology",
+ "osv-math",
+ "planar-geometry",
+]
+
+[[package]]
+name = "mesh-topology"
+version = "0.1.0"
+dependencies = [
+ "geometry-ops",
+ "osv-math",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1263,22 +1324,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "modelgraph-runtime"
-version = "0.1.0"
-dependencies = [
- "mechanical-core",
- "value-codec",
-]
-
-[[package]]
-name = "modelgraph-text"
-version = "0.1.0"
-dependencies = [
- "osv-math",
- "value-codec",
 ]
 
 [[package]]
@@ -1391,6 +1436,7 @@ dependencies = [
 name = "nurbs-core"
 version = "0.1.0"
 dependencies = [
+ "brep-topology",
  "cad-predicates",
  "geometry-ops",
  "osv-math",
@@ -1499,6 +1545,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 name = "openscad-core"
 version = "0.1.0"
 dependencies = [
+ "geometry-ops",
  "value-codec",
 ]
 
@@ -1611,6 +1658,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 name = "planar-geometry"
 version = "0.1.0"
 dependencies = [
+ "cad-predicates",
  "osv-math",
  "rustc-hash 2.1.1",
 ]
@@ -1642,13 +1690,19 @@ name = "polygon-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
- "crc32fast",
- "flate2",
+ "compute-core",
  "geometry-ops",
+ "gpu-compute",
+ "manifold-core",
+ "mesh-io",
+ "mesh-query",
+ "mesh-section",
+ "mesh-topology",
  "osv-math",
  "planar-geometry",
  "rbench",
  "rustc-hash 2.1.1",
+ "sdf-core",
  "value-codec",
 ]
 
@@ -1903,6 +1957,25 @@ dependencies = [
  "tokio-rustls",
  "tokio-stream",
  "tokio-util",
+]
+
+[[package]]
+name = "rush-frontend"
+version = "0.1.0"
+dependencies = [
+ "osv-math",
+ "themoretheless-tokenizer-rush",
+ "value-codec",
+]
+
+[[package]]
+name = "rush-runtime"
+version = "0.1.0"
+dependencies = [
+ "mechanical-core",
+ "osv-math",
+ "sketch-core",
+ "value-codec",
 ]
 
 [[package]]
@@ -2335,6 +2408,19 @@ dependencies = [
 [[package]]
 name = "tensor-core"
 version = "0.1.0"
+
+[[package]]
+name = "themoretheless-tokenizer-core"
+version = "0.4.0"
+source = "git+https://github.com/themoretheless/tokenizer.git?branch=release#6618dfd420738db3a5193d044f04820673c9a94d"
+
+[[package]]
+name = "themoretheless-tokenizer-rush"
+version = "0.4.0"
+source = "git+https://github.com/themoretheless/tokenizer.git?branch=release#6618dfd420738db3a5193d044f04820673c9a94d"
+dependencies = [
+ "themoretheless-tokenizer-core",
+]
 
 [[package]]
 name = "thiserror"

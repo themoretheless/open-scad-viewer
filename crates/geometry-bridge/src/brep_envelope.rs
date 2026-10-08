@@ -344,9 +344,10 @@ pub fn validate(request: &Value, nodes: &[Value]) -> Result<()> {
         validate_source(source)?;
     }
     if let Some(schema) = request.get("schema")
-        && schema.as_str() != Some("semantic-program-core") {
-            return Err(invalid("Expected the semantic-program-core schema"));
-        }
+        && schema.as_str() != Some("semantic-program-core")
+    {
+        return Err(invalid("Expected the semantic-program-core schema"));
+    }
     if let Some(version) = request.get("schemaVersion") {
         validate_schema_version(version)?;
     }
@@ -359,9 +360,10 @@ pub fn validate(request: &Value, nodes: &[Value]) -> Result<()> {
         }
     }
     if let Some(identity) = request.get("identityVersion")
-        && identity.as_str() != Some("semantic-program-core-v1") {
-            return Err(invalid("Unknown semantic core identity version"));
-        }
+        && identity.as_str() != Some("semantic-program-core-v1")
+    {
+        return Err(invalid("Unknown semantic core identity version"));
+    }
     if let Some(language) = request.get("language") {
         validate_language(language)?;
     }

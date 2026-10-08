@@ -8,7 +8,7 @@ import {optimizeWasm} from './wasm-optimize.mjs'
 import {wasmArtifactIdentityModule} from './wasm-artifact-identity.mjs'
 import {packStampHit,writePackStamp} from './wasm-pack-stamp.mjs'
 import {reproducibleCargo} from './reproducible-cargo.mjs'
-// The OpenSCAD and ModelGraph frontends ship separately from the geometry kernel: a session that never
+// The OpenSCAD and RushGraph frontends ship separately from the geometry kernel: a session that never
 // builds source never downloads them, and the geometry module stays under the browsers' main-thread
 // instantiation ceiling. Same transport and symbol policy as build-geometry-kernels.mjs.
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/language-kernel')

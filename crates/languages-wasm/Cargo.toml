@@ -9,4 +9,4 @@ publish.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-languages-bridge = { path = "../languages-bridge" }
+languages-bridge = { workspace = true }

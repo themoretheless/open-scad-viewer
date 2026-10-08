@@ -71,7 +71,7 @@ describe('retained 2D B-rep profiles',()=>{
     const a=validateBrepProfile([rectangle(10000,0,1,1)])
     const b=validateBrepProfile([rectangle(10000,1e-10,1,1)])
     expect(()=>booleanBrepProfiles(a,b,'union')).toThrow(GeometryKernelError)
-    expect(()=>validateBrepProfile(Array.from({length:257},(_,i)=>rectangle(i*3,0,1,1)))).toThrow(/256|resource/i)
+    expect(()=>validateBrepProfile(Array.from({length:257},(_,i)=>rectangle(i*3,0,1,1)))).toThrow(/1022|resource/i)
     expect(()=>validateBrepProfile([], 'material-left',0)).toThrow(/tolerance/i)
   })
 })

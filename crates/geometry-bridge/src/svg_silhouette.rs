@@ -48,6 +48,29 @@ pub(crate) fn contours(
             "SVG silhouette alpha threshold must be between 0.01 and 1.",
         ));
     }
+    let pixmap = raster(tree, raster_size)?;
+    let width = pixmap.width();
+    let height = pixmap.height();
+    let minimum_alpha = (alpha_threshold * 255.).ceil() as u8;
+    let pixels: Vec<bool> = pixmap
+        .pixels()
+        .iter()
+        .map(|p| p.alpha() >= minimum_alpha)
+        .collect();
+    trace(
+        &pixels,
+        width as usize,
+        height as usize,
+        width_mm,
+        height_mm,
+        MAX_POINTS,
+    )
+}
+
+pub(crate) fn raster(tree: &usvg::Tree, raster_size: u32) -> Result<tiny_skia::Pixmap> {
+    if !(1..=MAX_RASTER_SIZE).contains(&raster_size) {
+        return Err(limit("SVG raster size must be between 1 and 2048 pixels."));
+    }
     let size = tree.size();
     let longest = f64::from(size.width().max(size.height()));
     let scale = f64::from(raster_size) / longest;
@@ -72,20 +95,114 @@ pub(crate) fn contours(
         tiny_skia::Transform::from_scale(sx as f32, sy as f32),
         &mut pixmap.as_mut(),
     );
-    let minimum_alpha = (alpha_threshold * 255.).ceil() as u8;
-    let pixels: Vec<bool> = pixmap
+    Ok(pixmap)
+}
+
+pub(crate) fn color_contours(
+    tree: &usvg::Tree,
+    width_mm: f64,
+    height_mm: f64,
+    raster_size: u32,
+    alpha: f64,
+    colors: usize,
+    ignore_white: bool,
+    min_area: f64,
+) -> Result<value_codec::Value> {
+    if !width_mm.is_finite()
+        || !height_mm.is_finite()
+        || width_mm <= 0.
+        || height_mm <= 0.
+        || width_mm > 10000.
+        || height_mm > 10000.
+        || !alpha.is_finite()
+        || !(0.01..=1.).contains(&alpha)
+        || !(2..=16).contains(&colors)
+        || !min_area.is_finite()
+        || min_area < 0.
+        || min_area > 1e8
+    {
+        return Err(invalid("Invalid color trace options"));
+    }
+    let pixmap = raster(tree, raster_size)?;
+    let pixels: Vec<Option<[u8; 3]>> = pixmap
         .pixels()
         .iter()
-        .map(|p| p.alpha() >= minimum_alpha)
+        .map(|p| {
+            if f64::from(p.alpha()) < alpha * 255. {
+                return None;
+            }
+            let a = u32::from(p.alpha());
+            let color =
+                [p.red(), p.green(), p.blue()].map(|v| (u32::from(v) * 255 / a).min(255) as u8);
+            if ignore_white && color.iter().all(|c| *c >= 245) {
+                None
+            } else {
+                Some(color)
+            }
+        })
         .collect();
-    trace(
-        &pixels,
-        width as usize,
-        height as usize,
-        width_mm,
-        height_mm,
-        MAX_POINTS,
-    )
+    let mut histogram = vec![[0u64; 4]; 512];
+    for color in pixels.iter().flatten() {
+        let key =
+            (color[0] as usize >> 5) * 64 + (color[1] as usize >> 5) * 8 + (color[2] as usize >> 5);
+        histogram[key][0] += 1;
+        for i in 0..3 {
+            histogram[key][i + 1] += u64::from(color[i]);
+        }
+    }
+    let mut buckets: Vec<_> = histogram
+        .into_iter()
+        .enumerate()
+        .filter(|(_, h)| h[0] > 0)
+        .collect();
+    buckets.sort_by(|a, b| b.1[0].cmp(&a.1[0]).then(a.0.cmp(&b.0)));
+    buckets.truncate(colors);
+    let palette: Vec<[u8; 3]> = buckets
+        .iter()
+        .map(|(_, h)| [1, 2, 3].map(|i| (h[i] / h[0]) as u8))
+        .collect();
+    let labels: Vec<Option<usize>> = pixels
+        .iter()
+        .map(|p| {
+            p.map(|c| {
+                palette
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(i, q)| {
+                        (
+                            (0..3)
+                                .map(|k| (i32::from(c[k]) - i32::from(q[k])).pow(2))
+                                .sum::<i32>(),
+                            *i,
+                        )
+                    })
+                    .unwrap()
+                    .0
+            })
+        })
+        .collect();
+    let mut output = Vec::new();
+    let mut total = 0;
+    for (index, color) in palette.iter().enumerate() {
+        let mask: Vec<bool> = labels.iter().map(|l| *l == Some(index)).collect();
+        let mut rings = trace(
+            &mask,
+            pixmap.width() as usize,
+            pixmap.height() as usize,
+            width_mm,
+            height_mm,
+            MAX_POINTS,
+        )?;
+        rings.retain(|r| planar_geometry::rings::area(r).abs() >= min_area);
+        total += rings.iter().map(Vec::len).sum::<usize>();
+        if total > MAX_POINTS {
+            return Err(limit("Color trace exceeds 500000 contour points."));
+        }
+        if !rings.is_empty() {
+            output.push(value_codec::json!({"color":color,"contours":rings}));
+        }
+    }
+    Ok(value_codec::Value::Array(output))
 }
 
 /// resvg creates temporary layers for filters, masks and group opacity. Bound
@@ -134,16 +251,17 @@ impl RenderBudget {
                 self.group(child, sx, sy, depth + 1)?;
             }
             if let usvg::Node::Image(image) = node
-                && !matches!(image.kind(), usvg::ImageKind::SVG(_)) {
-                    let size = image.size();
-                    let pixels = f64::from(size.width()) * f64::from(size.height());
-                    if pixels > MAX_LAYER_PIXELS {
-                        return Err(limit(
-                            "SVG silhouette embedded image exceeds 16 million decoded pixels.",
-                        ));
-                    }
-                    self.work += pixels;
+                && !matches!(image.kind(), usvg::ImageKind::SVG(_))
+            {
+                let size = image.size();
+                let pixels = f64::from(size.width()) * f64::from(size.height());
+                if pixels > MAX_LAYER_PIXELS {
+                    return Err(limit(
+                        "SVG silhouette embedded image exceeds 16 million decoded pixels.",
+                    ));
                 }
+                self.work += pixels;
+            }
             if let usvg::Node::Path(path) = node {
                 self.geometry_work += path.data().segments().count();
                 if let Some(intervals) = path.stroke().and_then(|stroke| stroke.dasharray()) {
@@ -336,6 +454,31 @@ mod tests {
         ).unwrap()
     }
 
+    #[test]
+    fn color_trace_keeps_colored_holes_and_removes_optional_white_background() {
+        let t = tree(
+            r#"<rect width="16" height="16" fill="white"/><rect x="2" y="2" width="12" height="12" fill="red"/><rect x="6" y="6" width="4" height="4" fill="blue"/>"#,
+        );
+        let result = color_contours(&t, 16., 16., 16, 0.5, 4, true, 0.).unwrap();
+        let layers = result.as_array().unwrap();
+        assert_eq!(layers.len(), 2);
+        let red = layers
+            .iter()
+            .find(|l| l["color"] == value_codec::json!([255, 0, 0]))
+            .unwrap();
+        let rings: Vec<Vec<[f64; 2]>> = crate::field(red, "contours").unwrap();
+        assert_eq!(rings.len(), 2);
+        assert!(rings.iter().any(|r| area(r) < 0.));
+        assert_eq!(
+            color_contours(&t, 16., 16., 16, 0.5, 4, false, 0.)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
+        assert!(color_contours(&t, 16., 16., 16, 0.5, 17, true, 0.).is_err());
+    }
     #[test]
     fn rectangle_has_exact_mm_bounds_and_only_four_corners() {
         let rings = contours(

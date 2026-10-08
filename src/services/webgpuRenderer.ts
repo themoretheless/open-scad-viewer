@@ -5,6 +5,7 @@ import {remapNativeFaceSelection} from './nativeFaceSelection'
  */
 import {
   invert,
+  rayAabbDistance,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
 import {
@@ -183,6 +184,42 @@ interface Bounds {
  * full scan, so a false "changed" answer is possible only as a cheap early
  * rejection; a false "unchanged" answer is impossible.
  */
+const bufferUidMap = new WeakMap<object, number>()
+let bufferUidSequence = 1
+function getBufferUid(buffer: object): number {
+  let id = bufferUidMap.get(buffer)
+  if (id === undefined) {
+    id = bufferUidSequence++
+    bufferUidMap.set(buffer, id)
+  }
+  return id
+}
+
+export function sortOpaqueDraws(draws: GMesh[]): void {
+  if (draws.length < 2) return
+  draws.sort((a, b) => {
+    if (a.shadingModel !== b.shadingModel) return a.shadingModel < b.shadingModel ? -1 : 1
+    if (a.vb !== b.vb) return getBufferUid(a.vb) - getBufferUid(b.vb)
+    if (a.ib !== b.ib) return getBufferUid(a.ib) - getBufferUid(b.ib)
+    return a.ic - b.ic
+  })
+}
+
+export function sortEdgeDraws(draws: GMesh[]): void {
+  if (draws.length < 2) return
+  draws.sort((a, b) => {
+    if (a.vb !== b.vb) return getBufferUid(a.vb) - getBufferUid(b.vb)
+    const aEdge = a.edgeIB
+    const bEdge = b.edgeIB
+    if (aEdge !== bEdge) {
+      if (!aEdge) return -1
+      if (!bEdge) return 1
+      return getBufferUid(aEdge) - getBufferUid(bEdge)
+    }
+    return a.edgeIC - b.edgeIC
+  })
+}
+
 const verifiedEqualPairs = new WeakMap<object, WeakSet<object>>()
 
 function sampledLanesMatch(left: Float32Array | Uint32Array, right: Float32Array | Uint32Array) {
@@ -442,6 +479,34 @@ export class WebGPURenderer {
   private hoverGeneration = 0
   private hoverX = 0
   private hoverY = 0
+  private lastHoverEvaluatedX = -1
+  private lastHoverEvaluatedY = -1
+  private lastHoverEpoch = -1
+  private sceneEpoch = 0
+  private lastCameraEpoch = 0
+  private lastCameraPose = { yaw: NaN, pitch: NaN, dist: NaN, tx: NaN, ty: NaN, tz: NaN, aspect: NaN }
+
+  private getCameraEpoch(): number {
+    const aspect = this.getAspect()
+    if (this.yaw !== this.lastCameraPose.yaw || this.pitch !== this.lastCameraPose.pitch
+      || this.dist !== this.lastCameraPose.dist || this.tx !== this.lastCameraPose.tx
+      || this.ty !== this.lastCameraPose.ty || this.tz !== this.lastCameraPose.tz
+      || aspect !== this.lastCameraPose.aspect) {
+      this.lastCameraPose.yaw = this.yaw
+      this.lastCameraPose.pitch = this.pitch
+      this.lastCameraPose.dist = this.dist
+      this.lastCameraPose.tx = this.tx
+      this.lastCameraPose.ty = this.ty
+      this.lastCameraPose.tz = this.tz
+      this.lastCameraPose.aspect = aspect
+      this.lastCameraEpoch++
+    }
+    return this.lastCameraEpoch
+  }
+
+  private getInteractionEpoch(): number {
+    return this.sceneEpoch + this.getCameraEpoch()
+  }
 
   async init(canvas: HTMLCanvasElement): Promise<boolean> {
     if (this.canvas || this.dev || this.initialized) this.teardown()
@@ -794,6 +859,7 @@ export class WebGPURenderer {
     this.sceneAabbIndex = nextSceneIndex
     this.sceneAabbIndexDirty = false
     this.bounds = nextBounds
+    this.sceneEpoch++
     this.invalidateShadowMap()
     this.selected = null
     this.selectedHit = null
@@ -1352,6 +1418,7 @@ export class WebGPURenderer {
       ? [normal[0] / length, normal[1] / length, normal[2] / length]
       : [0, 0, 1]
     this.sectionOffset = Number.isFinite(offset) ? offset : 0
+    this.sceneEpoch++
     this.requestRender()
   }
 
@@ -1723,6 +1790,8 @@ export class WebGPURenderer {
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
       if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
     }
+    sortOpaqueDraws(this.opaqueDraws)
+    sortEdgeDraws(this.edgeDraws)
 
     const enc = dev.createCommandEncoder()
 
@@ -2212,6 +2281,15 @@ export class WebGPURenderer {
     const ray = this.rayForClientPoint(clientX, clientY)
     if (!ray) return []
 
+    if (this.bounds) {
+      const margin = Math.max(1e-4, this.bounds.radius * 1e-4)
+      const sceneBox: Aabb3 = {
+        min: [this.bounds.min[0] - margin, this.bounds.min[1] - margin, this.bounds.min[2] - margin],
+        max: [this.bounds.max[0] + margin, this.bounds.max[1] + margin, this.bounds.max[2] + margin],
+      }
+      if (rayAabbDistance(ray, sceneBox) === null) return []
+    }
+
     type HitCursor = {
       meshIndex: number
       mesh: GMesh
@@ -2356,6 +2434,11 @@ export class WebGPURenderer {
   private updateHoverAt(clientX: number, clientY: number) {
     // A passing pointer must not prematurely finish parameter animation.
     if (this.geometryFade || this.geometryGhosts.length || this.meshes.some(mesh => mesh.morph)) return
+    const epoch = this.getInteractionEpoch()
+    if (this.lastHoverEvaluatedX === clientX && this.lastHoverEvaluatedY === clientY && this.lastHoverEpoch === epoch) return
+    this.lastHoverEvaluatedX = clientX
+    this.lastHoverEvaluatedY = clientY
+    this.lastHoverEpoch = epoch
     const hit = this.findHit(clientX, clientY)
     const index = hit?.meshIndex ?? null
     const styleChanged = index !== this.hovered
@@ -2398,6 +2481,8 @@ export class WebGPURenderer {
 
   private clearHover = () => {
     this.cancelPendingHover()
+    this.lastHoverEvaluatedX = -1
+    this.lastHoverEvaluatedY = -1
     if (this.hovered === null && this.hoveredHit === null) return
     this.hovered = null
     this.hoveredHit = null

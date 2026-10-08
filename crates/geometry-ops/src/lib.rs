@@ -1,18 +1,22 @@
 //! Representation-independent point mappings and brush falloffs. Geometry
 //! ownership, topology updates and validity checks belong to each consuming kernel.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
+#[cfg(feature = "codec")]
+mod serialization;
 pub use math_core::{Error, Result, V3, finite};
 pub type Point = V3;
+#[cfg(feature = "codec")]
 mod codec;
 pub mod sculpt;
+pub mod keypoints;
+pub mod transparency;
+pub mod solid_program;
+pub mod program_graph;
+pub mod profile_program;
+pub mod extrude_slices;
+pub mod fragment_resolution;
+pub mod revolution;
+pub mod resize;
+pub mod polygon_mesh;
 pub use sculpt::{Falloff, SculptBrush, SculptKind, SculptTarget, Symmetry, unit_or_zero};
 const INVALID_INPUT: &str = "GEOMETRY_INVALID_INPUT";
 pub(crate) fn fail(message: impl Into<String>) -> Error {
@@ -34,65 +38,7 @@ pub enum Deformation {
         controls: Box<[Point; 8]>,
     },
 }
-impl value_codec::Serialize for Deformation {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Twist {
-                origin,
-                radians_per_unit,
-            } => {
-                let mut object = value_codec::Map::new();
-                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
-                object.insert(
-                    "radians_per_unit".into(),
-                    value_codec::Serialize::to_value(radians_per_unit),
-                );
-                object.insert("kind".into(), value_codec::Value::String("twist".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Bend { origin, radius } => {
-                let mut object = value_codec::Map::new();
-                object.insert("origin".into(), value_codec::Serialize::to_value(origin));
-                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
-                object.insert("kind".into(), value_codec::Value::String("bend".into()));
-                value_codec::Value::Object(object)
-            }
-            Self::Lattice { min, max, controls } => {
-                let mut object = value_codec::Map::new();
-                object.insert("min".into(), value_codec::Serialize::to_value(min));
-                object.insert("max".into(), value_codec::Serialize::to_value(max));
-                object.insert(
-                    "controls".into(),
-                    value_codec::Serialize::to_value(controls),
-                );
-                object.insert("kind".into(), value_codec::Value::String("lattice".into()));
-                value_codec::Value::Object(object)
-            }
-        }
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Deformation {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = codec::object(value)?;
-        let kind: String = codec::required(&mut object, "kind")?;
-        match kind.as_str() {
-            "twist" => Ok(Self::Twist {
-                origin: codec::required(&mut object, "origin")?,
-                radians_per_unit: codec::required(&mut object, "radians_per_unit")?,
-            }),
-            "bend" => Ok(Self::Bend {
-                origin: codec::required(&mut object, "origin")?,
-                radius: codec::required(&mut object, "radius")?,
-            }),
-            "lattice" => Ok(Self::Lattice {
-                min: codec::required(&mut object, "min")?,
-                max: codec::required(&mut object, "max")?,
-                controls: codec::required(&mut object, "controls")?,
-            }),
-            _ => Err(value_codec::error("Unknown deformation kind")),
-        }
-    }
-}
+
 impl Deformation {
     pub fn validate(&self) -> Result<()> {
         let valid = match self {
@@ -194,34 +140,7 @@ pub struct Brush {
     pub radius: f64,
     pub displacement: Point,
 }
-impl value_codec::Serialize for Brush {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "center".into(),
-            value_codec::Serialize::to_value(&self.center),
-        );
-        object.insert(
-            "radius".into(),
-            value_codec::Serialize::to_value(&self.radius),
-        );
-        object.insert(
-            "displacement".into(),
-            value_codec::Serialize::to_value(&self.displacement),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Brush {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = codec::object(value)?;
-        Ok(Self {
-            center: codec::required(&mut object, "center")?,
-            radius: codec::required(&mut object, "radius")?,
-            displacement: codec::required(&mut object, "displacement")?,
-        })
-    }
-}
+
 impl Brush {
     pub fn validate(&self) -> Result<()> {
         if finite(self.center)
@@ -387,6 +306,7 @@ mod tests {
         );
         assert_eq!(edge.apply([1e6 - 1., 0., 0.]).unwrap(), [1e6 - 1., 0., 0.]);
     }
+    #[cfg(feature = "codec")]
     #[test]
     fn brush_round_trips_through_value_codec() {
         let b = Brush {
@@ -406,43 +326,10 @@ mod tests {
 }
 
 /// Neutral triangle buffer. Not a mesh kernel: no validate/inspect/boolean.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Triangles {
     pub positions: Vec<f64>,
     pub indices: Vec<usize>,
-}
-impl value_codec::Serialize for Triangles {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "positions".into(),
-            value_codec::Serialize::to_value(&self.positions),
-        );
-        object.insert(
-            "indices".into(),
-            value_codec::Serialize::to_value(&self.indices),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Triangles {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let positions = value_codec::Deserialize::from_value(
-            object
-                .remove("positions")
-                .ok_or_else(|| value_codec::error("Missing field positions"))?,
-        )?;
-        let indices = value_codec::Deserialize::from_value(
-            object
-                .remove("indices")
-                .ok_or_else(|| value_codec::error("Missing field indices"))?,
-        )?;
-        Ok(Self { positions, indices })
-    }
 }
 
 fn vunit(a: Point) -> Result<Point> {
@@ -507,3 +394,12 @@ pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result
     }
     Ok(sections)
 }
+
+pub mod force_markers;
+
+pub mod point_transform;
+pub mod live_pattern;
+
+pub mod path_sampling;
+
+pub mod keyframes;

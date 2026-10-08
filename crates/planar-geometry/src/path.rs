@@ -495,8 +495,11 @@ impl BezierPath {
 
     /// Simplify by flattening then Ramer–Douglas–Peucker; result is a polyline path.
     pub fn simplify(&self, tolerance: f64) -> Result<Self> {
-        check(tolerance.is_finite(), "Invalid simplify tolerance")?;
-        let mut pts = self.flatten()?;
+        check(
+            tolerance.is_finite() && tolerance > 0.,
+            "Invalid simplify tolerance",
+        )?;
+        let mut pts = self.flatten_tol(tolerance * 0.5)?;
         if self.closed && pts.len() >= 2 && dist(pts[0], *pts.last().unwrap()) <= 1e-9 {
             pts.pop();
         }
@@ -505,7 +508,7 @@ impl BezierPath {
         let reduce = |points: &[[f64; 2]]| -> Vec<[f64; 2]> {
             points
                 .iter()
-                .zip(rdp_keep(points, tolerance.max(0.0)))
+                .zip(rdp_keep(points, tolerance * 0.5))
                 .filter_map(|(p, keep)| keep.then_some(*p))
                 .collect()
         };

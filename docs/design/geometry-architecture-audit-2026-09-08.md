@@ -57,7 +57,7 @@ flowchart TD
 
 Есть дополнительная непоследовательность: узел `subdivision(vertices,faces,levels)` сразу возвращает `kind:'mesh'`, тогда как `mesh_to_subdivision` возвращает `kind:'subdivision'` и требует отдельного `subdivision_tessellate`. Одинаковая семантическая сущность имеет разную авторитетность в зависимости от пути создания.
 
-Источники: [graph execution](../../src/services/modelGraphNurbsKernel.ts), [scene publication](../../src/services/modelGraphTextScene.ts), [mesh contract](../../src/core/mesh.ts).
+Источники: [graph execution](../../src/services/rushGraphNurbsKernel.ts), [scene publication](../../src/services/rushFrontendScene.ts), [mesh contract](../../src/core/mesh.ts).
 
 **Предложение:** результат моделирования должен содержать `GeometryArtifact { definition, revision, nativeRepresentation, validation, provenance }`, а производный `RenderMesh` — ссылку на этот artifact и параметры тесселяции. `show` запрашивает preview через сервис отображения; пользователь не обязан менять авторитетный root на mesh ради просмотра. Нарезка получает native artifact, а не текущие Float32-буферы GPU. `geometryAssetId` остаётся идентичностью точных буферов и не заменяет идентичность модели.
 
@@ -143,6 +143,6 @@ B-rep нужен как отдельный общий слой топологи�
 
 ## 10. Долг документации
 
-В [старом описании own NURBS](modelgraph-nurbs-own-kernel.md) вступление про «две библиотеки», отсутствие включённой topology и отсутствие общего sweep уже не отражает текущий набор крейтов; поздние разделы того же файла описывают B-rep и реконструкции. Статус этих утверждений нужно согласовать с [native-modeling-operations.md](native-modeling-operations.md), сохранив точные ограничения: translation sweep не является любым sweep, а существование topology не означает готовый Boolean.
+В [старом описании own NURBS](rush-nurbs-own-kernel.md) вступление про «две библиотеки», отсутствие включённой topology и отсутствие общего sweep уже не отражает текущий набор крейтов; поздние разделы того же файла описывают B-rep и реконструкции. Статус этих утверждений нужно согласовать с [native-modeling-operations.md](native-modeling-operations.md), сохранив точные ограничения: translation sweep не является любым sweep, а существование topology не означает готовый Boolean.
 
 Рекомендуется хранить одну машинно читаемую таблицу capability → native owner → input/output kinds → constraints → evidence/tests и генерировать из неё справку MCP/языка и статус архитектуры. Документ не должен объявлять метод готовым только потому, что совпало его имя. Для RAG этот аудит — `observed-source` snapshot с датой; предложения в разделах выше должны индексироваться как `proposed`, а не как возможности продукта.

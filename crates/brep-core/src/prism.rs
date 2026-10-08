@@ -3,7 +3,7 @@
 use super::*;
 
 pub const MAX_PROFILE_LOOPS: usize = 64;
-pub const MAX_PROFILE_CURVES: usize = 254;
+pub const MAX_PROFILE_CURVES: usize = MAX_FACES - 2;
 pub const MAX_PROFILE_CONTROLS: usize = 8192;
 const TOLERANCE: f64 = 1e-7;
 
@@ -72,7 +72,7 @@ fn push_face(
     });
     FaceUse { face, reversed }
 }
-fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
+pub(crate) fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
     let [a, b] = bounds;
     Surface {
         degree_u: 1,
@@ -88,7 +88,7 @@ fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
         periodic_v: false,
     }
 }
-fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
+pub(crate) fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
     let mut result = curve.clone();
     for p in &mut result.control_points {
         for i in 0..2 {
@@ -126,7 +126,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
     {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
-            "Prism profile exceeds 64 loops, 254 curves or 8192 control points",
+            format!("Prism profile exceeds {MAX_PROFILE_LOOPS} loops, {MAX_PROFILE_CURVES} curves or {MAX_PROFILE_CONTROLS} control points"),
         ));
     }
     if loops.is_empty() {
@@ -166,7 +166,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             if normalized_wire.len() > MAX_PROFILE_CURVES {
                 return Err(Error::new(
                     "BREP_RESOURCE_LIMIT",
-                    "Prism profile exceeds 254 active curve spans",
+                    format!("Prism profile exceeds {MAX_PROFILE_CURVES} active curve spans"),
                 ));
             }
         }
@@ -176,14 +176,18 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
     if curve_count > MAX_PROFILE_CURVES {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
-            "Prism profile exceeds 254 active curve spans",
+            format!("Prism profile exceeds {MAX_PROFILE_CURVES} active curve spans"),
         ));
     }
-    let components = crate::planar_trim::components(&profile, TOLERANCE)?;
-    if curve_count + 2 * components.len() > 256 {
+    let components = if profile.iter().flatten().any(|c| c.degree==3) {
+        let (components,depths)=crate::bezier_profile::classify_components(&profile,TOLERANCE)?;
+        for (wire,depth) in profile.iter().zip(depths){if (crate::bezier_profile::signed_area(wire,TOLERANCE)?>0.)!=(depth%2==0){return Err(unsupported("Bézier boundaries require material-left winding"));}}
+        components
+    } else { crate::planar_trim::components(&profile, TOLERANCE)? };
+    if curve_count + 2 * components.len() > MAX_FACES {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",
-            "Prism exceeds 256 faces including caps",
+            format!("Prism exceeds {MAX_FACES} faces including caps"),
         ));
     }
     let mut model = empty_model();
@@ -736,6 +740,7 @@ pub fn recognize(model: &Model) -> Result<Option<ProfilePrism>> {
 mod imported_cap_tests {
     use super::*;
     #[test]
+    #[cfg(feature = "codec")]
     fn recognizes_trimmed_step_carriers_without_admitting_deformed_sides() {
         let model: Model = value_codec::from_str(include_str!(
             "../../../docs/qualification/cad-roadmap-2026-09-28/parts-history/imported-flange.json"
@@ -770,5 +775,27 @@ mod imported_cap_tests {
             .unwrap()
             .signed_volume_mm3;
         assert!((volume - 3000. * std::f64::consts::PI).abs() < 1e-5);
+    }
+}
+
+#[cfg(test)]
+mod expanded_profile_budget_tests {
+    use super::*;
+    #[test]
+    fn more_than_256_edges_uses_the_shared_face_budget() {
+        let count=320;
+        let points=(0..count).map(|i| {
+            let a=std::f64::consts::TAU*i as f64/count as f64;
+            [100.*a.cos(),100.*a.sin()]
+        }).collect();
+        let wire=crate::sketch::polygon_wire(points).unwrap();
+        let solid=extrude(&[wire],0.,2.).unwrap();
+        assert_eq!(solid.faces.len(),count+2);
+        solid.validate().unwrap();
+    }
+    #[test]
+    fn refuses_profiles_beyond_the_shared_face_budget() {
+        let curve=line(vec![0.,0.],vec![1.,0.]);
+        assert!(extrude(&[vec![curve;MAX_PROFILE_CURVES+1]],0.,1.).is_err());
     }
 }
