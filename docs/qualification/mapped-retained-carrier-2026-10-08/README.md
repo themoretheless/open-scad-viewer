@@ -2732,3 +2732,12 @@ Native diagnostics connect this filter to a fresh full corrected-transition
 Y enclosure and the actual monotone neighbor trace with 128 cover cells.
 Compilation passed. This connection only narrows candidate parameters; it
 does not authorize a pair contact or reduce the reported pending-pair count.
+
+Fresh owned XY transition admission completed the full native fixture in
+420.05 seconds, including zero-budget refusal, owner/projection identity,
+complete coverage and the unchanged 154-pending-pair combined audit.
+The coordinate-preimage report now borrows the exact monotone certificate
+and retains its immutable requested target. Tests check both identities and
+retain a target touching the exact original endpoint. All three exact-trace
+tests passed (0.01 seconds). These reports remain conservative candidate
+covers, not complete pair-contact certificates. Native filtering is running.

@@ -253,6 +253,8 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     if let Some(bounds)=bridge.enclose_with_transverse_correction(domain[0],domain[1],max_spans)?.0 {
                         let candidates=monotone.coordinate_preimage(bounds[1],128)?;
                         assert!(candidates.cells<=128);
+                        assert!(std::ptr::eq(candidates.owner(),&monotone));
+                        assert_eq!(candidates.target(),bounds[1]);
                         eprintln!("transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
                             bounds[1],candidates.domains,candidates.cells);
                     }

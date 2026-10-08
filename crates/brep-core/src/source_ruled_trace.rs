@@ -176,16 +176,26 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
 }
 /// Conservative parameter cover of all points whose certified coordinate
 /// can enter a target interval. Empty cover is a strict exclusion witness.
-pub(crate) struct CoordinatePreimage {
+pub(crate) struct CoordinatePreimage<'p, 't, 's> {
+    owner: &'p MonotoneCoordinate<'t, 's>,
+    target: [f64; 2],
     pub(crate) domains: Vec<[f64; 2]>,
     pub(crate) cells: usize,
 }
-impl MonotoneCoordinate<'_, '_> {
-    pub(crate) fn coordinate_preimage(
-        &self,
+impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
+    pub(crate) fn owner(&self) -> &'p MonotoneCoordinate<'t, 's> {
+        self.owner
+    }
+    pub(crate) fn target(&self) -> [f64; 2] {
+        self.target
+    }
+}
+impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    pub(crate) fn coordinate_preimage<'p>(
+        &'p self,
         target: [f64; 2],
         max_cells: usize,
-    ) -> Result<CoordinatePreimage> {
+    ) -> Result<CoordinatePreimage<'p, 't, 's>> {
         if !target.iter().all(|v| v.is_finite()) || target[0] > target[1] || max_cells > 100000 {
             return Err(Error::new(
                 "BREP_RULED_TRACE",
@@ -193,6 +203,8 @@ impl MonotoneCoordinate<'_, '_> {
             ));
         }
         let mut out = CoordinatePreimage {
+            owner: self,
+            target,
             domains: Vec::new(),
             cells: 0,
         };
@@ -311,6 +323,10 @@ mod tests {
         );
         let cover = proof.coordinate_preimage([1., 2.], 31).unwrap();
         assert!(cover.cells <= 31 && !cover.domains.is_empty());
+        assert!(std::ptr::eq(cover.owner(), &proof));
+        assert_eq!(cover.target(), [1., 2.]);
+        let endpoint = proof.coordinate_preimage([0., 0.], 31).unwrap();
+        assert!(endpoint.domains.iter().any(|d| d[0] <= 2. && d[1] >= 2.));
         for i in 0..=100 {
             let t = 2. + 3. * i as f64 / 100.;
             let y = trace.curve().evaluate(t).unwrap().point[1];
