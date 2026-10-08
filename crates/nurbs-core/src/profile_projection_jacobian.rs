@@ -26,6 +26,8 @@ pub struct Report<'p, 's> {
     pub signs: Option<Vec<Vec<Sign>>>,
     pub exact_work: u64,
     pub exact_reason: Option<cad_predicates::Reason>,
+    /// First coefficient not computed; no partial sign grid is admitted.
+    pub pending_coefficient: Option<[usize; 2]>,
     pub reason: &'static str,
 }
 pub fn certify<'p, 's>(
@@ -102,6 +104,7 @@ pub fn certify<'p, 's>(
     let tolerance = ToleranceContext::default_valid();
     let mut work = 0;
     let mut exact_reason = None;
+    let mut pending_coefficient = None;
     let mut signs = Vec::new();
     for row in 0..3 * surface.degree_u {
         let mut ctx = PredicateContext::new(
@@ -150,6 +153,7 @@ pub fn certify<'p, 's>(
                         Some(net) => coefficients.push(net[0][0]),
                         None => {
                             exact_reason = d.reason;
+                            pending_coefficient = Some([row, column]);
                             break;
                         }
                     }
@@ -179,6 +183,7 @@ pub fn certify<'p, 's>(
         signs,
         exact_work: work,
         exact_reason,
+        pending_coefficient,
         reason: if orientation.is_some() {
             "profile-strict-interior-projection-orientation"
         } else {

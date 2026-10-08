@@ -338,6 +338,27 @@ mod tests {
         }
     }
     #[test]
+    fn exact_annular_profile_projection_diagnostics() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let specs=[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]},crate::source_profile_body::FaceSpec{face:5,anchor:[0,0]}];
+        let report=crate::source_profile_body::prepare(&body,&specs,
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
+        let proposal=report.proposal.unwrap();
+        let profile=proposal.profile(0).unwrap();
+        let r=nurbs_core::profile_projection_jacobian::certify(profile,[0,1],20000000).unwrap();
+        eprintln!("annular exact profile factors={:?} orientation={} work={} exactReason={:?} pending={:?} signs={:?}",profile.factors(),r.certificate.is_some(),r.exact_work,r.exact_reason,r.pending_coefficient,r.signs);
+        assert!(r.exact_work<=20000000);
+        if r.certificate.is_some() {
+            let jordan=nurbs_core::profile_projected_jordan::certify(profile,[0,1],1e-8,20000000,10000).unwrap();
+            eprintln!("annular exact profile Jordan qualified={} work={} cells={} reason={}",jordan.certificate.is_some(),jordan.exact_work,jordan.boundary_cells,jordan.reason);
+        }
+    }
+    #[test]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();

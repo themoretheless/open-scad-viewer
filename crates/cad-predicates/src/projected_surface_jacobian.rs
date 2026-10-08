@@ -73,6 +73,17 @@ pub(crate) fn mul(
     selected_cell: [Option<usize>; 2],
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Poly, Reason> {
+    let degrees = [a.len() + b.len() - 2, a[0].len() + b[0].len() - 2];
+    let window =
+        std::array::from_fn(|axis| selected_cell[axis].map_or([0, degrees[axis]], |i| [i, i]));
+    mul_window(a, b, window, ctx)
+}
+fn mul_window(
+    a: &Poly,
+    b: &Poly,
+    window: [[usize; 2]; 2],
+    ctx: &mut PredicateContext<'_>,
+) -> Result<Poly, Reason> {
     let (p, q, r, s) = (a.len() - 1, a[0].len() - 1, b.len() - 1, b[0].len() - 1);
     let mut out = zeros(p + r + 1, q + s + 1);
     let fu = factors(p + r, ctx)?;
@@ -84,8 +95,10 @@ pub(crate) fn mul(
             }
             for (k, row) in b.iter().enumerate() {
                 for (l, y) in row.iter().enumerate() {
-                    if selected_cell[0].is_some_and(|row| i + k != row)
-                        || selected_cell[1].is_some_and(|column| j + l != column)
+                    if i + k < window[0][0]
+                        || i + k > window[0][1]
+                        || j + l < window[1][0]
+                        || j + l > window[1][1]
                         || y.sign() == Sign::Zero
                     {
                         continue;
@@ -209,9 +222,21 @@ fn compute_weights(
         for axis in 0..3 {
             let a = (axis + 1) % 3;
             let b = (axis + 2) % 3;
+            // Only minor coefficients whose indices can contribute through H
+            // to the requested determinant coefficient/row are needed.
+            let degrees = [surface.len() - 1, surface[0].len() - 1];
+            let selected = [row, column];
+            let window = std::array::from_fn(|axis| {
+                selected[axis].map_or([0, 2 * degrees[axis] - 1], |i| {
+                    [
+                        i.saturating_sub(degrees[axis]),
+                        i.min(2 * degrees[axis] - 1),
+                    ]
+                })
+            });
             let minors = difference(
-                mul(&u[a], &v[b], [None, None], ctx)?,
-                mul(&u[b], &v[a], [None, None], ctx)?,
+                mul_window(&u[a], &v[b], window, ctx)?,
+                mul_window(&u[b], &v[a], window, ctx)?,
                 ctx,
             )?;
             let term = mul(&h[axis], &minors, [row, column], ctx)?;
