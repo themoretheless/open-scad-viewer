@@ -28,6 +28,7 @@ pub struct Report<'p, 's> {
     pub exact_reason: Option<cad_predicates::Reason>,
     /// First coefficient not computed; no partial sign grid is admitted.
     pub pending_coefficient: Option<[usize; 2]>,
+    pub filtered_coefficients: usize,
     pub reason: &'static str,
 }
 pub fn certify<'p, 's>(
@@ -106,7 +107,74 @@ pub fn certify<'p, 's>(
     let mut exact_reason = None;
     let mut pending_coefficient = None;
     let mut signs = Vec::new();
+    let mut filtered_coefficients = 0;
+    let mut ctx = PredicateContext::new(
+        &arena,
+        &tolerance,
+        Limits {
+            max_work: max_work.min(cad_predicates::MAX_WORK),
+            ..Limits::default()
+        },
+        None,
+    );
+    let filter = cad_predicates::factorized_surface_projected_jacobian_filter(
+        &mut ctx, &points, &rows, &columns, axes,
+    )
+    .map_err(|_| numeric_err("Profile projection filter admission failed"))?;
+    work += filter.work_used;
     for row in 0..3 * surface.degree_u {
+        if let Some(bounds) = &filter.coefficient_bounds {
+            let mut coefficients = Vec::new();
+            for column in 0..3 * surface.degree_v {
+                let bound = bounds[row][column];
+                let filtered = if bound[0] > 0. {
+                    Some(Sign::Positive)
+                } else if bound[1] < 0. {
+                    Some(Sign::Negative)
+                } else {
+                    None
+                };
+                if let Some(sign) = filtered {
+                    coefficients.push(sign);
+                    filtered_coefficients += 1;
+                    continue;
+                }
+                let mut ctx = PredicateContext::new(
+                    &arena,
+                    &tolerance,
+                    Limits {
+                        max_work: max_work.saturating_sub(work).min(cad_predicates::MAX_WORK),
+                        ..Limits::default()
+                    },
+                    None,
+                );
+                let d = cad_predicates::factorized_surface_projected_jacobian(
+                    &mut ctx,
+                    &points,
+                    &rows,
+                    &columns,
+                    axes,
+                    Some([row, column]),
+                )
+                .map_err(|_| {
+                    numeric_err("Profile projection filtered fallback admission failed")
+                })?;
+                work += d.work_used;
+                match d.signs {
+                    Some(net) => coefficients.push(net[0][0]),
+                    None => {
+                        exact_reason = d.reason;
+                        pending_coefficient = Some([row, column]);
+                        break;
+                    }
+                }
+            }
+            if coefficients.len() != 3 * surface.degree_v {
+                break;
+            }
+            signs.push(coefficients);
+            continue;
+        }
         let mut ctx = PredicateContext::new(
             &arena,
             &tolerance,
@@ -184,6 +252,7 @@ pub fn certify<'p, 's>(
         exact_work: work,
         exact_reason,
         pending_coefficient,
+        filtered_coefficients,
         reason: if orientation.is_some() {
             "profile-strict-interior-projection-orientation"
         } else {

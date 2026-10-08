@@ -1212,3 +1212,7 @@ mod tests {
         assert!(d.signs.unwrap().iter().flatten().all(|s| *s == Sign::Zero));
     }
 }
+
+#[path = "projected_surface_jacobian_filter.rs"]
+mod interval_filter;
+pub use interval_filter::factorized_surface_projected_jacobian_filter;

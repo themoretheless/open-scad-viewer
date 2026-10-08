@@ -338,7 +338,7 @@ mod tests {
         }
     }
     #[test]
-    fn exact_annular_profile_projection_diagnostics() {
+    fn exact_annular_profile_projection_is_globally_injective() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
         let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
@@ -351,12 +351,17 @@ mod tests {
         let proposal=report.proposal.unwrap();
         let profile=proposal.profile(0).unwrap();
         let r=nurbs_core::profile_projection_jacobian::certify(profile,[0,1],20000000).unwrap();
-        eprintln!("annular exact profile factors={:?} orientation={} work={} exactReason={:?} pending={:?} signs={:?}",profile.factors(),r.certificate.is_some(),r.exact_work,r.exact_reason,r.pending_coefficient,r.signs);
+        eprintln!("annular exact profile factors={:?} orientation={} work={} exactReason={:?} pending={:?} filtered={} signs={:?}",profile.factors(),r.certificate.is_some(),r.exact_work,r.exact_reason,r.pending_coefficient,r.filtered_coefficients,r.signs);
         assert!(r.exact_work<=20000000);
-        if r.certificate.is_some() {
-            let jordan=nurbs_core::profile_projected_jordan::certify(profile,[0,1],1e-8,20000000,10000).unwrap();
-            eprintln!("annular exact profile Jordan qualified={} work={} cells={} reason={}",jordan.certificate.is_some(),jordan.exact_work,jordan.boundary_cells,jordan.reason);
-        }
+        let orientation=r.certificate.expect("actual factorized annular profile orientation");
+        assert!(std::ptr::eq(orientation.profile(),profile));
+        assert!(r.filtered_coefficients>0);
+        let jordan=nurbs_core::profile_projected_jordan::certify(profile,[0,1],1e-8,20000000,10000).unwrap();
+        eprintln!("annular exact profile Jordan qualified={} work={} cells={} reason={}",jordan.certificate.is_some(),jordan.exact_work,jordan.boundary_cells,jordan.reason);
+        let certificate=jordan.certificate.expect("actual factorized annular profile Jordan boundary");
+        assert!(std::ptr::eq(certificate.profile(),profile));
+        assert_eq!(certificate.axes(),[0,1]);
+
     }
     #[test]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
@@ -631,6 +636,14 @@ mod tests {
             assert!(std::ptr::eq(certificate.profile(),exact_profile));
             assert_eq!(certificate.axes(),[0,1]);
         }
+        let profile_region=xy_face.qualify_profile_xy_region(1e-8,20000000,10000).unwrap();
+        eprintln!("owned exact profile XY region qualified={} work={} cells={} reason={}",profile_region.certificate.is_some(),profile_region.exact_work,profile_region.boundary_cells,profile_region.reason);
+        let profile_region=profile_region.certificate.expect("actual factorized profile region must qualify");
+        assert!(std::ptr::eq(profile_region.face(),&xy_face));
+        assert!(std::ptr::eq(profile_region.profile().profile(),exact_profile));
+        assert_eq!(profile_region.source_domain(),[[0.75,0.9],[0.,1.]]);
+        assert!(xy_face.qualify_profile_xy_region(1e-8,0,0).unwrap().certificate.is_none());
+        assert!(xy_face.qualify_profile_xy_region(f64::NAN,1,1).is_err());
         let original_region=xy_face.qualify_original_xy_region(1e-8,20000000,10000).unwrap();
         eprintln!("owned transition original XY region qualified={} work={} cells={} reason={}",
             original_region.certificate.is_some(),original_region.exact_work,
@@ -846,11 +859,13 @@ mod tests {
         use crate::source_profile_body::{ContactAuditLimits,PairContactProof};
         let audit_limits=ContactAuditLimits{cells:4096,cells_per_pair:8,controls_per_enclosure:1000,spans:100000,
             domain_cells:100000,domain_cells_per_pair:256,exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};
-        let audit=if let Some(region)=original_region.certificate.as_ref() {
-            expression.inspect_contacts_with_original_region(audit_limits,region).unwrap()
-        } else {expression.inspect_contacts(audit_limits).unwrap()};
+        let ruled_profile=expression.qualify_transition_profile_ruled_contact(1,&profile_region,1000,1000000,10000).unwrap();
+        eprintln!("exact profile ruled contact qualified={} work={} drivers={} reason={}",ruled_profile.certificate.is_some(),ruled_profile.exact_work,ruled_profile.driver_cells,ruled_profile.reason);
+        assert!(ruled_profile.certificate.is_some(),"exact profile boundary must match owned wall");
+        assert!(expression.qualify_transition_profile_ruled_contact(1,&profile_region,1000,0,0).unwrap().certificate.is_none());
+        let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
-        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),154);
+        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),153);
         let mut kinds=[0usize;7];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
@@ -863,13 +878,13 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[154,162,12,23,54,1,0]);
-        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(154));
+        assert_eq!(kinds,[153,162,12,23,54,1,1]);
+        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(153));
         assert_eq!(diagnostics["pairs"].as_array().unwrap().len(),406);
         let binary=value_codec::encode_binary(&diagnostics).unwrap();
         assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);
         let json=value_codec::from_str::<value_codec::Value>(&diagnostics.to_string()).unwrap();
-        assert_eq!(json["pendingPairs"].as_u64(),Some(154));
+        assert_eq!(json["pendingPairs"].as_u64(),Some(153));
         assert_eq!(json["pairs"].as_array().unwrap().len(),406);
         eprintln!("expression audit diagnostics binaryBytes={} jsonBytes={}",binary.len(),diagnostics.to_string().len());
 

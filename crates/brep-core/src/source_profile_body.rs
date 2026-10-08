@@ -1559,5 +1559,5 @@ pub use assembled_shell::{ExpressionShell,ShellFace,ShellUse,ShellFaceKind,Shell
 
 #[path="source_profile_projected_region.rs"]
 mod projected_region;
-pub use projected_region::{OriginalProjectedRegion,OriginalProjectedRegionReport};
+pub use projected_region::{OriginalProjectedRegion,OriginalProjectedRegionReport,ProfileProjectedRegion,ProfileProjectedRegionReport};
 pub use assembled_shell::{TransitionRuledContact,TransitionRuledReport};

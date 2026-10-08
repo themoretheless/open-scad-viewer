@@ -132,6 +132,87 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         out.reason = "profile-transition-ruled-contact-qualified";
         Ok(out)
     }
+    pub fn qualify_transition_profile_ruled_contact<'x>(
+        &'x self,
+        rail: usize,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        max_controls: usize,
+        max_work: u64,
+        max_drivers: usize,
+    ) -> Result<TransitionRuledReport<'x>> {
+        if rail > 1 || max_controls > 1000000 || max_work > 100000000 || max_drivers > 100000 {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound original ruled transition contact work",
+            ));
+        }
+        let mut out = TransitionRuledReport {
+            certificate: None,
+            exact_work: 0,
+            driver_cells: 0,
+            reason: "profile-transition-ruled-contact-unproven",
+        };
+        let boundary = self.assembly.patch.rails.face.boundary;
+        if !std::ptr::eq(region.face().boundary(), boundary) || max_work == 0 || max_drivers == 0 {
+            return Ok(out);
+        }
+        let Some(pair) = self
+            .pairs
+            .iter()
+            .find(|p| p.kind == ShellPairKind::Rail(rail))
+        else {
+            return Ok(out);
+        };
+        let owners = pair.uses.map(|a| &self.faces[a.face]);
+        let [ShellFaceKind::Transition, ShellFaceKind::Original(index)] = owners.map(|f| f.kind)
+        else {
+            return Ok(out);
+        };
+        let root = boundary.rooted[rail];
+        let neighbor =
+            root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
+        let Some(trace) = exact_trace::certify(neighbor, [0, 1], 1 - root.axis, max_controls)?
+        else {
+            return Ok(out);
+        };
+        let natural = match (root.axis, rail) {
+            (0, 0) => 0,
+            (0, 1) => 2,
+            (1, 0) => 3,
+            _ => 1,
+        };
+        let original = region.profile();
+        let Some(curve) = original
+            .boundary()
+            .iter()
+            .zip(original.boundary_indices())
+            .find_map(|(c, &i)| (i == natural).then_some(c))
+        else {
+            return Ok(out);
+        };
+        if original.axes() != [0, 1] || !identical_trace(curve, trace.curve()) {
+            return Ok(out);
+        }
+        // The whole wall projects onto this original Jordan boundary. The
+        // source subregion (and the transition with the same planar image)
+        // can meet it only on the selected natural rail. Fresh carrier proof
+        // supplies its full 3D contact ownership, including both cut roots.
+        let edge = root.qualify_incident_edge(max_work, max_drivers)?;
+        out.exact_work = edge.work_used;
+        out.driver_cells = edge.driver_cells;
+        let Some(edge) = edge.edge else {
+            out.reason = edge.reason;
+            return Ok(out);
+        };
+        out.certificate = Some(TransitionRuledContact {
+            owners,
+            rail,
+            trace,
+            edge,
+        });
+        out.reason = "profile-transition-ruled-contact-qualified";
+        Ok(out)
+    }
 }
 
 #[cfg(test)]

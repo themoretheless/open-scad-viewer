@@ -127,6 +127,38 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(out)
     }
+    pub fn inspect_contacts_with_profile_region(
+        &self,
+        limits: ContactAuditLimits,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+    ) -> Result<ShellContactAudit<'_>> {
+        let mut out = self.inspect_contacts(limits)?;
+        for pair in &mut out.pairs {
+            if !matches!(pair.proof, PairContactProof::Pending) {
+                continue;
+            }
+            for &edge in &pair.support.shared_edges {
+                let ShellPairKind::Rail(rail) = self.pairs[edge].kind else {
+                    continue;
+                };
+                let ruled = self.qualify_transition_profile_ruled_contact(
+                    rail,
+                    region,
+                    limits.controls_per_enclosure,
+                    limits.exact_work - out.exact_work,
+                    limits.driver_cells - out.driver_cells,
+                )?;
+                out.exact_work += ruled.exact_work;
+                out.driver_cells += ruled.driver_cells;
+                pair.reason = ruled.reason;
+                if let Some(certificate) = ruled.certificate {
+                    pair.proof = PairContactProof::TransitionRuled(certificate);
+                    break;
+                }
+            }
+        }
+        Ok(out)
+    }
     pub fn inspect_contacts(&self, limits: ContactAuditLimits) -> Result<ShellContactAudit<'_>> {
         if limits.exact_work > 100000000 || limits.driver_cells > 100000 {
             return Err(Error::new(
