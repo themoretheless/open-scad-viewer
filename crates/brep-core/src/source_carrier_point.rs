@@ -2,6 +2,7 @@
 //! carrier. Enclosures never replace the root expression by a fixed parameter.
 use crate::{source_contact_point::SourcePoint, source_shared_edge::SharedEdge};
 use nurbs_core::{Error, Result, interval_eval::Interval as I};
+#[derive(Clone)]
 pub struct Point {
     edge: SharedEdge,
     root: SourcePoint,
@@ -38,6 +39,100 @@ impl Point {
         value_codec::json!({"version":1,"kind":"original-carrier-root","edge":self.edge.definition(),
             "root":self.root.definition(),"sourceSide":self.source_side})
     }
+}
+/// Exact restriction of an original incident use. The transported root stays
+/// attached to its admitted carrier; parameter bounds are only enclosures.
+/// This view does not admit a new shared edge or sewn body.
+pub struct Restriction<'a> {
+    point: &'a Point,
+    side: usize,
+    half: usize,
+}
+impl Point {
+    /// Partition either incident use in its original traversal direction.
+    /// Both returned restrictions share the same root expression.
+    pub fn retained_parts(&self, side: usize) -> Result<[Restriction<'_>; 2]> {
+        if side > 1 {
+            return Err(Error::new(
+                "BREP_CARRIER_ROOT",
+                "Choose an original incident use",
+            ));
+        }
+        Ok(std::array::from_fn(|half| Restriction {
+            point: self,
+            side,
+            half,
+        }))
+    }
+}
+impl Restriction<'_> {
+    pub fn source(&self) -> &crate::source_boundary_fragment::Fragment {
+        &self.point.edge.uses()[self.side]
+    }
+    pub fn root(&self) -> &Point {
+        self.point
+    }
+    pub fn side(&self) -> usize {
+        self.side
+    }
+    pub fn parameter_bounds(&self) -> [[f64; 2]; 2] {
+        let ends = self.source().parameter_bounds();
+        let cut = self.point.parameters[self.side];
+        if self.half == 0 {
+            [ends[0], cut]
+        } else {
+            [cut, ends[1]]
+        }
+    }
+    /// Source identity and traversal, never overlapping coordinate boxes.
+    pub fn joins(&self, next: &Restriction<'_>) -> bool {
+        self.half == 0
+            && next.half == 1
+            && self.side == next.side
+            && self.point.definition() == next.point.definition()
+    }
+    pub fn definition(&self) -> value_codec::Value {
+        value_codec::json!({"version":1,"kind":"carrier-root-restriction",
+            "point":self.point.definition(),"side":self.side,"half":self.half})
+    }
+    /// Conservative full-source enclosure on the restricted parameter interval.
+    /// This is positional evidence only; it cannot authorize endpoint welding.
+    pub fn enclose(&self, max_spans: usize) -> Result<RestrictionEnclosure> {
+        if max_spans > 100000 {
+            return Err(Error::new(
+                "BREP_CARRIER_ROOT",
+                "Bound restriction span work",
+            ));
+        }
+        let ends = self.parameter_bounds();
+        let t = I::new(ends[0][0].min(ends[1][0]), ends[0][1].max(ends[1][1]))?;
+        let curve = self.source().curve();
+        let spans = (curve.degree..curve.control_points.len())
+            .filter(|&i| {
+                curve.knots[i] < curve.knots[i + 1]
+                    && curve.knots[i] <= t.hi
+                    && curve.knots[i + 1] >= t.lo
+            })
+            .count();
+        if spans > max_spans {
+            return Ok(RestrictionEnclosure {
+                uv: None,
+                spans: 0,
+                complete: false,
+            });
+        }
+        let uv = nurbs_core::interval_eval::evaluate_interval(curve, t)?;
+        Ok(RestrictionEnclosure {
+            uv: Some(std::array::from_fn(|k| [uv[k].lo, uv[k].hi])),
+            spans,
+            complete: true,
+        })
+    }
+}
+pub struct RestrictionEnclosure {
+    pub uv: Option<[[f64; 2]; 2]>,
+    pub spans: usize,
+    pub complete: bool,
 }
 pub struct Report {
     pub point: Option<Point>,

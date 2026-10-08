@@ -391,6 +391,20 @@ mod tests {
             let transported=crate::source_carrier_point::qualify(original,point,side,3).unwrap();
             let carrier=transported.point.expect(transported.reason);assert_eq!(transported.spans,3);
             assert_eq!(carrier.root().definition(),point.definition());
+            for use_side in 0..2 {
+                let parts=carrier.retained_parts(use_side).unwrap();
+                assert!(parts[0].joins(&parts[1]));
+                assert!(!parts[1].joins(&parts[0]));
+                assert_eq!(parts[0].parameter_bounds()[1],parts[1].parameter_bounds()[0]);
+                assert_eq!(parts[0].source().definition(),original.uses()[use_side].definition());
+                assert_eq!(parts[1].parameter_bounds()[1],original.uses()[use_side].parameter_bounds()[1]);
+                assert!(!parts[0].enclose(0).unwrap().complete);
+                assert!(parts[0].enclose(100).unwrap().complete);
+                assert!(parts[1].enclose(100).unwrap().complete);
+                let foreign_parts=carrier.retained_parts(1-use_side).unwrap();
+                assert!(!parts[0].joins(&foreign_parts[1]));
+            }
+            assert!(carrier.retained_parts(2).is_err());
             let b=carrier.parameter_bounds()[1-side];assert!(b[0]<if high {0.75}else{0.25}&&b[1]>if high {0.75}else{0.25});
             assert!(crate::source_carrier_point::qualify(original,point,side,2).unwrap().point.is_none());
             assert!(crate::source_carrier_point::qualify(original,point,1-side,3).unwrap().point.is_none());

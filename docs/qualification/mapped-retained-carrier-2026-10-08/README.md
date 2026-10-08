@@ -819,3 +819,22 @@ Both actual carrier/root transport and fresh restoration regressions pass.
 This establishes a native transported-root object for subsequent endpoint
 integration. It is not yet a Fragment endpoint variant, a replacement contour,
 new endpoint surface or corrected closed Body. Those integrations remain open.
+
+## Incident-use restrictions at transported roots
+
+`Point::retained_parts(side)` now represents both halves of either original
+incident use, including the degree-five neighboring pcurve on edge 0. The halves
+retain the private admitted carrier and original root expression. Directed
+parameter bounds enclose that expression; they do not replace it with a scalar.
+Joining requires the same source side, original carrier/root definitions and
+first-to-second traversal. Coordinate overlap cannot establish a join.
+
+Complete UV enclosures charge every intersected original curve span and refuse
+insufficient work. The actual edge 0 and edge 1 regression checks both incident
+uses, their outer endpoints, shared root bounds, reversed join refusal, foreign
+side refusal and zero-span refusal. It passed in 2.41 seconds. All five existing
+source-boundary-fragment tests passed in 0.06 seconds.
+
+These are exact source restriction views. Integration into Fragment endpoints,
+fresh qualification of both restricted shared carriers, restoration of those
+restrictions and closed-body assembly remain required. No packaged WASM changed.
