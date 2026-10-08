@@ -1021,12 +1021,23 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
     /// Prove injectivity only with one fixed projection and complete coverage
     /// of the corrected expression's projected Jacobian principal minors.
     pub fn inspect_transverse_corrected_injectivity(
-        &self,
-        free: [f64; 2],
-        across: [f64; 2],
-        projection: [[f64; 3]; 2],
-        max_cells: usize,
-        max_spans: usize,
+        &self, free:[f64;2], across:[f64;2], projection:[[f64;3];2],
+        max_cells:usize, max_spans:usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        self.inspect_transverse_corrected_injectivity_policy(
+            free,across,projection,max_cells,max_spans,false)
+    }
+    /// Spend additional shared work on first jets integrated from source rails.
+    pub fn inspect_transverse_corrected_injectivity_from_rails(
+        &self, free:[f64;2], across:[f64;2], projection:[[f64;3];2],
+        max_cells:usize, max_spans:usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        self.inspect_transverse_corrected_injectivity_policy(
+            free,across,projection,max_cells,max_spans,true)
+    }
+    fn inspect_transverse_corrected_injectivity_policy(
+        &self, free:[f64;2], across:[f64;2], projection:[[f64;3];2],
+        max_cells:usize, max_spans:usize, tighten:bool,
     ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
         self.bridge.validate(free, across, max_spans)?;
         check(
@@ -1082,7 +1093,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 max_spans - out.spans,
             )?;
             out.spans += spent;
-            let Some(jet) = jet else {
+            let Some(mut jet) = jet else {
                 out.pending.push(rect);
                 out.pending.extend(queue);
                 return Ok(out);
@@ -1101,6 +1112,29 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             if projected_principal_minors_positive(j)? {
                 out.regular.push(rect);
                 continue;
+            }
+            if tighten && out.spans < max_spans {
+                let (anchored, spent) = self.first_free_from_rail_bounds(
+                    rect[0], rect[1], max_spans-out.spans)?;
+                out.spans += spent;
+                if let Some(anchored) = anchored {
+                    for k in 0..3 {
+                        let common = I::new(jet[0][k][0],jet[0][k][1])?
+                            .intersect(anchored[k][0],anchored[k][1])?;
+                        jet[0][k]=[common.lo,common.hi];
+                    }
+                    for row in 0..2 {
+                        j[row][0]=I::point(0.);
+                        for k in 0..3 {
+                            j[row][0]=j[row][0].add(I::point(projection[row][k])
+                                .mul(I::new(jet[0][k][0],jet[0][k][1])?)?)?;
+                        }
+                    }
+                    if projected_principal_minors_positive(j)? {
+                        out.regular.push(rect);
+                        continue;
+                    }
+                }
             }
             let range = self.bridge.section(false).range();
             let axis = usize::from(
@@ -1416,7 +1450,7 @@ mod tests {
         .unwrap();
         let corrected = bridge.constrain_original_rails(100).unwrap().0.unwrap();
         let report = corrected
-            .inspect_transverse_corrected_injectivity(
+            .inspect_transverse_corrected_injectivity_from_rails(
                 [0., 1.],
                 [0., 1.],
                 [[0., 1., 0.], [1., 0., 0.]],

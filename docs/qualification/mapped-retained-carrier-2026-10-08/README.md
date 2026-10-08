@@ -2511,3 +2511,48 @@ corrected transition. A midpoint-derived inverse only chooses a finite
 preconditioning matrix in XY; the existing whole-domain principal-minor
 enclosures alone grant proof. Failure or incomplete coverage retains
 the projected contact as unqualified. This new check is being run next.
+
+## XY injectivity and first jets from preserved rails
+
+The direct XY native run passed in 120.23 s, but projection admission
+remains incomplete: 476 accepted rectangles, 49 pending, 1000 cells,
+61000 spans. No projected face certificate or curved-contact proof follows.
+
+A new bounded first-free-jet enclosure integrates the full corrected
+second jet from the exact source first jet at the nearest natural rail.
+The whole connecting path is enclosed. Internal free knots permitting
+C1 jumps are refused, including knots at the requested path endpoints.
+An explicit stronger injectivity policy intersects these first-jet bounds
+with the direct bounds and rechecks projected principal minors, charging
+all additional queries to the same span budget. The original policy keeps
+its existing work allocation.
+
+Four bridge tests passed in 5.72 s, including first derivatives of both
+quartic and rational fixtures along both parameter axes, and refusal of
+a genuinely folded patch under the stronger policy. The new native XY
+policy is being run; incomplete coverage cannot grant contact admission.
+
+The first-jet path guard has a dedicated derivative-jump regression. A
+degree-two free chart with a double knot at 0.5 is refused by the normal
+rail factory. The test additionally bypasses that private factory only
+to exercise the local defensive guard: paths ending at, starting at,
+or crossing the knot all return none with zero derivative queries.
+Five bridge tests passed in 14.39 s. The native stronger XY policy run
+remains live; no projected injectivity/contact certificate is yet claimed.
+
+The rail first-jet anchor now has an exact separable-weight endpoint
+formula for a single clamped nonlinear span (degree at most eight). It
+forms adjacent original control-point differences before weighting,
+bounds their rational curve in the unchanged source parameter interval,
+and multiplies by the exact degree/span and adjacent/boundary weight
+ratio. The common separable factors cancel algebraically. Unsupported
+nonlinear layouts retain the existing general derivative enclosure; no
+rounded replacement controls are constructed.
+
+A translated-world regression initially used 2^40 and was correctly
+rejected by the source coordinate cap of 1e9. It now uses valid 2^29
+coordinates and proves a strictly positive rail derivative from a one-ULP
+control difference. The cap was not changed. Six bridge tests passed in
+15.49 s, including rational weights, both axes, folds, and derivative
+jump refusals. The preceding native stronger-policy run is still live;
+its binary predates this more stable endpoint formula.
