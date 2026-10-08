@@ -417,3 +417,31 @@ not zero. `factored-secant-pole-weights.json` preserves original weights and
 this exact result. Removing a second factor would change the represented
 geometry; a supported correction requires its own bounded error and source
 identity treatment. No tolerance-based coefficient deletion is performed.
+
+## Whole-domain positional bound for a separable weight proposal
+
+Native `qualify_weight_profile` binds a proposal to the original surface and
+covers all original controls. Target weights are exact expressions
+row[i]*column[j]/pivot using authored original row/column weights, not flattened
+binary64 replacements. Positive rational basis partition of unity gives
+T-S = sum B_ij (targetWeight-originalWeight)(P_ij-S)/targetW.
+Original control coordinate extents bound P_ij-S, and the positive target-weight
+lower bound supplies the denominator. Every arithmetic step rounds outward.
+The private proposal certificate reports complete whole-domain axis bounds;
+missing controls provide no certificate. Periodic layouts currently refuse.
+
+Two native tests cover one-ULP changes, analytic planar evaluation, unchanged
+original source, insufficient work, invalid anchors/tolerances and rejection
+of a large change. The admitted original annular Body regression covers all
+18 face-0 controls with pole-row anchor [5,0]. Axis deviation bounds are
+[2.5515425836831596e-15, 7.294274923020359e-15, 1.1913036837556104e-15] mm;
+weight deviation upper is 6.66133814775094e-16. The positional 1e-7 mm tolerance
+passes. `weight-profile-position-native.json` records the native output.
+
+This is a proposal bound only. It neither alters the represented source nor
+qualifies tangent continuity, rebuilt neighboring carrier identities or a
+replacement closed Body. Flattening the exact product expressions to f64 adds
+a separate error and can reintroduce the pole residual. Applying a correction
+requires retaining its exact factored representation and requalifying seams,
+wall/volume, exchange and history. Shipped WASM and its 28 pending wall pairs
+remain unchanged. No new whole-wall proof follows from positional proximity.

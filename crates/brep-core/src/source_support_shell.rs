@@ -378,6 +378,13 @@ mod tests {
         assert!(std::ptr::eq(shared.body(),&body));assert_eq!(shared.faces(),[0,2]);
         assert_eq!(shared.fixed_axes(),[1,1]);assert_eq!(shared.fixed_values(),[1.,1.]);
         assert_eq!(shared.free_endpoints(),[[0.,1.],[3.,0.]]);
+        let source=shared.surfaces()[0];
+        let (profile,profile_work)=nurbs_core::normal_alignment::qualify_weight_profile(source,[5,0],18).unwrap();
+        let profile=profile.unwrap();assert_eq!(profile_work,18);assert!(std::ptr::eq(profile.source(),source));
+        assert!(profile.within_position_tolerance(1e-7).unwrap());
+        eprintln!("annular original exact weight-profile proposal axis upper {:?} weight upper {}",profile.axis_deviation_upper(),profile.weight_deviation_upper());
+        assert!(nurbs_core::normal_alignment::qualify_weight_profile(source,[5,0],17).unwrap().0.is_none());
+
         let first=shared.canonical_bounds(0,[[0.25,0.5],[0.,1.]]).unwrap();
         let second=shared.canonical_bounds(1,[[1.5,2.25],[0.,1.]]).unwrap();
         assert!(first[0]<=0.25&&first[1]>=0.5);assert!(second[0]<=0.25&&second[1]>=0.5);

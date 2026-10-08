@@ -1,0 +1,17 @@
+{
+  "face": 0,
+  "anchor": [
+    5,
+    0
+  ],
+  "controlsCovered": 18,
+  "axisDeviationUpperMm": [
+    2.5515425836831596e-15,
+    7.294274923020359e-15,
+    1.1913036837556104e-15
+  ],
+  "weightDeviationUpper": 6.66133814775094e-16,
+  "positionToleranceMm": 1e-07,
+  "positionToleranceQualified": true,
+  "scope": "Native source-bound exact separable expression proposal. No replacement Body, flattened weights, tangent continuity, or STEP acceptance is certified."
+}
