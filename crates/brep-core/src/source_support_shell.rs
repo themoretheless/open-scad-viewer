@@ -723,24 +723,25 @@ mod tests {
             domain_cells:100000,domain_cells_per_pair:256,exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};
         let audit=expression.inspect_contacts(audit_limits).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
-        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),155);
-        let mut kinds=[0usize;5];
+        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),154);
+        let mut kinds=[0usize;6];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
                 PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
+                PairContactProof::TransitionPlane(c)=>(5,Some([c.owners()[1],c.owners()[0]])),
             };
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[155,162,12,23,54]);
-        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(155));
+        assert_eq!(kinds,[154,162,12,23,54,1]);
+        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(154));
         assert_eq!(diagnostics["pairs"].as_array().unwrap().len(),406);
         let binary=value_codec::encode_binary(&diagnostics).unwrap();
         assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);
         let json=value_codec::from_str::<value_codec::Value>(&diagnostics.to_string()).unwrap();
-        assert_eq!(json["pendingPairs"].as_u64(),Some(155));
+        assert_eq!(json["pendingPairs"].as_u64(),Some(154));
         assert_eq!(json["pairs"].as_array().unwrap().len(),406);
         eprintln!("expression audit diagnostics binaryBytes={} jsonBytes={}",binary.len(),diagnostics.to_string().len());
 

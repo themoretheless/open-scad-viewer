@@ -18,6 +18,7 @@ pub enum PairContactProof<'x> {
     Planar(OriginalPlanarContact<'x>),
     Fiber(OriginalFiberContact<'x>),
     VertexOrInterior(OriginalAdditionalContact<'x>),
+    TransitionPlane(TransitionPlaneContact<'x>),
 }
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
@@ -27,6 +28,7 @@ impl PairContactProof<'_> {
             Self::Planar(_) => "planar",
             Self::Fiber(_) => "fiber",
             Self::VertexOrInterior(_) => "vertex-or-interior",
+            Self::TransitionPlane(_) => "transition-plane",
         }
     }
 }
@@ -158,6 +160,28 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         if let Some(certificate) = extra.certificate {
                             proof = PairContactProof::VertexOrInterior(certificate);
                         }
+                    }
+                }
+            }
+            if matches!(proof, PairContactProof::Pending) {
+                for &edge in &support.shared_edges {
+                    let ShellPairKind::Rail(rail) = self.pairs[edge].kind else {
+                        continue;
+                    };
+                    let plane = self.qualify_transition_plane_contact(
+                        rail,
+                        limits.exact_work - out.exact_work,
+                        limits.controls_per_enclosure,
+                        limits.cells - out.cells,
+                        limits.spans - out.spans,
+                    )?;
+                    out.exact_work += plane.exact_work;
+                    out.cells += plane.cells;
+                    out.spans += plane.spans;
+                    reason = plane.reason;
+                    if let Some(certificate) = plane.certificate {
+                        proof = PairContactProof::TransitionPlane(certificate);
+                        break;
                     }
                 }
             }

@@ -2442,3 +2442,21 @@ audit integration is next; the last combined audit still reported 155
 pending pairs because it did not consume transition-plane certificates.
 This one pair proof does not establish global Body validity or fillet
 radius, wall thickness, or packaged WASM integration.
+
+## Combined audit consumes owned transition-plane proof
+
+The unified audit freshly qualifies pending pairs that have an owned Rail
+edge, using the same remaining cells, spans, and exact work as all other
+proof families. A private TransitionPlane certificate is retained as a
+separate proof variant and emits diagnostic kind transition-plane.
+Support rectangles are still present as inspection history; the typed
+proof determines whether a pair is qualified.
+
+The native fixture passed in 88.26 s. Counts are now [154 pending,
+162 excluded, 12 original planar, 23 fiber, 54 vertex/interior,
+1 transition-plane]. Combined work is 2245 cells, 51107 spans, 6494
+domain cells, 3982141 exact work, 0 driver cells. Tests check actual owner
+pointer identities, JSON/binary diagnostic round trips with 154 pending
+pairs, all 406 inventory pairs, and zero budgets retaining all 406 pending.
+This does not qualify the remaining curved-neighbor contact, all other
+pairs, shell volume, wall thickness, or packaged WASM/UI runtime.
