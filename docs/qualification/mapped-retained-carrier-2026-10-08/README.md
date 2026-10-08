@@ -909,3 +909,24 @@ containment, orientation, immersion or self-intersection freedom. The section
 is still owned by the original Surface; it is not an exact shared boundary of
 the corrected weight profile. Exact corrected-section ownership, neighbor
 replacement wires, cap geometry and closed-body admission remain required.
+
+## Exact section tangent and transverse derivative bounds
+
+`WeightProfile::derivative_bounds` differentiates the exact factored homogeneous
+profile with the existing translated quotient calculus. Original intersecting
+spans, including both one-sided limits at knots, are all charged. Incomplete
+span work returns no certificate. `ProfileSection::tangent_bounds` and
+`transverse_bounds` select the free and fixed original coordinate derivatives
+without flattening new weights or materializing a rounded Curve.
+
+An independently evaluated rational planar example checks tangent
+[0,3/(1+2v)^2,0] and transverse derivative [0.64,0,0] at three parameters. A
+two-span example refuses one-span work for both derivatives. All 13 profile
+tests passed in 0.02 seconds. On the actual U=0.75 annular cut, both derivative
+vectors exclude zero over each of 64 full intervals covering the section.
+The B-rep control regression passed in 3.37 seconds.
+
+These derivatives provide exact-profile boundary data for transition
+construction. They do not prove an independently authored cap tangent, shared
+position, positive thickness or embedding. Corrected-section ownership in
+shared-edge admission and actual end-transition surfaces remain open.

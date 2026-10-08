@@ -116,6 +116,36 @@ impl ProfileSection<'_, '_> {
     ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
         self.profile.enclose(self.rectangle(range)?, max_spans)
     }
+    /// Complete derivative of the exact section with respect to its free
+    /// original parameter, including both one-sided knot limits.
+    pub fn tangent_bounds(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (bounds, spent) = self
+            .profile
+            .derivative_bounds(self.rectangle(range)?, max_spans)?;
+        Ok((
+            bounds.map(|b| std::array::from_fn(|k| b[k][1 - self.axis])),
+            spent,
+        ))
+    }
+    /// Transverse support derivative for constructing a boundary-compatible
+    /// transition. This does not certify any independently proposed cap.
+    pub fn transverse_bounds(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (bounds, spent) = self
+            .profile
+            .derivative_bounds(self.rectangle(range)?, max_spans)?;
+        Ok((
+            bounds.map(|b| std::array::from_fn(|k| b[k][self.axis])),
+            spent,
+        ))
+    }
     /// Normals belong to the incident proposed support, not an as-yet unauthored cap.
     pub fn support_normals(
         &self,
@@ -218,6 +248,57 @@ impl<'source> WeightProfile<'source> {
             return Ok((None, 0));
         }
         Ok((Some(hull), spent))
+    }
+    /// Quotient derivatives of the exact factored homogeneous expression.
+    /// Every original span intersecting the rectangle contributes; incomplete
+    /// work returns no certificate. No replacement binary64 weights are made.
+    pub fn derivative_bounds(
+        &self,
+        domain: [[f64; 2]; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[[f64; 2]; 2]; 3]>, usize)> {
+        crate::normal_alignment::validate_rectangle(self.source, domain, max_spans)?;
+        let s = self.source;
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let knots = [&s.knots_u, &s.knots_v];
+        let mut hull = [[[f64::INFINITY, f64::NEG_INFINITY]; 2]; 3];
+        let mut spent = 0;
+        for u in degrees[0]..counts[0] {
+            for v in degrees[1]..counts[1] {
+                let span = [
+                    [knots[0][u], knots[0][u + 1]],
+                    [knots[1][v], knots[1][v + 1]],
+                ];
+                if span.iter().any(|r| r[0] == r[1]) {
+                    continue;
+                }
+                let section = std::array::from_fn(|a| {
+                    [span[a][0].max(domain[a][0]), span[a][1].min(domain[a][1])]
+                });
+                if section.iter().any(|r| r[0] > r[1]) {
+                    continue;
+                }
+                if spent == max_spans {
+                    return Ok((None, spent));
+                }
+                let values = crate::normal_alignment::jacobian_net_on(
+                    self.homogeneous_on([u, v], span)?,
+                    degrees,
+                    span,
+                    section,
+                    &s.control_points[u][v],
+                )?;
+                for k in 0..3 {
+                    for axis in 0..2 {
+                        hull[k][axis][0] = hull[k][axis][0].min(values[k][axis].lo);
+                        hull[k][axis][1] = hull[k][axis][1].max(values[k][axis].hi);
+                    }
+                }
+                spent += 1;
+            }
+        }
+        Ok((if spent == 0 { None } else { Some(hull) }, spent))
     }
     /// Complete rectangle enclosure of the exact profile's unnormalized normal.
     /// Includes both one-sided limits at knots; zero-containing bounds do not
@@ -890,6 +971,16 @@ mod tests {
         for v in [0., 0.3, 1.] {
             let r = cut.enclose([v, v], 1).unwrap().0.unwrap();
             let expected = [0.8, 3. * v / (1. + 2. * v), 0.];
+            let tangent = cut.tangent_bounds([v, v], 1).unwrap().0.unwrap();
+            let transverse = cut.transverse_bounds([v, v], 1).unwrap().0.unwrap();
+            for (bounds, expected) in [
+                (tangent, [0., 3. / (1. + 2. * v).powi(2), 0.]),
+                (transverse, [0.64, 0., 0.]),
+            ] {
+                for k in 0..3 {
+                    assert!(bounds[k][0] <= expected[k] && expected[k] <= bounds[k][1]);
+                }
+            }
             for k in 0..3 {
                 assert!(r[k][0] <= expected[k] && r[k][1] >= expected[k]);
             }
@@ -911,6 +1002,10 @@ mod tests {
         assert!(cut.enclose([0., 1.], 1).unwrap().0.is_none());
         assert!(cut.support_normals([0., 1.], 1).unwrap().0.is_none());
         assert!(cut.enclose([0., 1.], 2).unwrap().0.is_some());
+        assert!(cut.tangent_bounds([0., 1.], 1).unwrap().0.is_none());
+        assert!(cut.transverse_bounds([0., 1.], 1).unwrap().0.is_none());
+        assert!(cut.tangent_bounds([0., 1.], 2).unwrap().0.is_some());
+        assert!(cut.transverse_bounds([0., 1.], 2).unwrap().0.is_some());
     }
     #[test]
     fn exact_profile_pole_keeps_distinct_limiting_planes() {

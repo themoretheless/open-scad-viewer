@@ -358,6 +358,10 @@ mod tests {
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {
             let r=cut.support_normals([i as f64/64.,(i+1) as f64/64.],1).unwrap().0.unwrap();
+            for bounds in [cut.tangent_bounds([i as f64/64.,(i+1) as f64/64.],1).unwrap().0.unwrap(),
+                cut.transverse_bounds([i as f64/64.,(i+1) as f64/64.],1).unwrap().0.unwrap()] {
+                assert!(bounds.iter().any(|r|r[0]>0.||r[1]<0.));
+            }
             assert!(r.iter().any(|r|r[0]>0.||r[1]<0.),"cut support normal unresolved at {i}: {r:?}");
         }
         eprintln!("corrected pole cut U=0.75 midpoint={:?} regularIntervals=64",middle);
