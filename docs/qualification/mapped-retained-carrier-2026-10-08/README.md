@@ -2611,3 +2611,14 @@ in 550.70 seconds. Its combined owned-shell audit still reported
 Jacobian determinant and breadth-first policy, so its passing result cannot
 qualify those changes. The replacement full fixture is running with both
 changes and explicit regular-plus-pending parameter-area checks.
+
+The combined determinant plus breadth-first native run has now emitted its
+XY cover: 464 accepted / 73 pending, 1000 cells, 84828 spans, pending area
+0.02392578125 (2.392578125%). Compared with the direct baseline's one-third
+pending area, this proves more complete coverage at the same cell cap, not
+whole-domain admission. Most remaining rectangles touch free=1; the rest
+are near the upper across section. The fixture's total-area checks passed
+before it continued to shell incidence/contact checks. Exact high-rail
+projected first-jet diagnostics are being added to distinguish boundary
+projection degeneracy from coarse-box overestimation. Full native execution
+is still in progress.
