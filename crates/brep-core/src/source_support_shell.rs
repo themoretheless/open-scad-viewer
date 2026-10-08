@@ -353,6 +353,14 @@ mod tests {
         let pole=pole.expect("exact corrected pole limit diagnostic");assert_eq!(spent,4);
         assert_eq!(pole.point,[20.,0.,6.]);assert!(pole.distinct_tangent_limits);
         eprintln!("corrected profile pole distinct={} sine={:?} normals={:?}",pole.distinct_tangent_limits,pole.sine_squared_interval,pole.components);
+        let cut=proposal.profile(0).unwrap().section(0,0.75).unwrap();
+        let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
+        assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
+        for i in 0..64 {
+            let r=cut.support_normals([i as f64/64.,(i+1) as f64/64.],1).unwrap().0.unwrap();
+            assert!(r.iter().any(|r|r[0]>0.||r[1]<0.),"cut support normal unresolved at {i}: {r:?}");
+        }
+        eprintln!("corrected pole cut U=0.75 midpoint={:?} regularIntervals=64",middle);
         let report=proposal.qualify_edge(1,100,1e-6,2,4).unwrap();
         assert!(report.seam.is_none());assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
         let r=report.angular.unwrap();assert_eq!((r.cells,r.spans,r.accepted_cells),(2,4,1));

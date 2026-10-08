@@ -76,6 +76,56 @@ pub struct ProfilePoleLimits {
     pub sine_squared_interval: Option<[f64; 2]>,
     pub distinct_tangent_limits: bool,
 }
+/// Exact iso-parameter cut carrier on one immutable proposed profile.
+/// This view keeps source/factor ownership instead of flattening new weights.
+pub struct ProfileSection<'p, 's> {
+    profile: &'p WeightProfile<'s>,
+    axis: usize,
+    parameter: f64,
+    range: [f64; 2],
+}
+impl ProfileSection<'_, '_> {
+    pub fn profile(&self) -> &WeightProfile<'_> {
+        self.profile
+    }
+    pub fn axis(&self) -> usize {
+        self.axis
+    }
+    pub fn parameter(&self) -> f64 {
+        self.parameter
+    }
+    pub fn range(&self) -> [f64; 2] {
+        self.range
+    }
+    fn rectangle(&self, range: [f64; 2]) -> Result<[[f64; 2]; 2]> {
+        check(
+            range.iter().all(|x| x.is_finite())
+                && range[0] <= range[1]
+                && range[0] >= self.range[0]
+                && range[1] <= self.range[1],
+            "Keep section parameters in its owned range",
+        )?;
+        let mut domain = [[self.parameter; 2]; 2];
+        domain[1 - self.axis] = range;
+        Ok(domain)
+    }
+    pub fn enclose(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.profile.enclose(self.rectangle(range)?, max_spans)
+    }
+    /// Normals belong to the incident proposed support, not an as-yet unauthored cap.
+    pub fn support_normals(
+        &self,
+        range: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.profile
+            .normal_bounds(self.rectangle(range)?, max_spans)
+    }
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -84,6 +134,32 @@ fn choose(n: usize, k: usize) -> f64 {
     x as f64
 }
 impl<'source> WeightProfile<'source> {
+    /// Exact new cut boundary for subsequent endpoint surface construction.
+    /// Creating the carrier does not trim the face or sew a closed Body.
+    pub fn section(&self, axis: usize, parameter: f64) -> Result<ProfileSection<'_, 'source>> {
+        check(
+            axis < 2 && parameter.is_finite(),
+            "Choose a finite profile section coordinate",
+        )?;
+        let s = self.source;
+        let knots = [&s.knots_u, &s.knots_v];
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let range = [
+            knots[1 - axis][degrees[1 - axis]],
+            knots[1 - axis][counts[1 - axis]],
+        ];
+        check(
+            parameter >= knots[axis][degrees[axis]] && parameter <= knots[axis][counts[axis]],
+            "Section coordinate lies inside the original natural chart",
+        )?;
+        Ok(ProfileSection {
+            profile: self,
+            axis,
+            parameter,
+            range,
+        })
+    }
     pub fn source(&self) -> &Surface {
         self.source
     }
@@ -799,6 +875,42 @@ mod tests {
             .unwrap();
         assert_eq!(r.aligned, Some(false));
         assert_eq!(r.pending, vec![[0., 1.]]);
+    }
+    #[test]
+    fn exact_section_carrier_keeps_profile_identity_and_complete_span_budget() {
+        let mut s = surface();
+        s.weights = vec![vec![2., 6.], vec![8., 25.]];
+        let p = qualify_weight_profile(&s, [0, 0], 4).unwrap().0.unwrap();
+        let cut = p.section(0, 0.5).unwrap();
+        assert!(std::ptr::eq(cut.profile(), &p));
+        assert_eq!(
+            (cut.axis(), cut.parameter(), cut.range()),
+            (0, 0.5, [0., 1.])
+        );
+        for v in [0., 0.3, 1.] {
+            let r = cut.enclose([v, v], 1).unwrap().0.unwrap();
+            let expected = [0.8, 3. * v / (1. + 2. * v), 0.];
+            for k in 0..3 {
+                assert!(r[k][0] <= expected[k] && r[k][1] >= expected[k]);
+            }
+        }
+        assert!(cut.support_normals([0.3, 0.3], 1).unwrap().0.unwrap()[2][0] > 0.);
+        assert!(cut.enclose([-0.1, 0.5], 1).is_err());
+        assert!(p.section(2, 0.5).is_err());
+        assert!(p.section(0, 1.1).is_err());
+        s.knots_v = vec![0., 0., 0.5, 1., 1.];
+        for row in &mut s.control_points {
+            let x = row[0][0];
+            row.insert(1, vec![x, 0.5, 0.]);
+        }
+        for row in &mut s.weights {
+            row.insert(1, 4.);
+        }
+        let p = qualify_weight_profile(&s, [0, 0], 6).unwrap().0.unwrap();
+        let cut = p.section(0, 0.5).unwrap();
+        assert!(cut.enclose([0., 1.], 1).unwrap().0.is_none());
+        assert!(cut.support_normals([0., 1.], 1).unwrap().0.is_none());
+        assert!(cut.enclose([0., 1.], 2).unwrap().0.is_some());
     }
     #[test]
     fn exact_profile_pole_keeps_distinct_limiting_planes() {

@@ -696,3 +696,22 @@ end requires changing the transition geometry, not just accepting the corrected
 weights or the zero normal. Twelve profile tests and the native actual pole /
 endpoint-preflight regression pass, including underbudget and noncollapsed
 controls. Other incident seam certificates remain separate from this diagnosis.
+
+## Exact new section carrier for endpoint reconstruction
+
+`WeightProfile::section` supplies a private `ProfileSection` view bound to one
+exact proposed profile, cut coordinate and full natural free-parameter range.
+Its position and incident-support normal enclosures use the existing exact
+homogeneous expressions. No iso curve weights are flattened into new f64
+controls. Incomplete span budgets return no position/normal bound; parameters
+outside the owned section range are errors. This creates a new carrier view,
+not a trimmed face, new cap or closed Body.
+
+The annular face 0 cut at U=0.75 stays away from pole [20,0,6]. Its V=0.5
+midpoint enclosure is [[19.847227256480796,19.847227256481446],
+[1.950029346061504,1.950029346061577],
+[5.942794293200402,5.9427942932005955]]. All 64 consecutive V intervals have
+support normal enclosures excluding zero. Thirteen profile tests and the
+native actual section/pole/endpoint regression pass. These bounds prepare a
+regular new junction boundary; adjacent retained-face cuts, cap construction,
+sewing, embedding and volume qualification remain required.
