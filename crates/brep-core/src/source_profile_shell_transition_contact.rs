@@ -2,6 +2,26 @@
 use super::*;
 use nurbs_core::interval_eval::Interval as I;
 type Rectangle = [[f64; 2]; 2];
+fn plane_normal(plane: [[f64; 3]; 3]) -> Result<[I; 3]> {
+    // An exactly constant coordinate gives an exact plane equation. Avoid
+    // introducing cross-product roundoff in its mathematically zero terms.
+    for axis in 0..3 {
+        if plane[0][axis] == plane[1][axis] && plane[0][axis] == plane[2][axis] {
+            return Ok(std::array::from_fn(|k| {
+                I::point(if k == axis { 1. } else { 0. })
+            }));
+        }
+    }
+    let a = std::array::from_fn::<_, 3, _>(|k| I::point(plane[1][k]).sub(I::point(plane[0][k])));
+    let b = std::array::from_fn::<_, 3, _>(|k| I::point(plane[2][k]).sub(I::point(plane[0][k])));
+    let a = a.into_iter().collect::<Result<Vec<_>>>()?;
+    let b = b.into_iter().collect::<Result<Vec<_>>>()?;
+    Ok([
+        a[1].mul(b[2])?.sub(a[2].mul(b[1])?)?,
+        a[2].mul(b[0])?.sub(a[0].mul(b[2])?)?,
+        a[0].mul(b[1])?.sub(a[1].mul(b[0])?)?,
+    ])
+}
 struct Cover {
     accepted: Vec<Rectangle>,
     pending: Vec<Rectangle>,
@@ -25,8 +45,10 @@ where
         spans: 0,
     };
     let anchor = domain[0][usize::from(high)];
-    let mut stack = vec![domain];
-    while let Some(rect) = stack.pop() {
+    // Process each refinement level before descending further. A difficult
+    // anchor must not consume the whole budget while coarse siblings wait.
+    let mut stack = std::collections::VecDeque::from([domain]);
+    while let Some(rect) = stack.pop_front() {
         if out.cells == max_cells {
             out.pending.push(rect);
             out.pending.extend(stack);
@@ -64,8 +86,8 @@ where
         let mut right = rect;
         left[axis][1] = middle;
         right[axis][0] = middle;
-        stack.push(right);
-        stack.push(left);
+        stack.push_back(left);
+        stack.push_back(right);
     }
     Ok(out)
 }
@@ -239,24 +261,14 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             out.reason = "expression-transition-plane-recipe-unproven";
             return Ok(out);
         };
-        let a =
-            std::array::from_fn::<_, 3, _>(|k| I::point(plane[1][k]).sub(I::point(plane[0][k])));
-        let b =
-            std::array::from_fn::<_, 3, _>(|k| I::point(plane[2][k]).sub(I::point(plane[0][k])));
-        let a = a.into_iter().collect::<Result<Vec<_>>>()?;
-        let b = b.into_iter().collect::<Result<Vec<_>>>()?;
-        let normal = [
-            a[1].mul(b[2])?.sub(a[2].mul(b[1])?)?,
-            a[2].mul(b[0])?.sub(a[0].mul(b[2])?)?,
-            a[0].mul(b[1])?.sub(a[1].mul(b[0])?)?,
-        ];
+        let normal = plane_normal(plane)?;
         let result = cover(
             domain,
             rail == 1,
             max_cells,
             max_spans,
             |rect, derivative, budget| {
-                let (bounds, spent) = if derivative {
+                let (bounds, mut spent) = if derivative {
                     if out.anchor_order == Some(2) {
                         constrained.second_free_derivatives_with_transverse_correction(
                             rect[0], rect[1], budget,
@@ -274,6 +286,9 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 };
                 let mut value = I::point(0.);
                 for k in 0..3 {
+                    if normal[k].lo == 0. && normal[k].hi == 0. {
+                        continue;
+                    }
                     let coordinate = I::new(bounds[k][0], bounds[k][1])?;
                     let coordinate = if derivative {
                         coordinate
@@ -281,6 +296,43 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         coordinate.sub(I::point(plane[0][k]))?
                     };
                     value = value.add(normal[k].mul(coordinate)?)?;
+                }
+                if !derivative
+                    && value.lo <= 0.
+                    && value.hi >= 0.
+                    && out.anchor_order == Some(2)
+                    && spent < budget
+                {
+                    // Position subtraction can remain broad away from a
+                    // tangent rail. Twice integrate a strict second normal
+                    // derivative over the entire path from that exact rail.
+                    let path = if rail == 1 {
+                        [rect[0][0], domain[0][1]]
+                    } else {
+                        [domain[0][0], rect[0][1]]
+                    };
+                    let (second, used) = constrained
+                        .second_free_derivatives_with_transverse_correction(
+                            path,
+                            rect[1],
+                            budget - spent,
+                        )?;
+                    spent += used;
+                    if let Some(second) = second {
+                        let mut curvature = I::point(0.);
+                        for k in 0..3 {
+                            if normal[k].lo == 0. && normal[k].hi == 0. {
+                                continue;
+                            }
+                            curvature = curvature
+                                .add(normal[k].mul(I::new(second[k][0], second[k][1])?)?)?;
+                        }
+                        if curvature.lo > 0. || curvature.hi < 0. {
+                            // The cover only consumes strict nonzero status;
+                            // this is a derivative bound, not a position box.
+                            return Ok((Some([curvature.lo, curvature.hi]), spent));
+                        }
+                    }
                 }
                 Ok((Some([value.lo, value.hi]), spent))
             },
@@ -308,6 +360,50 @@ mod tests {
         (r[0][1] - r[0][0]) * (r[1][1] - r[1][0])
     }
     #[test]
+    fn plane_cover_axis_equation_has_exact_zero_components() {
+        for axis in 0..3 {
+            let mut plane = [[0.; 3]; 3];
+            for p in &mut plane {
+                p[axis] = 1000000.;
+            }
+            plane[1][(axis + 1) % 3] = 3.;
+            plane[2][(axis + 2) % 3] = 7.;
+            let normal = plane_normal(plane).unwrap();
+            for k in 0..3 {
+                let expected = if k == axis { 1. } else { 0. };
+                assert_eq!([normal[k].lo, normal[k].hi], [expected; 2]);
+            }
+        }
+    }
+    #[test]
+    fn plane_cover_budget_reaches_all_coarse_siblings() {
+        let domain = [[0., 1.]; 2];
+        let mut visited = Vec::new();
+        let report = cover(domain, false, 7, 100, |rect, _, _| {
+            visited.push(rect);
+            Ok((None, 1))
+        })
+        .unwrap();
+        assert_eq!(visited.len(), 7);
+        for x in [[0., 0.5], [0.5, 1.]] {
+            for y in [[0., 0.5], [0.5, 1.]] {
+                assert!(visited.contains(&[x, y]));
+            }
+        }
+        assert!(report.accepted.is_empty());
+        assert_eq!(report.pending.len(), 8);
+        assert_eq!(report.pending.iter().copied().map(area).sum::<f64>(), 1.);
+        let exhausted = cover(domain, false, 100, 3, |_, _, remaining| {
+            assert!(remaining > 0);
+            Ok((None, 1))
+        })
+        .unwrap();
+        assert_eq!(exhausted.spans, 3);
+        assert_eq!(exhausted.cells, 3);
+        assert!(exhausted.accepted.is_empty());
+        assert_eq!(exhausted.pending.iter().copied().map(area).sum::<f64>(), 1.);
+    }
+    #[test]
     fn second_order_plane_cover_refuses_an_extra_interior_zero() {
         let domain = [[0., 1.]; 2];
         let result = cover(domain, false, 127, 127, |rect, second, _| {
@@ -317,6 +413,13 @@ mod tests {
             } else {
                 t.mul(t)?.mul(I::point(1.).sub(I::point(2.).mul(t)?)?)?
             };
+            if !second && value.lo <= 0. && value.hi >= 0. {
+                let path = I::new(0., rect[0][1])?;
+                let curvature = I::point(2.).sub(I::point(12.).mul(path)?)?;
+                if curvature.lo > 0. || curvature.hi < 0. {
+                    return Ok((Some([curvature.lo, curvature.hi]), 1));
+                }
+            }
             Ok((Some([value.lo, value.hi]), 1))
         })
         .unwrap();

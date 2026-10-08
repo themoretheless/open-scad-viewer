@@ -2352,3 +2352,63 @@ The quartic and rational whole-rectangle checks now run with both source
 parameter axes (transposed control and weight nets). All four bridge tests
 passed in 6.76 s. This covers orientation of the derivative transport; it
 does not certify arbitrary NURBS input or the pending shell contacts.
+
+The corrected expanded native call passed in 282.00 s. Rail 0 exhausted
+100000 spans after 3125 cells, still retaining 21 rectangles. Its pending
+list includes the untouched half free=[0.5,1], across=[0,1], while the
+active rectangle had narrowed to free=[0.12615966796875,0.126220703125],
+across=[0.2520751953125,0.252197265625]. This demonstrates depth-first
+budget starvation; it is not a proof of an actual intersection.
+
+The plane-contact cover now processes refinement levels in breadth-first
+order. All unprocessed products remain pending on exhaustion. A regression
+checks that seven evaluations reach all four coarse siblings and preserve
+the whole pending area. All three plane_cover tests passed. An initial
+filter by the source filename selected zero tests; the corrected function
+filter explicitly selected these three. Native full-shell rerun is required
+before claiming any additional pair certificate.
+
+The analytic second-jet fixtures additionally check enclosure convergence:
+a 2e-5-wide rectangle around (0.5,0.5) has less than one percent of
+the full-domain z-derivative enclosure width, for both axes and both
+weight cases. All four bridge tests passed in 1.73 s. This establishes
+convergence for these fixtures, not for every source profile.
+
+The breadth-first native fixture passed in 151.08 s. Rail 0 remains
+unqualified: 3114 pending rectangles, 3124 evaluated cells, 100000 spans.
+The pending count is not directly comparable to the depth-first count:
+it now describes broadly refined coverage rather than a few large
+unvisited siblings. No new contact certificate was issued.
+
+A subsequent enclosure improvement uses an exact coordinate plane equation
+when all three already-qualified plane points share a coordinate. Its
+zero normal components are skipped exactly, avoiding outward cross-product
+noise in structurally zero terms. General planes retain the cross-product
+enclosure. Four plane_cover tests passed, including all three coordinate
+plane orientations. Full native verification of this improvement follows.
+
+An additional tangent-contact fallback is implemented for nonanchored
+rectangles whose position plane interval contains zero. It evaluates the
+full corrected second normal derivative over the entire free path from
+the owned natural rail to that rectangle, with the same across interval.
+A strict sign, together with the exact zero position and first normal
+jet at the rail, proves nonzero position by twice integration. It never
+uses a local second derivative away from the rail as a contact proof.
+Fallback work is charged to the same remaining span allowance. The
+interior-zero polynomial regression also exercises this complete-path
+criterion; a final focused test run is pending.
+
+The coordinate-plane-only native run passed in 140.64 s and retained
+the same 3114 pending rectangles (3124 cells, 100000 spans). The complete
+path second-derivative fallback then passed the native fixture in 104.34 s:
+rail 0 retains 1288 rectangles after 1478 cells / 100000 spans; no complete
+certificate. Rail 1 still needs a curved-neighbor criterion. Summing the
+exact dyadic rectangle areas from the logs gives pending area 0.84375
+before the fallback and 0.38037109375 after it. Remaining free extent is
+[0.578125,1]. This is parameter-domain area, not world-space face area,
+and is not a count of actual intersections. The combined shell audit
+remains at 155 unqualified pairs.
+
+The final four plane_cover tests also verify early span exhaustion after
+three queries: all unprocessed area remains pending. The full-path
+interior-zero regression passed. This stage is native only.
