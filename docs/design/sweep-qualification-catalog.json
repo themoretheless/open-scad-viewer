@@ -310,7 +310,8 @@
         "progressive_miter",
         "sweep_section_correction",
         "sweep_seam_set",
-        "sweeps::scalar"
+        "sweeps::scalar",
+        "profile_certificate"
       ],
       "bridgeTests": [
         "sweep_pipeline",
@@ -328,7 +329,8 @@
       "tests/nurbsProgressiveMiterWallAudit.test.ts",
       "tests/sweepViewportEvidence.test.ts",
       "tests/nurbsScalarSweep.test.ts",
-      "tests/profileSolidAdmission.test.ts"
+      "tests/profileSolidAdmission.test.ts",
+      "tests/profileFramePremises.test.ts"
     ],
     "rush": [
       "tests/modelGraphLoft.test.ts",
