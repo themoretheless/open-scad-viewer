@@ -22,3 +22,13 @@ cargo run --release --locked --manifest-path crates/Cargo.toml -p geometry-bridg
 ```
 
 The replay inputs are the existing restored annular request and native coverage inventory. Detailed output and logs are archived beside this note. Production WASM SHA cdf42a4f5d788b945e10b7a83210d820a595850830ed37b8e58570e42935b1cc predates this native change; these new diagnostics are not yet wired to worker or UI.
+
+## Owned seam endpoint diagnostic
+
+`source_seam_tangency::inspect_endpoint_limits` binds the diagnostic to a privately admitted original shared edge. Literal endpoint control identity selects the original U boundary. Total exact factor work is bounded across both sides; errors without a consumed-work report reserve the remaining budget. The routine returns diagnostics and never supplies a regular G1 certificate.
+
+A replay of edges 0, 1, 16 and 18 returns `source-seam-endpoint-distinct-tangent-limits`, using 18,186,223; 18,233,929; 18,462,713; and 18,549,238 work units respectively, within the 100,000,000 global allowance per edge. Every result identifies the same collapsed original point and separated limiting planes as the initial chart inspection.
+
+Six seam tests pass, including reversed carrier orientation, tiny budget exhaustion, invalid options, refusal for mapped/root-ended identity, and continued regular G1 rejection. Mapped carriers require separate endpoint identity qualification. WASM/worker/UI integration is still pending.
+
+Correction to interpretation: zero-radius endings are deliberately constructed to return to the original sharp rim. Their differing limiting planes are inherent in that geometry, rather than evidence of a control-net implementation defect. A requirement for a smooth endpoint needs additional transition geometry or adjacent-edge treatment; relaxing the normal test is invalid.

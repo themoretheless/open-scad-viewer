@@ -67,6 +67,80 @@ fn inverse(edge: &SharedEdge, side: usize, canonical: I) -> Result<I> {
         .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
         .intersect(d[0], d[1])
 }
+#[derive(Debug)]
+pub struct EndpointLimits {
+    pub side: usize,
+    pub boundary_end: bool,
+    pub limits: nurbs_core::factored_surface_normals::BoundaryLimits,
+}
+#[derive(Debug)]
+pub struct EndpointReport {
+    pub canonical: f64,
+    pub exact_work: u64,
+    pub sides: Vec<EndpointLimits>,
+    pub reason: &'static str,
+}
+/// Diagnose an owned literal carrier endpoint without admitting regular G1.
+/// Root-ended/mapped carriers need separate endpoint identity qualification.
+pub fn inspect_endpoint_limits(
+    edge: &SharedEdge, canonical: f64, max_sine_squared: f64, max_exact_work: u64,
+) -> Result<EndpointReport> {
+    if ![0.,1.].contains(&canonical) || !max_sine_squared.is_finite()
+        || !(0. ..1.).contains(&max_sine_squared)
+        || !(1..=100000000).contains(&max_exact_work)
+    {
+        return Err(Error::new("BREP_SOURCE_SEAM_ENDPOINT", "Choose a carrier endpoint and bounded exact normal work"));
+    }
+    let mut out = EndpointReport { canonical, exact_work:0, sides:Vec::new(), reason:"source-seam-endpoint-limits-unresolved" };
+    if edge.ranges().is_some() {
+        out.reason="source-seam-endpoint-limits-identity-required";
+        return Ok(out);
+    }
+    for side in 0..2 {
+        let fragment=&edge.uses()[side];
+        let curve=fragment.curve();
+        let reversed=edge.reversed()[side] ^ fragment.reversed();
+        let curve_end=(canonical==1.) ^ reversed;
+        let parameter=curve.domain()[usize::from(curve_end)];
+        if !fragment.parameter_bounds().contains(&[parameter,parameter]) { continue; }
+        let endpoint_knots=if curve_end { &curve.knots[curve.control_points.len()..] }
+            else { &curve.knots[..=curve.degree] };
+        if !endpoint_knots.iter().all(|k| *k==parameter) { continue; }
+        let uv=&curve.control_points[if curve_end { curve.control_points.len()-1 } else {0}];
+        let surface=fragment.surface();
+        for end in [false,true] {
+            let u=surface.knots_u[if end {surface.control_points.len()} else {surface.degree_u}];
+            if uv[0]!=u {continue;}
+            if out.exact_work==max_exact_work {
+                out.reason="source-seam-endpoint-limits-work-limit";
+                return Ok(out);
+            }
+            // Unsupported charts remain unresolved; no substitute sampled normal.
+            let r=match nurbs_core::factored_surface_normals::prepare(surface,end,max_exact_work-out.exact_work) {
+                Ok(r)=>r,
+                Err(_)=>{
+                    // Errors expose no consumed-work report: reserve the entire
+                    // remaining allowance rather than spend it again elsewhere.
+                    out.exact_work=max_exact_work;
+                    out.reason="source-seam-endpoint-limits-unsupported";
+                    return Ok(out);
+                }
+            };
+            out.exact_work+=r.work;
+            if r.reason=="factored-normal-work-limit" {
+                out.reason="source-seam-endpoint-limits-work-limit";
+                return Ok(out);
+            }
+            if let Some(proof)=r.certificate {
+                out.sides.push(EndpointLimits {side,boundary_end:end,limits:proof.boundary_limits(max_sine_squared)?});
+            }
+        }
+    }
+    if out.sides.iter().any(|s|s.limits.distinct_tangent_limits) {
+        out.reason="source-seam-endpoint-distinct-tangent-limits";
+    }
+    Ok(out)
+}
 /// Every accepted interval bounds all corresponding normal pairs, including
 /// endpoint root enclosures and both incident original knot sides. Antiparallel
 /// normals are compatible tangent planes; orientation is checked by the shell.
@@ -193,6 +267,44 @@ mod tests {
             curve_spans: 20000,
             normal_spans: 20000,
         }
+    }
+    #[test]
+    fn owned_endpoint_limits_preserve_sharp_tip_and_exact_work_budget() {
+        let s=Surface {
+            degree_u:2, degree_v:2,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.];3],vec![vec![0.5,0.,0.];3],
+                vec![vec![1.,0.,0.],vec![1.,0.5,0.],vec![1.,1.,1.]]],
+            weights:vec![vec![1.;3];3],periodic_u:false,periodic_v:false,
+        };
+        let pc=Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.]]).unwrap();
+        let world=Curve::from_polyline(vec![vec![0.,0.,0.],vec![1.,0.,0.]]).unwrap();
+        let a=Fragment::new(&s,&pc,Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap();
+        let b=Fragment::new(&s,&pc,Endpoint::Parameter(1.),Endpoint::Parameter(0.)).unwrap();
+        let edge=crate::source_shared_edge::qualify(&world,[&a,&b],[false,false],100000000).unwrap().edge.unwrap();
+        let r=inspect_endpoint_limits(&edge,0.,1e-6,100000000).unwrap();
+        assert_eq!(r.reason,"source-seam-endpoint-distinct-tangent-limits");
+        assert_eq!(r.sides.len(),2);
+        assert!(r.exact_work<=100000000);
+        assert!(r.sides.iter().all(|s|s.limits.collapsed_point==Some([0.;3]) && s.limits.distinct_tangent_limits));
+        let stopped=inspect_endpoint_limits(&edge,0.,1e-6,1).unwrap();
+        assert!(stopped.sides.is_empty());assert!(stopped.exact_work<=1);
+        assert_eq!(stopped.reason,"source-seam-endpoint-limits-work-limit");
+        assert!(qualify(&edge,limits()).unwrap().seam.is_none());
+        let opposite=inspect_endpoint_limits(&edge,1.,1e-6,100000000).unwrap();
+        assert!(opposite.sides.iter().all(|s|!s.limits.distinct_tangent_limits));
+        assert!(inspect_endpoint_limits(&edge,0.5,1e-6,100).is_err());
+        assert!(inspect_endpoint_limits(&edge,0.,1e-6,0).is_err());
+        let mut reverse_world=world.clone();reverse_world.control_points.reverse();
+        let reverse=crate::source_shared_edge::qualify(&reverse_world,[&a,&b],[true,true],100000000).unwrap().edge.unwrap();
+        assert_eq!(inspect_endpoint_limits(&reverse,1.,1e-6,100000000).unwrap().reason,
+            "source-seam-endpoint-distinct-tangent-limits");
+        let carrier=Curve::from_polyline(vec![vec![-1.,0.,0.],vec![2.,0.,0.]]).unwrap();
+        let mapped=crate::source_mapped_edge::qualify(&carrier,[&a,&b],
+            [[[1.,3.],[2.,3.]],[[1.,3.],[2.,3.]]],[None;2],100000000,0).unwrap().edge.unwrap();
+        let rejected=inspect_endpoint_limits(&mapped,0.,1e-6,100000000).unwrap();
+        assert_eq!(rejected.reason,"source-seam-endpoint-limits-identity-required");
+        assert!(rejected.sides.is_empty());assert_eq!(rejected.exact_work,0);
     }
     fn patch(crease: bool) -> Surface {
         Surface {

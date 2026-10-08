@@ -60,6 +60,10 @@ fn limits(v: &Value) -> Result<brep_core::source_body_restore::Limits> {
 }
 fn endpoint_limits(edge: &brep_core::source_shared_edge::SharedEdge, canonical: [f64; 2]) -> Value {
     use nurbs_core::interval_eval::{Interval as I, evaluate_interval};
+    let owned = if canonical[0]==canonical[1] && [0.,1.].contains(&canonical[0]) {
+        let r=brep_core::source_seam_tangency::inspect_endpoint_limits(edge,canonical[0],1e-6,100000000).unwrap();
+        json!({"reason":r.reason,"exactWork":r.exact_work,"sides":r.sides.iter().map(|s|json!({"side":s.side,"boundaryEnd":s.boundary_end,"collapsedPoint":s.limits.collapsed_point,"components":s.limits.components,"sineSquaredBounds":s.limits.sine_squared_interval,"distinctTangentLimits":s.limits.distinct_tangent_limits})).collect::<Vec<_>>()})
+    } else {Value::Null};
     let ranges = edge.ranges().unwrap_or_else(|| {
         std::array::from_fn(|side| {
             if edge.reversed()[side] ^ edge.uses()[side].reversed() {
@@ -127,7 +131,7 @@ fn endpoint_limits(edge: &brep_core::source_shared_edge::SharedEdge, canonical: 
         }
         sides.push(json!({"side":side,"parameter":[t.lo,t.hi],"uv":rect,"regularComponents":regular,"normalSpans":spans,"factors":factors}));
     }
-    json!({"canonical":canonical,"sides":sides,"scope":"Original limiting normal enclosures; no regular endpoint or seam certificate"})
+    json!({"canonical":canonical,"sides":sides,"ownedEndpointLimits":owned,"scope":"Original limiting normal enclosures; no regular endpoint or seam certificate"})
 }
 fn main() {
     let args: Vec<_> = std::env::args().collect();
