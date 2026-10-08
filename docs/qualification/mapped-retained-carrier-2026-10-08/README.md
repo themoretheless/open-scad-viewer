@@ -1399,3 +1399,18 @@ refuses 56. All 18 profile tests passed in 95.65 seconds, and both bridge
 tests passed in 0.01 seconds. The native annular requalification is running
 separately; the earlier 1001 pending rectangles remain the last qualified
 whole-domain diagnostic until that run completes.
+
+## Correlated-displacement annular result and local refinement order
+
+The native run with common source displacement bounds completed in 169.28
+seconds. Whole-domain breadth refinement still reports 0 accepted cells,
+1001 pending rectangles, 1000 visited cells and 57000 spans. This confirms
+that tightening the displacement term alone does not qualify the interior.
+
+The corrected bridge regularity traversal now finishes local subdivision
+before traversing untouched siblings. All siblings remain in its queue and
+are copied to pending on exhaustion; requested-domain coverage is unchanged.
+The independent quartic regression passed in 58.34 seconds, including full
+regularity, a 100-cell partial cover containing certified cells, and area
+one for certified plus pending rectangles. Its annular native check is
+running separately; no new annular regularity result is claimed yet.

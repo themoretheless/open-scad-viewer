@@ -440,7 +440,7 @@ mod tests {
             eprintln!("constrained rail high={} aligned={:?} sine={:?} spans={}",high,report.aligned,report.sine_squared_interval,report.spans);
         }
         for sample in [0.25,0.5,0.75] {
-            let (normal,spans)=constrained.normals_with_transverse_correction([sample;2],[sample;2],54).unwrap();
+            let (normal,spans)=constrained.normals_with_transverse_correction([sample;2],[sample;2],57).unwrap();
             let normal=normal.unwrap();
             assert!(normal.iter().any(|r|r[0]>0.||r[1]<0.));
             eprintln!("full Hermite point={sample} normal={normal:?} spans={spans}");

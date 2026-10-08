@@ -1809,6 +1809,10 @@ mod tests {
         assert!(cover.complete_regular);
         let area:f64=cover.regular.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
         assert_eq!(area,1.);
+        let partial=corrected.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],100,5700).unwrap();
+        assert!(!partial.regular.is_empty(),"bounded traversal should reach certifiable local rectangles");
+        let total:f64=partial.regular.iter().chain(&partial.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(total,1.);
         let limited=corrected.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],0,72).unwrap();
         assert!(!limited.complete_regular);
         assert_eq!(limited.pending,vec![[[0.,1.],[0.,1.]]]);

@@ -909,8 +909,11 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             left[axis][1] = mid;
             let mut right = rect;
             right[axis][0] = mid;
-            queue.push_back(left);
-            queue.push_back(right);
+            // Finish refining a local rectangle before distributing work over
+            // every unresolved breadth level. The untouched sibling remains
+            // in the queue, preserving complete requested-domain coverage.
+            queue.push_front(right);
+            queue.push_front(left);
         }
         out.complete_regular = out.pending.is_empty();
         out.reason = if out.complete_regular {
