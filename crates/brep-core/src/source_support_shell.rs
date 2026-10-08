@@ -427,16 +427,20 @@ mod tests {
             [[[0.,0.],[0.5,0.5]],[[1.,1.],[0.5,0.5]]],1e-6,16).unwrap();
         eprintln!("corrected profile seam midpoint aligned={:?} sine={:?}",point.aligned,point.sine_squared_interval);
         assert_eq!(point.aligned,Some(true));
-        let whole=profile.inspect_original_path(neighbor,
-            [[[0.,0.],[0.,1.]],[[1.,0.],[1.,1.]]],1e-6,50000,100000).unwrap();
-        eprintln!("corrected whole seam aligned={:?} upper={:?} cells={} spans={} accepted={} pending={} reason={}",
+        let owned=proposal.qualify_seam(0,5,100,1e-6,50000,100000).unwrap();
+        let certificate=owned.seam.as_ref().expect(owned.reason);
+        assert!(std::ptr::eq(certificate.proposal(),&proposal));
+        assert_eq!(certificate.faces(),[0,5]);assert_eq!(certificate.edge(),5);
+        let whole=owned.angular.unwrap();
+        eprintln!("owned corrected whole seam aligned={:?} upper={:?} cells={} spans={} accepted={} pending={} reason={}",
             whole.aligned,whole.upper_sine_squared,whole.cells,whole.spans,whole.accepted_cells,whole.pending.len(),whole.reason);
-        assert_eq!(whole.aligned,Some(true));
-        assert!(whole.pending.is_empty());
-        assert!(whole.upper_sine_squared.unwrap()<=1e-6);
+        assert_eq!(whole.aligned,Some(true));assert!(whole.pending.is_empty());
+        assert!(certificate.upper_sine_squared()<=certificate.threshold());
         assert_eq!(whole.cells,14697);assert_eq!(whole.spans,29394);
-
-
+        let limited=proposal.qualify_seam(0,5,0,1e-6,50000,100000).unwrap();
+        assert!(limited.seam.is_none()&&limited.angular.is_none());
+        let limited=proposal.qualify_seam(0,5,100,1e-6,1,1).unwrap();
+        assert!(limited.seam.is_none());assert!(!limited.angular.unwrap().pending.is_empty());
         let mut exact=proposal_limits();exact.controls=44;exact.fragments=4;
         assert!(crate::source_profile_body::prepare(&body,&specs,exact).unwrap().proposal.is_some());
         let mut missing=proposal_limits();missing.controls=43;

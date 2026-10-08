@@ -23,7 +23,95 @@ pub struct Proposal<'a> {
     axis_deviation_upper: [f64; 3],
     position_tolerance: f64,
 }
+/// Tangent-plane certificate attached to this exact proposal and an owned
+/// original shared carrier. It does not admit volume or shell embedding.
+pub struct Seam<'p, 'b> {
+    proposal: &'p Proposal<'b>,
+    faces: [usize; 2],
+    edge: usize,
+    threshold: f64,
+    upper: f64,
+}
+impl Seam<'_, '_> {
+    pub fn proposal(&self) -> &Proposal<'_> {
+        self.proposal
+    }
+    pub fn faces(&self) -> [usize; 2] {
+        self.faces
+    }
+    pub fn edge(&self) -> usize {
+        self.edge
+    }
+    pub fn threshold(&self) -> f64 {
+        self.threshold
+    }
+    pub fn upper_sine_squared(&self) -> f64 {
+        self.upper
+    }
+}
+pub struct SeamReport<'p, 'b> {
+    pub seam: Option<Seam<'p, 'b>>,
+    pub angular: Option<nurbs_core::normal_alignment::ProfilePathReport>,
+    pub reason: &'static str,
+}
 impl<'a> Proposal<'a> {
+    /// Derive both UV paths from private original carrier ownership. A changed
+    /// neighbor requires a profile/profile proof and is refused by this path.
+    pub fn qualify_seam<'p>(
+        &'p self,
+        face: usize,
+        neighbor: usize,
+        max_edges: usize,
+        threshold: f64,
+        cells: usize,
+        spans: usize,
+    ) -> Result<SeamReport<'p, 'a>> {
+        let mut out = SeamReport {
+            seam: None,
+            angular: None,
+            reason: "profile-seam-carrier-unproven",
+        };
+        let profile = self
+            .profile(face)
+            .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose a proposed face"))?;
+        if self.profile(neighbor).is_some() {
+            out.reason = "profile-seam-changed-neighbor-unproven";
+            return Ok(out);
+        }
+        let Some(map) =
+            crate::source_shared_chord_map::prepare(self.body, [face, neighbor], max_edges)?
+        else {
+            return Ok(out);
+        };
+        let axes = map.fixed_axes();
+        let fixed = map.fixed_values();
+        let free = map.free_endpoints();
+        let lines = std::array::from_fn(|side| {
+            std::array::from_fn(|end| {
+                std::array::from_fn(|axis| {
+                    if axis == axes[side] {
+                        fixed[side]
+                    } else {
+                        free[side][end]
+                    }
+                })
+            })
+        });
+        let angular =
+            profile.inspect_original_path(map.surfaces()[1], lines, threshold, cells, spans)?;
+        out.reason = angular.reason;
+        if angular.aligned == Some(true) {
+            out.seam = Some(Seam {
+                proposal: self,
+                faces: [face, neighbor],
+                edge: map.edge(),
+                threshold,
+                upper: angular.upper_sine_squared.unwrap(),
+            });
+        }
+        out.angular = Some(angular);
+        Ok(out)
+    }
     pub fn original_body(&self) -> &'a Body {
         self.body
     }

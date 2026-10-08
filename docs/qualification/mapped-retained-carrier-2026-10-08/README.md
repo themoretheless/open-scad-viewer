@@ -561,3 +561,19 @@ This qualifies this corrected/original seam's tangent-plane angle only.
 Other seams, singular end transitions, corrected volume/wall/self-intersection
 and STEP admission remain outstanding; no original pending wall pair or whole
 body is promoted. The implementation remains native, outside packaged WASM.
+
+## Owned corrected seam certificate
+
+`Proposal::qualify_seam` obtains both affine UV lines from a privately admitted
+original shared-carrier map. Callers choose face addresses and work limits;
+they do not supply UV paths or angle certificates. The profile proposal's
+boundary-preservation gate keeps that carrier's geometry unchanged. A private
+`source_profile_body::Seam` binds the complete angular result to the proposal,
+face pair, actual edge address and tolerance. Both changed incident faces
+currently refuse this original-neighbor path.
+
+The annular regression uses face pair [0,5], owned edge 5, instead of manually
+specified UV lines. It checks proposal identity, full angular coverage and
+refusal for zero edge-inspection work or incomplete normal work. The earlier
+angular-only API remains explicit about its lack of positional ownership.
+Neither certificate admits corrected volume, embedding, wall thickness or STEP.

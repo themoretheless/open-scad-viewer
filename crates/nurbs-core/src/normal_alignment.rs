@@ -1,6 +1,6 @@
 //! Complete-rectangle normal/line angle bounds, including both sides of knots.
 pub use crate::surface_boundary_secant::{OriginalBoundarySecant,boundary_secant_bounds,OriginalBoundaryDirection,boundary_secant_direction_bounds};
-pub use crate::surface_weight_profile::{WeightProfile,ProfileDirection,ProfileBoundary,qualify_weight_profile};
+pub use crate::surface_weight_profile::{WeightProfile,ProfileDirection,ProfileBoundary,ProfilePathReport,qualify_weight_profile};
 use crate::{check, distance_bounds::Interval as I, surface::Surface, Result};
 
 #[derive(Debug)]
