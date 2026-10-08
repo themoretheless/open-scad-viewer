@@ -10,12 +10,34 @@ pub struct Certificate<'a> {
     end: bool,
     net: Net,
 }
+/// Bounds owned by one immutable original source and exact endpoint pair.
+pub(crate) struct PairBounds<'a> {
+    surface: &'a Surface,
+    end: bool,
+    pair: [[[f64; 2]; 2]; 2],
+    components: [[[f64; 2]; 3]; 2],
+}
+impl PairBounds<'_> {
+    pub(crate) fn components(
+        &self, proof: &Certificate<'_>, pair: [[[f64; 2]; 2]; 2],
+    ) -> Result<[[[f64; 2]; 3]; 2]> {
+        check(std::ptr::eq(self.surface, proof.surface) && self.end == proof.end
+            && self.pair == pair, "Use normal bounds for their original source and pair")?;
+        Ok(self.components)
+    }
+}
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
     pub work: u64,
     pub reason: &'static str,
 }
 impl<'a> Certificate<'a> {
+    pub(crate) fn pair_bounds(&self, pair: [[[f64; 2]; 2]; 2]) -> Result<PairBounds<'a>> {
+        Ok(PairBounds {
+            surface: self.surface, end: self.end, pair,
+            components: [self.bounds(pair[0])?, self.bounds(pair[1])?],
+        })
+    }
     pub(crate) fn end(&self) -> bool {
         self.end
     }

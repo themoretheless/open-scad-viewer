@@ -834,3 +834,21 @@ floating angles or distances. Candidate data are deliberately not promoted to
 an exact witness or a wall certificate. Evidence: `pole-chord-candidates.json.gz`
 and its completed log. Full minimum wall, general fillets, STEP/part acceptance,
 P0 and new WASM/UI packaging remain open.
+
+## Endpoint normal reuse
+
+Commit 7e4354a6 reuses each endpoint bound between the three pole matrix
+modes. All seven rational-pole and thirteen chord/coverage tests passed.
+The unchanged 1024-cell / 8192-restriction audit retained pending pairs on
+both pole faces in every prototype: forward radii 8/13, reverse radii 7/11.
+Both spatial directions matched. Whole same-face qualification stays 28/31;
+distinct-face wall thickness remains unqualified. Archived normal-cache
+JSON/logs describe this first change only.
+
+The next source-owned cache binds both normal boxes to the immutable original
+surface, pole orientation and exact pair rectangles. Angular and Cartesian
+secant stages share it, charging the two restrictions once. The thirteen
+chord/coverage tests include cached exclusion with zero additional budget,
+foreign-source and changed-pair rejection, and incomplete-coverage refusal.
+The separate pair-cache prototype audit is still running; no qualification
+claim follows from these unit tests.

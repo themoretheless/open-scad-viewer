@@ -84,6 +84,19 @@ fn secant_exclusion(
     max_spans: usize,
     factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
 ) -> Result<(bool, usize)> {
+    secant_exclusion_cached(s, pair, boxes, sine, max_spans, factored, None)
+}
+fn secant_exclusion_cached(
+    s: &Surface, pair: Pair, boxes: [&Vec<[f64; 2]>; 2], sine: f64,
+    max_spans: usize,
+    factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
+    cached: Option<&crate::factored_surface_normals::PairBounds<'_>>,
+) -> Result<(bool, usize)> {
+    let components = if let Some(cache) = cached {
+        let proof = factored.ok_or(crate::input("Missing original normal proof"))?;
+        crate::check(std::ptr::eq(s, proof.surface()), "Use original normal source")?;
+        Some(cache.components(proof, pair)?)
+    } else { None };
     let mut d = [I::point(0.); 3];
     for k in 0..3 {
         d[k] =
@@ -105,11 +118,13 @@ fn secant_exclusion(
     }
     let threshold = I::point(1.).sub(I::point(sine))?;
     let mut spans = 0;
-    for rect in pair {
-        if spans == max_spans {
+    for (index, rect) in pair.into_iter().enumerate() {
+        if components.is_none() && spans == max_spans {
             break;
         }
-        let (bounds, used) = if let Some(proof) = factored {
+        let (bounds, used) = if let Some(values) = components {
+            (Some(values[index]), 0)
+        } else if let Some(proof) = factored {
             // A prepared fact covers one original Bezier span. Its exact
             // preparation budget is separate from this bounded coverage call.
             (Some(proof.bounds(rect)?), 1)
@@ -259,6 +274,7 @@ fn qualify_impl<'a>(
             break;
         }
         out.cells += 1;
+        let mut pair_normals = None;
         let union = std::array::from_fn(|axis| {
             [
                 pair[0][axis][0].min(pair[1][axis][0]),
@@ -340,7 +356,9 @@ fn qualify_impl<'a>(
         if let Some(threshold) = necessary.filter(|_| out.spans < limits.spans) {
             if let Some(proof) = factored {
                 if limits.spans - out.spans >= 2 {
-                    let components = [proof.bounds(pair[0])?, proof.bounds(pair[1])?];
+                    let cache = proof.pair_bounds(pair)?;
+                    let components = cache.components(proof, pair)?;
+                    pair_normals = Some(cache);
                     out.spans += 2;
                     let r = normal_alignment::inspect_pair_bounds(components, threshold)?;
                     if r.aligned == Some(false) {
@@ -373,13 +391,14 @@ fn qualify_impl<'a>(
                 continue;
             }
             if out.spans < limits.spans {
-                let (excluded, used) = secant_exclusion(
+                let (excluded, used) = secant_exclusion_cached(
                     s,
                     pair,
                     [&a, &b],
                     max_sine_squared,
                     limits.spans - out.spans,
                     factored,
+                    pair_normals.as_ref(),
                 )?;
                 out.spans += used;
                 if excluded {
@@ -481,6 +500,20 @@ mod tests {
         );
         let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 1, Some(&proof)).unwrap();
         assert!(excluded && used == 1);
+        let cache = proof.pair_bounds(pair).unwrap();
+        assert_eq!(secant_exclusion_cached(&s, pair, [&a, &b], 1e-6, 0,
+            Some(&proof), Some(&cache)).unwrap(), (true, 0));
+        assert!(cache.components(&proof, [pair[0]; 2]).is_err());
+        let other = s.clone();
+        let other_proof = crate::factored_surface_normals::prepare(&other, false, 1_000_000)
+            .unwrap().certificate.unwrap();
+        assert!(cache.components(&other_proof, pair).is_err());
+        let other_end = crate::factored_surface_normals::prepare(&s, true, 1_000_000)
+            .unwrap();
+        if let Some(other_end) = other_end.certificate {
+            assert!(cache.components(&other_end, pair).is_err());
+        }
+
         let foreign = s.clone();
         assert!(qualify_with_factored_normals(
             &foreign,
