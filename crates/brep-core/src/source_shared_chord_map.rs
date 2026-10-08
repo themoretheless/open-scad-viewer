@@ -38,6 +38,50 @@ impl<'a> SharedBoundary<'a> {
         }
         Ok((Some(result),spent))
     }
+    /// Exclude a normal-aligned chord on the full endpoint product. A common
+    /// carrier coefficient stays unrestricted; transverse displacements have
+    /// known signs because both paths start at natural chart boundaries.
+    /// Returns exclusion, original derivative spans, and normal spans consumed.
+    pub fn exclude_normal_chords(&self, rectangles:[[[f64;2];2];2], sine:f64,
+        max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
+        if !sine.is_finite()||!(0. ..1.).contains(&sine) {
+            return Err(Error::new("BREP_SHARED_CHORD_MAP","Require squared sine in [0,1)"));
+        }
+        // Validate both endpoint products before any partial geometric work.
+        for side in 0..2 {self.canonical_bounds(side,rectangles[side])?;}
+        if max_spans==0||max_normal_spans==0 {return Ok((false,0,0));}
+        let (tangent,mut spent)=self.tangent_bounds(rectangles,max_spans)?;
+        let Some(tangent)=tangent else{return Ok((false,spent,0));};
+        let mut transverse=[[[0.;2];3];2];
+        for side in 0..2 {
+            if spent==max_spans {return Ok((false,spent,0));}
+            let axis=self.fixed_axes[side];let s=self.surfaces[side];
+            let knots=[&s.knots_u,&s.knots_v];let degrees=[s.degree_u,s.degree_v];
+            let direction=if self.fixed[side]==knots[axis][degrees[axis]] {1.}else{-1.};
+            let sign=direction*if side==0 {-1.}else{1.};
+            let mut path=rectangles[side];
+            path[axis]=[path[axis][0].min(self.fixed[side]),path[axis][1].max(self.fixed[side])];
+            let (proof,used)=nurbs_core::normal_alignment::derivative_path_bounds(s,path,axis,max_spans-spent)?;
+            spent+=used;
+            let Some(proof)=proof else{return Ok((false,spent,0));};
+            for (k,r) in proof.components().into_iter().enumerate(){
+                let g=I::new(r[0],r[1])?.mul(I::point(sign))?;
+                transverse[side][k]=[g.lo,g.hi];
+            }
+        }
+        let mut normal_spent=0;
+        for side in 0..2 {
+            if normal_spent==max_normal_spans {break;}
+            let (normal,used)=nurbs_core::normal_alignment::normal_bounds(self.surfaces[side],rectangles[side],max_normal_spans-normal_spent)?;
+            normal_spent+=used;
+            if let Some(normal)=normal {
+                if nurbs_core::normal_alignment::shared_chord_cone_excluded(tangent,transverse,normal,sine)? {
+                    return Ok((true,spent,normal_spent));
+                }
+            }
+        }
+        Ok((false,spent,normal_spent))
+    }
     /// Outward arithmetic applies the original affine map; no rounded inverse
     /// or evaluated world coincidence is admitted as a parameter identity.
     pub fn canonical_bounds(&self,side:usize,rectangle:[[f64;2];2])->Result<[f64;2]> {

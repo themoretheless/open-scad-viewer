@@ -284,3 +284,24 @@ Validation: 21 native normal-alignment tests passed, one existing ignored; the
 annular original Body regression passed. These changes remain native. No new
 whole-wall pair proof or general fillet completion is claimed; WASM remains the
 previously qualified 3ad19753 artifact.
+
+## Original shared transverse paths in pair coverage
+
+The Body-bound boundary map now integrates each original fixed-coordinate
+surface derivative from its natural chart boundary to the endpoint product.
+The known inward direction and subtraction on side zero give nonnegative
+transverse coefficients. The common carrier derivative retains one unrestricted
+coefficient instead of two independent point anchors. Original endpoint normals
+and all derivative/normal span costs are charged; incomplete work cannot exclude.
+The mixed pair controller invokes this gate on terminal UV products. Original
+retained-domain, positional-distance and existing anchored proofs remain active.
+
+Native control with unchanged 1024-cell mixed limits:
+17/45 complete pair proofs (none lost), pending UV products **3006 -> 2247**,
+cells 30461, geometric spans **64252 -> 62406**, normal spans **11647 -> 12406**,
+domain cells 314744, factor queries **4975 -> 4797**, exact preparation 55479571.
+These product counts are subdivision diagnostics, not percentages of geometric
+coverage or a complete wall certificate. Whole-wall qualification remains false.
+The artifact `mixed-wall-shared-transverse-native.json` retains native pair
+statuses and unresolved original UV products. All 17 source-support-shell tests
+passed. This work has not yet replaced the qualified WASM/worker/UI artifact.

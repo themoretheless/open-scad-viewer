@@ -138,6 +138,7 @@ pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm
     // Reuse the exact retained-region sources that own prepared normal facts.
     let surfaces = faces.map(|f| regions[f].loops()[0][0].surface());
     let natural = surfaces.map(domain);
+    let shared_boundary=crate::source_shared_chord_map::prepare(body,faces,100000)?;
     let [mut first_normals, mut second_normals] =
         surfaces.map(nurbs_core::normal_alignment::OriginalNormalCache::new);
     let mut queue = vec![natural];
@@ -285,6 +286,19 @@ pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm
                 else {anchored=false;}
             }}
             let mut excluded=false;
+            if let Some(shared)=shared_boundary.as_ref() {
+                if (0..2).all(|side|shared.canonical_bounds(side,uv[side]).is_ok()) {
+                    let geometric=(limits.spans-out.spans).min(64);
+                    let normals=(limits.normal_spans-out.normal_spans).min(64);
+                    match shared.exclude_normal_chords(uv,limits.max_sine_squared,geometric,normals) {
+                        Ok((proof,used,normal_used))=>{out.spans+=used;out.normal_spans+=normal_used;excluded=proof;}
+                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=geometric;out.normal_spans+=normals;}
+                        Err(e)=>return Err(e),
+                    }
+                }
+            }
+            if excluded {out.normal_products+=1;continue;}
+
             if anchored {
                 'projections:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
                     if x==0&&y==0&&z==0 {continue;}

@@ -384,6 +384,18 @@ mod tests {
         assert!(shared.canonical_bounds(0,[[-0.01,0.5],[0.,1.]]).is_err());
         let (tangent,spans)=shared.tangent_bounds([[[0.25,0.5],[0.,1.]],[[1.5,2.25],[0.,1.]]],64).unwrap();
         assert!(spans>0);assert!(tangent.unwrap().iter().all(|r|r[0].is_finite()&&r[1].is_finite()&&r[0]<=r[1]));
+        let shared_rects=[[[0.25,0.5],[0.8,1.]],[[1.5,2.25],[0.8,1.]]];
+        let (_,shared_spans,shared_normals)=shared.exclude_normal_chords(shared_rects,1e-6,64,64).unwrap();
+        assert!(shared_spans>0&&shared_spans<=64&&shared_normals<=64);
+        assert_eq!(shared.exclude_normal_chords(shared_rects,1e-6,0,64).unwrap(),(false,0,0));
+        assert_eq!(shared.exclude_normal_chords(shared_rects,1e-6,64,0).unwrap(),(false,0,0));
+        assert!(shared.exclude_normal_chords(shared_rects,f64::NAN,64,64).is_err());
+        let narrow=[[[0.4,0.400000001],[0.999999999,1.]],[[1.799999997,1.8],[0.999999999,1.]]];
+        let (excluded,used,normal_used)=shared.exclude_normal_chords(narrow,1e-6,64,64).unwrap();
+        assert!(excluded,"shared rolling boundary exclusion used {used}/{normal_used}");
+        assert!(!shared.exclude_normal_chords(narrow,1e-6,1,64).unwrap().0);
+
+
 
         assert!(crate::source_shared_chord_map::prepare(&body,[0,2],0).unwrap().is_none());
         let reverse=crate::source_shared_chord_map::prepare(&body,[2,0],100000).unwrap().unwrap();
