@@ -98,6 +98,10 @@ Direct source normal-cache controls now verify zero factored budget, one charged
 
 ## Owned normal factors packaged acceptance
 
+## Original corner cone packaged worker and UI acceptance
+
+WASM `8c435e4f1446b8c21cdb2ed32709c66c3c44238cd95c3b8a49a40a31b91ede47`, 12,138,666 bytes, packages the four-corner integration snapshot. All 28 real worker tests pass; per-pair proof states, cells and unresolved product counts match native, as do normal/domain and shared factor counters. Exact compression round-trip passes. Distribution verification passes at 8,413,811 asset bytes plus 15,435,058 raw WASM bytes, with the existing 608-byte geometry and 761-byte aggregate margins retained over measured sizes. The actual reloaded in-app browser at 5.99 mm shows 28 unresolved pairs, 17/45 additional mixed proofs, 3,124 remaining mixed products and 27/27 self exclusions. Uncertain regions remain highlighted and Retry available; whole-wall thickness remains refused. Archives: `mixed-wall-corner-worker.json.gz`, `mixed-wall-corner-package-audit.json`, `mixed-wall-corner-ui-result.jpg`. Arbitrary certified anchor paths added later are not part of this package snapshot.
+
 ### Native positive chord cone predicate
 
 Original pcurve-endpoint proposals supply exact arbitrary anchors on the work-limit controls. Of the explicitly capped first 32 products, both source anchor identities qualify for 30 products of [0,1] and 31 of [0,2]; remaining proposals refuse the second anchor. The first common world anchor is exactly (20,0,6), with original UV pairs [(1,0),(20,0)] and [(1,0),(0,1)] respectively. None of the 26 integer projections excludes a chord cone. Anchor coincidence alone therefore closes no wall pair; the remaining path/normal bounds near the collapsed pole require further treatment. `mixed-wall-anchored-work-products-native.json` records exact-work charges and proposal failures. No statements are made about products outside the 32-product detail cap.
