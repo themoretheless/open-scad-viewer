@@ -978,3 +978,19 @@ Both spatial directions match. No pole face qualified; whole same-face
 coverage stays 28/31. JSON/log archives retain full uncertainty rectangles
 and classified attempts. The all-accounting audit for 191a0add is running
 separately with the same limits and thresholds.
+
+## Endpoint matrix Gram eigenvalue bound
+
+Endpoint projection now bounds the largest eigenvalue of MᵀM by the
+minimum of its original trace upper bound and an outward Gershgorin bound.
+For every enclosed M, lambda_min >= det(MᵀM)/lambda_max_upper; the same
+original separated minor sum and normal norm lower bound are retained.
+No sampled endpoint normal or path is admitted.
+
+An independent constant-matrix chord oracle checks 24 nonzero directions.
+The upper cosine-squared estimate is below .32 where the previous
+trace-only estimate exceeds .60. Fourteen chord/coverage and seven pole
+tests passed, including rank/normal refusals, short aligned normal chords
+and bounded-work refusal. Prototype qualification for this new bound has
+not been run; the preceding all-accounting audit is still live. Whole
+same-face coverage remains 28/31 and global wall safety is unproven.

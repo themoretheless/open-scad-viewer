@@ -117,6 +117,20 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     if normal_squared.lo <= 0. {
         return Ok(1.);
     }
+    // Gershgorin also bounds the largest eigenvalue of the 2x2 Gram
+    // matrix. Nearly orthogonal columns need not pay the full trace bound.
+    let mut diagonal = [I::point(0.); 2];
+    let mut off_diagonal = I::point(0.);
+    for row in j {
+        for a in 0..2 {
+            let upper = row[a].lo.abs().max(row[a].hi.abs());
+            diagonal[a] = diagonal[a].add(I::point(upper).mul(I::point(upper))?)?;
+        }
+        off_diagonal = off_diagonal.add(row[0].mul(row[1])?)?;
+    }
+    let off_upper = off_diagonal.lo.abs().max(off_diagonal.hi.abs());
+    let gershgorin = diagonal[0].hi.max(diagonal[1].hi);
+    let largest = I::point(gershgorin).add(I::point(off_upper))?.hi.min(trace.hi);
     let mut numerator = I::point(0.);
     for a in 0..2 {
         let mut dot = I::point(0.);
@@ -127,14 +141,14 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
         numerator = numerator.add(I::point(upper).mul(I::point(upper))?)?;
     }
     Ok(numerator
-        .mul(trace)?
+        .mul(I::point(largest))?
         .div(normal_squared.mul(determinant)?)?
         .hi
         .min(1.))
 }
 /// Pair-specific exclusion, not an intrinsic certificate for the convex union.
-/// Each attempted matrix charges five net restrictions and up to two endpoint
-/// normal restrictions. A confined coordinate path is tried before the UV path.
+/// Each attempted matrix charges its executed net restrictions; local paths
+/// reserve six, other paths five. Endpoint normal restrictions are reused.
 #[derive(Default)]
 pub(crate) struct PairExclusion {
     pub excluded: bool,
@@ -540,6 +554,22 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn endpoint_gram_eigenvalue_bound_encloses_independent_chord_directions() {
+        let j = [[I::point(1.), I::point(0.)],
+            [I::point(0.), I::point(1.)], [I::point(0.), I::point(0.2)]];
+        let n = [I::point(0.), I::point(0.4), I::point(1.)];
+        let upper = endpoint_matrix_cosine(j, n).unwrap();
+        assert!(upper < 0.32); // The trace-only estimate exceeds 0.60.
+        for x in [-2., -1., 0., 1., 2.] {
+            for y in [-2., -1., 0., 1., 2.] {
+                if x == 0. && y == 0. { continue; }
+                let length_squared = x*x + 1.04*y*y;
+                let cosine_squared = (0.6*y)*(0.6*y)/(1.16*length_squared);
+                assert!(cosine_squared <= upper);
+            }
+        }
+    }
     #[test]
     fn endpoint_normal_matrix_preserves_tangent_variation_and_refuses_aligned_chords() {
         let zero = I::point(0.);
