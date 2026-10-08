@@ -135,6 +135,44 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
     pub(crate) fn parameter_domain(&self) -> [f64; 2] {
         self.trace.curve().domain()
     }
+    /// Monotonicity lifts certified endpoint evaluations to an enclosure of
+    /// every point on the requested subinterval, including both endpoints.
+    pub(crate) fn coordinate_enclosure(
+        &self,
+        domain: [f64; 2],
+        max_evaluations: usize,
+    ) -> Result<Option<[f64; 2]>> {
+        let full = self.parameter_domain();
+        if !domain.iter().all(|t| t.is_finite())
+            || domain[0] < full[0]
+            || domain[1] > full[1]
+            || domain[0] > domain[1]
+            || max_evaluations > 2
+        {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound a complete trace subinterval and endpoint work",
+            ));
+        }
+        let needed = if domain[0] == domain[1] { 1 } else { 2 };
+        if max_evaluations < needed {
+            return Ok(None);
+        }
+        let mut bounds = [f64::INFINITY, f64::NEG_INFINITY];
+        for t in if needed == 1 {
+            &domain[..1]
+        } else {
+            &domain[..]
+        } {
+            let v = nurbs_core::interval_eval::evaluate_interval(
+                self.trace.curve(),
+                nurbs_core::interval_eval::Interval::point(*t),
+            )?[self.coordinate];
+            bounds[0] = bounds[0].min(v.lo);
+            bounds[1] = bounds[1].max(v.hi);
+        }
+        Ok(Some(bounds))
+    }
 }
 pub(crate) fn certify_monotone_coordinate<'t, 's>(
     trace: &'t Certificate<'s>,
@@ -191,6 +229,24 @@ mod tests {
         assert!(proof.increasing());
         assert_eq!(proof.coordinate_range(), [0., 4.]);
         assert_eq!(proof.parameter_domain(), [2., 5.]);
+        let interval = proof
+            .coordinate_enclosure([2.75, 4.25], 2)
+            .unwrap()
+            .unwrap();
+        for i in 0..=16 {
+            let t = 2.75 + 1.5 * i as f64 / 16.;
+            let point = trace.curve().evaluate(t).unwrap().point[1];
+            assert!(point >= interval[0] - 1e-12 && point <= interval[1] + 1e-12);
+        }
+        assert!(
+            proof
+                .coordinate_enclosure([2.75, 4.25], 1)
+                .unwrap()
+                .is_none()
+        );
+        assert!(proof.coordinate_enclosure([3., 3.], 0).unwrap().is_none());
+        assert!(proof.coordinate_enclosure([3., 3.], 1).unwrap().is_some());
+        assert!(proof.coordinate_enclosure([1., 4.], 2).is_err());
         assert_eq!(proof.trace().curve().knots, vec![2., 2., 2., 5., 5., 5.]);
         assert!(certify_monotone_coordinate(&trace, 1, 1).unwrap().is_none());
         assert!(certify_monotone_coordinate(&trace, 2, 2).is_err());

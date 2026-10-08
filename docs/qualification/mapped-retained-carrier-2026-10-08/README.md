@@ -2712,3 +2712,12 @@ retain refusal. This proves a simple full trace, not transition contact.
 The nonunit-domain/reversed/fold/work-limit test passed. Native curved-neighbor
 diagnostics now require this property for the actual full face-2 Y trace;
 that native assertion is awaiting execution.
+
+The monotone trace certificate now encloses a requested coordinate over any
+complete original-domain subinterval using outward-rounded endpoint interval
+evaluations. Monotonicity supplies the interior bound; no sampled interior
+admission is used. Nondegenerate intervals require both endpoint evaluations,
+point intervals require one; insufficient work returns no enclosure and an
+out-of-domain request errors. The complete exact-trace suite (three tests)
+passed, including unequal weights and nonunit domains. This supports later
+exclusion of external trace portions but does not itself certify contact.
