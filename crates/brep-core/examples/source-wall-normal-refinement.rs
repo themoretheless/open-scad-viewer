@@ -8,6 +8,13 @@ fn transpose_parameters(s: &Surface) -> Surface {
         weights:(0..columns).map(|v|(0..rows).map(|u|s.weights[u][v]).collect()).collect(),
         periodic_u:s.periodic_v,periodic_v:s.periodic_u}
 }
+fn classify_boundary_rows(zero:[bool;2],resolved:[bool;2])->&'static str {
+    if !zero[0] {"nonzero-boundary-row"}
+    else if !resolved[0] {"unproven"}
+    else if !zero[1] {"exact-linear-boundary-factor"}
+    else if !resolved[1] {"unproven"}
+    else {"at-least-quadratic-boundary-factor"}
+}
 fn boundary_order(s: &Surface, end: bool) -> value_codec::Value {
     use cad_predicates::{AuthoredScalar,SourceArena,PredicateContext,Limits,ToleranceContext,Sign};
     let mut source=s.clone();if end {source.control_points.reverse();source.weights.reverse();}
@@ -19,18 +26,21 @@ fn boundary_order(s: &Surface, end: bool) -> value_codec::Value {
     let arena=SourceArena::authored("normal-boundary-order-audit",1,values).unwrap();
     let leaves=(0..source.control_points.len()).map(|u|(0..width).map(|v|
         std::array::from_fn(|k|arena.leaf((u*width+v)*4+k).unwrap())).collect()).collect::<Vec<_>>();
-    let tolerance=ToleranceContext::default_valid();let mut work=0;let mut zero=[true;2];let mut resolved=true;
+    let tolerance=ToleranceContext::default_valid();let mut work=0;let mut zero=[true;2];let mut row_resolved=[true;2];
     for axes in [[1,2],[2,0],[0,1]] {for u in 0..2 {
-        if work==100_000_000 {resolved=false;break;}
+        if work==100_000_000 {row_resolved[u]=false;break;}
         let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:(100_000_000-work).min(cad_predicates::MAX_WORK),..Limits::default()},None);
         let row=cad_predicates::rational_surface_projected_jacobian_row_bounds(&mut ctx,&leaves,axes,u).unwrap();work+=row.work_used;
         if let Some(signs)=row.signs {for sign in &signs[0] {
-            match sign {Sign::Zero=>{},Sign::Positive|Sign::Negative=>zero[u]=false,_=>resolved=false}
-        }} else {resolved=false;}
+            match sign {Sign::Zero=>{},Sign::Positive|Sign::Negative=>zero[u]=false,_=>row_resolved[u]=false}
+        }} else {row_resolved[u]=false;}
     }}
-    let order=if !resolved {"unproven"} else if !zero[0] {"nonzero-boundary-row"}
-        else if !zero[1] {"exact-linear-boundary-factor"} else {"at-least-quadratic-boundary-factor"};
-    value_codec::json!({"reason":order,"work":work,"rowsExactlyZero":zero,"resolved":resolved})
+    // A single exact nonzero coefficient disproves a zero polynomial even
+    // when another coefficient remains unresolved. A factor still requires
+    // every coefficient of the preceding row to be exactly zero.
+    let order=classify_boundary_rows(zero,row_resolved);
+    let exact_zero=[zero[0]&&row_resolved[0],zero[1]&&row_resolved[1]];
+    value_codec::json!({"reason":order,"work":work,"rowsExactlyZero":exact_zero,"rowsFullyResolved":row_resolved,"resolved":order!="unproven"})
 }
 fn split_product(pair: [[[f64;2];2];2], side: usize, axis: usize, mid: f64)
     -> [[[[f64;2];2];2];2] {
@@ -121,6 +131,13 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unresolved_coefficients_never_establish_a_zero_row_or_hide_a_nonzero_one() {
+        assert_eq!(classify_boundary_rows([false,true],[false,false]),"nonzero-boundary-row");
+        assert_eq!(classify_boundary_rows([true,false],[false,true]),"unproven");
+        assert_eq!(classify_boundary_rows([true,false],[true,false]),"exact-linear-boundary-factor");
+        assert_eq!(classify_boundary_rows([true,true],[true,false]),"unproven");
+    }
     #[test]
     fn boundary_rows_distinguish_regular_linear_and_quadratic_normals() {
         let make=|rows:Vec<Vec<Vec<f64>>>| {

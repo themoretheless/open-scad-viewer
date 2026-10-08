@@ -1544,13 +1544,15 @@ its receipt/log and `distinct-normal-parameter-exchange-tests.log.gz`.
 
 `distinct-normal-factor-order-audit.json.gz` records all 108 endpoint/axis
 attempts and the complete 212-pair exploratory product audit. Exact projected
-Jacobian coefficient rows distinguish 104 nonzero boundary rows, two factors
-of at least quadratic order, and two unresolved cases. No linear boundary
+Jacobian coefficient rows distinguish 106 nonzero boundary polynomials and two factors
+of at least quadratic order. No linear boundary
 factor was established. These are diagnostic coefficient results, not a wall
 certificate or a self-intersection proof. Parameter exchange remains confined
 to the prepared chart; no certificate is rebound to an original body.
 
-Three example tests passed, including regular, linear and quadratic reference
+Four example tests passed, including regular, linear and quadratic reference
 surfaces at both ends. The receipt binds uncompressed evidence and the original
-request by SHA-256. The remaining two uncertain cases need stronger exact
-coefficient evaluation before extending the normal exclusion algorithm.
+request by SHA-256. A definite nonzero coefficient resolves a nonzero polynomial even when other
+coefficients remain uncertain. Proving a zero row still requires every
+coefficient to resolve exactly to zero; the fourth test covers this distinction.
+A nonzero polynomial does not prove a nonvanishing normal everywhere.
