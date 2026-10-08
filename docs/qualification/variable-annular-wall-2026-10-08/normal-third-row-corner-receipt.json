@@ -1,0 +1,12 @@
+{
+  "scope": "Exact third coefficient row and eight limiting corner directions only; no whole patch/body certificate",
+  "normal-third-row-corner-audit.json.gz": {
+    "uncompressedSha256": "4948b4c36e2c4042fc46807dc1b9d3c5373d1d210635bc76538c00140df3dc78",
+    "bytes": 88380
+  },
+  "normal-third-row-corner-tests.log.gz": {
+    "uncompressedSha256": "61534c0d6f033c48db16f0a5aeb17e3295cb7390b3e105141f1cedbc2859d90e",
+    "bytes": 7144
+  },
+  "requestSha256": "b9269dc1cf938d0e1b05b8c7550bdef025ea371385c487c49ade35e8c27af9ea"
+}

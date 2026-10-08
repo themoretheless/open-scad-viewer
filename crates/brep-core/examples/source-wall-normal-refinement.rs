@@ -26,8 +26,8 @@ fn boundary_order(s: &Surface, end: bool) -> value_codec::Value {
     let arena=SourceArena::authored("normal-boundary-order-audit",1,values).unwrap();
     let leaves=(0..source.control_points.len()).map(|u|(0..width).map(|v|
         std::array::from_fn(|k|arena.leaf((u*width+v)*4+k).unwrap())).collect()).collect::<Vec<_>>();
-    let tolerance=ToleranceContext::default_valid();let mut work=0;let mut zero=[true;2];let mut row_resolved=[true;2];
-    for axes in [[1,2],[2,0],[0,1]] {for u in 0..2 {
+    let tolerance=ToleranceContext::default_valid();let mut work=0;let mut zero=[true;3];let mut row_resolved=[true;3];
+    for axes in [[1,2],[2,0],[0,1]] {for u in 0..3 {
         if work==100_000_000 {row_resolved[u]=false;break;}
         let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work:(100_000_000-work).min(cad_predicates::MAX_WORK),..Limits::default()},None);
         let row=cad_predicates::rational_surface_projected_jacobian_row_bounds(&mut ctx,&leaves,axes,u).unwrap();work+=row.work_used;
@@ -38,15 +38,27 @@ fn boundary_order(s: &Surface, end: bool) -> value_codec::Value {
     // A single exact nonzero coefficient disproves a zero polynomial even
     // when another coefficient remains unresolved. A factor still requires
     // every coefficient of the preceding row to be exactly zero.
-    let order=classify_boundary_rows(zero,row_resolved);
+    let order=classify_boundary_rows([zero[0],zero[1]],[row_resolved[0],row_resolved[1]]);
     let exact_zero=[zero[0]&&row_resolved[0],zero[1]&&row_resolved[1]];
-    value_codec::json!({"reason":order,"work":work,"rowsExactlyZero":exact_zero,"rowsFullyResolved":row_resolved,"resolved":order!="unproven"})
+    let quadratic_order=if !exact_zero.iter().all(|v|*v) {"quadratic-factor-unproven"}
+        else if !zero[2] {"exactly-two"}
+        else if row_resolved[2] {"at-least-three"} else {"unproven"};
+    value_codec::json!({"reason":order,"work":work,"rowsExactlyZero":exact_zero,"rowsFullyResolved":row_resolved,"resolved":order!="unproven","quadraticFactorOrder":quadratic_order})
 }
 fn split_product(pair: [[[f64;2];2];2], side: usize, axis: usize, mid: f64)
     -> [[[[f64;2];2];2];2] {
     assert!(side<2 && axis<2 && pair[side][axis][0]<mid && mid<pair[side][axis][1]);
     let mut left=pair;let mut right=pair;
     left[side][axis][1]=mid;right[side][axis][0]=mid;[left,right]
+}
+fn factored_corners(proof:&nurbs_core::factored_surface_normals::Certificate<'_>,domain:[[f64;2];2])->value_codec::Value {
+    let mut rows=Vec::new();
+    for u in domain[0] {for v in domain[1] {
+        let bounds=proof.bounds([[u,u],[v,v]]).unwrap();
+        rows.push(value_codec::json!({"uv":[u,v],"normalBounds":bounds,
+            "nonzeroDirectionProven":bounds.iter().any(|b|b[0]>0.||b[1]<0.)}));
+    }}
+    value_codec::json!(rows)
 }
 fn main() {
     let args: Vec<_> = std::env::args().collect();
@@ -85,7 +97,8 @@ fn main() {
                         let bounds=report.certificate.as_ref().map(|c|{
                             assert!(std::ptr::eq(c.surface(),surface));c.bounds(domain).unwrap()
                         });
-                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"parameterExchanged":axis==1,"boundaryOrder":boundary_order(surface,end)})
+                        let corners=report.certificate.as_ref().map(|c|factored_corners(c,domain));
+                        value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":report.certificate.is_some(),"work":report.work,"reason":report.reason,"boundsOnPreparedChart":bounds,"cornerNormalBounds":corners,"parameterExchanged":axis==1,"boundaryOrder":boundary_order(surface,end)})
                     }
                     Err(error)=>value_codec::json!({"face":face,"axis":axis,"end":end,"qualified":false,"error":error.to_string(),"boundaryOrder":boundary_order(surface,end)}),
                 };
@@ -132,6 +145,15 @@ mod tests {
         let regular=make(vec![vec![vec![0.,0.,0.],vec![0.,1.,0.]],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
         let linear=make(vec![vec![vec![0.,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
         let quadratic=make(vec![vec![vec![0.,0.,0.];2],vec![vec![0.5,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
+        let cubic=make(vec![vec![vec![0.,0.,0.];2],vec![vec![1./3.,0.,0.];2],vec![vec![2./3.,0.,0.];2],vec![vec![1.,0.,0.],vec![1.,1.,0.]]]);
+        assert_eq!(boundary_order(&quadratic,false)["quadraticFactorOrder"].as_str(),Some("exactly-two"));
+        assert_eq!(boundary_order(&cubic,false)["quadraticFactorOrder"].as_str(),Some("at-least-three"));
+        let prepared=nurbs_core::factored_surface_normals::prepare(&quadratic,false,100_000_000).unwrap();
+        let proof=prepared.certificate.unwrap();
+        assert!(std::ptr::eq(proof.surface(),&quadratic));
+        let corners=factored_corners(&proof,[[0.,1.];2]);
+        assert_eq!(corners.as_array().unwrap().len(),4);
+        assert!(corners.as_array().unwrap().iter().all(|p|p["nonzeroDirectionProven"].as_bool()==Some(true)));
         for (surface,reason) in [(&regular,"nonzero-boundary-row"),(&linear,"exact-linear-boundary-factor"),(&quadratic,"at-least-quadratic-boundary-factor")] {
             assert_eq!(boundary_order(surface,false)["reason"].as_str(),Some(reason));
             assert_eq!(boundary_order(surface,true)["reason"].as_str(),Some("nonzero-boundary-row"));

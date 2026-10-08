@@ -1635,3 +1635,17 @@ Its remaining obligations include nine curved self pairs, 162 distinct normal/
 wall pairs, one clearance-resolution refusal and one clearance-work refusal.
 This is thickness coverage evidence for the stated near-normal chord scope,
 not a general self-intersection audit. Packaged-WASM acceptance is still pending.
+
+### Exact third row and limiting corner diagnostics
+
+All 108 endpoint/axis attempts now inspect the third projected normal
+coefficient row too. The two established quadratic factors (face 0 at U end,
+face 10 at U start) have a definite nonzero third row: the factor order is
+exactly two, so a higher U factor cannot resolve these boxes. All eight corners
+of their prepared original charts have an interval component excluding zero.
+Their full-chart normal hulls still contain the zero vector. Corner results do
+not establish nonvanishing normals over the complete chart; subdivided factored
+normal bounds are the next useful check. No original chart or certificate was
+rebound. Four example tests passed, including quadratic/cubic order distinction
+and source-owned corner bounds. The product sweep in this diagnostic artifact
+uses only one cell per pair and is not an improved wall qualification.
