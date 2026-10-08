@@ -2460,3 +2460,20 @@ pointer identities, JSON/binary diagnostic round trips with 154 pending
 pairs, all 406 inventory pairs, and zero budgets retaining all 406 pending.
 This does not qualify the remaining curved-neighbor contact, all other
 pairs, shell volume, wall thickness, or packaged WASM/UI runtime.
+
+## Curved neighbor inventory
+
+Fresh fixture inspection identifies rail 1 neighbor as original face 2,
+degree [5,1], clamped domains [0,3] x [0,1], a 6x2 positive-weight net.
+For each of its six rows the XY control coordinates and both weights
+are identical across the linear parameter; only Z changes. Its complete
+XY projection is therefore the original rational degree-five curve,
+independent of that parameter. This is a ruled support, not an assumed
+exact cylinder. The transition source has free axis 1 and its high free
+rail coincides with the wall's upper curved boundary through the privately
+owned shared-edge construction. A projected curve/Jordan exclusion proof
+is the next relevant family; the current plane certificate cannot certify
+this curved neighbor. No additional pair admission follows from inventory.
+
+The inventory native fixture passed in 141.07 s, retaining the same
+combined counts [154,162,12,23,54,1] and owner/transport/budget checks.

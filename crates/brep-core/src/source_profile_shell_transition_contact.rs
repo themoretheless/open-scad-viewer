@@ -229,6 +229,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         let neighbor =
             root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
+        #[cfg(test)]
+        if rail == 1 && max_work > 0 {
+            eprintln!("transition curved neighbor face={} degrees={:?} knots={:?} controls={:?} weights={:?} sourceFreeAxis={} sourceControls={:?}",
+                index, [neighbor.degree_u,neighbor.degree_v], [&neighbor.knots_u,&neighbor.knots_v],
+                neighbor.control_points,neighbor.weights,free_axis,source.control_points);
+        }
         let Some(plane) =
             crate::source_allowed_contact::plane(neighbor, &mut out.exact_work, max_work)?
         else {
