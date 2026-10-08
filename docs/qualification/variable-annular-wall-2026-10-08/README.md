@@ -690,3 +690,35 @@ end-to-end CAD latency. Evidence: `split-restriction-benchmark.log.gz` and the
 three `split-*-tests.log.gz` files (25 regressions plus the benchmark passed).
 A fresh four-body run with classified evidence and splitting is active;
 whole-wall qualification and WASM/UI integration remain open.
+
+
+### Completed simultaneous restriction audit
+
+The original four-body run with simultaneous restriction and classified path
+reports completed. It reproduces the corrected-prefix partitions, pending
+counts and uncertainty rectangles above; no pole face is fully certified.
+Both sweep directions match these classified counts:
+
+| Radius order | Face | Coordinate exclusions | Coordinate attempts | Path unavailable |
+| --- | --- | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 68 | 354 | 3 |
+| 0.5 → 1.25 | 10 | 0 | 381 | 381 |
+| 1.25 → 0.5 | 0 | 53 | 347 | 3 |
+| 1.25 → 0.5 | 10 | 0 | 384 | 383 |
+
+These counters distinguish actual coordinate-path proofs from UV-matrix or
+Cartesian secant exclusions. Entry paths contribute certificates for individual
+pairs; exit paths fail the pole-based confinement or separated factor checks
+almost everywhere. This identifies local inverse-coordinate charts as the
+next exit-face proof direction; raising the same global prefix budget does
+not resolve those failures. Entry uncertainty still needs additional coupled
+bounds around V separation ~0.396.
+
+Per-face elapsed time across all eight cases was 623.740–1868.949 ms,
+including ordinary qualification, both native preparations and adaptive
+coverage. This completed run has no paired end-to-end timing baseline;
+the debug microbenchmark ratio must not be substituted for its speedup.
+Evidence: `split-self-wall.json.gz` and the completed log. Original model
+serialization remains unchanged in every case. Retained whole self-face
+coverage stays 28/31. Distinct-face wall checks, complete minimum wall
+thickness, general arbitrary-body fillets and WASM/UI packaging remain open.
