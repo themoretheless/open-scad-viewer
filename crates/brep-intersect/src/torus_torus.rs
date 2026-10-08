@@ -49,14 +49,13 @@
 //! quadrant patch of the profile row, on both 4x4 tilings (the second
 //! torus's profile angle is measured in its own frame — its axis may be
 //! anti-parallel to the first). Nothing here authorizes a topology change.
-use super::plane_torus::{
-    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
-};
+use brep_core::intersections::{CanonicalTorus, recognize_torus};
+use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
 #[cfg(test)]
-use super::sphere_sphere::ARC_WEIGHT;
-use super::sphere_sphere::{RECOGNITION, circle_curve};
+use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
+use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_curve};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -296,7 +295,7 @@ mod tests {
 
     /// Rotate pi about X then lift along Z: y -> -y, z -> z0 - z (axis flips).
     fn flipped(model: &Model, z0: f64) -> Model {
-        crate::transform::affine(
+        brep_core::transform::affine(
             model,
             [
                 [1., 0., 0., 0.],
@@ -410,9 +409,9 @@ mod tests {
         // to z=3: the meridian centers (3,0) and (3,3) sit at d=3, a=0.8,
         // l=0.6 — the exact circle pair of radii 2.4 and 3.6, both at
         // z=0.8, sorted by height then radius.
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         let second = translated(
-            &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
             [0., 0., 3.],
         );
         let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
@@ -496,8 +495,8 @@ mod tests {
         // Torus R=3, r=1 at the origin against torus R=3, r=1 lifted to
         // z=1: d=1, a=1/2, l=sqrt(3)/2 — the exact circles of radii
         // 3 -+ sqrt(3)/2, both at z=1/2.
-        let first = crate::analytic::torus(3., 1.).unwrap();
-        let second = translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., 1.]);
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
+        let second = translated(&brep_core::analytic::torus(3., 1.).unwrap(), [0., 0., 1.]);
         let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let root = 0.75_f64.sqrt();
@@ -537,8 +536,8 @@ mod tests {
         // Torus R=3, r=1 at the origin against torus R=2.5, r=1.2 lifted to
         // z=0.7: both roots land strictly inside both meridian circles and
         // revolve into two circles.
-        let first = crate::analytic::torus(3., 1.).unwrap();
-        let second = translated(&crate::analytic::torus(2.5, 1.2).unwrap(), [0., 0., 0.7]);
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
+        let second = translated(&brep_core::analytic::torus(2.5, 1.2).unwrap(), [0., 0., 0.7]);
         let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let mut roots = meridian_roots(1., 3., 1.2, 2.5, 0.7);
@@ -571,10 +570,10 @@ mod tests {
         // (rotation pi about X, then z -> 6 - z): its center plane stays at
         // z=3 but its axis is -z. The surface is symmetric, so the exact
         // circles are unchanged and the second lift follows its own frame.
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         let second = flipped(
             &translated(
-                &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+                &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
                 [0., 0., 3.],
             ),
             6.,
@@ -616,9 +615,9 @@ mod tests {
         // Torus R=3, r=1 at the origin against torus R=3, r=1 at z=2: the
         // meridian circles touch externally (d = 2 = r_1 + r_2) at rho=3,
         // z=1 — the contact revolves into a circle but is never guessed.
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         for dz in [0., 2e-15, -2e-15] {
-            let second = translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., 2. + dz]);
+            let second = translated(&brep_core::analytic::torus(3., 1.).unwrap(), [0., 0., 2. + dz]);
             let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -630,7 +629,7 @@ mod tests {
         }
         // Just clear of the band: provable miss, resolved.
         let clear = translated(
-            &crate::analytic::torus(3., 1.).unwrap(),
+            &brep_core::analytic::torus(3., 1.).unwrap(),
             [0., 0., 2. + 1e-9],
         );
         let report = intersect_torus_torus(&first, &clear, Options::default()).unwrap();
@@ -640,7 +639,7 @@ mod tests {
         );
         // Just across: two small transverse circles around the touch point.
         let across = translated(
-            &crate::analytic::torus(3., 1.).unwrap(),
+            &brep_core::analytic::torus(3., 1.).unwrap(),
             [0., 0., 2. - 1e-9],
         );
         let report = intersect_torus_torus(&first, &across, Options::default()).unwrap();
@@ -652,9 +651,9 @@ mod tests {
         // Torus R=3, r=1 at the origin against torus R=3, r=2 at z=1: the
         // meridian circles touch internally (d = 1 = |r_1 - r_2|) at rho=3,
         // z=-1 — never a guessed circle.
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         for dr in [0., 2e-15, -2e-15] {
-            let second = translated(&crate::analytic::torus(3., 2. + dr).unwrap(), [0., 0., 1.]);
+            let second = translated(&brep_core::analytic::torus(3., 2. + dr).unwrap(), [0., 0., 1.]);
             let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -666,7 +665,7 @@ mod tests {
         // Just larger: the second meridian circle swallows the first,
         // provably contained, resolved empty.
         let swallow = translated(
-            &crate::analytic::torus(3., 2. + 1e-9).unwrap(),
+            &brep_core::analytic::torus(3., 2. + 1e-9).unwrap(),
             [0., 0., 1.],
         );
         let report = intersect_torus_torus(&first, &swallow, Options::default()).unwrap();
@@ -676,7 +675,7 @@ mod tests {
         );
         // Just smaller: two transverse circles around the touch point.
         let across = translated(
-            &crate::analytic::torus(3., 2. - 1e-9).unwrap(),
+            &brep_core::analytic::torus(3., 2. - 1e-9).unwrap(),
             [0., 0., 1.],
         );
         let report = intersect_torus_torus(&first, &across, Options::default()).unwrap();
@@ -688,8 +687,8 @@ mod tests {
         // The identical torus twice: equal meridian circles within the band
         // (R_1 == R_2, h == 0, r_1 == r_2) — coincident surfaces, never a
         // guessed curve.
-        let first = crate::analytic::torus(3., 1.).unwrap();
-        let second = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
+        let second = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_torus_torus(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -707,18 +706,18 @@ mod tests {
 
     #[test]
     fn nested_and_separate_pairs_resolve_empty() {
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         // Concentric within the band with a provably different minor radius:
         // certified containment through the d <= band branch.
-        let concentric = crate::analytic::torus(3., 0.5).unwrap();
+        let concentric = brep_core::analytic::torus(3., 0.5).unwrap();
         // Nested without contact: R=3.2, r=2.5 contains the first tube
         // (d = 0.2, d + r_1 = 1.2 < r_2 = 2.5).
-        let nested = crate::analytic::torus(3.2, 2.5).unwrap();
+        let nested = brep_core::analytic::torus(3.2, 2.5).unwrap();
         // The first torus nested inside the second's tube without contact:
         // R=2.7, r=0.4 (d = 0.3, d + r_2 = 0.7 < r_1 = 1).
-        let inner = crate::analytic::torus(2.7, 0.4).unwrap();
+        let inner = brep_core::analytic::torus(2.7, 0.4).unwrap();
         // Far along the axis, no reach back.
-        let far = translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., 10.]);
+        let far = translated(&brep_core::analytic::torus(3., 1.).unwrap(), [0., 0., 10.]);
         for second in [&concentric, &nested, &inner, &far] {
             let report = intersect_torus_torus(&first, second, Options::default()).unwrap();
             assert!(
@@ -731,9 +730,9 @@ mod tests {
 
     #[test]
     fn near_coaxial_bands_stay_unresolved_not_forced() {
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         let base = translated(
-            &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
             [0., 0., 3.],
         );
         // Center-line offset inside the recognition band: near_coincidence.
@@ -747,7 +746,7 @@ mod tests {
         );
         // Recognition-scale tilt of the second axis: near_coincidence.
         let (sin, cos) = 1e-10_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, 0.],
@@ -767,14 +766,14 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
-        let first = crate::analytic::torus(3., 1.).unwrap();
+        let first = brep_core::analytic::torus(3., 1.).unwrap();
         let base = translated(
-            &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
             [0., 0., 3.],
         );
         let off = translated(&base, [0.5, 0., 0.]);
         let (sin, cos) = 0.3_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, -3. * sin],
@@ -802,33 +801,33 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let other = translated(
-            &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
             [0., 0., 3.],
         );
         // Spheres, cuboids, cylinders and frusta are not the canonical
         // operand on either side.
         for (a, b) in [
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::cylinder(2.2, 8.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::cylinder(2.2, 8.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
             (
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
         ] {
             let report = intersect_torus_torus(&a, &b, Options::default()).unwrap();
@@ -863,10 +862,10 @@ mod tests {
         // about X by 0.5.
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
-        let first = rotated_translated(&crate::analytic::torus(3., 1.).unwrap(), angle, offset);
+        let first = rotated_translated(&brep_core::analytic::torus(3., 1.).unwrap(), angle, offset);
         let second = rotated_translated(
             &translated(
-                &crate::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
+                &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
                 [0., 0., 3.],
             ),
             angle,

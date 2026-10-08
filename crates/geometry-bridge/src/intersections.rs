@@ -57,69 +57,69 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             options,
         )?),
-        Some("brep_intersect_sphere_sphere") => encode(brep_core::intersections::intersect_sphere_sphere(
+        Some("brep_intersect_sphere_sphere") => encode(brep_intersect::intersect_sphere_sphere(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_sphere_cylinder") => encode(brep_core::intersections::intersect_sphere_cylinder(
+        Some("brep_intersect_sphere_cylinder") => encode(brep_intersect::intersect_sphere_cylinder(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_sphere_cone") => encode(brep_core::intersections::intersect_sphere_cone(
+        Some("brep_intersect_sphere_cone") => encode(brep_intersect::intersect_sphere_cone(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_cone_cone") => encode(brep_core::intersections::intersect_cone_cone(
+        Some("brep_intersect_cone_cone") => encode(brep_intersect::intersect_cone_cone(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
         Some("brep_intersect_cylinder_cylinder") => {
-            encode(brep_core::intersections::intersect_cylinder_cylinder(
+            encode(brep_intersect::intersect_cylinder_cylinder(
                 &field(&v, "first")?,
                 &field(&v, "second")?,
                 options,
             )?)
         }
-        Some("brep_intersect_plane_sphere") => encode(brep_core::intersections::intersect_plane_sphere(
+        Some("brep_intersect_plane_sphere") => encode(brep_intersect::intersect_plane_sphere(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_plane_cylinder") => encode(brep_core::intersections::intersect_plane_cylinder(
+        Some("brep_intersect_plane_cylinder") => encode(brep_intersect::intersect_plane_cylinder(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_plane_cone") => encode(brep_core::intersections::intersect_plane_cone(
+        Some("brep_intersect_plane_cone") => encode(brep_intersect::intersect_plane_cone(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_plane_torus") => encode(brep_core::intersections::intersect_plane_torus(
+        Some("brep_intersect_plane_torus") => encode(brep_intersect::intersect_plane_torus(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_sphere_torus") => encode(brep_core::intersections::intersect_sphere_torus(
+        Some("brep_intersect_sphere_torus") => encode(brep_intersect::intersect_sphere_torus(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_cylinder_torus") => encode(brep_core::intersections::intersect_cylinder_torus(
+        Some("brep_intersect_cylinder_torus") => encode(brep_intersect::intersect_cylinder_torus(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_cone_torus") => encode(brep_core::intersections::intersect_cone_torus(
+        Some("brep_intersect_cone_torus") => encode(brep_intersect::intersect_cone_torus(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_torus_torus") => encode(brep_core::intersections::intersect_torus_torus(
+        Some("brep_intersect_torus_torus") => encode(brep_intersect::intersect_torus_torus(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,

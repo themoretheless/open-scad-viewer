@@ -58,15 +58,15 @@
 //! parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one
 //! degree-1 line per revolution quadrant patch of the profile row. Nothing
 //! here authorizes a topology change.
-use super::plane_torus::{
-    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
-};
-use super::sphere_cylinder::{CanonicalCylinder, CylinderPatchCurve, recognize_cylinder};
+use brep_core::intersections::{CanonicalTorus, recognize_torus};
+use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
+use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
+use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
-use super::sphere_sphere::ARC_WEIGHT;
-use super::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
+use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
+use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -489,8 +489,8 @@ mod tests {
     fn two_side_circles_match_the_sqrt_oracle() {
         // Torus R=3, r=1; cylinder R_c=2.2 spanning z in -4..4: a = -0.8,
         // side circles of radius 2.2 at z = +-sqrt(1 - 0.64) = +-0.6.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cylinder = translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let cylinder = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         for (component, z) in report.components.iter().zip([-0.6, 0.6]) {
@@ -572,8 +572,8 @@ mod tests {
         // h_c=0.3 cuts the torus at radii 3 +- sqrt(1 - 0.09) — the inner
         // circle (2.0460608...) sits inside the cap disk, the outer one is
         // beyond it.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cylinder = translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., 0.3]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let cylinder = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., 0.3]);
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         // Sorted by torus-axial height: the cap circle at z=0.3, then the
@@ -631,9 +631,9 @@ mod tests {
         // |a| = 1.5 > 1 — no side contact; each cap plane at h_c = +-0.25
         // cuts the torus at 3 +- sqrt(1 - 0.0625), both inside the disk:
         // four cap circles.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let cylinder = translated(
-            &crate::analytic::cylinder(4.5, 0.5).unwrap(),
+            &brep_core::analytic::cylinder(4.5, 0.5).unwrap(),
             [0., 0., -0.25],
         );
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
@@ -689,9 +689,9 @@ mod tests {
         // equator): the line rho = R_c is tangent to the meridian circle at
         // z == 0 — the one configuration where the roots would coincide.
         // Never a guessed circle.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         for r_c in [2., 2. + 2e-15, 2. - 2e-15, 4., 4. + 2e-15, 4. - 2e-15] {
-            let cylinder = translated(&crate::analytic::cylinder(r_c, 8.).unwrap(), [0., 0., -4.]);
+            let cylinder = translated(&brep_core::analytic::cylinder(r_c, 8.).unwrap(), [0., 0., -4.]);
             let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -703,7 +703,7 @@ mod tests {
         }
         // Just clear of the band on the outside: provable miss, resolved.
         let clear = translated(
-            &crate::analytic::cylinder(2. - 1e-9, 8.).unwrap(),
+            &brep_core::analytic::cylinder(2. - 1e-9, 8.).unwrap(),
             [0., 0., -4.],
         );
         let report = intersect_cylinder_torus(&clear, &torus, Options::default()).unwrap();
@@ -713,7 +713,7 @@ mod tests {
         );
         // Just across: two small transverse circles around the inner equator.
         let across = translated(
-            &crate::analytic::cylinder(2. + 1e-9, 8.).unwrap(),
+            &brep_core::analytic::cylinder(2. + 1e-9, 8.).unwrap(),
             [0., 0., -4.],
         );
         let report = intersect_cylinder_torus(&across, &torus, Options::default()).unwrap();
@@ -722,17 +722,17 @@ mod tests {
 
     #[test]
     fn zero_circle_configurations_resolve_empty() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         // Thin cylinder in the hole: the line rho = 1 misses the meridian
         // circle, caps far above the tube.
-        let thin = translated(&crate::analytic::cylinder(1., 8.).unwrap(), [0., 0., -4.]);
+        let thin = translated(&brep_core::analytic::cylinder(1., 8.).unwrap(), [0., 0., -4.]);
         // Short narrow cylinder around the center plane: no side contact,
         // and both cap circles (radii 3 +- sqrt(0.75)) lie outside the
         // R_c = 1.5 disks.
-        let narrow = translated(&crate::analytic::cylinder(1.5, 1.).unwrap(), [0., 0., -0.5]);
+        let narrow = translated(&brep_core::analytic::cylinder(1.5, 1.).unwrap(), [0., 0., -0.5]);
         // Huge cylinder swallowing the whole torus.
         let huge = translated(
-            &crate::analytic::cylinder(20., 40.).unwrap(),
+            &brep_core::analytic::cylinder(20., 40.).unwrap(),
             [0., 0., -20.],
         );
         for cylinder in [&thin, &narrow, &huge] {
@@ -751,10 +751,10 @@ mod tests {
         // z = +-sqrt(1 - 0.25) land exactly on the cap planes, and the cap
         // circle of radius R + |a| = 2.5 equals R_c — rim tangencies, never
         // guessed circles. The outer cap circles (radius 3.5) are absent.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let half = 0.75_f64.sqrt();
         let cylinder = translated(
-            &crate::analytic::cylinder(2.5, 2. * half).unwrap(),
+            &brep_core::analytic::cylinder(2.5, 2. * half).unwrap(),
             [0., 0., -half],
         );
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
@@ -770,8 +770,8 @@ mod tests {
     fn cap_plane_tube_tangency_stays_unresolved() {
         // R_c = 5 (no side contact: |a| = 2 > 1), half height 1: both cap
         // planes sit at |h_c| == r — tangent to the tube, never guessed.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cylinder = translated(&crate::analytic::cylinder(5., 2.).unwrap(), [0., 0., -1.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let cylinder = translated(&brep_core::analytic::cylinder(5., 2.).unwrap(), [0., 0., -1.]);
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -782,7 +782,7 @@ mod tests {
         // Just clear of the band on the outside: both caps beyond the tube,
         // resolved empty.
         let clear = translated(
-            &crate::analytic::cylinder(5., 2.).unwrap(),
+            &brep_core::analytic::cylinder(5., 2.).unwrap(),
             [0., 0., 2. + 1e-9],
         );
         let report = intersect_cylinder_torus(&clear, &torus, Options::default()).unwrap();
@@ -792,15 +792,15 @@ mod tests {
         );
         // Just across: the top cap clears the tube (h_c = 1 + 1e-9) and the
         // bottom cap at h_c = -(1 - 1e-9) cuts two small cap circles.
-        let across = translated(&crate::analytic::cylinder(5., 2.).unwrap(), [0., 0., 1e-9]);
+        let across = translated(&brep_core::analytic::cylinder(5., 2.).unwrap(), [0., 0., 1e-9]);
         let report = intersect_cylinder_torus(&across, &torus, Options::default()).unwrap();
         only_circles(&report, 2);
     }
 
     #[test]
     fn near_coaxial_bands_stay_unresolved_not_forced() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let base = translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let base = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
         // Center-line offset inside the recognition band: near_coincidence.
         let near = translated(&base, [1e-10, 0., 0.]);
         let report = intersect_cylinder_torus(&near, &torus, Options::default()).unwrap();
@@ -812,7 +812,7 @@ mod tests {
         );
         // Recognition-scale tilt of the cylinder axis: near_coincidence.
         let (sin, cos) = 1e-10_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, 0.],
@@ -832,11 +832,11 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let base = translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let base = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
         let off = translated(&base, [0.5, 0., 0.]);
         let (sin, cos) = 0.3_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, 0.],
@@ -864,30 +864,30 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cylinder = translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let cylinder = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
         // Spheres, cuboids, tori-as-first-operand and swapped operand order
         // are not the canonical pair.
         for (a, b) in [
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(2., 1.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::torus(2., 1.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::cylinder(2.2, 8.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::cylinder(2.2, 8.).unwrap(),
             ),
             (
-                crate::analytic::cylinder(2.2, 8.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::cylinder(2.2, 8.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
         ] {
             let report = intersect_cylinder_torus(&a, &b, Options::default()).unwrap();
@@ -921,9 +921,9 @@ mod tests {
         // Rigid placement of the whole coaxial configuration about X by 0.5.
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
-        let torus = rotated_translated(&crate::analytic::torus(3., 1.).unwrap(), angle, offset);
+        let torus = rotated_translated(&brep_core::analytic::torus(3., 1.).unwrap(), angle, offset);
         let cylinder = rotated_translated(
-            &translated(&crate::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]),
+            &translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]),
             angle,
             offset,
         );

@@ -48,14 +48,15 @@
 //! NumericallyResolved, never certified complete, and nothing here
 //! authorizes a topology change.
 use super::cylinder_cylinder::{arc_parameter, lift_line};
+use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::plane_sphere::{
-    CanonicalPlane, EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d,
-    conic_sweep, recognize_plane,
+    EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
 };
-use super::sphere_cylinder::{CanonicalCylinder, CylinderPatchCurve, recognize_cylinder};
-use super::sphere_sphere::{RECOGNITION, ccw_intersect};
+use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
+use super::sphere_cylinder::CylinderPatchCurve;
+use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
@@ -732,7 +733,7 @@ mod tests {
         // Plane z = 4, patch [-3,3]^2; cylinder r = 2, z in [0, 8]: the exact
         // circle of radius 2 at mid-height, fully inside the patch.
         let plane = plane_patch([-3., -3., 4.], [6., 0., 0.], [0., 6., 0.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
@@ -795,7 +796,7 @@ mod tests {
         // clipped to its x >= 0 half, swept [3pi/2, 5pi/2], endpoints
         // (0, -+2, 4).
         let plane = plane_patch([0., -3., 4.], [3., 0., 0.], [0., 6., 0.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         let [
@@ -877,7 +878,7 @@ mod tests {
 
     #[test]
     fn cap_plane_coincidence_and_beyond_classification() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let at = |z: f64| plane_patch([-3., -3., z], [6., 0., 0.], [0., 6., 0.]);
         // Plane coincident with the top cap plane: a coincident cap/rim
         // region, never a guessed circle.
@@ -912,7 +913,7 @@ mod tests {
         // Plane x = 1, patch y in [-3, 3], z in [0, 10]: the two exact
         // rulings at (1, +-sqrt(3), z), z in [0, 8] (clipped by the caps).
         let plane = plane_patch([1., -3., 0.], [0., 6., 0.], [0., 0., 10.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
@@ -981,7 +982,7 @@ mod tests {
 
     #[test]
     fn parallel_miss_tangency_and_band_classification() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let at = |x: f64| plane_patch([x, -3., 0.], [0., 6., 0.], [0., 0., 10.]);
         // Miss: d = 3 > r, empty and resolved.
         let report = intersect_plane_cylinder(&at(3.), &cylinder, Options::default()).unwrap();
@@ -1027,7 +1028,7 @@ mod tests {
         // runs along the patch boundary within the band (tangency region),
         // the other is resolved with exact trims.
         let plane = plane_patch([1., -3., 0.], [0., 3. + 3_f64.sqrt(), 0.], [0., 0., 10.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1, "{report:?}");
@@ -1068,7 +1069,7 @@ mod tests {
         let beta = std::f64::consts::PI / 6.;
         let (s, c) = beta.sin_cos();
         let plane = oblique_plane(beta, 6., 8.);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
@@ -1133,7 +1134,7 @@ mod tests {
         // arcs whose endpoints sit exactly on z = 0 and z = 8.
         let beta = 5. * std::f64::consts::PI / 12.;
         let plane = oblique_plane(beta, 6., 8.);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.components.len(), 2, "{report:?}");
@@ -1175,7 +1176,7 @@ mod tests {
         // a guessed ellipse.
         let beta = 2_f64.atan();
         let plane = oblique_plane(beta, 6., 8.);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -1187,7 +1188,7 @@ mod tests {
 
     #[test]
     fn near_coincident_tilts_are_never_forced() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Recognition-scale tilt off perpendicular (about X by 1e-6).
         let a = 1e-6_f64;
         let (sa, ca) = a.sin_cos();
@@ -1222,17 +1223,17 @@ mod tests {
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
         let plane = plane_patch([-3., -3., 4.], [6., 0., 0.], [0., 6., 0.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         for (a, b) in [
             (
                 plane.clone(),
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
             ),
-            (plane.clone(), crate::analytic::sphere(2.).unwrap()),
+            (plane.clone(), brep_core::analytic::sphere(2.).unwrap()),
             // Operand order is fixed: the cylinder as plane operand refuses.
             (cylinder.clone(), plane.clone()),
             (
-                crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
                 cylinder.clone(),
             ),
         ] {
@@ -1275,7 +1276,7 @@ mod tests {
         let (s, c) = beta.sin_cos();
         let plane = rotated_translated(&oblique_plane(beta, 6., 8.), angle, offset);
         let cylinder =
-            rotated_translated(&crate::analytic::cylinder(2., 8.).unwrap(), angle, offset);
+            rotated_translated(&brep_core::analytic::cylinder(2., 8.).unwrap(), angle, offset);
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         let [

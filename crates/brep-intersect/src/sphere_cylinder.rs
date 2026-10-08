@@ -22,15 +22,18 @@
 //! tangent contacts are never reported as point or guessed-circle components,
 //! matching the house tangency discipline. Nothing here authorizes a topology
 //! change.
-use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
-    lift,
+use brep_core::intersections::sphere_sphere::{
+    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve, lift,
 };
+use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
-const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 const TAU: f64 = std::f64::consts::TAU;
+
+fn point_of(jet_point: &[f64]) -> [f64; 3] {
+    [jet_point[0], jet_point[1], jet_point[2]]
+}
 
 /// One cylinder face's share of an intersection circle in that face's UV.
 #[derive(Clone, Debug)]
@@ -59,281 +62,6 @@ pub enum SphereCylinderComponent {
         /// and the cylinder side or cap plane equation.
         max_sample_residual: f64,
     },
-}
-
-#[derive(Clone, Debug)]
-pub struct CanonicalCylinder {
-    /// Midpoint of the axis segment.
-    pub center: [f64; 3],
-    /// Unit axis, bottom cap toward top cap.
-    pub axis: [f64; 3],
-    pub radius: f64,
-    pub half_height: f64,
-    /// Observed structural deviation bound; feeds the outward classification.
-    pub(crate) error: f64,
-    /// In-plane orthonormal ring frame: x = quadrant-0 direction, y = axis x x.
-    pub frame: [[f64; 3]; 2],
-    /// Side face indices ordered by quadrant.
-    pub(crate) sides: [usize; 4],
-    /// Cap face indices: [bottom, top].
-    #[allow(dead_code)]
-    pub(crate) caps: [usize; 2],
-}
-
-/// One quadrant's exact cap trim arc: the quarter circle of radius 1/2
-/// centered at [1/2, 1/2] in cap UV, weights cos(pi/4).
-fn cap_quarter_arc(curve: &Curve, quadrant: usize) -> bool {
-    let [x, y] = QUADRANTS[quadrant];
-    let [nx, ny] = QUADRANTS[(quadrant + 1) % 4];
-    curve.degree == 2
-        && curve.knots == [0., 0., 0., 1., 1., 1.]
-        && curve.weights == [1., ARC_WEIGHT, 1.]
-        && curve.control_points
-            == [
-                [0.5 + x / 2., 0.5 + y / 2.].to_vec(),
-                [0.5 + (x + nx) / 2., 0.5 + (y + ny) / 2.].to_vec(),
-                [0.5 + nx / 2., 0.5 + ny / 2.].to_vec(),
-            ]
-}
-
-fn point_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
-
-/// Recognizes a canonical cylinder solid as built by `analytic::cylinder`,
-/// certifying the side/cap surface structure, exact weights and trim pcurves,
-/// every control point against the exact construction in the recovered ring
-/// frame, a globally consistent quadrant tiling, and both ring vertex sets.
-/// Rigid affine placement is admitted; anything else returns `None`.
-pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
-    model.validate()?;
-    if model.bodies.len() != 1
-        || model.shells.len() != 1
-        || model.faces.len() != 6
-        || model.vertices.len() != 8
-    {
-        return Ok(None);
-    }
-    let Some((sides, caps)) = recognize::classify_analytic_faces(model) else {
-        return Ok(None);
-    };
-    if sides.len() != 4 || caps.len() != 2 {
-        return Ok(None);
-    }
-    // Side trims: the unit-square boundary, each edge exactly once.
-    for &index in &sides {
-        if !recognize::unit_square_boundary(model, index) {
-            return Ok(None);
-        }
-    }
-    // Ring centers: each ring vertex is shared by two adjacent side patches,
-    // so the eight evaluated corners average to the ring center.
-    let mut bottom = [0.; 3];
-    let mut top = [0.; 3];
-    for &index in &sides {
-        let surface = &model.faces[index].surface;
-        for u in [0., 1.] {
-            let b = point_of(&surface.evaluate(u, 0.)?.point);
-            let t = point_of(&surface.evaluate(u, 1.)?.point);
-            for k in 0..3 {
-                bottom[k] += b[k] / 8.;
-                top[k] += t[k] / 8.;
-            }
-        }
-    }
-    let axis_vec = sub(top, bottom);
-    let height = axis_vec[0].hypot(axis_vec[1]).hypot(axis_vec[2]);
-    if !height.is_finite() || !(1e-5..=1e6).contains(&height) {
-        return Ok(None);
-    }
-    let axis = axis_vec.map(|x| x / height);
-    let center = std::array::from_fn(|k| (bottom[k] + top[k]) / 2.);
-    let radial = |point: [f64; 3], from: [f64; 3]| {
-        let d = sub(point, from);
-        let axial = dot(d, axis);
-        sub(d, axis.map(|x| x * axial))
-    };
-    // Radius from the four arc midpoints (u = v = 1/2 sits on the 45-degree
-    // point of the quarter arc at half height).
-    let mut radius = 0.;
-    let mut mid_radii = Vec::with_capacity(4);
-    for &index in &sides {
-        let point = point_of(&model.faces[index].surface.evaluate(0.5, 0.5)?.point);
-        let perp = radial(point, center);
-        let r = perp[0].hypot(perp[1]).hypot(perp[2]);
-        mid_radii.push(r);
-        radius += r / 4.;
-    }
-    if !radius.is_finite() || !(1e-5..=1e6).contains(&radius) {
-        return Ok(None);
-    }
-    let mut error: f64 = 0.;
-    for r in &mid_radii {
-        let deviation = (r - radius).abs();
-        if deviation > RECOGNITION * radius {
-            return Ok(None);
-        }
-        error = error.max(deviation);
-    }
-    // In-plane frame: x from the first side patch's bottom start direction.
-    let start = point_of(&model.faces[sides[0]].surface.evaluate(0., 0.)?.point);
-    let x_perp = radial(start, bottom);
-    let x_length = x_perp[0].hypot(x_perp[1]).hypot(x_perp[2]);
-    if !x_length.is_finite() || x_length <= 0. {
-        return Ok(None);
-    }
-    let x_dir = x_perp.map(|x| x / x_length);
-    error = error.max((x_length - radius).abs());
-    let y_dir = cross(axis, x_dir);
-    // Per-patch quadrant tiling and exact control-point certification.
-    let quarter = std::f64::consts::FRAC_PI_2;
-    let mut seen = [false; 4];
-    let mut ordered = [0usize; 4];
-    for &index in &sides {
-        let surface = &model.faces[index].surface;
-        let point = point_of(&surface.evaluate(0., 0.)?.point);
-        let perp = radial(point, bottom);
-        let angle = dot(perp, y_dir).atan2(dot(perp, x_dir));
-        let quadrant = (angle / quarter).round() as i64;
-        let quadrant = quadrant.rem_euclid(4) as usize;
-        let residual = (angle - quadrant as f64 * quarter + std::f64::consts::PI).rem_euclid(TAU)
-            - std::f64::consts::PI;
-        if residual.abs() > RECOGNITION {
-            return Ok(None);
-        }
-        if seen[quadrant] {
-            return Ok(None);
-        }
-        seen[quadrant] = true;
-        ordered[quadrant] = index;
-        let qa = QUADRANTS[quadrant];
-        let qb = QUADRANTS[(quadrant + 1) % 4];
-        let pattern = [
-            [qa[0], qa[1]],
-            [qa[0] + qb[0], qa[1] + qb[1]],
-            [qb[0], qb[1]],
-        ];
-        for (k, expected_xy) in pattern.iter().enumerate() {
-            for (j, actual) in surface.control_points[k].iter().take(2).enumerate() {
-                let expected: [f64; 3] = std::array::from_fn(|a| {
-                    bottom[a]
-                        + radius * (expected_xy[0] * x_dir[a] + expected_xy[1] * y_dir[a])
-                        + height * j as f64 * axis[a]
-                });
-                if actual.len() != 3 {
-                    return Ok(None);
-                }
-                let d = [
-                    actual[0] - expected[0],
-                    actual[1] - expected[1],
-                    actual[2] - expected[2],
-                ];
-                let deviation = d[0].hypot(d[1]).hypot(d[2]);
-                if !deviation.is_finite() || deviation > RECOGNITION * radius + 1e-12 {
-                    return Ok(None);
-                }
-                error = error.max(deviation);
-            }
-        }
-    }
-    if seen.into_iter().any(|hit| !hit) {
-        return Ok(None);
-    }
-    // Caps: axial slot from any corner, exact bilinear corners in the ring
-    // frame, and the four inscribed quarter-arc trims each exactly once.
-    let mut cap_assigned = [false; 2];
-    let mut cap_ids = [0usize; 2];
-    for &index in &caps {
-        let surface = &model.faces[index].surface;
-        let corner = point_of(&surface.evaluate(0., 0.)?.point);
-        let axial = dot(sub(corner, bottom), axis);
-        let slot = if axial.abs() <= RECOGNITION * height {
-            0
-        } else if (axial - height).abs() <= RECOGNITION * height {
-            1
-        } else {
-            return Ok(None);
-        };
-        error = error.max(if slot == 0 {
-            axial.abs()
-        } else {
-            (axial - height).abs()
-        });
-        if cap_assigned[slot] {
-            return Ok(None);
-        }
-        cap_assigned[slot] = true;
-        cap_ids[slot] = index;
-        for (i, row) in surface.control_points.iter().take(2).enumerate() {
-            for (j, actual) in row.iter().take(2).enumerate() {
-                let expected: [f64; 3] = std::array::from_fn(|a| {
-                    bottom[a]
-                        + radius
-                            * ((2. * i as f64 - 1.) * x_dir[a] + (2. * j as f64 - 1.) * y_dir[a])
-                        + if slot == 1 { height * axis[a] } else { 0. }
-                });
-                if actual.len() != 2 + 1 {
-                    return Ok(None);
-                }
-                let d = [
-                    actual[0] - expected[0],
-                    actual[1] - expected[1],
-                    actual[2] - expected[2],
-                ];
-                let deviation = d[0].hypot(d[1]).hypot(d[2]);
-                if !deviation.is_finite() || deviation > RECOGNITION * radius + 1e-12 {
-                    return Ok(None);
-                }
-                error = error.max(deviation);
-            }
-        }
-        let loop_ = &model.loops[model.faces[index].outer];
-        if loop_.coedges.len() != 4 {
-            return Ok(None);
-        }
-        let mut seen_quadrant = [false; 4];
-        for coedge in &loop_.coedges {
-            let mut hit = false;
-            for (quadrant, seen) in seen_quadrant.iter_mut().enumerate() {
-                if !*seen && cap_quarter_arc(&coedge.pcurve, quadrant) {
-                    *seen = true;
-                    hit = true;
-                    break;
-                }
-            }
-            if !hit {
-                return Ok(None);
-            }
-        }
-        if seen_quadrant.into_iter().any(|hit| !hit) {
-            return Ok(None);
-        }
-    }
-    if cap_assigned.into_iter().any(|hit| !hit) {
-        return Ok(None);
-    }
-    // Every vertex on one of the two rings.
-    for vertex in &model.vertices {
-        let d = sub(vertex.point, center);
-        let axial = dot(d, axis);
-        let perp = sub(d, axis.map(|x| x * axial));
-        let dev_r = (perp[0].hypot(perp[1]).hypot(perp[2]) - radius).abs();
-        let dev_a = (axial.abs() - height / 2.).abs();
-        if dev_r > RECOGNITION * radius || dev_a > RECOGNITION * height {
-            return Ok(None);
-        }
-        error = error.max(dev_r).max(dev_a);
-    }
-    Ok(Some(CanonicalCylinder {
-        center,
-        axis,
-        radius,
-        half_height: height / 2.,
-        error,
-        frame: [x_dir, y_dir],
-        sides: ordered,
-        caps: cap_ids,
-    }))
 }
 
 /// Where a resolved circle sits on the cylinder boundary.
@@ -594,6 +322,7 @@ impl value_codec::Serialize for SphereCylinderComponent {
 #[cfg(test)]
 mod tests {
     use super::super::test_utils::{rotated_translated, translated};
+    use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
     use super::*;
 
     fn only_circles(
@@ -696,8 +425,8 @@ mod tests {
     fn two_side_circles_match_the_sqrt_oracle() {
         // Cylinder R=2 spans z in 0..8; sphere r=3 centered on the axis at
         // the cylinder midpoint: side circles at z = 4 +- sqrt(9 - 4).
-        let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [0., 0., 4.]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [0., 0., 4.]);
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let oracle = (9_f64 - 4.).sqrt();
@@ -763,8 +492,8 @@ mod tests {
         // Sphere r=3 centered at the bottom cap plane: upper side circle at
         // z = sqrt(5) inside, lower one below the cylinder; the bottom cap
         // plane circle has radius 3 > R, so it lies outside the cap disk.
-        let sphere = crate::analytic::sphere(3.).unwrap();
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let sphere = brep_core::analytic::sphere(3.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, _, _, cylinder_uv, sampled) = circle_of(&report.components[0]);
@@ -792,8 +521,8 @@ mod tests {
         // r=1.5 < R=2, center 0.5 below the top cap plane z=8: circle of
         // radius sqrt(1.5^2 - 0.5^2) = sqrt(2) in the cap plane, inside the
         // disk; no side contact is possible.
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 7.5]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 7.5]);
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, _, sphere_uv, cylinder_uv, sampled) =
@@ -840,14 +569,14 @@ mod tests {
 
     #[test]
     fn zero_circle_configurations_resolve_empty() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Small sphere strictly inside.
-        let inside = translated(&crate::analytic::sphere(1.).unwrap(), [0., 0., 4.]);
+        let inside = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 4.]);
         // Sphere beyond the top cap, no reach back.
-        let beyond = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 11.]);
+        let beyond = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 11.]);
         // Large sphere swallowing the whole cylinder (side crossings beyond
         // the height, cap circles outside the disks).
-        let swallow = translated(&crate::analytic::sphere(20.).unwrap(), [0., 0., 4.]);
+        let swallow = translated(&brep_core::analytic::sphere(20.).unwrap(), [0., 0., 4.]);
         for sphere in [&inside, &beyond, &swallow] {
             let report = intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
             assert!(
@@ -860,15 +589,15 @@ mod tests {
 
     #[test]
     fn equal_radii_report_the_coincident_band() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Exact r == R: tangent equator circle — never a guessed component.
-        let exact = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 4.]);
+        let exact = translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 4.]);
         // Within the outward band: inseparable from coincidence.
-        let near = crate::analytic::sphere(2. + 2e-15).unwrap();
+        let near = brep_core::analytic::sphere(2. + 2e-15).unwrap();
         let near = translated(&near, [0., 0., 4.]);
         // r == R with the sphere reaching back over the top cap: the radius
         // ambiguity still forbids certifying a cap circle.
-        let reaching = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 9.]);
+        let reaching = translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 9.]);
         for sphere in [&exact, &near, &reaching] {
             let report = intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
@@ -884,9 +613,9 @@ mod tests {
 
     #[test]
     fn cap_plane_touch_stays_a_tangency_region() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         // r=1.5 sphere tangent to the top cap plane z=8 from inside.
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5]);
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 6.5]);
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -895,14 +624,14 @@ mod tests {
             UnresolvedReason::TangencyOrMultipleRoot
         );
         // Just clear of the band: strictly inside, empty and resolved.
-        let clear = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 - 1e-9]);
+        let clear = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 - 1e-9]);
         let report = intersect_sphere_cylinder(&clear, &cylinder, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
             "{report:?}"
         );
         // Just across: a small transverse cap circle.
-        let across = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 + 1e-9]);
+        let across = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 + 1e-9]);
         let report = intersect_sphere_cylinder(&across, &cylinder, Options::default()).unwrap();
         only_circles(&report, 1);
     }
@@ -911,9 +640,9 @@ mod tests {
     fn rim_tangency_stays_unresolved() {
         // sqrt(r^2 - R^2) == h/2 exactly: both side crossings land on the cap
         // planes — the rim tangency is never a guessed circle.
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let r = (4_f64 + 16.).sqrt();
-        let sphere = translated(&crate::analytic::sphere(r).unwrap(), [0., 0., 4.]);
+        let sphere = translated(&brep_core::analytic::sphere(r).unwrap(), [0., 0., 4.]);
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -925,8 +654,8 @@ mod tests {
 
     #[test]
     fn near_axial_offset_within_the_band_stays_unresolved() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [1e-10, 0., 4.]);
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [1e-10, 0., 4.]);
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -938,8 +667,8 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_pairs_are_unsupported_regions() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [0.5, 0., 4.]);
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [0.5, 0., 4.]);
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -956,25 +685,25 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         // Frustum and tube are not the canonical cylinder; cuboids and tori
         // are neither canonical operand.
         for (a, b) in [
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::frustum(1., 2., 3.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::frustum(1., 2., 3.).unwrap(),
             ),
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::tube(2., 1., 3.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::tube(2., 1., 3.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::cylinder(1., 2.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::cylinder(1., 2.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::cylinder(1., 2.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::cylinder(1., 2.).unwrap(),
             ),
         ] {
             let report = intersect_sphere_cylinder(&a, &b, Options::default()).unwrap();
@@ -988,12 +717,12 @@ mod tests {
         }
         // A canonical pair still resolves: sphere r=2 at the bottom ring of
         // cylinder(1, 4) crosses the side once at z = 4 - sqrt(3).
-        let tall = crate::analytic::cylinder(1., 4.).unwrap();
+        let tall = brep_core::analytic::cylinder(1., 4.).unwrap();
         let report = intersect_sphere_cylinder(&sphere, &tall, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert_eq!(report.components.len(), 1);
         // A structurally perturbed cylinder fails validation as a hard error.
-        let mut perturbed = crate::analytic::cylinder(1., 2.).unwrap();
+        let mut perturbed = brep_core::analytic::cylinder(1., 2.).unwrap();
         perturbed.faces[0].surface.weights[1][0] = 0.5;
         assert!(intersect_sphere_cylinder(&sphere, &perturbed, Options::default()).is_err());
     }
@@ -1004,12 +733,12 @@ mod tests {
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
         let sphere = rotated_translated(
-            &translated(&crate::analytic::sphere(3.).unwrap(), [0., 0., 4.]),
+            &translated(&brep_core::analytic::sphere(3.).unwrap(), [0., 0., 4.]),
             angle,
             offset,
         );
         let cylinder =
-            rotated_translated(&crate::analytic::cylinder(2., 8.).unwrap(), angle, offset);
+            rotated_translated(&brep_core::analytic::cylinder(2., 8.).unwrap(), angle, offset);
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         // Independent binary64 oracle in the placed frame.
@@ -1079,8 +808,8 @@ mod tests {
     fn swapped_cap_slots_and_bottom_cap_circle() {
         // Sphere poking through the bottom cap from below: circle on the
         // bottom cap face, axial slot 0.
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 0.5]);
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 0.5]);
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (_, center, radius, _, _, cylinder_uv, _) = circle_of(&report.components[0]);

@@ -29,10 +29,11 @@
 //! radii); a coincident cap plane of nested coaxial cylinders shares the
 //! smaller cap disk and is an honest `CoincidentTrim` region. Nothing here
 //! authorizes a topology change.
-use super::sphere_cylinder::{CanonicalCylinder, CylinderPatchCurve, recognize_cylinder};
-use super::sphere_sphere::RECOGNITION;
+use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
+use super::sphere_cylinder::CylinderPatchCurve;
+use brep_core::intersections::sphere_sphere::RECOGNITION;
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
@@ -450,8 +451,8 @@ mod tests {
         // r1=2 at the origin (z in 0..8), r2=3 offset by d=3.5 along x:
         // 1 = |r1-r2| < d < r1+r2 = 5, so the planar circle/circle section
         // gives two foot points at x = (d^2 + r1^2 - r2^2)/(2d), y = +-sqrt.
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
-        let second = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
+        let second = translated(&brep_core::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
         let report = intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         let d = 3.5_f64;
@@ -513,7 +514,7 @@ mod tests {
         // Place the second cylinder so that one ruling lands exactly on the
         // first cylinder's quadrant seam: offset along the direction at angle
         // -theta from the recognized frame x, where theta is the ruling angle.
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         let rec = recognize_cylinder(&first).unwrap().unwrap();
         let d = 3.5_f64;
         let x = (d * d + 4. - 9.) / (2. * d);
@@ -525,7 +526,7 @@ mod tests {
             0.,
         ];
         let second = translated(
-            &crate::analytic::cylinder(3., 8.).unwrap(),
+            &brep_core::analytic::cylinder(3., 8.).unwrap(),
             [d * u_world[0], d * u_world[1], 0.],
         );
         let report = intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
@@ -574,10 +575,10 @@ mod tests {
 
     #[test]
     fn finite_heights_clip_or_eliminate_the_lines() {
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Partial overlap: the second cylinder spans z in 5..9, so the clip
         // interval is [1, 4] about the first center plane — lines z in 5..8.
-        let partial = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 5.]);
+        let partial = translated(&brep_core::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 5.]);
         let report = intersect_cylinder_cylinder(&first, &partial, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         let d = 3.5_f64;
@@ -601,7 +602,7 @@ mod tests {
             assert!((arc.control_points[1][1] - 0.75).abs() <= 1e-12);
         }
         // Disjoint heights: the clip interval is empty beyond the band.
-        let disjoint = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 9.]);
+        let disjoint = translated(&brep_core::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 9.]);
         let report = intersect_cylinder_cylinder(&first, &disjoint, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -609,7 +610,7 @@ mod tests {
         );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Heights touching at one cap plane: a band-thin clip degenerates.
-        let touching = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 8.]);
+        let touching = translated(&brep_core::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 8.]);
         let report = intersect_cylinder_cylinder(&first, &touching, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -621,11 +622,11 @@ mod tests {
 
     #[test]
     fn external_and_internal_tangencies_stay_unresolved() {
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         // External tangency: d == r1 + r2.
-        let external = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [5., 0., 0.]);
+        let external = translated(&brep_core::analytic::cylinder(3., 8.).unwrap(), [5., 0., 0.]);
         // Internal tangency: d == |r1 - r2|.
-        let internal = translated(&crate::analytic::cylinder(5., 8.).unwrap(), [3., 0., 0.]);
+        let internal = translated(&brep_core::analytic::cylinder(5., 8.).unwrap(), [3., 0., 0.]);
         for second in [&external, &internal] {
             let report = intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
@@ -638,7 +639,7 @@ mod tests {
         }
         // Just clear of the external band: separate, empty and resolved.
         let clear = translated(
-            &crate::analytic::cylinder(3., 8.).unwrap(),
+            &brep_core::analytic::cylinder(3., 8.).unwrap(),
             [5. + 1e-9, 0., 0.],
         );
         let report = intersect_cylinder_cylinder(&first, &clear, Options::default()).unwrap();
@@ -648,13 +649,13 @@ mod tests {
         );
         // Just across: the transverse two-line case.
         let across = translated(
-            &crate::analytic::cylinder(3., 8.).unwrap(),
+            &brep_core::analytic::cylinder(3., 8.).unwrap(),
             [5. - 1e-9, 0., 0.],
         );
         let report = intersect_cylinder_cylinder(&first, &across, Options::default()).unwrap();
         only_lines(&report, 2);
         // Radially nested without contact: d < |r1 - r2| provably.
-        let nested = translated(&crate::analytic::cylinder(5., 8.).unwrap(), [2., 0., 0.]);
+        let nested = translated(&brep_core::analytic::cylinder(5., 8.).unwrap(), [2., 0., 0.]);
         let report = intersect_cylinder_cylinder(&first, &nested, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -665,11 +666,11 @@ mod tests {
 
     #[test]
     fn coaxial_equal_radii_report_the_coincident_band() {
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Exact equal radii, overlapping heights: coincident side surface.
-        let same = crate::analytic::cylinder(2., 8.).unwrap();
+        let same = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Radii equal within the outward band: inseparable from coincidence.
-        let near = crate::analytic::cylinder(2. + 2e-15, 8.).unwrap();
+        let near = brep_core::analytic::cylinder(2. + 2e-15, 8.).unwrap();
         for second in [&same, &near] {
             let report = intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
@@ -682,7 +683,7 @@ mod tests {
         }
         // Stacked equal-radius cylinders sharing the cap plane z = 8: the
         // coincident rim circle is a tangency contact, never a guessed circle.
-        let stacked = translated(&crate::analytic::cylinder(2., 4.).unwrap(), [0., 0., 8.]);
+        let stacked = translated(&brep_core::analytic::cylinder(2., 4.).unwrap(), [0., 0., 8.]);
         let report = intersect_cylinder_cylinder(&first, &stacked, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(
@@ -690,7 +691,7 @@ mod tests {
             UnresolvedReason::TangencyOrMultipleRoot
         );
         // Equal radii, heights disjoint beyond the band: no contact.
-        let apart = translated(&crate::analytic::cylinder(2., 4.).unwrap(), [0., 0., 9.]);
+        let apart = translated(&brep_core::analytic::cylinder(2., 4.).unwrap(), [0., 0., 9.]);
         let report = intersect_cylinder_cylinder(&first, &apart, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -701,10 +702,10 @@ mod tests {
 
     #[test]
     fn coaxial_unequal_radii_resolve_empty_unless_cap_planes_coincide() {
-        let outer = crate::analytic::cylinder(2., 8.).unwrap();
+        let outer = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Nested coaxial cylinders with no shared cap plane (the inner spans
         // z in 2..6): the sides never meet and no rim lies on the other side.
-        let inner = translated(&crate::analytic::cylinder(1., 4.).unwrap(), [0., 0., 2.]);
+        let inner = translated(&brep_core::analytic::cylinder(1., 4.).unwrap(), [0., 0., 2.]);
         let report = intersect_cylinder_cylinder(&outer, &inner, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -713,7 +714,7 @@ mod tests {
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Same-height nested cylinders share both cap disks over the smaller
         // radius: an honest coincident-trim region, not resolved empty.
-        let shared_caps = crate::analytic::cylinder(1., 8.).unwrap();
+        let shared_caps = brep_core::analytic::cylinder(1., 8.).unwrap();
         let report = intersect_cylinder_cylinder(&outer, &shared_caps, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -723,7 +724,7 @@ mod tests {
         );
         // Stacked cylinders with different radii share the smaller cap disk:
         // an honest coincident-trim region, not a resolved-empty report.
-        let stacked = translated(&crate::analytic::cylinder(1., 4.).unwrap(), [0., 0., 8.]);
+        let stacked = translated(&brep_core::analytic::cylinder(1., 4.).unwrap(), [0., 0., 8.]);
         let report = intersect_cylinder_cylinder(&outer, &stacked, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -735,9 +736,9 @@ mod tests {
 
     #[test]
     fn near_parallel_within_the_band_stays_unresolved_not_forced() {
-        let first = crate::analytic::cylinder(2., 8.).unwrap();
+        let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         let tilted = rotated_translated(
-            &crate::analytic::cylinder(3., 8.).unwrap(),
+            &brep_core::analytic::cylinder(3., 8.).unwrap(),
             1e-10,
             [3.5, 0., 0.],
         );
@@ -750,7 +751,7 @@ mod tests {
         );
         // Clearly non-parallel: the general quartic is out of scope.
         let skew = rotated_translated(
-            &crate::analytic::cylinder(3., 8.).unwrap(),
+            &brep_core::analytic::cylinder(3., 8.).unwrap(),
             0.3,
             [3.5, 0., 0.],
         );
@@ -766,7 +767,7 @@ mod tests {
             vec![0., 1., 0., 1., 0., 1., 0., 1.]
         );
         // A near-coaxial offset inside the recognition band: near_coincidence.
-        let near = translated(&crate::analytic::cylinder(2., 8.).unwrap(), [1e-10, 0., 0.]);
+        let near = translated(&brep_core::analytic::cylinder(2., 8.).unwrap(), [1e-10, 0., 0.]);
         let report = intersect_cylinder_cylinder(&first, &near, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(
@@ -780,9 +781,9 @@ mod tests {
         // Rigid placement of the whole parallel configuration about X by 0.5.
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
-        let first = rotated_translated(&crate::analytic::cylinder(2., 8.).unwrap(), angle, offset);
+        let first = rotated_translated(&brep_core::analytic::cylinder(2., 8.).unwrap(), angle, offset);
         let second = rotated_translated(
-            &translated(&crate::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]),
+            &translated(&brep_core::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]),
             angle,
             offset,
         );
@@ -846,24 +847,24 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
+        let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
         // Frusta, tubes, spheres and cuboids are not the canonical cylinder.
         for (a, b) in [
             (
-                crate::analytic::frustum(1., 2., 3.).unwrap(),
-                crate::analytic::cylinder(2., 8.).unwrap(),
+                brep_core::analytic::frustum(1., 2., 3.).unwrap(),
+                brep_core::analytic::cylinder(2., 8.).unwrap(),
             ),
             (
-                crate::analytic::tube(2., 1., 3.).unwrap(),
-                crate::analytic::cylinder(2., 8.).unwrap(),
+                brep_core::analytic::tube(2., 1., 3.).unwrap(),
+                brep_core::analytic::cylinder(2., 8.).unwrap(),
             ),
             (
-                crate::analytic::cylinder(2., 8.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::cylinder(2., 8.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::cylinder(2., 8.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::cylinder(2., 8.).unwrap(),
             ),
         ] {
             let report = intersect_cylinder_cylinder(&a, &b, Options::default()).unwrap();
@@ -876,12 +877,12 @@ mod tests {
             );
         }
         // A canonical pair still resolves.
-        let second = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
+        let second = translated(&brep_core::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
         let report = intersect_cylinder_cylinder(&cylinder, &second, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert_eq!(report.components.len(), 2);
         // A structurally perturbed cylinder fails validation as a hard error.
-        let mut perturbed = crate::analytic::cylinder(1., 2.).unwrap();
+        let mut perturbed = brep_core::analytic::cylinder(1., 2.).unwrap();
         perturbed.faces[0].surface.weights[1][0] = 0.5;
         assert!(intersect_cylinder_cylinder(&cylinder, &perturbed, Options::default()).is_err());
     }

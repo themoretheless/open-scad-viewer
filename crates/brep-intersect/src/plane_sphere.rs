@@ -27,150 +27,13 @@
 //! `sphere_sphere::lift_clipped` (clipped arcs, with exact endpoint
 //! inversion), and exact rational quadratic ellipse arcs in the plane UV.
 //! Nothing here authorizes a topology change.
-use super::sphere_sphere::{self, CanonicalSphere, RECOGNITION, SpherePatchCircle};
+use brep_core::intersections::sphere_sphere::{self, CanonicalSphere, SpherePatchCircle};
+use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
-
-/// A recognized canonical planar patch: an exact affine rectangular surface
-/// `P(u,v) = origin + u*U + v*V` over `(u,v) in [0,1]^2`, with U and V
-/// orthogonal within the recognition band.
-#[derive(Clone, Debug)]
-pub(crate) struct CanonicalPlane {
-    /// Surface control point [0][0]: the (0,0) corner.
-    pub(crate) origin: [f64; 3],
-    /// Edge vector to the (1,0) corner.
-    pub(crate) u: [f64; 3],
-    /// Edge vector to the (0,1) corner.
-    pub(crate) v: [f64; 3],
-    /// Unit normal u x v / |u x v|.
-    pub(crate) normal: [f64; 3],
-    pub(crate) u_len: f64,
-    pub(crate) v_len: f64,
-    /// Observed structural deviation bound; feeds the outward classification.
-    pub(crate) error: f64,
-}
-
-/// Recognizes a canonical planar patch model: one body, one open shell, one
-/// bilinear affine face over the unit square with exact unit weights, the
-/// four unit-square boundary trims each exactly once, four corner vertices
-/// matching the surface corners, an exactly-affine fourth corner, and edge
-/// vectors orthogonal within the recognition band. Rigid affine placement is
-/// admitted; anything else returns `None`.
-pub(crate) fn recognize_plane(model: &Model) -> Result<Option<CanonicalPlane>> {
-    model.validate()?;
-    // Bodies require closed shells, so the freestanding patch is a single
-    // open shell with no body at all.
-    if !model.bodies.is_empty()
-        || model.shells.len() != 1
-        || model.faces.len() != 1
-        || model.vertices.len() != 4
-        || model.edges.len() != 4
-        || model.loops.len() != 1
-    {
-        return Ok(None);
-    }
-    let shell = &model.shells[0];
-    if shell.closed || shell.faces.len() != 1 {
-        return Ok(None);
-    }
-    let face = &model.faces[0];
-    let surface = &face.surface;
-    if surface.degree_u != 1
-        || surface.degree_v != 1
-        || surface.periodic_u
-        || surface.periodic_v
-        || surface.knots_u != [0., 0., 1., 1.]
-        || surface.knots_v != [0., 0., 1., 1.]
-        || surface.control_points.len() != 2
-        || surface.control_points.iter().any(|row| row.len() != 2)
-        || surface
-            .control_points
-            .iter()
-            .flatten()
-            .any(|p| p.len() != 3)
-        || surface.weights != [[1., 1.], [1., 1.]]
-        || !face.holes.is_empty()
-    {
-        return Ok(None);
-    }
-    if !super::recognize::unit_square_boundary(model, 0) {
-        return Ok(None);
-    }
-    let p = &surface.control_points;
-    let p00 = point3(&p[0][0]);
-    let p10 = point3(&p[1][0]);
-    let p01 = point3(&p[0][1]);
-    let p11 = point3(&p[1][1]);
-    let u = sub(p10, p00);
-    let v = sub(p01, p00);
-    let u_len = u[0].hypot(u[1]).hypot(u[2]);
-    let v_len = v[0].hypot(v[1]).hypot(v[2]);
-    if !(1e-5..=1e6).contains(&u_len) || !(1e-5..=1e6).contains(&v_len) {
-        return Ok(None);
-    }
-    let scale = u_len.max(v_len);
-    let mut error: f64 = 0.;
-    // Affine fourth corner: p11 == p00 + u + v.
-    let deviation = {
-        let d = [
-            p11[0] - (p00[0] + u[0] + v[0]),
-            p11[1] - (p00[1] + u[1] + v[1]),
-            p11[2] - (p00[2] + u[2] + v[2]),
-        ];
-        d[0].hypot(d[1]).hypot(d[2])
-    };
-    if !deviation.is_finite() || deviation > RECOGNITION * scale + 1e-12 {
-        return Ok(None);
-    }
-    error = error.max(deviation);
-    // Rectangularity: the edge vectors must be orthogonal within the band.
-    let skew = dot(u, v);
-    let skew_model = skew.abs() / u_len.min(v_len);
-    if !skew_model.is_finite() || skew_model > RECOGNITION * scale {
-        return Ok(None);
-    }
-    error = error.max(skew_model);
-    let normal = cross(u, v);
-    let n_len = normal[0].hypot(normal[1]).hypot(normal[2]);
-    if !n_len.is_finite() || n_len <= 0. {
-        return Ok(None);
-    }
-    let normal = normal.map(|x| x / n_len);
-    // Every vertex coincides with one surface corner, each exactly once.
-    let corners = [p00, p10, p11, p01];
-    let mut used = [false; 4];
-    for vertex in &model.vertices {
-        let mut hit = false;
-        for (k, corner) in corners.iter().enumerate() {
-            let d = sub(vertex.point, *corner);
-            let deviation = d[0].hypot(d[1]).hypot(d[2]);
-            if !used[k] && deviation <= RECOGNITION * scale {
-                used[k] = true;
-                hit = true;
-                error = error.max(deviation);
-                break;
-            }
-        }
-        if !hit {
-            return Ok(None);
-        }
-    }
-    if used.into_iter().any(|hit| !hit) {
-        return Ok(None);
-    }
-    Ok(Some(CanonicalPlane {
-        origin: p00,
-        u,
-        v,
-        normal,
-        u_len,
-        v_len,
-        error,
-    }))
-}
 
 /// One plane patch's share of an intersection curve in that patch's UV. The
 /// canonical plane operand has exactly one face, so `patch` is always 0.
@@ -610,7 +473,7 @@ impl value_codec::Serialize for PlaneSphereComponent {
 /// trims and four corner vertices (the cuboid face construction, freestanding).
 #[cfg(test)]
 pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
-    use crate::{Coedge, Edge, Face, FaceUse, Loop, Shell, TopologyIds, Vertex};
+    use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Shell, TopologyIds, Vertex};
     let add = |a: [f64; 3], b: [f64; 3]| [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
     let corners = [
         origin,
@@ -626,12 +489,12 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
         edges.push(Edge {
             degenerate: false,
             vertices: [i, j],
-            curve: crate::line(corners[i].to_vec(), corners[j].to_vec()),
+            curve: super::test_utils::line(corners[i].to_vec(), corners[j].to_vec()),
         });
         coedges.push(Coedge {
             edge: i,
             reversed: false,
-            pcurve: crate::line(uv[i].to_vec(), uv[j].to_vec()),
+            pcurve: super::test_utils::line(uv[i].to_vec(), uv[j].to_vec()),
         });
     }
     let mut model = Model(
@@ -676,7 +539,7 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
 
 #[cfg(test)]
 mod tests {
-    use super::super::sphere_sphere::ARC_WEIGHT;
+    use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
     use super::super::test_utils::rotated_translated;
     use super::*;
 
@@ -779,7 +642,7 @@ mod tests {
         // Plane z = 1, patch [-3,3]^2; sphere r = 2 at the origin: the exact
         // circle of radius sqrt(4 - 1) at z = 1, fully inside the patch.
         let plane = plane_patch([-3., -3., 1.], [6., 0., 0.], [0., 6., 0.]);
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         let report = intersect_plane_sphere(&plane, &sphere, Options::default()).unwrap();
         let (curve, center, radius, normal, plane_uv, sphere_uv, sampled) =
             only_circle(&report, true);
@@ -852,7 +715,7 @@ mod tests {
         // radius sqrt(3) is clipped to its x >= 0 half, swept angle interval
         // [3pi/2, 5pi/2] in the (x, y) basis, endpoints (0, +-sqrt(3), 1).
         let plane = plane_patch([0., -3., 1.], [3., 0., 0.], [0., 6., 0.]);
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         let report = intersect_plane_sphere(&plane, &sphere, Options::default()).unwrap();
         let (curve, center, radius, _, plane_uv, sphere_uv, sampled) = only_circle(&report, false);
         let oracle = 3_f64.sqrt();
@@ -926,7 +789,7 @@ mod tests {
 
     #[test]
     fn miss_tangency_and_band_classification() {
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         let at = |z: f64| plane_patch([-1., -1., z], [2., 0., 0.], [0., 2., 0.]);
         // Miss: d = 5 > r, empty and resolved.
         let report = intersect_plane_sphere(&at(5.), &sphere, Options::default()).unwrap();
@@ -965,7 +828,7 @@ mod tests {
 
     #[test]
     fn domain_edge_tangency_and_outside_cases() {
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         // Circle of radius sqrt(3) at z = 1 tangent to the patch edge x = sqrt(3).
         let tangent = plane_patch([3_f64.sqrt(), -3., 1.], [3., 0., 0.], [0., 6., 0.]);
         let report = intersect_plane_sphere(&tangent, &sphere, Options::default()).unwrap();
@@ -1001,7 +864,7 @@ mod tests {
             angle,
             offset,
         );
-        let sphere = rotated_translated(&crate::analytic::sphere(2.).unwrap(), angle, offset);
+        let sphere = rotated_translated(&brep_core::analytic::sphere(2.).unwrap(), angle, offset);
         let report = intersect_plane_sphere(&plane, &sphere, Options::default()).unwrap();
         let (curve, center, radius, normal, plane_uv, sphere_uv, sampled) =
             only_circle(&report, true);
@@ -1048,17 +911,17 @@ mod tests {
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
         let plane = plane_patch([-3., -3., 1.], [6., 0., 0.], [0., 6., 0.]);
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         for (a, b) in [
-            (plane.clone(), crate::analytic::cylinder(1., 2.).unwrap()),
+            (plane.clone(), brep_core::analytic::cylinder(1., 2.).unwrap()),
             (
                 plane.clone(),
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
             ),
-            (crate::analytic::cylinder(1., 2.).unwrap(), sphere.clone()),
+            (brep_core::analytic::cylinder(1., 2.).unwrap(), sphere.clone()),
             // A closed solid is not a planar patch even though it has faces.
             (
-                crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
                 sphere.clone(),
             ),
         ] {

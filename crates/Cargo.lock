@@ -222,6 +222,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "brep-intersect"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "nurbs-intersect",
+ "value-codec",
+]
+
+[[package]]
 name = "brep-topology"
 version = "0.1.0"
 dependencies = [
@@ -792,6 +803,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "brep-core",
+ "brep-intersect",
  "brep-topology",
  "bridge-analysis",
  "bridge-cam",

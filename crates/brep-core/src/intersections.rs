@@ -1,40 +1,28 @@
-//! Analytic surface recognition (`Model` → canonical analytic form) and the
-//! analytic pair intersections on retained models. The curve/surface engine
-//! behind them lives in `nurbs-intersect`.
+//! Exact analytic recognition (`Model` → canonical sphere, cylinder, cone,
+//! torus or plane) and the sphere–sphere pair intersection the analytic
+//! Booleans use. The remaining pair intersections live in `brep-intersect`;
+//! the curve/surface engine behind all of them is `nurbs-intersect`.
 use nurbs_core::{Result, curve::Curve};
 use nurbs_intersect::*;
 
 #[cfg(test)]
 mod test_utils;
-mod cone_cone;
-mod cone_torus;
-mod cylinder_cylinder;
-mod cylinder_torus;
-mod plane_cone;
-mod plane_cylinder;
-mod plane_sphere;
-mod plane_torus;
+mod cone;
+mod cylinder;
+mod plane;
 pub(crate) mod recognize;
-mod sphere_cone;
-mod sphere_cylinder;
-pub(crate) mod sphere_sphere;
-mod sphere_torus;
-mod torus_torus;
-pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
-pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
-pub use cylinder_cylinder::{CylinderCylinderComponent, intersect_cylinder_cylinder};
-pub use cylinder_torus::{CylinderTorusComponent, intersect_cylinder_torus};
-pub use plane_cone::{PlaneConeComponent, intersect_plane_cone};
-pub use plane_cylinder::{PlaneCylinderComponent, intersect_plane_cylinder};
-pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sphere};
-pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
-pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
-pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
+#[doc(hidden)]
+pub mod sphere_sphere;
+mod torus;
 pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
-pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
-pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 
-#[doc(hidden)] pub use plane_cone::{CanonicalCone, recognize_cone}; // cad-step classification input
-#[doc(hidden)] pub use plane_torus::{CanonicalTorus, recognize_torus};
-#[doc(hidden)] pub use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
-#[doc(hidden)] pub use sphere_sphere::{CanonicalSphere, recognize as recognize_sphere};
+#[doc(hidden)]
+pub use cone::{CanonicalCone, recognize_cone};
+#[doc(hidden)]
+pub use cylinder::{CanonicalCylinder, recognize_cylinder};
+#[doc(hidden)]
+pub use plane::{CanonicalPlane, recognize_plane};
+#[doc(hidden)]
+pub use sphere_sphere::{CanonicalSphere, recognize as recognize_sphere};
+#[doc(hidden)]
+pub use torus::{CanonicalTorus, recognize_torus};
