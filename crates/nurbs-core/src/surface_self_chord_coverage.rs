@@ -48,6 +48,9 @@ pub struct Report<'a> {
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
+    /// Every remaining closed endpoint pair in original parameter coordinates.
+    /// These are unresolved obligations, never asserted geometric defects.
+    pub unresolved_pairs: Vec<Pair>,
     pub reason: &'static str,
 }
 fn span_count(s: &Surface, domain: Rectangle) -> usize {
@@ -264,6 +267,7 @@ fn qualify_impl<'a>(
         distance_exclusions: 0,
         pending: 1,
         uncertain: None,
+        unresolved_pairs: Vec::new(),
         reason: "self-coverage-work-limit",
     };
     let mut pending = vec![[domain, domain]];
@@ -443,6 +447,7 @@ fn qualify_impl<'a>(
     }
     out.pending = pending.len();
     out.uncertain = pending.last().copied();
+    out.unresolved_pairs = pending.clone();
     if pending.is_empty() {
         out.reason = "self-coverage-qualified";
         out.certificate = Some(Certificate {
@@ -587,6 +592,7 @@ mod tests {
         assert!(r.intrinsic_exclusions > 1);
         assert_eq!(r.pending, 0);
         assert!(r.uncertain.is_none());
+        assert!(r.unresolved_pairs.is_empty());
         assert!(c
             .intrinsic_certificates()
             .iter()
@@ -605,6 +611,16 @@ mod tests {
             assert!(r.certificate.is_none());
             assert!(r.pending > 0);
             assert!(r.uncertain.is_some());
+            assert_eq!(r.unresolved_pairs.len(), r.pending);
+            assert_eq!(r.unresolved_pairs.last().copied(), r.uncertain);
+            for pair in &r.unresolved_pairs {
+                for rect in pair {
+                    for axis in 0..2 {
+                        assert!(rect[axis][0] >= 0. && rect[axis][0] <= rect[axis][1]
+                            && rect[axis][1] <= 1.);
+                    }
+                }
+            }
         }
     }
     #[test]

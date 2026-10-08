@@ -1053,3 +1053,20 @@ where the minor route alone exceeds .18. An actual aligned chord still
 returns an unexcluded bound of one. Sixteen chord/coverage and seven
 pole tests passed. The unchanged prototype audit runs as
 annular-gram-lower-self-wall; whole-face/global wall safety is unproven.
+
+## Complete unresolved endpoint obligations
+
+Coverage reports now preserve every remaining closed endpoint-pair
+rectangle in original coordinates as unresolved_pairs; the audit JSON
+exports unresolvedPairs. The previous uncertain field retains the last
+pair for compatibility. A budget or resolution refusal returns the full
+remaining stack; a qualified certificate has no unresolved obligations.
+These records are unproven checks, never claimed defects.
+
+Sixteen chord/coverage tests passed, including complete-empty and
+incomplete bounded-domain obligations. The prototype example compiles.
+The direct-lower audit and its deeper 12500-cell / 100000-restriction
+comparison were launched before this reporting change and do not include
+the new list field. They retain their original single uncertainty field.
+Both use 4.74999 mm and sin² 1e-4. No qualification is claimed while the
+deep audit is running.
