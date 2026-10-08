@@ -1494,3 +1494,27 @@ These explicitly requested canonical intervals are not yet bound to the
 bridge's root-ended carriers. That binding must enclose the exact transformed
 end coordinates, retain source ownership and restrict neighbor contours
 before a sewn Body can be admitted. Corner/terminal closure remains open.
+
+## Root-ended carrier seam ownership
+
+`qualify_root_ended_seam` accepts two source-owned CutPartitions on the same
+Proposal, face, neighbor, original edge, section axis and natural free end.
+It freshly admits both UV roots through the original shared carrier, proves
+strict canonical order, and uses the hull of their transported enclosures
+for original neighbor angular qualification. A RootEndedSeam retains both
+Point root definitions alongside the interval-qualified RestrictedSeam.
+No independently authored rounded canonical endpoint replaces a root.
+Carrier transport and angular checks share one source-span allowance.
+
+The final owned-neighbor regression passed in 13.57 seconds. Edge 0's roots
+produce canonical cover [0.09999999999999563,0.25000000000000416]; edge 1
+produces [0.7499999999999981,0.9000000000000014]. Both use six carrier spans
+before whole-interval neighbor qualification. Every root definition restores
+with fresh original carrier/root checks. Repeated ends, a distinct Proposal
+over identical source geometry and insufficient carrier work refuse.
+The preceding complete bridge regression also passed in 147.05 seconds.
+
+These facts still do not create the two-root retained incident fragments or
+sew a closed body. Fragment restoration currently allows one Carrier end
+per fragment; bounded two-end restoration and fresh mapped-edge admission
+are the next steps before assembling neighbor contours.

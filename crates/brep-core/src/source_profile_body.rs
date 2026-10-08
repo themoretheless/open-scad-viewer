@@ -72,6 +72,18 @@ pub struct RestrictedSeamReport<'p,'b> {
     pub seam:Option<RestrictedSeam<'p,'b>>,
     pub angular:nurbs_core::normal_alignment::ProfilePathReport,
 }
+/// Restricted seam retaining both freshly admitted original carrier roots.
+pub struct RootEndedSeam<'p,'b> {
+    restricted:RestrictedSeam<'p,'b>, points:[crate::source_carrier_point::Point;2],
+}
+impl RootEndedSeam<'_,'_> {
+    pub fn restricted(&self)->&RestrictedSeam<'_,'_> {&self.restricted}
+    pub fn points(&self)->&[crate::source_carrier_point::Point;2] {&self.points}
+}
+pub struct RootEndedSeamReport<'p,'b> {
+    pub seam:Option<RootEndedSeam<'p,'b>>,pub carrier_spans:usize,
+    pub angular:Option<nurbs_core::normal_alignment::ProfilePathReport>,pub reason:&'static str,
+}
 /// An owned new section end with an exact source-parameter recipe. Interval
 /// coordinates enclose that recipe; they are not rounded replacement vertices.
 pub struct CutEndpoint<'p, 'b> {
@@ -742,6 +754,46 @@ impl<'a> Proposal<'a> {
         }
         out.angular = Some(angular);
         Ok(out)
+    }
+    /// Bind angular qualification to two owned section roots on one carrier.
+    /// The interval covers their exact transported enclosures; it is not made
+    /// from independently rounded canonical endpoint scalars.
+    pub fn qualify_root_ended_seam<'p>(
+        &'p self,parts:[&CutPartition<'_, 'p,'a>;2],threshold:f64,cells:usize,spans:usize,
+    )->Result<RootEndedSeamReport<'p,'a>> {
+        if spans>100000 || !(1..=100000).contains(&cells) || !threshold.is_finite() || !(0. ..1.).contains(&threshold) {
+            return Err(Error::new("BREP_PROFILE_SEAM","Bound root-ended seam angular and carrier work"));
+        }
+        let mut out=RootEndedSeamReport{seam:None,carrier_spans:0,angular:None,reason:"profile-root-seam-ownership-unproven"};
+        let ends=[parts[0].endpoint,parts[1].endpoint];
+        if ends.iter().any(|e|!std::ptr::eq(e.proposal,self))
+            || ends[0].edge!=ends[1].edge || ends[0].face!=ends[1].face
+            || ends[0].neighbor!=ends[1].neighbor || ends[0].axis!=ends[1].axis
+            || ends[0].high!=ends[1].high || ends[0].parameter==ends[1].parameter {
+            return Ok(out);
+        }
+        let shell=self.body.geometry().shell();let edge=&shell.edges()[ends[0].edge];
+        let side=usize::from(shell.uses()[ends[0].edge][0].face!=ends[0].face);
+        let mut points=Vec::new();
+        for part in parts {
+            if out.carrier_spans==spans {out.reason="profile-root-seam-carrier-work-limit";return Ok(out);}
+            let checked=crate::source_carrier_point::qualify(edge,&part.point,side,spans-out.carrier_spans)?;
+            out.carrier_spans+=checked.spans;out.reason=checked.reason;
+            let Some(point)=checked.point else {return Ok(out);};points.push(point);
+        }
+        let ranges=[points[0].canonical_bounds(),points[1].canonical_bounds()];
+        if !(ranges[0][1]<ranges[1][0] || ranges[1][1]<ranges[0][0]) {
+            out.reason="profile-root-seam-order-unproven";return Ok(out);
+        }
+        let canonical=[ranges[0][0].min(ranges[1][0]),ranges[0][1].max(ranges[1][1])];
+        if out.carrier_spans==spans {out.reason="profile-root-seam-angular-work-limit";return Ok(out);}
+        let angular=self.qualify_edge_interval(ends[0].edge,canonical,threshold,cells,spans-out.carrier_spans)?;
+        out.reason=angular.angular.reason;
+        if let Some(restricted)=angular.seam {
+            out.seam=Some(RootEndedSeam{restricted,points:[points.remove(0),points.remove(0)]});
+            out.reason="profile-root-ended-seam-qualified";
+        }
+        out.angular=Some(angular.angular);Ok(out)
     }
     /// Qualify only the requested interval of an owned original carrier.
     /// UVs are freshly enclosed from both original pcurves and canonical maps.

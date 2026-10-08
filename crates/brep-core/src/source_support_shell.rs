@@ -358,6 +358,26 @@ mod tests {
             assert_eq!(report.angular.aligned,Some(true));assert!(report.angular.pending.is_empty());
             assert!(seam.upper_sine_squared()<=seam.threshold());
             eprintln!("restricted seam edge={edge} interval={canonical:?} cells={} spans={} upper={}",report.angular.cells,report.angular.spans,seam.upper_sine_squared());
+            let high=edge==1;
+            let a=proposal.cut_endpoint(0,0,0.75,high,edge,16).unwrap().endpoint.unwrap();
+            let b=proposal.cut_endpoint(0,0,0.9,high,edge,16).unwrap().endpoint.unwrap();
+            let pa=a.split_source_use(100).unwrap().partition.unwrap();
+            let pb=b.split_source_use(100).unwrap().partition.unwrap();
+            let rooted=proposal.qualify_root_ended_seam([&pa,&pb],1e-6,100000,100000).unwrap();
+            let rooted_seam=rooted.seam.expect(rooted.reason);
+            assert!(std::ptr::eq(rooted_seam.restricted().proposal(),&proposal));
+            assert_eq!(rooted_seam.restricted().edge(),edge);
+            for point in rooted_seam.points() {
+                let q=point.canonical_bounds();let whole=rooted_seam.restricted().canonical_interval();
+                assert!(whole[0]<=q[0]&&q[1]<=whole[1]);
+                let fresh=crate::source_carrier_point::restore(point.definition(),crate::source_carrier_point::RestoreLimits{edge:crate::source_shared_edge_restore::Limits{mapping_cells_per_use:16,exact_work:100000000,driver_cells:10000},root_mapping_cells:16,spans:3}).unwrap().point.unwrap();
+                assert_eq!(fresh.definition(),point.definition());
+            }
+            let twin=crate::source_profile_body::prepare(&body,&specs,crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap().proposal.unwrap();
+            assert!(twin.qualify_root_ended_seam([&pa,&pb],1e-6,100,100).unwrap().seam.is_none());
+            assert!(proposal.qualify_root_ended_seam([&pa,&pa],1e-6,100,100).unwrap().seam.is_none());
+            assert!(proposal.qualify_root_ended_seam([&pa,&pb],1e-6,100,1).unwrap().seam.is_none());
+            eprintln!("root-ended seam edge={edge} carrierSpans={} canonical={:?}",rooted.carrier_spans,rooted_seam.restricted().canonical_interval());
             let limited=proposal.qualify_edge_interval(edge,canonical,1e-6,1,1).unwrap();
             assert!(limited.seam.is_none());assert!(!limited.angular.pending.is_empty());
         }
