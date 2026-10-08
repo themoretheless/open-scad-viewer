@@ -75,6 +75,7 @@ try{
 
  const fixtureRoot=path.resolve(process.env.SOLID_EDGE_FIXTURE_ROOT??'docs/qualification/cad-roadmap-2026-09-28/edge-errors-2026-09-30')
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(fixtureRoot,'fixture.json'));await closeMenu();await ready()
+ await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
  await solid.getByRole('button',{name:JSON.parse(await readFile(path.join(fixtureRoot,'fixture.json'),'utf8')).bodies[0].name,exact:true}).waitFor();await ready()
  const before=await doc('before'),id=(await readFile(path.join(fixtureRoot,'edge-id.txt'),'utf8')).trim()
  await activate(solid.getByRole('tab',{name:'Сцена',exact:true}));await activate(solid.getByRole('button',{name:before.bodies[0].name,exact:true}));await activate(solid.getByRole('button',{name:'Рёбра',exact:true}));await ready()
@@ -92,7 +93,7 @@ try{
  }
  if(ids.length>1&&mode==='constant'){
   await selectEdge(ids[0])
-  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
+  await activate(page.getByRole('button',{name:'Команды',exact:true}))
   const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(partialSearch,'Скруглить 3D');await partialSearch.press('Enter')
   const curved=brep.edges[brep.topologyIds.edges.indexOf(ids[0])].curve.degree>1
   await solid.getByText(curved?'Выберите полное кольцо:':'Выберите всю цепочку рёбер',{exact:false}).waitFor()
@@ -101,7 +102,7 @@ try{
   await page.keyboard.press('Escape');await ready()
  }
  for(const [i,edge] of ids.entries())await selectEdge(edge,i>0)
- await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
+ await activate(page.getByRole('button',{name:'Команды',exact:true}))
  const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,'Скруглить 3D');await search.press('Enter')
  const filletType=solid.getByRole('combobox',{name:'Тип скругления',exact:true})
  if(inputMode==='keyboard'){
@@ -145,7 +146,7 @@ try{
   await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
   assert.deepEqual(await doc('late-cancelled'),before)
   assert.equal(await solid.locator('[data-preview-body]').count(),0)
-  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));await enterText(search,'Скруглить 3D');await search.press('Enter')
+  await activate(page.getByRole('button',{name:'Команды',exact:true}));await enterText(search,'Скруглить 3D');await search.press('Enter')
   await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'2 mm')
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent?.trim()==='Готово · Enter'&&!b.disabled))
   const currentPreview=await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML))
