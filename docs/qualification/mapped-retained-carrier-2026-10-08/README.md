@@ -100,6 +100,8 @@ Direct source normal-cache controls now verify zero factored budget, one charged
 
 ### Native positive chord cone predicate
 
+`surface_self_chord::qualify_corner_chords` now binds this predicate to two immutable original NURBS sources. Exactly equal three-dimensional control poles at verified nonperiodic clamped corners establish the common anchor. Continuous original derivative hulls cover corner-to-endpoint rectangles; their signed columns generate every nonzero chord as a positive combination. Endpoint normal bounds come from the same original sources and charge the shared span allowance. Private certificate fields retain both source identities, endpoint rectangles and requested angle. Tests qualify opposite planar quadrants, refuse possible cancellation and insufficient normal work, and reject even a 1e-15 displaced anchor. These source-bound predicates are not yet wired into Body mixed products or shipped WASM; the 32-pair annular status is unchanged.
+
 `normal_alignment::positive_chord_cone_excluded` bounds the normal angle of every nonzero positive combination of supplied interval generators. A strict positive projection prevents cancellation; the ratio of normal dot product to that projection bounds the cosine through Cauchy-Schwarz. All generators are validated before early refusal. Zero normal/projection, nonpositive projected generators, possible cancellation and aligned chords supply no exclusion. Two direct tests pass and the complete normal-alignment test filter passes. This is native algebra only: original source derivative paths and exact common-boundary ownership are not yet bound to these generators, so it supplies no new Body certificate or packaged wall proof.
 
 ### Increased per-pair work is not an improvement

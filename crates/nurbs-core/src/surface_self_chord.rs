@@ -598,6 +598,95 @@ pub fn qualify_rectangle<'a>(
     }
     Ok(out)
 }
+
+/// Source-bound exclusion for chords between two original rectangles connected
+/// through exactly equal clamped chart corners. This proves direction only.
+pub struct CornerChordCertificate<'a> {
+    sources: [&'a Surface;2], rectangles: [[[f64;2];2];2], max_sine_squared:f64,
+}
+impl<'a> CornerChordCertificate<'a> {
+    pub fn sources(&self)->[&'a Surface;2]{self.sources}
+    pub fn rectangles(&self)->[[[f64;2];2];2]{self.rectangles}
+    pub fn max_sine_squared(&self)->f64{self.max_sine_squared}
+}
+/// The corner-to-endpoint paths integrate original derivative enclosures.
+/// No sampled coincidence, approximate anchors or external normal boxes enter
+/// the proof. Work exhaustion and cones permitting cancellation remain unproved.
+pub fn qualify_corner_chords<'a>(
+    sources:[&'a Surface;2], high_corners:[[bool;2];2], rectangles:[[[f64;2];2];2],
+    projection:[f64;3], sine:f64, max_spans:usize,
+)->Result<(Option<CornerChordCertificate<'a>>,usize)> {
+    check((1..=100000).contains(&max_spans)&&projection.iter().all(|x|x.is_finite())
+        &&sine.is_finite()&&(0. ..1.).contains(&sine),"Choose bounded original corner path work and a finite projection")?;
+    let mut anchors=[[0.;2];2];let mut poles=[Vec::new(),Vec::new()];
+    for side in 0..2 {
+        let s=sources[side];s.validate()?;
+        check(!s.periodic_u&&!s.periodic_v,"Use nonperiodic clamped corners")?;
+        normal_alignment::validate_rectangle(s,rectangles[side],max_spans)?;
+        let counts=[s.control_points.len(),s.control_points[0].len()];
+        let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+        let mut indices=[0;2];
+        for axis in 0..2 {
+            let high=high_corners[side][axis];let k=knots[axis];
+            let value=if high{k[counts[axis]]}else{k[degrees[axis]]};
+            let ends=if high{&k[counts[axis]..]}else{&k[..=degrees[axis]]};
+            check(ends.iter().all(|x|*x==value),"Original corner must be exactly clamped")?;
+            anchors[side][axis]=value;indices[axis]=if high{counts[axis]-1}else{0};
+        }
+        poles[side]=s.control_points[indices[0]][indices[1]].clone();
+    }
+    check(poles[0].len()==3&&poles[0]==poles[1],"Require exactly equal original corner coordinates")?;
+    let mut spans=0;let mut generators=Vec::new();
+    for side in 0..2 {
+        if spans==max_spans{return Ok((None,spans));}
+        let domain=std::array::from_fn(|a|[anchors[side][a].min(rectangles[side][a][0]),anchors[side][a].max(rectangles[side][a][1])]);
+        let report=qualify_rectangle(sources[side],domain,sine,max_spans-spans)?;
+        spans+=report.spans;
+        let Some(matrix)=report.mean_matrix else{return Ok((None,spans));};
+        for axis in 0..2 {
+            let sign=(if side==0{-1.}else{1.})*(if high_corners[side][axis]{-1.}else{1.});
+            let mut g=[[0.;2];3];
+            for k in 0..3 {let value=matrix.jacobian[k][axis].mul(I::point(sign))?;g[k]=[value.lo,value.hi];}
+            generators.push(g);
+        }
+    }
+    for side in 0..2 {
+        if spans==max_spans {break;}
+        let (normal,used)=normal_alignment::normal_bounds(sources[side],rectangles[side],max_spans-spans)?;
+        spans+=used;
+        if let Some(n)=normal {
+            if normal_alignment::positive_chord_cone_excluded(&generators,n,projection,sine)? {
+                return Ok((Some(CornerChordCertificate{sources,rectangles,max_sine_squared:sine}),spans));
+            }
+        }
+    }
+    Ok((None,spans))
+}
+
+#[cfg(test)]
+mod original_corner_chord_tests {
+    use super::*;
+    fn plane(sign:f64)->Surface {
+        Surface{degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![0.,0.,0.],vec![0.,sign,0.]],vec![vec![sign,0.,0.],vec![sign,sign,0.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false}
+    }
+    #[test]
+    fn owns_original_paths_and_accounts_normal_work() {
+        let a=plane(-1.);let b=plane(1.);let rects=[[[0.,0.1];2];2];
+        let (cert,used)=qualify_corner_chords([&a,&b],[[false;2];2],rects,[1.,1.,0.],1e-6,3).unwrap();
+        let cert=cert.unwrap();assert_eq!(used,3);assert!(std::ptr::eq(cert.sources()[0],&a));
+        assert!(std::ptr::eq(cert.sources()[1],&b));assert_eq!(cert.rectangles(),rects);
+        assert!(qualify_corner_chords([&a,&b],[[false;2];2],rects,[1.,1.,0.],1e-6,2).unwrap().0.is_none());
+        assert!(qualify_corner_chords([&a,&a],[[false;2];2],rects,[1.,1.,0.],1e-6,4).unwrap().0.is_none());
+    }
+    #[test]
+    fn rejects_approximate_common_corner_and_invalid_projection() {
+        let a=plane(-1.);let mut b=plane(1.);b.control_points[0][0][2]=1e-15;
+        assert!(qualify_corner_chords([&a,&b],[[false;2];2],[[[0.,0.1];2];2],[1.,1.,0.],1e-6,4).is_err());
+        assert!(qualify_corner_chords([&a,&a],[[false;2];2],[[[0.,0.1];2];2],[f64::NAN,0.,0.],1e-6,4).is_err());
+    }
+}
 /// Excludes nonzero geometric chords using S_v=t² B on an exactly verified
 /// collapsed Bezier rail. Along a straight UV segment, averaged S_u and the
 /// positive t²-weighted average B lie in the same bounded differential hull.
