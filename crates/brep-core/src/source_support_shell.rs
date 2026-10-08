@@ -388,6 +388,9 @@ mod tests {
         assert_eq!(area,1.);assert!(!refined.complete_regular);
         assert!(refined.pending.iter().any(|r|r[1][1]==1.));
         eprintln!("adaptive transition regular={} pending={} cells={} spans={}",refined.regular.len(),refined.pending.len(),refined.cells,refined.spans);
+        assert!(refined.regular.iter().all(|r|r[1][1]<1.));
+        let pending_area:f64=refined.pending.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        eprintln!("adaptive transition pendingArea={pending_area:.17}");
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

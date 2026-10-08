@@ -385,6 +385,73 @@ impl ProfileEndTransition<'_, '_> {
         }
         Ok((Some(bounds), spent + more))
     }
+    /// N=(1-s)^3 F exactly. F remains finite at the collapsed tip, but
+    /// nonzero F at s=1 does not make the actual zero Jacobian regular there.
+    pub fn factored_normal_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let domain = self.section.rectangle(free)?;
+        check(
+            max_spans <= 100000
+                && across.iter().all(|x| x.is_finite())
+                && across[0] >= 0.
+                && across[1] <= 1.
+                && across[0] <= across[1],
+            "Bound factored transition normal work",
+        )?;
+        let mut values = Vec::new();
+        let mut spent = 0;
+        for query in 0..4 {
+            if spent == max_spans {
+                return Ok((None, spent));
+            }
+            let (bounds, used) = match query {
+                0 => self.section.enclose(free, max_spans - spent)?,
+                1 => self.section.tangent_bounds(free, max_spans - spent)?,
+                2 => self.section.transverse_bounds(free, max_spans - spent)?,
+                _ => self
+                    .section
+                    .profile
+                    .mixed_derivative_bounds(domain, max_spans - spent)?,
+            };
+            spent += used;
+            let Some(bounds) = bounds else {
+                return Ok((None, spent));
+            };
+            values.push(bounds);
+        }
+        let t = I::new(across[0], across[1])?;
+        let scale = I::point(self.transverse_scale);
+        let mut a = [I::point(0.); 3];
+        let mut b = a;
+        for k in 0..3 {
+            let v = |i: usize| I::new(values[i][k][0], values[i][k][1]);
+            a[k] = I::point(1.)
+                .add(I::point(2.).mul(t)?)?
+                .mul(v(1)?)?
+                .add(t.mul(scale)?.mul(v(3)?)?)?;
+            b[k] = I::point(6.)
+                .mul(t)?
+                .mul(I::point(self.target[k]).sub(v(0)?)?)?
+                .add(
+                    I::point(1.)
+                        .sub(I::point(3.).mul(t)?)?
+                        .mul(scale)?
+                        .mul(v(2)?)?,
+                )?;
+        }
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let i = (k + 1) % 3;
+            let j = (k + 2) % 3;
+            let n = a[i].mul(b[j])?.sub(a[j].mul(b[i])?)?;
+            bounds[k] = [n.lo, n.hi];
+        }
+        Ok((Some(bounds), spent))
+    }
     /// Cover the entire requested rectangle with certified regular cells and
     /// explicit pending cells. Subdivision never discards unresolved domains.
     pub fn inspect_regularity(
@@ -420,20 +487,25 @@ impl ProfileEndTransition<'_, '_> {
                 return Ok(out);
             }
             out.cells += 1;
-            let (bounds, spent) = self.normal_bounds(rect[0], rect[1], max_spans - out.spans)?;
+            let (bounds, spent) =
+                self.factored_normal_bounds(rect[0], rect[1], max_spans - out.spans)?;
             out.spans += spent;
             let Some(bounds) = bounds else {
                 out.pending.push(rect);
                 out.pending.extend(queue);
                 return Ok(out);
             };
-            if bounds.iter().any(|b| b[0] > 0. || b[1] < 0.) {
+            let nonzero = bounds.iter().any(|b| b[0] > 0. || b[1] < 0.);
+            if nonzero && rect[1][1] < 1. {
                 out.regular.push(rect);
                 continue;
             }
             let free_width = self.section.range[1] - self.section.range[0];
-            let axis =
-                usize::from((rect[0][1] - rect[0][0]) / free_width < rect[1][1] - rect[1][0]);
+            let axis = if nonzero && rect[1][1] == 1. {
+                1
+            } else {
+                usize::from((rect[0][1] - rect[0][0]) / free_width < rect[1][1] - rect[1][0])
+            };
             let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
             if mid <= rect[axis][0] || mid >= rect[axis][1] {
                 out.pending.push(rect);
@@ -1432,6 +1504,30 @@ mod tests {
             Some(true)
         );
         assert!(transition.regular_join([0.2, 0.4], 0).is_err());
+        let factored = transition
+            .factored_normal_bounds([0.3, 0.3], [0.5, 0.5], 4)
+            .unwrap()
+            .0
+            .unwrap();
+        for (k, expected) in [7.03125, 0., -1.21875].into_iter().enumerate() {
+            assert!(factored[k][0] <= expected && expected <= factored[k][1]);
+        }
+        let raw = transition
+            .normal_bounds([0.3, 0.3], [0.5, 0.5], 4)
+            .unwrap()
+            .0
+            .unwrap();
+        for k in 0..3 {
+            assert!(factored[k][0] * 0.125 <= raw[k][1] && raw[k][0] <= factored[k][1] * 0.125);
+        }
+        assert!(
+            transition
+                .factored_normal_bounds([0.3, 0.3], [0.5, 0.5], 3)
+                .unwrap()
+                .0
+                .is_none()
+        );
+
         let empty = transition
             .inspect_regularity([0., 1.], [0., 1.], 0, 100)
             .unwrap();
@@ -1449,6 +1545,7 @@ mod tests {
         assert_eq!(area, 1.);
         assert!(!refined.complete_regular);
         assert!(!refined.regular.is_empty());
+        assert!(refined.regular.iter().all(|r| r[1][1] < 1.));
         assert!(refined.pending.iter().any(|r| r[1][1] == 1.));
         assert!(refined.cells <= 200 && refined.spans <= 800);
 

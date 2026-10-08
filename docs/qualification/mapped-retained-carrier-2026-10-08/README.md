@@ -1021,3 +1021,25 @@ returns the untouched domain; budgets and incomplete coverage remain explicit.
 The full transition is still unqualified: 379 cells require tighter bounds or
 further work, and the tip needs its own supported singularity treatment. Rail
 coincidence, self-intersections, thickness and closed-body admission remain open.
+
+## Deflated transition Jacobian near the collapsed target
+
+The exact Hermite normal factors as N=(1-s)^3 F, with
+F=[(1+2s)S_t+s l D_t] cross [6s(P-S)+(1-3s)lD].
+`factored_normal_bounds` encloses F using four shared source span queries.
+A nonzero F proves regularity only for s<1; it cannot authorize the actual
+zero Jacobian at s=1. Adaptive acceptance explicitly requires the upper s
+endpoint below one. Nonzero cells touching the tip subdivide across s and
+retain an unresolved tip collar instead of silently dropping the boundary.
+
+At the same 1000-cell/4000-span budget, the actual annular fixture now has
+478 accepted cells and 45 pending cells, with complete unit-domain coverage.
+The pending parameter area is 0.00001955032348633; this is parameter area,
+not a physical surface area or an error tolerance. Every accepted cell
+excludes s=1. A rational analytic test independently checks the factored
+normal [7.03125,0,-1.21875] at the specified planar example point.
+
+All 13 profile tests passed in 0.04 seconds, and the actual control fixture
+passed in 4.70 seconds. Span exhaustion remains a refusal. The remaining
+45 cells, limiting tip planes, neighbor rail ownership, embedding and
+closed-body admission remain unresolved; no packaged WASM changed.
