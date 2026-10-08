@@ -49,6 +49,36 @@ pub fn prepare<'a>(body:&'a Body,faces:[usize;2],uv:[[f64;2];2],world:[f64;3],ma
     let anchors=anchors.try_into().ok().expect("two original anchors");
     Ok(Preparation{prepared:Some(PreparedPair{body,faces,anchors,differential}),exact_work:used})
 }
+/// Authored pcurve ends propose anchors; evaluated coincidence is only a
+/// candidate filter. Exact source identities remain mandatory on both sides.
+pub fn prepare_boundary_anchor<'a>(body:&'a Body,faces:[usize;2],max_work:u64)->Result<Preparation<'a>> {
+    let regions=body.geometry().shell().regions().ok_or_else(||Error::new("BREP_SOURCE_WALL_ANCHOR","Require original retained regions"))?;
+    if faces[0]==faces[1]||faces.iter().any(|&f|f>=regions.len())||max_work>100000000 {
+        return Err(Error::new("BREP_SOURCE_WALL_ANCHOR","Choose distinct owned faces and bounded exact work"));
+    }
+    let points=faces.map(|f|{
+        let mut points=Vec::new();
+        for edge in regions[f].loops().iter().flatten() {
+            for p in [edge.curve().control_points.first(),edge.curve().control_points.last()].into_iter().flatten() {
+                if p.len()==2 {let uv=[p[0],p[1]];if !points.contains(&uv)&&points.len()<16 {points.push(uv);}}
+            }
+        }
+        points
+    });
+    let sources=faces.map(|f|regions[f].loops()[0][0].surface());
+    let mut used=0;
+    for a in &points[0] {for b in &points[1] {
+        if used==max_work {return Ok(Preparation{prepared:None,exact_work:used});}
+        let Ok(first)=sources[0].evaluate(a[0],a[1]) else{continue;};
+        let Ok(second)=sources[1].evaluate(b[0],b[1]) else{continue;};
+        if first.point!=second.point||first.point.len()!=3 {continue;}
+        let world=[first.point[0],first.point[1],first.point[2]];
+        let result=prepare(body,faces,[*a,*b],world,max_work-used)?;
+        used+=result.exact_work;
+        if result.prepared.is_some(){return Ok(Preparation{prepared:result.prepared,exact_work:used});}
+    }}
+    Ok(Preparation{prepared:None,exact_work:used})
+}
 impl<'a> PreparedPair<'a> {
     pub(crate) fn matches(&self,body:&Body,faces:[usize;2])->bool {
         std::ptr::eq(self.body,body)&&self.faces==faces

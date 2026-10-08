@@ -377,6 +377,9 @@ mod tests {
         let prepared=crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],10000000).unwrap();
         assert!(prepared.prepared.is_some());
         assert!(prepared.exact_work>0 && prepared.exact_work<=10000000);
+        let automatic=crate::source_wall_anchor::prepare_boundary_anchor(&body,[0,1],2000000).unwrap();
+        assert!(automatic.prepared.is_some());assert!(automatic.exact_work<=2000000);
+        assert!(crate::source_wall_anchor::prepare_boundary_anchor(&body,[0,1],0).unwrap().prepared.is_none());
         let paths=prepared.prepared.unwrap();
         let product=[[[0.9999999925494194,1.],[0.,7.450580596923828e-9]],
             [[19.999999990686774,20.],[-9.313225746154785e-9,0.]]];

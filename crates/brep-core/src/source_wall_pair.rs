@@ -92,7 +92,7 @@ pub fn qualify_with_anchors<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
     limits:Limits,anchors:&crate::source_wall_anchor::PreparedPair<'a>)->Result<Report<'a>> {
     qualify_with_prepared(body,faces,minimum_mm,limits,[None,None],0,Some(anchors))
 }
-fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
+pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm:f64,
     limits:Limits,factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
     query_budget:usize,anchors:Option<&crate::source_wall_anchor::PreparedPair<'a>>)->Result<Report<'a>> {
     if anchors.is_some_and(|a|!a.matches(body,faces)) {

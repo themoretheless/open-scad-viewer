@@ -141,3 +141,26 @@ Published WASM SHA256 `a3c2cf9037041319f1b3c1fa4cfbc2e220242353ff075865c32312e29
 The interface now projects the native collapsed endpoint into a dedicated scene marker, only for a visible selected source body with distinct tangent limits. On the new factored-normal WASM, actual browser edge 0 produces marker coordinate `20,0,6` and the localized refusal. Selecting edge 1 removes the old marker (DOM count zero). Screenshot: `source-endpoint-marker.jpg`. Vue type checking passes. This locates a proven defect; it does not repair the sharp transition or certify the complete command matrix.
 
 The actual in-app browser, using shipped endpoint-chord WASM, selects original edge 0 and runs its tangency command with Enter. The result identifies distinct limiting tangent planes at the end, displays the original coordinate (20, 0, 6) mm and unresolved parameter interval [0, 0], and advises changing the transition or processing neighboring edges. Retry remains available. `source-sharp-endpoint-ui-result.jpg` records the visible localized result. The selected edge is highlighted; a dedicated marker for the endpoint itself is not established by this screenshot. This is one error scenario, not the full mouse/keyboard command matrix or a qualified smooth end transition.
+
+
+## Automatic original pair anchors (native, 2026-10-08)
+
+`mixed-wall-auto-anchor-native.json` measures the unchanged restored annular
+control with the same 1024 per-pair mixed cell limit and global budgets as
+`mixed-wall-corner-integrated-native.json`. Candidate anchors come from at most
+16 distinct authored pcurve control ends per face. Evaluated coordinate equality
+only filters proposals; both original surface identities must be certified.
+Preparation uses the existing exact budget, capped at 2,000,000 per pair.
+The prepared paths remain bound to the original Body and ordered face pair.
+
+- Complete mixed pair proofs remain **17/45**; no proofs were lost or added.
+- Pending mixed UV products: **3124 -> 2714**. Product counts describe the
+  adaptive decomposition, not a physical area or percentage of wall coverage.
+- Exact preparation work: **37,683,566 -> 55,479,571**, within 100,000,000.
+- Mixed geometric spans: **59,588 -> 92,369**, within 100,000.
+- Mixed cells: **30,461 -> 23,565**; normal spans **11,647 -> 9,918**;
+  domain cells **314,744 -> 289,302**; factored queries **4,562 -> 3,899**.
+- Whole-wall admission remains false; 28 distinct-face pairs remain pending.
+- Native source-support tests: 17 passed; additional automatic anchor selection
+  and zero-budget refusal regression passed. No WASM/worker/UI qualification
+  of this update has been performed yet, and no runtime speedup is claimed.
