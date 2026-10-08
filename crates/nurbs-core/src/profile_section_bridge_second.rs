@@ -309,6 +309,30 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
 }
 
 // Keep the common displacement in both rows of the free Jacobian column.
+/// Project before multiplying by the shared rail displacement. Coordinate
+/// boxes alone lose this correlation when the projection mixes coordinates.
+pub(super) fn projected_rail_column(
+    projection: [[f64; 3]; 2],
+    first: [[f64; 2]; 3],
+    second: [[f64; 2]; 3],
+    delta: I,
+) -> Result<[I; 2]> {
+    let mut out = [I::point(0.); 2];
+    for row in 0..2 {
+        let mut anchor = I::point(0.);
+        let mut curvature = I::point(0.);
+        for k in 0..3 {
+            if projection[row][k] == 0. {
+                continue;
+            }
+            let scale = I::point(projection[row][k]);
+            anchor = anchor.add(scale.mul(I::new(first[k][0], first[k][1])?)?)?;
+            curvature = curvature.add(scale.mul(I::new(second[k][0], second[k][1])?)?)?;
+        }
+        out[row] = anchor.add(delta.mul(curvature)?)?;
+    }
+    Ok(out)
+}
 pub(super) fn projected_rail_determinant(
     projection: [[f64; 3]; 2],
     first: [[f64; 2]; 3],
@@ -335,6 +359,29 @@ pub(super) fn projected_rail_determinant(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn projected_rail_column_keeps_coordinate_displacement_shared() {
+        let first = [[1e-12; 2], [0.; 2], [0.; 2]];
+        let second = [[-2.; 2], [1.; 2], [0.; 2]];
+        let delta = I::new(-1., 0.).unwrap();
+        let independent = I::point(1e-12)
+            .add(delta.mul(I::point(-2.)).unwrap())
+            .unwrap()
+            .add(delta.mul(I::point(1.)).unwrap())
+            .unwrap();
+        assert!(independent.lo < 0.);
+        let column =
+            projected_rail_column([[1., 1., 0.], [0., 0., 1.]], first, second, delta).unwrap();
+        assert!(column[0].lo > 0. && column[0].hi >= 1.);
+        let crossing = projected_rail_column(
+            [[1., 1., 0.], [0., 0., 1.]],
+            first,
+            [[2.; 2], [-1.; 2], [0.; 2]],
+            delta,
+        )
+        .unwrap();
+        assert!(crossing[0].lo < 0. && crossing[0].hi > 0.);
+    }
     #[test]
     fn rail_determinant_preserves_common_displacement_and_interior_zeros() {
         let epsilon = 1e-12;
@@ -584,20 +631,24 @@ mod tests {
                 let (_, spent) = corrected
                     .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 100)
                     .unwrap();
-                assert!(corrected
-                    .second_free_derivatives_with_transverse_correction(
-                        [0.5; 2],
-                        [0.5; 2],
-                        spent - 1
-                    )
-                    .unwrap()
-                    .0
-                    .is_none());
-                assert!(corrected
-                    .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 0)
-                    .unwrap()
-                    .0
-                    .is_none());
+                assert!(
+                    corrected
+                        .second_free_derivatives_with_transverse_correction(
+                            [0.5; 2],
+                            [0.5; 2],
+                            spent - 1
+                        )
+                        .unwrap()
+                        .0
+                        .is_none()
+                );
+                assert!(
+                    corrected
+                        .second_free_derivatives_with_transverse_correction([0.5; 2], [0.5; 2], 0)
+                        .unwrap()
+                        .0
+                        .is_none()
+                );
             }
         }
     }

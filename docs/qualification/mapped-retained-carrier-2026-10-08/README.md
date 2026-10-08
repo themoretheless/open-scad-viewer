@@ -2636,3 +2636,44 @@ that the first principal minor is positive but extremely small at the rail;
 coarse direct derivative boxes can overwhelm it. Three point bounds do not
 prove its sign along the entire rail, nor exclude contacts with the full
 ruled-neighbor trace. A full-path curvature/factor proof remains required.
+
+Whole high-rail first-jet diagnostic (across=[0,1], one source span) encloses
+its first projected component in
+[5.518449039608263e-14,2.496746907561329e-13]. Thus this principal minor is
+strictly positive along the full original rail, despite its small scale.
+Its second component spans [-3.601831891585211e-15,9.530326499677803e-16];
+no sign assertion is made for that component. The fixture now requires the
+full-rail positive bound. Two complete near-rail second-derivative rectangles
+also have strictly negative world-X bounds: [-0.41591,-0.36639] and
+[-0.22425,-0.18165], each using 36 spans. These component statements are
+insufficient alone to qualify the complete projected Jacobian determinant.
+
+The full whole-rail diagnostic fixture completed successfully in 143.36
+seconds. The new `TransitionBoundary::qualify_face_from_rails` reconstructs
+its exact owned Hermite recipe and runs the complete rail-based injectivity
+policy itself, creating a `TransitionFace` only for a complete report.
+It accepts no caller-provided certificate or diagnostic report. The original
+`qualify_face` route remains unchanged. Native checks now cover zero-budget
+refusal, invalid projection rejection, and a fresh successful 3D admission
+with exact boundary-owner identity and projection preservation. Compilation
+passed; the new successful-admission fixture is still running.
+
+A requested 200000-span diagnostic run was rejected by the existing bridge
+input cap (`Bound Hermite bridge domain and work`), rather than failing a
+geometric predicate. The follow-up uses 2000 cells / 100000 spans within the
+existing contract; no numerical sign criterion or resource cap was weakened.
+
+### Preserve rail displacement through projection of the first column
+
+A remaining dependency loss occurred before the principal-minor predicate:
+world-coordinate boxes of A + delta*B were projected independently, losing
+the common delta when the projection mixed X and Y. The stronger policy now
+also intersects that column with P*A + delta*(P*B). This is the same exact
+FTC expression, enclosed with outward interval operations, and requires no
+additional derivative queries. Both diagonals and determinant still require
+strict positivity. A regression has A=(1e-12,0), B=(-2,1), delta=[-1,0],
+projection=(1,1): independent boxes include negative values but the coupled
+projection proves positivity. Reversing B retains the genuine interior zero.
+All eight bridge tests passed in 1.38 seconds, including folded-patch refusal
+and both work-limit coverage stop conditions. Full native confirmation of
+this new column intersection remains pending.

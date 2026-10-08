@@ -1136,6 +1136,10 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                                 .mul(I::new(jet[0][k][0],jet[0][k][1])?)?)?;
                         }
                     }
+                    let projected=second_free_jet::projected_rail_column(projection,anchor,second,delta)?;
+                    for row in 0..2 {
+                        j[row][0]=j[row][0].intersect(projected[row].lo,projected[row].hi)?;
+                    }
                     if projected_principal_minors_positive(j)? ||
                         (j[0][0].lo>0. && j[1][1].lo>0. &&
                             second_free_jet::projected_rail_determinant(projection,anchor,second,
