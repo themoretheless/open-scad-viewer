@@ -552,6 +552,20 @@ mod tests {
         let patch=sewn.qualify_sections([&exterior[1],&exterior[0]]).unwrap();
         let patch=patch.patch.expect(patch.reason);
         assert!(std::ptr::eq(patch.rails(),&sewn));
+        let retained_faces=exterior.iter().map(|e|e.qualify_face(1,16,256,2048,12288).unwrap().face.unwrap()).collect::<Vec<_>>();
+        assert!(patch.qualify_outer_edges([&retained_faces[0],&retained_faces[0]],100000000,100000).unwrap().assembly.is_none());
+        assert!(patch.qualify_outer_edges([&retained_faces[0],&retained_faces[1]],1,1).unwrap().assembly.is_none());
+        let outer=patch.qualify_outer_edges([&retained_faces[1],&retained_faces[0]],100000000,100000).unwrap();
+        eprintln!("outer retained edges work={} drivers={} reason={}",outer.work,outer.driver_cells,outer.reason);
+        let outer=outer.assembly.expect(outer.reason);
+        assert!(std::ptr::eq(outer.patch(),&patch));assert_eq!(outer.edges().len(),4);
+        assert_eq!(outer.retained_factored(),[None,Some(1)]);
+        for edge in outer.edges() {
+            assert_ne!(edge.reversed()[0],edge.reversed()[1]);
+            let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();
+            let restored=restored.edge.expect(restored.reason);
+            assert_eq!(restored.definition(),edge.definition());
+        }
         for index in 0..2 {
             assert_eq!(patch.retained()[index].iter().map(|f|f.definition()).collect::<Vec<_>>(),exterior[index].kept_loop().iter().map(|f|f.definition()).collect::<Vec<_>>());
         }

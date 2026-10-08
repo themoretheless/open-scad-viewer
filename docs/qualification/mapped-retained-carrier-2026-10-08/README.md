@@ -1927,3 +1927,36 @@ requires both global profile proofs, entry ordinary regularity, terminal
 factored regularity, exact exterior owner identity and the explicit
 collapsed-boundary classification. Insufficient quotient or regularity
 allowance issues no face. Packaged WASM remains unchanged.
+
+## Fresh outer retained 3D-edge admission
+
+TransitionPatchIncidence::qualify_outer_edges now requires both admitted
+retained-profile faces under the exact same transition boundary. Duplicate
+entry/terminal faces or foreign boundary ownership refuse. Input order is
+normalized and each admitted exterior contour must equal the patch's
+retained contour definitions.
+
+For each rail and each exterior section, the selected original use is
+located by source surface/curve and exact Crossing root definition. Its
+neighbor head/tail fragment is located by the corresponding Carrier root
+and neighbor source-side authority. The original world curve and reordered
+original affine maps are then freshly admitted through source_mapped_edge.
+The selected profile's complete natural rail preservation remains tied to
+the immutable Proposal; no rounded profile boundary is substituted.
+
+A shared total exact-work and driver allowance covers all four fresh edges.
+The private assembly retains the patch and four admitted SharedEdges, plus
+the ordinary/factored retained-face classification copied only from the
+admitted face objects. Tiny work and duplicate faces refuse. Tests check
+opposite directed uses and exact patch ownership.
+
+The first combined annular regression passed in 72.91 seconds. Four outer
+edges require 692448 exact work and zero extra root drivers. Together with
+the two middle rails and two section incidences, this admits the split
+edge uses around the selected replacement patch. Complete shell incidence
+assembly, distinct-face contacts, volume and wall/radius qualification
+remain required. Native-only.
+
+The final combined regression passed in 49.97 seconds. All four outer
+SharedEdges restore from their mixed Crossing/Carrier endpoint definitions
+with identical source recipes, followed by fresh admission.
