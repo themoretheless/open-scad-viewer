@@ -6,7 +6,7 @@ import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSol
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
-import {serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 import type {LighteningOptions} from '../src/services/solidLightening'
 
@@ -53,6 +53,57 @@ it('rounds all rotated cuboid edges with endpoint radii through the real body-ed
   }
   expect(JSON.stringify(document)).toBe(before)
 },60_000)
+
+it('rounds all rotated cuboid edges with constant radii through the real body-edit worker',async()=>{
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
+  const brep=transformNurbsBrep(source,[
+    [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
+    [Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b),-9],
+    [-Math.sin(b),0,Math.cos(b),23],[0,0,0,1],
+  ])
+  const body={id:'rotated',name:'Rotated',brep,mesh:tessellateNurbsBrep(brep)}
+  const document={version:1 as const,sketches:[],bodies:[body]},before=JSON.stringify(document)
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const measurements:{edge:number,radius:number,length:number,volume:number,expected:number}[]=[]
+  for(let edge=0;edge<brep.edges.length;edge++) for(const radius of [.1,1,2]){
+    const result=await client.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[edge],openings:[],segments:8,distance:0,radius,endRadius:radius,filletMode:'constant',axis:'z'}})
+    const [p,q]=source.edges[edge].vertices.map(i=>source.vertices[i].point)
+    const length=Math.hypot(...p.map((x,i)=>x-q[i]))
+    expect(result.bodies[0].id).toBe(body.id)
+    const history=new DirectHistory(document),original=serializeDirectDocument(history.document)
+    history.commit(result)
+    const committed=serializeDirectDocument(history.document)
+    expect(serializeDirectDocument(history.undo())).toBe(original)
+    expect(serializeDirectDocument(history.redo())).toBe(committed)
+    expect(serializeDirectDocument(parseDirectDocument(committed))).toBe(committed)
+    const volume=analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3
+    const expected=480-(1-Math.PI/4)*length*radius*radius
+    expect(volume).toBeCloseTo(expected,4)
+    measurements.push({edge,radius,length,volume,expected})
+  }
+  const heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+  const pending=heldClient.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[0],openings:[],segments:8,distance:0,radius:1,endRadius:1,filletMode:'constant',axis:'z'}})
+  const rejection=expect(pending).rejects.toMatchObject({code:'CAD_CANCELLED'})
+  const callback=heldPort.onmessage!
+  let release!:(event:MessageEvent)=>void
+  const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+  heldPort.onmessage=event=>release(event)
+  const event=await captured
+  expect(event.data.ok).toBe(true)
+  heldClient.cancel();callback(event);await rejection
+  expect(JSON.stringify(document)).toBe(before)
+  if(process.env.CAD_CONSTANT_FILLET_WORKER_REPORT){
+    const {readFileSync,writeFileSync}=await import('node:fs')
+    const {createHash}=await import('node:crypto')
+    const wasm=readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))
+    writeFileSync(process.env.CAD_CONSTANT_FILLET_WORKER_REPORT,JSON.stringify({
+      schema:'constant-fillet-worker/1',passed:true,
+      wasmSha256:createHash('sha256').update(wasm).digest('hex'),measurements,
+      scope:'Real packaged worker: twelve rotated cuboid edges, three constant radii, body identity, analytic volume, Undo/Redo, document serialization and cancellation of a captured successful real reply. Does not qualify general NURBS edges or browser interaction.'
+    },null,2)+'\n')
+  }
+},120_000)
 
 it('prepares and extrudes polynomial rounded profiles through the shipped worker',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
