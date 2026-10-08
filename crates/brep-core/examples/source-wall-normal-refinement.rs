@@ -102,26 +102,9 @@ fn main() {
         let [a,b]: [usize;2] = value_codec::from_value(record["faces"].clone()).unwrap();
         assert!(a<b && b<surfaces.len());
         let original = [domains[a],domains[b]];
-        let mut pending = vec![original]; let mut cells=0; let mut spans=0; let mut reason="work-limit";
-        let (left,right) = caches.split_at_mut(b);
-        while cells<cell_limit && !pending.is_empty() {
-            let pair=pending.pop().unwrap(); cells+=1;
-            let r=left[a].inspect_other(&mut right[0],pair,threshold,span_limit-spans).unwrap(); spans+=r.spans;
-            if r.aligned==Some(false) {continue;}
-            if r.aligned==Some(true) {pending.push(pair);reason="aligned-region";break;}
-            if spans==span_limit {pending.push(pair);reason="span-limit";break;}
-            let mut choice=(0,0);let mut largest=0.;
-            for side in 0..2 {for axis in 0..2 {
-                let width=(pair[side][axis][1]-pair[side][axis][0])/(original[side][axis][1]-original[side][axis][0]);
-                if width>largest {largest=width;choice=(side,axis);}
-            }}
-            let (side,axis)=choice;let d=pair[side][axis];let mid=d[0]*0.5+d[1]*0.5;
-            if mid<=d[0] || mid>=d[1] {pending.push(pair);reason="resolution-limit";break;}
-            let [l,r]=split_product(pair,side,axis,mid);
-            pending.push(r);pending.push(l);
-        }
-        if pending.is_empty() {reason="normal-product-excluded";}
-        rows.push(value_codec::json!({"faces":[a,b],"cells":cells,"spans":spans,"normalExcluded":pending.is_empty(),"reason":reason,"unresolvedPairs":pending}));
+        let (left,right)=caches.split_at_mut(b);
+        let result=left[a].inspect_product(&mut right[0],original,threshold,cell_limit,span_limit).unwrap();
+        rows.push(value_codec::json!({"faces":[a,b],"cells":result.cells,"spans":result.spans,"normalExcluded":result.excluded,"reason":result.reason,"unresolvedPairs":result.unresolved}));
         let report=value_codec::json!({"scope":"Exploratory original closed UV-product normal exclusion only; no wall certificate", "completeAudit":rows.len()==pairs.len(),"expectedPairs":pairs.len(),"limitingNormals":limiting_normals,"maxSineSquared":sine,"necessaryPairSineSquared":threshold,"cellsPerPair":cell_limit,"spansPerPair":span_limit,"rows":rows});
         let temporary=format!("{}.tmp",args[3]);std::fs::write(&temporary,value_codec::to_string_pretty(&report).unwrap()).unwrap();std::fs::rename(temporary,&args[3]).unwrap();
     }

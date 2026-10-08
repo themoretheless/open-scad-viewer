@@ -600,9 +600,61 @@ pub struct OriginalNormalCache<'a> {
     surface: &'a Surface,
     rectangles: std::collections::HashMap<[[u64;2];2],[[f64;2];3]>,
 }
+/// Complete closed product traversal. An unresolved cell is always retained;
+/// angular alignment alone is neither a wall witness nor a thickness proof.
+#[derive(Debug)]
+pub struct ProductReport {
+    pub excluded: bool,
+    pub cells: usize,
+    pub spans: usize,
+    pub unresolved: Vec<[[[f64;2];2];2]>,
+    pub reason: &'static str,
+}
 impl<'a> OriginalNormalCache<'a> {
     pub fn new(surface:&'a Surface)->Self {
         Self{surface,rectangles:std::collections::HashMap::new()}
+    }
+    pub fn inspect_product(&mut self, other:&mut Self,
+        domains:[[[f64;2];2];2], sine:f64, max_cells:usize, max_spans:usize)
+        ->Result<ProductReport> {
+        check((1..=100000).contains(&max_cells),"Normal product cell budget")?;
+        validate_input(self.surface,domains[0],[1.,0.,0.],sine,max_spans.max(1))?;
+        validate_input(other.surface,domains[1],[1.,0.,0.],sine,max_spans.max(1))?;
+        let mut out=ProductReport{excluded:false,cells:0,spans:0,
+            unresolved:vec![domains],reason:"product-cell-limit"};
+        while out.cells<max_cells && !out.unresolved.is_empty() {
+            let pair=out.unresolved.pop().unwrap();out.cells+=1;
+            let r=self.inspect_other(other,pair,sine,max_spans-out.spans)?;
+            out.spans+=r.spans;
+            if r.aligned==Some(false) {continue;}
+            if r.aligned==Some(true) {
+                out.unresolved.push(pair);out.reason="product-aligned-region";break;
+            }
+            if out.spans==max_spans {
+                out.unresolved.push(pair);out.reason="product-span-limit";break;
+            }
+            let mut choice=None;let mut largest=0.;
+            for side in 0..2 {for axis in 0..2 {
+                let full=domains[side][axis][1]-domains[side][axis][0];
+                if full<=0. {continue;}
+                let width=(pair[side][axis][1]-pair[side][axis][0])/full;
+                if width>largest {largest=width;choice=Some((side,axis));}
+            }}
+            let Some((side,axis))=choice else {
+                out.unresolved.push(pair);out.reason="product-resolution-limit";break;
+            };
+            let d=pair[side][axis];let mid=d[0]*0.5+d[1]*0.5;
+            if !(d[0]<mid && mid<d[1]) {
+                out.unresolved.push(pair);out.reason="product-resolution-limit";break;
+            }
+            let mut left=pair;let mut right=pair;
+            left[side][axis][1]=mid;right[side][axis][0]=mid;
+            out.unresolved.push(right);out.unresolved.push(left);
+        }
+        if out.unresolved.is_empty() {
+            out.excluded=true;out.reason="product-normal-excluded";
+        }
+        Ok(out)
     }
     /// Compare complete original rectangles, charging only new source queries.
     /// Private source references and cache keys prevent rebinding paid hulls.
@@ -796,6 +848,28 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn closed_product_excludes_only_complete_oblique_normal_coverage() {
+        let a=plane();let mut b=plane();
+        for row in &mut b.control_points {for p in row {p.swap(0,2);}}
+        let domains=[[[0.,1.];2];2];
+        let mut ca=OriginalNormalCache::new(&a);let mut cb=OriginalNormalCache::new(&b);
+        let refused=ca.inspect_product(&mut cb,domains,1e-6,1,1).unwrap();
+        assert!(!refused.excluded);assert_eq!(refused.unresolved,vec![domains]);
+        let paid=ca.inspect_product(&mut cb,domains,1e-6,1,2).unwrap();
+        assert!(paid.excluded);assert!(paid.unresolved.is_empty());
+        let cached=ca.inspect_product(&mut cb,domains,1e-6,1,0).unwrap();
+        assert!(cached.excluded);assert_eq!(cached.spans,0);
+        let reverse=cb.inspect_product(&mut ca,domains,1e-6,1,0).unwrap();
+        assert!(reverse.excluded);
+        let mut same=OriginalNormalCache::new(&a);
+        let aligned=ca.inspect_product(&mut same,domains,1e-6,100,2).unwrap();
+        assert!(!aligned.excluded);assert_eq!(aligned.unresolved,vec![domains]);
+        assert_eq!(aligned.reason,"product-aligned-region");
+        assert!(ca.inspect_product(&mut cb,domains,1e-6,0,0).is_err());
+        let mut invalid=domains;invalid[1][0]=[f64::NAN,1.];
+        assert!(ca.inspect_product(&mut cb,invalid,1e-6,1,0).is_err());
     }
     #[test]
     fn distinct_source_cache_reuses_only_complete_original_rectangles() {

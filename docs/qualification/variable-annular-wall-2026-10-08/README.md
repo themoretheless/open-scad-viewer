@@ -1579,3 +1579,19 @@ check passed: 8,338,996 asset bytes + 15,291,557 raw WASM bytes = 23,630,553 byt
 Receipts bind the worker and UI reports to the new artifact. Full wall and
 self-intersection qualification, arbitrary fillets and the full P0 matrix remain
 open.
+
+### Native closed normal-product traversal
+
+`OriginalNormalCache::inspect_product` now owns the bounded closed-product
+traversal in Rust. The exploratory example calls this API. All 212 original
+face pairs match the earlier example exactly in face IDs, charged cells and
+restrictions, exclusion decisions, and every retained closed product: 68 excluded,
+72 aligned regions retained, 72 cell-budget refusals retained. Eleven focused
+normal-alignment tests passed; one pre-existing test is ignored. Tests include
+budget refusal, complete exclusion, zero-query cache reuse, endpoint exchange,
+aligned regions, invalid input and invalid cell limits.
+
+This API is not yet integrated into whole-wall admission or the packaged WASM.
+The 253-pair whole-wall result above therefore remains unchanged. Integration
+must charge traversal cells and normal restrictions explicitly and preserve the
+source ownership and all remaining obligations.
