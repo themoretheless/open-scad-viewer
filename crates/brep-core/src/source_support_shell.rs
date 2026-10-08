@@ -364,6 +364,17 @@ mod tests {
         assert!(pair.proven);assert_eq!(pair.reason,"source-wall-mixed-product-qualified");
         assert!(aggregate.certificate.is_none());
 
+        for faces in [[0,7],[2,5],[5,12],[7,10]] {
+            let end=crate::source_wall_pair::qualify(&body,faces,5.99,
+                crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
+                    cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();
+            assert!(end.unresolved_products.is_empty(),"original corner product {faces:?}");
+            assert!(end.spans<=10000);assert!(end.normal_spans<=10000);
+            let proof=end.certificate.expect("continuous source-bound corner exclusion");
+            assert!(std::ptr::eq(proof.body(),&body));assert_eq!(proof.faces(),faces);
+            assert_eq!(proof.lower_mm(),5.99);
+        }
+
         let numerical=crate::source_wall_pair::qualify(&body,[16,20],5.99,
             crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
                 cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();

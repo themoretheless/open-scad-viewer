@@ -261,6 +261,33 @@ pub(crate) fn qualify_with_factors<'a>(
                 width((s, a)).total_cmp(&width((t, b)))
             });
         let Some((side, axis)) = chosen else {
+            // At original chart corners the two point boxes lose their common
+            // anchor dependency. Integrate source derivatives instead; every
+            // proposed projection is checked by a source-bound cone proof.
+            let mut corners=[[false;2];2];let mut anchored=true;
+            for s in 0..2 {for a in 0..2 {
+                if uv[s][a][0]==natural[s][a][0] {corners[s][a]=false;}
+                else if uv[s][a][1]==natural[s][a][1] {corners[s][a]=true;}
+                else {anchored=false;}
+            }}
+            let mut excluded=false;
+            if anchored {
+                'projections:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                    if x==0&&y==0&&z==0 {continue;}
+                    let allowance=(limits.spans-out.spans).min(64);
+                    if allowance==0 {break 'projections;}
+                    match nurbs_core::surface_self_chord::qualify_corner_chords(
+                        surfaces,corners,uv,[x as f64,y as f64,z as f64],limits.max_sine_squared,allowance) {
+                        Ok((proof,used))=>{out.spans+=used;if proof.is_some(){excluded=true;break 'projections;}}
+                        Err(e) if e.code=="NURBS_INVALID_INPUT"=>{break 'projections;}
+                        Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{
+                            out.spans+=allowance;break 'projections;
+                        }
+                        Err(e)=>return Err(e),
+                    }
+                }}}
+            }
+            if excluded {out.normal_products+=1;continue;}
             out.unresolved_products.push(uv);
             continue;
         };
