@@ -475,6 +475,15 @@ mod tests {
             assert!(std::ptr::eq(exterior.section(),&section));
             assert!(!exterior.kept_loop().is_empty());
             assert!(!exterior.removed_loop().is_empty());
+            let injectivity=exterior.inspect_quotient_injectivity(1,16,256).unwrap();
+            assert!(injectivity.proven,"owned profile must qualify globally");
+            let retained=exterior.qualify_face(1,16,256,2048,12288).unwrap();
+            let retained_face=retained.face.expect(retained.reason);
+            assert!(std::ptr::eq(retained_face.exterior(),&exterior));
+            assert_eq!(retained_face.factored_boundary(),if high {Some(1)}else{None});
+            assert!(exterior.qualify_face(1,16,255,2048,12288).unwrap().face.is_none());
+            assert!(exterior.qualify_face(1,16,256,0,12288).unwrap().face.is_none());
+            eprintln!("retained profile quotient high={high} proven={} cells={} reason={} bounds={:?} margins={:?}",injectivity.proven,injectivity.cells,injectivity.reason,injectivity.weighted_bounds,injectivity.band_margins_lower);
             let cover=exterior.inspect_regularity(128,256).unwrap();
             let area:f64=cover.regular.iter().chain(&cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
             assert!((area-if high {0.1}else{0.75}).abs()<1e-12);

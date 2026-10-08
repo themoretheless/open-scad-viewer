@@ -354,6 +354,7 @@ pub fn certify(
         Projection::Fixed(projection),
         subdivisions,
         max_cells,
+        None,
     )
 }
 /// The source frame is defined without rounding its orthogonality: t=A-P,
@@ -372,7 +373,15 @@ pub fn certify_source_frame(
         Projection::Source,
         subdivisions,
         max_cells,
+        None,
     )
+}
+/// Apply the same original-control quotient proof to exact separable profile
+/// weights. No binary64 replacement Surface or inherited report is accepted.
+pub fn certify_profile_source_frame(
+    profile:&crate::normal_alignment::WeightProfile<'_>,collapsed_end:usize,subdivisions:usize,max_cells:usize,
+)->Result<Report> {
+    certify_inner(profile.source(),collapsed_end,Projection::Source,subdivisions,max_cells,Some(profile))
 }
 fn certify_inner(
     s: &Surface,
@@ -380,6 +389,7 @@ fn certify_inner(
     projection: Projection,
     subdivisions: usize,
     max_cells: usize,
+    profile:Option<&crate::normal_alignment::WeightProfile<'_>>,
 ) -> Result<Report> {
     s.validate()?;
     check(
@@ -451,7 +461,10 @@ fn certify_inner(
     for i in 0..=p {
         for j in 0..=q {
             let point = &s.control_points[index(i)][j];
-            let weight = I::point(s.weights[index(i)][j]);
+            let weight = if let Some(profile)=profile {
+                let (row,column,pivot)=profile.factors();
+                I::point(row[index(i)]).mul(I::point(column[j]))?.div(I::point(pivot))?
+            }else{I::point(s.weights[index(i)][j])};
             coordinates[2][i][j] = weight;
             for row in 0..2 {
                 if row == 1
@@ -725,6 +738,7 @@ fn certify_ruled_join_inner(
         projection,
         subdivisions,
         subdivisions * subdivisions,
+        None,
     )?;
     out.source_frame = first.source_frame;
     let coefficients = match projection {
@@ -1157,6 +1171,23 @@ mod tests {
         let r = certify_ruled_source_frame(&ruled_surface(), 0, 16, 15).unwrap();
         assert!(!r.proven && r.cells == 0 && r.angular_derivative_numerator.is_none());
         assert!(certify_ruled_source_frame(&ruled_surface(), 0, 0, 16).is_err());
+    }
+    #[test]
+    fn exact_profile_quotient_uses_original_controls_and_refuses_folds() {
+        let mut s=triangular();s.weights[2][1]=1.25;
+        let p=crate::normal_alignment::qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+        assert!(p.weight_deviation_upper()>0.1);
+        let r=certify_profile_source_frame(&p,0,8,64).unwrap();assert!(r.proven,"{r:?}");
+        assert!(!certify_profile_source_frame(&p,0,8,63).unwrap().proven);
+        assert!(!certify_profile_source_frame(&p,1,8,64).unwrap().proven);
+        assert!(certify_profile_source_frame(&p,0,0,64).is_err());
+        // S=(u,2u^2*v*(1-v),0): distinct V=0.25 and 0.75 coincide.
+        s.degree_v=2;s.knots_v=vec![0.,0.,0.,1.,1.,1.];
+        s.control_points=vec![vec![vec![0.,0.,0.];3],vec![vec![0.5,0.,0.];3],
+            vec![vec![1.,0.,0.],vec![1.,1.,0.],vec![1.,0.,0.]]];
+        s.weights=vec![vec![1.;3];3];
+        let p=crate::normal_alignment::qualify_weight_profile(&s,[0,0],9).unwrap().0.unwrap();
+        assert!(!certify_profile_source_frame(&p,0,8,64).unwrap().proven);
     }
     #[test]
     fn collapsed_triangle_is_injective_only_after_identifying_its_pole_boundary() {

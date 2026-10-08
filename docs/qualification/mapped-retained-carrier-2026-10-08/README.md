@@ -1888,3 +1888,42 @@ a closed Body. Those gates and whole-body qualification remain required.
 The strengthened native regression explicitly requiring complete terminal
 factored coverage, zero pending and power 2 passed in 43.90 seconds.
 Packaged WASM remains unchanged.
+
+## Exact-profile global quotient injectivity and retained-face admission
+
+The existing weighted quotient dominance proof now accepts exact profile
+weights through certify_profile_source_frame. Its original-control source
+frame and polynomial proof are reused, but each weight is freshly enclosed
+as row[i]*column[j]/pivot. Existing ordinary Surface callers retain their
+original weight path. No rounded replacement Surface or inherited original
+injectivity report supplies authority.
+
+ExteriorSection::inspect_quotient_injectivity qualifies the entire owned
+profile chart. A successful global proof covers both retained subregions,
+identifying only the original collapsed U row with a single pole. The
+private RetainedProfileFace constructor then requires fresh complete
+region regularity: ordinary normals when the pole is outside the retained
+rectangle, or complete factored normal coverage when it is included. The
+result explicitly records the factored boundary and borrows its exact
+ExteriorSection. Failed global or local checks issue no face.
+
+Independent tests exercise a nonseparable original weight changed by the
+profile proposal, work refusal, the wrong collapsed boundary and a genuine
+fold S=(u,2u^2*v*(1-v),0), where V=0.25 and 0.75 coincide. All eight
+quotient tests passed in 0.04 seconds.
+
+On the annular fixture the full-chart exact-profile proof succeeds with
+256 cells and weighted bounds [9.824382008237144,0.6195945915904447,
+1.185833747547404,4.309243282738274]. Entry uses ordinary complete
+regularity; terminal uses complete second-power factored coverage. The
+initial combined quotient regression passed in 56.06 seconds.
+
+Retained face admission is separate from patch-to-retained incidence and
+closed shell assembly. It does not qualify intersections between distinct
+faces, volume, radius or wall thickness. Native-only.
+
+The final owned retained-face regression passed in 194.84 seconds. It
+requires both global profile proofs, entry ordinary regularity, terminal
+factored regularity, exact exterior owner identity and the explicit
+collapsed-boundary classification. Insufficient quotient or regularity
+allowance issues no face. Packaged WASM remains unchanged.

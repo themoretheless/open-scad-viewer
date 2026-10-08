@@ -301,7 +301,26 @@ impl<'a,'s,'p,'b> TransitionSection<'a,'s,'p,'b> {
 }
 /// Both complementary arcs classified, with the exterior side selected.
 pub struct ExteriorSection<'r,'a,'s,'p,'b> {section:&'r TransitionSection<'a,'s,'p,'b>,kept:usize}
-impl ExteriorSection<'_,'_,'_,'_,'_> {
+impl<'e,'a,'s,'p,'b> ExteriorSection<'e,'a,'s,'p,'b> {
+    /// Fresh global quotient proof plus complete owned-region regularity.
+    pub fn qualify_face<'r>(&'r self,collapsed_end:usize,subdivisions:usize,quotient_cells:usize,cells:usize,spans:usize)->Result<RetainedProfileFaceReport<'r,'e,'a,'s,'p,'b>> {
+        let quotient=self.inspect_quotient_injectivity(collapsed_end,subdivisions,quotient_cells)?;
+        let mut out=RetainedProfileFaceReport{face:None,quotient,ordinary:None,pole:None,reason:"profile-retained-global-injectivity-unproven"};
+        if !out.quotient.proven {return Ok(out);}
+        let (profile,domain)=self.profile_domain();let source=profile.source();
+        let pole_u=source.knots_u[if collapsed_end==0 {source.degree_u}else{source.control_points.len()}];
+        if domain[0][0]<=pole_u && pole_u<=domain[0][1] {
+            let report=self.inspect_factored_pole_regularity(collapsed_end==1,cells,spans)?;
+            out.reason=report.reason;
+            if report.complete_factored {out.face=Some(RetainedProfileFace{exterior:self,factored_boundary:Some(collapsed_end)});}
+            out.pole=Some(report);
+        }else{
+            let report=self.inspect_regularity(cells,spans)?;out.reason=report.reason;
+            if report.complete_regular {out.face=Some(RetainedProfileFace{exterior:self,factored_boundary:None});}
+            out.ordinary=Some(report);
+        }
+        if out.face.is_some() {out.reason="profile-retained-face-embedded-qualified";}Ok(out)
+    }
     /// Inspect a rectangle containing the complete qualified exterior region.
     /// No original-surface immersion certificate is inherited by the profile.
     pub fn inspect_regularity(&self,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::TransitionRegularityReport> {
@@ -309,6 +328,11 @@ impl ExteriorSection<'_,'_,'_,'_,'_> {
     }
     pub fn inspect_factored_pole_regularity(&self,high:bool,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::ProfilePoleCover> {
         let (profile,domain)=self.profile_domain();profile.inspect_factored_pole_regularity(domain,high,cells,spans)
+    }
+    /// Full-chart quotient injectivity also covers this retained subregion.
+    pub fn inspect_quotient_injectivity(&self,collapsed_end:usize,subdivisions:usize,cells:usize)->Result<nurbs_core::surface_quotient_injectivity::Report> {
+        let (profile,_)=self.profile_domain();
+        nurbs_core::surface_quotient_injectivity::certify_profile_source_frame(profile,collapsed_end,subdivisions,cells)
     }
     fn profile_domain(&self)->(&WeightProfile<'_>,[[f64;2];2]) {
         let recipe=self.section.boundary.rooted[0];
@@ -321,6 +345,19 @@ impl ExteriorSection<'_,'_,'_,'_,'_> {
     pub fn section(&self)->&TransitionSection<'_,'_,'_,'_> {self.section}
     pub fn kept_loop(&self)->&[crate::source_boundary_fragment::Fragment] {&self.section.contours.loops[self.kept]}
     pub fn removed_loop(&self)->&[crate::source_boundary_fragment::Fragment] {&self.section.contours.loops[1-self.kept]}
+}
+/// Embedded owned retained-profile region, with explicit collapsed-boundary
+/// quotient when applicable. No surrounding shell or volume admission.
+pub struct RetainedProfileFace<'r,'e,'a,'s,'p,'b> {exterior:&'r ExteriorSection<'e,'a,'s,'p,'b>,factored_boundary:Option<usize>}
+impl RetainedProfileFace<'_,'_,'_,'_,'_,'_> {
+    pub fn exterior(&self)->&ExteriorSection<'_,'_,'_,'_,'_> {self.exterior}
+    pub fn factored_boundary(&self)->Option<usize> {self.factored_boundary}
+}
+pub struct RetainedProfileFaceReport<'r,'e,'a,'s,'p,'b> {
+    pub face:Option<RetainedProfileFace<'r,'e,'a,'s,'p,'b>>,
+    pub quotient:nurbs_core::surface_quotient_injectivity::Report,
+    pub ordinary:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,
+    pub pole:Option<nurbs_core::normal_alignment::ProfilePoleCover>,pub reason:&'static str,
 }
 pub struct ExteriorSectionReport<'r,'a,'s,'p,'b> {pub region:Option<ExteriorSection<'r,'a,'s,'p,'b>>,pub controls:usize,pub driver_cells:usize,pub reason:&'static str}
 pub struct TransitionSectionReport<'a,'s,'p,'b> {pub section:Option<TransitionSection<'a,'s,'p,'b>>,pub fragments:usize,pub reason:&'static str}
