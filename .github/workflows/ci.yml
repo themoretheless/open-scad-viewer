@@ -41,6 +41,8 @@ jobs:
     # The memory probe keeps its original 4+24 jobs and byte/slope limits.
     env:
       MALLOC_ARENA_MAX: '2'
+      MALLOC_TRIM_THRESHOLD_: '0'
+      MALLOC_MMAP_THRESHOLD_: '131072'
     strategy:
       fail-fast: false
       matrix:
