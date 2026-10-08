@@ -2,12 +2,15 @@
 //! Consistent coefficients imply strict orientation in the open chart; this
 //! alone proves neither global injectivity nor boundary ownership.
 use crate::{
-    Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef, PredicateContext,
-    Reason, Sign, exact_inputs,
+    exact_inputs, Algebra, AuthoredScalar, ContextIdentity, Expansion, InputError, LeafRef,
+    PredicateContext, Reason, Sign,
 };
 type Poly = Vec<Vec<Expansion>>;
 pub struct Decision {
     pub signs: Option<Vec<Vec<Sign>>>,
+    /// Outward enclosures in the same positive homogeneous coefficient scale.
+    /// Requested explicitly; sign-only callers retain their original work budget.
+    pub coefficient_bounds: Option<Vec<Vec<[f64; 2]>>>,
     pub reason: Option<Reason>,
     pub work_used: u64,
     pub context: ContextIdentity,
@@ -111,6 +114,7 @@ fn compute(
     axes: [usize; 2],
     row: Option<usize>,
     column: Option<usize>,
+    with_bounds: bool,
 ) -> Result<Decision, InputError> {
     if !(2..=9).contains(&surface.len())
         || !(2..=9).contains(&surface[0].len())
@@ -130,7 +134,7 @@ fn compute(
         .map(|&r| ctx.resolve(r).cloned())
         .collect::<Result<Vec<AuthoredScalar>, _>>()?;
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
-    let result = (|| -> Result<Vec<Vec<Sign>>, Reason> {
+    let result = (|| -> Result<(Vec<Vec<Sign>>, Option<Vec<Vec<[f64; 2]>>>), Reason> {
         ctx.charge(values.len() as u64)?;
         let x = exact_inputs(&values, ctx)?;
         let unit = x.last().unwrap();
@@ -187,15 +191,35 @@ fn compute(
                     .collect()
             })
             .collect();
+        let bounds = if with_bounds {
+            Some(
+                selected
+                    .iter()
+                    .map(|row| {
+                        column
+                            .map_or(&row[..], |c| &row[c..c + 1])
+                            .iter()
+                            .map(|x| {
+                                let b = x.enclosure(ctx)?;
+                                Ok([b.lo, b.hi])
+                            })
+                            .collect::<Result<Vec<_>, Reason>>()
+                    })
+                    .collect::<Result<Vec<_>, Reason>>()?,
+            )
+        } else {
+            None
+        };
         ctx.charge(0)?;
-        Ok(signs)
+        Ok((signs, bounds))
     })();
-    let (signs, reason) = match result {
-        Ok(s) => (Some(s), None),
-        Err(r) => (None, Some(r)),
+    let (signs, coefficient_bounds, reason) = match result {
+        Ok((s, b)) => (Some(s), b, None),
+        Err(r) => (None, None, Some(r)),
     };
     Ok(Decision {
         signs,
+        coefficient_bounds,
         reason,
         work_used: ctx.work_used(),
         context: ctx.identity(),
@@ -208,7 +232,7 @@ pub fn rational_surface_projected_jacobian(
     surface: &[Vec<[LeafRef; 4]>],
     axes: [usize; 2],
 ) -> Result<Decision, InputError> {
-    compute(ctx, surface, axes, None, None)
+    compute(ctx, surface, axes, None, None, false)
 }
 /// One original Bernstein coefficient row. The caller must check every row
 /// of the same immutable chart before claiming interior orientation.
@@ -218,7 +242,7 @@ pub fn rational_surface_projected_jacobian_row(
     axes: [usize; 2],
     row: usize,
 ) -> Result<Decision, InputError> {
-    compute(ctx, surface, axes, Some(row), None)
+    compute(ctx, surface, axes, Some(row), None, false)
 }
 
 /// One exact coefficient, for bounded refinement of an exhausted row query.
@@ -228,12 +252,84 @@ pub fn rational_surface_projected_jacobian_coefficient(
     axes: [usize; 2],
     index: [usize; 2],
 ) -> Result<Decision, InputError> {
-    compute(ctx, surface, axes, Some(index[0]), Some(index[1]))
+    compute(ctx, surface, axes, Some(index[0]), Some(index[1]), false)
 }
+/// Exact coefficient sign with an outward magnitude enclosure. Identical
+/// source inputs and chart degrees share the positive scaling across axes.
+pub fn rational_surface_projected_jacobian_coefficient_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    axes: [usize; 2],
+    index: [usize; 2],
+) -> Result<Decision, InputError> {
+    compute(ctx, surface, axes, Some(index[0]), Some(index[1]), true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+
+    #[test]
+    fn exact_normal_component_bounds_preserve_common_scale_and_refuse_exhaustion() {
+        let points = [
+            [[0., 0., 0., 1.], [0., 1., 3., 1.]],
+            [[1., 0., 2., 1.], [1., 1., 5., 1.]],
+        ];
+        let arena = SourceArena::authored(
+            "normal-bounds-plane",
+            1,
+            points
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|x: &f64| AuthoredScalar::Binary64Bits(x.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let leaves = (0..2)
+            .map(|u| {
+                (0..2)
+                    .map(|v| std::array::from_fn(|k| arena.leaf((u * 2 + v) * 4 + k).unwrap()))
+                    .collect()
+            })
+            .collect::<Vec<_>>();
+        let tolerance = ToleranceContext::default_valid();
+        let mut bounds = Vec::new();
+        for axes in [[1, 2], [2, 0], [0, 1]] {
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let d = rational_surface_projected_jacobian_coefficient_bounds(
+                &mut ctx,
+                &leaves,
+                axes,
+                [0, 0],
+            )
+            .unwrap();
+            bounds.push(d.coefficient_bounds.unwrap()[0][0]);
+        }
+        assert!(bounds[2][0] > 0.);
+        for (axis, ratio) in [(0, 2.), (1, 3.)] {
+            assert!(bounds[axis][0] + ratio * bounds[2][0] <= 0.);
+            assert!(bounds[axis][1] + ratio * bounds[2][1] >= 0.);
+        }
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: 1,
+                ..Limits::default()
+            },
+            None,
+        );
+        let d = rational_surface_projected_jacobian_coefficient_bounds(
+            &mut ctx,
+            &leaves,
+            [0, 1],
+            [0, 0],
+        )
+        .unwrap();
+        assert!(d.signs.is_none() && d.coefficient_bounds.is_none());
+    }
 
     fn check(points: Vec<Vec<[f64; 4]>>, axes: [usize; 2], work: u64) -> Decision {
         check_row(points, axes, work, None)

@@ -87,3 +87,27 @@ termination requires a different end construction and renewed radius, contact,
 closure and self-intersection qualification. This does not disprove one-sided
 seam tangency against each support separately; those full-seam angular bounds
 remain an independent requirement.
+
+## Whole plane rail and one-sided endpoint normal
+
+All eight original plane-side rails now have exact tangent-plane agreement
+for the complete regular interval u in (0,1], and an axial one-sided normal
+limit at u=0. This closes the previously omitted plane-rail neighborhoods.
+The collapsed surface point itself remains nonregular.
+
+Every projected normal numerator coefficient for X/Y on v=0 is exactly zero.
+Z rows 0/1 are exactly zero; every remaining Bernstein coefficient has the
+same strict sign. Positive Bernstein bases prove a nonzero axial normal for
+all u>0, with its same direction in the limit. The incident original support
+face is checked to have every control Z=6. These assertions inspect the
+original definitions, including rounding, rather than ideal conic formulas.
+
+The new exact predicate optionally returns outward coefficient enclosures
+in the same positive scale across projections. Existing sign-only calls retain
+their original work budget. Seven focused predicate tests pass, including
+known-plane component ratios and resource exhaustion refusal.
+
+`pole-normal-bounds.json.gz` records all original plane-rail coefficient rows
+and corner leading magnitudes. Cylinder-side full angular bounds remain open;
+these results do not supply a unique regular tangent plane at the collapsed
+end, a replacement smooth cap, thickness or general source-body admission.

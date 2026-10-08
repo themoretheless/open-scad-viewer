@@ -57,12 +57,13 @@ fn main() {
                 let tolerance = ToleranceContext::default_valid();
                 let mut corners = Vec::new();
                 let mut leading = [[None; 3]; 2];
+                let mut plane_signs = Vec::new();
                 for corner in [0, 1] {
                     let column = corner * (3 * surface.degree_v - 1);
                     let mut components = Vec::new();
                     for (component, axes) in [[1, 2], [2, 0], [0, 1]].into_iter().enumerate() {
                         let mut rows = Vec::new();
-                        for row in 0..3 {
+                        for row in 0..if corner == 0 { 3 * surface.degree_u } else { 3 } {
                             let mut ctx = PredicateContext::new(
                                 &arena,
                                 &tolerance,
@@ -73,7 +74,7 @@ fn main() {
                                 None,
                             );
                             let d =
-                                cad_predicates::rational_surface_projected_jacobian_coefficient(
+                                cad_predicates::rational_surface_projected_jacobian_coefficient_bounds(
                                     &mut ctx,
                                     &leaves,
                                     axes,
@@ -81,7 +82,18 @@ fn main() {
                                 )
                                 .unwrap();
                             let sign = d.signs.as_ref().map(|s| s[0][0]);
-                            rows.push(value_codec::json!({"row":row,"sign":format!("{sign:?}"),"reason":format!("{:?}",d.reason),"work":d.work_used}));
+                            rows.push(value_codec::json!({"row":row,"sign":format!("{sign:?}"),"reason":format!("{:?}",d.reason),"work":d.work_used,"coefficientBounds":d.coefficient_bounds}));
+                            if corner == 0 {
+                                if component < 2 {
+                                    assert_eq!(
+                                        sign,
+                                        Some(Sign::Zero),
+                                        "Original plane rail must have exact axial normals"
+                                    );
+                                } else {
+                                    plane_signs.push(sign);
+                                }
+                            }
                             if row < 2 {
                                 assert_eq!(
                                     sign,
@@ -92,7 +104,7 @@ fn main() {
                             if row == 2 {
                                 leading[corner][component] = sign;
                             }
-                            if sign.is_some_and(|s| s != Sign::Zero) {
+                            if corner != 0 && sign.is_some_and(|s| s != Sign::Zero) {
                                 break;
                             }
                         }
@@ -100,6 +112,21 @@ fn main() {
                     }
                     corners.push(value_codec::json!({"vEnd":corner,"components":components}));
                 }
+                let plane_direction = plane_signs[2].unwrap();
+                assert!(matches!(plane_direction, Sign::Positive | Sign::Negative));
+                assert!(
+                    plane_signs[2..].iter().all(|s| *s == Some(plane_direction)),
+                    "Plane rail normals must stay nonzero for all u>0"
+                );
+                assert!(
+                    model.faces[face + 1]
+                        .surface
+                        .control_points
+                        .iter()
+                        .flatten()
+                        .all(|p| p[2] == 6.),
+                    "Incident original face must be the authored support plane"
+                );
                 let nonzero = |s: Option<Sign>| {
                     s.is_some_and(|x| matches!(x, Sign::Positive | Sign::Negative))
                 };
@@ -111,7 +138,7 @@ fn main() {
                     regular_pole_disproven,
                     "Two original corner paths must prove nonparallel limiting normals"
                 );
-                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"collapsedEnd":end,"regularPoleDisproven":regular_pole_disproven,"corners":corners}));
+                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"collapsedEnd":end,"planeRailAndLimitProven":true,"regularPoleDisproven":regular_pole_disproven,"corners":corners}));
             }
         }
     }
