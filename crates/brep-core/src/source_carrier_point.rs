@@ -134,6 +134,49 @@ pub struct RestrictionEnclosure {
     pub spans: usize,
     pub complete: bool,
 }
+/// Original parent correspondence proves a transported endpoint identity only
+/// under unchanged world geometry, incident source definitions and affine maps.
+/// Fresh whole-source composition remains the caller's responsibility.
+pub(crate) fn same_mapped_endpoint(
+    world: &nurbs_core::curve::Curve,
+    fragments: [&crate::source_boundary_fragment::Fragment; 2],
+    ranges: [[[f64; 2]; 2]; 2],
+    ends: [&crate::source_boundary_fragment::Endpoint; 2],
+) -> bool {
+    use crate::source_boundary_fragment::{Endpoint, Role};
+    let (carrier, own, other) = match ends {
+        [Endpoint::Carrier { point, side }, _] => (point.as_ref(), *side, 1),
+        [_, Endpoint::Carrier { point, side }] => (point.as_ref(), *side, 0),
+        _ => return false,
+    };
+    if carrier.edge.world() != world {
+        return false;
+    }
+    let own_index = 1 - other;
+    let other_side = match ends[other] {
+        Endpoint::Carrier { point, side } if point.definition() == carrier.definition() => *side,
+        Endpoint::Crossing {
+            point,
+            role: Role::Boundary,
+        } if point.definition() == carrier.root.definition() => carrier.source_side,
+        _ => return false,
+    };
+    if own == other_side {
+        return false;
+    }
+    let sides = if own_index == 0 {
+        [own, other_side]
+    } else {
+        [other_side, own]
+    };
+    let original_ranges = crate::source_seam_tangency::ranges(&carrier.edge);
+    (0..2).all(|i| {
+        let source = &carrier.edge.uses()[sides[i]];
+        source.surface() == fragments[i].surface()
+            && source.curve() == fragments[i].curve()
+            && ranges[i] == original_ranges[sides[i]]
+    })
+}
 pub struct Report {
     pub point: Option<Point>,
     pub spans: usize,

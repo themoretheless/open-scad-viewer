@@ -264,7 +264,9 @@ pub fn qualify_with_candidates(
                 &fragments[0].endpoints()[i],
                 &fragments[1].endpoints()[1 - i],
             ) {
-                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) => false,
+                (Endpoint::Carrier { .. }, _) | (_, Endpoint::Carrier { .. }) =>
+                    crate::source_carrier_point::same_mapped_endpoint(world, fragments, ranges,
+                        [&fragments[0].endpoints()[i], &fragments[1].endpoints()[1-i]]),
                 (Endpoint::Parameter(a), Endpoint::Parameter(b)) => {
                     let da = fragments[0].curve().domain();
                     let db = fragments[1].curve().domain();

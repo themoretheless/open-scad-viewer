@@ -424,6 +424,38 @@ mod tests {
                 let foreign_parts=carrier.retained_parts(1-use_side).unwrap();
                 assert!(!parts[0].joins(&foreign_parts[1]));
             }
+            let transported_partition=partition.qualify_transported_neighbor(3,100000000,100000).unwrap();
+            assert_eq!(transported_partition.carrier_spans,3);
+            assert!(transported_partition.partition.is_some(),"{}",transported_partition.reason);
+            assert!(partition.qualify_transported_neighbor(2,100000000,100000).unwrap().partition.is_none());
+            assert!(partition.qualify_transported_neighbor(3,1,100).unwrap().partition.is_none());
+            let neighbor_fragments=original.uses()[1-side].split_at_carrier(&carrier,1-side).unwrap();
+            let selected_fragments=partition.selected_fragments();
+            let carrier_selected=original.uses()[side].split_at_carrier(&carrier,side).unwrap();
+            let maps=crate::source_seam_tangency::ranges(original);
+            for half in 0..2 {
+                let pair=[&selected_fragments[half],&neighbor_fragments[1-half]];
+                let ranges=[maps[side],maps[1-side]];
+                let report=crate::source_mapped_edge::qualify(original.world(),pair,ranges,[None,None],100000000,100000).unwrap();
+                let admitted=report.edge.expect(report.reason);
+                assert!(!admitted.covers_complete_canonical_source());
+                let restored=crate::source_shared_edge_restore::restore(admitted.definition(),crate::source_shared_edge_restore::Limits {
+                    mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000 }).unwrap();
+                assert_eq!(restored.edge.expect(restored.reason).definition(),admitted.definition());
+                let endpoint_index=if half==0 {1}else{0};
+                let ends=[&pair[0].endpoints()[endpoint_index],&pair[1].endpoints()[1-endpoint_index]];
+                assert!(crate::source_carrier_point::same_mapped_endpoint(original.world(),pair,ranges,ends));
+                let both_pair=[&carrier_selected[half],&neighbor_fragments[1-half]];
+                let both_ends=[&both_pair[0].endpoints()[endpoint_index],&both_pair[1].endpoints()[1-endpoint_index]];
+                assert!(crate::source_carrier_point::same_mapped_endpoint(original.world(),both_pair,ranges,both_ends));
+                assert!(!crate::source_carrier_point::same_mapped_endpoint(original.world(),both_pair,ranges,[both_ends[0],both_ends[0]]));
+                assert!(crate::source_mapped_edge::qualify(original.world(),both_pair,ranges,[None,None],100000000,100000).unwrap().edge.is_some());
+                let mut changed=original.world().clone();changed.control_points[0][0]+=0.01;
+                assert!(!crate::source_carrier_point::same_mapped_endpoint(&changed,pair,ranges,ends));
+                let mut changed_ranges=ranges;changed_ranges[0][0][0]+=0.01;
+                assert!(!crate::source_carrier_point::same_mapped_endpoint(original.world(),pair,changed_ranges,ends));
+                assert!(crate::source_mapped_edge::qualify(original.world(),pair,ranges,[None,None],1,100).unwrap().edge.is_none());
+            }
             assert!(carrier.retained_parts(2).is_err());
             let b=carrier.parameter_bounds()[1-side];assert!(b[0]<if high {0.75}else{0.25}&&b[1]>if high {0.75}else{0.25});
             assert!(crate::source_carrier_point::qualify(original,point,side,2).unwrap().point.is_none());

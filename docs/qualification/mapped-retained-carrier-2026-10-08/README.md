@@ -864,3 +864,25 @@ shear and exchange refinement refuse these endpoints until replay is supported.
 Direct and mapped shared-edge admission also explicitly refuse Carrier endpoints;
 matching both restricted halves to their parent correspondence is the next proof
 step. Closed-body assembly and packaged WASM integration remain incomplete.
+
+## Fresh admission of transported-root shared halves
+
+Mapped shared-edge admission now recognizes a Carrier/Carrier or
+Carrier/Boundary-Crossing endpoint pair through the private original parent.
+The world Curve, both incident source definitions and both original affine maps
+must be unchanged. Incident sides must differ. A crossing must retain exactly
+the carrier's original root definition. Fresh source/world composition and
+opposite traversal qualification still run before endpoint identity is used.
+
+`CutPartition::qualify_transported_neighbor` integrates this route without an
+independently authored neighbor cutter. It charges carrier spans and shares
+exact-work/driver quotas across both admitted halves. Actual edges 0 and 1 pass
+both mixed and Carrier/Carrier admission, including the nonlinear degree-five
+neighbor. Mixed halves restore through fresh original definitions; changed
+world geometry, altered maps, repeated incident side and insufficient work
+refuse. No admitted half is labeled complete source coverage.
+
+The control regression passed in 2.43 seconds; mapped tests passed 5/5 and
+shared-edge/restore tests 10/10. These fixtures prove source-owned half-edge
+correspondence only. Replacement face contours, corrected surface ownership,
+end caps, closed-body assembly, embedding and packaged WASM remain required.
