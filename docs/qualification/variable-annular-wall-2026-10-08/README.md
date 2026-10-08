@@ -432,3 +432,45 @@ bounds for the full remaining nets, a separated longitudinal
 derivative, and the weighted mean-chord inequality before they can
 exclude the collapsed diagonal. They do not yet add whole self-face
 certificates or global wall qualification. Retained coverage is 28/31.
+
+
+## Source-owned rational weighted chord decomposition
+
+The new sealed certificate retains the original immutable surface and pole
+orientation. Exact original coefficient predicates prepare the complete nets
+in S_u=a lambda+u E and S_v=a u alpha+u² B. Every removed coefficient has
+exact Zero sign; the nonzero first-order tangential term alpha is retained.
+Coefficient bounds are divided by their positive normalization scale and
+original W². Queries refuse a longitudinal lambda interval containing zero.
+
+For a straight UV segment, let L=integral(lambda), T=integral(u),
+R=integral(u²), A=integral(u alpha), and F=integral(u E).
+Then chord=(a+F/L)(delta_u L+delta_v A)
++(integral(u² B)/R-(F/L)A/R) delta_v R.
+Positive weighted means and T²<=R enclose both columns by
+M1=a+E_box*[0,u_max]/lambda_box and
+M2=B_box-E_box*(alpha_box/lambda_box)*[0,1].
+Endpoint tangent frames lie in these same bounds. R=0 implies the entire
+segment lies on the collapsed rail and its geometric chord is zero.
+This does not assert a unique regular tangent plane at that rail.
+
+The intrinsic exclusion uses the existing interval minor/singular-value bound
+and positive diagonal column balancing. Each rational query pays five net
+restrictions; exact preparation work has its own reported budget. Complete
+coverage checks that differential and normal facts have identical original
+source pointers and pole orientation. Insufficient work retains pending pairs.
+
+Three preparation/integration tests pass, including independent polynomial
+S=(3u,3u²v,u³) chord and endpoint-frame formulas, reversed poles, retained
+rational tangent terms, an exact nonzero transverse perturbation, foreign
+source refusal, and bounded incomplete coverage. The narrow rational fixture
+rectangle is excluded; its wider rectangle was not certified by these bounds.
+The twelve existing chord/coverage regressions also pass. Evidence:
+`owned-rational-pole-tests.log.gz` and `rational-chord-tests.log.gz`.
+
+The four original-body audit is running with unchanged 4.74999 mm minimum,
+1e-4 squared-sine tolerance, 1024 cells and 8192 spans per end face. No new
+whole-face or whole-wall certificate is claimed before its completed report.
+Retained previously proven self-face coverage remains 28/31. Distinct-face
+wall pairs and global minimum wall thickness remain unqualified. This native
+calculation has not been included in a new WASM/UI build.

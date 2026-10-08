@@ -4,7 +4,9 @@ fn main() {
     let output = std::env::args().nth(1).expect("output JSON path");
     let adaptive_enabled = std::env::args().nth(2).as_deref() == Some("adaptive");
     let minimum_mm = 4.74999;
-    let factored_enabled = std::env::args().nth(5).as_deref() == Some("factored");
+    let rational_enabled = std::env::args().nth(5).as_deref() == Some("rational");
+    let factored_enabled =
+        rational_enabled || std::env::args().nth(5).as_deref() == Some("factored");
     let adaptive_cells: usize = std::env::args()
         .nth(3)
         .map(|s| s.parse().unwrap())
@@ -46,11 +48,35 @@ fn main() {
                     } else {
                         None
                     };
+                    let differential = if rational_enabled && (face == 0 || face == 10) {
+                        Some(
+                            nurbs_core::rational_pole_differential::prepare(
+                                &f.surface,
+                                face == 10,
+                                100_000_000,
+                            )
+                            .unwrap(),
+                        )
+                    } else {
+                        None
+                    };
                     let limits = nurbs_core::surface_self_chord_coverage::Limits {
                         cells: adaptive_cells,
                         spans: adaptive_spans,
                     };
-                    let a = if let Some(proof) =
+                    let a = if let (Some(normals), Some(differential)) = (
+                        prepared.as_ref().and_then(|p| p.certificate.as_ref()),
+                        differential.as_ref().and_then(|p| p.certificate.as_ref()),
+                    ) {
+                        nurbs_core::surface_self_chord_coverage::qualify_with_rational_pole(
+                            &f.surface,
+                            minimum_mm,
+                            1e-4,
+                            limits,
+                            normals,
+                            differential,
+                        )
+                    } else if let Some(proof) =
                         prepared.as_ref().and_then(|p| p.certificate.as_ref())
                     {
                         nurbs_core::surface_self_chord_coverage::qualify_with_factored_normals(
@@ -68,7 +94,7 @@ fn main() {
                         a.direction_exclusions, a.reason,
                     );
                     Some(
-                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"polarExclusions":a.polar_exclusions,"polarFactorRefusals":a.polar_factor_refusals,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
+                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"polarExclusions":a.polar_exclusions,"polarFactorRefusals":a.polar_factor_refusals,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"rationalDifferentialWork":differential.as_ref().map(|p|p.work),"rationalDifferentialQualified":differential.as_ref().map(|p|p.certificate.is_some()),"rationalDifferentialReason":differential.as_ref().map(|p|p.reason),"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
                     )
                 } else {
                     None

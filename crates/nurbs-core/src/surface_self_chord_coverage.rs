@@ -153,7 +153,7 @@ pub fn qualify<'a>(
     max_sine_squared: f64,
     limits: Limits,
 ) -> Result<Report<'a>> {
-    qualify_impl(s, minimum_mm, max_sine_squared, limits, None)
+    qualify_impl(s, minimum_mm, max_sine_squared, limits, None, None)
 }
 /// Reuse only a sealed exact boundary-factor fact from this same immutable
 /// source. Original exact preparation work is paid before coverage begins.
@@ -168,7 +168,31 @@ pub fn qualify_with_factored_normals<'a>(
         std::ptr::eq(s, proof.surface()),
         "Use factored normals from the same original surface",
     )?;
-    qualify_impl(s, minimum_mm, max_sine_squared, limits, Some(proof))
+    qualify_impl(s, minimum_mm, max_sine_squared, limits, Some(proof), None)
+}
+/// Reuses exact differential and normal facts from the same source and pole.
+pub fn qualify_with_rational_pole<'a>(
+    s: &'a Surface,
+    minimum_mm: f64,
+    max_sine_squared: f64,
+    limits: Limits,
+    normals: &crate::factored_surface_normals::Certificate<'a>,
+    differential: &crate::rational_pole_differential::Certificate<'a>,
+) -> Result<Report<'a>> {
+    check(
+        std::ptr::eq(s, normals.surface())
+            && std::ptr::eq(s, differential.surface())
+            && normals.end() == differential.end(),
+        "Use pole facts from the same original surface and end",
+    )?;
+    qualify_impl(
+        s,
+        minimum_mm,
+        max_sine_squared,
+        limits,
+        Some(normals),
+        Some(differential),
+    )
 }
 fn qualify_impl<'a>(
     s: &'a Surface,
@@ -176,6 +200,7 @@ fn qualify_impl<'a>(
     max_sine_squared: f64,
     limits: Limits,
     factored: Option<&crate::factored_surface_normals::Certificate<'a>>,
+    differential: Option<&crate::rational_pole_differential::Certificate<'a>>,
 ) -> Result<Report<'a>> {
     s.validate()?;
     check(
@@ -237,6 +262,22 @@ fn qualify_impl<'a>(
             out.intrinsic_exclusions += 1;
             intrinsic.push(c);
             continue;
+        }
+        if let Some(proof) = differential.filter(|_| out.spans < limits.spans) {
+            let r = surface_self_chord::qualify_rational_polar_rectangle(
+                s,
+                union,
+                proof,
+                max_sine_squared,
+                limits.spans - out.spans,
+            )?;
+            out.spans += r.spans;
+            if let Some(c) = r.certificate {
+                out.intrinsic_exclusions += 1;
+                out.polar_exclusions += 1;
+                intrinsic.push(c);
+                continue;
+            }
         }
         if let Some(proof) = factored.filter(|_| out.spans < limits.spans) {
             let r = surface_self_chord::qualify_polar_rectangle(

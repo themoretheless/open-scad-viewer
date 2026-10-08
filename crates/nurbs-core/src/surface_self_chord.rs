@@ -89,6 +89,36 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     }
     Ok(best)
 }
+fn balanced_cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
+    let mut best = cosine_upper(j)?;
+    // J D is the same original differential in rescaled parameter coordinates:
+    // chord = M D (D^-1 delta), and n.(J D)=0. The intrinsic inequality
+    // therefore applies unchanged to any fixed positive diagonal D.
+    let scales: [f64; 2] = std::array::from_fn(|a| {
+        1. / j
+            .iter()
+            .map(|row| row[a].lo.abs().max(row[a].hi.abs()))
+            .fold(0_f64, f64::max)
+    });
+    if scales.iter().all(|s| s.is_finite() && *s > 0.) {
+        let mut balanced = j;
+        let mut finite = true;
+        for k in 0..3 {
+            for a in 0..2 {
+                match j[k][a].mul(I::point(scales[a])) {
+                    Ok(x) => balanced[k][a] = x,
+                    Err(_) => finite = false,
+                }
+            }
+        }
+        if finite {
+            if let Ok(bound) = cosine_upper(balanced) {
+                best = best.min(bound);
+            }
+        }
+    }
+    Ok(best)
+}
 /// If J ranges in H, the chord is M*delta with M in H by integration along
 /// the straight parameter segment. A uniformly nonsingular coordinate minor
 /// gives |chord| >= |det(M)|/||M||F * |delta|. At either endpoint n.J=0, so
@@ -192,33 +222,7 @@ pub fn qualify_rectangle<'a>(
             j[k][a] = I::new(hull[k][a][0], hull[k][a][1])?;
         }
     }
-    let mut best = cosine_upper(j)?;
-    // J D is the same original differential in rescaled parameter coordinates:
-    // chord = M D (D^-1 delta), and n.(J D)=0. The intrinsic inequality
-    // therefore applies unchanged to any fixed positive diagonal D.
-    let scales: [f64; 2] = std::array::from_fn(|a| {
-        1. / j
-            .iter()
-            .map(|row| row[a].lo.abs().max(row[a].hi.abs()))
-            .fold(0_f64, f64::max)
-    });
-    if scales.iter().all(|s| s.is_finite() && *s > 0.) {
-        let mut balanced = j;
-        let mut finite = true;
-        for k in 0..3 {
-            for a in 0..2 {
-                match j[k][a].mul(I::point(scales[a])) {
-                    Ok(x) => balanced[k][a] = x,
-                    Err(_) => finite = false,
-                }
-            }
-        }
-        if finite {
-            if let Ok(bound) = cosine_upper(balanced) {
-                best = best.min(bound);
-            }
-        }
-    }
+    let best = balanced_cosine_upper(j)?;
     out.cosine_squared_upper = Some(best);
     let threshold = I::point(1.).sub(I::point(max_sine_squared))?;
     if best < threshold.lo {
@@ -278,6 +282,54 @@ pub fn qualify_polar_rectangle<'a>(
             cosine_squared_upper: best,
         });
         out.reason = "polar-chord-normal-excluded";
+    }
+    Ok(out)
+}
+/// Uses the exact source-owned rational decomposition. Preparation work is
+/// recorded separately; each query restricts five bounded Bernstein nets.
+pub fn qualify_rational_polar_rectangle<'a>(
+    s: &'a Surface,
+    domain: [[f64; 2]; 2],
+    proof: &crate::rational_pole_differential::Certificate<'a>,
+    max_sine_squared: f64,
+    max_spans: usize,
+) -> Result<Report<'a>> {
+    check(
+        std::ptr::eq(s, proof.surface()),
+        "Use the same original rational pole surface",
+    )?;
+    check(
+        max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
+        "Rational chord requires squared sine in [0,1)",
+    )?;
+    normal_alignment::validate_rectangle(s, domain, max_spans)?;
+    let mut out = Report {
+        certificate: None,
+        spans: 0,
+        complete: false,
+        cosine_squared_upper: None,
+        reason: "rational-polar-chord-work-limit",
+    };
+    if max_spans < 5 {
+        return Ok(out);
+    }
+    out.spans = 5;
+    let Some(j) = proof.bounds(domain)? else {
+        out.reason = "rational-polar-longitudinal-unproven";
+        return Ok(out);
+    };
+    let best = balanced_cosine_upper(j)?;
+    out.complete = true;
+    out.cosine_squared_upper = Some(best);
+    out.reason = "rational-polar-chord-unproven";
+    if best < I::point(1.).sub(I::point(max_sine_squared))?.lo {
+        out.certificate = Some(Certificate {
+            surface: s,
+            domain,
+            max_sine_squared,
+            cosine_squared_upper: best,
+        });
+        out.reason = "rational-polar-chord-normal-excluded";
     }
     Ok(out)
 }
