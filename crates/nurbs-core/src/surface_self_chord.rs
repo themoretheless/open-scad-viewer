@@ -220,14 +220,14 @@ pub(crate) fn rational_pole_pair_report_cached(
         if local_path {
             local_attempted = true;
         }
-        let matrix = match mode {
-            0 => differential.coordinate_path_bounds(union)?,
-            1 => differential.local_coordinate_path_bounds(union)?,
-            3 => differential.local_coordinate_path_bounds_with_margin(union, 1.)?,
-            4 => differential.local_coordinate_path_bounds_with_margin(union, 0.25)?,
-            _ => differential.bounds(union)?,
+        let (matrix, spent) = match mode {
+            0 => (differential.coordinate_path_bounds(union)?, 5),
+            1 => differential.local_coordinate_path_report(union, 3.)?,
+            3 => differential.local_coordinate_path_report(union, 1.)?,
+            4 => differential.local_coordinate_path_report(union, 0.25)?,
+            _ => (differential.bounds(union)?, 5),
         };
-        used += cost;
+        used += spent;
         if local_path && matrix.is_some() {
             local_available = true;
         }

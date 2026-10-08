@@ -934,3 +934,19 @@ V[0,.01] refuses the broad nonmonotone extension and accepts the tighter
 chart, enclosing independently calculated derivatives. Seven pole and
 thirteen chord tests pass. The unchanged 1024/8192 prototype audit is
 running as annular-tight-path-self-wall; qualification remains unproven.
+
+## Executed local restriction accounting
+
+Local inverse attempts now return their executed restriction count. A
+separated-lambda refusal executes one restriction; successful confinement
+and both frame bounds execute six. The caller reserves six before entry
+and charges the actual count afterward. No geometric predicate changed.
+Seven pole and thirteen chord tests passed, including exact one/six counts,
+independent rational frames, original source/pair identity and insufficient
+budget refusal. The 1024/8192 audit runs as annular-local-accounting-self-wall.
+
+The preceding tight-path audit is still running. Its forward-radius cases
+already exclude 8/24 pairs via local inverse charts on faces 0/10; the
+corresponding early-secant audit excluded zero this way. This establishes
+that the added chart proof can exclude new pairs, not whole-face coverage
+or a percentage gain. Those partial cases retain 8/13 pending pairs.

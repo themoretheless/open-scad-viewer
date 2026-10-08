@@ -555,6 +555,13 @@ impl<'a> Certificate<'a> {
     pub(crate) fn local_coordinate_path_bounds_with_margin(
         &self, domain: [[f64; 2]; 2], factor: f64,
     ) -> Result<Option<[[I; 2]; 3]>> {
+        Ok(self.local_coordinate_path_report(domain, factor)?.0)
+    }
+    /// Counts every executed original net restriction, including refusals.
+    /// Callers reserve six before entry, so even a successful path stays bounded.
+    pub(crate) fn local_coordinate_path_report(
+        &self, domain: [[f64; 2]; 2], factor: f64,
+    ) -> Result<(Option<[[I; 2]; 3]>, usize)> {
         check(factor.is_finite() && factor > 0., "Positive inverse path margin")?;
         let d = self.normalized_domain(domain)?;
         let width = I::point(d[0][1]).sub(I::point(d[0][0]))?;
@@ -566,9 +573,10 @@ impl<'a> Certificate<'a> {
             ],
             d[1],
         ];
+        let mut used = 1;
         let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
-            return Ok(None);
+            return Ok((None, used));
         }
         let orient = |x: I| {
             if lambda.lo > 0. {
@@ -577,14 +585,17 @@ impl<'a> Certificate<'a> {
                 I::point(0.).sub(x)
             }
         };
+        used += 1;
         let mut endpoint =
             orient(normal_alignment::rational_quotient_hull(&self.anchor_position, d)?[0])?;
+        used += 1;
         let mut left = orient(
             normal_alignment::rational_quotient_hull(
                 &self.anchor_position,
                 [[extended[0][0]; 2], d[1]],
             )?[0],
         )?;
+        used += 1;
         let right = orient(
             normal_alignment::rational_quotient_hull(
                 &self.anchor_position,
@@ -598,24 +609,26 @@ impl<'a> Certificate<'a> {
             endpoint = I::new(endpoint.lo.max(0.), endpoint.hi)?;
         }
         if left.hi > endpoint.lo || right.lo < endpoint.hi {
-            return Ok(None);
+            return Ok((None, used));
         }
+        used += 1;
         let Some(ratio) =
             normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
         else {
-            return Ok(None);
+            return Ok((None, used));
         };
+        used += 1;
         let Some(second) =
             normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
         else {
-            return Ok(None);
+            return Ok((None, used));
         };
         let mut j = [[I::point(0.); 2]; 3];
         for k in 0..3 {
             j[k][0] = self.a[k].add(I::new(extended[0][0], extended[0][1])?.mul(ratio[k])?)?;
             j[k][1] = second[k];
         }
-        Ok(Some(j))
+        Ok((Some(j), used))
     }
     /// Columns enclosing the weighted mean chord matrix and both endpoint tangent
     /// frames. A separated signed longitudinal derivative is required everywhere.
@@ -895,6 +908,13 @@ mod tests {
         let d = [[0.8, 0.85], [0., 0.1]];
         let local = [[0.45, 0.55], [0., 0.01]];
         assert!(c.local_coordinate_path_bounds(local).unwrap().is_none());
+        let refused = c.local_coordinate_path_report(local, 3.).unwrap();
+        assert!(refused.0.is_none());
+        assert_eq!(refused.1, 1);
+        let accepted = c.local_coordinate_path_report(local, 0.25).unwrap();
+        assert!(accepted.0.is_some());
+        assert_eq!(accepted.1, 6);
+
         let narrow = c.local_coordinate_path_bounds_with_margin(local, 0.25)
             .unwrap().unwrap();
         for u in [0.45, 0.5, 0.55] {
