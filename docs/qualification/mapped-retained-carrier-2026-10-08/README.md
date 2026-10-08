@@ -2622,3 +2622,17 @@ before it continued to shell incidence/contact checks. Exact high-rail
 projected first-jet diagnostics are being added to distinguish boundary
 projection degeneracy from coarse-box overestimation. Full native execution
 is still in progress.
+
+The breadth-first full fixture completed successfully in 143.22 seconds,
+retaining the combined 154 pending contact pairs. The next native executable
+emitted exact high-rail projected first-free bounds (one span each):
+across=0: first component [2.4967469075612617e-13,2.4967469075613293e-13];
+across=0.5: [1.4432026944035643e-13,1.4432026944036127e-13];
+across=1: [5.518449039608263e-14,5.518449039608565e-14].
+Their second projected components are negative, respectively approximately
+-2.2672e-15, -1.1500e-15, and -3.8161e-16. These are interval bounds of
+stored source data, not a tolerance-based zero classification. They show
+that the first principal minor is positive but extremely small at the rail;
+coarse direct derivative boxes can overwhelm it. Three point bounds do not
+prove its sign along the entire rail, nor exclude contacts with the full
+ruled-neighbor trace. A full-path curvature/factor proof remains required.

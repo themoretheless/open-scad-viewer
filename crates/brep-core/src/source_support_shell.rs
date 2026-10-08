@@ -542,6 +542,23 @@ mod tests {
         assert!(xy_det.is_finite() && xy_det!=0.);
         let xy_projection=[[vectors[1][1]/xy_det,-vectors[1][0]/xy_det,0.],
             [-vectors[0][1]/xy_det,vectors[0][0]/xy_det,0.]];
+        // Diagnose the exact boundary separately from coarse interval cells.
+        // A candidate projection may degenerate there even when 3D immersion
+        // is proven; point diagnostics never grant contact authority.
+        for across in [0.,0.5,1.] {
+            let (rail,spent)=bridge.first_free_from_rail_bounds([1.,1.],[across,across],1000).unwrap();
+            let projected=rail.map(|jet|xy_projection.map(|row| {
+                let mut v=nurbs_core::interval_eval::Interval::point(0.);
+                for k in 0..3 {
+                    if row[k]!=0. {
+                        v=v.add(nurbs_core::interval_eval::Interval::point(row[k])
+                            .mul(nurbs_core::interval_eval::Interval::new(jet[k][0],jet[k][1]).unwrap()).unwrap()).unwrap();
+                    }
+                }
+                [v.lo,v.hi]
+            }));
+            eprintln!("owned XY high rail across={across} projectedFree={projected:?} spans={spent}");
+        }
         let direct_xy=bridge.inspect_transverse_corrected_injectivity(
             [0.,1.],[0.,1.],xy_projection,1000,100000).unwrap();
         let area=|regions:&Vec<[[f64;2];2]>|regions.iter().map(|r|
@@ -565,23 +582,6 @@ mod tests {
             }
         }
         if xy_report.complete_regular {assert!(xy_report.pending.is_empty() && xy_report.complete_regular);}
-        // Diagnose the exact boundary separately from coarse interval cells.
-        // A candidate projection may degenerate there even when 3D immersion
-        // is proven; point diagnostics never grant contact authority.
-        for across in [0.,0.5,1.] {
-            let (rail,spent)=bridge.first_free_from_rail_bounds([1.,1.],[across,across],1000).unwrap();
-            let projected=rail.map(|jet|xy_projection.map(|row| {
-                let mut v=nurbs_core::interval_eval::Interval::point(0.);
-                for k in 0..3 {
-                    if row[k]!=0. {
-                        v=v.add(nurbs_core::interval_eval::Interval::point(row[k])
-                            .mul(nurbs_core::interval_eval::Interval::new(jet[k][0],jet[k][1]).unwrap()).unwrap()).unwrap();
-                    }
-                }
-                [v.lo,v.hi]
-            }));
-            eprintln!("owned XY high rail across={across} projectedFree={projected:?} spans={spent}");
-        }
         let admitted=boundary.qualify_face(projection,1000,1000,61000).unwrap();
         let face=admitted.face.expect("complete interior admission for the owned annular transition");
         assert!(std::ptr::eq(face.boundary(),&boundary));
