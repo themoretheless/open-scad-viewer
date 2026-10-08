@@ -89,3 +89,16 @@ cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
 The next algorithm investigation is derivative-column scaling in the original
 intrinsic chord inequality. Any stronger bound must preserve the full original
 pair domain and pass independent analytic and rejection regressions.
+
+## Complete original volume admission
+
+All four bodies pass the repeated native volume audit. Exact boundary/joins,
+valid trims, 31 injective faces, all face-pair classification and embedded
+boundary pass together. Material nesting roles are consistent. Each original
+shell independently proves outward orientation on its first attempted ray.
+`proven=true` therefore covers all volume prerequisites for these specimens.
+
+`volume-qualified.json.gz` records all stage outcomes and individual pair
+reasons. This supersedes the initial low-budget volume failure while preserving
+that evidence. It does not certify global minimum wall thickness, unique regular
+pole tangency, general fillets or named-part STEP acceptance.
