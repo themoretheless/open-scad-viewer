@@ -355,11 +355,17 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
         }).collect::<BTreeSet<_>>());
     for &vertex in vertices[0].intersection(&vertices[1]) {
         let point=model.vertices[vertex].point;
+        let proposal_controls=nets.each_ref().map(|ps|ps.iter().map(|p|p.to_vec()).collect::<Vec<_>>());
+        let proposal_poles=proposal_controls.each_ref().map(|ps|ps.iter().collect::<Vec<_>>());
+        let proposed=propose_vertex_plane(point,&proposal_poles);
         let mut candidates=Vec::<&[f64]>::new();
         for p in nets.iter().flatten().copied(){
             if p!=point && !candidates.contains(&p){candidates.push(p);}
             if candidates.len()==16{break;}
         }
+        // Floating proposals only choose anchors; every original enclosure
+        // control still passes the exact half-space and owned-stratum tests.
+        if let Some(anchors)=&proposed {candidates.extend(anchors.iter().map(|p|p.as_slice()));}
         for a in 0..candidates.len(){for b in a+1..candidates.len(){
             let mut signs=[None,None];let mut vertex_only=[true,true];let mut valid=true;
             for side in 0..2 {for &p in &nets[side] {

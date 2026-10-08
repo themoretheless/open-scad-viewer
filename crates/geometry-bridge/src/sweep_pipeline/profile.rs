@@ -217,7 +217,19 @@ pub(super) fn profile_body_from(v: Value, accepted: Option<Value>, prepared: Opt
         },
         json!({"sections":sections}),
     )?;
-    Ok(json!({"model":model,"approximation":approximation,"globalEmbeddingCertified":false}))
+    let caps = cap_faces(&model, closed)?;
+    let volume = call(
+        "brep_sweep_volume_audit",
+        merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
+    )?;
+    // The host forwards the native construction report without deriving proof
+    // claims. Bind the retained-body result to that report for Rush/viewport.
+    let mut approximation = approximation;
+    approximation["report"]["volume"] = volume.clone();
+    approximation["report"]["wallRegularityCertified"] = volume["allFacesInjective"].clone();
+    approximation["report"]["seamContinuity"] = json!("C0");
+    // This certifies the actual retained body, not the ideal swept family.
+    Ok(json!({"model":model,"approximation":approximation,"volume":volume,"globalEmbeddingCertified":false}))
 }
 #[derive(Clone)]
 struct Stream {

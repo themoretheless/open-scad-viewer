@@ -14,8 +14,10 @@ const commands={
  native:[...catalog.suites.native.filters.map(filter=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p',catalog.suites.native.package,'--lib',filter]),...(catalog.suites.native.bridgeTests??[]).map(test=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p','geometry-bridge','--test',test])],
  wasm:[['node_modules/.bin/vitest','run',...catalog.suites.wasm]],
  rush:[['node_modules/.bin/vitest','run',...catalog.suites.rush]],
+ 'profile-browser':[['node','scripts/check-profile-solid-browser.mjs',...args]],
  browser:[['node','scripts/check-sweep-miter-matrix-browser.mjs',...args]],
  step:[['node','--import','tsx','scripts/export-sweep-step-oracle.mts',...args]],
+ 'profile-step':[['node','--import','tsx','scripts/export-profile-solid-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-profile-solid-step.py',args[0]??'/tmp/profile-solid-step']],
  'scalar-step':[['node','--import','tsx','scripts/export-scalar-sweep-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-scalar-sweep-step-occt.py',args[0]??'/tmp/scalar-sweep-step']],
  'step-smooth':[['node','--import','tsx','scripts/export-smooth-station-step-oracle.mts',...args],['python3','scripts/reference-sweep-generator-volume.py',args[0]??'/tmp/sweep-smooth-station-step']],
 }
