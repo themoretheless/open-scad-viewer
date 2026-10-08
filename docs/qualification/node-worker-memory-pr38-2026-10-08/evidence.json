@@ -1,0 +1,43 @@
+{
+  "schema": "node-worker-memory-diagnostic/1",
+  "platform": "linux-arm64",
+  "node": "22.23.3",
+  "image": "node:22.23.3-bookworm-slim",
+  "imageManifestSha256": "c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392",
+  "sourceHead": "0a88e20159790056e507ded8af7193c5b7b948dc",
+  "x86CiQualified": false,
+  "files": [
+    {
+      "path": "default.json",
+      "sha256": "0a43e77c45eee871e97cc8219d709f36f5df17e16a2c538a620bcfa3abed44e6",
+      "byteLength": 2281
+    },
+    {
+      "path": "liftoff.json",
+      "sha256": "d3a5568fad2e795657965a1378a720e857237eddbc65b4f680eae3dc48254cd5",
+      "byteLength": 2281
+    },
+    {
+      "path": "liftoff-arena-1.json",
+      "sha256": "fcd0a1d9d131f9382170d4bb198841013b16dd3c258d36f9ec2a5d8903af23eb",
+      "byteLength": 2281
+    },
+    {
+      "path": "liftoff-arena-2.json",
+      "sha256": "696ac5f4dbc1e7da25a16353824c86984c64938c203b51254c72242309f28600",
+      "byteLength": 2272
+    },
+    {
+      "path": "default-arena.json",
+      "sha256": "7af97afcbd4b79d7f800b2e16ea9f4efb012ed984139a6f8f0d8b240cae08735",
+      "byteLength": 2281
+    }
+  ],
+  "sourceSha256": {
+    "package-lock.json": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+    "tests/fixtures/mcp-manifold-plan-memory-probe.ts": "0c1124fa6ec5d372e240c20da7e952080f0ad2c91f660f91c7e57eb9e47ea54d",
+    "tests/mcpManifoldPlanMemorySlope.test.ts": "cabf52e453a9ff9c8f97ffeacd5e7b643b9def53715cd841b0896dc05550245b",
+    "src/mcp/manifoldPlanQualificationSupervisor.ts": "343677a4130862062b97304efe623eedd493ff7ecf789290658f527d4f98884c",
+    "src/mcp/manifoldPlanQualification.worker.mjs": "0e44f7bdd8e9eff62025ee879c658feaf9ee7c1e4c12ec01dbc7a8363e487190"
+  }
+}
