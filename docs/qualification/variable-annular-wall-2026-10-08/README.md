@@ -275,3 +275,29 @@ G1 continuity, self-chord exclusion or global wall thickness.
 `annular-pole-normal-grid-refined.*.gz` retains complete grids and
 exact work totals. These verified grids are the next input to bounded
 limiting-normal and secant qualification.
+
+## Owned native factored-normal rectangles
+
+`nurbs_core::factored_surface_normals::prepare` reconstructs all
+original normal coefficient rows under an explicit total exact-work
+budget and per-query predicate limits. Every leading row coefficient
+must have exact Zero sign. Only then does the private source-bound
+fact retain the divided Bernstein net. Exit U reversal is corrected
+for the original oriented normal. Rational denominators and chart
+lengths are positive, so the factored numerator preserves directions
+on the regular interior. Its boundary values enclose one-sided limits.
+
+Rectangle queries use outward de Casteljau restriction on the original
+normalized parameter interval. The three native tests cover boundary
+and reversed orientation, an independent exact-integer cubic graph
+normal formula, missing factor, missing work and out-of-chart refusal.
+
+All eight original specimen end charts qualify this factor fact at
+18.3–21.4 million exact operations per chart, below the 100 million
+cap. Original source pointers and unchanged model definitions are
+checked. Full-chart, full-pole and both pole rail point bounds are
+recorded in `pole-normal-native.json.gz`; its completed log and
+`factored-normal-tests.log.gz` retain execution evidence.
+This factor/normal fact is not yet consumed by whole self-chord
+coverage and does not establish end wall thickness or a unique pole
+plane. Retained whole self-face qualification remains 28/31.

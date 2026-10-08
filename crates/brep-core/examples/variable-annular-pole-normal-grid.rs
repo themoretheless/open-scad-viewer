@@ -142,7 +142,18 @@ fn main() {
                     components.push(value_codec::json!({"axes":axes,"firstTwoRowsExactlyZero":zeros,"reason":format!("{:?}",d.reason),"work":work,"mode":mode,"bounds":grid}));
                 }
                 eprintln!("radii={radii:?} direction={direction} face={face} whole_factor_proven={factor_proven}");
-                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components}));
+                let original = &model.faces[face].surface;
+                let native =
+                    nurbs_core::factored_surface_normals::prepare(original, reverse, 100_000_000)
+                        .unwrap();
+                let queries = native.certificate.as_ref().map(|proof| {
+                    assert!(std::ptr::eq(proof.surface(), original));
+                    let u = [original.knots_u[original.degree_u], original.knots_u[original.control_points.len()]];
+                    let v = [original.knots_v[original.degree_v], original.knots_v[original.control_points[0].len()]];
+                    let pole = u[usize::from(reverse)];
+                    [[u,v],[[pole,pole],v],[[pole,pole],[v[0],v[0]]],[[pole,pole],[v[1],v[1]]]].map(|domain| value_codec::json!({"domain":domain,"bounds":proof.bounds(domain).unwrap()}))
+                });
+                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components,"nativeFactoredNormal":{"qualified":native.certificate.is_some(),"reason":native.reason,"work":native.work,"queries":queries}}));
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
         }

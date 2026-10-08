@@ -40,6 +40,7 @@ pub mod surface_contact_search;
 pub mod radial_bounds;
 pub mod ray_surface;
 pub mod normal_alignment;
+pub mod factored_surface_normals;
 pub mod curve_surface_agreement;
 pub mod curve_surface_plane;
 pub mod curve_surface_affine;
