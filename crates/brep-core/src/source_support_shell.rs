@@ -397,6 +397,7 @@ mod tests {
         assert!(shared.exclude_normal_chords_with_mean(narrow,1e-6,64,64).unwrap().0);
         assert!(!shared.exclude_normal_chords_with_mean(narrow,1e-6,8,64).unwrap().0);
         assert!(shared.exclude_normal_chords_with_secant(narrow,1e-6,64,64).unwrap().0);
+        assert!(shared.exclude_normal_chords_with_factored_secant(narrow,1e-6,64,64).unwrap().0);
 
 
 

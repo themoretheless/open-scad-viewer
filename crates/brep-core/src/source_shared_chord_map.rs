@@ -57,6 +57,11 @@ impl<'a> SharedBoundary<'a> {
         max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
         self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,2)
     }
+    /// Remove only exact original nonnegative pole factors from secant directions.
+    pub fn exclude_normal_chords_with_factored_secant(&self, rectangles:[[[f64;2];2];2], sine:f64,
+        max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,3)
+    }
     fn exclude_normal_chords_impl(&self, rectangles:[[[f64;2];2];2], sine:f64,
         max_spans:usize,max_normal_spans:usize,method:usize)->Result<(bool,usize,usize)> {
         if !sine.is_finite()||!(0. ..1.).contains(&sine) {
@@ -74,7 +79,10 @@ impl<'a> SharedBoundary<'a> {
             let knots=[&s.knots_u,&s.knots_v];let degrees=[s.degree_u,s.degree_v];
             let direction=if self.fixed[side]==knots[axis][degrees[axis]] {1.}else{-1.};
             let sign=direction*if side==0 {-1.}else{1.};
-            let (components,used)=if method==2 {
+            let (components,used)=if method==3 {
+                let (proof,used)=nurbs_core::normal_alignment::boundary_secant_direction_bounds(s,rectangles[side],axis,self.fixed[side],max_spans-spent)?;
+                (proof.map(|p|p.components()),used)
+            } else if method==2 {
                 let (proof,used)=nurbs_core::normal_alignment::boundary_secant_bounds(s,rectangles[side],axis,self.fixed[side],max_spans-spent)?;
                 (proof.map(|p|p.components()),used)
             } else if method==1 {

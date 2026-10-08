@@ -388,3 +388,32 @@ is available separately for further native qualification; shipped WASM remains
 weights, whereas face 2 has no collapsed U rail. Further directional proof must
 handle this original zero factor explicitly rather than normalize a vector
 whose interval contains zero. The experiment artifact records this boundary.
+
+## Exact original pole factors in correlated secant directions
+
+`boundary_secant_direction_bounds` removes a normalized nonnegative free
+coordinate factor only when original clamped Bezier endpoint control rows share
+one exactly equal pole. Unequal positive rational weights are supported:
+H-cW has exactly zero original rows, so the rational chord numerator has the
+corresponding factor before interval arithmetic. Bernstein degree reduction
+preserves its original multiplicity. The private direction certificate reports
+source, endpoint product and (high/low end, power). Its components are directions,
+not physical derivative magnitudes. A whole constant chart refuses.
+
+Five secant tests pass, including high-end unequal weights, a double low-end
+factor, pole limits and an independent rational formula. Changing one rail
+point by 1e-15 prevents factor admission. The optional Body-bound factored
+secant method passes the existing rolling-boundary control. The experiment on
+the full original annular control preserves all counters and statuses but adds
+no proof: 17/45, 2247 pending products. Automatic coverage retains the previous
+method; these additions remain native and shipped WASM is unchanged.
+
+An exact dyadic source audit establishes why a second pole factor cannot simply
+be assumed. Face 0's adjacent constant rail differs from the pole in position;
+its weight profile is only approximately proportional to the pole profile.
+The exact cross product w4[0]*w5[1]-w4[1]*w5[0] equals
+-165809539722621 / 2535301200456458802993406410752 (approximately -6.54e-17),
+not zero. `factored-secant-pole-weights.json` preserves original weights and
+this exact result. Removing a second factor would change the represented
+geometry; a supported correction requires its own bounded error and source
+identity treatment. No tolerance-based coefficient deletion is performed.

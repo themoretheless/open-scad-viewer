@@ -1,0 +1,30 @@
+{
+  "face": 0,
+  "pole": [
+    20.0,
+    0.0,
+    6.0
+  ],
+  "adjacentRail": [
+    20.0,
+    1.5728110252606624,
+    6.0
+  ],
+  "adjacentWeights": [
+    0.9923141121612922,
+    0.7016720377763581,
+    0.9923141121612922
+  ],
+  "poleWeights": [
+    1.0,
+    0.7071067811865476,
+    1.0
+  ],
+  "crossProductExactlyZero": false,
+  "crossProductDifference": {
+    "numerator": "-165809539722621",
+    "denominator": "2535301200456458802993406410752",
+    "approximate": -6.540033179993306e-17
+  },
+  "scope": "Exact dyadic arithmetic on original binary64 source weights; this is not authorization to remove a second factor."
+}

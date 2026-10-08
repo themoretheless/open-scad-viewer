@@ -24,6 +24,41 @@ impl OriginalBoundarySecant<'_> {
         self.components
     }
 }
+/// A secant direction after removing a nonnegative original pole factor.
+/// Components are not a physical derivative magnitude. The chord coefficient
+/// includes the reported normalized free-coordinate factor.
+pub struct OriginalBoundaryDirection<'a> {
+    proof: OriginalBoundarySecant<'a>,
+    factor: Option<(bool, usize)>,
+}
+impl OriginalBoundaryDirection<'_> {
+    pub fn surface(&self) -> &Surface {
+        self.proof.surface()
+    }
+    pub fn endpoints(&self) -> [[f64; 2]; 2] {
+        self.proof.endpoints()
+    }
+    pub fn components(&self) -> [[f64; 2]; 3] {
+        self.proof.components()
+    }
+    /// (high end, power): t^power or (1-t)^power on the original free domain.
+    pub fn factor(&self) -> Option<(bool, usize)> {
+        self.factor
+    }
+}
+pub fn boundary_secant_direction_bounds<'a>(
+    s: &'a Surface,
+    endpoints: [[f64; 2]; 2],
+    axis: usize,
+    boundary: f64,
+    max_spans: usize,
+) -> Result<(Option<OriginalBoundaryDirection<'a>>, usize)> {
+    let (proof, spent, factor) = bounds_impl(s, endpoints, axis, boundary, max_spans, true)?;
+    Ok((
+        proof.map(|proof| OriginalBoundaryDirection { proof, factor }),
+        spent,
+    ))
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -42,6 +77,21 @@ pub fn boundary_secant_bounds<'a>(
     boundary: f64,
     max_spans: usize,
 ) -> Result<(Option<OriginalBoundarySecant<'a>>, usize)> {
+    let (proof, spent, _) = bounds_impl(s, endpoints, axis, boundary, max_spans, false)?;
+    Ok((proof, spent))
+}
+fn bounds_impl<'a>(
+    s: &'a Surface,
+    endpoints: [[f64; 2]; 2],
+    axis: usize,
+    boundary: f64,
+    max_spans: usize,
+    remove_pole: bool,
+) -> Result<(
+    Option<OriginalBoundarySecant<'a>>,
+    usize,
+    Option<(bool, usize)>,
+)> {
     check(axis < 2, "Choose an original boundary secant coordinate")?;
     normal_alignment::validate_rectangle(s, endpoints, max_spans)?;
     let degrees = [s.degree_u, s.degree_v];
@@ -65,7 +115,46 @@ pub fn boundary_secant_bounds<'a>(
         || !knots[axis][..=q].iter().all(|x| *x == low)
         || !knots[axis][q + 1..].iter().all(|x| *x == high)
     {
-        return Ok((None, 0));
+        return Ok((None, 0, None));
+    }
+    let free_low = knots[free][p];
+    let free_high = knots[free][counts[free]];
+    let mut pole_factor = None;
+    if remove_pole
+        && p > 0
+        && counts[free] == p + 1
+        && knots[free][..=p].iter().all(|x| *x == free_low)
+        && knots[free][p + 1..].iter().all(|x| *x == free_high)
+    {
+        for high_end in [false, true] {
+            let rail = if high_end { p } else { 0 };
+            let pole = if axis == 1 {
+                &s.control_points[rail][0]
+            } else {
+                &s.control_points[0][rail]
+            };
+            let mut power = 0;
+            for step in 0..=p {
+                let row = if high_end { p - step } else { step };
+                if !(0..=q).all(|j| {
+                    if axis == 1 {
+                        &s.control_points[row][j] == pole
+                    } else {
+                        &s.control_points[j][row] == pole
+                    }
+                }) {
+                    break;
+                }
+                power += 1;
+            }
+            if power > p {
+                return Ok((None, 0, None));
+            }
+            if power > 0 {
+                pole_factor = Some((high_end, power));
+                break;
+            }
+        }
     }
     let end = boundary == high;
     let boundary_index = if end { q } else { 0 };
@@ -84,7 +173,7 @@ pub fn boundary_secant_bounds<'a>(
             continue;
         }
         if spent == max_spans {
-            return Ok((None, spent));
+            return Ok((None, spent, pole_factor));
         }
         let mut indices = [0; 2];
         indices[free] = index;
@@ -143,8 +232,29 @@ pub fn boundary_secant_bounds<'a>(
                 }
             }
         }
+        let mut free_degree = 2 * p;
+        if let Some((high_end, power)) = pole_factor {
+            // H-cW has exactly zero original endpoint rows, even with unequal
+            // weights. Q therefore has this original free-coordinate factor.
+            // Remove it algebraically; never infer zero from interval widths.
+            let mut factored = Vec::new();
+            for row in 0..=2 * p - power {
+                let original = if high_end { row } else { row + power };
+                let scale =
+                    I::point(choose(2 * p, original)).div(I::point(choose(2 * p - power, row)))?;
+                let mut values = divided[original].clone();
+                for h in &mut values {
+                    for k in 0..3 {
+                        h[k] = h[k].mul(scale)?;
+                    }
+                }
+                factored.push(values);
+            }
+            divided = factored;
+            free_degree -= power;
+        }
         let numerator =
-            normal_alignment::restrict_hull(&divided, [2 * p, q - 1], basis_span, domain)?;
+            normal_alignment::restrict_hull(&divided, [free_degree, q - 1], basis_span, domain)?;
         let length = I::point(high).sub(I::point(low))?;
         let scale = I::point(if end { -1. } else { 1. }).div(length)?;
         for k in 0..3 {
@@ -155,7 +265,7 @@ pub fn boundary_secant_bounds<'a>(
         spent += 1;
     }
     if spent == 0 {
-        return Ok((None, 0));
+        return Ok((None, 0, None));
     }
     Ok((
         Some(OriginalBoundarySecant {
@@ -166,6 +276,7 @@ pub fn boundary_secant_bounds<'a>(
             components: hull,
         }),
         spent,
+        pole_factor,
     ))
 }
 #[cfg(test)]
@@ -270,5 +381,67 @@ mod tests {
                 .0
                 .is_none()
         );
+    }
+    #[test]
+    fn exact_pole_factor_keeps_unequal_weights_and_refuses_nearby_rail() {
+        let mut s = surface();
+        s.control_points[1] = vec![vec![1., 0., 0.]; 3];
+        let endpoints = [[0.99, 1.], [0.2, 0.3]];
+        let raw = boundary_secant_bounds(&s, endpoints, 1, 1., 1)
+            .unwrap()
+            .0
+            .unwrap();
+        assert!(raw.components()[1][0] <= 0.);
+        let proof = boundary_secant_direction_bounds(&s, endpoints, 1, 1., 1)
+            .unwrap()
+            .0
+            .unwrap();
+        assert_eq!(proof.factor(), Some((true, 1)));
+        assert!(proof.components()[1][0] > 1.19);
+        s.weights[1] = vec![1., 0.7, 1.];
+        let proof = boundary_secant_direction_bounds(&s, endpoints, 1, 1., 1)
+            .unwrap()
+            .0
+            .unwrap();
+        assert_eq!(proof.factor(), Some((true, 1)));
+        assert!(std::ptr::eq(proof.surface(), &s));
+        for u in [0.99, 0.995, 1.] {
+            for v in [0.2, 0.25, 0.3] {
+                let w = (1. - v) * (1. - v) + 1.4 * v * (1. - v) + v * v;
+                let d = (1. - u) + u * w;
+                let expected = [0.6 * u * v / d, (v * v / d - 1.) / (v - 1.), 0.];
+                for (r, x) in proof.components().into_iter().zip(expected) {
+                    assert!(r[0] <= x && x <= r[1], "{r:?} misses {x}");
+                }
+            }
+        }
+        s.control_points[1][1][1] = 1e-15;
+        assert!(
+            boundary_secant_direction_bounds(&s, endpoints, 1, 1., 1)
+                .unwrap()
+                .0
+                .unwrap()
+                .factor()
+                .is_none()
+        );
+    }
+    #[test]
+    fn repeated_low_pole_factor_has_original_multiplicity() {
+        let mut s = surface();
+        s.degree_u = 2;
+        s.knots_u = vec![0., 0., 0., 1., 1., 1.];
+        s.control_points = vec![
+            vec![vec![0., 0., 0.]; 3],
+            vec![vec![0., 0., 0.]; 3],
+            vec![vec![1., 0., 0.], vec![1., 0., 0.], vec![1., 1., 0.]],
+        ];
+        s.weights = vec![vec![1.; 3]; 3];
+        let proof = boundary_secant_direction_bounds(&s, [[0., 0.01], [0.2, 0.3]], 1, 1., 1)
+            .unwrap()
+            .0
+            .unwrap();
+        assert_eq!(proof.factor(), Some((false, 2)));
+        let r = proof.components()[1];
+        assert!(r[0] > 1.19 && r[1] < 1.31);
     }
 }

@@ -1,5 +1,5 @@
 //! Complete-rectangle normal/line angle bounds, including both sides of knots.
-pub use crate::surface_boundary_secant::{OriginalBoundarySecant,boundary_secant_bounds};
+pub use crate::surface_boundary_secant::{OriginalBoundarySecant,boundary_secant_bounds,OriginalBoundaryDirection,boundary_secant_direction_bounds};
 use crate::{check, distance_bounds::Interval as I, surface::Surface, Result};
 
 #[derive(Debug)]
