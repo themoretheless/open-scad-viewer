@@ -2034,6 +2034,15 @@ const sourceStepWorker=createSolidPreviewWorker(),sourceStepPending=ref(false),s
 const selectedSourceBody=computed(()=>(document.value.sourceBodies??[]).find(record=>sourceEdgeSelection.value.startsWith(record.id+':')))
 const sourceSeamWorker=createSolidPreviewWorker(),sourceSeamPending=ref(false),sourceSeamError=ref('')
 const sourceSeamResult=shallowRef<SourceSeamResult|null>(null)
+const sourceSeamEndpointMarkers=computed(()=>{
+ const body=selectedSourceBody.value
+ if(!props.open || !body || !objectInView(body.id) || sourceSeamResult.value?.qualified)return []
+ return (sourceSeamResult.value?.endpointLimits?.sides??[]).flatMap(side=>{
+  const point=side.collapsedPoint
+  if(!side.distinctTangentLimits || !point || !point.every(Number.isFinite))return []
+  return [{key:`${side.side}:${side.boundaryEnd}`,body:body.id,point,screen:project(point,'3d')}]
+ })
+})
 let sourceSeamGeneration=0
 function cancelSourceSeam(){sourceSeamGeneration++;sourceSeamWorker.cancel();sourceSeamPending.value=false}
 watch(()=>[document.value,props.open,sourceEdgeSelection.value],()=>{
@@ -3913,6 +3922,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <g v-if="pane==='3d'" data-source-body-preview="edges">
                 <polyline v-for="edge in sourceDisplayEdges" :key="edge.key" :points="edge.points" fill="none" :stroke="sourceEdgeSelection===edge.key?(sourceSeamResult&&!sourceSeamResult.qualified?'#ff9977':'#ffc977'):sourceEdgeHover===edge.key?'#ffffff':'#77eac5'" :stroke-width="sourceEdgeSelection===edge.key?4:2" vector-effect="non-scaling-stroke" :tabindex="edge.selectable?0:-1" :aria-disabled="!edge.selectable" role="button" :aria-label="edge.name+' '+label('ребро','edge')+' '+edge.index" :aria-pressed="sourceEdgeSelection===edge.key" @pointerenter="sourceEdgeHover=edge.key" @pointerleave="sourceEdgeHover=''" @pointerdown.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.enter.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.space.stop.prevent="pickSourceEdge(edge.body,edge.index)" @keydown.esc.stop.prevent="sourceEdgeSelection=''" />
+              </g>
+              <g v-if="pane==='3d'" data-source-seam-errors="endpoints" pointer-events="none">
+                <circle v-for="marker in sourceSeamEndpointMarkers" :key="marker.key" :data-source-body="marker.body" :data-source-seam-error-point="marker.point.join(',')" :cx="marker.screen[0]" :cy="marker.screen[1]" :r="views['3d']/100" fill="#ff647c" stroke="white" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ label('Разные касательные плоскости в конце: ','Distinct endpoint tangent planes: ')+marker.point.join(', ')+' mm' }}</title></circle>
               </g>
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
