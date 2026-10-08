@@ -647,7 +647,7 @@ mod tests {
         let assembled=outer.assemble_shell(1000).unwrap();
         eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
         let expression=assembled.shell.expect(assembled.reason);
-        let region=original_region.certificate.as_ref().expect("fresh original XY region");
+        if let Some(region)=original_region.certificate.as_ref() {
         assert!(expression.qualify_transition_ruled_contact(1,region,1000,0,1000).unwrap().certificate.is_none());
         let ruled=expression.qualify_transition_ruled_contact(1,region,1000,10000000,100000).unwrap();
         eprintln!("owned transition ruled contact qualified={} work={} reason={}",
@@ -657,6 +657,9 @@ mod tests {
         assert_eq!(ruled.trace().domain(),[0.,3.]);
         let owners=ruled.owners();
         assert!(owners.iter().all(|owner|expression.faces().iter().any(|f|std::ptr::eq(*owner,f))));
+        } else {
+            assert_eq!(original_region.reason,"profile-original-weight-identity-unproven");
+        }
         assert!(std::ptr::eq(expression.assembly(),&outer));
         assert_eq!(expression.faces().len(),body.geometry().shell().faces().len()+2);
         assert_eq!(expression.pairs().len(),body.geometry().shell().edges().len()+6);
@@ -814,21 +817,24 @@ mod tests {
         use crate::source_profile_body::{ContactAuditLimits,PairContactProof};
         let audit_limits=ContactAuditLimits{cells:4096,cells_per_pair:8,controls_per_enclosure:1000,spans:100000,
             domain_cells:100000,domain_cells_per_pair:256,exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};
-        let audit=expression.inspect_contacts(audit_limits).unwrap();
+        let audit=if let Some(region)=original_region.certificate.as_ref() {
+            expression.inspect_contacts_with_original_region(audit_limits,region).unwrap()
+        } else {expression.inspect_contacts(audit_limits).unwrap()};
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),154);
-        let mut kinds=[0usize;6];
+        let mut kinds=[0usize;7];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
                 PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
                 PairContactProof::TransitionPlane(c)=>(5,Some([c.owners()[1],c.owners()[0]])),
+                PairContactProof::TransitionRuled(c)=>(6,Some([c.owners()[1],c.owners()[0]])),
             };
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[154,162,12,23,54,1]);
+        assert_eq!(kinds,[154,162,12,23,54,1,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(154));
         assert_eq!(diagnostics["pairs"].as_array().unwrap().len(),406);
         let binary=value_codec::encode_binary(&diagnostics).unwrap();

@@ -19,6 +19,7 @@ pub enum PairContactProof<'x> {
     Fiber(OriginalFiberContact<'x>),
     VertexOrInterior(OriginalAdditionalContact<'x>),
     TransitionPlane(TransitionPlaneContact<'x>),
+    TransitionRuled(TransitionRuledContact<'x>),
 }
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
@@ -29,6 +30,7 @@ impl PairContactProof<'_> {
             Self::Fiber(_) => "fiber",
             Self::VertexOrInterior(_) => "vertex-or-interior",
             Self::TransitionPlane(_) => "transition-plane",
+            Self::TransitionRuled(_) => "transition-ruled",
         }
     }
 }
@@ -91,6 +93,40 @@ impl ShellContactAudit<'_> {
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     /// Generate every proof freshly from this immutable owned shell. Budgets
     /// cover the entire audit; no caller-supplied report can authorize a pair.
+    /// Extend the complete base audit only with fresh contact proofs tied to
+    /// this shell's exact transition boundary and remaining shared work.
+    pub fn inspect_contacts_with_original_region(
+        &self,
+        limits: ContactAuditLimits,
+        region: &OriginalProjectedRegion<'_, '_, '_, '_, '_>,
+    ) -> Result<ShellContactAudit<'_>> {
+        let mut out = self.inspect_contacts(limits)?;
+        for pair in &mut out.pairs {
+            if !matches!(pair.proof, PairContactProof::Pending) {
+                continue;
+            }
+            for &edge in &pair.support.shared_edges {
+                let ShellPairKind::Rail(rail) = self.pairs[edge].kind else {
+                    continue;
+                };
+                let ruled = self.qualify_transition_ruled_contact(
+                    rail,
+                    region,
+                    limits.controls_per_enclosure,
+                    limits.exact_work - out.exact_work,
+                    limits.driver_cells - out.driver_cells,
+                )?;
+                out.exact_work += ruled.exact_work;
+                out.driver_cells += ruled.driver_cells;
+                pair.reason = ruled.reason;
+                if let Some(certificate) = ruled.certificate {
+                    pair.proof = PairContactProof::TransitionRuled(certificate);
+                    break;
+                }
+            }
+        }
+        Ok(out)
+    }
     pub fn inspect_contacts(&self, limits: ContactAuditLimits) -> Result<ShellContactAudit<'_>> {
         if limits.exact_work > 100000000 || limits.driver_cells > 100000 {
             return Err(Error::new(

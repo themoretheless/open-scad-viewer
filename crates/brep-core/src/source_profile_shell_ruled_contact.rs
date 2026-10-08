@@ -47,6 +47,7 @@ impl TransitionRuledContact<'_> {
 pub struct TransitionRuledReport<'x> {
     pub certificate: Option<TransitionRuledContact<'x>>,
     pub exact_work: u64,
+    pub driver_cells: usize,
     pub reason: &'static str,
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
@@ -67,6 +68,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         let mut out = TransitionRuledReport {
             certificate: None,
             exact_work: 0,
+            driver_cells: 0,
             reason: "profile-transition-ruled-contact-unproven",
         };
         let boundary = self.assembly.patch.rails.face.boundary;
@@ -116,6 +118,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         // supplies its full 3D contact ownership, including both cut roots.
         let edge = root.qualify_incident_edge(max_work, max_drivers)?;
         out.exact_work = edge.work_used;
+        out.driver_cells = edge.driver_cells;
         let Some(edge) = edge.edge else {
             out.reason = edge.reason;
             return Ok(out);

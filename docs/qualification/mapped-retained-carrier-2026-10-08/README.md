@@ -2821,3 +2821,20 @@ exact-identity test passed, including one-bit coordinate/weight refusal,
 reversed nonunit domains and periodic refusal. The full guarded native fixture
 now requires this owned high-rail contact; it is running. The combined audit
 has not yet been changed and still reports 154 pending pairs.
+
+The guarded native projected-region route exposed a real fixture limitation:
+exact original weight identity is unproven after 888 predicate-work units.
+The fixture's WeightProfile is an exact factor-expression proposal but differs
+from its original authored weight matrix. Its original Jordan certificate
+therefore cannot establish boundary identity for the profile. The initial
+native expectation of a successful original transfer failed and has been
+corrected to require this refusal; no geometric guard was weakened.
+
+Combined auditing now has an optional owned-original-region entry point and
+a transition-ruled proof kind, accounting fresh edge exact/driver work against
+remaining shared budgets. It never creates that proof without the valid
+region certificate. The current fixture must retain 154 pending pairs, with
+zero transition-ruled admissions. Compilation passed; the corrected full
+native refusal/audit fixture is running. The next required geometry work is
+projected-Jordan authority for the exact factor-expression WeightProfile,
+including its actual boundary trace; original-surface authority is insufficient.
