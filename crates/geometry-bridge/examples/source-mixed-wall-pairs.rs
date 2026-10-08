@@ -72,6 +72,7 @@ fn main() {
         value_codec::from_str(&std::fs::read_to_string(&args[2]).unwrap()).unwrap(),
     )
     .unwrap();
+    let cells=args.get(5).map(|v|v.parse::<usize>().expect("product cell limit")).unwrap_or(4096);
     let mut results = Vec::new();
     for faces in pairs {
         let r = brep_core::source_wall_pair::qualify(
@@ -81,7 +82,7 @@ fn main() {
             brep_core::source_wall_pair::Limits {
                 normal_spans: 10000,
                 max_sine_squared: 1e-6,
-                cells: 4096,
+                cells,
                 spans: 10000,
                 domain_cells: 10000,
                 domain_cells_per_query: 256,
