@@ -414,6 +414,17 @@ mod tests {
         assert!(cover.complete_regular,"{} pending={}",cover.reason,cover.pending.len());
         let area:f64=cover.regular.iter().chain(&cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
         eprintln!("noncollapsed bridge adaptive regular={} pending={} cells={} spans={}",cover.regular.len(),cover.pending.len(),cover.cells,cover.spans);
+        let jet=bridge.derivative_bounds([0.5,0.5],[0.5,0.5],8).unwrap().0.unwrap();
+        let vectors=jet.map(|r|r.map(|b|b[0]*0.5+b[1]*0.5));
+        let dot=|a:[f64;3],b:[f64;3]|a.iter().zip(b).map(|(x,y)|x*y).sum::<f64>();
+        let aa=dot(vectors[0],vectors[0]);let bb=dot(vectors[1],vectors[1]);let ab=dot(vectors[0],vectors[1]);
+        let determinant=aa*bb-ab*ab;assert!(determinant>0.);
+        let projection=[std::array::from_fn(|k|(bb*vectors[0][k]-ab*vectors[1][k])/determinant),
+            std::array::from_fn(|k|(aa*vectors[1][k]-ab*vectors[0][k])/determinant)];
+        let injectivity=bridge.inspect_injectivity([0.,1.],[0.,1.],projection,12000,96000).unwrap();
+        let area:f64=injectivity.regular.iter().chain(&injectivity.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
+        eprintln!("bridge injectivity qualified={} accepted={} pending={} cells={} spans={} projection={:?}",injectivity.complete_regular,injectivity.regular.len(),injectivity.pending.len(),injectivity.cells,injectivity.spans,projection);
+
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

@@ -1116,3 +1116,28 @@ This qualifies local immersion of this bridge only. It does not prove global
 injectivity, self-intersection freedom, thickness, neighbor side-rail identity,
 terminal corner closure or a sewn Body. Those remain required before WASM/UI
 admission, general geometry claims or the full CAD objective can be complete.
+
+## Fixed-projection injectivity check for exact bridges
+
+Bridge derivatives are now exposed as complete source-owned interval hulls.
+`inspect_injectivity` checks the positive definite symmetric part of a fixed
+2D projected Jacobian on every adaptive cell. On the convex domain, integration
+of d^T J d along any joining segment proves strict monotonicity, hence global
+injectivity, only when the entire cover qualifies. No sampled point or local
+regularity certificate establishes this result. Original internal knot
+multiplicities must guarantee a single-valued piecewise C1 transverse field;
+unsupported continuity returns the untouched pending domain.
+
+The rational planar reference qualifies the full rectangle; zero projection
+and a deliberately folded bridge refuse global admission. All 13 profile
+tests passed in 0.86 seconds. For the actual annular bridge a fixed projection
+proposed from the midpoint dual vectors is freshly checked, not trusted.
+At 1000 cells/8000 spans it accepts 76 cells with 849 pending. At 12000
+cells/96000 spans it accepts 3287 cells with 5427 pending, retaining unit-domain
+coverage. The latter control run passed in 52.42 seconds.
+
+The annular bridge remains globally unqualified. Pending cells are neither
+proved defects nor proved injective regions. Another projection, tighter
+correlated derivatives or independent pairwise separation is required. Existing
+full local regularity remains valid; side rails, corner geometry, whole-body
+self-intersections, thickness and packaged WASM remain incomplete.

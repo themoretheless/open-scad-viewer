@@ -1521,6 +1521,12 @@ mod tests {
         let area:f64=cover.regular.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();assert_eq!(area,1.);
         let refused=bridge.inspect_regularity([0.,1.],[0.,1.],0,8000).unwrap();
         assert_eq!(refused.pending,vec![[[0.,1.],[0.,1.]]]);
+        let injective=bridge.inspect_injectivity([0.,1.],[0.,1.],[[0.,1.,0.],[1.,0.,0.]],12000,96000).unwrap();
+        assert!(injective.complete_regular,"{} pending={}",injective.reason,injective.pending.len());
+        let refused=bridge.inspect_injectivity([0.,1.],[0.,1.],[[0.;3];2],10,80).unwrap();
+        assert!(!refused.complete_regular);assert!(!refused.pending.is_empty());
+        let folded=crate::normal_alignment::ProfileSectionBridge::new(p.section(0,0.5).unwrap(),p.section(0,0.5).unwrap(),[0.25,0.25]).unwrap();
+        assert!(!folded.inspect_injectivity([0.,1.],[0.,1.],[[0.,1.,0.],[1.,0.,0.]],200,1600).unwrap().complete_regular);
         let transition = p
             .section(0, 0.5)
             .unwrap()
