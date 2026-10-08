@@ -1493,3 +1493,6 @@ mod tests {
         assert!(!projected_principal_minors_positive(uncertain).unwrap());
     }
 }
+
+#[path="profile_section_bridge_second.rs"]
+mod second_free_jet;

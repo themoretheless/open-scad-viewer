@@ -2321,3 +2321,29 @@ rail 1 remains nonplanar (2932 exact work). Neither receives a certificate.
 Next required work is full corrected second free-jet bounds for tangent
 plane contacts and a curved-neighbor proof for rail 1. No packaged WASM
 or full Body admission is claimed by this stage.
+
+## Full corrected second free derivative (2026-10-09)
+
+The transition now encloses its second free derivative, including all four
+Hermite rail corrections. Natural free rails are not replaced by source
+second derivatives: the construction preserves position and first jets,
+which does not imply preservation of the second jet. Across endpoints use
+the exact source section derivative because the correction vanishes there.
+Shared span exhaustion returns no enclosure.
+
+An independent quartic fixture checks C_vv=(0,0,2u^4) and a rational
+positive-weight variant checks C_vv=(0,0,4u^4/(1+u^4)). All four
+profile_section_bridge tests passed (0.54 s). The second-order contact
+cover additionally refuses t^2(1-2t), which has an interior zero.
+
+The native shell fixture passed in 77.42 s. With 512 cells the tangent
+plane rail retains 21 pending rectangles (16412 spans, 8636 exact work),
+down from 513 before second-derivative bounds. It still has no complete
+contact certificate. The curved neighbor remains unsupported by this
+plane-specific proof. Combined audit still has 155 pending pairs; neither
+packaged WASM integration nor global Body validity follows from this test.
+
+Whole-rectangle analytic checks also passed in the four-test group
+(3.78 s). The expanded native run initially failed at the API work guard:
+300000 spans exceeded its documented 100000 cap. The call is corrected
+to 4096 cells / 100000 spans; no geometric predicate or guard is relaxed.

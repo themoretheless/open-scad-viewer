@@ -257,9 +257,15 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             max_spans,
             |rect, derivative, budget| {
                 let (bounds, spent) = if derivative {
-                    let (jet, spent) = constrained
-                        .derivatives_with_transverse_correction(rect[0], rect[1], budget)?;
-                    (jet.map(|j| j[0]), spent)
+                    if out.anchor_order == Some(2) {
+                        constrained.second_free_derivatives_with_transverse_correction(
+                            rect[0], rect[1], budget,
+                        )?
+                    } else {
+                        let (jet, spent) = constrained
+                            .derivatives_with_transverse_correction(rect[0], rect[1], budget)?;
+                        (jet.map(|j| j[0]), spent)
+                    }
                 } else {
                     constrained.enclose_with_transverse_correction(rect[0], rect[1], budget)?
                 };
@@ -282,11 +288,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         out.cells = result.cells;
         out.spans = result.spans;
         out.pending = result.pending;
-        out.reason = if out.anchor_order == Some(2) {
-            "expression-transition-plane-second-jet-required"
-        } else {
-            "expression-transition-plane-cover-pending"
-        };
+        out.reason = "expression-transition-plane-cover-pending";
         if out.pending.is_empty() {
             out.certificate = Some(TransitionPlaneContact {
                 owners,
@@ -304,6 +306,39 @@ mod tests {
     use super::*;
     fn area(r: Rectangle) -> f64 {
         (r[0][1] - r[0][0]) * (r[1][1] - r[1][0])
+    }
+    #[test]
+    fn second_order_plane_cover_refuses_an_extra_interior_zero() {
+        let domain = [[0., 1.]; 2];
+        let result = cover(domain, false, 127, 127, |rect, second, _| {
+            let t = I::new(rect[0][0], rect[0][1])?;
+            let value = if second {
+                I::point(2.).sub(I::point(12.).mul(t)?)?
+            } else {
+                t.mul(t)?.mul(I::point(1.).sub(I::point(2.).mul(t)?)?)?
+            };
+            Ok((Some([value.lo, value.hi]), 1))
+        })
+        .unwrap();
+        assert!(!result.pending.is_empty());
+        assert!(result
+            .pending
+            .iter()
+            .any(|r| r[0][0] <= 0.5 && r[0][1] >= 0.5));
+        let covered = result
+            .pending
+            .iter()
+            .chain(&result.accepted)
+            .copied()
+            .map(area)
+            .sum::<f64>();
+        assert!((covered - 1.).abs() < 1e-12);
+        let quadratic = cover(domain, false, 1, 1, |_, second, _| {
+            assert!(second);
+            Ok((Some([2.; 2]), 1))
+        })
+        .unwrap();
+        assert!(quadratic.pending.is_empty());
     }
     #[test]
     fn transition_plane_cover_keeps_extra_zero_and_budget_remainder() {
