@@ -418,6 +418,18 @@ mod tests {
         let residual=x.mul(x).unwrap().add(y.mul(y).unwrap()).unwrap().sub(RailInterval::point(400.)).unwrap();
         assert!(residual.hi<0.,"Hermite rail must not be admitted as the unchanged cylinder boundary");
         eprintln!("bridge cylinder rail midpoint squared-radius residual=[{},{}]",residual.lo,residual.hi);
+        assert!(bridge.constrain_original_rails(1000).unwrap().0.is_none(),"rounded 0.15 scale is not the exact difference of section coordinates");
+        let exact_width=0.9-0.75;
+        let exact_bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            proposal.profile(0).unwrap().section(0,0.75).unwrap(),proposal.profile(0).unwrap().section(0,0.9).unwrap(),[exact_width;2]).unwrap();
+        let constrained=exact_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+        let corrected=constrained.enclose([1.,1.],[0.5;2],1).unwrap().0.unwrap();
+        let x=RailInterval::new(corrected[0][0],corrected[0][1]).unwrap();let y=RailInterval::new(corrected[1][0],corrected[1][1]).unwrap();
+        let residual=x.mul(x).unwrap().add(y.mul(y).unwrap()).unwrap().sub(RailInterval::point(400.)).unwrap();
+        assert!(residual.lo.abs()<1e-8&&residual.hi.abs()<1e-8);
+        eprintln!("constrained cylinder rail residual=[{},{}]",residual.lo,residual.hi);
+        assert!(constrained.enclose([0.4,0.6],[0.4,0.6],14).unwrap().0.is_some());
+        assert!(constrained.enclose([0.4,0.6],[0.4,0.6],13).unwrap().0.is_none());
         let mut bridge_regular=0;
         for i in 0..8 {for j in 0..8 {
             let n=bridge.normal_bounds([i as f64/8.,(i+1) as f64/8.],[j as f64/8.,(j+1) as f64/8.],8).unwrap().0.unwrap();

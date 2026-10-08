@@ -1684,6 +1684,21 @@ mod tests {
         assert!(cut.transverse_bounds([0., 1.], 2).unwrap().0.is_some());
     }
     #[test]
+    fn original_rail_correction_matches_independent_separable_surface_positions() {
+        let mut s=surface();s.weights=vec![vec![2.,2.],vec![8.,8.]];
+        let p=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+        let bridge=crate::normal_alignment::ProfileSectionBridge::new(
+            p.section(0,0.5).unwrap(),p.section(0,0.75).unwrap(),[0.25;2]).unwrap();
+        let corrected=bridge.constrain_original_rails(100).unwrap().0.unwrap();
+        for free in [0.,0.3,1.] {for across in [0.,0.5,1.] {
+            let bounds=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
+            let u=0.5+0.25*across;let expected=[4.*u/(1.+3.*u),free,0.];
+            for k in 0..3 {assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1]);}
+        }}
+        assert!(corrected.enclose([0.3;2],[0.5;2],13).unwrap().0.is_none());
+        assert!(bridge.constrain_original_rails(0).unwrap().0.is_none());
+    }
+    #[test]
     fn exact_profile_pole_keeps_distinct_limiting_planes() {
         let mut s = surface();
         s.degree_u = 2;

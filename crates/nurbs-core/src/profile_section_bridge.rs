@@ -48,6 +48,40 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
             free: self.section(false).range()[usize::from(high)],
         }
     }
+    /// Attach source-natural rails only when both sections and endpoint jets
+    /// have the same exact affine support coordinate. Rounded scales refuse.
+    pub fn constrain_original_rails(
+        &self,
+        max_controls: usize,
+    ) -> Result<(Option<RailConstrainedBridge<'_, 'a, 'b, 'c, 'd>>, usize)> {
+        check(max_controls <= 1000000, "Bound original rail control work")?;
+        let a = self.section(false);
+        let b = self.section(true);
+        if !std::ptr::eq(a.profile(), b.profile()) || a.axis() != b.axis() {
+            return Ok((None, 0));
+        }
+        let x = a.parameter();
+        let y = b.parameter();
+        let width = y - x;
+        // Sterbenz guarantees this binary subtraction is exact. Zero is exact too.
+        let exact = x == 0.
+            || y == 0.
+            || (x.signum() == y.signum() && x.abs() * 0.5 <= y.abs() && y.abs() <= x.abs() * 2.);
+        if !exact || width == 0. || self.scales.iter().any(|s| s.to_bits() != width.to_bits()) {
+            return Ok((None, 0));
+        }
+        let mut spent = 0;
+        for high in [false, true] {
+            let (boundary, used) =
+                a.profile()
+                    .preserved_boundary(1 - a.axis(), high, max_controls - spent)?;
+            spent += used;
+            if boundary.is_none() {
+                return Ok((None, spent));
+            }
+        }
+        Ok((Some(RailConstrainedBridge { bridge: self }), spent))
+    }
     fn validate(&self, free: [f64; 2], across: [f64; 2], budget: usize) -> Result<()> {
         self.section(false).rectangle(free)?;
         self.section(true).rectangle(free)?;
@@ -420,6 +454,99 @@ impl ProfileBridgeRail<'_, '_, '_, '_, '_> {
             .bridge
             .derivative_bounds([self.free; 2], range, budget)?;
         Ok((jet.map(|j| j[1]), spent))
+    }
+}
+/// Position correction anchored to original natural support rails. It does
+/// not inherit regularity/injectivity from the uncorrected Hermite bridge.
+pub struct RailConstrainedBridge<'r, 'a, 'b, 'c, 'd> {
+    bridge: &'r ProfileSectionBridge<'a, 'b, 'c, 'd>,
+}
+impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
+    fn source_rail(
+        &self,
+        high: bool,
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let a = self.bridge.section(false);
+        let b = self.bridge.section(true);
+        let t = I::new(across[0], across[1])?;
+        let coordinate = I::point(a.parameter())
+            .add(t.mul(I::point(b.parameter()).sub(I::point(a.parameter()))?)?)?;
+        let mut domain = [[0.; 2]; 2];
+        domain[a.axis()] = [coordinate.lo, coordinate.hi];
+        domain[1 - a.axis()] = [a.range()[usize::from(high)]; 2];
+        let surface = a.profile().source();
+        let axis = a.axis();
+        let chart = if axis == 0 {
+            [
+                surface.knots_u[surface.degree_u],
+                surface.knots_u[surface.control_points.len()],
+            ]
+        } else {
+            [
+                surface.knots_v[surface.degree_v],
+                surface.knots_v[surface.control_points[0].len()],
+            ]
+        };
+        domain[axis][0] = domain[axis][0].max(chart[0]);
+        domain[axis][1] = domain[axis][1].min(chart[1]);
+        a.profile().enclose(domain, budget)
+    }
+    pub fn enclose(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.bridge.validate(free, across, budget)?;
+        if across == [0., 0.] || across == [1., 1.] {
+            return self.bridge.enclose(free, across, budget);
+        }
+        let range = self.bridge.section(false).range();
+        for high in [false, true] {
+            if free == [range[usize::from(high)]; 2] {
+                return self.source_rail(high, across, budget);
+            }
+        }
+        let (base, mut spent) = self.bridge.enclose(free, across, budget)?;
+        let Some(base) = base else {
+            return Ok((None, spent));
+        };
+        let mut result = base
+            .map(|r| I::new(r[0], r[1]))
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        let t = I::new(free[0], free[1])?
+            .sub(I::point(range[0]))?
+            .div(I::point(range[1]).sub(I::point(range[0]))?)?;
+        for high in [false, true] {
+            if spent == budget {
+                return Ok((None, spent));
+            }
+            let (rail, used) = self.source_rail(high, across, budget - spent)?;
+            spent += used;
+            let Some(rail) = rail else {
+                return Ok((None, spent));
+            };
+            if spent == budget {
+                return Ok((None, spent));
+            }
+            let (old, used) = self.bridge.rail(high).enclose(across, budget - spent)?;
+            spent += used;
+            let Some(old) = old else {
+                return Ok((None, spent));
+            };
+            let weight = if high { t } else { I::point(1.).sub(t)? };
+            for k in 0..3 {
+                let error = I::new(rail[k][0], rail[k][1])?.sub(I::new(old[k][0], old[k][1])?)?;
+                result[k] = result[k].add(weight.mul(error)?)?;
+            }
+        }
+        Ok((
+            Some(std::array::from_fn(|k| [result[k].lo, result[k].hi])),
+            spent,
+        ))
     }
 }
 #[cfg(test)]

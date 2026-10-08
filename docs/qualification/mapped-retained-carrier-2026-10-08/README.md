@@ -1188,3 +1188,31 @@ proposal. Its side geometry must be constrained to the original neighbor
 supports, retaining exact source rail expressions and compatible endpoint
 derivatives. The needed side correction and resulting renewed regularity/
 injectivity checks are not implemented here. Whole-body admission remains open.
+
+## Source-rail position correction of the bridge
+
+`constrain_original_rails` binds both natural side rails to the same original
+profile used by both sections. It requires matching axes, exact affine
+coordinate width and matching endpoint scales, and independently qualifies
+both preserved original natural boundaries. Exact subtraction is admitted
+only for zero endpoints or the Sterbenz range; other arithmetic and rounded
+scales refuse. In particular authored 0.15 is not the exact width of binary64
+section parameters 0.75 and 0.9.
+
+The new expression adds linear free-coordinate weights of the two source-rail
+minus Hermite-rail errors. On each side it specializes to the original rail
+expression; at each section it preserves the original section. Interior
+position bounds share all 14 source queries and refuse insufficient work.
+No regularity or injectivity facts are inherited from the old bridge.
+
+The actual corrected high rail midpoint has nominal cylinder squared-radius
+residual [-1.3926637620897965e-11,1.1084466677857565e-11], containing zero,
+compared with the previous strictly negative residual near -7.403e-5.
+Structural source ownership, not this numerical enclosure alone, establishes
+the side position. The control fixture passed in 14.51 seconds. An independent
+rational planar reference checks the corrected interior positions against
+[4u/(1+3u),v,0], plus exact boundary behavior and work refusal.
+
+This is position geometry only. Corrected derivative fields, regularity,
+injectivity, side tangent planes, native shared-edge admission and corner
+closure remain required before the corrected bridge can be sewn into a Body.
