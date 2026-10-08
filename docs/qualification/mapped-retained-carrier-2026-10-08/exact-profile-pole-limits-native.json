@@ -1,0 +1,23 @@
+{
+  "scope": "native exact corrected profile pole limiting planes",
+  "face": 0,
+  "anchor": [
+    5,
+    0
+  ],
+  "highU": true,
+  "pole": [
+    20,
+    0,
+    6
+  ],
+  "spans": 4,
+  "distinctTangentLimits": true,
+  "sineSquaredInterval": [
+    0.9999999999997745,
+    1.0
+  ],
+  "regularG1Qualified": false,
+  "wholeBodyQualified": false,
+  "includedInWasm": false
+}

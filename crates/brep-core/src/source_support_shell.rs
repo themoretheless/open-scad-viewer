@@ -349,6 +349,10 @@ mod tests {
         let report=crate::source_profile_body::prepare(&body,&specs,
             crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
         let proposal=report.proposal.unwrap();
+        let (pole,spent)=proposal.profile(0).unwrap().pole_limits(true,1e-6,4).unwrap();
+        let pole=pole.expect("exact corrected pole limit diagnostic");assert_eq!(spent,4);
+        assert_eq!(pole.point,[20.,0.,6.]);assert!(pole.distinct_tangent_limits);
+        eprintln!("corrected profile pole distinct={} sine={:?} normals={:?}",pole.distinct_tangent_limits,pole.sine_squared_interval,pole.components);
         let report=proposal.qualify_edge(1,100,1e-6,2,4).unwrap();
         assert!(report.seam.is_none());assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
         let r=report.angular.unwrap();assert_eq!((r.cells,r.spans,r.accepted_cells),(2,4,1));

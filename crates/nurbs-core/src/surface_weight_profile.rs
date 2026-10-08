@@ -68,6 +68,14 @@ pub struct ProfilePathReport {
     pub pending: Vec<[f64; 2]>,
     pub reason: &'static str,
 }
+/// Diagnostic limiting planes for a collapsed natural U boundary of the exact
+/// proposed profile. Distinct limits cannot authorize a regular G1 pole.
+pub struct ProfilePoleLimits {
+    pub point: [f64; 3],
+    pub components: [[[f64; 2]; 3]; 2],
+    pub sine_squared_interval: Option<[f64; 2]>,
+    pub distinct_tangent_limits: bool,
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -373,6 +381,71 @@ impl<'source> WeightProfile<'source> {
         out.upper_sine_squared = Some(upper);
         out.reason = "profile-path-tangent-planes-qualified";
         Ok(out)
+    }
+    /// Compare factored one-sided transverse directions at both ends of a
+    /// collapsed U rail. The ordinary U derivative is combined with the exact
+    /// removed transverse factor; this is a pole diagnostic, not regularity.
+    pub fn pole_limits(
+        &self,
+        high: bool,
+        threshold: f64,
+        max_spans: usize,
+    ) -> Result<(Option<ProfilePoleLimits>, usize)> {
+        check(
+            threshold.is_finite() && (0. ..1.).contains(&threshold) && max_spans <= 100000,
+            "Bound proposed pole diagnostics",
+        )?;
+        let s = self.source;
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let knots = [&s.knots_u, &s.knots_v];
+        let row = &s.control_points[if high { counts[0] - 1 } else { 0 }];
+        if !row.iter().all(|p| p == &row[0]) {
+            return Ok((None, 0));
+        }
+        let u = knots[0][if high { counts[0] } else { degrees[0] }];
+        let vs = [knots[1][degrees[1]], knots[1][counts[1]]];
+        let span = [[knots[0][degrees[0]], knots[0][counts[0]]], vs];
+        let mut spent = 0;
+        let mut normals = [[[0.; 2]; 3]; 2];
+        for end in 0..2 {
+            let domain = [[u, u], [vs[end], vs[end]]];
+            let (direction, used) =
+                self.boundary_direction(domain, 1, vs[end], max_spans - spent)?;
+            spent += used;
+            let Some(direction) = direction else {
+                return Ok((None, spent));
+            };
+            if !matches!(direction.factor(),Some((factor_high,power)) if factor_high==high&&power>0)
+            {
+                return Ok((None, spent));
+            }
+            if spent == max_spans {
+                return Ok((None, spent));
+            }
+            let net = self.homogeneous_on(degrees, span)?;
+            let j = crate::normal_alignment::jacobian_net_on(net, degrees, span, domain, &row[0])?;
+            spent += 1;
+            let transverse = direction.components();
+            for k in 0..3 {
+                let a = (k + 1) % 3;
+                let b = (k + 2) % 3;
+                let n = j[a][0]
+                    .mul(I::new(transverse[b][0], transverse[b][1])?)?
+                    .sub(j[b][0].mul(I::new(transverse[a][0], transverse[a][1])?)?)?;
+                normals[end][k] = [n.lo, n.hi];
+            }
+        }
+        let compared = crate::normal_alignment::inspect_pair_bounds(normals, threshold)?;
+        Ok((
+            Some(ProfilePoleLimits {
+                point: [row[0][0], row[0][1], row[0][2]],
+                components: normals,
+                sine_squared_interval: compared.sine_squared_interval,
+                distinct_tangent_limits: compared.aligned == Some(false),
+            }),
+            spent,
+        ))
     }
     pub(crate) fn homogeneous_on(
         &self,
@@ -726,6 +799,28 @@ mod tests {
             .unwrap();
         assert_eq!(r.aligned, Some(false));
         assert_eq!(r.pending, vec![[0., 1.]]);
+    }
+    #[test]
+    fn exact_profile_pole_keeps_distinct_limiting_planes() {
+        let mut s = surface();
+        s.degree_u = 2;
+        s.knots_u = vec![0., 0., 0., 1., 1., 1.];
+        s.degree_v = 2;
+        s.knots_v = vec![0., 0., 0., 1., 1., 1.];
+        s.control_points = vec![
+            vec![vec![0., 0., 0.]; 3],
+            vec![vec![0.5, 0., 0.]; 3],
+            vec![vec![1., 0., 0.], vec![1., 0.5, 0.], vec![1., 1., 1.]],
+        ];
+        s.weights = vec![vec![1.; 3]; 3];
+        let profile = qualify_weight_profile(&s, [0, 0], 9).unwrap().0.unwrap();
+        let (limits, spent) = profile.pole_limits(false, 1e-6, 4).unwrap();
+        let limits = limits.unwrap();
+        assert_eq!(spent, 4);
+        assert_eq!(limits.point, [0.; 3]);
+        assert!(limits.distinct_tangent_limits);
+        assert!(profile.pole_limits(false, 1e-6, 3).unwrap().0.is_none());
+        assert!(profile.pole_limits(true, 1e-6, 4).unwrap().0.is_none());
     }
     #[test]
     fn two_corrected_profiles_use_their_actual_normals() {

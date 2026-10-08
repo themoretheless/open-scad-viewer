@@ -678,3 +678,21 @@ self-intersection or STEP qualification, and remains outside packaged WASM.
 All 18 source-support-shell tests pass after endpoint preflight, including the
 explicit singular-endpoint and quota-refusal controls and full incident edge
 5/6/8/15 angular checks. No original Body admission gate was relaxed.
+
+## Corrected pole limiting-plane diagnostic
+
+`WeightProfile::pole_limits` combines its exact nonnegative factored transverse
+boundary direction with the exact profile's U derivative at both V endpoints
+of a collapsed natural U rail. Its private source profile supplies all
+homogeneous expressions. The returned diagnostic does not assert regularity
+or authorize G1 at a pole. Unsupported factors and missing span work return no
+diagnostic, and zero-containing normals cannot prove distinct tangent limits.
+
+The actual corrected annular face 0 high-U pole [20,0,6] has distinct limiting
+planes: squared-sine interval [0.9999999999997745,1]. It consumes four spans.
+The limit normals point essentially along Z and X respectively. Thus the
+profile correction does not remove the original sharp pole; admitting a smooth
+end requires changing the transition geometry, not just accepting the corrected
+weights or the zero normal. Twelve profile tests and the native actual pole /
+endpoint-preflight regression pass, including underbudget and noncollapsed
+controls. Other incident seam certificates remain separate from this diagnosis.
