@@ -4,8 +4,8 @@
 //! constructors or reconstructs an AABB.  It translates the selected
 //! MANIFOLD_SOLID_BREP/BREP_WITH_VOIDS graph directly to/from `Model`.
 
-use crate::analytic_features::FeatureCertificate;
-use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
+use brep_core::analytic_features::FeatureCertificate;
+use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::{CoedgeTrim, Vertex};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use sha2::{Digest, Sha256};
@@ -3750,7 +3750,7 @@ fn import_step_direct(
                     allow_open_shells,
                 },
             )?;
-            let component = crate::transform::affine(&component, occurrence.transform)?;
+            let component = brep_core::transform::affine(&component, occurrence.transform)?;
             append_direct_model(&mut aggregate, component, &map, &mut aggregate_map);
         }
         aggregate.rebuild_topology_ids();
@@ -3777,7 +3777,7 @@ fn import_step_direct(
             },
         )?;
         if let Some(matrix) = placement {
-            model = crate::transform::affine(&model, matrix)?
+            model = brep_core::transform::affine(&model, matrix)?
         }
         (model, map)
     };
@@ -4683,46 +4683,6 @@ fn certify_step_v8_topology(model: &Model) -> Result<StepV8Certificate> {
         ],
     })
 }
-pub(crate) fn canonical_face_senses(model: &Model) -> Result<Model> {
-    let mut result = model.clone();
-    let reversed = result
-        .shells
-        .iter()
-        .flat_map(|shell| &shell.faces)
-        .filter(|usage| usage.reversed)
-        .map(|usage| usage.face)
-        .collect::<BTreeSet<_>>();
-    for face_index in reversed {
-        let face = &mut result.0.faces[face_index];
-        let sum = face.surface.knots_u[face.surface.degree_u]
-            + face.surface.knots_u[face.surface.knots_u.len() - face.surface.degree_u - 1];
-        face.surface.control_points.reverse();
-        face.surface.weights.reverse();
-        face.surface.knots_u.reverse();
-        for knot in &mut face.surface.knots_u {
-            *knot = sum - *knot
-        }
-        let mut loops = vec![face.outer];
-        loops.extend(face.holes.iter().copied());
-        for loop_index in loops {
-            for coedge in &mut result.0.loops[loop_index].coedges {
-                for point in &mut coedge.pcurve.control_points {
-                    point[0] = sum - point[0]
-                }
-                coedge.pcurve = coedge.pcurve.reverse()?;
-                coedge.reversed = !coedge.reversed;
-            }
-            result.0.loops[loop_index].coedges.reverse();
-        }
-    }
-    for shell in &mut result.0.shells {
-        for usage in &mut shell.faces {
-            usage.reversed = false
-        }
-    }
-    result.validate()?;
-    Ok(result)
-}
 pub(crate) fn refs_text(v: &[usize]) -> String {
     v.iter()
         .map(|x| format!("#{x}"))
@@ -4866,7 +4826,7 @@ fn export_step_direct(
     allow_degenerate: bool,
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
-    let canonical = canonical_face_senses(model)?;
+    let canonical = brep_core::face_senses::canonical_face_senses(model)?;
     let model = &canonical;
     let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
     if (!allow_open_shells && model.bodies.is_empty())
@@ -5323,10 +5283,10 @@ mod tests {
     #[test]
     fn partial_holed_revolution_is_not_mistaken_for_a_periodic_band() {
         let loops = vec![
-            crate::sketch::polygon_wire(vec![[3.,0.],[6.,0.],[6.,4.],[3.,4.]]).unwrap(),
-            crate::sketch::polygon_wire(vec![[4.,1.],[4.,3.],[5.,3.],[5.,1.]]).unwrap(),
+            brep_core::sketch::polygon_wire(vec![[3.,0.],[6.,0.],[6.,4.],[3.,4.]]).unwrap(),
+            brep_core::sketch::polygon_wire(vec![[4.,1.],[4.,3.],[5.,3.],[5.,1.]]).unwrap(),
         ];
-        let model=crate::revolve_region_angle(&loops,1e-7,90.).unwrap();
+        let model=brep_core::revolve_region_angle(&loops,1e-7,90.).unwrap();
         assert!(!periodic_patch_grid_compatible(&model,4,1));
         let periodic=periodicized_step_v6(&model).unwrap();
         assert_eq!(value_codec::to_value(&periodic).unwrap(),value_codec::to_value(&model).unwrap());
@@ -6044,9 +6004,9 @@ mod tests {
     #[test]
     fn v5_roundtrips_rational_analytic_bodies_and_sense_combinations() {
         for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(3., 1., 4.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
+            brep_core::cylinder(2., 3.).unwrap(),
+            brep_core::frustum(3., 1., 4.).unwrap(),
+            brep_core::torus(4., 1.).unwrap(),
         ] {
             let (text, _, _) = export_step_v5(&model).unwrap();
             assert!(text.contains("RATIONAL_B_SPLINE_"));
@@ -6055,7 +6015,7 @@ mod tests {
             assert_eq!(back.faces.len(), model.faces.len());
             back.validate().unwrap();
         }
-        let model = crate::cylinder(2., 3.).unwrap();
+        let model = brep_core::cylinder(2., 3.).unwrap();
         let (text, _, _) = export_step_v5(&model).unwrap();
         let text = text
             .lines()
@@ -6076,8 +6036,8 @@ mod tests {
     #[test]
     fn v6_roundtrips_certified_pole_boundaries() {
         for model in [
-            crate::sphere(2.).unwrap(),
-            crate::frustum(2., 0., 3.).unwrap(),
+            brep_core::sphere(2.).unwrap(),
+            brep_core::frustum(2., 0., 3.).unwrap(),
         ] {
             let degenerate = model.edges.iter().filter(|edge| edge.degenerate).count();
             if degenerate > 0 {
@@ -6097,10 +6057,10 @@ mod tests {
             back.validate().unwrap();
         }
         for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(2., 1., 3.).unwrap(),
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
+            brep_core::cylinder(2., 3.).unwrap(),
+            brep_core::frustum(2., 1., 3.).unwrap(),
+            brep_core::sphere(2.).unwrap(),
+            brep_core::torus(4., 1.).unwrap(),
         ] {
             let (text, _, _) = export_step_v6(&model).unwrap();
             assert!(text.contains("SEAM_CURVE("));
@@ -6150,10 +6110,10 @@ mod tests {
     #[test]
     fn v7_requires_whole_domain_boundary_identities_for_periodic_carriers() {
         for model in [
-            crate::cylinder(2., 3.).unwrap(),
-            crate::frustum(2., 1., 3.).unwrap(),
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
+            brep_core::cylinder(2., 3.).unwrap(),
+            brep_core::frustum(2., 1., 3.).unwrap(),
+            brep_core::sphere(2.).unwrap(),
+            brep_core::torus(4., 1.).unwrap(),
         ] {
             let (text, _, _) = export_step_v7(&model).unwrap();
             let (back, import_certificate, _) = import_step_v7(&text).unwrap();
@@ -6169,11 +6129,11 @@ mod tests {
     #[test]
     fn v8_carries_whole_domain_regularity_in_the_topology_certificate() {
         let expected = [
-            (crate::cylinder(2., 3.).unwrap(), "cylinder", 0),
-            (crate::frustum(2., 1., 3.).unwrap(), "cone", 0),
-            (crate::frustum(2., 0., 3.).unwrap(), "cone", 1),
-            (crate::sphere(2.).unwrap(), "sphere", 2),
-            (crate::torus(4., 1.).unwrap(), "torus", 0),
+            (brep_core::cylinder(2., 3.).unwrap(), "cylinder", 0),
+            (brep_core::frustum(2., 1., 3.).unwrap(), "cone", 0),
+            (brep_core::frustum(2., 0., 3.).unwrap(), "cone", 1),
+            (brep_core::sphere(2.).unwrap(), "sphere", 2),
+            (brep_core::torus(4., 1.).unwrap(), "torus", 0),
         ];
         for (model, carrier, collapsed) in expected {
             let (text, export_certificate, _) = export_step_v8(&model).unwrap();
@@ -6311,8 +6271,8 @@ mod tests {
         void_model.rebuild_topology_ids();
         void_model.validate().unwrap();
         let fixtures = [
-            crate::sphere(2.).unwrap(),
-            crate::torus(4., 1.).unwrap(),
+            brep_core::sphere(2.).unwrap(),
+            brep_core::torus(4., 1.).unwrap(),
             void_model,
         ];
         let exported = fixtures

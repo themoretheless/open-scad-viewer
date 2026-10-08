@@ -1,4 +1,5 @@
-use brep_core::{circular_blend::partial_annular_arc, export_step_v9};
+use brep_core::circular_blend::partial_annular_arc;
+use cad_step::export_step_v9;
 
 fn main() {
     let directory = std::env::args().nth(1).expect("output directory");

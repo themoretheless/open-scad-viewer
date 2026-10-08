@@ -4,8 +4,8 @@
 //! `step_interchange` / `step-interchange/1`. No Parasolid claims.
 //! `general-nurbs-step` is lifted here for freeform cuboid / bump / cavity solids.
 
-use crate::Model;
-use crate::analytic_features::FeatureCertificate;
+use brep_core::Model;
+use brep_core::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
     StepGraphRoot, StepWriter, as_uniform_bicubic, emit_b_spline_surface, fmt_refs,
     is_planar_surface, is_uniform_bicubic_positive, parse_entities, refuse,
@@ -19,7 +19,7 @@ pub const NURBS_STEP_SOLID_V2_CAPABILITY: &str = "step-interchange/2";
 
 /// Cuboid with each face elevated to uniform bicubic (degree 3×3, w≡1) for STEP honesty.
 pub fn freeform_cuboid_solid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
-    let mut model = crate::cuboid(min, max)?;
+    let mut model = brep_core::cuboid(min, max)?;
     for face in &mut model.faces {
         let elev = as_uniform_bicubic(&face.surface).ok_or_else(|| {
             refuse("freeform_cuboid_solid requires elevatable planar bilinear faces")
@@ -410,9 +410,9 @@ fn rebuild_from_surfaces(surfaces: &[Surface]) -> Result<Model> {
                 }
             }
         }
-        let outer = crate::cuboid(omin, omax)?;
-        let inner = crate::cuboid(imin, imax)?;
-        let mut result = crate::imprint_pipeline::cavity(
+        let outer = brep_core::cuboid(omin, omax)?;
+        let inner = brep_core::cuboid(imin, imax)?;
+        let mut result = brep_core::imprint_pipeline::cavity(
             &outer,
             &inner,
             outer.tolerance_mm.max(inner.tolerance_mm),
@@ -566,10 +566,10 @@ pub fn import_nurbs_step_solid_v2(
     let mut model = combined.ok_or_else(|| refuse("STEP /2 contains no admitted body"))?;
     model.rebuild_topology_ids();
     if let Some(matrix) = placement {
-        model = crate::transform::affine(&model, matrix)?;
+        model = brep_core::transform::affine(&model, matrix)?;
     }
     if (scale - 1.).abs() > f64::EPSILON {
-        model = crate::transform::affine(
+        model = brep_core::transform::affine(
             &model,
             [
                 [scale, 0., 0., 0.],
@@ -665,7 +665,7 @@ mod tests {
     fn a4_contained_boolean_difference_refuses_v2() {
         let a = freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
         let b0 = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
-        let b = crate::transform::affine(
+        let b = brep_core::transform::affine(
             &b0,
             [
                 [1., 0., 0., 1.],
@@ -675,7 +675,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let error = crate::nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap_err();
+        let error = brep_core::nurbs_boolean_imprint_solids(&a, &b, "difference").unwrap_err();
         assert_eq!(error.code, "BREP_NURBS_SS_REFUSED");
         assert!(
             error
@@ -736,9 +736,9 @@ mod tests {
         assert!(identity.preserved);
         assert_eq!(back.1.bodies, multi.1.bodies);
 
-        let outer = crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap();
-        let inner = crate::cuboid([1., 1., 1.], [2., 2., 2.]).unwrap();
-        let mut cavity = crate::imprint_pipeline::cavity(&outer, &inner, 1e-7).unwrap();
+        let outer = brep_core::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap();
+        let inner = brep_core::cuboid([1., 1., 1.], [2., 2., 2.]).unwrap();
+        let mut cavity = brep_core::imprint_pipeline::cavity(&outer, &inner, 1e-7).unwrap();
         for face in &mut cavity.faces {
             face.surface = as_uniform_bicubic(&face.surface).unwrap();
         }

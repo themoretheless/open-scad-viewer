@@ -5,8 +5,8 @@
 //! topology graph directly; it never recognizes constructors, derives an
 //! AABB, or crosses through a mesh.
 
-use crate::analytic_features::FeatureCertificate;
-use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
+use brep_core::analytic_features::FeatureCertificate;
+use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::Vertex;
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};

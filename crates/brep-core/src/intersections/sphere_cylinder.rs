@@ -62,17 +62,17 @@ pub enum SphereCylinderComponent {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalCylinder {
+pub struct CanonicalCylinder {
     /// Midpoint of the axis segment.
-    pub(crate) center: [f64; 3],
+    pub center: [f64; 3],
     /// Unit axis, bottom cap toward top cap.
-    pub(crate) axis: [f64; 3],
-    pub(crate) radius: f64,
-    pub(crate) half_height: f64,
+    pub axis: [f64; 3],
+    pub radius: f64,
+    pub half_height: f64,
     /// Observed structural deviation bound; feeds the outward classification.
     pub(crate) error: f64,
     /// In-plane orthonormal ring frame: x = quadrant-0 direction, y = axis x x.
-    pub(crate) frame: [[f64; 3]; 2],
+    pub frame: [[f64; 3]; 2],
     /// Side face indices ordered by quadrant.
     pub(crate) sides: [usize; 4],
     /// Cap face indices: [bottom, top].
@@ -105,7 +105,7 @@ fn point_of(jet_point: &[f64]) -> [f64; 3] {
 /// every control point against the exact construction in the recovered ring
 /// frame, a globally consistent quadrant tiling, and both ring vertex sets.
 /// Rigid affine placement is admitted; anything else returns `None`.
-pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
+pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1

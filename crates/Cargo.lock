@@ -340,6 +340,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cad-step"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "sha2",
+ "value-codec",
+]
+
+[[package]]
 name = "cc"
 version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -786,6 +797,7 @@ dependencies = [
  "bridge-codec",
  "bridge-svg",
  "cad-predicates",
+ "cad-step",
  "compute-core",
  "gcode-core",
  "geometry-ops",

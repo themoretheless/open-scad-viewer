@@ -6,11 +6,11 @@
 //! fallback for curved solids, never silent height defaults). FACETED / STL /
 //! OBJ / incomplete graphs refuse.
 
-use crate::analytic::{cylinder, frustum, sphere, torus, tube};
-use crate::analytic_features::FeatureCertificate;
-use crate::intersections::{recognize_cone, recognize_cylinder, recognize_sphere, recognize_torus};
-use crate::transform;
-use crate::{Model, TopoId, TopoKind, cuboid};
+use brep_core::analytic::{cylinder, frustum, sphere, torus, tube};
+use brep_core::analytic_features::FeatureCertificate;
+use brep_core::intersections::{recognize_cone, recognize_cylinder, recognize_sphere, recognize_torus};
+use brep_core::transform;
+use brep_core::{Model, TopoId, TopoKind, cuboid};
 use nurbs_core::{Error, Result};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
@@ -438,7 +438,7 @@ fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
     if caps.len() != 2 || sides != 8 {
         return None;
     }
-    let plane_normal = |face: &crate::Face| -> Option<[f64; 3]> {
+    let plane_normal = |face: &brep_core::Face| -> Option<[f64; 3]> {
         let cps = &face.surface.control_points;
         if cps.len() < 2 || cps[0].len() < 2 || cps[0][0].len() != 3 {
             return None;
@@ -1819,8 +1819,8 @@ pub fn import_step_v2(text: &str) -> Result<(Model, FeatureCertificate, StepIden
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analytic::{cylinder, frustum, sphere, torus, tube};
-    use crate::cuboid;
+    use brep_core::analytic::{cylinder, frustum, sphere, torus, tube};
+    use brep_core::cuboid;
 
     fn envelope_ok(a: &Model, b: &Model, tol: f64) {
         let (amin, amax) = model_bounds(a);
@@ -2048,7 +2048,7 @@ mod tests {
     #[test]
     fn roundtrip_oriented_tube() {
         let base = tube(3., 1.5, 4.).unwrap();
-        let model = crate::transform::affine(
+        let model = brep_core::transform::affine(
             &base,
             [
                 [0., 0., 1., 1.],

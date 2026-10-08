@@ -785,11 +785,6 @@ mod imported_cap_tests {
         assert!((point[1]-(1.5*source[1]+3.5)).abs()<1e-12);
         assert!((point[2]-5.).abs()<1e-12);
         assert!(side.weights.iter().flatten().any(|w| *w!=1.));
-        let (step,_,_)=crate::step_interchange_v3::export_step_v9(&loft).unwrap();
-        let (restored,_,_)=crate::step_interchange_v3::import_step_v9(&step).unwrap();
-        restored.validate().unwrap();
-        assert_eq!(restored.bodies.len(),1);
-        assert_eq!(restored.faces.iter().filter(|face|face.holes.len()==1).count(),2);
         for scale in [0.,-1.,f64::NAN,f64::INFINITY] {
             assert!(loft_scaled(&loops,0.,10.,scale,[0.,0.]).is_err());
         }

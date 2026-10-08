@@ -68,9 +68,9 @@ struct PatchFrame {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalSphere {
-    pub(crate) center: [f64; 3],
-    pub(crate) radius: f64,
+pub struct CanonicalSphere {
+    pub center: [f64; 3],
+    pub radius: f64,
     /// Observed structural deviation bound; feeds the outward classification.
     pub(crate) error: f64,
     patches: Vec<PatchFrame>,
@@ -93,7 +93,7 @@ pub(crate) fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
 /// control point and weight against the exact construction in its recovered
 /// frame, the exact quarter-disk trim pcurves, and a globally consistent
 /// pole/quadrant tiling (each (hemisphere, quadrant) pair exactly once).
-pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
+pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1

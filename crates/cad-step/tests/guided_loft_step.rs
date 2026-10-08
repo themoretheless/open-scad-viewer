@@ -89,12 +89,12 @@ fn guided_loft_retains_curved_boundaries_and_jets_through_step_v9() {
     )
     .unwrap();
     let model = open_face(s);
-    let (text, _, _) = brep_core::export_step_v9(&model).unwrap();
+    let (text, _, _) = cad_step::export_step_v9(&model).unwrap();
     assert!(text.contains("SHELL_BASED_SURFACE_MODEL"));
     if let Ok(path) = std::env::var("LOFT_STEP_OUTPUT") {
         std::fs::write(path, &text).unwrap();
     }
-    let (back, _, _) = brep_core::import_step_v9(&text).unwrap();
+    let (back, _, _) = cad_step::import_step_v9(&text).unwrap();
     assert_eq!(back.faces.len(), 1);
     assert_eq!(back.edges.len(), 4);
     assert!(!back.shells[0].closed);
@@ -189,8 +189,8 @@ fn rational_and_multiple_guide_step_matrix() {
     ];
     for (name, surface) in cases {
         let model = open_face(surface.clone());
-        let (text, _, _) = brep_core::export_step_v9(&model).unwrap();
-        let (back, _, _) = brep_core::import_step_v9(&text).unwrap();
+        let (text, _, _) = cad_step::export_step_v9(&model).unwrap();
+        let (back, _, _) = cad_step::import_step_v9(&text).unwrap();
         let mut samples = Vec::new();
         for u in [0., 0.13, 0.37, 0.83, 1.] {
             for v in [0., 0.17, 0.37, 0.83, 1.] {
@@ -287,8 +287,8 @@ fn closed_loft_step_retains_shared_seam_and_cyclic_jets() {
     );
     model.rebuild_topology_ids();
     model.validate().unwrap();
-    let (text, _, _) = brep_core::export_step_v9(&model).unwrap();
-    let (back, _, _) = brep_core::import_step_v9(&text).unwrap();
+    let (text, _, _) = cad_step::export_step_v9(&model).unwrap();
+    let (back, _, _) = cad_step::import_step_v9(&text).unwrap();
     assert_eq!(back.edges.len(), 3);
     let mut samples = Vec::new();
     for u in [0., 0.13, 0.37, 0.83, 1.] {

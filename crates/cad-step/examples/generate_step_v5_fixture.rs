@@ -1,6 +1,7 @@
-use brep_core::{
-    Body, Model, bicubic_open_face, cylinder, export_step_v5, export_step_v6, export_step_v8,
-    export_step_v9, freeform_cuboid_solid, frustum, sphere, torus, tube,
+use brep_core::{Body, Model, cylinder, frustum, sphere, torus, tube};
+use cad_step::{
+    bicubic_open_face, export_step_v5, export_step_v6, export_step_v8, export_step_v9,
+    freeform_cuboid_solid,
 };
 use nurbs_core::surface::Surface;
 

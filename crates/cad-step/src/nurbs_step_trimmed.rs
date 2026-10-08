@@ -3,14 +3,14 @@
 //! Capability `nurbs-step-trimmed-bicubic/1`. Peer to `nurbs-step-bicubic-face/1`;
 //! constructor solids stay on `step_interchange`. No MANIFOLD_SOLID_BREP.
 
-use crate::analytic_features::FeatureCertificate;
+use brep_core::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
     PcurveLineEdge, StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs,
     invert_uv, is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common,
     resolve_cartesian, split_top_args, step_header, surface_from_b_spline_args,
     validate_linked_step_graph,
 };
-use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Result, surface::Surface};
 
 pub const NURBS_STEP_TRIMMED_BICUBIC_CAPABILITY: &str = "nurbs-step-trimmed-bicubic/1";
@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn refuses_solid_export_and_import() {
-        let solid = crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let solid = brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
         assert_eq!(
             export_nurbs_step_trimmed(&solid).unwrap_err().code,
             "BREP_NURBS_STEP_REFUSED"

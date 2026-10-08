@@ -176,7 +176,7 @@ mod tests {
     use value_codec::json;
     #[test]
     fn mixed_shell_display_keeps_exact_triangle_ownership() {
-        let mut model = brep_core::step_interchange_v3::import_step_v9(include_str!(
+        let mut model = cad_step::import_step_v9(include_str!(
             "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
         )).unwrap().0;
         model.bodies.pop();

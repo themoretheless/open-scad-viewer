@@ -11,9 +11,9 @@ nurbs-core = { path = "../nurbs-core" }
 brep-topology = { path = "../brep-topology" }
 planar-geometry = { path = "../planar-geometry" }
 cad-predicates = { path = "../cad-predicates" }
-sha2 = "0.11"
 
 [dev-dependencies]
+sha2 = "0.11"
 rbench = { workspace = true }
 
 [[example]]

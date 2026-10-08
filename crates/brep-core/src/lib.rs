@@ -34,15 +34,10 @@ pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
 pub mod close_topology;
 pub mod coverage_verifier;
 mod cylinder_sphere_boolean;
-pub mod iges_interchange_v2;
 pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
 pub mod nurbs_ss_general;
-pub mod nurbs_step_interchange;
-mod nurbs_step_shared;
-pub mod nurbs_step_solid;
-pub mod nurbs_step_trimmed;
 pub mod operations;
 mod body_edit;
 pub mod planar_trim;
@@ -63,6 +58,7 @@ pub mod solid_distance;
 pub mod shell_relation;
 pub mod shell_nesting;
 pub mod shell_orientation;
+pub mod face_senses;
 pub mod ray_parity;
 pub mod predicate_evidence;
 pub mod prism;
@@ -75,8 +71,6 @@ pub mod boundary_embedding;
 pub mod boundary_hull_contact;
 pub mod volume_validity;
 mod sphere_boolean;
-pub mod step_interchange;
-pub mod step_interchange_v3;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
@@ -98,20 +92,15 @@ pub use analytic_features::{
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_bent_rmf_sweep,
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
     exact_analytic_shell, exact_annular_fillet, exact_layered_prism_fillet, exact_convex_chamfer, exact_convex_prism_fillet, exact_simple_prism_fillet,
-    exact_valence3_corner_blend, exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep,
-    import_iges,
+    exact_valence3_corner_blend, exact_variable_radius_fillet, frame_law_ruled_sweep,
 };
 pub use close_topology::{
-    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, CLOSE_TOPOLOGY_IGES_CAPABILITY,
-    CLOSE_TOPOLOGY_STEP_CAPABILITY, ComplexHealCertificate, ComplexHealPlan,
-    ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind, EdgeRadialRing, EdgeUseRef,
-    ExactParameterPartition, FaceRef, LocalCorrespondence, MixedDimensionalBrep, SharedFace,
-    TOLERANT_COMPLEX_HEAL_CAPABILITY, TopologyComplexCertificate, VertexFan, VertexUseRef,
-    certify_complex_heal, complex_relation_id, export_complex_iges, export_complex_step,
-    import_complex_iges, import_complex_step,
-};
-pub use iges_interchange_v2::{
-    IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
+    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, ComplexHealCertificate,
+    ComplexHealPlan, ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind,
+    EdgeRadialRing, EdgeUseRef, ExactParameterPartition, FaceRef, LocalCorrespondence,
+    MixedDimensionalBrep, SharedFace, TOLERANT_COMPLEX_HEAL_CAPABILITY,
+    TopologyComplexCertificate, VertexFan, VertexUseRef, certify_complex_heal,
+    complex_relation_id,
 };
 pub use nurbs_ss_g6::{
     BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
@@ -133,35 +122,9 @@ pub use nurbs_ss_general::{
     GENERAL_SS_CAPABILITY, GeneralBranchGraph, GeneralSsBranch, branch_graph_from_ss_report,
     rational_traces_from_ss_report, verify_general_ss_branch_graph,
 };
-pub use nurbs_step_interchange::{
-    NURBS_STEP_BICUBIC_FACE_CAPABILITY, bicubic_open_face, export_nurbs_step, import_nurbs_step,
-};
-pub use nurbs_step_solid::{
-    NURBS_STEP_SOLID_CAPABILITY, NURBS_STEP_SOLID_V2_CAPABILITY, export_nurbs_step_solid,
-    export_nurbs_step_solid_v2, freeform_cuboid_solid, freeform_cuboid_with_bump_face,
-    import_nurbs_step_solid, import_nurbs_step_solid_v2,
-};
-pub use nurbs_step_trimmed::{
-    NURBS_STEP_TRIMMED_BICUBIC_CAPABILITY, bicubic_trimmed_face, export_nurbs_step_trimmed,
-    import_nurbs_step_trimmed,
-};
 pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
     faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
-};
-pub use step_interchange::{
-    STEP_INTERCHANGE_V2_CAPABILITY, StepIdentityReport, export_step, export_step_v2, import_step,
-    import_step_v2,
-};
-pub use step_interchange_v3::{
-    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, STEP_INTERCHANGE_V5_CAPABILITY,
-    STEP_INTERCHANGE_V6_CAPABILITY, STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
-    STEP_INTERCHANGE_V9_CAPABILITY, STEP_INTERCHANGE_V10_CAPABILITY, StepRegularityEvidence,
-    StepV3Report, StepV8Certificate, StepV10Document, compose_step_v7_occurrences,
-    compose_step_v8_occurrences, compose_step_v9_occurrences, export_step_v3, export_step_v4,
-    export_step_v5, export_step_v6, export_step_v7, export_step_v8, export_step_v9,
-    export_step_v10, import_step_v3, import_step_v4, import_step_v5, import_step_v6,
-    import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
 
 pub use brep_topology::{
@@ -1913,8 +1876,6 @@ pub mod source_root_refinement;
 pub mod source_exchange_endpoints;
 
 pub mod source_exchange_trims;
-
-pub mod source_exchange_step;
 
 pub mod source_support_shell;
 

@@ -187,20 +187,20 @@ pub enum PlaneConeComponent {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalCone {
+pub struct CanonicalCone {
     /// Bottom ring center (the apex itself when the bottom radius is zero).
-    pub(crate) bottom: [f64; 3],
+    pub bottom: [f64; 3],
     /// Unit axis, bottom ring toward top ring.
-    pub(crate) axis: [f64; 3],
-    pub(crate) r_bottom: f64,
-    pub(crate) r_top: f64,
-    pub(crate) height: f64,
+    pub axis: [f64; 3],
+    pub r_bottom: f64,
+    pub r_top: f64,
+    pub height: f64,
     /// Radius slope (r_top - r_bottom) / height, certified nonzero.
     pub(crate) slope: f64,
     /// Observed structural deviation bound; feeds the outward classification.
     pub(crate) error: f64,
     /// In-plane orthonormal ring frame: x = quadrant-0 direction, y = axis x x.
-    pub(crate) frame: [[f64; 3]; 2],
+    pub frame: [[f64; 3]; 2],
     /// Side face indices ordered by quadrant.
     pub(crate) sides: [usize; 4],
     /// Cap face indices [bottom, top]; None for an apex ring.
@@ -242,7 +242,7 @@ fn hypot3(v: [f64; 3]) -> f64 {
 /// certified-nonzero taper (an equal-radius frustum is a cylinder and is
 /// refused here). Rigid affine placement is admitted; anything else
 /// returns `None`.
-pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
+pub fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
     model.validate()?;
     if model.bodies.len() != 1 || model.shells.len() != 1 {
         return Ok(None);

@@ -285,7 +285,7 @@ fn step_successor_bridge_reports_identity_preservation_and_loss() {
 
 #[test]
 fn direct_step_v3_bridge_preserves_exact_graph() {
-    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
     let expected = encode(model).unwrap();
     let exported = dispatch(json!({
         "op": "brep_nurbs_export_step_v3",
@@ -311,7 +311,7 @@ fn direct_step_v3_bridge_preserves_exact_graph() {
 
 #[test]
 fn direct_step_v5_bridge_exposes_ap242_report() {
-    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
     let exported =
         dispatch(json!({"op":"brep_nurbs_export_step_v5","model":encode(model).unwrap()})).unwrap();
     assert_eq!(exported["certificate"]["capability"], "step-interchange/5");
@@ -348,7 +348,7 @@ fn direct_step_v6_bridge_roundtrips_poles_and_reports_identities() {
 
 #[test]
 fn direct_step_v7_bridge_composes_occurrence_topology() {
-    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
     let exported =
         dispatch(json!({"op":"brep_nurbs_export_step_v7","model":encode(model).unwrap()})).unwrap();
     assert_eq!(exported["certificate"]["capability"], "step-interchange/7");
@@ -403,7 +403,7 @@ fn direct_step_v9_bridge_retains_open_shell() {
         periodic_u: false,
         periodic_v: false,
     };
-    let model = brep_core::bicubic_open_face(surface).unwrap();
+    let model = cad_step::bicubic_open_face(surface).unwrap();
     let exported =
         dispatch(json!({"op":"brep_nurbs_export_step_v9","model":encode(model).unwrap()})).unwrap();
     assert_eq!(exported["certificate"]["capability"], "step-interchange/9");
@@ -421,7 +421,7 @@ fn direct_step_v9_bridge_retains_open_shell() {
 
 #[test]
 fn direct_iges_v2_bridge_preserves_exact_graph() {
-    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
     let exported = dispatch(json!({
         "op":"brep_nurbs_export_iges_v2",
         "model":encode(model).unwrap(),
@@ -687,7 +687,7 @@ fn freeform_nurbs_step_export_import_roundtrip() {
         periodic_u: false,
         periodic_v: false,
     };
-    let model = encode(brep_core::bicubic_open_face(surface).unwrap()).unwrap();
+    let model = encode(cad_step::bicubic_open_face(surface).unwrap()).unwrap();
     let exported = dispatch(json!({
         "op": "brep_nurbs_export_step_freeform",
         "model": model,
@@ -740,7 +740,7 @@ fn freeform_nurbs_step_trimmed_and_solid_bridge() {
         periodic_v: false,
     };
     let hole = [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]];
-    let trimmed = encode(brep_core::bicubic_trimmed_face(surface, hole).unwrap()).unwrap();
+    let trimmed = encode(cad_step::bicubic_trimmed_face(surface, hole).unwrap()).unwrap();
     let exported = dispatch(json!({
         "op": "brep_nurbs_export_step_trimmed",
         "model": trimmed,
@@ -765,7 +765,7 @@ fn freeform_nurbs_step_trimmed_and_solid_bridge() {
     );
 
     let solid =
-        encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 2., 2.]).unwrap()).unwrap();
+        encode(cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 2., 2.]).unwrap()).unwrap();
     let sexported = dispatch(json!({
         "op": "brep_nurbs_export_step_solid",
         "model": solid,
@@ -786,8 +786,8 @@ fn freeform_nurbs_step_trimmed_and_solid_bridge() {
     .unwrap();
     assert_eq!(simported["model"]["faces"].as_array().unwrap().len(), 6);
 
-    let outer = brep_core::freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
-    let inner = brep_core::freeform_cuboid_solid([2., -1., 0.], [5., 3., 4.]).unwrap();
+    let outer = cad_step::freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
+    let inner = cad_step::freeform_cuboid_solid([2., -1., 0.], [5., 3., 4.]).unwrap();
     let (boolean_result, boolean_cert) =
         brep_core::nurbs_boolean_imprint_solids(&outer, &inner, "difference").unwrap();
     assert_eq!(boolean_cert.capability, "nurbs-boolean-bezier-le3/2");
@@ -1049,7 +1049,7 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
 #[test]
 fn certified_freeform_tessellation_crosses_bridge() {
     let planar =
-        encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap()).unwrap();
+        encode(cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap()).unwrap();
     assert!(
         dispatch(json!({
             "op":"brep_nurbs_certified_tessellate",
@@ -1075,7 +1075,7 @@ fn certified_freeform_tessellation_crosses_bridge() {
     assert_eq!(planar_cert["audit"]["ok"], true);
 
     let bump =
-        encode(brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
+        encode(cad_step::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
             .unwrap();
     let bump_cert = dispatch(json!({
         "op":"brep_nurbs_certified_freeform_tessellate",
@@ -1100,7 +1100,7 @@ fn certified_freeform_tessellation_crosses_bridge() {
 #[test]
 fn certified_freeform_mass_crosses_bridge() {
     let planar =
-        encode(brep_core::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
+        encode(cad_step::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
     assert!(
         dispatch(json!({
             "op":"brep_nurbs_certified_mass_properties",
@@ -1123,7 +1123,7 @@ fn certified_freeform_mass_crosses_bridge() {
     assert_eq!(mass["namingComplete"], true);
 
     let bump =
-        encode(brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
+        encode(cad_step::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
             .unwrap();
     assert!(
         dispatch(json!({

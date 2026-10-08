@@ -18,6 +18,7 @@ export const CRATE_LAYERS = {
   'geometry-ops': 2, 'planar-geometry': 2, 'polygon-core': 2, 'nurbs-core': 2, 'sdf-core': 2,
   'subdivision-core': 2, 'sketch-core': 2, 'brep-topology': 2,
   'brep-core': 3,
+  'cad-step': 4,
   'openscad-core': 4, 'modelgraph-runtime': 4, 'modelgraph-text': 4, 'mechanical-core': 4,
   'mechanics-core': 4, 'gcode-core': 4, 'gcode-optimize': 4, 'slicer-core': 4, 'laser-core': 4,
   'printer-core': 4, 'photogrammetry-core': 4,

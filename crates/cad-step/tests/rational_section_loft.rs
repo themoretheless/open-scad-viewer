@@ -96,9 +96,9 @@ fn law(a: f64, b: f64) -> Curve {
 #[test]
 fn retained_hollow_rational_loft_step_roundtrip_preserves_topology_and_surfaces() {
     let model = rational_section_loft(&[circles(0., 1.), circles(10., 2.)]).unwrap();
-    let (text, _, _) = brep_core::export_step_v5(&model).unwrap();
+    let (text, _, _) = cad_step::export_step_v5(&model).unwrap();
     assert!(text.contains("RATIONAL_B_SPLINE_SURFACE"));
-    let (restored, _, _) = brep_core::import_step_v5(&text).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&text).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(restored.faces.len(), model.faces.len());
     assert_eq!(restored.edges.len(), model.edges.len());
@@ -230,8 +230,8 @@ fn natural_capped_loft_step_roundtrip_and_independent_fixture() {
         &[0., 0.5, 1.],
     )
     .unwrap();
-    let (text, _, _) = brep_core::export_step_v9(&model).unwrap();
-    let restored = brep_core::import_step_v9(&text).unwrap().0;
+    let (text, _, _) = cad_step::export_step_v9(&model).unwrap();
+    let restored = cad_step::import_step_v9(&text).unwrap().0;
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(restored.bodies.len(), 1);
     assert_eq!(restored.faces.len(), model.faces.len());
@@ -283,6 +283,6 @@ fn differing_section_weights_retain_rational_sections_and_closed_topology() {
             }
         }
     }
-    let (step, _, _) = brep_core::export_step_v5(&natural).unwrap();
+    let (step, _, _) = cad_step::export_step_v5(&natural).unwrap();
     assert!(step.contains("RATIONAL_B_SPLINE_SURFACE"));
 }

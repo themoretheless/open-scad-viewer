@@ -27,6 +27,7 @@ mechanical-core = { path = "../mechanical-core" }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
 brep-core = { path = "../brep-core" }
+cad-step = { path = "../cad-step" }
 cad-predicates = { path = "../cad-predicates" }
 planar-geometry = { path = "../planar-geometry" }
 subdivision-core = { path = "../subdivision-core" }

@@ -1250,8 +1250,8 @@ mod registry_tests {
     #[test]
     fn periodic_step_sphere_tessellates_with_shared_seam_and_poles() {
         let source = brep_core::sphere(2.).unwrap();
-        let text = brep_core::export_step_v6(&source).unwrap().0;
-        let model = brep_core::import_step_v6(&text).unwrap().0;
+        let text = cad_step::export_step_v6(&source).unwrap().0;
+        let model = cad_step::import_step_v6(&text).unwrap().0;
         nurbs(&model, 8).unwrap();
     }
     fn append_model(target: &mut brep_core::Model, mut source: brep_core::Model) {

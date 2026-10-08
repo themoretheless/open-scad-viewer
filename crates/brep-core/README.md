@@ -91,9 +91,9 @@ agreement; it does not claim general solid-geometric certification.
   (`nurbs-ss-bezier-le3/1`: Bezier deg≤3 elevated to bicubic).
 - `trim_sew` provides chart classification + exact sew without auto-heal.
 - `analytic_features` publishes AnalyticComplete fillet/chamfer/shell/solid-loft
-  under their QualificationPlans (faceted ≠ analytic). Constructor STEP lives in
-  `step_interchange`; freeform bicubic open-face STEP in `nurbs_step_interchange`
-  (`nurbs-step-bicubic-face/1`).
+  under their QualificationPlans (faceted ≠ analytic). STEP and IGES interchange
+  lives in the `cad-step` crate (`step_interchange`, `nurbs_step_interchange`,
+  `iges_interchange_v2`), which reads this crate through its public API.
 - `prism::extrude(loops, z_min, z_max)` accepts material-left 2D NURBS loops:
   CCW outer boundaries, CW holes, and nested islands. Active knots split retained
   curves into individual edges so a closed multi-span curve does not collapse
