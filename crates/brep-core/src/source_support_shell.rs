@@ -439,6 +439,17 @@ mod tests {
             assert_eq!(constrained.inspect_support_rail_normals(high,[0.5;2],1e-6,36).unwrap().aligned,None);
             eprintln!("constrained rail high={} aligned={:?} sine={:?} spans={}",high,report.aligned,report.sine_squared_interval,report.spans);
         }
+        for sample in [0.25,0.5,0.75] {
+            let (normal,spans)=constrained.normals_with_transverse_correction([sample;2],[sample;2],54).unwrap();
+            let normal=normal.unwrap();
+            assert!(normal.iter().any(|r|r[0]>0.||r[1]<0.));
+            eprintln!("full Hermite point={sample} normal={normal:?} spans={spans}");
+        }
+        for high in [false,true] {
+            let join=constrained.inspect_transverse_corrected_side_join(high,[0.,1.],1000,1000).unwrap();
+            assert!(join.complete_regular);
+            eprintln!("full Hermite side={high} cells={} spans={}",join.cells,join.spans);
+        }
         let full_cover=constrained.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],1000,72000).unwrap();
         let full_area:f64=full_cover.regular.iter().chain(&full_cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
         assert_eq!(full_area,1.);

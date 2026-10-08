@@ -1342,3 +1342,21 @@ instead of 72. The independent quartic derivative, whole-domain regularity
 and full-side join regression passed in 39.82 seconds, including refusal at
 53 spans. This establishes the query reduction, not a runtime speedup claim.
 The annular point-normal and whole-side diagnostics are being tested separately.
+
+## Annular source-side qualification after shared-jet reuse
+
+The annular full correction has nonzero normal enclosures at paired free/across
+parameters 0.25, 0.5 and 0.75, using 54 spans each. The source-side join
+qualification covers both complete across intervals: 9 cells/spans for the
+planar side and 5 for the cylindrical side, with no pending intervals.
+This uses exact Hermite source-jet identity and nonzero source normals.
+Neighboring Body support ownership is still not qualified by these results.
+The separate full-domain regularity calculation remains necessary; point
+normals and side regularity do not certify the bridge interior.
+
+The updated native control completed successfully. Full-domain regularity
+remains unresolved: 0 accepted cells, 1001 pending rectangles, 1000 cells,
+54000 spans. Shared jet reuse reduced source query work but did not tighten
+the geometric enclosure enough for admission. The next correction must
+retain dependencies between the source and bridge error fields rather than
+merely reuse their independently bounded jets.
