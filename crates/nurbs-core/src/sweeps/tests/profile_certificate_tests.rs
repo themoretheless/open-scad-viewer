@@ -169,3 +169,66 @@
         let r = certify(&p, &path, &s, [1., 0., 0.], &surface, 100., 100).unwrap();
         assert!(!r.within_budget && r.error_upper.is_none());
     }
+
+    #[test]
+    fn oblique_multi_span_tangent_is_exact_and_budgeted() {
+        let p=curve(&[[1.,0.,0.],[2.,0.,0.]],&[1.,1.],[0.,1.]);
+        let path=Curve { degree:2, knots:vec![0.,0.,0.,0.5,0.5,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![0.,0.015625,1.],vec![0.,0.03125,2.],vec![0.,0.046875,3.],vec![0.,0.,4.]],
+            weights:vec![1.;5],periodic:false };
+        let original=path.clone();
+        let law=constant_vector_law([1.,0.,0.]).unwrap();
+        let surface=retained(&p,&path,&law,[1.,0.,0.],9);
+        let report=certify(&p,&path,&law,[1.,0.,0.],&surface,0.01,10000).unwrap();
+        assert!(report.within_budget,"{report:?}");
+        assert_eq!(report.method,"interval-planar-bishop-frame");
+        let mut changed=path.clone();changed.control_points[3][1]=changed.control_points[3][1].next_up();
+        let refused=certify(&p,&changed,&law,[1.,0.,0.],&surface,0.01,10000).unwrap();
+        assert_eq!(refused.reason,Some("continuous-path-tangent-unproved"));
+        assert!(refused.error_upper.is_none());
+        for limit in [0,1,2,10] {
+            let limited=certify(&p,&path,&law,[1.,0.,0.],&surface,0.01,limit).unwrap();
+            assert!(!limited.within_budget && limited.error_upper.is_none());assert!(limited.cells<=limit);
+        }
+        assert_eq!(path,original);
+    }
+
+    #[test]
+    fn tilted_planar_bishop_bound_contains_independent_constant_normal_oracle() {
+        let p=curve(&[[1.,-1.,0.],[2.,-2.,0.]],&[1.,2.],[0.,1.]);
+        let path=curve(&[[0.,0.,0.],[0.125,0.125,2.],[0.,0.,4.]],&[1.,1.,1.],[-2.,3.]);
+        let law=constant_vector_law([1.,0.,0.]).unwrap();
+        let surface=retained(&p,&path,&law,[1.,-1.,0.],9);
+        let report=certify(&p,&path,&law,[1.,-1.,0.],&surface,0.01,10000).unwrap();
+        assert!(report.within_budget,"{report:?}");
+        assert_eq!(report.method,"interval-planar-bishop-frame");
+        for i in 0..=100 {
+            let v=i as f64/100.; let c=path.evaluate(-2.+5.*v).unwrap().point;
+            let q=p.evaluate(0.37).unwrap().point;let actual=surface.evaluate(0.37,v).unwrap().point;
+            let distance=(0..3).map(|k|(actual[k]-c[k]-q[k]).powi(2)).sum::<f64>().sqrt();
+            assert!(distance<=report.error_upper.unwrap(),"{distance} {report:?}");
+        }
+        let tiny=certify(&p,&path,&law,[1.,-1.,0.],&surface,0.01,1).unwrap();
+        assert!(tiny.error_upper.is_none() && !tiny.within_budget && tiny.cells<=1);
+    }
+
+    #[test]
+    fn closed_tilted_planar_path_has_exact_oblique_seam_premise_at_six_and_ten_stations() {
+        let path=Curve{degree:2,knots:vec![0.,0.,0.,0.25,0.25,0.5,0.5,0.75,0.75,1.,1.,1.],
+            control_points:vec![vec![3.,0.,0.],vec![3.,3.,3.],vec![0.,3.,3.],vec![-3.,3.,3.],vec![-3.,0.,0.],vec![-3.,-3.,-3.],vec![0.,-3.,-3.],vec![3.,-3.,-3.],vec![3.,0.,0.]],
+            weights:vec![1.,1.,2.,2.,4.,4.,8.,8.,16.],periodic:false};
+        let p=curve(&[[3.,-0.125,0.125],[3.,-0.25,0.25]],&[1.,1.],[0.,1.]);
+        let law=constant_vector_law([1.,0.,0.]).unwrap();
+        for count in [6,10] {
+            let surface=retained(&p,&path,&law,[0.,-1.,1.],count);
+            let report=certify(&p,&path,&law,[0.,-1.,1.],&surface,1.,100000).unwrap();
+            assert!(report.within_budget,"{count}: {report:?}");
+            assert_eq!(report.method,"interval-planar-bishop-frame");
+            for i in 0..=100 {
+                let v=i as f64/100.;let c=path.evaluate(v).unwrap().point;
+                let q=p.evaluate(0.37).unwrap().point;let actual=surface.evaluate(0.37,v).unwrap().point;
+                let distance=(0..3).map(|k|(actual[k]-c[k]-q[k]+if k==0{3.}else{0.}).powi(2)).sum::<f64>().sqrt();
+                assert!(distance<=report.error_upper.unwrap(),"{count}: {distance} {report:?}");
+            }
+        }
+    }

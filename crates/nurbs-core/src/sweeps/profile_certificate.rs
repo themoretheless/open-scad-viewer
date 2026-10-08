@@ -10,6 +10,8 @@ use super::progressive_miter::{scalar_certificate as scalar, vector_certificate 
 use crate::sweep_support::interval_vec3::{add, cross, div, dot_tight as dot, norm, scale, sub};
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I, surface::Surface};
 type V = [I; 3];
+#[path = "profile_frame_premises.rs"]
+mod frame_premises;
 
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -416,12 +418,17 @@ pub fn certify(
                 .all(|p| p.len() == 3 && p[0] > 0. && p[1] == 0. && p[2] == 0.),
         "Profile certificate requires finite 3D inputs",
     )?;
-    let mut plane = (0..3).find(|&k| {
-        path.control_points
-            .iter()
-            .all(|p| p[k] == path.control_points[0][k])
-    });
-    if retained.periodic_v && plane.is_some() {
+    let closed = retained.periodic_v || super::progressive_sweep::path_is_closed(path)?;
+    let mut premise_work = 0usize;
+    let mut plane = (0..3)
+        .find(|&k| {
+            path.control_points
+                .iter()
+                .all(|p| p[k] == path.control_points[0][k])
+        })
+        .map(|axis| std::array::from_fn(|k| I::point(if k == axis { 1. } else { 0. })))
+        .or_else(|| frame_premises::plane(&path.control_points, max_cells, &mut premise_work));
+    if closed && plane.is_some() {
         let [a, b] = path.domain();
         let clamped = path.knots[..=path.degree].iter().all(|&k| k == a)
             && path.knots[path.control_points.len()..]
@@ -432,11 +439,13 @@ pub fn certify(
         let outgoing = &path.control_points[1];
         let aligned = clamped
             && p == path.control_points.last().unwrap()
-            && (0..3).any(|axis| {
-                (0..3).all(|k| k == axis || incoming[k] == p[k] && outgoing[k] == p[k])
-                    && (incoming[axis] < p[axis] && p[axis] < outgoing[axis]
-                        || incoming[axis] > p[axis] && p[axis] > outgoing[axis])
-            });
+            && frame_premises::aligned(
+                incoming,
+                p,
+                outgoing,
+                max_cells.saturating_sub(premise_work),
+                &mut premise_work,
+            );
         // Without exact endpoint tangent agreement, zero planar holonomy is
         // not an admissible premise. The unit-frame envelope still includes
         // every possible closing correction.
@@ -479,19 +488,21 @@ pub fn certify(
             && path.knots.iter().filter(|&&v| v == k).count() >= path.degree
         {
             // A full-multiplicity Bezier join has these authored endpoint
-            // controls. Equal transverse coordinates and an equal signed axis
-            // direction prove tangent alignment without tolerance snapping.
+            // controls. Exact projected collinearity and a shared signed direction
+            // prove tangent agreement without rounded differences or snapping.
             let p = &path.control_points[span];
             let a = &path.control_points[span - 1];
             let b = &path.control_points[span + 1];
             let aligned = path.knots.iter().filter(|&&v| v == k).count() == path.degree
-                && (0..3).any(|axis| {
-                    (0..3).all(|j| j == axis || (a[j] == p[j] && p[j] == b[j]))
-                        && ((a[axis] < p[axis] && p[axis] < b[axis])
-                            || (a[axis] > p[axis] && p[axis] > b[axis]))
-                });
+                && frame_premises::aligned(
+                    a,
+                    p,
+                    b,
+                    max_cells.saturating_sub(premise_work),
+                    &mut premise_work,
+                );
             if !aligned {
-                return Ok(unresolved(0, "continuous-path-tangent-unproved"));
+                return Ok(unresolved(premise_work, "continuous-path-tangent-unproved"));
             }
         }
     }
@@ -502,7 +513,10 @@ pub fn certify(
         return Ok(unresolved(0, "initial-frame-unresolved"));
     };
     let b0 = cross(t0, n0)?;
-    let mut cells = 1;
+    if premise_work >= max_cells {
+        return Ok(unresolved(premise_work, "cell-budget-exhausted"));
+    }
+    let mut cells = 1 + premise_work;
     let mut used = 0;
     let start = values(path, [0., 0.], max_cells - cells, &mut used)?;
     cells += used;
@@ -520,12 +534,12 @@ pub fn certify(
     let reference = Reference {
         path,
         scale: law,
-        plane: plane.map(|axis| std::array::from_fn(|k| I::point(if k == axis { 1. } else { 0. }))),
+        plane,
         initial: n0,
         initial_side: b0,
         initial_tangent: t0,
         coordinates,
-        closed: retained.periodic_v || super::progressive_sweep::path_is_closed(path)?,
+        closed,
     };
     // Equal-weight one-span lines and affine laws give an affine ideal sweep.
     // Its distance to each affine retained segment is convex, hence endpoints
@@ -728,5 +742,5 @@ fn affine_points(
 }
 
 #[cfg(test)]
-#[path="tests/profile_certificate_tests.rs"]
+#[path = "tests/profile_certificate_tests.rs"]
 mod tests;
