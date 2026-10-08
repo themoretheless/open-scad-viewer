@@ -1556,3 +1556,26 @@ request by SHA-256. A definite nonzero coefficient resolves a nonzero polynomial
 coefficients remain uncertain. Proving a zero row still requires every
 coefficient to resolve exactly to zero; the fourth test covers this distinction.
 A nonzero polynomial does not prove a nonvanishing normal everywhere.
+
+### Packaged distinct-face cache: WASM and rendered UI
+
+The kernel SHA-256 is `82fd669fbb6d980e44f9d27af48757906caee8f9c826176b130f0107c238a0c9`
+(11,995,165 bytes). All 26 real-worker/transport tests passed. Ordinary annular
+coverage uses 42 normal restrictions and leaves 257 pairs unproven; reuse of
+same-face facts uses 36 restrictions and leaves 253 pairs unproven. Neither
+qualifies the whole wall. Cuboid acceptance includes the six-query successful
+case and one-query refusal. These measurements are query counts, not UI latency.
+
+Mouse and keyboard source-wall scenarios passed on this packaged kernel:
+original-face/display-region highlighting, cancellation, an obsolete successful
+callback, localized injected transport failure, actual Retry, unchanged document
+and exact reload. External Google font CSS was explicitly replaced with an
+empty stylesheet; application console and page errors remained fatal. The
+initial online attempts failed only on font DNS and were not counted as passes.
+Both screenshots were reviewed. Highlighting is at face/display-region granularity.
+
+Frontend and MCP typechecks passed. Vite and the unchanged bounded distribution
+check passed: 8,338,996 asset bytes + 15,291,557 raw WASM bytes = 23,630,553 bytes.
+Receipts bind the worker and UI reports to the new artifact. Full wall and
+self-intersection qualification, arbitrary fillets and the full P0 matrix remain
+open.

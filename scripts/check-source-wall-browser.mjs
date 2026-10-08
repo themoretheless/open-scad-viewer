@@ -24,6 +24,9 @@ try {
  const {playwright}=await loadQualificationPlaywrightPackage()
  browser=await playwright.chromium.launch({headless:true,channel:'chromium',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1100}});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))});page.on('console',m=>{if(m.type()==='error')errors.push(m.text())})
+ // Exercise CAD behavior without depending on external font DNS. Keep all
+ // application console/page errors fatal; only this stylesheet is substituted.
+ await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({status:200,contentType:'text/css',body:''}))
  await page.addInitScript(()=>{
   const NativeWorker=window.Worker;window.__sourceResults=[];window.__holdSource=false;
   window.Worker=class extends NativeWorker {
@@ -83,5 +86,5 @@ try {
  assert.equal((await page.evaluate(()=>window.__sourceResults.at(-1))).wholeWallQualified,false)
  await closeMenu();assert.deepEqual(await exportDoc('after.json'),before);await page.reload();await ready();assert.deepEqual(await exportDoc('reload.json'),before)
  assert.deepEqual(errors,[])
- await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,localizedTransportFailure:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
+ await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,externalFontStylesheetSubstituted:true,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,localizedTransportFailure:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
