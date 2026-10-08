@@ -21,4 +21,37 @@ cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
 ```
 
 `self-wall.json.gz` records face identifiers, exact scope, bounds and reasons.
-The independent 496-pair material-wall audit is running separately.
+## Initial whole-wall audit
+
+All 496 original face pairs, including 31 self pairs, are enumerated in each
+body. The conservative lower bound remains zero: 91 pairs per body still have
+zero lower bounds. The material chord is unproven because its volume stage is
+unproven. No wall interval or convergence is claimed.
+
+Per body: 17 curved self pairs remain unresolved, 14 planar self pairs are
+excluded, 42 coplanar pairs and 172 endpoint-normal pairs are excluded. The
+remaining pairs carry distance/control-hull bounds, including 8 or 10 refined
+face-distance bounds depending on arc direction.
+
+`whole-wall-initial.json.gz` preserves every face-pair identifier and reason.
+This initial route does not allocate the explicit whole-chart linear/quotient
+injectivity budget. A later route must separately qualify embedded boundary,
+material roles and orientation before the material-chord claim can succeed.
+
+## Adaptive same-face coverage
+
+At minimum threshold 4.74999 mm and sin² <= 1e-4, adaptive complete-chart
+pair coverage certifies two further curved surfaces in each body. Combined
+with intrinsic results, 18/31 same-face cases are certified. Remaining face
+indices: 0,5,7,8,10,16,17,20,21,24,25,28,29. The report preserves pending
+regions and exclusion counts; finite work is not treated as safety.
+
+```sh
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-self-wall -- /tmp/adaptive.json adaptive
+```
+
+An explicit volume audit now accepts separately bounded whole-chart
+injectivity work. Its regression requires embedded boundary, consistent
+material roles and independent outward orientation together; invalid budgets
+are refused. Original default admission behavior remains unchanged.
