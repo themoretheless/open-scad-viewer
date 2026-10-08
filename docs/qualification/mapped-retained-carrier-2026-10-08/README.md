@@ -2603,3 +2603,11 @@ are unchanged. Seven profile-section bridge tests passed (3.15 seconds),
 including genuine-fold refusal and common-displacement determinant tests.
 The full native fixture must still verify this scheduling change; it is not
 an admission of the XY projection or a global shell contact certificate.
+
+The preceding stable-rail native fixture subsequently completed successfully
+in 550.70 seconds. Its combined owned-shell audit still reported
+[154 pending, 162 excluded, 12 planar, 23 fiber, 54 vertex/interior,
+1 transition-plane] across 406 pairs. That executable predated the coupled
+Jacobian determinant and breadth-first policy, so its passing result cannot
+qualify those changes. The replacement full fixture is running with both
+changes and explicit regular-plus-pending parameter-area checks.
