@@ -1740,3 +1740,15 @@ The 169 remaining native obligations are classified in
 `factored-native-unresolved-classification.json`: 9 same-face, 20 shared-edge,
 and 140 distinct pairs without an admitted shared edge. Classification does not
 upgrade an unresolved obligation to a proven pair.
+
+### Worker and panel timing baseline
+
+The prior 8f28d264 kernel passed the mouse wall scenario with request tracing.
+Two authentic requests measured 1,874.2 / 1,899.5 ms from post to reply,
+1,806.8 / 1,863.3 ms for the whole native operation, 34.0 / 31.2 ms warmup,
+0.1 ms response preparation and 8.0 / 5.7 ms reply-to-DOM publication.
+This is neither a Rust-only timer nor a final-paint measurement, and two runs
+during concurrent work do not qualify general performance. Cancellation, stale
+success refusal, Retry, exact document preservation and reload also pass.
+The receipt binds the report, kernel and instrumented script. New factored-normal
+worker/UI qualification remains pending the ongoing package optimization.

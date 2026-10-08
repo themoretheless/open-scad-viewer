@@ -28,12 +28,21 @@ try {
  // application console/page errors fatal; only this stylesheet is substituted.
  await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({status:200,contentType:'text/css',body:''}))
  await page.addInitScript(()=>{
-  const NativeWorker=window.Worker;window.__sourceResults=[];window.__holdSource=false;
+  const NativeWorker=window.Worker;window.__sourceResults=[];window.__sourceTimings=[];window.__holdSource=false;
+  new MutationObserver(()=>{
+   const entry=window.__sourceTimings.at(-1)
+   if(entry&&!entry.renderedAt&&document.querySelector('[data-source-wall-coverage-result]')){
+    entry.renderedAt=performance.now();entry.replyToDomMs=entry.renderedAt-entry.receivedAt
+   }
+  }).observe(document,{childList:true,subtree:true});
   window.Worker=class extends NativeWorker {
-   constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='sourceBodyRestore'&&e.data.ok&&e.data.result?.wallCoverage){window.__sourceResults.push(e.data.result.wallCoverage);window.__sourceReply=e.data.result}})}
+   constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='sourceBodyRestore'&&e.data.ok&&e.data.result?.wallCoverage){window.__sourceResults.push(e.data.result.wallCoverage);window.__sourceReply=e.data.result;
+    if(this.coverageTiming?.id===e.data.id){const receivedAt=performance.now();window.__sourceTimings.push({...this.coverageTiming,receivedAt,roundTripMs:receivedAt-this.coverageTiming.dispatchAt,nativeOperationTiming:e.data.timing})}}})}
    postMessage(message,...args){if(message?.job?.kind==='sourceBodyRestore'&&message.job.options.wallCoverage){
     if(window.__failSource){window.__failSource=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'sourceBodyRestore',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private source wall worker failure'}}}));return}
     if(window.__holdSource){window.__sourceHeld=true;this.held=true;const callback=this.onmessage,result=structuredClone(window.__sourceReply);window.__sourceLate=()=>{if(!callback||!result)throw Error('Missing obsolete source callback or result');callback({data:{version:1,id:message.id,kind:'sourceBodyRestore',ok:true,result}})};return}
+    this.coverageTiming={id:message.id,dispatchAt:performance.now(),postMessageMs:0}
+    const result=super.postMessage({...message,traceTiming:true},...args);this.coverageTiming.postMessageMs=performance.now()-this.coverageTiming.dispatchAt;return result
    }return super.postMessage(message,...args)}
    terminate(){if(this.held)window.__sourceTerminated=true;return super.terminate()}
   }
@@ -90,7 +99,15 @@ try {
  const failure=panel.locator('#source-wall-input-error');await failure.waitFor();assert.ok((await failure.innerText()).includes('Расчёт не завершён'))
  await activate(failure.getByRole('button',{name:'Повторить',exact:true}));await result.waitFor({timeout:120000});assert.equal(await failure.count(),0)
  assert.equal((await page.evaluate(()=>window.__sourceResults.at(-1))).wholeWallQualified,false)
+ const timings=await page.evaluate(()=>window.__sourceTimings)
  await closeMenu();assert.deepEqual(await exportDoc('after.json'),before);await page.reload();await ready();assert.deepEqual(await exportDoc('reload.json'),before)
+ assert.ok(timings.length>=2)
+ for(const t of timings){
+  assert.ok(Number.isFinite(t.roundTripMs)&&t.roundTripMs>0)
+  assert.ok(Number.isFinite(t.postMessageMs)&&t.postMessageMs>=0)
+  assert.ok(Number.isFinite(t.replyToDomMs)&&t.replyToDomMs>=0)
+  for(const field of ['warmupMs','executeMs','prepareMs'])assert.ok(Number.isFinite(t.nativeOperationTiming?.[field])&&t.nativeOperationTiming[field]>=0)
+ }
  assert.deepEqual(errors,[])
- await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,externalFontStylesheetSubstituted:true,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,localizedTransportFailure:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
+ await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,timings,timingScope:'Real request post through reply and DOM publication; worker warmup/whole native operation/response preparation, not Rust-only computation or final paint.',externalFontStylesheetSubstituted:true,coverage,cancelledHeldRequest:true,obsoleteCallbackIgnored:true,localizedTransportFailure:true,retry:true,highlightedUnprovenFaces:true,documentUnchanged:true,reloadExact:true,errors,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex')},null,2)+'\n')
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
