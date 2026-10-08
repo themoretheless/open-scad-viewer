@@ -1474,3 +1474,9 @@ This native change is not yet packaged into the shipped WASM.
 
 The full nurbs-core library suite also passed: 716 passed, zero failures, two
 ignored. Evidence: `distinct-face-normal-cache-full-nurbs.log.gz`.
+
+Prepared packaged-worker regressions now require the observed native query
+limits (42 ordinary, 36 with reused adaptive-self facts) and the cuboid six-query
+success/one-query refusal. They must run against the newly packaged binary;
+type checking passed, but these stricter worker checks are not yet claimed as
+executed. The previous binary cannot meet the annular query limits.

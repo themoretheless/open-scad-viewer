@@ -38,3 +38,8 @@ same isolated profile survives browser restart. Quota was deliberately set to
 one byte via Chromium's storage override; ordinary disk exhaustion is not
 claimed. See `recovery/report.json` and the hashed JSON snapshot archive.
 This qualifies these persistence scenarios, not the complete P0 command matrix.
+
+The refreshed source inventory enumerates 96 commands and binds them to the
+current Vue source hash (`current-command-inventory.json`). Its per-command
+execution gates remain unverified; scenario reports above provide evidence
+only for their explicitly exercised cases.

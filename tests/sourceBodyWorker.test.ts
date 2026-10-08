@@ -418,7 +418,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   if(pairs===378){
    if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
-   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(1000)
+   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(adaptive?36:42)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
   }
   if(adaptive){
@@ -471,9 +471,9 @@ it('cancels continuous coverage on threshold changes and ignores its late reply'
 it('qualifies the original cuboid whole-wall threshold through real WASM worker',async()=>{
  const definition=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-wall-cuboid-body.json.gz',import.meta.url))).toString())
  const client=realClient(),results=[],started=performance.now()
- for(const [minimumMm,pairs,qualified] of [[9.99,21,true],[10.01,21,false],[9.99,20,false]] as const){
+ for(const [minimumMm,pairs,normalSpans,qualified] of [[9.99,21,10000,true],[10.01,21,10000,false],[9.99,20,10000,false],[9.99,21,6,true],[9.99,21,1,false]] as const){
   const o:SourceBodyOptions={...options(),definition,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm,adaptiveSelf:{planeControls:10000,cells:1,spans:1,cellsPerFace:1,spansPerFace:1},
-   limits:{pairs,planeControls:10000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
+   limits:{pairs,planeControls:10000,normalSpans,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options:o})
   expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
   expect(r.wallCoverage!.adaptiveSelf!.allSelfPairsQualified).toBe(true)
@@ -481,6 +481,7 @@ it('qualifies the original cuboid whole-wall threshold through real WASM worker'
   expect(coverage.totalPairs).toBe(21);expect(coverage.pairs).toHaveLength(pairs)
   expect(coverage.lowerMm).toBe(qualified?minimumMm:null)
   expect(coverage.enumerationComplete).toBe(pairs===21)
+  expect(coverage.normalSpans).toBeLessThanOrEqual(Math.min(normalSpans,6))
   if(qualified){expect(coverage.pairs.every(p=>p.proven)).toBe(true);expect(coverage.cells).toBe(3)}
   results.push(coverage)
  }
