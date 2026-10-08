@@ -106,7 +106,8 @@ const limits = new Map([
 // Retain 3,760 bytes of headroom.
 // Native continuous profile bounds and exact cubic seam add ~16 KB packed.
 // Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
-const geometryChunkBudget = 4_060_000
+// Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
+const geometryChunkBudget = 4_068_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
