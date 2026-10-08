@@ -8,7 +8,8 @@ fn main() {
         .nth(3)
         .map(|s| s.parse().unwrap())
         .unwrap_or(256);
-    assert!((1..=10000).contains(&adaptive_cells));
+    assert!((1..=100000).contains(&adaptive_cells));
+    let adaptive_spans = (adaptive_cells * 8).min(100000);
     let selected: Option<Vec<usize>> = std::env::args()
         .nth(4)
         .map(|s| s.split(',').map(|x| x.parse().unwrap()).collect());
@@ -38,7 +39,7 @@ fn main() {
                         1e-4,
                         nurbs_core::surface_self_chord_coverage::Limits {
                             cells: adaptive_cells,
-                            spans: adaptive_cells * 8,
+                            spans: adaptive_spans,
                         },
                     )
                     .unwrap();
@@ -56,7 +57,7 @@ fn main() {
                 faces.push(value_codec::json!({"face":face,"qualified":r.certificate.is_some(),"complete":r.complete,"cosineSquaredUpper":r.cosine_squared_upper,"spans":r.spans,"reason":r.reason,"adaptive":adaptive}));
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
-            cases.push(value_codec::json!({"radii":radii,"direction":direction,"sourceFacesTotal":model.faces.len(),"selectedFaces":selected,"adaptiveCellsPerFace":adaptive_cells,"faces":faces}));
+            cases.push(value_codec::json!({"radii":radii,"direction":direction,"sourceFacesTotal":model.faces.len(),"selectedFaces":selected,"adaptiveCellsPerFace":adaptive_cells,"adaptiveSpansPerFace":adaptive_spans,"faces":faces}));
         }
     }
     std::fs::write(output,value_codec::to_string_pretty(&value_codec::json!({"schema":"cad-annular-self-wall/1","scope":"Full original chart intrinsic self-chord exclusion; absence of a certificate remains unresolved, not a thin witness or global wall certificate","maxSineSquared":1e-4,"cases":cases})).unwrap()).unwrap();

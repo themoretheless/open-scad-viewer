@@ -211,3 +211,12 @@ after the combined-minor change (one executed test). Evidence:
 `gram-source-body-tests.log.gz`. The controlled combined-minor
 4096-cell specimen comparison remains running; this expanded-budget
 result must not be attributed to that newer bound.
+
+The combined-minor comparison at 4096 cells/32768 spans completed
+for all four specimens and selected faces 5,16,17,20,21,24,25,28,29.
+It gives no additional full-chart certificates at that budget.
+`self-wall-gram4096.*.gz` preserves all unresolved original domains.
+The subsequent 20000-cell run separately caps spans at 100000;
+the diagnostic example now records both independent actual budgets.
+The larger run is still pending, so its partial results are not
+counted as qualification of all four specimens here.
