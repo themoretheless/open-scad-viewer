@@ -142,6 +142,64 @@ fn main() {
                     components.push(value_codec::json!({"axes":axes,"firstTwoRowsExactlyZero":zeros,"reason":format!("{:?}",d.reason),"work":work,"mode":mode,"bounds":grid}));
                 }
                 eprintln!("radii={radii:?} direction={direction} face={face} whole_factor_proven={factor_proven}");
+                let mut derivative_rows = Vec::new();
+                let mut rational_factor = true;
+                for coordinate in 0..3 {
+                    for row in 0..2 {
+                        let mut ctx = PredicateContext::new(
+                            &arena,
+                            &tolerance,
+                            Limits {
+                                max_work: cad_predicates::MAX_WORK,
+                                ..Limits::default()
+                            },
+                            None,
+                        );
+                        let d = cad_predicates::rational_surface_derivative_numerator_row_bounds(
+                            &mut ctx, &leaves, coordinate, 1, row,
+                        )
+                        .unwrap();
+                        let mut work = d.work_used;
+                        let mut signs = d.signs;
+                        let mut bounds = d.coefficient_bounds;
+                        if signs.is_none() {
+                            let mut ss = Vec::new();
+                            let mut bs = Vec::new();
+                            let mut complete = true;
+                            for column in 0..2 * s.degree_v {
+                                let mut ctx = PredicateContext::new(
+                                    &arena,
+                                    &tolerance,
+                                    Limits {
+                                        max_work: cad_predicates::MAX_WORK,
+                                        ..Limits::default()
+                                    },
+                                    None,
+                                );
+                                let d = cad_predicates::rational_surface_derivative_numerator_coefficient_bounds(&mut ctx,&leaves,coordinate,1,[row,column]).unwrap();
+                                work += d.work_used;
+                                if let (Some(s), Some(b)) = (d.signs, d.coefficient_bounds) {
+                                    ss.push(s[0][0]);
+                                    bs.push(b[0][0]);
+                                } else {
+                                    complete = false;
+                                    break;
+                                }
+                            }
+                            if complete {
+                                signs = Some(vec![ss]);
+                                bounds = Some(vec![bs]);
+                            }
+                        }
+                        let zero = signs.as_ref().is_some_and(|net| {
+                            net[0].len() == 2 * s.degree_v
+                                && net[0].iter().all(|x| *x == Sign::Zero)
+                        });
+                        rational_factor &= zero;
+                        derivative_rows.push(value_codec::json!({"coordinate":coordinate,"row":row,"allExactlyZero":zero,"signs":signs.as_ref().map(|net|net[0].iter().map(|x|format!("{x:?}")).collect::<Vec<_>>()),"bounds":bounds,"work":work}));
+                    }
+                }
+                eprintln!("face={face} rational_derivative_U2_factor={rational_factor}");
                 let original = &model.faces[face].surface;
                 let native =
                     nurbs_core::factored_surface_normals::prepare(original, reverse, 100_000_000)
@@ -153,7 +211,7 @@ fn main() {
                     let pole = u[usize::from(reverse)];
                     [[u,v],[[pole,pole],v],[[pole,pole],[v[0],v[0]]],[[pole,pole],[v[1],v[1]]]].map(|domain| value_codec::json!({"domain":domain,"bounds":proof.bounds(domain).unwrap()}))
                 });
-                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components,"nativeFactoredNormal":{"qualified":native.certificate.is_some(),"reason":native.reason,"work":native.work,"queries":queries}}));
+                cases.push(value_codec::json!({"radii":radii,"direction":direction,"face":face,"reversedU":reverse,"wholeU2FactorProven":factor_proven,"components":components,"rationalDerivativeFactor":{"verified":rational_factor,"rows":derivative_rows},"nativeFactoredNormal":{"qualified":native.certificate.is_some(),"reason":native.reason,"work":native.work,"queries":queries}}));
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
         }

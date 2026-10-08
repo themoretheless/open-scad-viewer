@@ -284,10 +284,204 @@ pub fn rational_surface_projected_jacobian_coefficient_bounds(
     compute(ctx, surface, axes, Some(index[0]), Some(index[1]), true)
 }
 
+/// Exact Bernstein coefficients of H_axis W - H W_axis for one original
+/// coordinate, in a shared positive scale across XYZ. Axis is normalized U/V.
+/// Whole requested rows are returned only after all their work is complete.
+pub fn rational_surface_derivative_numerator_row_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    coordinate: usize,
+    axis: usize,
+    row: usize,
+) -> Result<Decision, InputError> {
+    derivative_numerator(ctx, surface, coordinate, axis, row, None)
+}
+pub fn rational_surface_derivative_numerator_coefficient_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    coordinate: usize,
+    axis: usize,
+    index: [usize; 2],
+) -> Result<Decision, InputError> {
+    derivative_numerator(ctx, surface, coordinate, axis, index[0], Some(index[1]))
+}
+fn derivative_numerator(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    coordinate: usize,
+    axis: usize,
+    row: usize,
+    column: Option<usize>,
+) -> Result<Decision, InputError> {
+    if !(2..=9).contains(&surface.len())
+        || !(2..=9).contains(&surface[0].len())
+        || surface.iter().any(|r| r.len() != surface[0].len())
+        || coordinate > 2
+        || axis > 1
+        || row >= 2 * (surface.len() - 1) + usize::from(axis == 1)
+        || column.is_some_and(|v| v >= 2 * (surface[0].len() - 1) + usize::from(axis == 0))
+    {
+        return Err(InputError::InvalidInput(
+            "Invalid rational derivative chart",
+        ));
+    }
+    let mut values = surface
+        .iter()
+        .flatten()
+        .flat_map(|p| p.iter())
+        .map(|&r| ctx.resolve(r).cloned())
+        .collect::<Result<Vec<AuthoredScalar>, _>>()?;
+    values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
+    let result = (|| -> Result<(Vec<Vec<Sign>>, Vec<Vec<[f64; 2]>>), Reason> {
+        ctx.charge(values.len() as u64)?;
+        let x = exact_inputs(&values, ctx)?;
+        let unit = x.last().unwrap();
+        if x[..x.len() - 1]
+            .chunks_exact(4)
+            .any(|p| p[3].sign() != Sign::Positive)
+        {
+            return Err(Reason::MissingProof);
+        }
+        let mut h = zeros(surface.len(), surface[0].len());
+        let mut w = h.clone();
+        for u in 0..surface.len() {
+            for v in 0..surface[0].len() {
+                let at = (u * surface[0].len() + v) * 4;
+                h[u][v] = x[at + coordinate]
+                    .sub(&x[coordinate], ctx)?
+                    .mul(&x[at + 3], ctx)?;
+                w[u][v] = unit.mul(&x[at + 3], ctx)?;
+            }
+        }
+        let dh = derivative(&h, axis, ctx)?;
+        let dw = derivative(&w, axis, ctx)?;
+        let net = difference(
+            mul(&dh, &w, [Some(row), column], ctx)?,
+            mul(&h, &dw, [Some(row), column], ctx)?,
+            ctx,
+        )?;
+        let selected = column.map_or(&net[row][..], |v| &net[row][v..v + 1]);
+        let signs = vec![selected.iter().map(Expansion::sign).collect()];
+        let bounds = vec![selected
+            .iter()
+            .map(|x| {
+                let b = x.enclosure(ctx)?;
+                Ok([b.lo, b.hi])
+            })
+            .collect::<Result<Vec<_>, Reason>>()?];
+        ctx.charge(0)?;
+        Ok((signs, bounds))
+    })();
+    let (signs, coefficient_bounds, reason) = match result {
+        Ok((s, b)) => (Some(s), Some(b), None),
+        Err(r) => (None, None, Some(r)),
+    };
+    Ok(Decision {
+        signs,
+        coefficient_bounds,
+        reason,
+        work_used: ctx.work_used(),
+        context: ctx.identity(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Limits, SourceArena, ToleranceContext};
+    #[test]
+    fn rational_derivative_rows_preserve_quadratic_factor_and_refuse_partial_work() {
+        // S=(u,2u²v/(1+v),0): V weights vary, but Q_v=(0,2u²,0).
+        let points: Vec<Vec<[f64; 4]>> = (0..3)
+            .map(|u| {
+                (0..2)
+                    .map(|v| {
+                        [
+                            u as f64 / 2.,
+                            if u == 2 { v as f64 } else { 0. },
+                            0.,
+                            (v + 1) as f64,
+                        ]
+                    })
+                    .collect()
+            })
+            .collect();
+        let arena = SourceArena::authored(
+            "rational-derivative-factor",
+            1,
+            points
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+                .collect(),
+        )
+        .unwrap();
+        let leaves = (0..3)
+            .map(|u| {
+                (0..2)
+                    .map(|v| std::array::from_fn(|k| arena.leaf((u * 2 + v) * 4 + k).unwrap()))
+                    .collect()
+            })
+            .collect::<Vec<_>>();
+        let tolerance = ToleranceContext::default_valid();
+        for coordinate in 0..3 {
+            for row in 0..5 {
+                let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+                let d = rational_surface_derivative_numerator_row_bounds(
+                    &mut ctx, &leaves, coordinate, 1, row,
+                )
+                .unwrap();
+                let signs = d.signs.unwrap();
+                let bounds = d.coefficient_bounds.unwrap();
+                assert_eq!(bounds.len(), 1);
+                assert_eq!(bounds[0].len(), 2);
+                assert!(signs[0].iter().all(|s| *s
+                    == if coordinate == 1 && row >= 2 {
+                        Sign::Positive
+                    } else {
+                        Sign::Zero
+                    }));
+                for column in 0..2 {
+                    let mut ctx =
+                        PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+                    let cell = rational_surface_derivative_numerator_coefficient_bounds(
+                        &mut ctx,
+                        &leaves,
+                        coordinate,
+                        1,
+                        [row, column],
+                    )
+                    .unwrap();
+                    assert_eq!(cell.signs.unwrap()[0][0], signs[0][column]);
+                    assert_eq!(cell.coefficient_bounds.unwrap()[0][0], bounds[0][column]);
+                }
+            }
+        }
+        for row in 0..4 {
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let d = rational_surface_derivative_numerator_row_bounds(&mut ctx, &leaves, 0, 0, row)
+                .unwrap();
+            assert_eq!(d.coefficient_bounds.unwrap()[0].len(), 3);
+            assert!(d.signs.unwrap()[0].iter().all(|s| *s == Sign::Positive));
+        }
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: 1,
+                ..Limits::default()
+            },
+            None,
+        );
+        let d =
+            rational_surface_derivative_numerator_row_bounds(&mut ctx, &leaves, 1, 1, 2).unwrap();
+        assert!(d.signs.is_none() && d.coefficient_bounds.is_none() && d.work_used <= 1);
+        let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+        assert!(
+            rational_surface_derivative_numerator_row_bounds(&mut ctx, &leaves, 1, 1, 5).is_err()
+        );
+    }
 
     #[test]
     fn exact_normal_component_bounds_preserve_common_scale_and_refuse_exhaustion() {

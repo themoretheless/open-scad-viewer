@@ -363,3 +363,33 @@ spans at 19586 or 19747 cells, leaving 18 or 11 pending domains.
 No complete certificate is produced (`annular-self-wall-gram-middle.*.gz`).
 Retained coverage stays 28/31. All broad roadmap requirements remain
 open to the extent not separately qualified.
+
+## Exact rational derivative numerator and actual leading term
+
+The predicate API now returns bounded original row or coefficient
+signs/magnitudes for H_axis W - H W_axis, with a common positive
+scale across XYZ and normalized U/V. Missing work returns no partial
+row. Eight projected-Jacobian/predicate tests pass, including rational
+V-varying weights whose derivative really has an exact U² factor,
+row/selected-coefficient agreement, both axis dimensions, positive
+U derivative, work refusal and invalid row refusal.
+
+Every original end was checked for the first two U rows of Q_v.
+All first rows are exactly zero, but all eight end charts have at least
+one exactly nonzero second-row coordinate. First-order terms cannot
+be discarded or replaced by a quadratic factor. The magnitudes in
+`rational-derivative-poles.json.gz` are predicate-scaled polynomial
+coefficients, not physical distance errors. Failed quadratic-factor
+admission is therefore supported by exact signs, rather than a
+budget stop or an interval that merely contains zero.
+
+This does not contradict the already verified U² factor in the normal
+numerator: the derivative's first-order term is along the pole
+longitudinal direction, so its transverse normal product can have
+higher vanishing order. A complete general proof still needs to
+qualify that decomposition on the original source and bound the
+resulting weighted chord. The new derivative API supplies exact
+coefficients for that next step. `rational-derivative-poles.log.gz`
+and `rational-derivative-tests.log.gz` retain execution evidence.
+Retained self-face coverage remains 28/31; no whole-wall or new
+WASM/UI qualification is claimed.
