@@ -1,0 +1,243 @@
+{
+  "scope": "Native original annular control; increased normal-product refinement only. No new wall certificate.",
+  "elapsedMs": 60606.792292,
+  "request": {
+    "adaptiveSelf": {
+      "cells": 50000,
+      "cellsPerFace": 8192,
+      "planeControls": 10000,
+      "pole": {
+        "cells": 100000,
+        "cellsPerFace": 4096,
+        "exactWork": 100000000,
+        "spans": 100000,
+        "spansPerFace": 100000
+      },
+      "refinement": {
+        "cells": 100000,
+        "cellsPerFace": 100000,
+        "spans": 100000,
+        "spansPerFace": 100000
+      },
+      "spans": 100000,
+      "spansPerFace": 10000
+    },
+    "factoredNormals": {
+      "cells": 100000,
+      "cellsPerPair": 1024,
+      "exactWork": 100000000,
+      "queries": 10000
+    },
+    "limits": {
+      "gapCells": 100000,
+      "gapSpans": 100000,
+      "maxSineSquared": 1e-06,
+      "normalSpans": 20000,
+      "pairs": 378,
+      "planeControls": 10000
+    },
+    "minimumMm": 5.99,
+    "normalProducts": {
+      "cells": 100000,
+      "cellsPerPair": 1024
+    },
+    "retainedGap": {
+      "cells": 100000,
+      "cellsPerPair": 256,
+      "domainCells": 1000000,
+      "domainCellsPerPair": 10000,
+      "domainCellsPerQuery": 256,
+      "spans": 100000,
+      "spansPerPair": 512,
+      "toleranceUv": 1e-08
+    }
+  },
+  "normalSpans": 19130,
+  "normalProductCells": 70630,
+  "factoredProductCells": 5625,
+  "newPairs": [],
+  "lostPairs": [],
+  "unprovenPairs": [
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      0,
+      5
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      0,
+      7
+    ],
+    [
+      0,
+      9
+    ],
+    [
+      0,
+      23
+    ],
+    [
+      0,
+      24
+    ],
+    [
+      0,
+      26
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      2,
+      24
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      3,
+      17
+    ],
+    [
+      3,
+      25
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      5,
+      11
+    ],
+    [
+      5,
+      12
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      23
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      7,
+      10
+    ],
+    [
+      7,
+      12
+    ],
+    [
+      8,
+      13
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      10,
+      12
+    ],
+    [
+      10,
+      14
+    ],
+    [
+      10,
+      15
+    ],
+    [
+      10,
+      16
+    ],
+    [
+      10,
+      18
+    ],
+    [
+      12,
+      16
+    ],
+    [
+      13,
+      17
+    ],
+    [
+      13,
+      25
+    ],
+    [
+      16,
+      20
+    ],
+    [
+      17,
+      21
+    ],
+    [
+      20,
+      24
+    ],
+    [
+      21,
+      25
+    ]
+  ],
+  "wholeWallQualified": false
+}
