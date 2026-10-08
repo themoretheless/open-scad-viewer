@@ -2721,3 +2721,14 @@ point intervals require one; insufficient work returns no enclosure and an
 out-of-domain request errors. The complete exact-trace suite (three tests)
 passed, including unequal weights and nonunit domains. This supports later
 exclusion of external trace portions but does not itself certify contact.
+
+A bounded coordinate-preimage cover now eliminates trace parameter cells
+only when their certified coordinate images are strictly disjoint from a
+target interval. Cells entirely inside the target remain candidates; all
+queued cells remain candidates at budget exhaustion. The three exact-trace
+tests passed, covering an empty outside target, zero-budget whole-domain
+retention, and containment of all independently evaluated target preimages.
+Native diagnostics connect this filter to a fresh full corrected-transition
+Y enclosure and the actual monotone neighbor trace with 128 cover cells.
+Compilation passed. This connection only narrows candidate parameters; it
+does not authorize a pair contact or reduce the reported pending-pair count.

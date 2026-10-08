@@ -174,6 +174,57 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
         Ok(Some(bounds))
     }
 }
+/// Conservative parameter cover of all points whose certified coordinate
+/// can enter a target interval. Empty cover is a strict exclusion witness.
+pub(crate) struct CoordinatePreimage {
+    pub(crate) domains: Vec<[f64; 2]>,
+    pub(crate) cells: usize,
+}
+impl MonotoneCoordinate<'_, '_> {
+    pub(crate) fn coordinate_preimage(
+        &self,
+        target: [f64; 2],
+        max_cells: usize,
+    ) -> Result<CoordinatePreimage> {
+        if !target.iter().all(|v| v.is_finite()) || target[0] > target[1] || max_cells > 100000 {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound coordinate target and cover work",
+            ));
+        }
+        let mut out = CoordinatePreimage {
+            domains: Vec::new(),
+            cells: 0,
+        };
+        let mut queue = std::collections::VecDeque::from([self.parameter_domain()]);
+        while let Some(domain) = queue.pop_front() {
+            if out.cells == max_cells {
+                out.domains.push(domain);
+                out.domains.extend(queue);
+                break;
+            }
+            out.cells += 1;
+            let bound = self
+                .coordinate_enclosure(domain, 2)?
+                .expect("complete endpoint work");
+            if bound[1] < target[0] || bound[0] > target[1] {
+                continue;
+            }
+            if bound[0] >= target[0] && bound[1] <= target[1] {
+                out.domains.push(domain);
+                continue;
+            }
+            let mid = domain[0] * 0.5 + domain[1] * 0.5;
+            if mid <= domain[0] || mid >= domain[1] {
+                out.domains.push(domain);
+                continue;
+            }
+            queue.push_back([domain[0], mid]);
+            queue.push_back([mid, domain[1]]);
+        }
+        Ok(out)
+    }
+}
 pub(crate) fn certify_monotone_coordinate<'t, 's>(
     trace: &'t Certificate<'s>,
     coordinate: usize,
@@ -247,6 +298,26 @@ mod tests {
         assert!(proof.coordinate_enclosure([3., 3.], 0).unwrap().is_none());
         assert!(proof.coordinate_enclosure([3., 3.], 1).unwrap().is_some());
         assert!(proof.coordinate_enclosure([1., 4.], 2).is_err());
+        assert!(
+            proof
+                .coordinate_preimage([5., 6.], 1)
+                .unwrap()
+                .domains
+                .is_empty()
+        );
+        assert_eq!(
+            proof.coordinate_preimage([1., 2.], 0).unwrap().domains,
+            vec![[2., 5.]]
+        );
+        let cover = proof.coordinate_preimage([1., 2.], 31).unwrap();
+        assert!(cover.cells <= 31 && !cover.domains.is_empty());
+        for i in 0..=100 {
+            let t = 2. + 3. * i as f64 / 100.;
+            let y = trace.curve().evaluate(t).unwrap().point[1];
+            if y >= 1. && y <= 2. {
+                assert!(cover.domains.iter().any(|d| t >= d[0] && t <= d[1]));
+            }
+        }
         assert_eq!(proof.trace().curve().knots, vec![2., 2., 2., 5., 5., 5.]);
         assert!(certify_monotone_coordinate(&trace, 1, 1).unwrap().is_none());
         assert!(certify_monotone_coordinate(&trace, 2, 2).is_err());

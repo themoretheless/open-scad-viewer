@@ -245,6 +245,18 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 assert!(std::ptr::eq(monotone.trace(),&trace));
                 assert!(monotone.increasing() && monotone.coordinate()==1);
                 assert_eq!(monotone.parameter_domain(),trace.curve().domain());
+                let section0=profile.section(root.axis,root.parameters[0])?;
+                let section1=profile.section(root.axis,root.parameters[1])?;
+                let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(section0,section1,
+                    [root.parameters[1]-root.parameters[0];2])?;
+                if let Some(bridge)=bridge.constrain_original_rails(max_controls)?.0 {
+                    if let Some(bounds)=bridge.enclose_with_transverse_correction(domain[0],domain[1],max_spans)?.0 {
+                        let candidates=monotone.coordinate_preimage(bounds[1],128)?;
+                        assert!(candidates.cells<=128);
+                        eprintln!("transition neighbor full Y target={:?} candidateParameters={:?} cells={}",
+                            bounds[1],candidates.domains,candidates.cells);
+                    }
+                }
                 eprintln!("transition curved neighbor monotoneY range={:?} domain={:?}",
                     monotone.coordinate_range(),monotone.parameter_domain());
                 eprintln!(
