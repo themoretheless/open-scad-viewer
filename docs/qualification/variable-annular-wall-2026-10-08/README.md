@@ -1013,3 +1013,23 @@ upper below .31 (Gershgorin alone exceeds .328). Fifteen chord/coverage
 and seven pole tests passed. This closed-form change has not yet been
 audited on the prototype bodies. The preceding Gershgorin prototype audit
 is still running. Whole wall safety remains unproven.
+
+## Gershgorin prototype audit completed
+
+The b4c8cf53 audit completed on all four unchanged original prototypes at
+1024 cells / 8192 restrictions, minimum 4.74999 mm and sin² 1e-4.
+Forward radii retain 6/8 pending pairs on faces 0/10; reverse radii retain
+10/12. Both spatial directions match; no pole face qualified.
+
+The forward entry uncertainty is U[.4375,.5] V[.375,.5] versus
+U[.375,.5] V[.25,.375]; its exit uncertainty is
+U[.125,.25] V[.375,.5] versus U[0,.25] V[0,.25].
+Reverse entry is U[.3125,.375] V[.25,.3125] versus
+U[.375,.4375] V[.125,.25]; reverse exit is
+U[0,.0625] V[.375,.4375] versus U[.0625,.125] V[.3125,.375].
+These are finite unresolved regions, not certified defects or percentages
+of unsafe area. Whole same-face coverage remains 28/31; distinct-face
+wall coverage and global minimum thickness remain unqualified.
+
+The closed-form prototype audit for 182d25e2 is running separately as
+annular-gram-closed-form-self-wall with unchanged limits and thresholds.
