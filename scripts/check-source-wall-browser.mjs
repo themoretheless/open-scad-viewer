@@ -73,6 +73,8 @@ try {
  const coverage=await page.evaluate(()=>window.__sourceResults.at(-1));assert.equal(coverage.wholeWallQualified,false);assert.equal(coverage.totalPairs,378)
  assert.ok(coverage.adaptiveSelf.faces.every(f=>f.endpointExchangeSymmetric===true&&f.unresolvedPairs.length===f.pending))
  await activate(result.locator('summary').first())
+ assert.ok(!(await result.innerText()).includes('source-wall-coverage-'))
+ assert.ok((await result.innerText()).includes('Все пары рассмотрены'))
  assert.equal(await panel.locator('[data-source-wall-pending-face]').count(),coverage.adaptiveSelf.faces.filter(f=>!f.qualified).length)
  assert.ok(await solid.locator('[data-source-wall-error="true"]').count()>0)
  await page.screenshot({path:path.join(directory,'unresolved.png'),fullPage:true})

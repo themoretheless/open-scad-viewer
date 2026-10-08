@@ -1613,3 +1613,13 @@ distinct pair remains confirmed. Neither produces a whole-wall certificate.
 Seven transport tests passed and the native bridge compiled. A stricter real-WASM
 worker case is prepared but has not passed on a newly packaged artifact yet.
 The currently packaged kernel and UI still use the preceding implementation.
+
+### Human-readable complete-enumeration diagnostics
+
+The whole-wall details replace an internal reason code with a localized
+explanation and next action. The rendered mouse scenario confirms the complete
+but unresolved branch, original-region highlights, cancellation, ignored stale
+success, localized failure, Retry and exact reload. The screenshot was reviewed.
+This check uses the preceding packaged kernel (253 unproven pairs); the ongoing
+normal-product kernel build is not qualified by this evidence. The truncated
+and successful message branches still require separate rendered scenarios.

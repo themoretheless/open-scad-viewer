@@ -3677,7 +3677,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               {{ sourceWallCoverageResult.wholeWallQualified?label('По всем граням подтверждён нижний порог толщины для отрезков, почти перпендикулярных граням.','The lower thickness threshold for near-normal chords is qualified across all faces.'):label('Толщина всей стенки не подтверждена. Проверьте выделенные грани; часть пар требует дополнительной диагностики.','Whole-wall thickness is unproven. Inspect highlighted faces; some pairs need further diagnostics.') }}
               {{ sourceWallCoverageResult.lowerMm }} {{ sourceWallCoverageResult.lowerMm!==null?label('мм','mm'):'' }} · {{ sourceWallCoverageResult.pairs.length }}/{{ sourceWallCoverageResult.totalPairs }}
               <button type="button" :disabled="sourceWallPending" @click="qualifySourceWall(false,true)">{{ label('Повторить проверку всей стенки','Retry whole wall') }}</button>
-              <details><summary>{{ label('Подробности','Details') }}</summary>{{ sourceWallCoverageResult.reason }} · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('непроверенных пар','unproven pairs') }}
+              <details><summary>{{ label('Подробности','Details') }}</summary>
+                {{ !sourceWallCoverageResult.enumerationComplete?label('Проверены не все пары граней: достигнут лимит расчёта. Выберите оставшиеся грани для отдельной проверки.','Not all face pairs were checked: the calculation limit was reached. Select the remaining faces for a separate check.'):
+                  sourceWallCoverageResult.wholeWallQualified?label('Проверены все пары граней в заданной области проверки.','All face pairs are qualified within the stated checking scope.'):
+                  label('Все пары рассмотрены, но часть участков остаётся неопределённой. Проверьте выделенные грани.','All pairs were considered, but some regions remain unresolved. Inspect the highlighted faces.') }}
+                · {{ sourceWallCoverageResult.pairs.filter(p=>!p.proven).length }} {{ label('неподтверждённых пар','unproven pairs') }}
                 <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
                   · {{ label('Проверка внутри граней','Within-face coverage') }}:
                   {{ sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>f.qualified).length }}/{{ sourceWallCoverageResult.adaptiveSelf.faces.length }}
@@ -4688,4 +4692,3 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
 .direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
 </style>
-
