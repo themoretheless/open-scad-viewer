@@ -174,6 +174,10 @@ mod tests {
         let other=crate::source_volume::qualify(geometry,crate::source_volume::Limits{axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000}).unwrap().body.unwrap();
         let foreign=crate::source_retained_face_gap::qualify(&other,[0,1],29.99,options()).unwrap().certificate.unwrap();
         assert!(crate::source_wall_coverage::qualify_with_retained_gap_facts(&body,9.99,coverage_options(),Vec::new(),no_products(),no_factors(),vec![foreign]).is_err());
+        let pass=crate::source_wall_coverage::RetainedGapLimits{cells:1,spans:2,domain_cells:1,cells_per_pair:1,spans_per_pair:2,domain_cells_per_pair:1,domain_cells_per_query:1,tolerance_uv:1e-8};
+        let bounded=crate::source_wall_coverage::qualify_with_retained_gap_pass(&body,30.01,coverage_options(),Vec::new(),no_products(),no_factors(),Vec::new(),Some(pass)).unwrap();
+        assert!(bounded.certificate.is_none());let extra=bounded.retained_gap.unwrap();assert_eq!(extra.cells,1);assert!(extra.spans<=2);assert!(extra.domain_cells<=1);assert_eq!(extra.pairs.len(),1);assert!(!extra.pairs[0].qualified);assert!(!extra.pairs[0].unresolved_products.is_empty());
+        let mut invalid=pass;invalid.cells_per_pair=0;assert!(crate::source_wall_coverage::qualify_with_retained_gap_pass(&body,9.99,coverage_options(),Vec::new(),no_products(),no_factors(),Vec::new(),Some(invalid)).is_err());
         let reversed=crate::source_retained_face_gap::qualify(&body,[1,0],29.99,options()).unwrap();assert!(reversed.certificate.is_some());
         let refused=crate::source_retained_face_gap::qualify(&body,[0,1],30.01,options()).unwrap();
         assert!(refused.certificate.is_none());assert!(!refused.unresolved_products.is_empty());assert_eq!(refused.cells,8);assert!(refused.spans<=16);assert!(refused.domain_cells<=1);

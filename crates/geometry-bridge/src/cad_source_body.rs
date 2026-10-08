@@ -222,7 +222,19 @@ pub fn restore(v: Value) -> Result<Value> {
             }
             brep_core::source_wall_coverage::FactoredNormalLimits{exact_work,queries,cells,cells_per_pair}
         };
-        Some((minimum,work,self_work,products,factors))
+        let retained=if o["retainedGap"].is_null(){None}else{
+            let r=&o["retainedGap"];
+            let work=brep_core::source_wall_coverage::RetainedGapLimits{
+                cells:field(r,"cells")?,spans:field(r,"spans")?,domain_cells:field(r,"domainCells")?,
+                cells_per_pair:field(r,"cellsPerPair")?,spans_per_pair:field(r,"spansPerPair")?,
+                domain_cells_per_pair:field(r,"domainCellsPerPair")?,domain_cells_per_query:field(r,"domainCellsPerQuery")?,tolerance_uv:field(r,"toleranceUv")?};
+            if [work.cells,work.spans,work.cells_per_pair,work.spans_per_pair,work.domain_cells_per_pair,work.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
+                ||!(1..=1000000).contains(&work.domain_cells)||!work.tolerance_uv.is_finite()||work.tolerance_uv<=0. {
+                return Err(super::input("Choose positive bounded total and per-pair retained domain work"));
+            }
+            Some(work)
+        };
+        Some((minimum,work,self_work,products,factors,retained))
     };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
@@ -268,7 +280,7 @@ pub fn restore(v: Value) -> Result<Value> {
             "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
-    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors)|->Result<Value>{
+    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors,retained)|->Result<Value>{
         let (facts,self_report)=if let Some((limits,pole,refinement))=self_work {
             let mut report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
             if let Some((extra,exact))=pole {
@@ -284,7 +296,9 @@ pub fn restore(v: Value) -> Result<Value> {
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
-        let r=brep_core::source_wall_coverage::qualify_with_self_facts_and_factored_normals(body,minimum,work,facts,products,factors)?;
+        let r=brep_core::source_wall_coverage::qualify_with_retained_gap_pass(body,minimum,work,facts,products,factors,Vec::new(),retained)?;
+        let retained_report=r.retained_gap.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"domainQueries":d.domain_queries,"endpointQueries":d.endpoint_queries,
+            "pairs":d.pairs.iter().map(|p|json!({"faces":p.faces,"qualified":p.qualified,"reason":p.reason,"cells":p.cells,"spans":p.spans,"domainCells":p.domain_cells,"domainQueries":p.domain_queries,"endpointQueries":p.endpoint_queries,"outsideProducts":p.outside_products,"unresolvedProducts":p.unresolved_products})).collect::<Vec<_>>()}));
         Ok(json!({"request":v["wallCoverage"],"wholeWallQualified":r.certificate.is_some(),
             "lowerMm":r.certificate.as_ref().map(|c|c.minimum_mm()),
             "enumerationComplete":r.enumeration_complete,"totalPairs":r.total_pairs,
@@ -292,7 +306,7 @@ pub fn restore(v: Value) -> Result<Value> {
             "planeControls":r.plane_controls,"normalSpans":r.normal_spans,"normalProductCells":r.normal_product_cells,
             "factoredExactWork":r.factored_exact_work,"factoredQueries":r.factored_queries,
             "factoredProductCells":r.factored_product_cells,
-            "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report}))
+            "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report,"retainedGap":retained_report}))
     }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
         Value::Null
@@ -521,6 +535,15 @@ mod tests {
             "definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,
             "wallCoverage":coverage_option.clone()})).unwrap();
         let coverage=&covered["wallCoverage"];
+        let mut retained_option=coverage_option.clone();
+        retained_option["retainedGap"]=json!({"cells":100,"spans":200,"domainCells":1000,"cellsPerPair":10,"spansPerPair":20,"domainCellsPerPair":100,"domainCellsPerQuery":10,"toleranceUv":1e-8});
+        let retained=super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,"wallCoverage":retained_option.clone()})).unwrap();
+        assert_eq!(retained["wallCoverage"]["request"],retained_option);
+        assert_eq!(retained["wallCoverage"]["retainedGap"]["cells"],json!(0));assert_eq!(retained["wallCoverage"]["retainedGap"]["pairs"].as_array().unwrap().len(),0);
+        for (key,value) in [("cells",json!(0)),("spans",json!(100001)),("domainCells",json!(1000001)),("cellsPerPair",json!(0)),("spansPerPair",json!(0)),("domainCellsPerPair",json!(0)),("domainCellsPerQuery",json!(0)),("toleranceUv",json!(0))] {
+            let mut invalid=retained_option.clone();invalid["retainedGap"][key]=value;
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,"wallCoverage":invalid})).is_err());
+        }
         assert_eq!(coverage["request"],coverage_option);
         assert_eq!(coverage["wholeWallQualified"],json!(false));
         assert_eq!(coverage["enumerationComplete"],json!(false));

@@ -119,7 +119,10 @@ fn main() {
             let r=brep_core::source_contour_winding::classify(regions[face].loops(),rect,1e-8,10000).unwrap();
             json!({"location":format!("{:?}",r.location),"cells":r.cells,"endpointQueries":r.endpoint_queries,"reason":r.reason})
         });
-        let retained = if args.get(4).is_some_and(|v| v == "retained") {
+        let retained = if args
+            .get(4)
+            .is_some_and(|v| v == "retained" || v == "retained-automatic")
+        {
             let mut r = brep_core::source_retained_face_gap::qualify(
                 body,
                 [a, b],
@@ -197,7 +200,9 @@ fn main() {
         )
         .unwrap();
         assert!(self_facts.all_self_pairs_qualified());
-        let r = wall::qualify_with_retained_gap_facts(
+        let automatic = args.get(4).is_some_and(|v| v == "retained-automatic");
+        let expected_faces: Vec<_> = retained_facts.iter().map(|c| c.faces()).collect();
+        let r = wall::qualify_with_retained_gap_pass(
             body,
             5.99,
             wall::Limits {
@@ -221,12 +226,47 @@ fn main() {
                 cells: 10000,
                 cells_per_pair: 128,
             },
-            retained_facts,
+            if automatic {
+                Vec::new()
+            } else {
+                retained_facts
+            },
+            if automatic {
+                Some(wall::RetainedGapLimits {
+                    cells: 100000,
+                    spans: 100000,
+                    domain_cells: 1000000,
+                    cells_per_pair: 256,
+                    spans_per_pair: 512,
+                    domain_cells_per_pair: 10000,
+                    domain_cells_per_query: 256,
+                    tolerance_uv: 1e-8,
+                })
+            } else {
+                None
+            },
         )
         .unwrap();
         assert!(r.enumeration_complete);
         assert!(r.certificate.is_none());
-        assert_eq!(r.pairs.iter().filter(|p| !p.proven).count(), 46);
+        let unresolved = r.pairs.iter().filter(|p| !p.proven).count();
+        assert!(unresolved <= 46);
+        for faces in expected_faces {
+            assert!(r.pairs.iter().any(|p| p.faces == faces && p.proven));
+        }
+        if let Some(d) = &r.retained_gap {
+            assert!(d.cells <= 100000 && d.spans <= 100000 && d.domain_cells <= 1000000);
+            assert_eq!(d.cells, d.pairs.iter().map(|p| p.cells).sum::<usize>());
+            assert_eq!(
+                d.domain_cells,
+                d.pairs.iter().map(|p| p.domain_cells).sum::<usize>()
+            );
+            assert!(
+                d.pairs
+                    .iter()
+                    .all(|p| p.qualified == p.unresolved_products.is_empty())
+            );
+        }
         for old in pairs.iter().filter(|p| p["proven"] == json!(true)) {
             assert!(
                 r.pairs
@@ -234,7 +274,7 @@ fn main() {
                     .any(|p| json!(p.faces) == old["faces"] && p.proven)
             );
         }
-        json!({"wholeWallQualified":false,"unresolved":46,"pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>()})
+        json!({"wholeWallQualified":false,"unresolved":unresolved,"retainedGap":r.retained_gap.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"pairsAttempted":d.pairs.len(),"qualifiedPairs":d.pairs.iter().filter(|p|p.qualified).count()})),"pairs":r.pairs.iter().map(|p|json!({"faces":p.faces,"proven":p.proven,"reason":p.reason})).collect::<Vec<_>>()})
     } else {
         Value::Null
     };

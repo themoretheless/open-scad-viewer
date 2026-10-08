@@ -25,6 +25,22 @@ pub struct FactoredNormalLimits {
     pub cells: usize,
     pub cells_per_pair: usize,
 }
+#[derive(Clone, Copy)]
+pub struct RetainedGapLimits {
+    pub cells:usize,pub spans:usize,pub domain_cells:usize,
+    pub cells_per_pair:usize,pub spans_per_pair:usize,pub domain_cells_per_pair:usize,
+    pub domain_cells_per_query:usize,pub tolerance_uv:f64,
+}
+pub struct RetainedPair {
+    pub faces:[usize;2],pub qualified:bool,pub reason:&'static str,
+    pub cells:usize,pub spans:usize,pub domain_cells:usize,
+    pub domain_queries:usize,pub endpoint_queries:usize,pub outside_products:usize,
+    pub unresolved_products:Vec<[[[f64;2];2];2]>,
+}
+pub struct RetainedReport {
+    pub cells:usize,pub spans:usize,pub domain_cells:usize,
+    pub domain_queries:usize,pub endpoint_queries:usize,pub pairs:Vec<RetainedPair>,
+}
 pub struct Certificate<'a> {
     body: &'a Body,
     minimum_mm: f64,
@@ -58,6 +74,7 @@ impl<'a> Certificate<'a> {
     }
 }
 pub struct Report<'a> {
+    pub retained_gap:Option<RetainedReport>,
     pub certificate: Option<Certificate<'a>>,
     pub pairs: Vec<Pair>,
     pub total_pairs: usize,
@@ -122,6 +139,22 @@ pub fn qualify_with_retained_gap_facts<'a>(
     products:NormalProductLimits,factors:FactoredNormalLimits,
     retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
 )->Result<Report<'a>> {
+    qualify_with_retained_gap_pass(body,minimum_mm,limits,facts,products,factors,retained_gaps,None)
+}
+/// Additional fair bounded pass over unresolved original distinct-face products.
+pub fn qualify_with_retained_gap_pass<'a>(
+    body:&'a Body,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits,factors:FactoredNormalLimits,
+    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained:Option<RetainedGapLimits>,
+)->Result<Report<'a>> {
+    if let Some(r)=retained {
+        if [r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
+            ||!(1..=1000000).contains(&r.domain_cells)||!r.tolerance_uv.is_finite()||r.tolerance_uv<=0. {
+            return Err(Error::new("BREP_SOURCE_RETAINED_GAP_LIMIT","Choose positive bounded total and per-pair retained domain work"));
+        }
+    }
     let mut retained_pairs=std::collections::HashSet::new();
     for gap in &retained_gaps {
         let mut faces=gap.faces();faces.sort();
@@ -184,6 +217,7 @@ pub fn qualify_with_retained_gap_facts<'a>(
         })?;
     let mut out = Report {
         certificate: None,
+        retained_gap:None,
         pairs: Vec::with_capacity(total_pairs.min(limits.pairs)),
         total_pairs,
         enumeration_complete: false,
@@ -343,6 +377,23 @@ pub fn qualify_with_retained_gap_facts<'a>(
             pair.proven=true;
             pair.reason="source-wall-retained-gap-qualified";
         }
+    }
+    if let Some(work)=retained {
+        let mut diagnostics=RetainedReport{cells:0,spans:0,domain_cells:0,domain_queries:0,endpoint_queries:0,pairs:Vec::new()};
+        for pair in out.pairs.iter_mut().filter(|p|!p.proven&&p.faces[0]!=p.faces[1]) {
+            if diagnostics.cells==work.cells||diagnostics.spans==work.spans||diagnostics.domain_cells==work.domain_cells {break;}
+            let r=crate::source_retained_face_gap::qualify(body,pair.faces,minimum_mm,crate::source_retained_face_gap::Limits{
+                cells:(work.cells-diagnostics.cells).min(work.cells_per_pair),
+                spans:(work.spans-diagnostics.spans).min(work.spans_per_pair),
+                domain_cells:(work.domain_cells-diagnostics.domain_cells).min(work.domain_cells_per_pair),
+                domain_cells_per_query:work.domain_cells_per_query,tolerance_uv:work.tolerance_uv})?;
+            diagnostics.cells+=r.cells;diagnostics.spans+=r.spans;diagnostics.domain_cells+=r.domain_cells;
+            diagnostics.domain_queries+=r.domain_queries;diagnostics.endpoint_queries+=r.endpoint_queries;
+            let qualified=r.certificate.is_some();
+            if let Some(c)=r.certificate {retained_gaps.push(c);pair.proven=true;pair.reason="source-wall-retained-gap-qualified";}
+            diagnostics.pairs.push(RetainedPair{faces:pair.faces,qualified,reason:r.reason,cells:r.cells,spans:r.spans,domain_cells:r.domain_cells,domain_queries:r.domain_queries,endpoint_queries:r.endpoint_queries,outside_products:r.outside_products,unresolved_products:r.unresolved_products});
+        }
+        out.retained_gap=Some(diagnostics);
     }
     out.enumeration_complete = out.pairs.len() == total_pairs;
     if out.enumeration_complete && out.pairs.iter().all(|p| p.proven) {
