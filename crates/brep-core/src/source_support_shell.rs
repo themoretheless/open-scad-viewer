@@ -691,11 +691,11 @@ mod tests {
             }
         }
         eprintln!("expression fresh unchanged planar contacts={} exactWork={} spans={}",original_planar,planar_work,planar_spans);
-        assert_eq!(original_planar,10);
+        assert_eq!(original_planar,12);
         eprintln!("expression fresh unchanged fiber contacts={} exactWork={} spans={} drivers={}",original_fiber,fiber_work,fiber_spans,fiber_drivers);
-        assert_eq!(original_fiber,19);
+        assert_eq!(original_fiber,23);
         eprintln!("expression fresh vertex/interior contacts={} exactWork={} spans={} drivers={}",additional_count,additional_work,additional_spans,additional_drivers);
-        assert_eq!(additional_count,45);
+        assert_eq!(additional_count,54);
         assert!(expression.qualify_original_additional_contact([0,0],100,100,100).is_err());
         assert!(expression.qualify_original_additional_contact(retained_ids,100000000,100000,100000).unwrap().certificate.is_none());
         assert!(expression.qualify_original_fiber_contact(retained_ids,100000000,100000,100000).unwrap().certificate.is_none());

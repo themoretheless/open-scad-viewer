@@ -2220,3 +2220,33 @@ owner identity, source face ID correspondence and reflexive/changed/zero
 work refusal. Combining all independent pair proofs with the 162 excluded
 pairs leaves 170 of 406 pairs without full qualification. Modified source
 contours, exact profile and transition contacts still require admission.
+
+
+## Complete source-arc refinement admits subdivided neighbor contacts
+
+The private original-pair gate now accepts the exact full source region
+with its two owned rail-root subdivisions. For each original fragment it
+reconstructs the expected final use sequence from the privately admitted
+neighbor IncidentContour. A replacement must be exactly head/middle/tail
+on the same original surface and curve, with the original traversal,
+original extreme endpoint definitions and identical intermediate endpoint
+definitions. Neighbor source-side/address ownership comes from the admitted
+root-ended seam; strict endpoint ordering was freshly established by
+Fragment construction and root admission. Every loop and unchanged
+fragment remains accounted for, including holes. Arbitrary new cuts,
+missing arcs and retained/profile/transition faces cannot inherit.
+
+The three contiguous restrictions therefore cover the same original
+parameter interval and UV material region. Fresh original planar/fiber/
+vertex/interior contact proofs can transfer across this refinement without
+substituting a rounded boundary or treating adjacency as a proof. The
+certificate still borrows the actual final refined face owners.
+
+The independent full-partition test passes for forward and reversed source
+traversal and refuses a gap, wrong traversal, missing arc or changed curve.
+The first annular run passed in 54.01 seconds: 12 planar, 23 boundary-fiber
+and 54 vertex/interior pairs, compared with 10/19/45 before refinement.
+The final regression requires all 12/23/54 results with exact intermediate
+endpoint identity checks enabled. With 162 excluded pairs, 155 of 406
+pairs still need a complete geometric proof. Transition/profile contacts
+remain separate; packaged WASM is unchanged.
