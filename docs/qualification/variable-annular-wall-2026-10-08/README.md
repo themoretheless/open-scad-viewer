@@ -1447,3 +1447,8 @@ The source-body mouse scenario additionally injects a transport failure after
 cancellation, checks the localized failed-calculation message, activates its
 actual Retry button, and requires the error to disappear after a real result.
 The archived mouse report includes `localizedTransportFailure: true`.
+
+The complete source-body panel scenario passed keyboard operation too, including
+successful obsolete reply replay, localized transport failure and its actual
+Retry button. Evidence: `source-wall-ui-keyboard.json.gz`. The same native
+geometry obligations remain unresolved; input method adds no geometry proof.
