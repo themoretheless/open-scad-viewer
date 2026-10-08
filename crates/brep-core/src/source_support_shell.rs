@@ -159,6 +159,19 @@ mod tests {
         let proved=crate::source_retained_face_gap::qualify(&body,[0,1],29.99,options()).unwrap();
         let c=proved.certificate.unwrap();assert!(std::ptr::eq(c.body(),&body));assert_eq!(c.faces(),[0,1]);assert_eq!(c.lower_mm(),29.99);
         assert!(proved.unresolved_products.is_empty());assert_eq!(proved.cells,1);assert_eq!(proved.spans,2);assert!(proved.domain_cells<=1);
+        let mixed_options=||crate::source_wall_pair::Limits{normal_spans:1000,max_sine_squared:1e-6,
+            cells:64,spans:128,domain_cells:1000,domain_cells_per_query:100,tolerance_uv:1e-8};
+        let perpendicular=crate::source_wall_pair::qualify(&body,[0,2],100.,mixed_options()).unwrap();
+        let proof=perpendicular.certificate.unwrap();
+        assert!(std::ptr::eq(proof.body(),&body));assert_eq!(proof.faces(),[0,2]);
+        assert_eq!(proof.lower_mm(),100.);assert_eq!(proof.max_sine_squared(),1e-6);
+        assert_eq!(perpendicular.normal_products,1);assert!(perpendicular.unresolved_products.is_empty());
+        // Adjacent faces have zero gap, but their orthogonal normal directions
+        // exclude the aligned chords required by this wall criterion.
+        assert!(crate::source_retained_face_gap::qualify(&body,[0,2],100.,options()).unwrap().certificate.is_none());
+        let too_thin=crate::source_wall_pair::qualify(&body,[0,1],30.01,mixed_options()).unwrap();
+        assert!(too_thin.certificate.is_none());assert!(!too_thin.unresolved_products.is_empty());
+        assert!(crate::source_wall_pair::qualify(&body,[0,1],29.99,mixed_options()).unwrap().certificate.is_some());
         let coverage_options=||crate::source_wall_coverage::Limits{pairs:21,plane_controls:10000,normal_spans:10000,gap:crate::source_face_gap::Limits{cells:10000,spans:20000},max_sine_squared:1e-6};
         let no_products=||crate::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0};
         let no_factors=||crate::source_wall_coverage::FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0};
@@ -296,6 +309,18 @@ mod tests {
         if let Some(path)=std::env::var_os("CAD_ANNULAR_SOURCE_BODY_OUTPUT") {
             std::fs::write(path,value_codec::to_string_pretty(&body.definition().unwrap()).unwrap()).unwrap();
         }
+        let combined=crate::source_wall_pair::qualify(&body,[4,5],5.99,
+            crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
+                cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();
+        assert!(combined.normal_products>0);assert!(combined.spans>0);
+        assert!(combined.unresolved_products.is_empty());
+        assert!(std::ptr::eq(combined.certificate.unwrap().body(),&body));
+        let numerical=crate::source_wall_pair::qualify(&body,[16,20],5.99,
+            crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
+                cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();
+        assert!(numerical.certificate.is_none());
+        assert_eq!(numerical.reason,"source-wall-pair-numeric-limit");
+        assert!(!numerical.unresolved_products.is_empty());assert_eq!(numerical.normal_spans,10000);
         let shell=body.geometry().shell();
         let flat_at=|z:f64|shell.faces().iter().enumerate().filter_map(|(i,w)| {
             let s=w[0].edges()[0].surface();
