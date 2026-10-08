@@ -1,0 +1,48 @@
+name: Disposable worker memory diagnostic
+on:
+  push:
+    branches: [codex/pr38-memory-diagnostics]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        policy: [default, arena2, arena2-trim, arena1-trim, liftoff]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.3'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Three fresh unmodified memory probes
+        env:
+          POLICY: ${{ matrix.policy }}
+        run: |
+          case "$POLICY" in
+            default) unset MALLOC_ARENA_MAX ;;
+            arena2) export MALLOC_ARENA_MAX=2 ;;
+            arena2-trim) export MALLOC_ARENA_MAX=2 MALLOC_TRIM_THRESHOLD_=0 MALLOC_MMAP_THRESHOLD_=131072 ;;
+            arena1-trim) export MALLOC_ARENA_MAX=1 MALLOC_TRIM_THRESHOLD_=0 MALLOC_MMAP_THRESHOLD_=131072 ;;
+            liftoff) unset MALLOC_ARENA_MAX ;;
+          esac
+          mkdir -p receipts
+          node --version > receipts/runtime.txt
+          uname -a >> receipts/runtime.txt
+          for trial in 1 2 3; do
+            if [ "$POLICY" = liftoff ]; then
+              timeout 70s node --liftoff-only --expose-gc --import tsx tests/fixtures/mcp-manifold-plan-memory-probe.ts > "receipts/probe-$trial.json"
+            else
+              timeout 70s node --expose-gc --import tsx tests/fixtures/mcp-manifold-plan-memory-probe.ts > "receipts/probe-$trial.json"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: memory-${{ matrix.policy }}
+          path: receipts
+          if-no-files-found: error
