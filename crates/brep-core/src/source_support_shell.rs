@@ -185,6 +185,25 @@ mod tests {
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
         let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
         let other=crate::source_volume::qualify(geometry,crate::source_volume::Limits{axis:2,origin:0.,absolute_error:0.02,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000}).unwrap().body.unwrap();
+        macro_rules! mixed_coverage {
+            ($target:expr,$minimum:expr,$angle:expr,$proofs:expr) => {{
+                let mut l=coverage_options();l.max_sine_squared=$angle;
+                crate::source_wall_coverage::qualify_with_mixed_pair_facts($target,$minimum,l,
+                    Vec::new(),no_products(),no_factors(),Vec::new(),None,$proofs)
+            }};
+        }
+        let mixed=crate::source_wall_pair::qualify(&body,[0,2],100.,mixed_options()).unwrap().certificate.unwrap();
+        let complete=mixed_coverage!(&body,9.99,1e-6,vec![mixed]).unwrap().certificate.unwrap();
+        assert_eq!(complete.mixed_pair_certificates().len(),1);
+        let mixed=crate::source_wall_pair::qualify(&body,[0,2],100.,mixed_options()).unwrap().certificate.unwrap();
+        assert!(mixed_coverage!(&body,100.01,1e-6,vec![mixed]).is_err());
+        let mixed=crate::source_wall_pair::qualify(&body,[0,2],100.,mixed_options()).unwrap().certificate.unwrap();
+        assert!(mixed_coverage!(&body,9.99,1e-5,vec![mixed]).is_err());
+        let mixed=crate::source_wall_pair::qualify(&other,[0,2],100.,mixed_options()).unwrap().certificate.unwrap();
+        assert!(mixed_coverage!(&body,9.99,1e-6,vec![mixed]).is_err());
+        let first=crate::source_wall_pair::qualify(&body,[0,2],100.,mixed_options()).unwrap().certificate.unwrap();
+        let reversed=crate::source_wall_pair::qualify(&body,[2,0],100.,mixed_options()).unwrap().certificate.unwrap();
+        assert!(mixed_coverage!(&body,9.99,1e-6,vec![first,reversed]).is_err());
         let foreign=crate::source_retained_face_gap::qualify(&other,[0,1],29.99,options()).unwrap().certificate.unwrap();
         assert!(crate::source_wall_coverage::qualify_with_retained_gap_facts(&body,9.99,coverage_options(),Vec::new(),no_products(),no_factors(),vec![foreign]).is_err());
         let pass=crate::source_wall_coverage::RetainedGapLimits{cells:1,spans:2,domain_cells:1,cells_per_pair:1,spans_per_pair:2,domain_cells_per_pair:1,domain_cells_per_query:1,tolerance_uv:1e-8};
@@ -314,7 +333,17 @@ mod tests {
                 cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();
         assert!(combined.normal_products>0);assert!(combined.spans>0);
         assert!(combined.unresolved_products.is_empty());
-        assert!(std::ptr::eq(combined.certificate.unwrap().body(),&body));
+        let mixed=combined.certificate.unwrap();assert!(std::ptr::eq(mixed.body(),&body));
+        let aggregate=crate::source_wall_coverage::qualify_with_mixed_pair_facts(&body,5.99,
+            crate::source_wall_coverage::Limits{pairs:378,plane_controls:10000,normal_spans:1000,
+                gap:crate::source_face_gap::Limits{cells:1000,spans:2000},max_sine_squared:1e-6},
+            Vec::new(),crate::source_wall_coverage::NormalProductLimits{cells:0,cells_per_pair:0},
+            crate::source_wall_coverage::FactoredNormalLimits{exact_work:0,queries:0,cells:0,cells_per_pair:0},
+            Vec::new(),None,vec![mixed]).unwrap();
+        let pair=aggregate.pairs.iter().find(|p|p.faces==[4,5]).unwrap();
+        assert!(pair.proven);assert_eq!(pair.reason,"source-wall-mixed-product-qualified");
+        assert!(aggregate.certificate.is_none());
+
         let numerical=crate::source_wall_pair::qualify(&body,[16,20],5.99,
             crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
                 cells:4096,spans:10000,domain_cells:10000,domain_cells_per_query:256,tolerance_uv:1e-8}).unwrap();

@@ -47,6 +47,7 @@ pub struct Certificate<'a> {
     max_sine_squared: f64,
     gaps: Vec<source_face_gap::Certificate<'a>>,
     retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a>>,
     self_chords: Vec<nurbs_core::surface_self_chord::Certificate<'a>>,
     adaptive_self: Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
 }
@@ -69,6 +70,7 @@ impl<'a> Certificate<'a> {
         &self.self_chords
     }
     pub fn retained_gap_certificates(&self) -> &[crate::source_retained_face_gap::Certificate<'a>] { &self.retained_gaps }
+    pub fn mixed_pair_certificates(&self) -> &[crate::source_wall_pair::Certificate<'a>] { &self.mixed_pairs }
     pub fn gap_certificates(&self) -> &[source_face_gap::Certificate<'a>] {
         &self.gaps
     }
@@ -146,9 +148,29 @@ pub fn qualify_with_retained_gap_pass<'a>(
     body:&'a Body,minimum_mm:f64,limits:Limits,
     facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
     products:NormalProductLimits,factors:FactoredNormalLimits,
-    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
     retained:Option<RetainedGapLimits>,
 )->Result<Report<'a>> {
+    qualify_with_mixed_pair_facts(body,minimum_mm,limits,facts,products,factors,retained_gaps,retained,Vec::new())
+}
+/// Reuse complete retained product proofs bound to this original immutable body.
+/// Certificates cover the requested threshold and normal-angle criterion.
+pub fn qualify_with_mixed_pair_facts<'a>(
+    body:&'a Body,minimum_mm:f64,limits:Limits,
+    facts:Vec<crate::source_wall_self_coverage::FaceCertificate<'a>>,
+    products:NormalProductLimits,factors:FactoredNormalLimits,
+    mut retained_gaps:Vec<crate::source_retained_face_gap::Certificate<'a>>,
+    retained:Option<RetainedGapLimits>,
+    mixed_pairs:Vec<crate::source_wall_pair::Certificate<'a>>,
+)->Result<Report<'a>> {
+    let mut mixed_faces=std::collections::HashSet::new();
+    for proof in &mixed_pairs {
+        let mut faces=proof.faces();faces.sort();
+        if !std::ptr::eq(proof.body(),body)||proof.lower_mm()<minimum_mm
+            ||proof.max_sine_squared()<limits.max_sine_squared||!mixed_faces.insert(faces) {
+            return Err(Error::new("BREP_SOURCE_MIXED_WALL_FACT","Use unique original body proofs covering the requested threshold and angle"));
+        }
+    }
     if let Some(r)=retained {
         if [r.cells,r.spans,r.cells_per_pair,r.spans_per_pair,r.domain_cells_per_pair,r.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
             ||!(1..=1000000).contains(&r.domain_cells)||!r.tolerance_uv.is_finite()||r.tolerance_uv<=0. {
@@ -373,6 +395,10 @@ pub fn qualify_with_retained_gap_pass<'a>(
         }
     }
     for pair in &mut out.pairs {
+        if !pair.proven && mixed_faces.contains(&pair.faces) {
+            pair.proven=true;
+            pair.reason="source-wall-mixed-product-qualified";
+        }
         if !pair.proven && retained_pairs.contains(&pair.faces) {
             pair.proven=true;
             pair.reason="source-wall-retained-gap-qualified";
@@ -403,6 +429,7 @@ pub fn qualify_with_retained_gap_pass<'a>(
             max_sine_squared: limits.max_sine_squared,
             gaps,
             retained_gaps,
+            mixed_pairs,
             self_chords,
             adaptive_self: facts,
         });
