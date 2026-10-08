@@ -1253,3 +1253,24 @@ interior points, shared split boundaries and diagonal endpoints. The actual
 short normal chord counterexample remains a refusal test. JSON schema 2
 explicitly marks unresolved pairs as representatives including exchange.
 No asymmetric distinct-face operation uses this reduction.
+
+## Complete original rectangle cache
+
+An in-call cache binds one immutable original surface and one squared-sine
+tolerance. Exact parameter endpoint bits key complete ordinary derivative
+and continuity reports. Only complete reports enter the cache; complete
+refusals may be reused but never promoted to certificates. Reuse consumes
+zero new derivative restrictions, preserving the original outward bounds.
+There is no cache across surfaces, edits or qualification calls. Reports
+count completeRectangleCacheHits. Twenty focused tests pass, including
+repeated partial two-span refusals, complete reuse with no new query budget,
+independent closed-product budget coverage and the short normal chord. The
+calculation example passes cargo check. Geometry tolerances remain unchanged.
+
+The complete 512-cell / 4096-restriction middle-face audit preserves all
+four original serializations. Forward radii use 2071 restrictions, reuse
+311 complete rectangles, and make 89 mean-matrix exclusions; 15 pending
+representatives remain. Reverse radii use 2072 restrictions, reuse 318
+rectangles, and make 99 mean-matrix exclusions; 13 remain. Both spatial
+directions match. These finite-budget results do not qualify any additional
+face. Full schema-2 JSON and logs are archived.

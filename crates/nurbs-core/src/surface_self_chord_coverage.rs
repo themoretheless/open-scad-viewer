@@ -13,6 +13,29 @@ fn diagonal_children(rect: Rectangle, axis: usize, mid: f64) -> [Pair; 3] {
     left[axis][1]=mid; right[axis][0]=mid;
     [[left,left],[left,right],[right,right]]
 }
+/// Per-call cache owns one immutable source and one admission tolerance.
+/// Only complete derivative/continuity coverage can be reused for free.
+struct RectangleCache<'a> {
+    surface: &'a Surface,
+    sine: f64,
+    reports: std::collections::HashMap<[[u64;2];2],surface_self_chord::Report<'a>>,
+}
+impl<'a> RectangleCache<'a> {
+    fn new(surface:&'a Surface,sine:f64)->Self {
+        Self{surface,sine,reports:std::collections::HashMap::new()}
+    }
+    fn qualify(&mut self,domain:Rectangle,budget:usize)
+        ->Result<(surface_self_chord::Report<'a>,bool)> {
+        let key=domain.map(|axis|axis.map(f64::to_bits));
+        if let Some(report)=self.reports.get(&key) {
+            let mut report=report.clone();report.spans=0;
+            return Ok((report,true));
+        }
+        let report=surface_self_chord::qualify_rectangle(self.surface,domain,self.sine,budget)?;
+        if report.complete {self.reports.insert(key,report.clone());}
+        Ok((report,false))
+    }
+}
 pub struct Limits {
     pub cells: usize,
     pub spans: usize,
@@ -57,6 +80,7 @@ pub struct Report<'a> {
     pub direction_exclusions: usize,
     /// Subset of direction exclusions proved by the original mean matrix.
     pub mean_matrix_exclusions: usize,
+    pub complete_rectangle_cache_hits: usize,
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
@@ -282,6 +306,7 @@ fn qualify_impl<'a>(
         factored_angular_exclusions: 0,
         direction_exclusions: 0,
         mean_matrix_exclusions: 0,
+        complete_rectangle_cache_hits: 0,
         distance_exclusions: 0,
         pending: 1,
         uncertain: None,
@@ -290,6 +315,7 @@ fn qualify_impl<'a>(
     };
     let mut pending = vec![[domain, domain]];
     let mut intrinsic = Vec::new();
+    let mut rectangles=RectangleCache::new(s,max_sine_squared);
     while let Some(pair) = pending.pop() {
         if out.cells == limits.cells || out.spans == limits.spans {
             pending.push(pair);
@@ -304,12 +330,8 @@ fn qualify_impl<'a>(
                 pair[0][axis][1].max(pair[1][axis][1]),
             ]
         });
-        let r = surface_self_chord::qualify_rectangle(
-            s,
-            union,
-            max_sine_squared,
-            limits.spans - out.spans,
-        )?;
+        let (r,reused)=rectangles.qualify(union,limits.spans-out.spans)?;
+        out.complete_rectangle_cache_hits+=usize::from(reused);
         out.spans += r.spans;
         if let Some(c) = r.certificate {
             out.intrinsic_exclusions += 1;
@@ -523,6 +545,52 @@ mod tests {
             assert_eq!(children[0][0][axis][1],mid);
             assert_eq!(children[2][0][axis][0],mid);
         }
+    }
+    #[test]
+    fn budget_refusal_preserves_all_closed_pairs_including_exchanged_endpoints() {
+        let mut s=graph();
+        for row in &mut s.control_points {for point in row {point.fill(0.);}}
+        let points:Vec<_>=[0.,0.25,0.5,0.75,1.].into_iter().flat_map(|u|
+            [0.,0.25,0.5,0.75,1.].into_iter().map(move|v|[u,v])).collect();
+        let contains=|r:Rectangle,p:[f64;2]| (0..2).all(|a|r[a][0]<=p[a] && p[a]<=r[a][1]);
+        for cells in 1..=12 {
+            let report=qualify(&s,0.1,1e-4,Limits{cells,spans:1000}).unwrap();
+            assert!(report.certificate.is_none());
+            assert_eq!(report.cells,cells);
+            assert_eq!(report.pending,report.unresolved_pairs.len());
+            assert_eq!(report.uncertain,report.unresolved_pairs.last().copied());
+            for &a in &points {for &b in &points {
+                assert!(report.unresolved_pairs.iter().any(|c|
+                    contains(c[0],a)&&contains(c[1],b) || contains(c[0],b)&&contains(c[1],a)),
+                    "Missing original endpoint obligation after {cells} cells: {a:?}, {b:?}");
+            }}
+        }
+    }
+    #[test]
+    fn rectangle_cache_reuses_only_complete_original_coverage() {
+        let s=graph();
+        let mut cache=RectangleCache::new(&s,1e-6);
+        let domain=[[0.,1.];2];
+        assert!(cache.qualify(domain,0).is_err());
+        let (paid,reused)=cache.qualify(domain,1).unwrap();
+        assert!(paid.complete && !reused && paid.spans==1);
+        let (free,reused)=cache.qualify(domain,0).unwrap();
+        assert!(free.complete && reused && free.spans==0);
+        assert_eq!(paid.cosine_squared_upper,free.cosine_squared_upper);
+        assert!(free.mean_matrix.is_some());
+        assert!(cache.qualify([[0.,0.5],[0.,1.]],0).is_err());
+        let mut multiple=s.clone();
+        multiple.control_points.push(multiple.control_points[2].clone());
+        multiple.weights.push(vec![1.;2]);
+        multiple.knots_u=vec![0.,0.,0.,0.5,1.,1.,1.];
+        let mut partial=RectangleCache::new(&multiple,1e-6);
+        for _ in 0..2 {
+            let (report,reused)=partial.qualify(domain,1).unwrap();
+            assert!(!report.complete && !reused && report.spans==1);
+        }
+        let (report,reused)=partial.qualify(domain,2).unwrap();
+        assert!(report.complete && !reused && report.spans==2);
+        assert!(partial.qualify(domain,0).unwrap().1);
     }
     fn graph() -> Surface {
         Surface {

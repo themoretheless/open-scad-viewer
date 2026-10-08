@@ -2,6 +2,7 @@
 //! Original rational derivative bounds cover every nonempty knot rectangle.
 use crate::{check, distance_bounds::Interval as I, normal_alignment, surface::Surface, Result};
 
+#[derive(Clone)]
 pub struct Certificate<'a> {
     surface: &'a Surface,
     domain: [[f64; 2]; 2],
@@ -24,6 +25,7 @@ impl<'a> Certificate<'a> {
 }
 /// Original derivative hull on a completely covered continuous rectangle.
 /// Private fields prevent rebinding a mean-path enclosure to another source.
+#[derive(Clone)]
 pub(crate) struct MeanMatrix<'a> {
     surface: &'a Surface,
     domain: [[f64; 2]; 2],
@@ -76,6 +78,7 @@ impl MeanMatrix<'_> {
         Ok((false,used))
     }
 }
+#[derive(Clone)]
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
     pub(crate) mean_matrix: Option<MeanMatrix<'a>>,
