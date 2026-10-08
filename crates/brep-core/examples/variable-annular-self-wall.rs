@@ -1,5 +1,19 @@
 //! Original full-chart exclusion of aligned same-face chords.
 //! Distinct face coverage and material volume remain separate requirements.
+fn save_completed_cases(output: &str, cases: &[value_codec::Value]) {
+    let report = value_codec::json!({
+        "schema":"cad-annular-self-wall/1",
+        "scope":"Full original chart intrinsic self-chord exclusion; absence of a certificate remains unresolved, not a thin witness or global wall certificate",
+        "maxSineSquared":1e-4,
+        "completeAudit":cases.len()==4,
+        "completedCases":cases.len(),
+        "expectedCases":4,
+        "cases":cases
+    });
+    let temporary = format!("{output}.tmp");
+    std::fs::write(&temporary,value_codec::to_string_pretty(&report).unwrap()).unwrap();
+    std::fs::rename(&temporary,output).unwrap();
+}
 fn main() {
     let output = std::env::args().nth(1).expect("output JSON path");
     let adaptive_enabled = std::env::args().nth(2).as_deref() == Some("adaptive");
@@ -104,7 +118,8 @@ fn main() {
             }
             assert_eq!(value_codec::to_string(&model).unwrap(), before);
             cases.push(value_codec::json!({"radii":radii,"direction":direction,"sourceFacesTotal":model.faces.len(),"selectedFaces":selected,"adaptiveCellsPerFace":adaptive_cells,"adaptiveSpansPerFace":adaptive_spans,"faces":faces}));
+            save_completed_cases(&output, &cases);
         }
     }
-    std::fs::write(output,value_codec::to_string_pretty(&value_codec::json!({"schema":"cad-annular-self-wall/1","scope":"Full original chart intrinsic self-chord exclusion; absence of a certificate remains unresolved, not a thin witness or global wall certificate","maxSineSquared":1e-4,"cases":cases})).unwrap()).unwrap();
+
 }

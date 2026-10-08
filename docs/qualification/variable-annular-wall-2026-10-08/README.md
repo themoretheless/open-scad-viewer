@@ -1084,3 +1084,20 @@ radius / positive-direction entry face has a complete certificate after
 progress is not a qualification of every entry face, the exit face, the
 middle face, distinct-face wall pairs or the global wall minimum. The
 final audit JSON and all four original-serialization checks remain pending.
+
+## Completed-case report checkpoints
+
+The prototype example now atomically replaces its JSON report after each
+complete case, after its original model serialization comparison. Explicit
+completeAudit / completedCases / expectedCases fields distinguish a
+partial run from all four complete cases. The temporary sibling is renamed
+only after successful full serialization/write. A short selected-face run
+completed all four cases, emitted completeAudit=true and counts=4, and
+left no temporary file. It is reporting smoke evidence, not pole coverage
+or application crash-recovery qualification. Archives retain that scope.
+
+The existing deep audit predates checkpoint reporting and remains live.
+Its first positive-direction / forward-radius case has a full entry face
+certificate (2721 cells / 70628 restrictions) and seven remaining exit
+face obligations after 4245 cells / 100000 restrictions. The remaining
+three prototype cases are not yet completed. No global wall safety follows.
