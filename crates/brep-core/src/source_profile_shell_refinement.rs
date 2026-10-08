@@ -56,6 +56,25 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
         additional_cells_per_pair: usize,
     ) -> Result<ShellContactAudit<'_>> {
+        self.refine_profile_contacts(limits, region, additional_cells_per_pair, false)
+    }
+    /// Refine every still-unqualified pair using the actual retained/profile
+    /// and transition expressions. Qualified contact loci remain unchanged.
+    pub fn inspect_all_contacts_with_profile_region_refined(
+        &self,
+        limits: ContactAuditLimits,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        additional_cells_per_pair: usize,
+    ) -> Result<ShellContactAudit<'_>> {
+        self.refine_profile_contacts(limits, region, additional_cells_per_pair, true)
+    }
+    fn refine_profile_contacts(
+        &self,
+        limits: ContactAuditLimits,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        additional_cells_per_pair: usize,
+        include_changed: bool,
+    ) -> Result<ShellContactAudit<'_>> {
         if additional_cells_per_pair > 100000 {
             return Err(Error::new(
                 "BREP_PROFILE_CONTACTS",
@@ -65,11 +84,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         let mut out = self.inspect_contacts_with_profile_region(limits, region)?;
         let candidate = |pair: &AuditedContactPair<'_>| {
             matches!(pair.proof, PairContactProof::Pending)
-                && pair
-                    .support
-                    .faces
-                    .iter()
-                    .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_)))
+                && (include_changed
+                    || pair
+                        .support
+                        .faces
+                        .iter()
+                        .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_))))
         };
         let mut remaining = out.pairs.iter().filter(|p| candidate(p)).count();
         for pair in &mut out.pairs {
