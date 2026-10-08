@@ -1361,3 +1361,12 @@ after 25940 cells; both exhaust 100000 restrictions and match spatial
 directions. All remaining rectangles are archived with complete JSON/logs.
 This predates cross-pair normal reuse and general span tensor restriction.
 No additional self-face certificate or global wall minimum follows.
+
+The complete cb295499 tensor-restriction middle audit preserves all four
+original models under 100000-cell / 100000-restriction caps. Forward radii
+retain 11 pending representatives after 51004 cells; reverse retain 15
+after 54723 cells. Both use the full restriction cap, and spatial directions
+match. Full schema-2 JSON/logs include all remaining original rectangles
+and both derivative and normal cache counters. No additional face is
+qualified; different subdivisions preclude interpreting pending counts as
+a coverage percentage. Distinct-face and global wall minimum remain open.
