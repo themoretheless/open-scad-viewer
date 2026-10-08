@@ -65,12 +65,22 @@ fn spans(s: &Surface, d: [[f64; 2]; 2]) -> usize {
 }
 // A close pair of rigorously enclosed chart points prevents a full-chart
 // clearance certificate. It says nothing about retained trims or material.
-fn midpoint_chart_pair(surfaces:[&Surface;2],uv:[[[f64;2];2];2])
-    ->Result<([[[f64;2];2];2],usize,f64)> {
-    let points=uv.map(|rect|rect.map(|axis|{let t=axis[0]*0.5+axis[1]*0.5;[t,t]}));
-    let work=spans(surfaces[0],points[0])+spans(surfaces[1],points[1]);
-    let boxes=[rectangle_bounds(surfaces[0],points[0])?,rectangle_bounds(surfaces[1],points[1])?];
-    Ok((points,work,enclosure_distance(&boxes[0],&boxes[1])?.1))
+fn midpoint_chart_pair(
+    surfaces: [&Surface; 2],
+    uv: [[[f64; 2]; 2]; 2],
+) -> Result<([[[f64; 2]; 2]; 2], usize, f64)> {
+    let points = uv.map(|rect| {
+        rect.map(|axis| {
+            let t = axis[0] * 0.5 + axis[1] * 0.5;
+            [t, t]
+        })
+    });
+    let work = spans(surfaces[0], points[0]) + spans(surfaces[1], points[1]);
+    let boxes = [
+        rectangle_bounds(surfaces[0], points[0])?,
+        rectangle_bounds(surfaces[1], points[1])?,
+    ];
+    Ok((points, work, enclosure_distance(&boxes[0], &boxes[1])?.1))
 }
 /// Certificates retain every selected pair. An exhausted or unresolved pair
 /// refuses; chart clearance never creates a trimmed-face upper witness.
@@ -145,14 +155,20 @@ pub fn qualify<'a>(
                 }
                 // Charge the point enclosures separately; unresolved work
                 // retains the original pair if no close point is established.
-                let point_uv=uv.map(|rect|rect.map(|axis|{let t=axis[0]*0.5+axis[1]*0.5;[t,t]}));
-                let point_work=spans(surfaces[0],point_uv[0])+spans(surfaces[1],point_uv[1]);
-                if out.cells<limits.cells&&point_work<=limits.spans-out.spans {
-                    let (points,used,upper)=midpoint_chart_pair(surfaces,uv)?;
-                    out.cells+=1;out.spans+=used;
-                    if upper<minimum_mm {
-                        out.uncertain_uv=Some(points);
-                        out.reason="source-face-gap-chart-close";
+                let point_uv = uv.map(|rect| {
+                    rect.map(|axis| {
+                        let t = axis[0] * 0.5 + axis[1] * 0.5;
+                        [t, t]
+                    })
+                });
+                let point_work = spans(surfaces[0], point_uv[0]) + spans(surfaces[1], point_uv[1]);
+                if out.cells < limits.cells && point_work <= limits.spans - out.spans {
+                    let (points, used, upper) = midpoint_chart_pair(surfaces, uv)?;
+                    out.cells += 1;
+                    out.spans += used;
+                    if upper < minimum_mm {
+                        out.uncertain_uv = Some(points);
+                        out.reason = "source-face-gap-chart-close";
                         return Ok(out);
                     }
                 }
@@ -180,6 +196,29 @@ pub fn qualify<'a>(
                 let r = uv[side][axis];
                 let mid = r[0] * 0.5 + r[1] * 0.5;
                 if !(r[0] < mid && mid < r[1]) {
+                    // Preserve the unresolved threshold contour. Only probe
+                    // queued chart points for a strict refusal; further rectangle
+                    // subdivision can chase this contour until budget exhaustion.
+                    for candidate in queue.iter().rev().copied() {
+                        let points = candidate.map(|rect| {
+                            rect.map(|axis| {
+                                let t = axis[0] * 0.5 + axis[1] * 0.5;
+                                [t, t]
+                            })
+                        });
+                        let work = spans(surfaces[0], points[0]) + spans(surfaces[1], points[1]);
+                        if out.cells == limits.cells || work > limits.spans - out.spans {
+                            break;
+                        }
+                        let (points, used, upper) = midpoint_chart_pair(surfaces, candidate)?;
+                        out.cells += 1;
+                        out.spans += used;
+                        if upper < minimum_mm {
+                            out.uncertain_uv = Some(points);
+                            out.reason = "source-face-gap-chart-close";
+                            return Ok(out);
+                        }
+                    }
                     out.reason = "source-face-gap-resolution-limit";
                     return Ok(out);
                 }
@@ -208,13 +247,27 @@ mod tests {
     use super::*;
     #[test]
     fn chart_point_enclosures_refuse_only_strictly_short_full_chart_gaps() {
-        let plane=|z|Surface{degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![vec![vec![0.,0.,z],vec![0.,1.,z]],vec![vec![1.,0.,z],vec![1.,1.,z]]],
-            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
-        let a=plane(0.);let b=plane(0.1);
-        let (points,work,upper)=midpoint_chart_pair([&a,&b],[[[0.,1.];2];2]).unwrap();
-        assert_eq!(points,[[[0.5,0.5];2];2]);assert_eq!(work,2);
-        assert!(upper>=0.1&&upper<0.100001);assert!(upper<0.2);assert!(upper>=0.05);
+        let plane = |z| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., z], vec![0., 1., z]],
+                vec![vec![1., 0., z], vec![1., 1., z]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let a = plane(0.);
+        let b = plane(0.1);
+        let (points, work, upper) = midpoint_chart_pair([&a, &b], [[[0., 1.]; 2]; 2]).unwrap();
+        assert_eq!(points, [[[0.5, 0.5]; 2]; 2]);
+        assert_eq!(work, 2);
+        assert!(upper >= 0.1 && upper < 0.100001);
+        assert!(upper < 0.2);
+        assert!(upper >= 0.05);
     }
     #[test]
     fn rational_weight_change_keeps_transverse_parameter_active() {
