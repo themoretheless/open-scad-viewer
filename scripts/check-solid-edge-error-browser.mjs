@@ -112,7 +112,27 @@ try{
   try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
  }else await filletType.selectOption(mode)
  assert.equal(await filletType.inputValue(),mode)
- if(mode==='partial-preview'){
+ if(process.env.SOLID_EDGE_EXPECT_INITIAL_REFUSAL){
+  assert.equal(mode,'constant')
+  const amount=solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true})
+  await enterText(amount,'0.1 mm')
+  const message=solid.getByText('Не удалось подтвердить отсутствие пересечений.',{exact:false})
+  await message.waitFor()
+  assert.ok(!(await solid.innerText()).includes('Размер сопряжения не помещается.'))
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  for(const edge of ids)assert.equal(await solid.locator(`[data-topology-edge="${edge}"]`).getAttribute('stroke'),'#f87171')
+  assert.deepEqual(await doc('refused'),before)
+  const count=await page.evaluate(()=>window.__edgeRequests)
+  await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
+  await page.waitForFunction(count=>window.__edgeRequests>count,count)
+  await message.waitFor()
+  assert.deepEqual(await doc('retry-refused'),before)
+  await page.screenshot({path:path.join(directory,'error.png')})
+  await page.keyboard.press('Escape');await ready();assert.deepEqual(await doc('cancelled'),before)
+  await page.reload();await ready();assert.deepEqual(await doc('reloaded'),before)
+  assert.deepEqual(errors,[])
+  await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,scope:'Unconfirmed separation refusal only; no constant-fillet success',localizedUncertainty:true,highlightedEdges:true,commitBlocked:true,retry:true,cancel:true,documentUnchanged:true,reload:true,errors},null,2))
+ }else if(mode==='partial-preview'){
   await enterText(solid.getByRole('textbox',{name:'\u0420\u0430\u0434\u0438\u0443\u0441 / \u0440\u0430\u0437\u043c\u0435\u0440, \u043c\u043c',exact:true}),'1.25 mm')
   await solid.locator('[data-preview-body]').first().waitFor()
   assert.equal(await solid.getByRole('button',{name:'\u0413\u043e\u0442\u043e\u0432\u043e \u00b7 Enter',exact:true}).isDisabled(),true)
@@ -130,8 +150,9 @@ try{
   await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,actualPreview:true,commitBlocked:true,lateResponseIgnored:true,documentUnchanged:true,errors},null,2))
  }else{
  if(process.env.SOLID_EDGE_FIXTURE_ROOT){
+  await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
   await page.evaluate(()=>window.__holdEdge=true)
-  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'1.25 mm')
+  await enterText(solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true}),'1.25 mm')
   await page.waitForFunction(()=>typeof window.__lateEdge==='function')
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
   if(process.env.SOLID_EDGE_CONTEXT_SWITCH){
@@ -147,7 +168,7 @@ try{
   assert.deepEqual(await doc('late-cancelled'),before)
   assert.equal(await solid.locator('[data-preview-body]').count(),0)
   await activate(page.getByRole('button',{name:'Команды',exact:true}));await enterText(search,'Скруглить 3D');await search.press('Enter')
-  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'2 mm')
+  await enterText(solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true}),'2 mm')
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent?.trim()==='Готово · Enter'&&!b.disabled))
   const currentPreview=await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML))
   assert.ok(currentPreview.length>0)

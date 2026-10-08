@@ -1121,6 +1121,7 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
   if(message.includes('complete corner chain'))return context+label('Выберите всю цепочку рёбер с Shift.','Select the complete edge chain with Shift.')
   if(message.includes('cavity or missing material'))return context+label('Скругление прорезает стенку. Уменьшите радиус.','Fillet crosses the wall. Reduce the radius.')
   if(message.includes('Partial circular rim'))return context+label('Выберите полное кольцо: добавьте остальные дуги с Shift.','Select a complete rim: add the remaining arcs with Shift.')
+  if(message.includes('separation is unresolved'))return context+label('Не удалось подтвердить отсутствие пересечений. Измените радиус или набор рёбер и повторите расчёт.','Intersection freedom could not be confirmed. Change the radius or selected edges and retry.')
   return context+(/collid|consum|radius.*(large|fit)|distance.*(large|fit)|too (small|short) for/i.test(message)
    ?label('Размер сопряжения не помещается. Уменьшите радиус или размер фаски.','The feature does not fit. Reduce the radius or chamfer size.')
    :label('Сопряжение не подтверждено для выбранной геометрии. Проверьте условия режима ниже и выберите подходящие рёбра.','The feature is unproven for this geometry. Check the mode requirements below and select suitable edges.'))

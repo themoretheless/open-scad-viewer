@@ -1,0 +1,31 @@
+{
+  "inputValue": "30",
+  "inputFont": "13px / 15.6px Inter, ui-sans-serif, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+  "inputPadding": "0px",
+  "text": {
+    "x": 726.34375,
+    "y": 494,
+    "width": 22.78125,
+    "height": 16
+  },
+  "label": {
+    "x": 631.125,
+    "y": 489,
+    "width": 124,
+    "height": 27.59375
+  },
+  "input": {
+    "x": 637.125,
+    "y": 495,
+    "width": 85.21875,
+    "height": 15.59375
+  },
+  "host": {
+    "x": 379.625,
+    "y": 109,
+    "width": 716.375,
+    "height": 792
+  },
+  "borderToFont": 0.07692307692307693,
+  "lineToFont": 1.2
+}
