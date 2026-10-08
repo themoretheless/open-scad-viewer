@@ -57,7 +57,7 @@ fn map(edge: &SharedEdge, side: usize, parameter: I) -> Result<I> {
         .div(I::point(d[1]).sub(I::point(d[0]))?)?;
     first.add(normalized.mul(last.sub(first)?)?)
 }
-fn inverse(edge: &SharedEdge, side: usize, canonical: I) -> Result<I> {
+pub(crate) fn inverse(edge: &SharedEdge, side: usize, canonical: I) -> Result<I> {
     let d = edge.uses()[side].curve().domain();
     let range = ranges(edge)[side];
     let first = I::point(range[0][0]).div(I::point(range[0][1]))?;

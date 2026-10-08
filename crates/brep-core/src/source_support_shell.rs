@@ -456,6 +456,24 @@ mod tests {
                     [uses[0].face,uses[1].face],audit.reason,audit.angular.map(|r|r.pending));
             }
         }
+        for index in [0,6] {
+            let report=both.qualify_edge(index,100,1e-6,10000,40000).unwrap();
+            let angular=report.angular.expect("original pcurve route");
+            if index==0 {
+                assert!(report.seam.is_none());assert_eq!(angular.aligned,None);
+                assert_eq!(report.reason,"profile-seam-endpoint-normal-unresolved");
+                assert!(!angular.pending.is_empty());
+            } else {
+                let proof=report.seam.expect(report.reason);assert_eq!(proof.edge(),6);
+                assert!(std::ptr::eq(proof.proposal(),&both));
+                assert_eq!(angular.aligned,Some(true));assert!(angular.pending.is_empty());
+                assert!(proof.upper_sine_squared()<=1e-6);
+                assert_eq!((angular.cells,angular.spans,angular.accepted_cells),(291,1164,147));
+            }
+
+            eprintln!("curved corrected edge {} aligned={:?} cells={} spans={} accepted={} pending={} reason={} upper={:?}",
+                index,angular.aligned,angular.cells,angular.spans,angular.accepted_cells,angular.pending.len(),report.reason,angular.upper_sine_squared);
+        }
         let limited=proposal.qualify_seam(0,5,0,1e-6,50000,100000).unwrap();
         assert!(limited.seam.is_none()&&limited.angular.is_none());
         let limited=proposal.qualify_seam(0,5,100,1e-6,1,1).unwrap();

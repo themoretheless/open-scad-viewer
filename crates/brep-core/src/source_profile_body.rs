@@ -128,6 +128,21 @@ impl<'a> Proposal<'a> {
             }
         };
         let Some(map) = map else {
+            if let Some(index) = edge.filter(|index| *index < max_edges) {
+                let angular =
+                    self.inspect_curved_edge(face, neighbor, index, threshold, cells, spans)?;
+                out.reason = angular.reason;
+                if angular.aligned == Some(true) {
+                    out.seam = Some(Seam {
+                        proposal: self,
+                        faces: [face, neighbor],
+                        edge: index,
+                        threshold,
+                        upper: angular.upper_sine_squared.unwrap(),
+                    });
+                }
+                out.angular = Some(angular);
+            }
             return Ok(out);
         };
         let axes = map.fixed_axes();
@@ -161,6 +176,149 @@ impl<'a> Proposal<'a> {
             });
         }
         out.angular = Some(angular);
+        Ok(out)
+    }
+    /// Original nonlinear pcurves remain source-owned; inverse canonical maps
+    /// and complete curve-span enclosures replace manually supplied UV lines.
+    fn inspect_curved_edge(
+        &self,
+        face: usize,
+        neighbor: usize,
+        index: usize,
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
+        if !(1..=100000).contains(&max_cells)
+            || !(1..=100000).contains(&max_spans)
+            || !threshold.is_finite()
+            || !(0. ..1.).contains(&threshold)
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_SEAM",
+                "Bound original pcurve and normal work",
+            ));
+        }
+        let shell = self.body.geometry().shell();
+        let edge = &shell.edges()[index];
+        let addresses = &shell.uses()[index];
+        let order = if addresses[0].face == face {
+            [0, 1]
+        } else {
+            [1, 0]
+        };
+        let mut out = ProfilePathReport {
+            aligned: None,
+            cells: 0,
+            spans: 0,
+            accepted_cells: 0,
+            upper_sine_squared: None,
+            pending: vec![[0., 1.]],
+            reason: "profile-seam-carrier-unproven",
+        };
+        let regions = shell.regions().unwrap();
+        if !edge.maps_complete_canonical_source()
+            || [face, neighbor].iter().enumerate().any(|(side, &f)| {
+                !same(
+                    edge.uses()[order[side]].surface(),
+                    regions[f].loops()[0][0].surface(),
+                ) || edge.uses()[order[side]].curve().periodic
+            })
+        {
+            return Ok(out);
+        }
+        let profile = self.profile(face).unwrap();
+        // Singular literal source endpoints are explicitly inspected before
+        // repeatedly subdividing an interval that contains a zero normal.
+        out.pending.push([1., 1.]);
+        out.pending.push([0., 0.]);
+        out.reason = "profile-path-work-limit";
+        let mut upper = 0_f64;
+        while let Some(q) = out.pending.pop() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(q);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let mut rectangles = [[[0.; 2]; 2]; 2];
+            for side in 0..2 {
+                let use_ = &edge.uses()[order[side]];
+                let c = use_.curve();
+                let t =
+                    crate::source_seam_tangency::inverse(edge, order[side], I::new(q[0], q[1])?)?;
+                let spent = (c.degree..c.control_points.len())
+                    .filter(|&i| {
+                        c.knots[i] < c.knots[i + 1] && c.knots[i] <= t.hi && c.knots[i + 1] >= t.lo
+                    })
+                    .count();
+                if spent > max_spans - out.spans {
+                    out.pending.push(q);
+                    return Ok(out);
+                }
+                out.spans += spent;
+                let uv = nurbs_core::interval_eval::evaluate_interval(c, t)?;
+                let s = use_.surface();
+                let natural = [
+                    [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+                    [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+                ];
+                for axis in 0..2 {
+                    let r = uv[axis].intersect(natural[axis][0], natural[axis][1])?;
+                    rectangles[side][axis] = [r.lo, r.hi];
+                }
+            }
+            if out.spans == max_spans {
+                out.pending.push(q);
+                return Ok(out);
+            }
+            let r = match self.profile(neighbor) {
+                Some(other) => profile.inspect_profile_normals(
+                    other,
+                    rectangles,
+                    threshold,
+                    max_spans - out.spans,
+                )?,
+                None => profile.inspect_original_normals(
+                    edge.uses()[order[1]].surface(),
+                    rectangles,
+                    threshold,
+                    max_spans - out.spans,
+                )?,
+            };
+            out.spans += r.spans;
+            if r.aligned == Some(true) {
+                upper = upper.max(r.sine_squared_interval.unwrap()[1]);
+                out.accepted_cells += 1;
+                continue;
+            }
+            if r.aligned == Some(false) {
+                out.pending.push(q);
+                out.aligned = Some(false);
+                out.reason = "profile-path-angular-mismatch";
+                return Ok(out);
+            }
+            if q[0] == q[1] {
+                out.pending.push(q);
+                out.reason = "profile-seam-endpoint-normal-unresolved";
+                return Ok(out);
+            }
+            if r.reason == "span-limit" {
+                out.pending.push(q);
+                return Ok(out);
+            }
+            let mid = q[0] + (q[1] - q[0]) * 0.5;
+            if mid <= q[0] || mid >= q[1] {
+                out.pending.push(q);
+                out.reason = "profile-path-resolution-limit";
+                return Ok(out);
+            }
+            out.pending.push([mid, q[1]]);
+            out.pending.push([q[0], mid]);
+        }
+        out.aligned = Some(true);
+        out.upper_sine_squared = Some(upper);
+        out.reason = "profile-path-tangent-planes-qualified";
         Ok(out)
     }
     pub fn original_body(&self) -> &'a Body {

@@ -200,6 +200,16 @@ impl<'source> WeightProfile<'source> {
     ) -> Result<crate::normal_alignment::PairReport> {
         self.inspect_normal_pair(original, None, domains, max_sine_squared, max_spans)
     }
+    /// Complete rectangle angle bounds for two exact proposed profiles.
+    pub fn inspect_profile_normals(
+        &self,
+        other: &WeightProfile<'_>,
+        domains: [[[f64; 2]; 2]; 2],
+        threshold: f64,
+        max_spans: usize,
+    ) -> Result<crate::normal_alignment::PairReport> {
+        self.inspect_normal_pair(other.source, Some(other), domains, threshold, max_spans)
+    }
     fn inspect_normal_pair(
         &self,
         original: &Surface,

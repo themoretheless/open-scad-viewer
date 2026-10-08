@@ -621,3 +621,29 @@ Native incident inventory for proposed faces [0,5] contains exactly edges
 canonical intervals [0,0.5] and [0.5,1]; edges [0,6] have unsupported carrier
 maps in this affine-boundary path. The separately fully funded edge 5 proof
 continues to pass. The actual annular regression passes after exact selection.
+
+## Original pcurve fallback for corrected seam angles
+
+Exact owned edge selection now has an original-pcurve fallback when affine
+natural-boundary maps are unsupported. It uses the privately admitted canonical
+parameter correspondence, both original UV curves and their complete interval
+span enclosures, then compares the actual original/proposed surface normals.
+Source identity is checked against both retained owned face regions. Periodic
+or incomplete original canonical maps remain unproven.
+
+The fallback separately inspects canonical endpoints before subdivision.
+Singular endpoint normals remain unresolved. Its shared span quota includes
+both pcurve spans and normal spans; no partial angular result becomes a seam
+certificate. Boundary geometry preservation still comes from proposal admission.
+The zero/insufficient edge-search limit cannot activate this fallback.
+Eleven profile kernel tests pass after exposing the direct profile/profile
+normal comparison used by the fallback.
+
+Actual original-pcurve results for proposal faces [0,5]: edge 6 qualifies over
+its whole length with 291 inspected cells, 1164 combined curve/normal spans,
+147 accepted intervals, no pending intervals and squared-sine upper
+9.837155135567825e-7 at tolerance 1e-6. Edge 0 remains unresolved at an explicitly
+inspected canonical endpoint: one cell, four combined spans, no accepted cells,
+three pending intervals (whole carrier and both endpoint checks). The regression
+asserts this refusal separately from the admitted edge 6 proof. These results
+supersede only the previous unsupported-map status of those two edges.
