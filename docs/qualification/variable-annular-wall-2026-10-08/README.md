@@ -136,5 +136,13 @@ produce a certificate. Work counts include every attempted normal span.
 Ten native tests pass, including direct oblique-secant exclusion, overlapping
 boxes and zero-work refusal, and a direct true half-cylinder diameter refusal.
 The existing short-normal-chord full-coverage rejection also passes. Evidence:
-`secant-tests.log.gz`. The controlled eleven-face annular comparison is pending;
-no additional annular certificates or WASM/UI integration are claimed yet.
+`secant-tests.log.gz`. The controlled eleven-face comparison completed for all four original bodies
+at unchanged 4.74999 mm threshold, 1e-4 squared-sine tolerance and
+1024 cells/8192 spans per face. Every selected face remains unresolved.
+Full same-face coverage therefore remains 18/31. Face 5 no longer reaches
+the earlier floating-point resolution stop: 195 or 265 original pair domains
+are excluded by direction, and calculation reaches the cell-work limit.
+Other selected faces have 6–261 direction exclusions. These are covered
+subdomains, not extra complete-face certificates. Reports and original-source
+identity checks are retained in `self-wall-secant.json.gz` and its log.
+No new WASM/UI integration or whole-wall certificate is claimed.
