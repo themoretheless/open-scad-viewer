@@ -92,7 +92,8 @@ fn main() {
         .unwrap();
         results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,
-            "domainCells":r.domain_cells,"unresolvedProducts":r.unresolved_products.len(),"reason":r.reason}));
+            "domainCells":r.domain_cells,"unresolvedProducts":r.unresolved_products.len(),
+            "unresolvedUvProducts":r.unresolved_products,"reason":r.reason}));
     }
     let automatic = if args.get(4).is_some_and(|v| v == "pass") {
         use brep_core::source_wall_coverage as w;
