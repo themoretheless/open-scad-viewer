@@ -3681,7 +3681,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
                   · {{ label('Проверка внутри граней','Within-face coverage') }}:
                   {{ sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>f.qualified).length }}/{{ sourceWallCoverageResult.adaptiveSelf.faces.length }}
-                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('областей требуют проверки','regions require checking') }}
+                  · {{ sourceWallCoverageResult.adaptiveSelf.faces.reduce((n,f)=>n+f.pending,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
                   <span v-for="face in sourceWallCoverageResult.adaptiveSelf.faces.filter(f=>!f.qualified)" :key="face.face" class="source-wall-face-pending" :data-source-wall-pending-face="face.face">
                     · {{ label('Грань','Face') }} {{ face.face+1 }}: {{ face.pending }} {{ label('пар участков требуют проверки','region pairs require checking') }}
                   </span>

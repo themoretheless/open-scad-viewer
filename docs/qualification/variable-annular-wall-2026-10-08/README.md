@@ -1353,3 +1353,11 @@ sets, plus retention of at least the 16 preceding qualified classes. The
 whole-wall certificate still refuses, and limiting pole seam normals remain
 unresolved. Complete passing logs are archived. This is not acceptance of
 all requested bracket/flange/housing operation chains. WASM repack is next.
+
+The complete de826db5 derivative-cache deep middle audit preserves all
+four originals with a 100000-cell / 100000-restriction cap. Forward radii
+retain 17 pending representatives after 25700 cells, reverse retain nine
+after 25940 cells; both exhaust 100000 restrictions and match spatial
+directions. All remaining rectangles are archived with complete JSON/logs.
+This predates cross-pair normal reuse and general span tensor restriction.
+No additional self-face certificate or global wall minimum follows.
