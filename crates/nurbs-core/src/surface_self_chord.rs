@@ -616,10 +616,30 @@ impl<'a> SurfaceAnchorCertificate<'a> {
 }
 pub fn qualify_surface_anchor<'a>(s:&'a Surface,uv:[f64;2],world:[f64;3],max_work:u64)
     ->Result<(Option<SurfaceAnchorCertificate<'a>>,u64)> {
+    s.validate()?;
+    // Exact clamped tensor corners equal their authored control pole, for any
+    // degree or interior knot count. Charge the direct identity decision.
+    if max_work>0 && !s.periodic_u && !s.periodic_v {
+        let counts=[s.control_points.len(),s.control_points[0].len()];
+        let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+        let mut indices=[0;2];let mut corner=true;
+        for axis in 0..2 {
+            let k=knots[axis];let low=k[degrees[axis]];let high=k[counts[axis]];
+            if uv[axis]==low && k[..=degrees[axis]].iter().all(|x|*x==low) {
+                indices[axis]=0;
+            } else if uv[axis]==high && k[counts[axis]..].iter().all(|x|*x==high) {
+                indices[axis]=counts[axis]-1;
+            } else {corner=false;}
+        }
+        if corner {
+            let pole=&s.control_points[indices[0]][indices[1]];
+            return Ok((if pole.as_slice()==world {Some(SurfaceAnchorCertificate{surface:s,uv,world})}else{None},1));
+        }
+    }
     let constant=|point:Vec<f64>|crate::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
         control_points:vec![point.clone(),point],weights:vec![1.,1.],periodic:false};
     let world_curve=constant(world.to_vec());let pcurve=constant(uv.to_vec());
-    let Some(report)=crate::curve_surface_agreement::verify_exact(&world_curve,&pcurve,s,false,max_work)?
+    let Some(report)=crate::curve_surface_agreement::verify_exact(&world_curve,&pcurve,s,false,max_work.min(cad_predicates::MAX_WORK))?
         else{return Ok((None,0));};
     let work=report.work_used;
     let certificate=if report.outcome==cad_predicates::BezierIdentity::Equal {
@@ -793,6 +813,14 @@ mod original_corner_chord_tests {
         assert!(qualify_corner_chords([&a,&a],[[false;2];2],rects,[1.,1.,0.],1e-6,4).unwrap().0.is_none());
     }
     #[test]
+    fn exact_anchor_uses_authored_clamped_corner_and_charges_work() {
+        let s=plane(-1.);let uv=[0.,0.];let world=[0.,0.,0.];
+        let (proof,work)=qualify_surface_anchor(&s,uv,world,1).unwrap();
+        assert!(proof.is_some());assert_eq!(work,1);
+        assert!(qualify_surface_anchor(&s,uv,world,0).unwrap().0.is_none());
+        assert!(qualify_surface_anchor(&s,uv,[0.,0.,1e-15],1).unwrap().0.is_none());
+    }
+    #[test]
     fn rejects_approximate_common_corner_and_invalid_projection() {
         let a=plane(-1.);let mut b=plane(1.);b.control_points[0][0][2]=1e-15;
         assert!(qualify_corner_chords([&a,&b],[[false;2];2],[[[0.,0.1];2];2],[1.,1.,0.],1e-6,4).is_err());
@@ -809,6 +837,13 @@ mod original_corner_chord_tests {
         let (cert,used)=qualify_corner_chords([&a,&b],[[true;2],[false;2]],rects,[1.,1.,0.],1e-6,3).unwrap();
         assert!(cert.is_some());assert_eq!(used,3);
         assert!(qualify_corner_chords([&b,&a],[[false;2],[true;2]],[rects[1],rects[0]],[-1.,-1.,0.],1e-6,3).unwrap().0.is_some());
+    }
+    #[test]
+    fn exact_anchor_on_large_identity_plane() {
+        let s=Surface{degree_u:1,degree_v:1,knots_u:vec![-20.,-20.,20.,20.],knots_v:vec![-20.,-20.,20.,20.],
+            control_points:vec![vec![vec![-20.,-20.,6.],vec![-20.,20.,6.]],vec![vec![20.,-20.,6.],vec![20.,20.,6.]]],weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let (proof,work)=qualify_surface_anchor(&s,[20.,0.],[20.,0.,6.],10000000).unwrap();
+        assert!(proof.is_some(),"work {work}");
     }
     #[test]
     fn exact_interior_anchor_refuses_approximation_and_insufficient_work() {

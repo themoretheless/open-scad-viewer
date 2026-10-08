@@ -374,6 +374,10 @@ mod tests {
             assert!(std::ptr::eq(proof.body(),&body));assert_eq!(proof.faces(),faces);
             assert_eq!(proof.lower_mm(),5.99);
         }
+        let prepared=crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],10000000).unwrap();
+        assert!(prepared.prepared.is_some());
+        assert!(prepared.exact_work>0 && prepared.exact_work<=10000000);
+        assert!(crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],0).unwrap().prepared.is_none());
 
         let numerical=crate::source_wall_pair::qualify(&body,[16,20],5.99,
             crate::source_wall_pair::Limits{normal_spans:10000,max_sine_squared:1e-6,
