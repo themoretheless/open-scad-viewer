@@ -1507,3 +1507,13 @@ issues no Body certificate and is not part of the shipped WASM. Integration
 requires private source-bound facts, coverage tests and admission checks.
 Evidence: `distinct-normal-refinement-audit.json.gz`, its completed log and
 `distinct-normal-refinement-receipt.json` with input/output hashes.
+
+An independent grid regression covers all four split coordinates, closed split
+boundaries and unchanged other coordinates on nonunit asymmetric domains.
+The complete 1024-cell/8192-span-per-pair audit retains all 68 prior exclusions
+but adds none: 72 aligned-region refusals, 58 work refusals and 14 resolution
+refusals. It spends 65,940 cells and 15,707 normal restrictions. Extra budget
+alone does not resolve these products; the result motivates original limiting
+normal qualification at singular chart ends rather than dropping endpoints.
+See `distinct-normal-refinement-1024-audit.json.gz`, its receipt/log and
+`distinct-normal-refinement-product-tests.log.gz`. No extra Body proof is issued.

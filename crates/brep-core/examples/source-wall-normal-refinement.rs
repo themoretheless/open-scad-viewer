@@ -1,8 +1,17 @@
 //! Exploratory closed UV-product normal exclusion on immutable original inputs.
 //! This emits diagnostics, never a wall or material-volume certificate.
 use nurbs_core::{normal_alignment::OriginalNormalCache, surface::Surface};
+fn split_product(pair: [[[f64;2];2];2], side: usize, axis: usize, mid: f64)
+    -> [[[[f64;2];2];2];2] {
+    assert!(side<2 && axis<2 && pair[side][axis][0]<mid && mid<pair[side][axis][1]);
+    let mut left=pair;let mut right=pair;
+    left[side][axis][1]=mid;right[side][axis][0]=mid;[left,right]
+}
 fn main() {
     let args: Vec<_> = std::env::args().collect();
+    let cell_limit: usize = args.get(4).map(|v|v.parse().unwrap()).unwrap_or(128);
+    assert!((1..=100000).contains(&cell_limit));
+    let span_limit=(cell_limit*8).min(100000);
     let request: value_codec::Value = value_codec::from_str(&std::fs::read_to_string(&args[1]).unwrap()).unwrap();
     let classification: value_codec::Value = value_codec::from_str(&std::fs::read_to_string(&args[2]).unwrap()).unwrap();
     let source = &request["definition"]["shell"]["regions"];
@@ -33,12 +42,12 @@ fn main() {
         let original = [domains[a],domains[b]];
         let mut pending = vec![original]; let mut cells=0; let mut spans=0; let mut reason="work-limit";
         let (left,right) = caches.split_at_mut(b);
-        while cells<128 && !pending.is_empty() {
+        while cells<cell_limit && !pending.is_empty() {
             let pair=pending.pop().unwrap(); cells+=1;
-            let r=left[a].inspect_other(&mut right[0],pair,threshold,1024-spans).unwrap(); spans+=r.spans;
+            let r=left[a].inspect_other(&mut right[0],pair,threshold,span_limit-spans).unwrap(); spans+=r.spans;
             if r.aligned==Some(false) {continue;}
             if r.aligned==Some(true) {pending.push(pair);reason="aligned-region";break;}
-            if spans==1024 {pending.push(pair);reason="span-limit";break;}
+            if spans==span_limit {pending.push(pair);reason="span-limit";break;}
             let mut choice=(0,0);let mut largest=0.;
             for side in 0..2 {for axis in 0..2 {
                 let width=(pair[side][axis][1]-pair[side][axis][0])/(original[side][axis][1]-original[side][axis][0]);
@@ -46,13 +55,38 @@ fn main() {
             }}
             let (side,axis)=choice;let d=pair[side][axis];let mid=d[0]*0.5+d[1]*0.5;
             if mid<=d[0] || mid>=d[1] {pending.push(pair);reason="resolution-limit";break;}
-            let mut l=pair;let mut r=pair;l[side][axis][1]=mid;r[side][axis][0]=mid;
+            let [l,r]=split_product(pair,side,axis,mid);
             pending.push(r);pending.push(l);
         }
         if pending.is_empty() {reason="normal-product-excluded";}
         rows.push(value_codec::json!({"faces":[a,b],"cells":cells,"spans":spans,"normalExcluded":pending.is_empty(),"reason":reason,"unresolvedPairs":pending}));
-        let report=value_codec::json!({"scope":"Exploratory original closed UV-product normal exclusion only; no wall certificate", "completeAudit":rows.len()==pairs.len(),"expectedPairs":pairs.len(),"maxSineSquared":sine,"necessaryPairSineSquared":threshold,"cellsPerPair":128,"spansPerPair":1024,"rows":rows});
+        let report=value_codec::json!({"scope":"Exploratory original closed UV-product normal exclusion only; no wall certificate", "completeAudit":rows.len()==pairs.len(),"expectedPairs":pairs.len(),"maxSineSquared":sine,"necessaryPairSineSquared":threshold,"cellsPerPair":cell_limit,"spansPerPair":span_limit,"rows":rows});
         let temporary=format!("{}.tmp",args[3]);std::fs::write(&temporary,value_codec::to_string_pretty(&report).unwrap()).unwrap();std::fs::rename(temporary,&args[3]).unwrap();
     }
     assert_eq!(before,value_codec::to_string(&surfaces).unwrap());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn closed_products_cover_every_split_boundary_and_keep_other_coordinates() {
+        let pair=[[[2.,6.],[-3.,1.]],[[10.,14.],[20.,24.]]];
+        for side in 0..2 {for axis in 0..2 {
+            let d=pair[side][axis];let mid=(d[0]+d[1])*0.5;
+            let children=split_product(pair,side,axis,mid);
+            for child in children {for s in 0..2 {for a in 0..2 {
+                if (s,a)!=(side,axis) {assert_eq!(child[s][a],pair[s][a]);}
+            }}}
+            for i in 0..625 {
+                let mut code=i;let mut point=[[0.;2];2];
+                for s in 0..2 {for a in 0..2 {
+                    let fraction=(code%5) as f64/4.;code/=5;
+                    point[s][a]=pair[s][a][0]+fraction*(pair[s][a][1]-pair[s][a][0]);
+                }}
+                assert!(children.iter().any(|child|(0..2).all(|s|(0..2).all(|a|
+                    child[s][a][0]<=point[s][a] && point[s][a]<=child[s][a][1]))));
+            }
+        }}
+    }
 }
