@@ -2141,7 +2141,7 @@ async function qualifySourceWall(scan=false,coverage=false){
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
-   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:100000,planeControls:1000000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,mixedProducts:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000},retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:100000,planeControls:1000000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})
@@ -3689,6 +3689,14 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   · {{ label('Расстояние между обрезанными гранями подтверждено:','Retained face separation qualified:') }}
                   {{ sourceWallCoverageResult.retainedGap.pairs.filter(p=>p.qualified).length }}/{{ sourceWallCoverageResult.retainedGap.pairs.length }}
                   · {{ sourceWallCoverageResult.retainedGap.pairs.reduce((n,p)=>n+p.unresolvedProducts.length,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                </span>
+                <span v-if="sourceWallCoverageResult.mixedProducts" data-source-wall-mixed-result="true">
+                  · {{ label('Дополнительно подтверждено пар граней:','Additional face pairs qualified:') }}
+                  {{ sourceWallCoverageResult.mixedProducts.pairs.filter(p=>p.qualified).length }}/{{ sourceWallCoverageResult.mixedProducts.pairs.length }}
+                  · {{ sourceWallCoverageResult.mixedProducts.pairs.reduce((n,p)=>n+p.unresolvedProducts.length,0) }} {{ label('пар участков требуют проверки','region pairs require checking') }}
+                  <span v-if="sourceWallCoverageResult.mixedProducts.pairs.some(p=>p.reason==='source-wall-pair-numeric-limit')">
+                    · {{ label('Достигнут численный предел. Проверьте выделенные грани отдельно.','A numerical limit was reached. Check the highlighted faces separately.') }}
+                  </span>
                 </span>
                 <span v-if="sourceWallCoverageResult.adaptiveSelf" data-source-wall-self-result="true">
                   · {{ label('Проверка внутри граней','Within-face coverage') }}:

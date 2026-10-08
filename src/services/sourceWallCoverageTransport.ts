@@ -6,7 +6,13 @@ export interface RetainedGapResult {
  cells:number;spans:number;domainCells:number;domainQueries:number;endpointQueries:number
  pairs:{faces:[number,number];qualified:boolean;reason:string;cells:number;spans:number;domainCells:number;domainQueries:number;endpointQueries:number;outsideProducts:number;unresolvedProducts:number[][][][]}[]
 }
+export interface MixedProductOptions extends RetainedGapOptions {normalSpans:number;normalSpansPerPair:number}
+export interface MixedProductResult extends RetainedGapResult {
+ normalSpans:number;normalProducts:number
+ pairs:(RetainedGapResult['pairs'][number]&{normalSpans:number;normalProducts:number})[]
+}
 export interface SourceWallCoverageOptions {
+ mixedProducts?:MixedProductOptions
  retainedGap?:RetainedGapOptions
  minimumMm:number
  factoredNormals?:{exactWork:number;queries:number;cells:number;cellsPerPair:number}
@@ -15,6 +21,7 @@ export interface SourceWallCoverageOptions {
  limits:{pairs:number;planeControls:number;normalSpans:number;gapCells:number;gapSpans:number;maxSineSquared:number}
 }
 export interface SourceWallCoverageResult {
+ mixedProducts?:MixedProductResult|null
  retainedGap?:RetainedGapResult|null
  adaptiveSelf?:{faces:{face:number;qualified:boolean;reason:string;cells:number;spans:number;pending:number;uncertain:number[][][]|null;unresolvedPairs?:number[][][][];endpointExchangeSymmetric?:true}[];planeControls:number;cells:number;spans:number;allSelfPairsQualified:boolean;refinementCells?:number;refinementSpans?:number;poleExactWork?:number;poleCells?:number;poleSpans?:number}|null
  request:SourceWallCoverageOptions;wholeWallQualified:boolean;lowerMm:number|null
@@ -34,6 +41,11 @@ export function coverageExpectation(o:SourceWallCoverageOptions):SourceWallCover
   for(const name of ['cells','spans','domainCells','cellsPerPair','spansPerPair','domainCellsPerPair','domainCellsPerQuery'] as const)
    if(!count(o.retainedGap[name],name==='domainCells'?1000000:100000)||o.retainedGap[name]<1)throw new Error('Invalid retained gap work')
   if(!Number.isFinite(o.retainedGap.toleranceUv)||o.retainedGap.toleranceUv<=0)throw new Error('Invalid retained gap UV tolerance')
+ }
+ if(o.mixedProducts){
+  for(const name of ['cells','spans','domainCells','cellsPerPair','spansPerPair','domainCellsPerPair','domainCellsPerQuery','normalSpans','normalSpansPerPair'] as const)
+   if(!count(o.mixedProducts[name],name==='domainCells'?1000000:100000)||o.mixedProducts[name]<1)throw new Error('Invalid mixed wall work')
+  if(!Number.isFinite(o.mixedProducts.toleranceUv)||o.mixedProducts.toleranceUv<=0)throw new Error('Invalid mixed wall UV tolerance')
  }
  const w=o.limits
  for(const [name,max] of [['pairs',100000],['planeControls',1000000],['normalSpans',100000],['gapCells',100000],['gapSpans',100000]] as const)
@@ -99,7 +111,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
    ||typeof p.proven!=='boolean'||typeof p.reason!=='string'||!p.reason.startsWith('source-'))return false
   const allowed=a===b
    ?p.proven?['source-wall-planar-self-excluded','source-wall-curved-self-excluded','source-wall-self-certified']:['source-wall-curved-self-unproven']
-   :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded',...(e.factoredNormals?['source-wall-factored-normal-pair-excluded']:[]),'source-face-gap-qualified',...(e.retainedGap?['source-wall-retained-gap-qualified']:[])]
+   :p.proven?['source-wall-coplanar-excluded','source-wall-normal-pair-excluded',...(e.factoredNormals?['source-wall-factored-normal-pair-excluded']:[]),'source-face-gap-qualified',...(e.retainedGap?['source-wall-retained-gap-qualified']:[]),...(e.mixedProducts?['source-wall-mixed-product-qualified']:[])]
     :['source-wall-pair-unproven','source-face-gap-work-limit','source-face-gap-resolution-limit','source-face-gap-chart-close']
   if(!allowed.includes(p.reason))return false
   if(p.reason==='source-wall-self-certified'&&(!adaptive||!adaptive.faces[p.faces[0]]?.qualified))return false
@@ -125,13 +137,42 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
     if(p.reason!=='source-retained-gap-qualified'||!entry.pair.proven||entry.pair.reason!=='source-wall-retained-gap-qualified')return false
     successes.add(p.faces.join(','))
    }else{
-    if(!['source-retained-gap-work-limit','source-retained-gap-resolution-limit'].includes(p.reason)||entry.pair.proven)return false
+    if(!['source-retained-gap-work-limit','source-retained-gap-resolution-limit'].includes(p.reason)||(entry.pair.proven&&!(e.mixedProducts&&entry.pair.reason==='source-wall-mixed-product-qualified')))return false
     if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1]))))return false
    }
    cells+=p.cells;spans+=p.spans;domainCells+=p.domainCells;domainQueries+=p.domainQueries;endpointQueries+=p.endpointQueries
   }
   if(cells!==retained.cells||spans!==retained.spans||domainCells!==retained.domainCells||domainQueries!==retained.domainQueries||endpointQueries!==retained.endpointQueries)return false
   if(r.pairs.some(p=>p.reason==='source-wall-retained-gap-qualified'&&!successes.has(p.faces.join(','))))return false
+ }
+ const mixed=r.mixedProducts,mixedWork=e.mixedProducts
+ if(!mixedWork){if(mixed!=null)return false}else{
+  if(!mixed||!Array.isArray(mixed.pairs)||mixed.pairs.length>expected
+   ||!count(mixed.normalSpans,mixedWork.normalSpans)||!count(mixed.normalProducts,mixed.cells)
+   ||!count(mixed.cells,mixedWork.cells)||!count(mixed.spans,mixedWork.spans)||!count(mixed.domainCells,mixedWork.domainCells)
+   ||mixed.domainCells>mixed.domainQueries*mixedWork.domainCellsPerQuery||!count(mixed.domainQueries,2*mixed.cells)||!count(mixed.endpointQueries,1024*mixed.domainQueries+8*mixed.domainCells))return false
+  const main=new Map(r.pairs.map((p,i)=>[p.faces.join(','),{pair:p,index:i}]))
+  let previous=-1,cells=0,spans=0,domainCells=0,domainQueries=0,endpointQueries=0,normalSpans=0,normalProducts=0
+  const successes=new Set<string>()
+  for(const p of mixed.pairs){
+   if(!p||!Array.isArray(p.faces)||p.faces.length!==2||!count(p.faces[0],faces-1)||!count(p.faces[1],faces-1)||p.faces[0]>=p.faces[1]
+    ||!count(p.normalSpans,mixedWork.normalSpansPerPair)||!count(p.normalProducts,p.cells)
+    ||typeof p.qualified!=='boolean'||!count(p.cells,mixedWork.cellsPerPair)||p.cells<1||!count(p.spans,mixedWork.spansPerPair)
+    ||p.domainCells>p.domainQueries*mixedWork.domainCellsPerQuery||!count(p.domainCells,mixedWork.domainCellsPerPair)||!count(p.domainQueries,2*p.cells)||!count(p.endpointQueries,1024*p.domainQueries+8*p.domainCells)
+    ||!count(p.outsideProducts,p.cells)||!Array.isArray(p.unresolvedProducts)||p.unresolvedProducts.length>p.cells+1
+    ||p.qualified!==(p.unresolvedProducts.length===0))return false
+   const entry=main.get(p.faces.join(','));if(!entry||entry.index<=previous)return false;previous=entry.index
+   if(p.qualified){
+    if(p.reason!=='source-wall-pair-qualified'||!entry.pair.proven||entry.pair.reason!=='source-wall-mixed-product-qualified')return false
+    successes.add(p.faces.join(','))
+   }else{
+    if(!['source-wall-pair-work-limit','source-wall-pair-resolution-limit','source-wall-pair-numeric-limit'].includes(p.reason)||entry.pair.proven)return false
+    if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1]))))return false
+   }
+   normalSpans+=p.normalSpans;normalProducts+=p.normalProducts;cells+=p.cells;spans+=p.spans;domainCells+=p.domainCells;domainQueries+=p.domainQueries;endpointQueries+=p.endpointQueries
+  }
+  if(normalSpans!==mixed.normalSpans||normalProducts!==mixed.normalProducts||cells!==mixed.cells||spans!==mixed.spans||domainCells!==mixed.domainCells||domainQueries!==mixed.domainQueries||endpointQueries!==mixed.endpointQueries)return false
+  if(r.pairs.some(p=>p.reason==='source-wall-mixed-product-qualified'&&!successes.has(p.faces.join(','))))return false
  }
  const qualified=r.enumerationComplete&&all
  if(r.wholeWallQualified!==qualified)return false

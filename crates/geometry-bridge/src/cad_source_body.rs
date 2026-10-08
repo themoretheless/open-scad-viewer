@@ -237,7 +237,20 @@ pub fn restore(v: Value) -> Result<Value> {
             }
             Some(work)
         };
-        Some((minimum,work,self_work,products,factors,retained))
+        let mixed=if o["mixedProducts"].is_null(){None}else{
+            let r=&o["mixedProducts"];
+            let domains=brep_core::source_wall_coverage::RetainedGapLimits{
+                cells:field(r,"cells")?,spans:field(r,"spans")?,domain_cells:field(r,"domainCells")?,
+                cells_per_pair:field(r,"cellsPerPair")?,spans_per_pair:field(r,"spansPerPair")?,
+                domain_cells_per_pair:field(r,"domainCellsPerPair")?,domain_cells_per_query:field(r,"domainCellsPerQuery")?,tolerance_uv:field(r,"toleranceUv")?};
+            let normal_spans=field(r,"normalSpans")?;let normal_spans_per_pair=field(r,"normalSpansPerPair")?;
+            if [normal_spans,normal_spans_per_pair,domains.cells,domains.spans,domains.cells_per_pair,domains.spans_per_pair,domains.domain_cells_per_pair,domains.domain_cells_per_query].iter().any(|n|!(1..=100000).contains(n))
+                ||!(1..=1000000).contains(&domains.domain_cells)||!domains.tolerance_uv.is_finite()||domains.tolerance_uv<=0. {
+                return Err(super::input("Choose bounded total and per-pair mixed wall work"));
+            }
+            Some(brep_core::source_wall_coverage::MixedPairLimits{domains,normal_spans,normal_spans_per_pair})
+        };
+        Some((minimum,work,self_work,products,factors,retained,mixed))
     };
     let report = brep_core::source_body_restore::restore(definition, limits(&config)?)?;
     let diagnostics = json!({"reason":report.reason(),
@@ -294,7 +307,7 @@ pub fn restore(v: Value) -> Result<Value> {
             "attempts":r.attempts,"refused":r.refused,"facesVisited":r.faces_visited,"facesTotal":r.faces_total,
             "proposalsExhausted":r.proposals_exhausted,"wholeWallQualified":false}))
     }).transpose()?;
-    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors,retained)|->Result<Value>{
+    let wall_coverage=coverage_request.map(|(minimum,work,self_work,products,factors,retained,mixed)|->Result<Value>{
         let (facts,self_report)=if let Some((limits,pole,refinement))=self_work {
             let mut report=brep_core::source_wall_self_coverage::qualify(body,minimum,work.max_sine_squared,limits)?;
             if let Some((extra,exact))=pole {
@@ -310,9 +323,14 @@ pub fn restore(v: Value) -> Result<Value> {
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
-        let r=brep_core::source_wall_coverage::qualify_with_retained_gap_pass(body,minimum,work,facts,products,factors,Vec::new(),retained)?;
+        let r=brep_core::source_wall_coverage::qualify_with_mixed_pair_pass(body,minimum,work,facts,products,factors,Vec::new(),retained,Vec::new(),mixed)?;
         let retained_report=r.retained_gap.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"domainQueries":d.domain_queries,"endpointQueries":d.endpoint_queries,
             "pairs":d.pairs.iter().map(|p|json!({"faces":p.faces,"qualified":p.qualified,"reason":p.reason,"cells":p.cells,"spans":p.spans,"domainCells":p.domain_cells,"domainQueries":p.domain_queries,"endpointQueries":p.endpoint_queries,"outsideProducts":p.outside_products,"unresolvedProducts":p.unresolved_products})).collect::<Vec<_>>()}));
+        let mixed_report=r.mixed.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"normalSpans":d.normal_spans,
+            "normalProducts":d.pairs.iter().map(|p|p.normal_products).sum::<usize>(),
+            "domainQueries":d.pairs.iter().map(|p|p.retained.domain_queries).sum::<usize>(),
+            "endpointQueries":d.pairs.iter().map(|p|p.retained.endpoint_queries).sum::<usize>(),
+            "pairs":d.pairs.iter().map(|q|{let p=&q.retained;json!({"faces":p.faces,"qualified":p.qualified,"reason":p.reason,"cells":p.cells,"spans":p.spans,"domainCells":p.domain_cells,"domainQueries":p.domain_queries,"endpointQueries":p.endpoint_queries,"outsideProducts":p.outside_products,"unresolvedProducts":p.unresolved_products,"normalSpans":q.normal_spans,"normalProducts":q.normal_products})}).collect::<Vec<_>>()}));
         Ok(json!({"request":v["wallCoverage"],"wholeWallQualified":r.certificate.is_some(),
             "lowerMm":r.certificate.as_ref().map(|c|c.minimum_mm()),
             "enumerationComplete":r.enumeration_complete,"totalPairs":r.total_pairs,
@@ -320,7 +338,7 @@ pub fn restore(v: Value) -> Result<Value> {
             "planeControls":r.plane_controls,"normalSpans":r.normal_spans,"normalProductCells":r.normal_product_cells,
             "factoredExactWork":r.factored_exact_work,"factoredQueries":r.factored_queries,
             "factoredProductCells":r.factored_product_cells,
-            "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report,"retainedGap":retained_report}))
+            "cells":r.cells,"spans":r.spans,"reason":r.reason,"adaptiveSelf":self_report,"retainedGap":retained_report,"mixedProducts":mixed_report}))
     }).transpose()?;
     let step_exchange = if v["stepExchange"].is_null() {
         Value::Null
@@ -558,6 +576,19 @@ mod tests {
         assert_eq!(retained["wallCoverage"]["retainedGap"]["cells"],json!(0));assert_eq!(retained["wallCoverage"]["retainedGap"]["pairs"].as_array().unwrap().len(),0);
         for (key,value) in [("cells",json!(0)),("spans",json!(100001)),("domainCells",json!(1000001)),("cellsPerPair",json!(0)),("spansPerPair",json!(0)),("domainCellsPerPair",json!(0)),("domainCellsPerQuery",json!(0)),("toleranceUv",json!(0))] {
             let mut invalid=retained_option.clone();invalid["retainedGap"][key]=value;
+            assert!(super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,"wallCoverage":invalid})).is_err());
+        }
+        let mut mixed_option=coverage_option.clone();
+        mixed_option["mixedProducts"]=retained_option["retainedGap"].clone();
+        mixed_option["mixedProducts"]["normalSpans"]=json!(100);
+        mixed_option["mixedProducts"]["normalSpansPerPair"]=json!(20);
+        let mixed=super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,"wallCoverage":mixed_option.clone()})).unwrap();
+        assert_eq!(mixed["wallCoverage"]["request"],mixed_option);
+        assert_eq!(mixed["wallCoverage"]["mixedProducts"]["cells"],json!(0));
+        assert_eq!(mixed["wallCoverage"]["mixedProducts"]["normalSpans"],json!(0));
+        assert_eq!(mixed["wallCoverage"]["mixedProducts"]["pairs"].as_array().unwrap().len(),0);
+        for key in ["cells","spans","domainCells","cellsPerPair","spansPerPair","domainCellsPerPair","domainCellsPerQuery","normalSpans","normalSpansPerPair","toleranceUv"] {
+            let mut invalid=mixed_option.clone();invalid["mixedProducts"][key]=json!(0);
             assert!(super::super::dispatch(json!({"op":"cad_source_body_restore","definition":wire_definition.clone(),"limits":config(50000),"endpointSpans":10000,"wallCoverage":invalid})).is_err());
         }
         assert_eq!(coverage["request"],coverage_option);

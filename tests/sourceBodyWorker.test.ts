@@ -592,6 +592,42 @@ it('qualifies bounded retained face products without losing prior proofs through
  if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
 },180000)
 
+it('qualifies mixed retained wall products through real WASM and preserves every earlier proof',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ try{for(const mixed of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   ...{retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8}},
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
+  if(mixed)o.wallCoverage!.mixedProducts={cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,
+   domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000}
+  const started=performance.now(),r=await client.run({kind:'sourceBodyRestore',options:o})
+  results.push({elapsedMs:performance.now()-started,result:r})
+  if(process.env.CAD_MIXED_WALL_WORKER_REPORT)writeFileSync(process.env.CAD_MIXED_WALL_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results},null,2)+'\n')
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull()
+  expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(c.pairs.filter(p=>!p.proven)).toHaveLength(mixed?32:45)
+  if(mixed){
+   expect(c.mixedProducts!.pairs).toHaveLength(45)
+   expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(13)
+   for(const old of results[0]!.result.wallCoverage!.pairs.filter(p=>p.proven))
+    expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
+   for(const mutate of [
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.normalSpans++,
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>!p.qualified)!.unresolvedProducts=[],
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts!.pairs.find(p=>p.qualified)!.faces=[0,0],
+    (r:SourceBodyResult)=>r.wallCoverage!.mixedProducts=null,
+    (r:SourceBodyResult)=>r.wallCoverage!.wholeWallQualified=true,
+   ]){const forged=structuredClone(r);mutate(forged);expect(validSourceBody(sourceBodyExpectation(o),forged)).toBe(false)}
+  }
+ }}finally{client.dispose()}
+},180000)
+
 it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mapped-root-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...o}=request,client=realClient(),r=await client.run({kind:'sourceBodyRestore',options:o})
@@ -691,3 +727,19 @@ it('qualifies all reference regular seams at UI budgets and preserves singular e
  }
  if(process.env.CAD_REFINED_SEAM_WORKER_REPORT)writeFileSync(process.env.CAD_REFINED_SEAM_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),elapsedMs:performance.now()-started,results,scope:'Original regular G1 seam qualification; singular endpoints remain refused; not a whole-wall or G2/radius certificate.'},null,2)+'\n')
 },180000)
+
+it('cancels a changed mixed request, ignores its late proof and retries the original snapshot',async()=>{
+ const {op:_op,...o}=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',import.meta.url))).toString()) as {op:string}&SourceBodyOptions
+ const native=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',import.meta.url))).toString()).result as SourceBodyResult
+ const ports:Port[]=[],client=new MainSolidWorkerClient(()=>{const p=new Port();ports.push(p);return p});clients.push(client)
+ const first=client.run({kind:'sourceBodyRestore',options:o}).catch(e=>e.code),late=ports[0]!.onmessage!
+ const changed=structuredClone(o);changed.wallCoverage!.mixedProducts!.normalSpans=99999
+ const second=client.run({kind:'sourceBodyRestore',options:changed}).catch(e=>e.code)
+ expect(await first).toBe('CAD_CANCELLED');expect(ports[0]!.terminated).toBe(true)
+ late({data:{version:1,id:ports[0]!.requests[0]!.id,kind:'sourceBodyRestore',ok:true,result:native}} as MessageEvent)
+ client.cancel();expect(await second).toBe('CAD_CANCELLED')
+ const retry=client.run({kind:'sourceBodyRestore',options:o})
+ o.wallCoverage!.mixedProducts!.normalSpans=1
+ expect((ports[2]!.requests[0]!.job as {options:SourceBodyOptions}).options.wallCoverage!.mixedProducts!.normalSpans).toBe(100000)
+ reply(ports[2]!,native);expect((await retry).wallCoverage!.pairs.filter(p=>!p.proven)).toHaveLength(32)
+})

@@ -221,3 +221,54 @@ it('retains unresolved original products and refuses forged retained success',()
   (r:SourceWallCoverageResult)=>{r.wholeWallQualified=true;r.lowerMm=option.minimumMm},
  ]){const changed=structuredClone(r);mutate(changed);expect(validCoverage(option,changed,6,key)).toBe(false)}
 })
+
+it('binds mixed product proofs and preserves an earlier gap refusal',()=>{
+ const {option,r}=retainedFixture()
+ option.mixedProducts={...option.retainedGap!,normalSpans:100,normalSpansPerPair:20}
+ r.request=structuredClone(option)
+ const old=r.retainedGap!.pairs[0]
+ old.qualified=false;old.reason='source-retained-gap-work-limit'
+ old.unresolvedProducts=[[[[0,1],[0,1]],[[0,1],[0,1]]]]
+ r.pairs[1].reason='source-wall-mixed-product-qualified'
+ r.mixedProducts={cells:3,spans:4,domainCells:8,domainQueries:2,endpointQueries:8,normalSpans:6,normalProducts:1,
+  pairs:[{...structuredClone(old),cells:3,spans:4,qualified:true,reason:'source-wall-pair-qualified',unresolvedProducts:[],normalSpans:6,normalProducts:1}]}
+ expect(coverageExpectation(option)).toEqual(option)
+ expect(validCoverage(option,r,6,key)).toBe(true)
+ for(const mutate of [
+  (r:SourceWallCoverageResult)=>r.mixedProducts=null,
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.normalSpans++,
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.normalProducts++,
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs[0].normalSpans=21,
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs[0].normalProducts=4,
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs[0].faces=[1,0],
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs.push(structuredClone(r.mixedProducts!.pairs[0])),
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs[0].unresolvedProducts=structuredClone(old.unresolvedProducts),
+  (r:SourceWallCoverageResult)=>r.mixedProducts!.pairs[0].reason='source-wall-pair-numeric-limit',
+  (r:SourceWallCoverageResult)=>r.request.mixedProducts!.normalSpans++,
+  (r:SourceWallCoverageResult)=>r.pairs[1].reason='source-face-gap-qualified',
+ ]){const forged=structuredClone(r);mutate(forged);expect(validCoverage(option,forged,6,key)).toBe(false)}
+ const missingRequest=structuredClone(option);delete missingRequest.mixedProducts
+ expect(validCoverage(missingRequest,r,6,key)).toBe(false)
+ for(const name of ['cells','spans','domainCells','cellsPerPair','spansPerPair','domainCellsPerPair','domainCellsPerQuery','normalSpans','normalSpansPerPair'] as const){
+  const bad=structuredClone(option);bad.mixedProducts![name]=0;expect(()=>coverageExpectation(bad)).toThrow()
+ }
+ const unresolved=structuredClone(r),p=unresolved.mixedProducts!.pairs[0]
+ p.qualified=false;p.reason='source-wall-pair-numeric-limit';p.unresolvedProducts=structuredClone(old.unresolvedProducts)
+ unresolved.pairs[1].proven=false;unresolved.pairs[1].reason='source-face-gap-chart-close'
+ unresolved.wholeWallQualified=false;unresolved.lowerMm=null;unresolved.reason='source-wall-coverage-unproven'
+ expect(validCoverage(option,unresolved,6,key)).toBe(true)
+})
+
+it('validates the complete native annular mixed report without promoting its remaining pairs',async()=>{
+ const {readFileSync}=await import('node:fs'),{gunzipSync}=await import('node:zlib')
+ const {sourceBodyExpectation,validSourceBody}=await import('../src/services/sourceBody')
+ const {op:_op,...options}=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',import.meta.url))).toString())
+ const report=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',import.meta.url))).toString())
+ expect(validSourceBody(sourceBodyExpectation(options),report.result)).toBe(true)
+ const coverage=report.result.wallCoverage as SourceWallCoverageResult
+ expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(32)
+ expect(coverage.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(13)
+ expect(coverage.wholeWallQualified).toBe(false)
+ const forged=structuredClone(report.result);forged.wallCoverage.mixedProducts.pairs=[]
+ expect(validSourceBody(sourceBodyExpectation(options),forged)).toBe(false)
+})
