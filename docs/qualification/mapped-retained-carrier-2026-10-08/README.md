@@ -1313,3 +1313,21 @@ unit rectangle. The accepted rectangles have total area one. Zero cell work
 retains exactly the original full rectangle as pending. All 16 profile tests
 passed in 54.47 seconds. The native annular control is being checked separately;
 no result for it is claimed by this reference qualification.
+
+## Whole-side source joins and annular regularity result
+
+`inspect_transverse_corrected_side_join` uses the full Hermite expression's
+algebraic first-jet identity and independently bounds the source profile
+normal over the entire affine rail interval. It keeps a complete interval
+partition on budget exhaustion. This checks source profile supports only;
+original neighboring Body support ownership must still be requalified.
+The quartic reference qualifies both complete side intervals and checks
+zero-work refusal. Its focused regression passed in 29.76 seconds.
+
+The native annular control completed in 138.60 seconds. The full correction's
+regularity diagnostic reports 0 accepted cells, 1001 pending rectangles,
+1000 visited cells and 72000 source spans. Accepted plus pending area remains
+one. The test passes because it checks coverage and truthful unresolved
+reporting; it does not certify annular regularity. These results supersede
+any inference from the original uncorrected bridge's regularity certificate.
+Tighter correlated derivative bounds are needed before Body admission.

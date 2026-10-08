@@ -1732,6 +1732,15 @@ mod tests {
         let limited=corrected.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],0,72).unwrap();
         assert!(!limited.complete_regular);
         assert_eq!(limited.pending,vec![[[0.,1.],[0.,1.]]]);
+        for high in [false,true] {
+            let join=corrected.inspect_transverse_corrected_side_join(high,[0.,1.],100,100).unwrap();
+            assert!(join.complete_regular);
+            let length:f64=join.regular.iter().map(|r|r[1][1]-r[1][0]).sum();
+            assert_eq!(length,1.);
+            let pending=corrected.inspect_transverse_corrected_side_join(high,[0.,1.],0,100).unwrap();
+            assert!(!pending.complete_regular);
+            assert_eq!(pending.pending.len(),1);
+        }
     }
     #[test]
     fn bridge_mixed_jet_matches_independent_bilinear_surface() {

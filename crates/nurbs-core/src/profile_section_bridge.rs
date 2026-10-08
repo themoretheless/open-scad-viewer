@@ -865,6 +865,69 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         };
         Ok(out)
     }
+    /// Exact side first-jet identity is established by the full Hermite
+    /// expression. Only regular source support normals remain to be enclosed.
+    /// This checks the original profile support, not neighboring Body ownership.
+    pub fn inspect_transverse_corrected_side_join(
+        &self,
+        high: bool,
+        across: [f64; 2],
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        let free = self.bridge.section(false).range()[usize::from(high)];
+        self.bridge.validate([free; 2], across, max_spans)?;
+        check(max_cells <= 100000, "Bound full side join work")?;
+        let mut out = crate::surface_weight_profile::TransitionRegularityReport {
+            regular: Vec::new(),
+            pending: Vec::new(),
+            cells: 0,
+            spans: 0,
+            complete_regular: false,
+            reason: "full-side-join-work-limit",
+        };
+        let mut queue = std::collections::VecDeque::from([[[free; 2], across]]);
+        while let Some(rect) = queue.pop_front() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let (normal, used) = self.bridge.section(false).profile().normal_bounds(
+                self.source_rail_domain(high, rect[1])?,
+                max_spans - out.spans,
+            )?;
+            out.spans += used;
+            let Some(normal) = normal else {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            };
+            if normal.iter().any(|r| r[0] > 0. || r[1] < 0.) {
+                out.regular.push(rect);
+                continue;
+            }
+            let mid = rect[1][0] * 0.5 + rect[1][1] * 0.5;
+            if mid <= rect[1][0] || mid >= rect[1][1] {
+                out.pending.push(rect);
+                continue;
+            }
+            let mut left = rect;
+            left[1][1] = mid;
+            let mut right = rect;
+            right[1][0] = mid;
+            queue.push_back(left);
+            queue.push_back(right);
+        }
+        out.complete_regular = out.pending.is_empty();
+        out.reason = if out.complete_regular {
+            "full-side-join-qualified"
+        } else {
+            "full-side-join-resolution-limit"
+        };
+        Ok(out)
+    }
     pub fn derivative_bounds(
         &self,
         free: [f64; 2],

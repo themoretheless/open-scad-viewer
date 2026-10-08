@@ -439,6 +439,10 @@ mod tests {
             assert_eq!(constrained.inspect_support_rail_normals(high,[0.5;2],1e-6,36).unwrap().aligned,None);
             eprintln!("constrained rail high={} aligned={:?} sine={:?} spans={}",high,report.aligned,report.sine_squared_interval,report.spans);
         }
+        let full_cover=constrained.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],1000,72000).unwrap();
+        let full_area:f64=full_cover.regular.iter().chain(&full_cover.pending).map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(full_area,1.);
+        eprintln!("full Hermite regular={} pending={} cells={} spans={}",full_cover.regular.len(),full_cover.pending.len(),full_cover.cells,full_cover.spans);
         let mut bridge_regular=0;
         for i in 0..8 {for j in 0..8 {
             let n=bridge.normal_bounds([i as f64/8.,(i+1) as f64/8.],[j as f64/8.,(j+1) as f64/8.],8).unwrap().0.unwrap();
