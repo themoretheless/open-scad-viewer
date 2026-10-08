@@ -577,3 +577,26 @@ specified UV lines. It checks proposal identity, full angular coverage and
 refusal for zero edge-inspection work or incomplete normal work. The earlier
 angular-only API remains explicit about its lack of positional ownership.
 Neither certificate admits corrected volume, embedding, wall thickness or STEP.
+
+## Two proposed incident faces
+
+The complete adaptive angular path can now compare two exact `WeightProfile`
+representations. Original/profile and profile/profile paths share coverage,
+budget and pending-interval logic. Both normal calculations use their actual
+homogeneous weight expressions. The owned proposal seam gate selects this path
+when both incident faces are proposed, preserving original carrier authority
+and binding its certificate to the complete proposal.
+
+Eleven profile tests pass. A control uses different original interior weights
+whose proposed separable factor recipes describe the same curved surface;
+complete angular coverage qualifies, incomplete work remains pending, and a
+changed control geometry rejects. This supersedes the preceding deliberate
+refusal for two changed incident profiles; it does not expand positional
+boundary admission or qualify corrected volume/wall/STEP.
+
+The actual annular proposal selects faces 0 and 5 with anchors [5,0] and [0,0].
+Boundary admission succeeds for both. Owned edge 5 then qualifies over its whole
+length: 15121 cells, 30242 normal spans, 7561 accepted intervals, no pending
+intervals, squared-sine upper 9.985969734463084e-7 at tolerance 1e-6.
+The native annular regression passes, including the original/profile path and
+its work-limit controls.

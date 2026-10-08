@@ -55,8 +55,8 @@ pub struct SeamReport<'p, 'b> {
     pub reason: &'static str,
 }
 impl<'a> Proposal<'a> {
-    /// Derive both UV paths from private original carrier ownership. A changed
-    /// neighbor requires a profile/profile proof and is refused by this path.
+    /// Derive both UV paths from private original carrier ownership and compare
+    /// each incident face's actual original or proposed weight representation.
     pub fn qualify_seam<'p>(
         &'p self,
         face: usize,
@@ -74,10 +74,6 @@ impl<'a> Proposal<'a> {
         let profile = self
             .profile(face)
             .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Choose a proposed face"))?;
-        if self.profile(neighbor).is_some() {
-            out.reason = "profile-seam-changed-neighbor-unproven";
-            return Ok(out);
-        }
         let Some(map) =
             crate::source_shared_chord_map::prepare(self.body, [face, neighbor], max_edges)?
         else {
@@ -97,8 +93,12 @@ impl<'a> Proposal<'a> {
                 })
             })
         });
-        let angular =
-            profile.inspect_original_path(map.surfaces()[1], lines, threshold, cells, spans)?;
+        let angular = match self.profile(neighbor) {
+            Some(other) => profile.inspect_profile_path(other, lines, threshold, cells, spans)?,
+            None => {
+                profile.inspect_original_path(map.surfaces()[1], lines, threshold, cells, spans)?
+            }
+        };
         out.reason = angular.reason;
         if angular.aligned == Some(true) {
             out.seam = Some(Seam {

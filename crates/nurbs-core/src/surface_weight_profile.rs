@@ -198,6 +198,16 @@ impl<'source> WeightProfile<'source> {
         max_sine_squared: f64,
         max_spans: usize,
     ) -> Result<crate::normal_alignment::PairReport> {
+        self.inspect_normal_pair(original, None, domains, max_sine_squared, max_spans)
+    }
+    fn inspect_normal_pair(
+        &self,
+        original: &Surface,
+        profile: Option<&WeightProfile<'_>>,
+        domains: [[[f64; 2]; 2]; 2],
+        max_sine_squared: f64,
+        max_spans: usize,
+    ) -> Result<crate::normal_alignment::PairReport> {
         check(
             max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared),
             "Finite squared-sine threshold below one",
@@ -214,8 +224,10 @@ impl<'source> WeightProfile<'source> {
         if a.is_none() || used == max_spans {
             return Ok(out);
         }
-        let (b, spent) =
-            crate::normal_alignment::normal_bounds(original, domains[1], max_spans - used)?;
+        let (b, spent) = match profile {
+            Some(p) => p.normal_bounds(domains[1], max_spans - used)?,
+            None => crate::normal_alignment::normal_bounds(original, domains[1], max_spans - used)?,
+        };
         out.spans += spent;
         out.normal_components[1] = b;
         if let (Some(a), Some(b)) = (a, b) {
@@ -233,6 +245,36 @@ impl<'source> WeightProfile<'source> {
     pub fn inspect_original_path(
         &self,
         original: &Surface,
+        endpoints: [[[f64; 2]; 2]; 2],
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<ProfilePathReport> {
+        self.inspect_path(original, None, endpoints, threshold, max_cells, max_spans)
+    }
+    /// Complete angular comparison of two exact proposed weight profiles.
+    /// Shared position and body ownership still require separate admission.
+    pub fn inspect_profile_path(
+        &self,
+        other: &WeightProfile<'_>,
+        endpoints: [[[f64; 2]; 2]; 2],
+        threshold: f64,
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<ProfilePathReport> {
+        self.inspect_path(
+            other.source,
+            Some(other),
+            endpoints,
+            threshold,
+            max_cells,
+            max_spans,
+        )
+    }
+    fn inspect_path(
+        &self,
+        original: &Surface,
+        other: Option<&WeightProfile<'_>>,
         endpoints: [[[f64; 2]; 2]; 2],
         threshold: f64,
         max_cells: usize,
@@ -285,8 +327,13 @@ impl<'source> WeightProfile<'source> {
                 }
             }
             out.cells += 1;
-            let r =
-                self.inspect_original_normals(original, domains, threshold, max_spans - out.spans)?;
+            let r = self.inspect_normal_pair(
+                original,
+                other,
+                domains,
+                threshold,
+                max_spans - out.spans,
+            )?;
             out.spans += r.spans;
             if r.aligned == Some(true) {
                 upper = upper.max(r.sine_squared_interval.unwrap()[1]);
@@ -669,6 +716,33 @@ mod tests {
             .unwrap();
         assert_eq!(r.aligned, Some(false));
         assert_eq!(r.pending, vec![[0., 1.]]);
+    }
+    #[test]
+    fn two_corrected_profiles_use_their_actual_normals() {
+        let mut a = surface();
+        a.control_points[1][1][2] = 1.;
+        a.weights[1][1] = 1.5;
+        let mut b = a.clone();
+        b.weights[1][1] = 2.;
+        // Same factor recipe makes the proposed surfaces equal, despite
+        // different original interior weights.
+        let p = qualify_weight_profile(&a, [0, 0], 4).unwrap().0.unwrap();
+        let q = qualify_weight_profile(&b, [0, 0], 4).unwrap().0.unwrap();
+        let line = [[[0., 0.5], [1., 0.5]], [[0., 0.5], [1., 0.5]]];
+        let r = p.inspect_profile_path(&q, line, 1e-4, 1000, 2000).unwrap();
+        assert_eq!(r.aligned, Some(true));
+        assert!(r.pending.is_empty());
+        let r = p.inspect_profile_path(&q, line, 1e-4, 1, 1).unwrap();
+        assert_eq!(r.aligned, None);
+        assert!(!r.pending.is_empty());
+        b.control_points[1][0][2] = 2.;
+        let tilted = qualify_weight_profile(&b, [0, 0], 4).unwrap().0.unwrap();
+        assert_eq!(
+            p.inspect_profile_path(&tilted, line, 1e-4, 1000, 2000)
+                .unwrap()
+                .aligned,
+            Some(false)
+        );
     }
     #[test]
     fn adaptive_curved_path_covers_all_subintervals() {
