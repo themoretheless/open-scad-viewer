@@ -1452,3 +1452,25 @@ The complete source-body panel scenario passed keyboard operation too, including
 successful obsolete reply replay, localized transport failure and its actual
 Retry button. Evidence: `source-wall-ui-keyboard.json.gz`. The same native
 geometry obligations remain unresolved; input method adds no geometry proof.
+
+## Distinct original-face normal reuse
+
+Native coverage now uses source-owned complete normal rectangles across distinct
+face pairs. Both requests are validated before querying, including zero new
+budget. Cache keys contain exact UV endpoints, immutable source references are
+private, and incomplete hulls are never stored. Ten normal tests pass, including
+unpaid changed rectangles, changed sources, incomplete multi-span requests,
+invalid domains/angles and successful zero-query reuse after complete payment.
+
+The admitted annular radius/tangency/body regression passes: original pair
+normal restrictions fall from 657 to 42, and reused adaptive-self coverage from
+651 to 36. Unproven pairs remain 257 and 253 respectively; no added whole-wall
+certificate is claimed. These are source-query counts, not UI latency or FPS.
+The independent cuboid regression proves all 21 pairs with six normal queries,
+and refuses with one, an incomplete pair list or a threshold above its wall.
+Evidence: `distinct-face-normal-cache-body.log.gz`,
+`distinct-face-normal-cache-cuboid.log.gz`, `distinct-face-normal-cache-tests.log.gz`.
+This native change is not yet packaged into the shipped WASM.
+
+The full nurbs-core library suite also passed: 716 passed, zero failures, two
+ignored. Evidence: `distinct-face-normal-cache-full-nurbs.log.gz`.

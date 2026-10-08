@@ -596,13 +596,35 @@ impl OriginalPairBounds<'_> {
         Ok(self.components)
     }
 }
-pub(crate) struct OriginalNormalCache<'a> {
+pub struct OriginalNormalCache<'a> {
     surface: &'a Surface,
     rectangles: std::collections::HashMap<[[u64;2];2],[[f64;2];3]>,
 }
 impl<'a> OriginalNormalCache<'a> {
-    pub(crate) fn new(surface:&'a Surface)->Self {
+    pub fn new(surface:&'a Surface)->Self {
         Self{surface,rectangles:std::collections::HashMap::new()}
+    }
+    /// Compare complete original rectangles, charging only new source queries.
+    /// Private source references and cache keys prevent rebinding paid hulls.
+    pub fn inspect_other(&mut self, other: &mut Self,
+        domains: [[[f64; 2]; 2]; 2], sine: f64, budget: usize) -> Result<PairReport> {
+        validate_input(self.surface,domains[0],[1.,0.,0.],sine,budget.max(1))?;
+        validate_input(other.surface,domains[1],[1.,0.,0.],sine,budget.max(1))?;
+        let mut spent=0; let mut components=[None;2];
+        for (side,cache) in [self,other].into_iter().enumerate() {
+            let rect=domains[side];let key=rect.map(|axis|axis.map(f64::to_bits));
+            if let Some(hull)=cache.rectangles.get(&key) {components[side]=Some(*hull);}
+            else if spent<budget {
+                let (hull,used)=normal_bounds(cache.surface,rect,budget-spent)?;
+                spent+=used;components[side]=hull;
+                if let Some(hull)=hull {cache.rectangles.insert(key,hull);}
+            }
+        }
+        let [Some(a),Some(b)]=components else {
+            return Ok(PairReport{aligned:None,sine_squared_interval:None,
+                normal_components:components,spans:spent,reason:"span-limit"});
+        };
+        let mut report=inspect_pair_bounds([a,b],sine)?;report.spans=spent;Ok(report)
     }
     pub(crate) fn inspect_pair(&mut self,pair:[[[f64;2];2];2],sine:f64,budget:usize)
         ->Result<(PairReport,Option<OriginalPairBounds<'a>>,usize)> {
@@ -774,6 +796,49 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn distinct_source_cache_reuses_only_complete_original_rectangles() {
+        let a=plane();let mut b=plane();
+        for row in &mut b.control_points {for p in row {p.swap(0,2);}}
+        let domains=[[[0.,1.],[0.,1.]];2];
+        let mut ac=OriginalNormalCache::new(&a);let mut bc=OriginalNormalCache::new(&b);
+        let paid=ac.inspect_other(&mut bc,domains,1e-6,2).unwrap();
+        let plain=inspect_pair([&a,&b],domains,1e-6,2).unwrap();
+        assert_eq!(paid.aligned,Some(false));assert_eq!(paid.spans,2);
+        assert_eq!(paid.normal_components,plain.normal_components);
+        assert_eq!(paid.sine_squared_interval,plain.sine_squared_interval);
+        let free=ac.inspect_other(&mut bc,domains,1e-6,0).unwrap();
+        assert_eq!(free.spans,0);assert_eq!(free.aligned,paid.aligned);
+        assert_eq!(free.sine_squared_interval,paid.sine_squared_interval);
+        let mut changed=domains;changed[1][0]=[-0.1,1.];
+        assert!(ac.inspect_other(&mut bc,changed,1e-6,0).is_err());
+        assert!(ac.inspect_other(&mut bc,domains,1.,0).is_err());
+        let c=plane();let mut cc=OriginalNormalCache::new(&c);
+        let missing=ac.inspect_other(&mut cc,domains,1e-6,0).unwrap();
+        assert_eq!(missing.aligned,None);assert_eq!(missing.normal_components[1],None);
+        let fresh=ac.inspect_other(&mut cc,domains,1e-6,1).unwrap();
+        assert_eq!(fresh.aligned,Some(true));assert_eq!(fresh.spans,1);
+    }
+    #[test]
+    fn incomplete_distinct_normal_queries_never_enter_the_cache() {
+        let mut a=plane();a.knots_u=vec![0.,0.,0.5,1.,1.];
+        a.control_points.push(vec![vec![2.,0.,1.],vec![2.,1.,1.]]);
+        a.weights.push(vec![1.;2]);let b=plane();
+        let mut ac=OriginalNormalCache::new(&a);let mut bc=OriginalNormalCache::new(&b);
+        let domains=[[[0.,1.],[0.,1.]];2];
+        for _ in 0..2 {
+            let r=ac.inspect_other(&mut bc,domains,1e-6,1).unwrap();
+            assert_eq!(r.spans,1);assert_eq!(r.aligned,None);
+            assert_eq!(r.normal_components,[None,None]);
+        }
+        let full=ac.inspect_other(&mut bc,domains,1e-6,3).unwrap();
+        assert_eq!(full.spans,3);assert!(full.normal_components.iter().all(Option::is_some));
+        let cached=ac.inspect_other(&mut bc,domains,1e-6,0).unwrap();
+        assert_eq!(cached.spans,0);assert_eq!(cached.normal_components,full.normal_components);
+        let point=[[[0.5,0.5],[0.3,0.7]];2];
+        let unpaid=ac.inspect_other(&mut bc,point,1e-6,0).unwrap();
+        assert_eq!(unpaid.normal_components,[None,None]);
     }
     #[test]
     fn exact_factored_limits_resolve_pole_angles_without_inventing_regular_normals() {

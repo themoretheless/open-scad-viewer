@@ -142,6 +142,8 @@ pub fn qualify_with_self_facts<'a>(
             [a.min(b), a.max(b)]
         }).collect();
     let necessary = geometry::necessary_normal_sine(limits.max_sine_squared)?;
+    let mut normal_caches: Vec<_> = surfaces.iter().map(|s|
+        nurbs_core::normal_alignment::OriginalNormalCache::new(s)).collect();
     let mut gaps = Vec::new();
     let mut self_chords = Vec::new();
     'pairs: for a in 0..surfaces.len() {
@@ -183,14 +185,12 @@ pub fn qualify_with_self_facts<'a>(
                 pair.proven = true;
             } else {
                 if let Some(threshold) =
-                    necessary.filter(|_| out.normal_spans < limits.normal_spans)
+                    necessary
                 {
-                    let r = nurbs_core::normal_alignment::inspect_pair(
-                        [surfaces[a], surfaces[b]],
-                        [domain(surfaces[a]), domain(surfaces[b])],
-                        threshold,
-                        limits.normal_spans - out.normal_spans,
-                    )?;
+                    let (before,after)=normal_caches.split_at_mut(b);
+                    let r = before[a].inspect_other(&mut after[0],
+                        [domain(surfaces[a]), domain(surfaces[b])], threshold,
+                        limits.normal_spans - out.normal_spans)?;
                     out.normal_spans += r.spans;
                     if r.aligned == Some(false) {
                         pair.reason = "source-wall-normal-pair-excluded";

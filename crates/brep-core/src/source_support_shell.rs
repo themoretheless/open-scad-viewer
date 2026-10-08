@@ -161,10 +161,10 @@ mod tests {
         if let Some(path)=std::env::var_os("CAD_CUBOID_SOURCE_BODY_OUTPUT") {
             std::fs::write(path,value_codec::to_string_pretty(&body.definition().unwrap()).unwrap()).unwrap();
         }
-        for (minimum,pairs,success) in [(9.99,21,true),(10.01,21,false),(9.99,20,false)] {
+        for (minimum,pairs,normal_spans,success) in [(9.99,21,10000,true),(10.01,21,10000,false),(9.99,20,10000,false),(9.99,21,6,true),(9.99,21,1,false)] {
             let report=crate::source_wall_coverage::qualify(&body,minimum,
                 crate::source_wall_coverage::Limits {
-                    pairs,plane_controls:10000,normal_spans:10000,
+                    pairs,plane_controls:10000,normal_spans,
                     gap:crate::source_face_gap::Limits{cells:10000,spans:20000},
                     max_sine_squared:1e-6,
                 }).unwrap();
@@ -173,6 +173,7 @@ mod tests {
             assert_eq!(report.total_pairs,21);
             assert_eq!(report.enumeration_complete,pairs==21);
             assert_eq!(report.certificate.is_some(),success,"{}",report.reason);
+            assert!(report.normal_spans<=normal_spans.min(6),"whole-chart normals must be paid once per original face");
             if let Some(certificate)=report.certificate {
                 assert!(std::ptr::eq(certificate.body(),&body));
                 assert_eq!(certificate.minimum_mm(),minimum);
