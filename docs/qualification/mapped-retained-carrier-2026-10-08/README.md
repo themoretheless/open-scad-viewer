@@ -794,3 +794,28 @@ This advances neighboring contour preparation for edge 1. Edge 0's nonlinear
 neighbor still needs a suitable exact cut representation or transported root
 endpoint support. A full replacement contour, endpoint cap and closed-body
 qualification are still outstanding.
+
+## Original carrier root transport for nonlinear neighbors
+
+`source_carrier_point::qualify` privately binds a certified original UV crossing
+root to its admitted original shared carrier. Source Surface and boundary Curve
+must equal the selected original use. Full original canonical maps are required;
+both retained uses must strictly contain the transported root enclosure.
+Complete original UV/world curve spans are charged before a Point is issued.
+The Point retains original edge/root definitions and exact correspondence;
+its UV, parameter and world boxes never become fixed endpoint coordinates.
+
+Restoration independently requalifies the original shared edge, root equations
+and carrier transport. Cached coordinate fields are ignored. An altered source
+side fails source identity, and incomplete span work yields no Point.
+
+Actual edge 0 transports its selected root into the nonlinear neighboring
+pcurve at parameter [0.24999999999999564,0.2500000000000046], canonical
+[0.24999999999999598,0.25000000000000416]. Edge 1 transports to neighbor parameter
+[0.749999999999997,0.7500000000000033], canonical
+[0.7499999999999981,0.7500000000000021]. Each costs three original curve spans.
+Both actual carrier/root transport and fresh restoration regressions pass.
+
+This establishes a native transported-root object for subsequent endpoint
+integration. It is not yet a Fragment endpoint variant, a replacement contour,
+new endpoint surface or corrected closed Body. Those integrations remain open.

@@ -385,6 +385,26 @@ mod tests {
             assert!(matches!(&fragments[0].endpoints()[1],crate::source_boundary_fragment::Endpoint::Crossing{..}));
             assert!(matches!(&fragments[1].endpoints()[0],crate::source_boundary_fragment::Endpoint::Crossing{..}));
             assert!(endpoint.split_source_use(0).is_err());
+            let original=&body.geometry().shell().edges()[index];
+            let addresses=&body.geometry().shell().uses()[index];
+            let side=usize::from(addresses[0].face!=0);
+            let transported=crate::source_carrier_point::qualify(original,point,side,3).unwrap();
+            let carrier=transported.point.expect(transported.reason);assert_eq!(transported.spans,3);
+            assert_eq!(carrier.root().definition(),point.definition());
+            let b=carrier.parameter_bounds()[1-side];assert!(b[0]<if high {0.75}else{0.25}&&b[1]>if high {0.75}else{0.25});
+            assert!(crate::source_carrier_point::qualify(original,point,side,2).unwrap().point.is_none());
+            assert!(crate::source_carrier_point::qualify(original,point,1-side,3).unwrap().point.is_none());
+            let restore_limits=||crate::source_carrier_point::RestoreLimits {
+                edge:crate::source_shared_edge_restore::Limits{mapping_cells_per_use:16,exact_work:100000000,driver_cells:10000},
+                root_mapping_cells:16,spans:3};
+            let mut definition=carrier.definition();definition["canonical"]=value_codec::json!([0.,0.]);
+            let restored=crate::source_carrier_point::restore(definition,restore_limits()).unwrap();
+            let restored=restored.point.expect(restored.reason);
+            assert_eq!(restored.definition(),carrier.definition());
+            let mut foreign=carrier.definition();foreign["sourceSide"]=value_codec::json!(1-side);
+            assert!(crate::source_carrier_point::restore(foreign,restore_limits()).unwrap().point.is_none());
+            eprintln!("carrier root edge={} side={} target={:?} canonical={:?} spans=3",index,side,b,carrier.canonical_bounds());
+
             if high {
                 let cutter=nurbs_core::curve::Curve::from_polyline(vec![vec![0.75,-1.],vec![0.75,2.]]).unwrap();
                 let joined=partition.qualify_neighbor(&cutter,[[0.7,0.8],[0.61,0.72]],16,100000000,10000).unwrap();
