@@ -649,6 +649,24 @@ mod tests {
         let zero_trim=expression.inspect_shell_trimmed(0,8,1000,20000,1e-8,0,256).unwrap();
         assert_eq!(zero_trim.pending_pairs(),count*(count-1)/2);
 
+        let mut original_planar=0;let mut planar_work=0;let mut planar_spans=0;
+        for pair in &trimmed_shell.pairs {
+            if pair.inspection.complete_excluded() {continue;}
+            let contact=expression.qualify_original_planar_contact(pair.faces,100000000-planar_work,100000-planar_spans).unwrap();
+            planar_work+=contact.exact_work;planar_spans+=contact.spans;
+            if let Some(certificate)=contact.certificate {
+                original_planar+=1;assert_eq!(certificate.faces(),pair.faces);
+                for side in 0..2 {assert!(std::ptr::eq(certificate.owners()[side],&expression.faces()[pair.faces[side]]));}
+                assert!(expression.qualify_original_planar_contact(pair.faces,0,0).unwrap().certificate.is_none());
+            }
+        }
+        eprintln!("expression fresh unchanged planar contacts={} exactWork={} spans={}",original_planar,planar_work,planar_spans);
+        assert_eq!(original_planar,10);
+        assert!(expression.qualify_original_planar_contact([0,0],100,100).is_err());
+        let transition_id=expression.faces().iter().position(|f|f.kind()==ShellFaceKind::Transition).unwrap();
+        assert!(expression.qualify_original_planar_contact([retained_ids[0],transition_id],100000000,100000).unwrap().certificate.is_none());
+        assert!(expression.qualify_original_planar_contact(retained_ids,100000000,100000).unwrap().certificate.is_none());
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

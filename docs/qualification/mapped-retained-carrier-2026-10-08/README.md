@@ -2137,3 +2137,32 @@ removing 149 partial outside products. The previous 149/257 result had a
 smaller two-cell per-pair allowance and is not an equal-budget comparison.
 Full shared contact neighborhoods, remaining distinct-face products,
 volume, wall thickness and radius qualification remain required.
+
+
+## Fresh planar contact authority for unchanged expression faces
+
+qualify_original_planar_contact maps two distinct Original expression
+faces to the privately owned original shell, requiring identical complete
+contour definitions (all loops, every fragment and endpoint) before fresh
+source_allowed_contact qualification. It issues a private certificate
+borrowing the actual final ShellFace owners and retaining the fresh source
+contact certificate. Retained, transition and subdivided original faces
+refuse transfer; their changed geometry/contours need separate proofs.
+Zero exact or span allowance issues no certificate.
+
+This admits supported shared-line contact without treating adjacency or
+an old report number as absence of extra intersection. Unresolved pair
+products are kept by the trim report; the independently owned contact
+certificate is an additional geometric proof for the whole unchanged
+pair. The test attempts every pending pair under shared exact/span work
+and checks actual face-owner pointer identity for each admitted contact.
+
+The first combined native run passed in 42.71 seconds. Ten of the 244
+pending trimmed pairs received fresh unchanged-planar contact certificates,
+using 1288456 exact work and 288 spans over all attempted pairs. A final
+run explicitly requires these ten certificates and rejects reflexive,
+retained and transition contact transfer. These ten pairs are qualified
+for allowed contact, not classified as disjoint. The product report still
+preserves its 244 pending entries; combining it with these ten separate
+contact certificates leaves 234 pairs without a complete pair proof.
+Changed/subdivided faces and curved seam neighborhoods remain required.
