@@ -620,6 +620,13 @@ it('qualifies mixed retained wall products through real WASM and preserves every
   if(mixed){
    expect(c.mixedProducts!.pairs).toHaveLength(45)
    expect(c.mixedProducts!.pairs.filter(p=>p.qualified)).toHaveLength(13)
+   // Requested UV resolution must prevent the former subnormal subdivision tail.
+   const native=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-uv-stop-native.json',import.meta.url),'utf8')).automatic
+   expect(c.mixedProducts!.normalSpans).toBe(native.normalSpans)
+   expect(c.mixedProducts!.domainCells).toBe(native.domainCells)
+   expect(c.mixedProducts!.pairs.map(p=>[p.faces,p.qualified,p.cells,p.unresolvedProducts.length]))
+    .toEqual(native.pairs.map((p:{faces:number[];qualified:boolean;cells:number;unresolvedProducts:number})=>[p.faces,p.qualified,p.cells,p.unresolvedProducts]))
+
    for(const old of results[0]!.result.wallCoverage!.pairs.filter(p=>p.proven))
     expect(c.pairs.find(p=>p.faces[0]===old.faces[0]&&p.faces[1]===old.faces[1])?.proven).toBe(true)
    for(const mutate of [
