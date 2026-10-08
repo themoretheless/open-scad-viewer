@@ -1,5 +1,5 @@
 //! Complete-rectangle normal/line angle bounds, including both sides of knots.
-use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
+use crate::{check, distance_bounds::Interval as I, surface::Surface, Result};
 
 #[derive(Debug)]
 pub struct Report {
@@ -28,12 +28,12 @@ fn norm_squared(x: [I; 3]) -> Result<I> {
     I::new(out.lo.max(0.), out.hi)
 }
 type Net = Vec<Vec<[I; 4]>>;
-pub(crate) fn restrict_hull(
+fn restrict_net(
     net: &Net,
     degrees: [usize; 2],
     span: [[f64; 2]; 2],
     domain: [[f64; 2]; 2],
-) -> Result<[I; 4]> {
+) -> Result<Net> {
     let [p, q] = degrees;
     let ku = [vec![span[0][0]; p + 1], vec![span[0][1]; p + 1]].concat();
     let kv = [vec![span[1][0]; q + 1], vec![span[1][1]; q + 1]].concat();
@@ -47,10 +47,7 @@ pub(crate) fn restrict_hull(
             .map(|h| h[3].hi)
             .fold(f64::NEG_INFINITY, f64::max),
     ];
-    let mut hull = [I {
-        lo: f64::INFINITY,
-        hi: f64::NEG_INFINITY,
-    }; 4];
+    let mut result = vec![vec![[I::point(0.); 4]; q + 1]; p + 1];
     for v in 0..=q {
         let vs = (0..q)
             .map(|k| domain[1][usize::from(k >= q - v)])
@@ -64,15 +61,58 @@ pub(crate) fn restrict_hull(
                 .map(|k| domain[0][usize::from(k >= p - u)])
                 .collect::<Vec<_>>();
             let h = crate::surface_distance::interpolate(rows.clone(), p, &ku, p, &us, weights)?;
-            for k in 0..4 {
-                hull[k].lo = hull[k].lo.min(h[k].lo);
-                hull[k].hi = hull[k].hi.max(h[k].hi);
-            }
+            result[u][v] = h;
         }
     }
-    Ok(hull)
+    Ok(result)
 }
-pub(crate) fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<[[I; 2]; 3]> {
+pub(crate) fn restrict_hull(
+    net: &Net,
+    degrees: [usize; 2],
+    span: [[f64; 2]; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<[I; 4]> {
+    let restricted = restrict_net(net, degrees, span, domain)?;
+    Ok(std::array::from_fn(|k| I {
+        lo: restricted
+            .iter()
+            .flatten()
+            .map(|h| h[k].lo)
+            .fold(f64::INFINITY, f64::min),
+        hi: restricted
+            .iter()
+            .flatten()
+            .map(|h| h[k].hi)
+            .fold(f64::NEG_INFINITY, f64::max),
+    }))
+}
+/// Positive denominator Bernstein coefficients make a rational polynomial a
+/// convex combination of coefficient quotients, including after restriction.
+pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result<[I; 3]> {
+    let restricted = restrict_net(
+        net,
+        [net.len() - 1, net[0].len() - 1],
+        [[0., 1.], [0., 1.]],
+        domain,
+    )?;
+    let mut out = [I {
+        lo: f64::INFINITY,
+        hi: f64::NEG_INFINITY,
+    }; 3];
+    for h in restricted.iter().flatten() {
+        for k in 0..3 {
+            let value = h[k].div(h[3])?;
+            out[k].lo = out[k].lo.min(value.lo);
+            out[k].hi = out[k].hi.max(value.hi);
+        }
+    }
+    Ok(out)
+}
+pub(crate) fn jacobian_on(
+    s: &Surface,
+    indices: [usize; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<[[I; 2]; 3]> {
     let [u, v] = indices;
     let (p, q) = (s.degree_u, s.degree_v);
     let span = [
@@ -541,6 +581,24 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn rational_coefficient_quotients_keep_shared_denominator_and_reject_zero() {
+        let net = vec![
+            vec![[I::point(2.), I::point(1.), I::point(0.), I::point(2.)]; 2],
+            vec![[I::point(10.), I::point(1.), I::point(0.), I::point(10.)]; 2],
+        ];
+        let full = rational_quotient_hull(&net, [[0., 1.], [0., 1.]]).unwrap();
+        assert!(full[0].contains(1.) && full[0].hi - full[0].lo < 1e-12);
+        for u in [0., 0.25, 0.5, 1.] {
+            assert!(full[1].contains(1. / (2. + 8. * u)));
+            let point = rational_quotient_hull(&net, [[u, u], [0.3, 0.3]]).unwrap();
+            assert!(point[1].contains(1. / (2. + 8. * u)));
+            assert!(point[1].hi - point[1].lo < 1e-12);
+        }
+        let mut invalid = net;
+        invalid[0][0][3] = I::point(0.);
+        assert!(rational_quotient_hull(&invalid, [[0., 1.], [0., 1.]]).is_err());
     }
     #[test]
     fn pair_normals_distinguish_tangency_fold_and_singular_transition() {

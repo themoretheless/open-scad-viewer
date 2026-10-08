@@ -161,6 +161,84 @@ fn scalar(g: Vec<Vec<I>>) -> Net {
         })
         .collect()
 }
+fn choose(n: usize, k: usize) -> u64 {
+    (0..k).fold(1, |x, i| x * (n - i) as u64 / (i + 1) as u64)
+}
+fn weight_square(weights: &[Vec<f64>]) -> Result<Net> {
+    // Preparation admits degree <= 8. All binomial products below are exact
+    // integers below 2^53; only their quotient needs outward rounding.
+    let (p, q) = (weights.len() - 1, weights[0].len() - 1);
+    let mut out = empty(2 * p + 1, 2 * q + 1);
+    for u in 0..=2 * p {
+        for v in 0..=2 * q {
+            let mut sum = I::point(0.);
+            for i in 0..=p {
+                for j in 0..=q {
+                    if u < i || u - i > p || v < j || v - j > q {
+                        continue;
+                    }
+                    let numerator =
+                        (choose(p, i) * choose(p, u - i) * choose(q, j) * choose(q, v - j)) as f64;
+                    let denominator = (choose(2 * p, u) * choose(2 * q, v)) as f64;
+                    let factor = I::point(numerator).div(I::point(denominator))?;
+                    sum = sum.add(
+                        I::point(weights[i][j])
+                            .mul(I::point(weights[u - i][v - j]))?
+                            .mul(factor)?,
+                    )?;
+                }
+            }
+            out[u][v][3] = sum;
+        }
+    }
+    Ok(out)
+}
+fn rational_net(mut net: Net, denominator: &Net) -> Result<Net> {
+    // Elevate the original polynomial numerator to W²'s tensor degrees.
+    // Packing the common denominator allows restricted coefficient quotients
+    // to retain correlations lost by dividing two independent range hulls.
+    for axis in 0..2 {
+        let target = if axis == 0 {
+            denominator.len()
+        } else {
+            denominator[0].len()
+        };
+        while (if axis == 0 { net.len() } else { net[0].len() }) < target {
+            let (nu, nv) = (net.len(), net[0].len());
+            let mut elevated = empty(nu + usize::from(axis == 0), nv + usize::from(axis == 1));
+            let degree = if axis == 0 { nu } else { nv };
+            for u in 0..elevated.len() {
+                for v in 0..elevated[0].len() {
+                    let i = if axis == 0 { u } else { v };
+                    if i == 0 {
+                        elevated[u][v] = net[u][v];
+                        continue;
+                    }
+                    if i == degree {
+                        elevated[u][v] =
+                            net[u - usize::from(axis == 0)][v - usize::from(axis == 1)];
+                        continue;
+                    }
+                    let t = I::point(i as f64).div(I::point(degree as f64))?;
+                    let one = I::point(1.).sub(t)?;
+                    for k in 0..3 {
+                        elevated[u][v][k] = net[u - usize::from(axis == 0)]
+                            [v - usize::from(axis == 1)][k]
+                            .mul(t)?
+                            .add(net[u][v][k].mul(one)?)?;
+                    }
+                }
+            }
+            net = elevated;
+        }
+    }
+    for u in 0..net.len() {
+        for v in 0..net[0].len() {
+            net[u][v][3] = denominator[u][v][3];
+        }
+    }
+    Ok(net)
+}
 /// No input geometry is fitted or changed. Every dropped coefficient has an
 /// exact Zero sign; all other magnitudes retain authored coefficient units.
 pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
@@ -281,16 +359,17 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
                 weight[u][v][0] = I::point(source.weights[u][v]);
             }
         }
+        let denominator = weight_square(&source.weights)?;
         Ok(Some(Certificate {
             surface: s,
             end,
             anchor,
             a,
             weight,
-            lambda: scalar(lambda),
-            alpha: scalar(alpha),
-            e,
-            b,
+            lambda: rational_net(scalar(lambda), &denominator)?,
+            alpha: rational_net(scalar(alpha), &denominator)?,
+            e: rational_net(e, &denominator)?,
+            b: rational_net(b, &denominator)?,
         }))
     })()?;
     let reason = if prepared.is_some() {
@@ -357,20 +436,21 @@ impl<'a> Certificate<'a> {
             )
         };
         let w = hull(&self.weight)?[0];
-        let denominator = w.mul(w)?;
-        let lambda = hull(&self.lambda)?[0].div(denominator)?;
+        check(w.lo > 0., "Positive original rational pole denominator")?;
+        let quotient = |net: &Net| normal_alignment::rational_quotient_hull(net, d);
+        let lambda = quotient(&self.lambda)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
             return Ok(None);
         }
-        let alpha = hull(&self.alpha)?[0].div(denominator)?;
-        let eh = hull(&self.e)?;
-        let bh = hull(&self.b)?;
+        let alpha = quotient(&self.alpha)?[0];
+        let eh = quotient(&self.e)?;
+        let bh = quotient(&self.b)?;
         let first = I::new(0., d[0][1])?.div_signed(lambda)?;
         let second = alpha.div_signed(lambda)?.mul(I::new(0., 1.)?)?;
         let mut j = [[I::point(0.); 2]; 3];
         for k in 0..3 {
-            let e = eh[k].div(denominator)?;
-            let b = bh[k].div(denominator)?;
+            let e = eh[k];
+            let b = bh[k];
             j[k][0] = self.a[k].add(e.mul(first)?)?;
             j[k][1] = b.sub(e.mul(second)?)?;
         }
@@ -440,9 +520,9 @@ mod tests {
                 &s, pair, &c, &normals, 1e-4, 7,
             )
             .unwrap();
-            // A wide mean-matrix enclosure contains a singular matrix; refuse
-            // rather than infer a denominator from the planar fixture alone.
-            assert!(!excluded.0 && excluded.1 <= 7);
+            // Correlated numerator/denominator coefficients now keep the
+            // wide angular pair nonsingular, unlike the old independent hulls.
+            assert!(excluded.0 && excluded.1 <= 7);
             let narrow = [[near, [0., 1e-12]], [near, [0.1, 0.1 + 1e-12]]];
             let local = crate::surface_self_chord::rational_pole_pair_exclusion(
                 &s, narrow, &c, &normals, 1e-4, 7,

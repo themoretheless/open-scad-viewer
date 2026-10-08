@@ -542,3 +542,32 @@ is completely certified; retained same-face coverage stays 28/31. Evidence:
 `endpoint-self-wall.json.gz`, its log and both endpoint test logs. A tighter
 correlated rational quotient/mean bound remains needed near the collapsed rail.
 Global wall qualification and WASM/UI packaging remain open.
+
+
+## Correlated rational coefficient quotient bounds
+
+The source-owned certificate now builds W² in its exact tensor Bernstein
+product degrees using original weights and outward interval arithmetic.
+Numerator nets are degree-elevated without changing their original polynomial.
+Every binomial integer product is exactly representable for admitted degrees
+<=8. The homogeneous net packs the elevated numerator and common W²
+coefficient together. Restriction uses the same original blossom operations.
+
+For positive restricted denominator coefficients D_i, N/D is a convex
+combination of N_i/D_i, with weights B_i D_i/D. Each coefficient quotient
+therefore gives a valid rational hull that retains the shared denominator.
+Nonpositive coefficient denominators refuse the query. The original weight
+restriction and four rational nets retain the five-restriction query charge.
+This tightens lambda, alpha, E and B separately; their integrated mean
+correlations remain bounded by the earlier conservative inequality.
+
+Four rational pole tests, six normal-alignment tests and thirteen chord tests
+pass (23 total). Independent rational quotient formulas still enclose both
+reflected/scaled-domain frames. A shared-denominator constant ratio stays
+near one despite weights ranging 2..10; nonconstant point queries contain
+1/(2+8u), and a zero denominator refuses. The earlier angular separation
+0.245 fixture now qualifies with the improved bound at U~1e-12. The unchanged
+analytic quotient oracle, source ownership and budget tests accompany this
+change in expected admission. Evidence: the three `correlated-*-tests.log.gz`
+files. A fresh original four-body audit has been dispatched with unchanged
+1024/8192 limits; no complete pole or whole-wall claim is made before its result.
