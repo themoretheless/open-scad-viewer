@@ -898,6 +898,20 @@ mod tests {
         let exhausted=expression.inspect_contacts(ContactAuditLimits{cells:0,spans:0,domain_cells:0,exact_work:0,driver_cells:0,..audit_limits}).unwrap();
         assert_eq!(exhausted.pairs().len(),406);assert_eq!(exhausted.pending_pairs(),406);
 
+        let refined=expression.inspect_contacts_with_profile_region_refined(audit_limits,&profile_region,32).unwrap();
+        assert_eq!(refined.pairs().len(),406);
+        assert!(refined.pending_pairs()<=audit.pending_pairs());
+        for (old,new) in audit.pairs().iter().zip(refined.pairs()) {
+            assert_eq!(old.support().faces,new.support().faces);
+            if !matches!(old.proof(),PairContactProof::Pending) {assert_eq!(old.proof().kind(),new.proof().kind());}
+            else {assert!(matches!(new.proof(),PairContactProof::Pending|PairContactProof::Excluded));}
+        }
+        let (cells,spans,domains,work,drivers)=refined.work();
+        assert!(cells<=audit_limits.cells && spans<=audit_limits.spans && domains<=audit_limits.domain_cells && work<=audit_limits.exact_work && drivers<=audit_limits.driver_cells);
+        let refined_diagnostics=refined.diagnostics();
+        eprintln!("refined contact audit pending={} cells={} spans={} domains={} reasons={} faceKinds={}",refined.pending_pairs(),cells,spans,domains,refined_diagnostics["pendingByReason"],refined_diagnostics["pendingByFaceKinds"]);
+        if let Ok(path)=std::env::var("BREP_CONTACT_REFINED_AUDIT_PATH") {std::fs::write(path,refined_diagnostics.to_string()).expect("write requested refined contact diagnostics");}
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

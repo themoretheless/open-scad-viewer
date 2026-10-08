@@ -301,3 +301,6 @@ mod tests {
         assert_eq!(value_codec::decode_binary(&value_codec::encode_binary(&d).unwrap()).unwrap(),d);
     }
 }
+
+#[path = "source_profile_shell_refinement.rs"]
+mod refinement;

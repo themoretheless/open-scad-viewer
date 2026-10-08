@@ -50,7 +50,7 @@ where
         Ok((false, 0))
     })
 }
-fn inspect_regions<F, G>(
+pub(super) fn inspect_regions<F, G>(
     domain: SupportProduct,
     max_cells: usize,
     max_spans: usize,
