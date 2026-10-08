@@ -33,7 +33,7 @@ pub struct Report {
     pub uncertain_canonical: Option<[f64; 2]>,
     pub reason: &'static str,
 }
-fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
+pub(crate) fn ranges(edge: &SharedEdge) -> [[[f64; 2]; 2]; 2] {
     edge.ranges().unwrap_or_else(|| {
         std::array::from_fn(|side| {
             // SharedEdge stores traversal orientation, while the map is for the

@@ -385,6 +385,26 @@ mod tests {
             assert!(matches!(&fragments[0].endpoints()[1],crate::source_boundary_fragment::Endpoint::Crossing{..}));
             assert!(matches!(&fragments[1].endpoints()[0],crate::source_boundary_fragment::Endpoint::Crossing{..}));
             assert!(endpoint.split_source_use(0).is_err());
+            if high {
+                let cutter=nurbs_core::curve::Curve::from_polyline(vec![vec![0.75,-1.],vec![0.75,2.]]).unwrap();
+                let joined=partition.qualify_neighbor(&cutter,[[0.7,0.8],[0.61,0.72]],16,100000000,10000).unwrap();
+                eprintln!("neighbor cut edge={} reason={} work={} roots={}",index,joined.reason,joined.exact_work,joined.root_checks);
+                let halves=joined.partition.expect(joined.reason);
+                assert!(halves.fragments()[0].joins(&halves.fragments()[1]));
+                assert!(halves.edges().iter().all(|e|!e.covers_complete_canonical_source()));
+                for half in halves.edges() {
+                    let restored=crate::source_shared_edge_restore::restore(half.definition(),
+                        crate::source_shared_edge_restore::Limits{mapping_cells_per_use:16,exact_work:100000000,driver_cells:10000}).unwrap();
+                    let restored=restored.edge.expect(restored.reason);
+                    assert_eq!(restored.definition(),half.definition());
+                    assert!(!restored.covers_complete_canonical_source());
+                }
+
+                let wrong=nurbs_core::curve::Curve::from_polyline(vec![vec![0.8,-1.],vec![0.8,2.]]).unwrap();
+                assert!(partition.qualify_neighbor(&wrong,[[0.7,0.8],[0.61,0.72]],16,100000000,10000).unwrap().partition.is_none());
+                assert!(partition.qualify_neighbor(&cutter,[[0.7,0.8],[0.61,0.72]],16,1,1).unwrap().partition.is_none());
+            }
+
             eprintln!("owned cut partition edge={} roots={:?} neighborRanges={:?} cells={}",index,
                 point.root_parameters(),neighbor,split.mapping_cells);
             let short=proposal.cut_endpoint(0,0,0.75,high,index,1).unwrap();

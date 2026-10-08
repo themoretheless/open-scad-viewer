@@ -770,3 +770,27 @@ Both new selected-face fragments also restore through the existing native
 root-requalification gate. Their joins and full original definitions survive
 the round trip; no cached endpoint bounds authorize restoration. The native
 actual cut/pole/partition/restore regression passes.
+
+## Fresh neighboring fragments and shared-edge halves
+
+`CutPartition::qualify_neighbor` treats the neighbor cutter/selector as proposal
+inputs. It independently certifies the original neighbor crossing, splits its
+original directed Fragment, and freshly qualifies both common world-edge halves
+through exact affine composition and actual endpoint-root identity. The two
+half-edge queries share the exact-work allowance and remaining driver allowance.
+A partial result is never issued as a complete neighbor partition.
+
+For annular edge 1 / neighbor face 2, an original UV cutter U=0.75 with V from
+-1 to 2 and root selector [[0.7,0.8],[0.61,0.72]] qualifies both half-edges.
+Fresh exact composition/root identity uses 220781 work units. Both neighbor
+Fragments retain the original curve and shared crossing root. The half-edges
+correctly refuse complete-source coverage claims. A displaced U=0.8 cutter and
+one-unit exact-work allowance refuse instead of matching nearby roots.
+
+Both actual new shared-edge halves restore through existing original-source
+qualification; their full definitions survive and they remain partial carriers.
+The native actual cut/pole/partition/shared-edge/restore regression passes.
+This advances neighboring contour preparation for edge 1. Edge 0's nonlinear
+neighbor still needs a suitable exact cut representation or transported root
+endpoint support. A full replacement contour, endpoint cap and closed-body
+qualification are still outstanding.
