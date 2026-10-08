@@ -306,7 +306,17 @@ pub(crate) fn qualify_with_prepared<'a>(body:&'a Body,faces:[usize;2],minimum_mm
                     .filter(|p|*p!=[0.;3]).collect();
                 let allowance=(limits.spans-out.spans).min(64);
                 if allowance>0 {
-                    match paths.qualify_product_projections(uv,&projections,limits.max_sine_squared,allowance) {
+                    // Conservative query charge includes supplied factors even if
+                    // a path refusal prevents querying one of the normals.
+                    let count=factors.iter().filter(|f|f.is_some()).count();
+                    let normals=if count<=query_budget-out.factored_queries {out.factored_queries+=count;factors}else{[None,None]};
+                    let query=paths.qualify_product_projections_with_normals(uv,&projections,limits.max_sine_squared,allowance,normals);
+                    let query=match query {
+                        Err(e) if e.code=="NURBS_INVALID_INPUT" && normals.iter().any(Option::is_some)=>
+                            paths.qualify_product_projections(uv,&projections,limits.max_sine_squared,allowance),
+                        other=>other,
+                    };
+                    match query {
                         Ok((proof,used))=>{out.spans+=used;excluded=proof.is_some();}
                         Err(e) if e.code=="NURBS_INVALID_INPUT"=>{}
                         Err(e) if e.code=="NURBS_NUMERIC_ERROR"=>{out.spans+=allowance;}

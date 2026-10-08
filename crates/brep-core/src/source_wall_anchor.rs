@@ -87,8 +87,15 @@ impl<'a> PreparedPair<'a> {
     /// Query work includes path restrictions, endpoint enclosures and normals.
     pub fn qualify_product_projections(&self,rectangles:[[[f64;2];2];2],projections:&[[f64;3]],sine:f64,max_spans:usize)
         ->Result<(Option<ProductCertificate<'a>>,usize)> {
+        self.qualify_product_projections_with_normals(rectangles,projections,sine,max_spans,[None,None])
+    }
+    /// The caller charges each supplied normal factor before this query.
+    /// Native validation keeps factors attached to their original source/pole.
+    pub fn qualify_product_projections_with_normals(&self,rectangles:[[[f64;2];2];2],projections:&[[f64;3]],sine:f64,max_spans:usize,
+        normals:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2])
+        ->Result<(Option<ProductCertificate<'a>>,usize)> {
         let (proof,used)=chord::qualify_polar_anchored_chords_with_projections(self.anchors.each_ref(),rectangles,
-            self.differential.each_ref().map(Option::as_ref),[None,None],projections,sine,max_spans)?;
+            self.differential.each_ref().map(Option::as_ref),normals,projections,sine,max_spans)?;
         Ok((proof.map(|_|ProductCertificate{body:self.body,faces:self.faces,rectangles,max_sine_squared:sine}),used))
     }
     pub fn qualify_product(&self,rectangles:[[[f64;2];2];2],projection:[f64;3],sine:f64,max_spans:usize)

@@ -214,3 +214,20 @@ Original annular regression, bounded-direction validation and budget-refusal
 checks pass. This change has not yet been packaged into WASM; the current
 worker/UI package remains the 3ad19753 artifact qualified above. No runtime
 speedup or new full-wall qualification is claimed.
+
+
+## Prepared normal factors in anchor products (native)
+
+The whole-wall path now supplies original prepared normal factors to the
+batched anchor criterion when its remaining query budget covers them. Each
+supplied factor is conservatively charged before the call, including factors
+not reached after a path refusal. Native source/pole validation is retained;
+a source/pole incompatibility falls back to the ordinary normal path.
+
+At the same 1024 mixed-cell limit: proofs remain **17/45**, pending products
+remain **3006**, geometric spans **64,370 -> 64,252**, factored query charges
+**4562 -> 4975** (limit 10000). Cells 30461, normal spans 11647, domain cells
+314744 and exact preparation 55479571 remain unchanged. No complete proofs
+were added or lost; whole-wall admission remains false. The original annular
+regression passes. The increased query cost is recorded; no speedup is claimed.
+This native update is not yet in the currently qualified 3ad19753 WASM package.
