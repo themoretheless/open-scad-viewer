@@ -1675,3 +1675,29 @@ remain open; it is not a closed Body or a general radius certificate.
 The combined native regression passed in 70.19 seconds with complete
 transition interior coverage (328 accepted, zero pending) and both rail
 incidence checks. Packaged WASM is unchanged.
+
+## Entry and terminal contour binding
+
+TransitionBoundary::propose_section_contours binds each entry/terminal cut
+to the exact boundary recipe. Both supplied CutPartitions must belong to
+the same immutable Proposal and selected face, axis and section parameter,
+the matching low/high rail and original edge. Each SourcePoint definition
+must equal the corresponding admitted carrier root's original crossing
+definition. Coordinate-box overlap cannot substitute for this identity.
+
+The original cut-contour constructor then freshly builds the two
+complementary closed source-chart contours. The private bound section
+retains its transition boundary and records contour edge 3 for entry or
+edge 1 for terminal. These remain original chart contour proposals whose
+geometry must be evaluated under the owned corrected profile.
+
+The final combined native annular regression passed in 26.73 seconds.
+Both section bindings succeed and all complementary loops close. Supplying
+the other section, reversed low/high partition order or insufficient
+fragment allowance refuses. Prior face and oriented rail admission still
+pass, with 328 accepted interior rectangles and zero pending.
+
+Remaining work includes selecting and admitting the exterior retained
+regions, matching their directed section uses to the transition, assembling
+the closed expression shell and qualifying whole-body volume/intersections
+and wall thickness. No new WASM is packaged by this stage.

@@ -187,6 +187,23 @@ pub struct TransitionSideReport<'s,'p,'b> {
 /// contour proposal; it does not admit a transition face or a closed Body.
 pub struct TransitionBoundary<'s,'p,'b> {rooted:[&'s RootEndedSeam<'p,'b>;2]}
 impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
+    /// Bind a terminal/entry section cut to this exact transition's carrier roots.
+    pub fn propose_section_contours<'a>(&'a self,high:bool,parts:[&CutPartition<'_, 'p,'b>;2],max_fragments:usize)->Result<TransitionSectionReport<'a,'s,'p,'b>> {
+        let mut out=TransitionSectionReport{section:None,fragments:0,reason:"profile-transition-section-ownership-unproven"};
+        let index=usize::from(high);let recipe=self.rooted[0];
+        for rail in 0..2 {
+            let part=parts[rail];let endpoint=part.endpoint;
+            if !std::ptr::eq(endpoint.proposal,recipe.restricted.proposal) || endpoint.face!=recipe.face
+                || endpoint.axis!=recipe.axis || endpoint.parameter!=recipe.parameters[index]
+                || endpoint.high!=(rail==1) || endpoint.edge!=self.rooted[rail].restricted.edge
+                || part.point.definition()!=self.rooted[rail].points[index].root().definition() {return Ok(out);}
+        }
+        let contours=propose_cut_contours(parts[0],parts[1],max_fragments)?;
+        out.fragments=contours.fragments;out.reason=contours.reason;
+        let Some(contours)=contours.proposal else {return Ok(out);};
+        out.section=Some(TransitionSection{boundary:self,high,contours});
+        out.reason="profile-transition-section-contours-bound";Ok(out)
+    }
     /// Fresh whole-domain injectivity also proves immersion. Authority remains
     /// attached to this boundary and its exact full-Hermite recipe.
     pub fn qualify_face<'a>(&'a self,projection:[[f64;3];2],controls:usize,cells:usize,spans:usize)->Result<TransitionFaceReport<'a,'s,'p,'b>> {
@@ -234,6 +251,15 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
         profile.enclose(domain,spans)
     }
 }
+/// Two complementary original source-chart contours at one owned section.
+/// Selection of the retained region and profile-face admission remain separate.
+pub struct TransitionSection<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,high:bool,contours:CutContourProposal}
+impl TransitionSection<'_,'_,'_,'_> {
+    pub fn boundary(&self)->&TransitionBoundary<'_,'_,'_> {self.boundary}
+    pub fn edge_index(&self)->usize {if self.high {1}else{3}}
+    pub fn contours(&self)->&CutContourProposal {&self.contours}
+}
+pub struct TransitionSectionReport<'a,'s,'p,'b> {pub section:Option<TransitionSection<'a,'s,'p,'b>>,pub fragments:usize,pub reason:&'static str}
 /// Admitted embedded transition expression with its root-owned contour.
 /// This does not establish closure or embedding of the surrounding Body.
 pub struct TransitionFace<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,projection:[[f64;3];2]}

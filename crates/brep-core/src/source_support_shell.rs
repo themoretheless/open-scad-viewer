@@ -457,6 +457,22 @@ mod tests {
         let sides=rooted_seams.iter().map(|root|root.qualify_transition_side(&bridge,1000,1000).unwrap().side.unwrap()).collect::<Vec<_>>();
         let boundary=crate::source_profile_body::propose_transition_boundary([&sides[1],&sides[0]]).unwrap();
         assert!(crate::source_profile_body::propose_transition_boundary([&sides[0],&sides[0]]).is_err());
+        for high in [false,true] {
+            let parameter=if high {0.9}else{0.75};
+            let ends=[proposal.cut_endpoint(0,0,parameter,false,0,16).unwrap().endpoint.unwrap(),
+                proposal.cut_endpoint(0,0,parameter,true,1,16).unwrap().endpoint.unwrap()];
+            let parts=ends.each_ref().map(|end|end.split_source_use(100).unwrap().partition.unwrap());
+            let section=boundary.propose_section_contours(high,[&parts[0],&parts[1]],100).unwrap();
+            let section=section.section.expect(section.reason);
+            assert!(std::ptr::eq(section.boundary(),&boundary));
+            assert_eq!(section.edge_index(),if high {1}else{3});
+            for loop_ in section.contours().loops() {
+                assert!((0..loop_.len()).all(|i|loop_[i].joins(&loop_[(i+1)%loop_.len()])));
+            }
+            assert!(boundary.propose_section_contours(!high,[&parts[0],&parts[1]],100).unwrap().section.is_none());
+            assert!(boundary.propose_section_contours(high,[&parts[1],&parts[0]],100).unwrap().section.is_none());
+            assert!(boundary.propose_section_contours(high,[&parts[0],&parts[1]],0).unwrap().section.is_none());
+        }
         assert!(boundary.enclose_edge(4,[0.,1.],1).is_err());
         assert!(boundary.enclose_edge(0,[-0.1,0.5],1).is_err());
         assert!(boundary.enclose_edge(0,[0.75,0.25],1).is_err());
