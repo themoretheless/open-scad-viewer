@@ -404,6 +404,20 @@ mod tests {
             assert_eq!(bridge.regular_join(high,free,1).unwrap().0,Some(true));
             assert_eq!(bridge.enclose(free,[if high {1.}else{0.};2],1).unwrap(),bridge.section(high).enclose(free,1).unwrap());
         }}
+        for high in [false,true] {
+            let rail=bridge.rail(high);let free=rail.free_parameter();
+            for across in [0.,0.5,1.] {
+                assert_eq!(rail.enclose([across;2],4).unwrap(),bridge.enclose([free;2],[across;2],4).unwrap());
+                assert!(rail.tangent_bounds([across;2],8).unwrap().0.is_some());
+            }
+        }
+        let boundary=bridge.rail(true).enclose([0.5;2],4).unwrap().0.unwrap();
+        use nurbs_core::interval_eval::Interval as RailInterval;
+        let x=RailInterval::new(boundary[0][0],boundary[0][1]).unwrap();
+        let y=RailInterval::new(boundary[1][0],boundary[1][1]).unwrap();
+        let residual=x.mul(x).unwrap().add(y.mul(y).unwrap()).unwrap().sub(RailInterval::point(400.)).unwrap();
+        assert!(residual.hi<0.,"Hermite rail must not be admitted as the unchanged cylinder boundary");
+        eprintln!("bridge cylinder rail midpoint squared-radius residual=[{},{}]",residual.lo,residual.hi);
         let mut bridge_regular=0;
         for i in 0..8 {for j in 0..8 {
             let n=bridge.normal_bounds([i as f64/8.,(i+1) as f64/8.],[j as f64/8.,(j+1) as f64/8.],8).unwrap().0.unwrap();

@@ -42,6 +42,12 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
     pub fn section(&self, high: bool) -> &ProfileSection<'_, '_> {
         self.sections[usize::from(high)].get()
     }
+    pub fn rail(&self, high: bool) -> ProfileBridgeRail<'_, 'a, 'b, 'c, 'd> {
+        ProfileBridgeRail {
+            bridge: self,
+            free: self.section(false).range()[usize::from(high)],
+        }
+    }
     fn validate(&self, free: [f64; 2], across: [f64; 2], budget: usize) -> Result<()> {
         self.section(false).rectangle(free)?;
         self.section(true).rectangle(free)?;
@@ -389,6 +395,33 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
     }
 }
 
+/// Exact side-rail expression, retaining both incident section definitions.
+pub struct ProfileBridgeRail<'r, 'a, 'b, 'c, 'd> {
+    bridge: &'r ProfileSectionBridge<'a, 'b, 'c, 'd>,
+    free: f64,
+}
+impl ProfileBridgeRail<'_, '_, '_, '_, '_> {
+    pub fn free_parameter(&self) -> f64 {
+        self.free
+    }
+    pub fn enclose(
+        &self,
+        range: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.bridge.enclose([self.free; 2], range, budget)
+    }
+    pub fn tangent_bounds(
+        &self,
+        range: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (jet, spent) = self
+            .bridge
+            .derivative_bounds([self.free; 2], range, budget)?;
+        Ok((jet.map(|j| j[1]), spent))
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

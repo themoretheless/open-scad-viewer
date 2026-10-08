@@ -1167,3 +1167,24 @@ This proves the exact U=0.75 to U=0.9 control bridge has no self-intersections,
 including its parameter boundaries. It does not qualify the entire fillet Body,
 other bridges, neighbor intersections, side-rail sewing, terminal corner patches,
 wall thickness or packaged WASM/UI admission. Those remain required.
+
+## Exact bridge rails expose a cylinder sewing mismatch
+
+`ProfileSectionBridge::rail` now retains each side as the same immutable
+bridge expression. Complete rail positions and tangents query original
+section data with shared span budgets; no independently rounded Curve is
+substituted. Actual rail endpoints agree with the incident sections, and
+position/tangent work completes at parameters 0,0.5,1.
+
+The high-free rail midpoint fails the nominal radius-20 cylinder constraint:
+x^2+y^2-400 lies in [-0.00007403168314112919,-0.00007403165307096059].
+This strictly excludes zero, corresponding to approximately 1.85e-6 model
+units of inward radial displacement. The regression requires this refusal;
+regularity and injectivity cannot authorize sewing onto the unchanged cylinder.
+
+All 13 profile tests passed in 1.15 seconds and the actual control fixture
+passed in 14.31 seconds. The verified noncollapsed bridge is still a construction
+proposal. Its side geometry must be constrained to the original neighbor
+supports, retaining exact source rail expressions and compatible endpoint
+derivatives. The needed side correction and resulting renewed regularity/
+injectivity checks are not implemented here. Whole-body admission remains open.
