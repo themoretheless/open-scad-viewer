@@ -1070,3 +1070,17 @@ comparison were launched before this reporting change and do not include
 the new list field. They retain their original single uncertainty field.
 Both use 4.74999 mm and sin² 1e-4. No qualification is claimed while the
 deep audit is running.
+
+## Direct lower prototype baseline completed
+
+The b30b5def 1024/8192 audit completed on all four original prototypes.
+Forward radii retain 6/12 pending pairs, reverse radii 7/13, matching both
+spatial directions; no pole face qualified at this limit. Archives contain
+original identity checks and uncertainty rectangles.
+
+The deeper 12500/100000 audit is confirmed running. Its first forward
+radius / positive-direction entry face has a complete certificate after
+2721 cells and 70628 restrictions with zero remaining pairs. This partial
+progress is not a qualification of every entry face, the exit face, the
+middle face, distinct-face wall pairs or the global wall minimum. The
+final audit JSON and all four original-serialization checks remain pending.
