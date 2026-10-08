@@ -300,6 +300,7 @@ fn qualify_impl<'a>(
             intrinsic.push(c);
             continue;
         }
+        let ordinary_matrix = r.mean_matrix;
         if let Some(proof) = differential.filter(|_| out.spans < limits.spans) {
             let r = surface_self_chord::qualify_rational_polar_rectangle(
                 s,
@@ -370,6 +371,15 @@ fn qualify_impl<'a>(
                     out.direction_exclusions += 1;
                     continue;
                 }
+            }
+        }
+        if let Some(matrix) = ordinary_matrix {
+            if out.spans < limits.spans {
+                let cached = factored.zip(pair_normals.as_ref());
+                let (excluded,used) = matrix.exclude_pair(pair,max_sine_squared,
+                    limits.spans-out.spans,cached)?;
+                out.spans += used;
+                if excluded { out.direction_exclusions += 1; continue; }
             }
         }
         if let (Some(differential), Some(normals)) = (differential, factored) {

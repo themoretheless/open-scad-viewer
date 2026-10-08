@@ -22,8 +22,57 @@ impl<'a> Certificate<'a> {
         self.cosine_squared_upper
     }
 }
+/// Original derivative hull on a completely covered continuous rectangle.
+/// Private fields prevent rebinding a mean-path enclosure to another source.
+pub(crate) struct MeanMatrix<'a> {
+    surface: &'a Surface,
+    domain: [[f64; 2]; 2],
+    jacobian: [[I; 2]; 3],
+}
+impl MeanMatrix<'_> {
+    pub(crate) fn exclude_pair(
+        &self, pair: [[[f64; 2]; 2]; 2], sine: f64, max_spans: usize,
+        cached: Option<(&crate::factored_surface_normals::Certificate<'_>,
+            &crate::factored_surface_normals::PairBounds<'_>)>,
+    ) -> Result<(bool,usize)> {
+        check(sine.is_finite() && (0. ..1.).contains(&sine)
+            && pair.iter().all(|rect| (0..2).all(|a| rect[a][0].is_finite()
+                && rect[a][1].is_finite() && self.domain[a][0]<=rect[a][0]
+                && rect[a][0]<=rect[a][1] && rect[a][1]<=self.domain[a][1])),
+            "Mean-path endpoints must lie in their original continuous rectangle")?;
+        let components = if let Some((proof,bounds))=cached {
+            check(std::ptr::eq(self.surface,proof.surface()),"Use original mean-path normal source")?;
+            Some(bounds.components(proof,pair)?)
+        } else { None };
+        let mut j=self.jacobian;
+        for a in 0..2 {
+            let scale=j.iter().map(|row|row[a].lo.abs().max(row[a].hi.abs())).fold(0_f64,f64::max);
+            if scale>=f64::MIN_POSITIVE && scale.is_finite() {
+                for row in &mut j { row[a]=row[a].div(I::point(scale))?; }
+            }
+        }
+        let threshold=I::point(1.).sub(I::point(sine))?.lo;
+        let mut used=0;
+        for (index,rect) in pair.into_iter().enumerate() {
+            let (bounds,spent)=if let Some(values)=components {(Some(values[index]),0)}
+                else {
+                    if used==max_spans { break; }
+                    normal_alignment::normal_bounds(self.surface,rect,max_spans-used)?
+                };
+            used+=spent;
+            let Some(bounds)=bounds else {continue};
+            let scale=bounds.iter().flatten().map(|x|x.abs()).fold(0_f64,f64::max);
+            if scale<f64::MIN_POSITIVE {continue;}
+            let mut n=[I::point(0.);3];
+            for k in 0..3 {n[k]=I::new(bounds[k][0],bounds[k][1])?.div(I::point(scale))?;}
+            if endpoint_matrix_cosine(j,n)?<threshold {return Ok((true,used));}
+        }
+        Ok((false,used))
+    }
+}
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
+    pub(crate) mean_matrix: Option<MeanMatrix<'a>>,
     pub spans: usize,
     pub complete: bool,
     pub cosine_squared_upper: Option<f64>,
@@ -423,6 +472,7 @@ pub fn qualify_rectangle<'a>(
     normal_alignment::validate_rectangle(s, domain, max_spans)?;
     let mut out = Report {
         certificate: None,
+        mean_matrix: None,
         spans: 0,
         complete: false,
         cosine_squared_upper: None,
@@ -493,6 +543,7 @@ pub fn qualify_rectangle<'a>(
         }
     }
     let best = balanced_cosine_upper(j)?;
+    out.mean_matrix = Some(MeanMatrix { surface:s, domain, jacobian:j });
     out.cosine_squared_upper = Some(best);
     let threshold = I::point(1.).sub(I::point(max_sine_squared))?;
     if best < threshold.lo {
@@ -527,6 +578,7 @@ pub fn qualify_polar_rectangle<'a>(
     normal_alignment::validate_rectangle(s, domain, max_spans)?;
     let mut out = Report {
         certificate: None,
+        mean_matrix: None,
         spans: 0,
         complete: false,
         cosine_squared_upper: None,
@@ -575,6 +627,7 @@ pub fn qualify_rational_polar_rectangle<'a>(
     normal_alignment::validate_rectangle(s, domain, max_spans)?;
     let mut out = Report {
         certificate: None,
+        mean_matrix: None,
         spans: 0,
         complete: false,
         cosine_squared_upper: None,
@@ -606,6 +659,25 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_mean_matrix_excludes_planar_tangent_variation_with_bounded_normals() {
+        let s=Surface { degree_u:2,degree_v:1,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:(0..3).map(|u|(0..2).map(|v|
+                vec![u as f64/2.,10.*v as f64+if u==2 {10.} else {0.},0.]).collect()).collect(),
+            weights:vec![vec![1.;2];3],periodic_u:false,periodic_v:false };
+        let r=qualify_rectangle(&s,[[0.,1.];2],1e-4,1).unwrap();
+        assert!(r.complete && r.certificate.is_none());
+        let matrix=r.mean_matrix.unwrap();
+        let pair=[[[0.,0.1],[0.,0.1]],[[0.8,0.9],[0.8,0.9]]];
+        assert_eq!(matrix.exclude_pair(pair,1e-4,0,None).unwrap(),(false,0));
+        assert_eq!(matrix.exclude_pair(pair,1e-4,1,None).unwrap(),(true,1));
+        assert!(matrix.exclude_pair([[[0.,1.01],[0.,1.]],pair[1]],1e-4,0,None).is_err());
+        let mut multiple=s.clone();multiple.degree_u=1;
+        multiple.knots_u=vec![0.,0.,0.5,1.,1.];
+        let incomplete=qualify_rectangle(&multiple,[[0.,1.];2],1e-4,1).unwrap();
+        assert!(!incomplete.complete && incomplete.mean_matrix.is_none());
+    }
     #[test]
     fn direct_gram_lower_bound_covers_interval_matrix_chords_and_aligned_case() {
         let j = [[I::new(0.9,1.1).unwrap(),I::point(0.)],

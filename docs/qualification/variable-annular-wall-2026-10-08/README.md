@@ -1182,3 +1182,28 @@ after 3941 / 100000; both reverse exits retain five after 4099 / 100000.
 All four original serialization comparisons passed. Complete JSON/logs
 are archived. Middle face, distinct-face wall pairs and the global minimum
 remain separate open obligations. Current intrinsic middle audit is live.
+
+## Original continuous mean matrix pair projection
+
+Ordinary rectangle qualification now retains an opaque mean-matrix fact
+only after every intersecting original derivative span and continuity
+check succeeds. The fact owns its immutable surface and rectangle. Pair
+endpoints must lie inside that rectangle; normals are bounded from the
+same original source, or a source/pair-checked factored normal cache.
+Endpoint matrix projection is checked before expensive inverse paths.
+Missing derivative work yields no fact; missing normal work never excludes.
+This extends projection beyond pole charts without inferring from samples.
+
+The independent planar polynomial S=(u,10v+10u²,0) has large tangent
+variation that refuses the ordinary intrinsic estimate, while complete
+original mean projection excludes the pair with one paid normal span.
+Zero budget refuses; foreign rectangles and incomplete derivative coverage
+refuse. Seventeen chord/coverage and seven pole tests passed, including
+the genuine short normal-chord counterexample.
+
+The preceding ordinary Gram middle-face audit completed all four original
+models at 12500 cells / 100000 restrictions: 19 pending forward and 11
+reverse, matching spatial directions. None qualified. Its complete JSON
+and every unresolved pair are archived. The new original-mean middle
+audit runs at 20000 cells / 100000 restrictions; no wall safety claim
+follows until its remaining obligations are closed.
