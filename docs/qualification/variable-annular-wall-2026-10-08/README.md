@@ -1384,3 +1384,19 @@ and bounded work assertions remain. Vue type checking passes. Three
 controlled-port contract tests pass for superseding restoration, abort/retry
 and stale continuous coverage replies. The packaged binary requirement is
 not yet executed because mandatory WASM optimization is still live.
+
+## Packaged WASM worker — 2026-10-08
+
+The packaged geometry WASM is 11,987,293 bytes, SHA-256
+`d00b9f1dd638fcb6fe1477d849735a8b7230bbce066ddcbd8214f4db1d23e2b7`.
+The real-worker continuous wall test passed with this binary (15.03 s for
+three requests). Adaptive coverage retains all endpoint-exchange representative
+obligations and reports 253 unproven body pairs. Whole-wall qualification stays
+false; this is not a global thickness or general self-intersection certificate.
+
+All 26 source-body-worker and wall-transport tests passed. Cancellation and
+supersession tests include controlled worker ports; they do not prove rendered
+UI cancellation. Type checking and production packaging passed. The measured
+packed kernel grew from 3,987,584 to 3,997,424 bytes; bundle limits retain their
+previous small margins. Evidence: `packaged-wall-worker.json.gz`,
+`packaged-worker-tests.log.gz`, and `packaged-dist-verify.log.gz`.
