@@ -464,8 +464,12 @@ fn jet_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Jet
         [s.knots_u[u], s.knots_u[u + 1]],
         [s.knots_v[v], s.knots_v[v + 1]],
     ];
-    let mut net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
+    let net = crate::curve_surface_composition::surface_net_on(s, indices, span)?;
     let origin = &s.control_points[u - degrees[0]][v - degrees[1]];
+    jet_net_on(net,degrees,span,domain,origin)
+}
+pub(crate) fn jet_net_on(mut net: Net, degrees:[usize;2], span:[[f64;2];2],
+    domain:[[f64;2];2], origin:&[f64]) -> Result<JetBounds> {
     for row in &mut net {
         for h in row {
             for k in 0..3 {

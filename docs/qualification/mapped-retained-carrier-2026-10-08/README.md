@@ -975,3 +975,24 @@ intervals covering each rail. The control fixture passes in 2.86 seconds.
 The zero tip derivative is explicit evidence of a singular parameterization,
 not a regular-tip certificate. Neighbor rail coincidence, rail tangent planes,
 interior Jacobian, embedding and closed-body admission remain required.
+
+## Interior transition Jacobian diagnostics
+
+The existing homogeneous quotient jet evaluator now accepts an explicitly
+owned coefficient net; original Surface evaluation delegates to the same
+unchanged calculus. `WeightProfile::mixed_derivative_bounds` uses the exact
+factored profile net and complete original spans. Transition free derivatives
+include this mixed derivative of the transverse field. `normal_bounds` crosses
+both transition derivatives while sharing their span quota; incomplete work
+returns no normal certificate. The collapsed tip remains explicitly singular.
+
+Analytic free derivatives, complete-work and work-refusal tests pass. Profile
+tests passed 13/13 in 0.02 seconds; original normal-alignment regressions passed
+22 tests with one pre-existing ignored test in 0.01 seconds. The actual B-rep
+control fixture passed in 2.97 seconds.
+
+On a coarse 8x8 full-interval cover of the annular end transition, all 64 normal
+enclosures are complete, but zero remains possible in every enclosure:
+0 regular cells, 64 pending cells. This proves neither degeneracy nor regularity.
+Adaptive refinement and tighter correlated Hermite bounds are needed before
+interior immersion can be admitted. No closed-body certificate or WASM changed.

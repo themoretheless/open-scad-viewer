@@ -310,6 +310,91 @@ impl ProfileEndTransition<'_, '_> {
         }
         Ok((Some(bounds), spent + more))
     }
+    /// Derivative in the section coordinate. The mixed support derivative
+    /// differentiates the actual transverse field rather than freezing it.
+    pub fn free_derivative_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let rectangle = self.section.rectangle(free)?;
+        check(
+            max_spans <= 100000
+                && across.iter().all(|x| x.is_finite())
+                && across[0] >= 0.
+                && across[1] <= 1.
+                && across[0] <= across[1],
+            "Bound transition derivative work",
+        )?;
+        if across == [1., 1.] {
+            return Ok((Some([[0., 0.]; 3]), 0));
+        }
+        let (tangent, spent) = self.section.tangent_bounds(free, max_spans)?;
+        if across == [0., 0.] {
+            return Ok((tangent, spent));
+        }
+        let Some(tangent) = tangent else {
+            return Ok((None, spent));
+        };
+        if spent == max_spans {
+            return Ok((None, spent));
+        }
+        let (mixed, more) = self
+            .section
+            .profile
+            .mixed_derivative_bounds(rectangle, max_spans - spent)?;
+        let Some(mixed) = mixed else {
+            return Ok((None, spent + more));
+        };
+        let t = I::new(across[0], across[1])?;
+        let t2 = t.mul(t)?;
+        let t3 = t2.mul(t)?;
+        let h00 = I::point(2.)
+            .mul(t3)?
+            .sub(I::point(3.).mul(t2)?)?
+            .add(I::point(1.))?;
+        let h10 = t3
+            .sub(I::point(2.).mul(t2)?)?
+            .add(t)?
+            .mul(I::point(self.transverse_scale))?;
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let value = h00
+                .mul(I::new(tangent[k][0], tangent[k][1])?)?
+                .add(h10.mul(I::new(mixed[k][0], mixed[k][1])?)?)?;
+            bounds[k] = [value.lo, value.hi];
+        }
+        Ok((Some(bounds), spent + more))
+    }
+    pub fn normal_bounds(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (a, spent) = self.free_derivative_bounds(free, across, max_spans)?;
+        let Some(a) = a else {
+            return Ok((None, spent));
+        };
+        if spent == max_spans && across != [1., 1.] {
+            return Ok((None, spent));
+        }
+        let (b, more) = self.across_derivative_bounds(free, across, max_spans - spent)?;
+        let Some(b) = b else {
+            return Ok((None, spent + more));
+        };
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let i = (k + 1) % 3;
+            let j = (k + 2) % 3;
+            let n = I::new(a[i][0], a[i][1])?
+                .mul(I::new(b[j][0], b[j][1])?)?
+                .sub(I::new(a[j][0], a[j][1])?.mul(I::new(b[i][0], b[i][1])?)?)?;
+            bounds[k] = [n.lo, n.hi];
+        }
+        Ok((Some(bounds), spent + more))
+    }
     pub fn rail(&self, high: bool) -> ProfileTransitionRail<'_, '_, '_> {
         ProfileTransitionRail {
             transition: self,
@@ -494,6 +579,54 @@ impl<'source> WeightProfile<'source> {
                         hull[k][axis][0] = hull[k][axis][0].min(values[k][axis].lo);
                         hull[k][axis][1] = hull[k][axis][1].max(values[k][axis].hi);
                     }
+                }
+                spent += 1;
+            }
+        }
+        Ok((if spent == 0 { None } else { Some(hull) }, spent))
+    }
+    /// Mixed derivative of the exact profile, needed by transverse transition
+    /// fields. Both one-sided knot limits are included in the complete hull.
+    pub fn mixed_derivative_bounds(
+        &self,
+        domain: [[f64; 2]; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        crate::normal_alignment::validate_rectangle(self.source, domain, max_spans)?;
+        let s = self.source;
+        let degrees = [s.degree_u, s.degree_v];
+        let counts = [s.control_points.len(), s.control_points[0].len()];
+        let knots = [&s.knots_u, &s.knots_v];
+        let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+        let mut spent = 0;
+        for u in degrees[0]..counts[0] {
+            for v in degrees[1]..counts[1] {
+                let span = [
+                    [knots[0][u], knots[0][u + 1]],
+                    [knots[1][v], knots[1][v + 1]],
+                ];
+                if span.iter().any(|r| r[0] == r[1]) {
+                    continue;
+                }
+                let section = std::array::from_fn(|a| {
+                    [span[a][0].max(domain[a][0]), span[a][1].min(domain[a][1])]
+                });
+                if section.iter().any(|r| r[0] > r[1]) {
+                    continue;
+                }
+                if spent == max_spans {
+                    return Ok((None, spent));
+                }
+                let jet = crate::normal_alignment::jet_net_on(
+                    self.homogeneous_on([u, v], span)?,
+                    degrees,
+                    span,
+                    section,
+                    &s.control_points[u][v],
+                )?;
+                for k in 0..3 {
+                    hull[k][0] = hull[k][0].min(jet.second[1][k].lo);
+                    hull[k][1] = hull[k][1].max(jet.second[1][k].hi);
                 }
                 spent += 1;
             }
@@ -1232,6 +1365,29 @@ mod tests {
             Some(true)
         );
         assert!(transition.regular_join([0.2, 0.4], 0).is_err());
+        for t in [0., 0.5, 1.] {
+            let free = transition
+                .free_derivative_bounds([0.3, 0.3], [t, t], 2)
+                .unwrap()
+                .0
+                .unwrap();
+            let expected = (2. * t * t * t - 3. * t * t + 1.) * 3. / 1.6f64.powi(2);
+            assert!(free[1][0] <= expected && expected <= free[1][1]);
+            assert!(
+                transition
+                    .normal_bounds([0.3, 0.3], [t, t], 4)
+                    .unwrap()
+                    .0
+                    .is_some()
+            );
+        }
+        assert!(
+            transition
+                .normal_bounds([0.3, 0.3], [0.5, 0.5], 3)
+                .unwrap()
+                .0
+                .is_none()
+        );
         for high in [false, true] {
             let rail = transition.rail(high);
             let v = if high { 1. } else { 0. };

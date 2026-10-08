@@ -372,6 +372,17 @@ mod tests {
                 assert!(rail.tangent_bounds(range,2).unwrap().0.is_some());
             }
         }
+        let mut regular_cells=0;let mut pending_cells=Vec::new();
+        for free_index in 0..8 {for across_index in 0..8 {
+            let free=[free_index as f64/8.,(free_index+1) as f64/8.];
+            let across=[across_index as f64/8.,(across_index+1) as f64/8.];
+            let (bounds,spent)=transition.normal_bounds(free,across,4).unwrap();
+            assert_eq!(spent,4);let bounds=bounds.unwrap();
+            if bounds.iter().any(|r|r[0]>0.||r[1]<0.) {regular_cells+=1;} else {pending_cells.push([free,across]);}
+        }}
+        assert_eq!(regular_cells+pending_cells.len(),64);
+        eprintln!("transition Jacobian regular={} pending={} domains={:?}",regular_cells,pending_cells.len(),pending_cells);
+        assert!(transition.normal_bounds([0.2,0.3],[0.2,0.3],3).unwrap().0.is_none());
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {
