@@ -1370,3 +1370,17 @@ match. Full schema-2 JSON/logs include all remaining original rectangles
 and both derivative and normal cache counters. No additional face is
 qualified; different subdivisions preclude interpreting pending counts as
 a coverage percentage. Distinct-face and global wall minimum remain open.
+
+## Prepared packaged-WASM obligation regression
+
+The real worker regression now requires the full native unresolved pair
+arrays and explicit exchange marker. It retains the 16 original qualified
+face identities from source-wall-adaptive-worker.json.gz:
+1,2,3,4,6,9,11,12,13,14,15,18,19,22,23,26. Stronger native coverage may add
+faces, while issued face facts and reused self-pair facts must match exactly.
+Array length and last obligation must match the pending/uncertain fields;
+a deliberately emptied unresolved array is rejected. Whole-wall refusal
+and bounded work assertions remain. Vue type checking passes. Three
+controlled-port contract tests pass for superseding restoration, abort/retry
+and stale continuous coverage replies. The packaged binary requirement is
+not yet executed because mandatory WASM optimization is still live.
