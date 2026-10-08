@@ -602,6 +602,14 @@ mod tests {
         assert_eq!(xy_face.projection(),xy_projection);
         assert!(xy_face.qualify_original_xy_region(1e-8,0,0).unwrap().certificate.is_none());
         assert!(xy_face.qualify_original_xy_region(f64::NAN,1,1).is_err());
+        let exact_profile=proposal.profile(0).unwrap();
+        let profile_orientation=nurbs_core::profile_projection_jacobian::certify(exact_profile,[0,1],20000000).unwrap();
+        eprintln!("exact factorized profile XY orientation qualified={} work={} reason={}",
+            profile_orientation.certificate.is_some(),profile_orientation.exact_work,profile_orientation.reason);
+        if let Some(certificate)=&profile_orientation.certificate {
+            assert!(std::ptr::eq(certificate.profile(),exact_profile));
+            assert_eq!(certificate.axes(),[0,1]);
+        }
         let original_region=xy_face.qualify_original_xy_region(1e-8,20000000,10000).unwrap();
         eprintln!("owned transition original XY region qualified={} work={} cells={} reason={}",
             original_region.certificate.is_some(),original_region.exact_work,

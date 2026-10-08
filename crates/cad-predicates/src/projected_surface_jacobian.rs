@@ -281,6 +281,36 @@ pub fn factorized_surface_projected_jacobian(
     axes: [usize; 2],
     index: Option<[usize; 2]>,
 ) -> Result<Decision, InputError> {
+    factorized_compute(
+        ctx,
+        points,
+        rows,
+        columns,
+        axes,
+        index.map(|i| i[0]),
+        index.map(|i| i[1]),
+    )
+}
+/// One exact factorized coefficient row; callers must cover every row.
+pub fn factorized_surface_projected_jacobian_row(
+    ctx: &mut PredicateContext<'_>,
+    points: &[Vec<[LeafRef; 3]>],
+    rows: &[LeafRef],
+    columns: &[LeafRef],
+    axes: [usize; 2],
+    row: usize,
+) -> Result<Decision, InputError> {
+    factorized_compute(ctx, points, rows, columns, axes, Some(row), None)
+}
+fn factorized_compute(
+    ctx: &mut PredicateContext<'_>,
+    points: &[Vec<[LeafRef; 3]>],
+    rows: &[LeafRef],
+    columns: &[LeafRef],
+    axes: [usize; 2],
+    row: Option<usize>,
+    column: Option<usize>,
+) -> Result<Decision, InputError> {
     if !(2..=9).contains(&points.len())
         || rows.len() != points.len()
         || !(2..=9).contains(&columns.len())
@@ -295,15 +325,7 @@ pub fn factorized_surface_projected_jacobian(
         .enumerate()
         .map(|(u, row)| row.iter().map(|p| [p[0], p[1], p[2], rows[u]]).collect())
         .collect();
-    compute_weights(
-        ctx,
-        &surface,
-        axes,
-        index.map(|i| i[0]),
-        index.map(|i| i[1]),
-        false,
-        Some(columns),
-    )
+    compute_weights(ctx, &surface, axes, row, column, false, Some(columns))
 }
 
 /// All coefficient rows under one bounded predicate context.
