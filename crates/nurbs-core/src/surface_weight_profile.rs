@@ -1858,6 +1858,15 @@ mod tests {
             }
             assert!(corrected.derivatives_with_transverse_correction([free;2],[0.,1.],0).is_err());
         }
+        let projection=[[0.,1.,0.],[4.,0.,0.]];
+        let injective=corrected.inspect_transverse_corrected_injectivity([0.,1.],[0.,1.],projection,1000,72000).unwrap();
+        assert!(injective.complete_regular);
+        let injective_area:f64=injective.regular.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(injective_area,1.);
+        let failed=corrected.inspect_transverse_corrected_injectivity([0.,1.],[0.,1.],[[0.;3];2],1,61).unwrap();
+        assert!(!failed.complete_regular);
+        assert_eq!(failed.pending.len(),2);
+        assert!(corrected.inspect_transverse_corrected_injectivity([0.,1.],[0.,1.],[[f64::NAN;3];2],1,61).is_err());
         let cover=corrected.inspect_transverse_corrected_regularity([0.,1.],[0.,1.],1000,72000).unwrap();
         assert!(cover.complete_regular);
         let area:f64=cover.regular.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();

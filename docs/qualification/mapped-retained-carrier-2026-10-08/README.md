@@ -1443,3 +1443,26 @@ All 19 profile tests passed in 12.30 seconds, including complete quartic
 regularity coverage, independent first jets and work refusal. The annular
 remainder-bound native run is being checked separately. Whole-body sewing,
 injectivity, wall thickness and neighbor support admission remain open.
+
+## Complete annular regularity and corrected injectivity qualification
+
+The native remainder-bound run completed in 94.83 seconds. The full corrected
+annular bridge has complete regularity coverage: 222 accepted rectangles,
+0 pending, 443 visited cells and 27023 source spans. Total accepted area is
+one. This supersedes the previous partial 495/11 diagnostic for this exact
+fixture. It certifies immersion of this transition expression, not closed
+Body assembly or general fillets.
+
+`inspect_transverse_corrected_injectivity` applies one fixed projection to
+the freshly corrected first jets and requires positive projected Jacobian
+principal minors on every rectangle. It retains complete pending coverage,
+checks continuity and validates finite projection/work limits. The original
+bridge's certificates are not reused. The independent quartic reference
+qualifies full-domain injectivity and rejects zero/nonfinite projections;
+its focused test passed in 19.95 seconds. A genuinely folded quadratic
+reference has coincident distinct parameter points and correctly refuses
+a complete certificate. All three bridge tests passed in 0.78 seconds.
+
+The annular corrected injectivity run is being checked separately. Neighbor
+shared-edge admission, global assembled-body intersection checks, thickness,
+corner closure and WASM/worker/UI integration remain open.

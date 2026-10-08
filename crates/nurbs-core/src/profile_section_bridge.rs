@@ -1013,6 +1013,114 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         };
         Ok(out)
     }
+    /// Prove injectivity only with one fixed projection and complete coverage
+    /// of the corrected expression's projected Jacobian principal minors.
+    pub fn inspect_transverse_corrected_injectivity(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        projection: [[f64; 3]; 2],
+        max_cells: usize,
+        max_spans: usize,
+    ) -> Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        self.bridge.validate(free, across, max_spans)?;
+        check(
+            max_cells <= 100000 && projection.iter().flatten().all(|x| x.is_finite()),
+            "Bound injectivity work and projection",
+        )?;
+        let mut out = crate::surface_weight_profile::TransitionRegularityReport {
+            regular: Vec::new(),
+            pending: Vec::new(),
+            cells: 0,
+            spans: 0,
+            complete_regular: false,
+            reason: "transverse-corrected-bridge-injectivity-work-limit",
+        };
+        // The transverse field must be single-valued and piecewise C1. Refuse
+        // internal knots whose multiplicity would allow first-derivative jumps.
+        for high in [false, true] {
+            let surface = self.bridge.section(high).profile().source();
+            for (knots, degree, count) in [
+                (
+                    &surface.knots_u,
+                    surface.degree_u,
+                    surface.control_points.len(),
+                ),
+                (
+                    &surface.knots_v,
+                    surface.degree_v,
+                    surface.control_points[0].len(),
+                ),
+            ] {
+                if knots.iter().any(|&k| {
+                    k > knots[degree]
+                        && k < knots[count]
+                        && knots.iter().filter(|&&x| x == k).count() >= degree
+                }) {
+                    out.pending.push([free, across]);
+                    out.reason = "transverse-corrected-bridge-injectivity-continuity-unproven";
+                    return Ok(out);
+                }
+            }
+        }
+        let mut queue = std::collections::VecDeque::from([[free, across]]);
+        while let Some(rect) = queue.pop_front() {
+            if out.cells == max_cells || out.spans == max_spans {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            }
+            out.cells += 1;
+            let (jet, spent) = self.derivatives_with_transverse_correction(
+                rect[0],
+                rect[1],
+                max_spans - out.spans,
+            )?;
+            out.spans += spent;
+            let Some(jet) = jet else {
+                out.pending.push(rect);
+                out.pending.extend(queue);
+                return Ok(out);
+            };
+            let mut j = [[I::point(0.); 2]; 2];
+            for row in 0..2 {
+                for axis in 0..2 {
+                    for k in 0..3 {
+                        j[row][axis] = j[row][axis].add(
+                            I::point(projection[row][k])
+                                .mul(I::new(jet[axis][k][0], jet[axis][k][1])?)?,
+                        )?;
+                    }
+                }
+            }
+            if projected_principal_minors_positive(j)? {
+                out.regular.push(rect);
+                continue;
+            }
+            let range = self.bridge.section(false).range();
+            let axis = usize::from(
+                (rect[0][1] - rect[0][0]) / (range[1] - range[0]) < rect[1][1] - rect[1][0],
+            );
+            let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
+            if mid <= rect[axis][0] || mid >= rect[axis][1] {
+                out.pending.push(rect);
+                continue;
+            }
+            let mut left = rect;
+            left[axis][1] = mid;
+            let mut right = rect;
+            right[axis][0] = mid;
+            queue.push_front(right);
+            queue.push_front(left);
+        }
+        out.complete_regular = out.pending.is_empty();
+        out.reason = if out.complete_regular {
+            "transverse-corrected-bridge-injectivity-qualified"
+        } else {
+            "transverse-corrected-bridge-injectivity-resolution-limit"
+        };
+        Ok(out)
+    }
     /// Exact side first-jet identity is established by the full Hermite
     /// expression. Only regular source support normals remain to be enclosed.
     /// This checks the original profile support, not neighboring Body ownership.
@@ -1274,6 +1382,53 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn full_corrected_injectivity_refuses_a_genuinely_folded_patch() {
+        // x(u)=(u-0.625)^2: distinct u values in [0.5,0.75]
+        // coincide. The cubic bridge reproduces this quadratic exactly.
+        let surface = crate::surface::Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: [0.390625, -0.234375, 0.140625]
+                .into_iter()
+                .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+                .collect(),
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let profile = crate::normal_alignment::qualify_weight_profile(&surface, [0, 0], 6)
+            .unwrap()
+            .0
+            .unwrap();
+        let bridge = ProfileSectionBridge::new(
+            profile.section(0, 0.5).unwrap(),
+            profile.section(0, 0.75).unwrap(),
+            [0.25; 2],
+        )
+        .unwrap();
+        let corrected = bridge.constrain_original_rails(100).unwrap().0.unwrap();
+        let report = corrected
+            .inspect_transverse_corrected_injectivity(
+                [0., 1.],
+                [0., 1.],
+                [[0., 1., 0.], [1., 0., 0.]],
+                20,
+                1220,
+            )
+            .unwrap();
+        assert!(!report.complete_regular);
+        assert!(!report.pending.is_empty());
+        let area: f64 = report
+            .regular
+            .iter()
+            .chain(&report.pending)
+            .map(|r| (r[0][1] - r[0][0]) * (r[1][1] - r[1][0]))
+            .sum();
+        assert_eq!(area, 1.);
+    }
     #[test]
     fn common_source_difference_tightens_translated_bridge_jet() {
         let surface = crate::surface::Surface {
