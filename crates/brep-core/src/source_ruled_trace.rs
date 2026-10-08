@@ -189,6 +189,33 @@ impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
     pub(crate) fn target(&self) -> [f64; 2] {
         self.target
     }
+    /// Retain all candidates outside the definitely interior interval between
+    /// two uncertain endpoints. This split alone proves no contact ownership.
+    pub(crate) fn exterior_domains(&self, roots: [[f64; 2]; 2]) -> Result<Vec<[f64; 2]>> {
+        let full = self.owner.parameter_domain();
+        if roots.iter().any(|r| {
+            !r.iter().all(|v| v.is_finite()) || r[0] > r[1] || r[0] < full[0] || r[1] > full[1]
+        }) {
+            return Err(Error::new(
+                "BREP_RULED_TRACE",
+                "Bound both endpoint intervals in the original trace chart",
+            ));
+        }
+        let inner = [roots[0][1].min(roots[1][1]), roots[0][0].max(roots[1][0])];
+        if inner[0] >= inner[1] {
+            return Ok(self.domains.clone());
+        }
+        let mut out = Vec::new();
+        for d in &self.domains {
+            if d[0] <= inner[0] {
+                out.push([d[0], d[1].min(inner[0])]);
+            }
+            if d[1] >= inner[1] {
+                out.push([d[0].max(inner[1]), d[1]]);
+            }
+        }
+        Ok(out)
+    }
 }
 impl<'t, 's> MonotoneCoordinate<'t, 's> {
     pub(crate) fn coordinate_preimage<'p>(
@@ -325,6 +352,21 @@ mod tests {
         assert!(cover.cells <= 31 && !cover.domains.is_empty());
         assert!(std::ptr::eq(cover.owner(), &proof));
         assert_eq!(cover.target(), [1., 2.]);
+        let full = proof.coordinate_preimage([0., 4.], 0).unwrap();
+        let roots = [[3., 3.1], [4., 4.1]];
+        assert_eq!(
+            full.exterior_domains(roots).unwrap(),
+            vec![[2., 3.1], [4., 5.]]
+        );
+        assert_eq!(
+            full.exterior_domains([roots[1], roots[0]]).unwrap(),
+            vec![[2., 3.1], [4., 5.]]
+        );
+        assert_eq!(
+            full.exterior_domains([[3., 4.], [3.5, 4.5]]).unwrap(),
+            vec![[2., 5.]]
+        );
+        assert!(full.exterior_domains([[1., 3.], [4., 4.1]]).is_err());
         let endpoint = proof.coordinate_preimage([0., 0.], 31).unwrap();
         assert!(endpoint.domains.iter().any(|d| d[0] <= 2. && d[1] >= 2.));
         for i in 0..=100 {

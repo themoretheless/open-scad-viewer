@@ -2748,3 +2748,13 @@ candidate portions outside the definitely interior shared-rail interval,
 including both uncertain endpoint bands. No midpoint replaces a root and no
 candidate list grants contact authority. Compilation passed; native results
 for these root-chart diagnostics are still pending.
+
+Exterior trace candidates now use a tested conservative endpoint-band split.
+Both original root intervals must lie in the complete trace chart. Either
+endpoint order is accepted; overlapping root intervals retain the entire
+candidate cover. Definitely interior intervals alone are removed, with their
+closed limits retained in exterior bands. Three exact-trace tests passed,
+including swapped roots, overlapping uncertainty, and outside-chart refusal.
+This utility does not bind arbitrary supplied roots to a geometric carrier;
+native diagnostics supply the actual owned carrier UV intervals, and no pair
+contact certificate is created from this split.
