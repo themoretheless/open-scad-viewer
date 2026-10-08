@@ -97,7 +97,7 @@ impl ProfileSection<'_, '_> {
     pub fn range(&self) -> [f64; 2] {
         self.range
     }
-    fn rectangle(&self, range: [f64; 2]) -> Result<[[f64; 2]; 2]> {
+    pub(crate) fn rectangle(&self, range: [f64; 2]) -> Result<[[f64; 2]; 2]> {
         check(
             range.iter().all(|x| x.is_finite())
                 && range[0] <= range[1]
@@ -1503,6 +1503,19 @@ mod tests {
                 .end_transition([0.; 3], 0.)
                 .is_err()
         );
+        let bridge=crate::normal_alignment::ProfileSectionBridge::new(p.section(0,0.5).unwrap(),p.section(0,0.75).unwrap(),[0.25,0.25]).unwrap();
+        for t in [0.,0.5,1.] {
+            let bounds=bridge.enclose([0.3,0.3],[t,t],4).unwrap().0.unwrap();
+            let h00=(1.-t)*(1.-t)*(1.+2.*t);let h10=t*(1.-t)*(1.-t);
+            let h01=t*t*(3.-2.*t);let h11=-t*t*(1.-t);
+            let expected=[h00*0.8+h10*0.25*0.64+h01*(3./3.25)+h11*0.25*(4./(3.25*3.25)),3.*0.3/1.6,0.];
+            for k in 0..3 {assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1]);}
+            let n=bridge.normal_bounds([0.3,0.3],[t,t],8).unwrap().0.unwrap();
+            assert!(n[2][1]<0.);
+        }
+        for high in [false,true] {assert_eq!(bridge.regular_join(high,[0.2,0.4],1).unwrap().0,Some(true));}
+        assert!(bridge.enclose([0.3,0.3],[0.5,0.5],3).unwrap().0.is_none());
+        assert!(bridge.normal_bounds([0.3,0.3],[0.5,0.5],7).unwrap().0.is_none());
         let transition = p
             .section(0, 0.5)
             .unwrap()

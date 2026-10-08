@@ -396,6 +396,20 @@ mod tests {
         assert!(tip.distinct_tangent_limits);assert!(tip.sine_squared_interval.unwrap()[0]>0.999999);
         eprintln!("transition tip distinct={} sine={:?} normals={:?}",tip.distinct_tangent_limits,tip.sine_squared_interval,tip.components);
         assert!(transition.tip_limits(1e-6,7).unwrap().0.is_none());
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            proposal.profile(0).unwrap().section(0,0.75).unwrap(),
+            proposal.profile(0).unwrap().section(0,0.9).unwrap(),[0.15,0.15]).unwrap();
+        for high in [false,true] {for i in 0..64 {
+            let free=[i as f64/64.,(i+1) as f64/64.];
+            assert_eq!(bridge.regular_join(high,free,1).unwrap().0,Some(true));
+            assert_eq!(bridge.enclose(free,[if high {1.}else{0.};2],1).unwrap(),bridge.section(high).enclose(free,1).unwrap());
+        }}
+        let mut bridge_regular=0;
+        for i in 0..8 {for j in 0..8 {
+            let n=bridge.normal_bounds([i as f64/8.,(i+1) as f64/8.],[j as f64/8.,(j+1) as f64/8.],8).unwrap().0.unwrap();
+            if n.iter().any(|r|r[0]>0.||r[1]<0.) {bridge_regular+=1;}
+        }}
+        eprintln!("noncollapsed bridge coarse regular={bridge_regular} pending={}",64-bridge_regular);
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {

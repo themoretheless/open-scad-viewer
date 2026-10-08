@@ -1064,3 +1064,30 @@ a smooth tip by further subdivision alone. Subsequent construction must use
 a noncollapsed terminal boundary and a separate corner patch, or explicitly
 qualify a supported sharp vertex with its full fan, embedding and neighbors.
 Neither route is implemented here. The full CAD objective remains incomplete.
+
+## Exact transition between two noncollapsed sections
+
+`ProfileSectionBridge` owns two independent exact profile sections and two
+finite nonzero transverse scales. It requires matching original free parameter
+ranges. Its cubic Hermite expression preserves each section identically at
+s=0 and s=1, with the corresponding scaled transverse derivative. Regular
+support normals therefore establish the boundary tangent planes at both ends.
+The second end is a section expression rather than an authored point.
+
+Complete position enclosures share four source span queries; complete normal
+enclosures share eight, including both mixed transverse derivatives. Neither
+profile is flattened into rounded replacement weights. Insufficient span work
+returns no certificate. A rational planar fixture independently checks bridge
+positions and regular interior normals at s=0,0.5,1, plus budget refusals.
+
+On the actual annular profile, a bridge from U=0.75 to U=0.9 preserves both
+section boundary enclosures and regular tangent planes over all 64 intervals
+of each boundary. A coarse full 8x8 interior cover yields complete normal
+enclosures but 0 regular / 64 pending cells; it proves no interior admission.
+All 13 profile tests passed in 0.04 seconds; the control fixture passed in
+5.12 seconds.
+
+This supplies a noncollapsed transition construction for a subsequent corner
+patch. The specific terminal section is a control example, not a finished
+end cap. Side-rail ownership, terminal corner geometry, interior refinement,
+self-intersections, thickness and closed-body/WASM integration remain open.
