@@ -762,7 +762,7 @@ mod tests {
         assert!(audit
             .pairs
             .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.as_ref().is_some_and(|c| c.edges().len() == 2)));
+            .any(|p| p.faces == [0, 2] && p.pole_planar.as_ref().is_some_and(|c| c.faces() == [0, 2] && c.edges().len() == 2)));
         assert!(source_shell_incidence::assemble_regions_with_root_planes(
             &regions,
             &pairs,
@@ -1001,7 +1001,7 @@ mod tests {
         assert!(audit
             .pairs
             .iter()
-            .any(|p| p.faces == [0, 2] && p.fiber.is_some()));
+            .any(|p| p.faces == [0, 2] && p.pole_planar.as_ref().is_some_and(|c| c.faces() == [0, 2] && !c.edges().is_empty())));
     }
     #[test]
     fn extended_canonical_carriers_preserve_closed_source_shell() {
@@ -1483,8 +1483,13 @@ mod tests {
         let stopped =
             crate::source_volume::qualify(stopped_geometry, volume_limits(5, 1000000)).unwrap();
         assert!(stopped.body.is_none());
-        assert!(stopped.signed_bounds.is_none());
-        assert_eq!(stopped.uncertain_face, Some(5));
+        // Zero-flux planar faces need no integration cell. The initial
+        // enclosure can now be complete while refinement remains unqualified.
+        assert_eq!(stopped.reason, "source-volume-work-limit");
+        assert_eq!(stopped.cells, 5);
+        let bounds=stopped.signed_bounds.unwrap();
+        assert!(bounds[0] <= 0. && bounds[1] >= 0.);
+        assert!(stopped.uncertain_face.is_some());
         let no_domain_geometry =
             crate::source_shell_geometry::qualify(fresh_shell(), geometry_limits(24, 15))
                 .unwrap()
@@ -1676,8 +1681,8 @@ mod tests {
                     origin: 0.,
                     absolute_error: 1e-8,
                     tolerance_uv: 1e-8,
-                    cells: 6,
-                    spans: 6,
+                    cells: 12,
+                    spans: 12,
                     domain_cells: 0,
                 },
             )
@@ -1689,7 +1694,8 @@ mod tests {
                 volume.reason,
                 volume.signed_bounds
             );
-            assert_eq!(volume.cells, 6);
+            assert_eq!(volume.cells, if axis < 2 { 8 } else { 12 });
+            assert_eq!(volume.spans, volume.cells);
             assert_eq!(volume.domain_cells, 0);
             let body = volume.body.unwrap();
             let bounds = body.volume();
