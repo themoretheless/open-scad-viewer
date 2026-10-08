@@ -47,6 +47,8 @@ pub struct Report<'a> {
     pub angular_exclusions: usize,
     pub factored_angular_exclusions: usize,
     pub direction_exclusions: usize,
+    /// Subset of direction exclusions proved by the original mean matrix.
+    pub mean_matrix_exclusions: usize,
     pub distance_exclusions: usize,
     pub pending: usize,
     pub uncertain: Option<Pair>,
@@ -267,6 +269,7 @@ fn qualify_impl<'a>(
         angular_exclusions: 0,
         factored_angular_exclusions: 0,
         direction_exclusions: 0,
+        mean_matrix_exclusions: 0,
         distance_exclusions: 0,
         pending: 1,
         uncertain: None,
@@ -379,7 +382,11 @@ fn qualify_impl<'a>(
                 let (excluded,used) = matrix.exclude_pair(pair,max_sine_squared,
                     limits.spans-out.spans,cached)?;
                 out.spans += used;
-                if excluded { out.direction_exclusions += 1; continue; }
+                if excluded {
+                    out.direction_exclusions += 1;
+                    out.mean_matrix_exclusions += 1;
+                    continue;
+                }
             }
         }
         if let (Some(differential), Some(normals)) = (differential, factored) {
