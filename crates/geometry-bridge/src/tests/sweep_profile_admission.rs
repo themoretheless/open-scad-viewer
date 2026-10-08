@@ -85,7 +85,10 @@ fn profile_constructor_audits_caps_and_whole_body_for_frame_guide_affine_combina
                     "orientation={orientation}, guide={guide}, affine={affine}: {}",
                     result["volume"]
                 );
-                assert_eq!(result["globalEmbeddingCertified"], json!(false));
+        assert_eq!(result["globalEmbeddingCertified"], json!(false));
+        assert_eq!(result["approximation"]["report"]["volume"], result["volume"]);
+        assert_eq!(result["approximation"]["report"]["wallRegularityCertified"], json!(true));
+        assert_eq!(result["approximation"]["report"]["seamContinuity"], json!("C0"));
                 let proof = admission(request(result["model"].clone(), true)).unwrap();
                 assert_eq!(proof["solidGeometryCertified"], json!(true));
                 assert_eq!(v, before);
