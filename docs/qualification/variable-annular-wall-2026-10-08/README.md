@@ -1292,3 +1292,43 @@ originalNormalRectangleCacheHits counts endpoint box reuse, separately from
 derivative rectangle reuse. Tolerances and outward enclosure rules remain
 unchanged. The full 100000-cell / 100000-restriction middle audit is running
 with the preceding derivative-cache version.
+
+The complete 51405859 middle audit at 512 cells preserves all four originals.
+Forward models use 1175 restrictions with 896 normal rectangle cache hits;
+reverse use 1193 with 879 hits. Previous derivative-only caching used
+2071 / 2072 restrictions. Traversal and results match: 15 / 13 pending
+representatives, 89 / 99 mean-matrix exclusions, and 167 / 178 total direction
+exclusions. This measures fewer source queries, not UI speed or wall safety.
+Full JSON/logs are archived.
+
+Completed historical middle audits are archived with all four unchanged
+originals. The 34ee6647 algebraic precondition audit uses 14721 / 14822 cells
+and 100000 restrictions, retaining 15 / 10 pending pairs. The 822cba7b
+in-pair normal reuse audit reaches 20000 cells with 90780 / 91372
+restrictions, retaining 17 / 11. Both spatial directions match. Different
+traversal depth means pending counts are not monotonic coverage percentages.
+Neither audit qualifies an additional face.
+
+## Original span restriction through closed tensor splits
+
+Derivative hull queries now normalize original positive knot spans with
+outward interval subtraction/division. Lower normalized endpoints round
+down and upper endpoints up; exact original span boundaries map to 0/1.
+The resulting closed unit rectangle contains every requested original point.
+Tensor de Casteljau restriction then encloses the polynomial hull without
+separate blossoms for each output coefficient. A nonseparated span-length
+bound retains the old blossom path. Out-of-span input is rejected before
+clamping. This supports arbitrary original span positions and scales.
+Independent degree-2/1 polynomial formulas verify full, interior and point
+rectangles on unit and offset spans, including exact endpoint values.
+Eight normal, 21 chord/coverage and seven pole tests pass.
+
+Full native nurbs-core library verification passes: 714 passed, zero failed,
+two ignored microbenchmarks. Complete test log is archived.
+
+The complete 64ad8556 symmetric middle audit preserves all four originals.
+Radii [0.5, 1.25], direction 1.0: 20000 cells, 90368 restrictions, 14 pending representatives.
+Radii [0.5, 1.25], direction -1.0: 20000 cells, 90368 restrictions, 14 pending representatives.
+Radii [1.25, 0.5], direction 1.0: 20000 cells, 90412 restrictions, 13 pending representatives.
+Radii [1.25, 0.5], direction -1.0: 20000 cells, 90412 restrictions, 13 pending representatives.
+No additional face is qualified. Full JSON/logs are archived.

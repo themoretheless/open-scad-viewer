@@ -72,7 +72,31 @@ pub(crate) fn restrict_hull(
     span: [[f64; 2]; 2],
     domain: [[f64; 2]; 2],
 ) -> Result<[I; 4]> {
-    let restricted = restrict_net(net, degrees, span, domain)?;
+    check((0..2).all(|axis| span[axis][0].is_finite() && span[axis][1].is_finite()
+        && span[axis][0]<span[axis][1] && domain[axis][0].is_finite()
+        && domain[axis][1].is_finite() && span[axis][0]<=domain[axis][0]
+        && domain[axis][0]<=domain[axis][1] && domain[axis][1]<=span[axis][1]),
+        "Restriction must lie in its original positive closed span")?;
+    // The extracted coefficients use the original span's Bernstein basis.
+    // Expand normalized endpoints outward, so the unit restriction contains
+    // the requested original closed rectangle, including point rectangles.
+    let mut normalized=[[0.;2];2];
+    let mut normalize=true;
+    for axis in 0..2 {
+        let length=I::point(span[axis][1]).sub(I::point(span[axis][0]))?;
+        if length.lo<=0. {normalize=false;break;}
+        for end in 0..2 {
+            normalized[axis][end]=if domain[axis][end]==span[axis][0] {0.}
+                else if domain[axis][end]==span[axis][1] {1.}
+                else {
+                    let value=I::point(domain[axis][end]).sub(I::point(span[axis][0]))?
+                        .div(length)?;
+                    if end==0 {value.lo.max(0.)} else {value.hi.min(1.)}
+                };
+        }
+    }
+    let restricted=if normalize {restrict_unit_net(net,normalized)?}
+        else {restrict_net(net,degrees,span,domain)?};
     Ok(std::array::from_fn(|k| I {
         lo: restricted
             .iter()
@@ -845,6 +869,30 @@ mod tests {
         }
         eprintln!("restriction-benchmark degree={p},{q} repeats={repeats} blossom_ms={} split_ms={} ratio={}",
             blossom*1000.,splits*1000.,blossom/splits);
+    }
+    #[test]
+    fn general_span_splits_enclose_independent_polynomials_and_closed_points() {
+        let net:Net=(0..3).map(|u|(0..2).map(|v|
+            [I::point(if u==2 {1.} else {0.}+2.*v as f64),
+             I::point(u as f64/2.*v as f64),I::point(1.),I::point(1.)]).collect()).collect();
+        for span in [[[0.,1.],[0.,1.]],[[1e6,1e6+8.],[-10.,-6.]]] {
+            let point=|t:f64,v:f64|[span[0][0]+t*(span[0][1]-span[0][0]),
+                span[1][0]+v*(span[1][1]-span[1][0])];
+            let a=point(0.125,0.125);let b=point(0.875,0.875);
+            let domain=[[a[0],b[0]],[a[1],b[1]]];
+            let hull=restrict_hull(&net,[2,1],span,domain).unwrap();
+            for t in [0.125,0.375,0.875] {for v in [0.125,0.625,0.875] {
+                assert!(hull[0].contains(t*t+2.*v) && hull[1].contains(t*v));
+            }}
+            let p=point(0.375,0.625);
+            let hull=restrict_hull(&net,[2,1],span,[[p[0];2],[p[1];2]]).unwrap();
+            assert!(hull[0].contains(0.375*0.375+2.*0.625));
+            assert!(hull[1].contains(0.375*0.625));
+            let hull=restrict_hull(&net,[2,1],span,span).unwrap();
+            assert!(hull[0].contains(0.) && hull[0].contains(3.));
+            assert!(restrict_hull(&net,[2,1],span,
+                [[span[0][0]-1.,span[0][1]],span[1]]).is_err());
+        }
     }
     #[test]
     fn rational_coefficient_quotients_keep_shared_denominator_and_reject_zero() {
