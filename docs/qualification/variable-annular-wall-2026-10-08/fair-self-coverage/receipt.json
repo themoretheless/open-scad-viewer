@@ -1,0 +1,11 @@
+{
+  "uncompressedSha256": {
+    "native-report": "6b098bdb2676cd45c2711ec2ea4252a212468880be9fc91304d3cb4add2c7bd3",
+    "native-run": "e076d428cfd9537abe9c19ab2a819ea6e211121c70f711767ff87f22bea1f139",
+    "tests": "3e7c703c69c20b90432353487e2ec756e88b7a323217ede5c209119afe8f7848"
+  },
+  "unprovenPairs": 169,
+  "previouslyProvenPairsLost": 0,
+  "newlyProvenPairs": 0,
+  "scope": "Native breadth-first self wall traversal; all pending closed pairs retained. This improves allocation near a singular corner, not whole-wall qualification. Packaged worker pending."
+}

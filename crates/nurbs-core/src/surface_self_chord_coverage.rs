@@ -315,13 +315,14 @@ fn qualify_impl<'a>(
         unresolved_pairs: Vec::new(),
         reason: "self-coverage-work-limit",
     };
-    let mut pending = vec![[domain, domain]];
+    // Visit each subdivision level before refining one singular corner.
+    let mut pending = std::collections::VecDeque::from([[domain, domain]]);
     let mut intrinsic = Vec::new();
     let mut rectangles=RectangleCache::new(s,max_sine_squared);
     let mut normal_rectangles=normal_alignment::OriginalNormalCache::new(s);
-    while let Some(pair) = pending.pop() {
+    while let Some(pair) = pending.pop_front() {
         if out.cells == limits.cells || out.spans == limits.spans {
-            pending.push(pair);
+            pending.push_back(pair);
             break;
         }
         out.cells += 1;
@@ -480,7 +481,7 @@ fn qualify_impl<'a>(
             }
         }
         if out.spans == limits.spans {
-            pending.push(pair);
+            pending.push_back(pair);
             break;
         }
         let mut selected = (0, 0);
@@ -499,25 +500,25 @@ fn qualify_impl<'a>(
         let d = pair[side][axis];
         let mid = d[0] * 0.5 + d[1] * 0.5;
         if mid <= d[0] || mid >= d[1] {
-            pending.push(pair);
+            pending.push_back(pair);
             out.reason = "self-coverage-resolution-limit";
             break;
         }
         if pair[0]==pair[1] {
             let [ll,lr,rr]=diagonal_children(pair[0],axis,mid);
-            pending.push(rr); pending.push(lr); pending.push(ll);
+            pending.push_back(rr); pending.push_back(lr); pending.push_back(ll);
             continue;
         }
         let mut left = pair;
         let mut right = pair;
         left[side][axis][1] = mid;
         right[side][axis][0] = mid;
-        pending.push(right);
-        pending.push(left);
+        pending.push_back(right);
+        pending.push_back(left);
     }
     out.pending = pending.len();
-    out.uncertain = pending.last().copied();
-    out.unresolved_pairs = pending.clone();
+    out.uncertain = pending.back().copied();
+    out.unresolved_pairs = pending.iter().copied().collect();
     if pending.is_empty() {
         out.reason = "self-coverage-qualified";
         out.certificate = Some(Certificate {
@@ -568,6 +569,19 @@ mod tests {
                     "Missing original endpoint obligation after {cells} cells: {a:?}, {b:?}");
             }}
         }
+    }
+    #[test]
+    fn unresolved_singular_corner_does_not_starve_other_original_pairs() {
+        let mut s=graph();
+        for row in &mut s.control_points {for point in row {point.fill(0.);}}
+        let report=qualify(&s,0.1,1e-4,Limits{cells:64,spans:10000}).unwrap();
+        assert!(report.certificate.is_none());
+        assert_eq!(report.cells,64);
+        assert_eq!(report.pending,report.unresolved_pairs.len());
+        // A depth-first traversal spends all cells shrinking one corner;
+        // level-order coverage keeps all unresolved parameter boxes useful.
+        assert!(report.unresolved_pairs.iter().flatten().flatten()
+            .all(|range| range[1]-range[0] >= 1./64.));
     }
     #[test]
     fn rectangle_cache_reuses_only_complete_original_coverage() {
