@@ -143,7 +143,24 @@ pub struct TransitionSideReport<'s,'p,'b> {
 /// Four exact boundary expression views with root-owned corners. This is a
 /// contour proposal; it does not admit a transition face or a closed Body.
 pub struct TransitionBoundary<'s,'p,'b> {rooted:[&'s RootEndedSeam<'p,'b>;2]}
-impl TransitionBoundary<'_,'_,'_> {
+impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
+    /// Fresh whole-domain injectivity also proves immersion. Authority remains
+    /// attached to this boundary and its exact full-Hermite recipe.
+    pub fn qualify_face<'a>(&'a self,projection:[[f64;3];2],controls:usize,cells:usize,spans:usize)->Result<TransitionFaceReport<'a,'s,'p,'b>> {
+        let root=self.rooted[0];
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let sections=[profile.section(root.axis,root.parameters[0])?,profile.section(root.axis,root.parameters[1])?];
+        let range=sections[0].range();
+        let width=root.parameters[1]-root.parameters[0];
+        let [first,last]=sections;
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(first,last,[width;2])?;
+        let (bridge,_)=bridge.constrain_original_rails(controls)?;
+        let Some(bridge)=bridge else {return Ok(TransitionFaceReport{face:None,interior:None,reason:"profile-transition-face-recipe-unproven"});};
+        let interior=bridge.inspect_transverse_corrected_injectivity(range,[0.,1.],projection,cells,spans)?;
+        let face=if interior.complete_regular {Some(TransitionFace{boundary:self,projection})}else{None};
+        let reason=interior.reason;
+        Ok(TransitionFaceReport{face,interior:Some(interior),reason})
+    }
     pub fn corners(&self)->[&crate::source_carrier_point::Point;4] {
         [&self.rooted[0].points[0],&self.rooted[0].points[1],&self.rooted[1].points[1],&self.rooted[1].points[0]]
     }
@@ -173,6 +190,18 @@ impl TransitionBoundary<'_,'_,'_> {
         }
         profile.enclose(domain,spans)
     }
+}
+/// Admitted embedded transition expression with its root-owned contour.
+/// This does not establish closure or embedding of the surrounding Body.
+pub struct TransitionFace<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,projection:[[f64;3];2]}
+impl TransitionFace<'_,'_,'_,'_> {
+    pub fn boundary(&self)->&TransitionBoundary<'_,'_,'_> {self.boundary}
+    pub fn projection(&self)->[[f64;3];2] {self.projection}
+}
+pub struct TransitionFaceReport<'a,'s,'p,'b> {
+    pub face:Option<TransitionFace<'a,'s,'p,'b>>,
+    pub interior:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,
+    pub reason:&'static str,
 }
 pub fn propose_transition_boundary<'s,'p,'b>(
     sides:[&TransitionSide<'s,'p,'b>;2],

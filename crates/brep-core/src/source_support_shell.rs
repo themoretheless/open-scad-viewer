@@ -420,6 +420,13 @@ mod tests {
         }
         let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
             proposal.profile(0).unwrap().section(0,0.75).unwrap(),proposal.profile(0).unwrap().section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
+        let jet=bridge.derivative_bounds([0.5;2],[0.5;2],8).unwrap().0.unwrap();
+        let vectors=jet.map(|r|r.map(|b|b[0]*0.5+b[1]*0.5));
+        let dot=|a:[f64;3],b:[f64;3]|a.iter().zip(b).map(|(x,y)|x*y).sum::<f64>();
+        let aa=dot(vectors[0],vectors[0]);let bb=dot(vectors[1],vectors[1]);let ab=dot(vectors[0],vectors[1]);
+        let determinant=aa*bb-ab*ab;assert!(determinant>0.);
+        let projection=[std::array::from_fn(|k|(bb*vectors[0][k]-ab*vectors[1][k])/determinant),
+            std::array::from_fn(|k|(aa*vectors[1][k]-ab*vectors[0][k])/determinant)];
         let bridge=bridge.constrain_original_rails(1000).unwrap().0.unwrap();
         let sides=rooted_seams.iter().map(|root|root.qualify_transition_side(&bridge,1000,1000).unwrap().side.unwrap()).collect::<Vec<_>>();
         let boundary=crate::source_profile_body::propose_transition_boundary([&sides[1],&sides[0]]).unwrap();
@@ -428,6 +435,23 @@ mod tests {
         assert!(boundary.enclose_edge(0,[-0.1,0.5],1).is_err());
         assert!(boundary.enclose_edge(0,[0.75,0.25],1).is_err());
 
+        let refused=boundary.qualify_face([[0.;3];2],1000,0,0).unwrap();
+        assert!(refused.face.is_none());
+        let interior=refused.interior.unwrap();
+        assert!(!interior.complete_regular);
+        assert_eq!(interior.pending.len(),1);
+        assert!(boundary.qualify_face([[f64::NAN;3];2],1000,1,100).is_err());
+        assert!(boundary.qualify_face([[0.;3];2],0,1,100).unwrap().face.is_none());
+        let admitted=boundary.qualify_face(projection,1000,1000,61000).unwrap();
+        let face=admitted.face.expect("complete interior admission for the owned annular transition");
+        assert!(std::ptr::eq(face.boundary(),&boundary));
+        assert_eq!(face.projection(),projection);
+        let interior=admitted.interior.unwrap();
+        assert!(interior.complete_regular);
+        assert!(interior.pending.is_empty());
+        let area:f64=interior.regular.iter().map(|r|(r[0][1]-r[0][0])*(r[1][1]-r[1][0])).sum();
+        assert_eq!(area,1.);
+        eprintln!("owned transition face accepted={} cells={} spans={}",interior.regular.len(),interior.cells,interior.spans);
         for edge in 0..4 {
             assert!(boundary.enclose_edge(edge,[0.,1.],1).unwrap().0.is_some());
             for (t,corner) in [(0.,edge),(1.,(edge+1)%4)] {

@@ -1598,3 +1598,30 @@ parameter intervals refuse. Existing retained-edge and restore checks pass.
 This is a transition boundary proposal. Interior face admission, terminal
 closure, neighboring replacement contours and closed Body admission remain
 open. These changes are native-only and are not in the packaged WASM.
+
+## Owned transition-expression face admission
+
+TransitionBoundary::qualify_face reconstructs the full Hermite-corrected
+expression directly from the boundary's immutable Proposal profile and
+section parameters. The exact rail-constrained factory must succeed.
+A fresh fixed-projection injectivity check covers the entire natural
+free interval and normalized across interval. Complete positive principal
+minors also establish immersion. An externally supplied report cannot
+create TransitionFace; its constructor and fields are private.
+
+The admitted expression keeps a reference to the exact root-owned boundary
+and the projection used for qualification. Refusal retains the full
+interior pending report. Zero cell/span allowance leaves one pending
+rectangle and admits no face; invalid nonfinite projection errors and
+insufficient control allowance refuses.
+
+The positive annular regression passed in 31.79 seconds with 328 accepted
+rectangles, 655 cells, 39955 source spans, zero pending rectangles and
+coverage area 1. Boundary owner identity and stored projection are checked.
+The refusal-only regression also passed in 7.75 seconds.
+
+This admits an embedded exact transition expression with its owned contour.
+It does not convert the expression into a rounded Surface or admit the
+surrounding shell/Body. Neighbor replacement contours, end closure, volume,
+wall thickness and whole-body intersection checks remain required. The
+implementation remains native-only pending WASM/worker/UI integration.
