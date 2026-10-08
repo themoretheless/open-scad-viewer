@@ -177,9 +177,37 @@ fn compute_weights(
     values.push(AuthoredScalar::Binary64Bits(1f64.to_bits()));
     let result = (|| -> Result<(Vec<Vec<Sign>>, Option<Vec<Vec<[f64; 2]>>>), Reason> {
         ctx.charge(values.len() as u64)?;
-        let x = exact_inputs(&values, ctx)?;
-        let unit = x.last().unwrap();
         let control_len = surface.len() * surface[0].len() * 4;
+        let x = if column_factors.is_some() {
+            // Normalize Cartesian leaves+unit separately from the factor leaves.
+            // Both scales are common positive constants; every homogeneous
+            // coordinate receives their same product. Unit weight factors need
+            // not inherit the Cartesian exponent normalization.
+            let mut coordinates: Vec<_> = values[..control_len]
+                .chunks_exact(4)
+                .flat_map(|p| p[..3].iter().cloned())
+                .collect();
+            coordinates.push(values.last().unwrap().clone());
+            let coordinates = exact_inputs(&coordinates, ctx)?;
+            let factors: Vec<_> = values[..control_len]
+                .chunks_exact(4)
+                .map(|p| p[3].clone())
+                .chain(values[control_len..values.len() - 1].iter().cloned())
+                .collect();
+            let factors = exact_inputs(&factors, ctx)?;
+            let controls = control_len / 4;
+            let mut exact = Vec::with_capacity(values.len());
+            for i in 0..controls {
+                exact.extend_from_slice(&coordinates[i * 3..i * 3 + 3]);
+                exact.push(factors[i].clone());
+            }
+            exact.extend_from_slice(&factors[controls..]);
+            exact.push(coordinates.last().unwrap().clone());
+            exact
+        } else {
+            exact_inputs(&values, ctx)?
+        };
+        let unit = x.last().unwrap();
         if x[..control_len]
             .chunks_exact(4)
             .any(|p| p[3].sign() != Sign::Positive)
@@ -1038,6 +1066,25 @@ mod tests {
         );
         assert!(has_orientation(&full, Sign::Positive));
         let signs = full.signs.unwrap();
+        for scale in [0.0009765625, 1024.] {
+            let transformed: Vec<Vec<[f64; 3]>> = points
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|p| [p[0] * scale + 128., p[1] * scale - 256., p[2]])
+                        .collect()
+                })
+                .collect();
+            let d = factorized_check(
+                transformed,
+                [1. * scale, 1.1 * scale],
+                [1. / scale, 1.1 / scale],
+                [0, 1],
+                1_000_000,
+                None,
+            );
+            assert_eq!(d.signs.unwrap(), signs);
+        }
         for (u, row) in signs.iter().enumerate() {
             for (v, sign) in row.iter().enumerate() {
                 let cell = factorized_check(

@@ -313,3 +313,23 @@ fn identical_expansion_subtraction_is_exact_and_still_charged() {
     let mut interrupted = PredicateContext::new(&source, &tolerance, Limits::default(), Some(&cancelled));
     assert!(matches!(a.sub(&a, &mut interrupted), Err(Reason::Cancelled)));
 }
+
+#[test]
+fn exact_unit_multiplication_keeps_low_terms_and_context_refusals() {
+    let source = arena(&[1.1]);
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
+    let value = Expansion::scalar(1.1).mul(&Expansion::scalar(1.1), &mut ctx).unwrap();
+    assert!(value.term_count() > 1);
+    for result in [value.mul(&Expansion::scalar(1.), &mut ctx).unwrap(), Expansion::scalar(1.).mul(&value, &mut ctx).unwrap()] {
+        assert_eq!(result.sub(&value, &mut ctx).unwrap().sign(), Sign::Zero);
+        assert_eq!(result.term_count(), value.term_count());
+    }
+    let mut small = PredicateContext::new(&source, &tolerance, Limits {max_expansion_terms:1, ..Limits::default()}, None);
+    assert_eq!(value.mul(&Expansion::scalar(1.), &mut small).err(), Some(Reason::ResourceLimit));
+    let cancelled = AtomicBool::new(true);
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), Some(&cancelled));
+    assert_eq!(value.mul(&Expansion::scalar(1.), &mut ctx).err(), Some(Reason::Cancelled));
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits {max_work:0, ..Limits::default()}, None);
+    assert_eq!(value.mul(&Expansion::scalar(1.), &mut ctx).err(), Some(Reason::ResourceLimit));
+}
