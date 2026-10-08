@@ -704,6 +704,18 @@ mod tests {
         assert!(expression.qualify_original_planar_contact([retained_ids[0],transition_id],100000000,100000).unwrap().certificate.is_none());
         assert!(expression.qualify_original_planar_contact(retained_ids,100000000,100000).unwrap().certificate.is_none());
 
+        for rail in 0..2 {
+            let plane=expression.qualify_transition_plane_contact(rail,100000000,1000,512,100000).unwrap();
+            eprintln!("transition plane rail={} qualified={} pending={} cells={} spans={} exactWork={} reason={}",rail,plane.certificate.is_some(),plane.pending.len(),plane.cells,plane.spans,plane.exact_work,plane.reason);
+            eprintln!("transition plane rail={} anchorOrder={:?}",rail,plane.anchor_order);
+            assert!(plane.cells<=512 && plane.spans<=100000 && plane.exact_work<=100000000);
+            assert!(expression.qualify_transition_plane_contact(rail,0,0,0,0).unwrap().certificate.is_none());
+            if let Some(certificate)=plane.certificate {
+                assert_eq!(certificate.rail(),rail);
+                assert!(!certificate.accepted().is_empty());
+                assert!(certificate.owners().iter().any(|f|std::ptr::eq(*f,&expression.faces()[transition_id])));
+            }
+        }
         use crate::source_profile_body::{ContactAuditLimits,PairContactProof};
         let audit_limits=ContactAuditLimits{cells:4096,cells_per_pair:8,controls_per_enclosure:1000,spans:100000,
             domain_cells:100000,domain_cells_per_pair:256,exact_work:100000000,driver_cells:100000,tolerance_uv:1e-8};

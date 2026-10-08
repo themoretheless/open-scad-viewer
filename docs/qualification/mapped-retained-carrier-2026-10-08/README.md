@@ -2282,3 +2282,42 @@ are not yet exposed through packaged WASM/worker/UI. Support pending
 products remain present even for contact-certified records; consumers
 must interpret them together with the pair proof kind, not as additional
 unqualified pairs.
+
+
+## Transition natural-rail plane preimage qualification
+
+qualify_transition_plane_contact requires an owned sewn Rail pair and its
+Original neighbor. The neighbor control net is freshly certified planar
+with exact predicates. Every original control point on the corresponding
+natural free rail must be exactly coplanar. Positive exact profile weights
+and the clamped preserved-rail factory retain the full rail image in that
+plane. The exact full-Hermite expression is rebuilt from its owned sections.
+An outward plane-normal enclosure projects exact position and free-jet
+bounds. Anchored rectangles can be accepted only when their full free
+normal derivative excludes zero; other rectangles require strictly
+nonzero plane-position bounds. The entire rectangle cover is retained on
+work exhaustion. Only a complete cover creates the private plane-contact
+certificate attached to the actual transition/neighbor owners.
+
+The independent polynomial t*(1-2*t) test retains its additional zero at
+1/2; accepted plus pending coverage preserves the whole domain. A linear
+anchored case is admitted and zero work keeps the full domain pending.
+Coverage summation uses a 1e-12 arithmetic tolerance only in the test,
+after its initial exact-f64 sum assertion differed from one by 1e-16;
+the geometric predicate and enclosures were not relaxed.
+
+The first native run passed in 63.32 seconds but issued no contact proof:
+rail 0 exhausted 512 cells / 31232 spans with 513 pending rectangles;
+rail 1's neighbor was not planar. The latter needs a curved-surface contact
+proof. The report additionally checks adjacent natural-rail control rows
+for exact coplanarity: together with clamping this identifies zero first
+normal jet (anchor order 2). Such tangency needs second-jet qualification;
+first-order interval failure is not treated as a geometric defect or safe
+contact. The unified audit remains at 155 pending pairs.
+
+The final native run passed in 77.31 seconds. Rail 0 has freshly confirmed
+anchor order 2 (8636 exact work) and remains at 513 pending rectangles;
+rail 1 remains nonplanar (2932 exact work). Neither receives a certificate.
+Next required work is full corrected second free-jet bounds for tangent
+plane contacts and a curved-neighbor proof for rail 1. No packaged WASM
+or full Body admission is claimed by this stage.

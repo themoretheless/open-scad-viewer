@@ -665,3 +665,6 @@ pub use original_contact::{
 #[path = "source_profile_shell_audit.rs"]
 mod audit;
 pub use audit::{AuditedContactPair, ContactAuditLimits, PairContactProof, ShellContactAudit};
+#[path = "source_profile_shell_transition_contact.rs"]
+mod transition_contact;
+pub use transition_contact::{TransitionPlaneContact, TransitionPlaneReport};
