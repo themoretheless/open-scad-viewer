@@ -1,0 +1,35 @@
+{
+  "scope": "New packed kernel qualified through real worker and rendered mouse/keyboard source-wall UI",
+  "nativeSourceCommit": "22084470",
+  "wasmSha256": "8f28d264385d707057b73f5c303f0842fb5799e43d46f9401b14f97c28d0bfee",
+  "wasmBytes": 11997863,
+  "normal-product-wasm-worker-wall.json.gz": {
+    "uncompressedSha256": "89db63a93a96f2583229e6fb96a78984fdf29e0a1083968feb44456b0f96e72f",
+    "bytes": 1543356
+  },
+  "normal-product-wasm-worker-cuboid.json.gz": {
+    "uncompressedSha256": "bb996bbd1257a9210b8afef7867ea0b978f8e08193a7bdb93f84b9a08274bdbf",
+    "bytes": 31403
+  },
+  "normal-product-wasm-worker-tests.log.gz": {
+    "uncompressedSha256": "b022edde00975ed1531d459bba71f1fe0473788bc0d37ded9b4ddb63ea840db8",
+    "bytes": 267
+  },
+  "normal-product-wasm-build.log.gz": {
+    "uncompressedSha256": "9a2c9f09aee3b707bb3533f7eec29e2dd77df8fb54aa376684cd9d265ca1ba09",
+    "bytes": 7599
+  },
+  "normal-product-ui-dist.log.gz": {
+    "uncompressedSha256": "65751b621ca154719fc21e34a0b65e1e42a676b36d9d2d880200ef13ef8a3731",
+    "bytes": 99
+  },
+  "normal-product-source-ui-mouse.json.gz": {
+    "uncompressedSha256": "5f52ae041b20655ceb5e7a8172812fcf719085a8fef308e6eecb6e794ec80661",
+    "bytes": 623271
+  },
+  "normal-product-source-ui-keyboard.json.gz": {
+    "uncompressedSha256": "df8e803111a89cd2cb51e96d725cc4b883bdf4d57f082ac66505282635ebecda",
+    "bytes": 623272
+  },
+  "uiSourceSha256": "9370112eab288bae546383b562458edb13e960be85b7d73d44c9d6a1da5edda8"
+}

@@ -1691,3 +1691,26 @@ exchanged. All 50 targeted pairs were visited; the same four complete exclusions
 also matches the native result after exchange in all 16 reference configurations.
 This checks the exclusion set, not equality of every pending subdivision or a
 complete Body certificate. Production and packaged worker integration remain open.
+
+### Packaged normal-product worker and current UI acceptance
+
+Kernel SHA-256 `8f28d264385d707057b73f5c303f0842fb5799e43d46f9401b14f97c28d0bfee`
+(11,997,863 bytes) passed all 27 worker/transport tests. The six annular cases
+preserve legacy results, refuse a one-cell product budget, confirm 177 remaining
+pairs without adaptive facts and 173 with owned adaptive facts, retain previous
+confirmed pairs and reject missing/over-budget product counters and forged or
+stale results. Both complete cases still refuse a whole-wall lower certificate.
+
+The current UI now requests 50,000 total / 128 per-pair product cells. Mouse and
+keyboard scenarios both report 173 unresolved pairs, 14,769 product cells and
+3,916 normal restrictions. They verify original-region highlighting, cancel,
+ignored obsolete successful callback, localized injected failure, actual Retry,
+unchanged document and exact reload. Both rendered screenshots were reviewed;
+external font CSS is explicitly substituted in these tests.
+
+The Vue typecheck and distribution checks passed. Actual asset bytes are
+8,344,094; raw WASM bytes are 15,294,255, total 23,638,349. Named bounded budgets
+were updated to measured kernel/worker/UI sizes while preserving their existing
+608/123/879-byte margins and the 761-byte total margin. The four exploratory
+factored-normal exclusions are not in this artifact; full thickness and
+self-intersection certification and the rest of the roadmap remain open.
