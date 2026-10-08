@@ -63,13 +63,17 @@ fn main(){
  let request:Value=value_codec::from_str(&std::fs::read_to_string(&args[1]).unwrap()).unwrap();
  let restored=brep_core::source_body_restore::restore(request["definition"].clone(),limits(&request["limits"]).unwrap()).unwrap();
  let body=restored.body().expect(restored.reason());let before=body.definition().unwrap();let mut cases=Vec::new();
- for face in [5,16,17,20,21,24,25]{
+ let cells:usize=args.get(3).map(|v|v.parse().unwrap()).unwrap_or(4096);
+ let spans:usize=args.get(4).map(|v|v.parse().unwrap()).unwrap_or(100000);
+ assert!((1..=100000).contains(&cells)&&(1..=100000).contains(&spans));
+ let selected:Vec<usize>=args.get(5).map(|v|v.split(',').map(|f|f.parse().unwrap()).collect()).unwrap_or(vec![5,16,17,20,21,24,25]);
+ for face in selected{
   let surface=body.geometry().shell().regions().unwrap()[face].loops()[0][0].surface();
   let r=nurbs_core::surface_self_chord_coverage::qualify(surface,5.99,1e-6,
-   nurbs_core::surface_self_chord_coverage::Limits{cells:4096,spans:100000}).unwrap();
+   nurbs_core::surface_self_chord_coverage::Limits{cells,spans}).unwrap();
   eprintln!("face={face} qualified={} cells={} spans={} pending={}",r.certificate.is_some(),r.cells,r.spans,r.pending);
   cases.push(json!({"face":face,"qualified":r.certificate.is_some(),"cells":r.cells,"spans":r.spans,"pending":r.pending,"reason":r.reason,"unresolvedPairs":r.unresolved_pairs}));
  }
  assert_eq!(before,body.definition().unwrap());
- std::fs::write(&args[2],value_codec::to_string_pretty(&json!({"scope":"Native original source-face self-chord budget experiment; no whole-wall or general self-intersection certificate","minimumMm":5.99,"maxSineSquared":1e-6,"definitionUnchanged":true,"cases":cases})).unwrap()).unwrap();
+ std::fs::write(&args[2],value_codec::to_string_pretty(&json!({"scope":"Native original source-face self-chord budget experiment; no whole-wall or general self-intersection certificate","minimumMm":5.99,"maxSineSquared":1e-6,"definitionUnchanged":true,"limits":{"cells":cells,"spans":spans},"cases":cases})).unwrap()).unwrap();
 }

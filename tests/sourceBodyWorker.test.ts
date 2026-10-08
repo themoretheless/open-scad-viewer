@@ -405,9 +405,9 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
 it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const [pairs,adaptive,products,factored,pole] of [[1,false,0,false,false],[378,false,0,false,false],[378,true,0,false,false],[378,false,1,false,false],[378,false,50000,false,false],[378,true,50000,false,false],[378,true,50000,true,false],[378,true,50000,true,true]] as const){
+ for(const [pairs,adaptive,products,factored,pole,expanded] of [[1,false,0,false,false,false],[378,false,0,false,false,false],[378,true,0,false,false,false],[378,false,1,false,false,false],[378,false,50000,false,false,false],[378,true,50000,false,false,false],[378,true,50000,true,false,false],[378,true,50000,true,true,false],[378,true,50000,true,true,true]] as const){
   const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
-   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096,...(pole?{pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}}:{})}}:{}),
+   ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:expanded?50000:10000,spans:100000,cellsPerFace:expanded?8192:512,spansPerFace:expanded?10000:4096,...(pole?{pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}}:{})}}:{}),
    ...(factored?{factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128}}:{}),
    ...(products?{normalProducts:{cells:products,cellsPerPair:128}}:{}),
    limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
@@ -419,7 +419,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
    if(products){
-    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(pole?167:factored?169:adaptive?173:177)
+    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(expanded?161:pole?167:factored?169:adaptive?173:177)
     else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
     expect(coverage.normalProductCells).toBeGreaterThan(0)
     expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
@@ -451,7 +451,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
    const qualifiedFaces=a.faces.filter(f=>f.qualified).map(f=>f.face)
    // Previously certified original face identities must survive stronger bounds.
    for(const face of [1,2,3,4,6,9,11,12,13,14,15,18,19,22,23,26])expect(qualifiedFaces).toContain(face)
-   expect(a.cells).toBeLessThanOrEqual(pole?110000:10000);expect(a.spans).toBeLessThanOrEqual(pole?200000:100000)
+   expect(a.cells).toBeLessThanOrEqual((expanded?50000:10000)+(pole?100000:0));expect(a.spans).toBeLessThanOrEqual(pole?200000:100000)
    if(pole){
     for(const face of [0,10])expect(qualifiedFaces).toContain(face)
     const prior=results.at(-1)!
@@ -462,6 +462,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
      expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
     }
    }
+   if(expanded){expect(qualifiedFaces).toHaveLength(26);expect(a.faces.filter(f=>!f.qualified).map(f=>f.face)).toEqual([5])}
    expect(a.allSelfPairsQualified).toBe(false)
    expect(coverage.pairs.filter(p=>p.reason==='source-wall-self-certified').map(p=>p.faces[0])).toEqual(qualifiedFaces)
    for(const face of a.faces){
