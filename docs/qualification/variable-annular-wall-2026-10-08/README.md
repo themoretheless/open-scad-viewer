@@ -1489,3 +1489,21 @@ edge. Of the latter, 210 report no pair proof, one reaches gap resolution and
 one reaches gap work limits. See `unresolved-pair-classification.json`, which
 binds both input archives by hash. This is diagnostic classification of old
 worker evidence; it adds no certificate and is not a new-binary result.
+
+## Exploratory distinct-face normal refinement
+
+The native example `source-wall-normal-refinement` reads original archived
+surface controls directly. It subdivides closed UV products, encloses original
+normal fields and preserves every pending product. It does not use mesh samples
+and asserts that serialized original surfaces are unchanged. The necessary
+pair-angle threshold is outward rounded from 4s(1-s), s=1e-6.
+
+All 212 previously unresolved pairs without shared edges were audited. Sixty-eight
+close their complete normal products with exclusion; 72 contain an aligned
+normal region and 72 retain budget-limited products. Total work is 12,238 cells
+and 3,389 new original normal restrictions with source/rectangle cache reuse.
+An aligned normal region is not a thin-wall witness. This exploratory routine
+issues no Body certificate and is not part of the shipped WASM. Integration
+requires private source-bound facts, coverage tests and admission checks.
+Evidence: `distinct-normal-refinement-audit.json.gz`, its completed log and
+`distinct-normal-refinement-receipt.json` with input/output hashes.
