@@ -1,0 +1,12 @@
+import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS} from '../../src/services/sweep/certificates/nurbsSweepEmbedding'
+import {writeFileSync} from 'node:fs'
+import {bezierNurbsCurve} from '../../src/services/nurbsConstructors'
+import {evaluateNurbsSurface} from '../../src/services/nurbsSurface'
+import {createBrepSectionLoftSurfaces} from '../../src/services/geometry/brep'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../../src/services/sweep/certificates/nurbsSweepEmbedding'
+import {exportDirectStepV5,importDirectStepV5} from '../../src/services/cadNurbsStep'
+const points=[[-1,-1],[1,-1],[1,1],[-1,1]]
+const sections=[0,5].map(z=>[points.map((p,i)=>bezierNurbsCurve([[...p,z],[...points[(i+1)%4],z]]))])
+const sides=[points.map((p,i)=>({degreeU:1,degreeV:2,knotsU:[0,0,1,1],knotsV:[0,0,0,.25,1,1,1],controlPoints:[p,points[(i+1)%4]].map(p=>[0,1,3,5].map(z=>[...p,z])),weights:[[1,.75,1.5,1],[1,.75,1.5,1]],periodicU:false,periodicV:false}))]
+const model=createBrepSectionLoftSurfaces(sections,sides,false)
+writeFileSync('tmp/profile-nonuniform-step/native-embedding-audit.json',JSON.stringify(inspectSweepEmbedding(model,[4,5],{...DEFAULT_SWEEP_EMBEDDING_BUDGETS,maxLinearCells:20000,maxCells:100000,maxDomainCells:1000000,cellsPerPair:1000,domainCellsPerPair:10000}),null,2))

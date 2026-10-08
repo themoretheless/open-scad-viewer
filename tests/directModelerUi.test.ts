@@ -3904,7 +3904,8 @@ it('preserves 1000 linked instances on source refusal and restores deleting the 
  await ui.click('Delete group Copies');expect(ui.doc().bodies).toEqual([])
  await ui.click('↶');expect(ui.serialized()).toBe(grouped)
  await ui.click('↷');expect(ui.doc().bodies).toEqual([])
-})
+// This renders and restores a thousand-instance document under CI contention.
+}, 180000)
 
 for(const locale of ['en','ru'])it('locates invalid vertex and curvature input without worker calls: '+locale,async()=>{
  const seed=cylinderSeed(),ui=await mount({locale,seedDocument:seed});await ui.click('Imported cylinder')

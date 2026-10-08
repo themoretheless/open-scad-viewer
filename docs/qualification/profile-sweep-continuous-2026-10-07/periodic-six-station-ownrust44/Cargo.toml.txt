@@ -1,0 +1,6 @@
+[package]
+name = "profile-periodic-normalizer-v2"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+value-codec = {path="/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/value-codec"}

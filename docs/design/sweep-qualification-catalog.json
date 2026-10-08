@@ -1,0 +1,284 @@
+{
+  "schema": "sweep-qualification-catalog/1",
+  "scope": "Finite scenario selection only. Constructors and independent geometry oracles own their assertions. Test suites cover families, not every browser/STEP fixture.",
+  "browser": {
+    "solid": [
+      "miter-periodic-hollow.r",
+      "miter-unclamped-hollow.r",
+      "progressive-miter-reconstructed-conic-half.r",
+      "progressive-miter-reconstructed-conic-one.r",
+      "progressive-miter-reconstructed-conic-two.r",
+      "closed-miter-frame-guide-affine-hollow-corrected.r",
+      "closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r",
+      "progressive-miter-reconstructed-guide-frame-affine-hollow.r",
+      "progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r",
+      "miter-combined-frame-affine-hollow.r",
+      "miter-affine-hollow.r",
+      "miter-combined-frame-guide-affine-hollow.r",
+      "miter-combined-frame-guide-affine-hollow-corrected.r",
+      "miter-moving-frame-guide-affine-hollow-corrected.r",
+      "miter-authored-frame-hollow.r",
+      "miter-guide-hollow.r",
+      "miter-guide-affine-hollow.r",
+      "miter-combined-frame-affine-hollow-corrected.r",
+      "miter-authored-frame-hollow-corrected.r",
+      "miter-guide-hollow-corrected.r",
+      "miter-guide-affine-hollow-corrected.r",
+      "miter-unsegmented-plain-hollow.r",
+      "miter-unsegmented-affine-hollow.r",
+      "miter-unsegmented-frame-affine-hollow.r",
+      "miter-unsegmented-guide-affine-hollow.r",
+      "miter-hollow-body.r",
+      "miter-hollow-corrected.r",
+      "closed-miter-hollow-body.r",
+      "progressive-miter-certified-hollow.r",
+      "progressive-miter-circle-corrected-hollow.r",
+      "progressive-miter-spatial-circle-corrected-hollow.r",
+      "progressive-miter-affine-circle-corrected-hollow.r",
+      "progressive-miter-oblique-circle-corrected-hollow.r",
+      "miter-rational-curved-guide-frame-affine-hollow.r",
+      "progressive-miter-station-g2-hollow.r",
+      "progressive-miter-reconstructed-stations.r",
+      "progressive-miter-reconstructed-sharp.r",
+      "closed-miter-frame-guide-affine-hollow.r",
+      "miter-g1-profile-frame-guide-affine.r"
+    ]
+  },
+  "step": {
+    "baseline": [
+      {
+        "file": "rush-unclamped-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-periodic-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-moving-frame-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-plain-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-frame-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "unsegmented-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-guide-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-guide-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-authored-frame-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-miter-combined-frame-affine-hollow-corrected.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-guide-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-authored-frame-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-combined-frame-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-scale-twist.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-spatial.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-circle-corrected-oblique.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-rational-curved-guide-frame-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-station-g2-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-g1-profile-frame-guide-affine.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-frame-guide-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-authored-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-straight-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "progressive-scale-twist-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-hollow-miter.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "open-spatial-bounded-correction.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "open-spatial-constructor-correction.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "closed-planar-hollow-miter.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "affine-oblique-hollow-miter.step",
+        "nativeAdmission": "refuse"
+      },
+      {
+        "file": "affine-oblique-dyadic-hollow.step",
+        "nativeAdmission": "certify"
+      },
+      {
+        "file": "rush-authored-affine-hollow-miter.step",
+        "nativeAdmission": "certify"
+      }
+    ],
+    "smooth": [
+      {
+        "file": "quintic-straight-owned-solid.step"
+      },
+      {
+        "file": "quintic-curved-owned-solid.step"
+      },
+      {
+        "file": "quintic-rush-reconstructed-solid.step"
+      },
+      {
+        "file": "quintic-rush-sharp-solid.step"
+      },
+      {
+        "file": "quintic-rush-guide-frame-affine-hollow.step"
+      },
+      {
+        "file": "quintic-rush-moving-frame-guide-affine-hollow.step"
+      },
+      {
+        "file": "quintic-rush-closed-frame-guide-affine-hollow.step"
+      },
+      {
+        "file": "quintic-conic-0.5-owned-solid.step"
+      },
+      {
+        "file": "quintic-conic-1-owned-solid.step"
+      },
+      {
+        "file": "quintic-conic-2-owned-solid.step"
+      }
+    ],
+    "smoothModes": [
+      false,
+      true,
+      "rush",
+      "rush-sharp",
+      "rush-guide",
+      "rush-moving",
+      "rush-closed",
+      "weight-half",
+      "weight-one",
+      "weight-two"
+    ],
+    "scalar": [
+      {
+        "file": "scaled_sweep.step",
+        "operation": "surface_scaled_sweep",
+        "scope": "Different rational path/scale weights; capped square."
+      },
+      {
+        "file": "profile_sweep.step",
+        "operation": "surface_profile_sweep",
+        "scope": "Accepted RMF scaled square; native and OCCT round-trip."
+      }
+    ]
+  },
+  "suites": {
+    "native": {
+      "package": "nurbs-core",
+      "filters": [
+        "loft",
+        "progressive_miter",
+        "sweep_section_correction",
+        "sweep_seam_set",
+        "sweeps::scalar"
+      ],
+      "bridgeTests": [
+        "sweep_pipeline",
+        "loft_generalization"
+      ]
+    },
+    "wasm": [
+      "tests/nurbsAdvancedLoft.test.ts",
+      "tests/nurbsGuidedLoft.test.ts",
+      "tests/sweepBoundaryCertificate.test.ts",
+      "tests/sweepRetainedDecomposition.test.ts",
+      "tests/sweepAffineLattice.test.ts",
+      "tests/miterSmoothStationWalls.test.ts",
+      "tests/sweepCurvedGuideMiter.test.ts",
+      "tests/nurbsProgressiveMiterWallAudit.test.ts",
+      "tests/sweepViewportEvidence.test.ts",
+      "tests/nurbsScalarSweep.test.ts"
+    ],
+    "rush": [
+      "tests/modelGraphLoft.test.ts",
+      "tests/miterStationGraph.test.ts",
+      "tests/solidRetainedLoft.test.ts"
+    ]
+  }
+}

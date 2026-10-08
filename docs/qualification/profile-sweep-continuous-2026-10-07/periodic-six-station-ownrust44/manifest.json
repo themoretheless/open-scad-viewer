@@ -1,0 +1,38 @@
+{
+  "artifact": {
+    "path": "docs/qualification/artifacts/geometry-8a50b676698a403b00fe8bbb601f4674f6e004f8a5a0b21c77a74dc9e0b04ed3.wasm",
+    "publishedPath": "public/wasm/geometry-kernel.wasm",
+    "sha256": "8a50b676698a403b00fe8bbb601f4674f6e004f8a5a0b21c77a74dc9e0b04ed3",
+    "byteLength": 12181014,
+    "variants": [
+      {
+        "sha256": "8a50b676698a403b00fe8bbb601f4674f6e004f8a5a0b21c77a74dc9e0b04ed3",
+        "byteLength": 12181014,
+        "builder": "macos-aarch64",
+        "evidence": "Observed local rebuild. rustc 1.100.0-nightly (215a8af4b 2026-09-15); Node v26.10.0. No foreign-host artifact is inferred."
+      }
+    ]
+  },
+  "sourceRelease": "docs/qualification/own-rust-cad-v44.json",
+  "qualificationUnits": 0,
+  "independentChecker": {
+    "distribution": "cadquery-ocp",
+    "version": "8.0.1.0.0"
+  },
+  "filesSha256": {
+    "Cargo.toml.txt": "63ef6493cdac57577177e0de01971c937bba78e6d7bea6380476fbdeb6469e7c",
+    "README.md": "356cbd907ce76b16c41e66f36782823fad97fc2d47cb97c10482715f391782c4",
+    "export.mts.txt": "f5c85dd0fab4c304ad30f41dfd1535ffe8f748717fb769ab403aec5845cc68b0",
+    "main.rs.txt": "37d987feab4bda6c17cf2c2c6a07931646797d1c62a6c9fc53771337815907d4",
+    "model-samples.json": "8698ec65df16926a38f43992774a6169e3859b9a2b8c3e09126d22b881a0c8b0",
+    "normalized-c606.json": "dd11a15cb844732745610a872e9bab43b475b233de28d9849b7918fe70272161",
+    "normalized.json": "dd11a15cb844732745610a872e9bab43b475b233de28d9849b7918fe70272161",
+    "occt-explore.json": "b342c642f239c35b3096be44d852dfb0e7d050760e526b658e07e06855fc16e1",
+    "periodic-occt.step": "f92cf5500021bf24da79cf9bc749f00b9ec0bdec4e468d7744fa32e7f68c7141",
+    "periodic.step": "0b9ddd13b01c3f29e0f1dc95e46916ffb76bad2c08923d9000e6c178fba10f45",
+    "raw-patches.json": "108d3cf65b6d36bdddb51db53b59733104a7d2d830efd9b25d1fc62269dbf280",
+    "reports.json": "5dfde36289450f825773f04631e981869576554750c933b02cc911d32c36055e",
+    "samples.json": "8698ec65df16926a38f43992774a6169e3859b9a2b8c3e09126d22b881a0c8b0",
+    "verify-occt.py.txt": "7b86820c4bea8087f352f5a9e263b9647fde053a018b15dfb3400948113da94c"
+  }
+}

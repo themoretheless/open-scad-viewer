@@ -1,0 +1,22 @@
+[
+  {
+    "maxPointError": 1.7763568394002505e-15,
+    "maxJetError": 3.197464792857662e-14,
+    "valid": true,
+    "faces": 6,
+    "solids": 1,
+    "volume": 20.0,
+    "expectedVolume": 20,
+    "adaptiveIntegrationRelativeError": 1.332267629550188e-16
+  },
+  {
+    "maxPointError": 1.7763568394002505e-15,
+    "maxJetError": 3.197464792857662e-14,
+    "valid": true,
+    "faces": 6,
+    "solids": 1,
+    "volume": 20.0,
+    "expectedVolume": 20,
+    "adaptiveIntegrationRelativeError": 1.332267629550188e-16
+  }
+]

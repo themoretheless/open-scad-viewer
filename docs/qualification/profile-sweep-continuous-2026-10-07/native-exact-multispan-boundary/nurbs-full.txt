@@ -1,0 +1,800 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                                           ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: unused import: `Expansion`
+ --> cad-predicates/src/line_chart_identity.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, ParameterDecision, ParameterIdentity,
+  |                              ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Expansion`
+ --> cad-predicates/src/quadratic_curve_separator.rs:4:30
+  |
+4 |     Algebra, AuthoredScalar, Expansion, InputError, LeafRef, PredicateContext, Reason, Sign,
+  |                              ^^^^^^^^^
+
+warning: `cad-predicates` (lib) generated 2 warnings (run `cargo fix --lib -p cad-predicates` to apply 2 suggestions)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3251:4
+     |
+3251 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3252:4
+     |
+3252 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3256:4
+     |
+3256 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3260:4
+     |
+3260 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `DistanceStopReason` is never used
+   --> nurbs-core/src/distance_bounds.rs:106:10
+    |
+106 | pub enum DistanceStopReason {
+    |          ^^^^^^^^^^^^^^^^^^
+
+warning: function `boundary_v_derivative` is never used
+  --> nurbs-core/src/gordon_tangent_fields.rs:12:15
+   |
+12 | pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dot` is never used
+  --> nurbs-core/src/sweep_support/interval_vec3.rs:38:15
+   |
+38 | pub(crate) fn dot(a: Vec3, b: Vec3) -> Result<Interval> {
+   |               ^^^
+
+warning: `nurbs-core` (lib) generated 7 warnings
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/.codex/worktrees/sweep-structure/open-scad-viewer/crates/nurbs-core)
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+   --> nurbs-core/src/continuity/preparation.rs:115:12
+    |
+115 |  #[test]fn aligns_degrees_domains_and_knots_without_introducing_C0_seams(){
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 7 warnings (6 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.69s
+     Running unittests src/lib.rs (crates/target/debug/build/nurbs-core/2fae3af6fa9d2ae6/out/nurbs_core-2fae3af6fa9d2ae6)
+
+running 694 tests
+test affine::tests::invalid_projective_nonfinite_dimension_and_output_range_are_refused ... ok
+test chord_arrangement::tests::overlapping_chords_retain_directed_source_occurrences ... ok
+test chord_arrangement::tests::multiple_crossings_are_ordered_by_proved_parameter_intervals ... ok
+test chord_arrangement::tests::simple_chains_preserve_exact_vertices_and_budget_refusal_is_atomic ... ok
+test chord_arrangement::tests::bowtie_splits_into_six_connected_edges_with_shared_crossing ... ok
+test chord_arrangement::tests::nearby_distinct_crossings_are_not_merged_by_tolerance ... ok
+test chord_arrangement::tests::exact_recipe_does_not_equate_nearby_intersections ... ok
+test chord_arrangement::tests::nonbinary_concurrent_intersections_share_an_exact_recipe ... ok
+test chord_arrangement::tests::shared_endpoint_contacts_use_one_topological_vertex ... ok
+test chord_arrangement::tests::concurrent_closed_profile_materializes_connected_filled_loops ... ok
+test chord_arrangement::tests::three_exact_crossings_share_one_vertex_without_collapsed_cuts ... ok
+test chord_faces::tests::duplicated_rays_and_collapsed_edges_are_refused ... ok
+test chord_faces::tests::adjacent_binary64_rays_have_exact_angular_order ... ok
+test chord_embedding::tests::shared_endpoints_and_separated_edges_are_admitted ... ok
+test chord_fill_selection::tests::coincident_traversals_preserve_winding_and_opposite_directions_cancel ... ok
+test affine::tests::affine_weighted_curve_preserves_rational_data_and_commutes_with_evaluation ... ok
+test boundary_partition::tests::wrong_lift_and_exhaustion_retain_candidates_without_qualification ... ok
+test chord_arrangement::tests::interior_contacts_split_axis_and_diagonal_chords ... ok
+test boundary_partition::tests::forward_and_reversed_edges_keep_original_domains_and_traversal ... ok
+test chord_faces::tests::square_and_reversed_square_have_one_counterclockwise_walk ... ok
+test chord_faces::tests::bowtie_has_two_counterclockwise_triangle_walks ... ok
+test chord_fill_selection::tests::both_crossed_lobes_are_filled_and_budget_failure_is_explicit ... ok
+test chord_embedding::tests::unjoined_crossings_contacts_and_duplicate_vertices_are_refused ... ok
+test chord_fill_selection::tests::extracted_boundaries_close_and_keep_both_lobes ... ok
+test affine::tests::surfaces_and_patch_sets_retain_basis_and_independent_plane_equation ... ok
+test chord_fill_selection::tests::nested_boundaries_follow_orientation_and_fill_rule ... ok
+test chord_fill_selection::tests::crossed_source_offset_produces_multiple_closed_regions ... ok
+test chord_fill_selection::tests::retraced_spikes_and_closed_bridges_do_not_change_filled_regions ... ok
+test chord_fill_selection::tests::partial_shared_boundary_is_removed_between_filled_regions ... ok
+test chord_fill_selection::tests::reversal_preserves_fill_and_exterior_is_empty ... ok
+test chord_intersection::tests::negative_miter_determinants_construct_the_same_join ... ok
+test chord_intersection::tests::refuses_contacts_parallel_outside_and_unmet_tolerance ... ok
+test chord_winding::tests::double_wound_contour_distinguishes_fill_rules ... ok
+test chord_winding::tests::bowtie_lobes_have_opposite_winding ... ok
+test chord_winding::tests::square_reversal_outside_and_boundary_are_distinct ... ok
+test chord_winding::tests::oriented_hole_and_island_alternate_the_filled_region ... ok
+test chord_witness::tests::concave_and_crossed_contours_have_proved_interior_witnesses ... ok
+test chord_intersection::tests::encloses_fractional_and_translated_intersections ... ok
+test chord_fill_selection::tests::trimmed_offset_transport_preserves_loops_and_scope ... ok
+test chord_fill_selection::tests::selected_boundary_curves_retain_exact_closure ... ok
+test chord_fill_selection::tests::star_merges_internal_edges_only_for_nonzero_fill ... ok
+test chord_witness::tests::witness_budget_never_returns_an_unchecked_point ... ok
+test closed_spline::tests::symmetric_loop_matches_independent_segment_polynomials_and_seam_jets ... ok
+test closed_spline::tests::nonuniform_spatial_loop_matches_all_authored_sites_and_join_jets ... ok
+test continuity::curve_match::tests::rejects_unclamped_knots_without_absolute_epsilon_and_degenerate_reference ... ok
+test continuity::curve_match::tests::refuses_a_handle_lost_to_coordinate_rounding ... ok
+test continuity::curve_match::tests::matches_all_endpoint_pairs_and_preserves_weights_and_other_controls ... ok
+test contact_normal_agreement::tests::exact_boundary_and_reversed_pcurve_qualify_without_uv_snapping ... ok
+test contact_normal_agreement::tests::rational_transition_contacts_qualify_and_normal_work_stop_stays_unresolved ... ok
+test chord_fill_selection::tests::long_boundary_chunks_share_endpoints_and_close ... ok
+test continuity::preparation::tests::already_compatible_normalized_surfaces_keep_their_controls ... ok
+test continuity::exact_strip::tests::projective_rational_quarters_certify_geometry_and_reject_curvature_change ... ok
+test closed_spline::tests::refuses_open_endpoints_bad_parameters_and_budgets_without_snapping ... ok
+test continuity::preparation::tests::certificate_detects_candidate_translation_and_refuses_rounded_knot_maps ... ok
+test continuity::exact_strip::tests::transport_preserves_exact_identity_and_regularity ... ok
+test continuity::station_scale::tests::normalized_bezier_scale_uses_endpoint_poles_and_retains_source ... ok
+test continuity::station_scale::tests::proposal_is_available_through_the_json_boundary ... ok
+test continuity::preparation::tests::checked_preparation_returns_original_pair_on_failed_budget ... ok
+test continuity::station_scale::tests::varying_weights_use_the_native_rational_derivative ... ok
+test continuity::tests::refuses_incompatible_basis_and_nonpositive_result_weights ... ok
+test continuity::tests::periodic_and_multispan_seams_are_proved_without_sampling ... ok
+test continuity::tests::rejects_rank_loss_between_sampling_sites ... ok
+test continuity::tests::handles_different_cross_degrees_and_nonuniform_end_spans ... ok
+test continuity::preparation::tests::explicit_conversion_can_unlink_both_periodic_inputs ... ok
+test continuity::exact_strip::tests::linear_multispan_requires_exact_internal_surface_jet_agreement ... ok
+test continuity::tests::application_gate_requires_a_finite_budget_and_second_order_seam_smoothness ... ok
+test continuity::tests::rounded_normalized_knots_cannot_hide_an_incompatible_basis ... ok
+test coons::tests::normalization_refuses_degree_limit_and_invalid_weights ... ok
+test continuity::tests::reversed_matching_restores_parameter_direction ... ok
+test coons::tests::checked_weight_transport_preserves_report_and_rollback ... ok
+test continuity::exact_strip::tests::original_surface_jets_require_exact_basis_and_regularity ... ok
+test coons::tests::affine_homogeneous_normalization_preserves_rational_curve_and_domain ... ok
+test contact_normal_agreement::tests::coincident_end_normals_cannot_hide_an_interior_tangent_defect ... ok
+test coons::tests::checked_preparation_bounds_whole_domain_and_rolls_back_below_budget ... ok
+test coons::tests::refuses_gaps_incompatible_weights_and_wrong_roles ... ok
+test coons::tests::refuses_nonpositive_interior_weights_even_with_positive_boundary_weights ... ok
+test coons::tests::prepared_incompatible_weight_cycle_builds_with_original_boundary_parameters ... ok
+test coons::tests::reports_reversed_rational_boundary_gap_before_weight_cycle ... ok
+test coons::tests::uniform_weight_rescaling_does_not_create_a_rounded_corner_gap ... ok
+test curve_axis_driver::tests::ordered_rational_bezier_allows_zero_endpoint_derivative_without_claiming_regular_inverse ... ok
+test curve_decomposition_certificate::batch_tests::last_span_exhaustion_discards_previous_bound_and_preserves_sources ... ok
+test curve_axis_driver::tests::nonunit_reversed_and_interior_turning_coordinates ... ok
+test continuity::preparation::tests::prepares_periodic_seams_with_different_degrees_and_preserves_wrapping ... ok
+test continuity::preparation::tests::explicit_conversion_prepares_mixed_seams_and_bounds_the_original_geometry ... ok
+test curve_decomposition_certificate::tests::unclamped_endpoint_spans_keep_parameterwise_error_and_work_limits ... ok
+test curve_decomposition_certificate::tests::nonuniform_rational_extraction_and_independent_translation ... ok
+test coons::tests::reproduces_all_four_boundaries_and_analytic_interior ... ok
+test coons::tests::rational_quarter_cylinder_preserves_boundaries_and_radius ... ok
+test curve_distance::separation_tests::stops_after_global_separation_without_claiming_precise_distance ... ok
+test curve_distance::tests::covers_multiple_spans_weights_and_periodic_seam ... ok
+test curve_distance::tests::parallel_lines_and_skew_interior_minimum ... ok
+test curve_distance::tests::rejects_invalid_contract_and_initial_budget ... ok
+test curve_distance::tests::work_limit_is_explicit_and_retains_global_bounds ... ok
+test curve_jets::tests::cubic_third_jet_and_invalid_cells ... ok
+test curve_distance::separation_tests::covers_all_original_spans_before_proof_and_refuses_contact ... ok
+test curve_jets::tests::rational_jets_enclose_original_curve_on_restricted_cells ... ok
+test curve_offset::tests::periodic_corners_require_the_same_explicit_join_as_open_corners ... ok
+test curve_offset::tests::cusp_and_budget_refuse_without_mutating_source ... ok
+test coons::tests::mixed_rational_bases_domains_and_scales_preserve_boundary_parameters ... ok
+test curve_offset::tests::zero_is_identity_and_corners_require_a_join_policy ... ok
+test curve_offset_diagnostics::current_chain_tests::disconnected_nonplanar_and_discontinuous_inputs_are_refused ... ok
+test curve_offset_diagnostics::current_chain_tests::edits_change_current_diagnostics_without_offset_metadata ... ok
+test curve_offset_diagnostics::current_chain_tests::transport_dispatch_uses_current_curve_definitions ... ok
+test curve_offset_diagnostics::exact_orientation_tests::diagonal_collinearity_and_nearby_sides_are_distinct ... ok
+test curve_offset_diagnostics::tests::crossing_and_adjacent_vertices_have_distinct_results ... ok
+test curve_offset_diagnostics::tests::overlap_resource_and_degeneracy_do_not_prove_simple ... ok
+test curve_offset_join::tests::finite_limits_parallel_and_long_extensions ... ok
+test curve_offset_join::tests::perpendicular_lines_and_bevel ... ok
+test curve_offset_join::tests::rational_curved_sides_use_one_sided_source_jets ... ok
+test curve_offset_join::tests::source_knot_preserves_original_and_bounds_weighted_corner ... ok
+test curve_distance::tests::rational_circle_distance_has_original_curve_witnesses ... ok
+test curve_offset_join::tests::translated_fractional_intersection ... ok
+test curve_offset_wire::tests::clamped_closed_triangle_keeps_nonperiodic_source_and_closes_wire ... ok
+test curve_offset_wire::tests::corner_bevel_keeps_roles_and_connected_station_parameters ... ok
+test curve_offset_wire::tests::inner_bevel_intersection_is_visible_without_a_region_claim ... ok
+test curve_offset_wire::tests::periodic_square_has_exact_closure_and_explicit_seam_bevel ... ok
+test curve_offset::tests::bounded_offset_transport_reports_curve_scope ... ok
+test curve_partition_agreement::tests::coincident_anchor_does_not_hide_endpoint_error_on_a_nonunit_domain ... ok
+test curve_partition_agreement::tests::invalid_cut_order_and_mismatched_parameter_domains_refuse ... ok
+test curve_decomposition_certificate::tests::degree_25_whole_domain_and_product_budget ... ok
+test curve_point_identity::tests::original_rational_points_match_without_cartesian_division ... ok
+test curve_quadratic_separator::tests::rational_weights_and_wrong_geometry_or_budget_refuse ... ok
+test curve_quadratic_separator::tests::tangent_curves_need_a_curved_separator_and_keep_originals ... ok
+test curve_regularity::tests::line_and_c0_corner_cover_both_one_sided_tangents ... ok
+test curve_regularity::tests::stationary_interior_and_exhaustion_never_prove_regularity ... ok
+test coons::tests::normalization_preserves_points_and_jets_across_degrees_and_weight_scales ... ok
+test curve_surface_affine::tests::curved_and_weighted_canonical_subintervals_have_exact_formal_composition ... ok
+test curve_surface_agreement::tests::affine_chart_identity_uses_exact_poles_and_bounded_work ... ok
+test curve_surface_affine::tests::closing_line_coverage_uses_exact_fraction_endpoints_and_preserves_definitions ... ok
+test curve_surface_agreement::tests::constant_coordinates_are_exact_with_independent_positive_rational_weights ... ok
+test curve_surface_agreement::tests::degree_five_rational_plane_composition_is_bounded_and_detects_damage ... ok
+test curve_partition_agreement::tests::altered_piece_and_work_stop_never_gain_geometry_preservation ... ok
+test curve_surface_agreement::tests::exact_identity_is_distinct_from_tolerance_and_preserves_reversal ... ok
+test curve_surface_agreement::tests::exact_identity_leaves_multispan_definitions_unproven ... ok
+test curve_surface_agreement::tests::formal_composition_does_not_claim_full_chart_membership ... ok
+test curve_surface_agreement::tests::departure_has_enclosed_witness_and_invalid_uv_is_unresolved ... ok
+test curve_surface_agreement::tests::identity_plane_preserves_rational_boundaries_on_nonunit_domains ... ok
+test curve_surface_agreement::tests::matching_reversed_and_exhausted ... ok
+test curve_surface_agreement::tests::natural_rational_boundary_keeps_direction_and_parameterization ... ok
+test curve_surface_agreement::tests::multispan_natural_boundaries_preserve_basis_senses_and_work_limits ... ok
+test curve_distance::conditioning_tests::distance_survives_common_weight_scaling_and_translation ... ok
+test curve_surface_agreement::tests::rational_curved_support_is_verified_without_planar_assumption ... ok
+test continuity::exact_strip::tests::common_multispan_basis_preserves_exact_jets_and_checks_every_span ... ok
+test curve_surface_agreement::tests::rational_pcurve_composition_preserves_the_shared_parameter ... ok
+test curve_surface_agreement::tests::rational_multispan_and_nonbinary_domains ... ok
+test curve_surface_agreement::tests::rational_subinterval_world_proposal_is_checked_against_original_definition ... ok
+test curve_surface_agreement::tests::rounded_complement_is_not_an_exact_nurbs_basis_reversal ... ok
+test curve_surface_agreement::tests::pcurve_crosses_surface_knots_at_strict_tolerance ... ok
+test curve_surface_agreement::tests::sweep_coedge_transport_retains_zero_budget_and_mismatch ... ok
+test curve_surface_agreement::tests::unchanged_original_pcurve_interval_preserves_nonunit_and_reversed_mapping ... ok
+test curve_surface_lift::tests::clamped_weighted_endpoint_uses_original_uv_control_identity ... ok
+test curve_surface_lift::tests::point_map_scale_requires_complete_derivative_coverage ... ok
+test curve_surface_agreement::tests::tensor_boundary_identity_preserves_domains_reversal_weights_and_limits ... ok
+test curve_surface_lift::tests::rotated_world_lifts_keep_ordered_original_pcurves_and_shared_endpoints ... ok
+test curve_surface_plane::point_tests::rational_fraction_plane_membership_is_exact_without_cartesian_rounding ... ok
+test curve_surface_plane::tests::nonlinear_oblique_plane_composition_preserves_original_sources_and_refuses_changes ... ok
+test foundation::deviation_span_tests::discontinuity_cannot_receive_a_lipschitz_certificate ... ok
+test curve_offset_wire::tests::smooth_periodic_seam_closes_with_bounded_perturbation ... ok
+test foundation::normal_regularity_regressions::aligned_corners_do_not_certify_an_interior_rank_loss ... ok
+test foundation::normal_regularity_regressions::flat_corner_normals_do_not_prove_a_patch_is_planar ... ok
+test curve_surface_agreement::tests::rational_quadratic_periodic_surface_seam ... ok
+test curve_surface_lift::tests::rational_source_lift_is_certified_over_every_original_interval ... ok
+test foundation::periodic_rebuild_tests::rollback_retains_periodic_source_and_invalid_counts_fail ... ok
+test foundation::deviation_span_tests::narrow_peak_between_samples_is_bounded ... ok
+test foundation::preimages::monotonicity_tests::pairwise_derivative_avoids_large_weight_cancellation ... ok
+test foundation::preimages::monotonicity_tests::subdivision_proves_positive_derivative_with_negative_control ... ok
+test foundation::preimages::public_monotonicity_tests::public_certificate_accepts_subdivision_and_rejects_stationary_map ... ok
+test foundation::preimages::tests::irrational_knot_inverse_is_enclosed_not_promoted ... ok
+test foundation::preimages::tests::piece_boundaries_and_nonunit_domains_are_enclosed ... ok
+test foundation::preimages::tests::rational_nested_factors_preserve_authored_order ... ok
+test foundation::preimages::tests::work_exhaustion_and_invalid_requests_refuse ... ok
+test curve_surface_agreement::tests::both_periodic_axes_cross_seams_together ... ok
+test curve_distance::two_curve_tests::separates_two_rational_arcs_at_a_non_sampled_minimum ... ok
+test foundation::rebuild_tests::rebuild_rejects_invalid_budgets_and_basis ... ok
+test foundation::reparameterization_materialization::tests::affine_partial_range_near_an_endpoint_preserves_the_authored_domain ... ok
+test foundation::rebuild_tests::rebuild_preserves_rational_shape_within_reported_bound ... ok
+test foundation::reparameterization_materialization::tests::incomplete_whole_domain_verification_refuses_materialization ... ok
+test foundation::rebuild_tests::rebuild_controls_and_degree_with_rollback ... ok
+test foundation::reparameterization_materialization::tests::json_materialization_reports_numerical_retention_and_refuses_depleted_work ... ok
+test curve_surface_agreement::tests::periodic_lift_crosses_seam_and_negative_periods ... ok
+test foundation::reparameterization_materialization::tests::common_map_weight_scale_does_not_exhaust_composed_weights ... ok
+test foundation::reparameterization_materialization::tests::nested_rational_maps_cross_source_knots_and_retain_authored_order ... ok
+test foundation::reparameterization_retention::residual_tests::partial_map_endpoint_is_checked_on_an_original_c0_source_knot ... ok
+test foundation::reparameterization_retention::residual_tests::correlated_composition_is_proved_in_one_cell_with_original_weighted_data ... ok
+test foundation::reparameterization_retention::tests::unchanged_endpoints_and_midpoint_do_not_hide_an_interior_distortion ... ok
+test foundation::reparameterization_retention::tests::whole_composition_bound_accepts_the_materialized_polynomial ... ok
+test foundation::reparameterization_materialization::tests::nonlinear_map_crosses_an_irrational_source_knot_preimage ... ok
+test foundation::surface_rebuild_tests::refuses_a_removed_bump_and_preserves_the_original ... ok
+test foundation::surface_rebuild_tests::surface_bound_detects_a_peak_between_uniform_samples ... ok
+test foundation::surface_rebuild_tests::surface_rebuild_never_accepts_an_overflowed_bound ... ok
+test foundation::surface_reduction_validation_tests::reduces_both_axes_with_zero_error ... ok
+test foundation::surface_reduction_validation_tests::rejects_degrees_before_unsigned_subtraction ... ok
+test framed_sweep::tests::circular_path_turns_profile_without_changing_section_length ... ok
+test foundation::reparameterization_retention::tests::all_c0_spans_are_covered_and_exhaustion_is_not_acceptance ... ok
+test framed_sweep::tests::closed_circle_has_periodic_storage_and_exact_position_seam ... ok
+test framed_sweep::tests::coincident_sections_do_not_make_an_open_path_periodic ... ok
+test framed_sweep::tests::refinement_detects_arc_error_and_improves_with_sections ... ok
+test framed_sweep::tests::refuses_closed_cusps_and_internal_corners ... ok
+test framed_sweep::tests::rejects_ambiguous_initial_frame_and_invalid_counts ... ok
+test framed_sweep::tests::straight_path_preserves_profile_and_translates ... ok
+test foundation::reparameterization_materialization::tests::scalar_parameters_do_not_inherit_geometric_coordinate_limits ... ok
+test framed_sweep::tests::nonplanar_periodic_path_distributes_holonomy_and_closes ... ok
+test continuity::preparation::tests::aligns_degrees_domains_and_knots_without_introducing_C0_seams ... ok
+test coons::tests::prepared_mixed_knots_and_conditioned_domains_keep_boundary_parameters ... ok
+test curve_offset::tests::rational_offset_error_bound_covers_dense_oracle ... ok
+test gordon::denominators::tests::common_denominator_preserves_incompatible_weighted_multispan_curves ... ok
+test gordon::denominators::tests::polynomial_denominators_do_not_consume_rational_degree_budget ... ok
+test gordon::cartesian::tests::cartesian_cells_retain_boundaries_with_incompatible_weights ... ok
+test gordon::tests::json_constructor_keeps_network_family_orientation ... ok
+test gordon::tests::refuses_incompatible_crossings_and_station_arrays ... ok
+test continuity::tests::rational_jets_match_all_boundary_pairs_in_normalized_coordinates ... ok
+test gordon::tests::preserves_nonlinear_network_and_matches_independent_gordon_formula ... ok
+test gordon::tests::retains_rational_arc_boundaries_between_crossings ... ok
+test gordon::tests::reproduces_independent_bilinear_network ... ok
+test grid_spline::tests::preserves_sites_of_the_panel_with_inferred_stationary_tangents ... ok
+test grid_spline::tests::matches_independent_product_of_natural_cubic_functions ... ok
+test gordon::cartesian::tests::clamped_cartesian_network_retains_weights_curves_and_tangent_fields ... ok
+test grid_spline::tests::validates_rectangle_parameters_and_budget_before_constructing ... ok
+test grid_spline::tests::reproduces_bilinear_geometry_and_nonuniform_authored_sites ... ok
+test guided_loft::authored_cartesian_tests::automatic_authored_units_survive_reversed_guide ... ok
+test guided_loft::tests::guides_and_tangent_controls_are_preserved_together ... ok
+test guided_loft::cartesian_tests::independent_guide_weights_and_missing_boundaries_are_retained ... ok
+test guided_loft::tests::json_preserves_guides_and_refuses_partial_tangent_fields ... ok
+test guided_loft::tests::rational_sections_and_full_guides_remain_on_independent_cylinder ... ok
+test guided_loft::tests::refuses_crossing_and_tangent_conflicts_and_invalid_guide_stations ... ok
+test guided_loft::tests::multiple_interior_guides_preserve_unconstrained_boundaries ... ok
+test hermite::tests::interpolates_sites_tangents_and_independent_cubic_polynomials ... ok
+test hermite::tests::json_dispatch_preserves_the_same_authored_constraints ... ok
+test hermite::tests::preserves_compensating_parameter_and_tangent_scales_and_refuses_rounding_collapse ... ok
+test hermite::tests::refuses_bad_parameters_counts_and_unrepresentable_controls ... ok
+test guided_loft::tests::single_interior_guide_matches_independent_quadratic_everywhere ... ok
+test intersection::bounded_curve_tests::unvisited_source_spans_remain_unresolved_at_box_limit ... ok
+test intersection::bounded_curve_tests::default_budget_keeps_existing_report_identical ... ok
+test interval_eval::tests::curve_enclosure_width_shrinks_with_interval ... ok
+test interval_eval::tests::invalid_inputs_are_rejected ... ok
+test guided_loft::authored_cartesian_tests::authored_units_retain_varying_rational_fields_and_refuse_exhaustion ... ok
+test guided_loft::clamped_cartesian_tests::clamped_guided_loft_retains_missing_boundaries_and_tangents ... ok
+test interval_eval::tests::surface_enclosure_contains_all_samples ... ok
+test loft_alignment::cartesian_tests::automatic_orientation_retains_independent_rational_guide_weights ... ok
+test interval_eval::tests::curve_enclosure_contains_all_samples ... ok
+test loft_alignment::tests::spatial_budget_cannot_relax_parameter_correspondence ... ok
+test loft_alignment::tests::overlap_and_inconsistent_stations_refuse ... ok
+test loft_alignment::clamped_cartesian_tests::automatic_clamped_loft_retains_reversed_rational_guide_and_tangents ... ok
+test loft_continuity::curved_tests::nonzero_curvature_is_matched_without_artificial_internal_c0_knots ... ok
+test loft_continuity::tests::conflicting_guide_is_refused ... ok
+test loft_continuity::orientation_tests::reversed_reference_and_scaled_normal_keep_authored_u_orientation ... ok
+test loft_alignment::tests::automatic_orientation_order_and_nonlinear_station_mapping ... ok
+test foundation::surface_rebuild_tests::rational_and_polynomial_rebuilds_bound_the_whole_patch ... ok
+test loft_reparameterization::tests::final_loft_audit_uses_original_tensor_not_a_rounded_isocurve ... ok
+test loft_continuity::tests::two_end_g2_retains_complete_sections ... ok
+test loft_reparameterization::tests::mapped_sections_accept_a_guide_that_crossed_different_source_parameters ... ok
+test loft_reparameterization::tests::json_loft_routes_section_maps_and_preserves_existing_unmapped_calls ... ok
+test loft_reparameterization::tests::final_loft_audit_retains_original_nonunit_composition_and_refuses_damage ... ok
+test foundation::periodic_surface_rebuild_tests::mixed_periodic_and_open_axes_preserve_cylinder_seam ... ok
+test loft_reparameterization::tests::partial_nonmonotone_and_mismatched_maps_refuse ... ok
+test loft_reparameterization::tests::piecewise_rational_maps_preserve_each_piece_with_different_endpoint_scales ... ok
+test loft_reparameterization::tests::nested_noncommuting_maps_match_authored_order_and_direct_evaluator ... ok
+test loft_reparameterization::tests::nonlinear_degree_nine_map_uses_the_actual_composed_degree_budget ... ok
+test moving_envelope::tests::discontinuous_source_charts_cannot_enter_the_envelope_pipeline ... ok
+test loft_reparameterization::tests::rational_mapping_retains_the_complete_section_and_independent_parameter_formula ... ok
+test moving_envelope::tests::partial_coverage_and_exhausted_budgets_cannot_admit_envelope ... ok
+test moving_envelope::tests::radius_relation_does_not_hide_oblique_normals ... ok
+test loft_reparameterization::tests::composed_piecewise_maps_certify_full_extents_instead_of_individual_piece_ranges ... ok
+test moving_radius::tests::invalid_radius_and_mismatched_parameter_domains_cannot_be_certified ... ok
+test natural_loft::tests::aligns_section_degree_knots_and_domain ... ok
+test natural_loft::tests::clamped_loft_preserves_constant_cartesian_boundary_tangents ... ok
+test loft_reparameterization::tests::affine_maps_preserve_multispan_source_geometry ... ok
+test natural_loft::tests::closed_loft_matches_independent_cyclic_cubic_and_section_sites ... ok
+test natural_loft::tests::closed_loft_rational_seam_has_matching_second_jets ... ok
+test natural_loft::tests::interpolates_rational_sections_at_nonuniform_stations ... ok
+test natural_loft::tests::json_boundary_retains_the_constructor_contract ... ok
+test natural_loft::tests::json_clamped_boundary_uses_authored_parameter_derivatives ... ok
+test natural_loft::tests::json_closed_loft_preserves_the_cycle_without_periodic_encoding ... ok
+test natural_loft::tests::json_control_tangent_loft_keeps_variable_boundary_derivative ... ok
+test natural_loft::tests::matches_independent_cubic_between_sections ... ok
+test natural_loft::tests::natural_homogeneous_boundary_has_nonzero_cartesian_second_derivative ... ok
+test natural_loft::tests::rejects_invalid_stations_and_weight_overshoot ... ok
+test natural_loft::tests::rational_second_jets_match_across_nonuniform_section_seam ... ok
+test natural_loft::tests::two_section_clamped_loft_matches_independent_hermite_basis ... ok
+test natural_spline::tests::clamped_reproduces_independent_cubic_and_authored_endpoint_derivatives ... ok
+test natural_loft::tests::varying_tangent_field_matches_independent_rational_hermite ... ok
+test natural_spline::tests::invalid_inputs_and_collapsed_intervals_are_refused ... ok
+test natural_spline::tests::independent_three_site_natural_solution_and_one_sided_jets ... ok
+test natural_spline::tests::json_dispatch_matches_native_interpolation ... ok
+test natural_spline::tests::line_stationary_sites_and_parameter_affine_invariance ... ok
+test natural_spline::tests::two_site_clamped_is_hermite_and_invalid_endpoint_conditions_are_refused ... ok
+test normal_alignment::tests::general_spatial_plane_does_not_depend_on_a_cartesian_axis ... ok
+test natural_spline::tests::many_nonuniform_sites_match_positions_and_both_join_derivatives ... ok
+test normal_alignment::tests::knot_sides_and_span_exhaustion_cannot_be_hidden ... ok
+test normal_alignment::tests::parallel_antiparallel_oblique_and_collapsed_normals_are_distinct ... ok
+test normal_alignment::tests::pair_normals_distinguish_tangency_fold_and_singular_transition ... ok
+test moving_radius::tests::all_original_knots_and_independent_law_partitions_are_covered ... ok
+test loft_reparameterization::tests::nonlinear_maps_cross_interior_section_knots_with_whole_retention ... ok
+test offset_contact_path::tests::planar_path_has_uniform_root_evidence_not_only_endpoint_samples ... ok
+test normal_alignment::tests::rational_original_derivatives_stay_enclosed_on_narrow_and_point_rectangles ... ok
+test offset_contact_predictor::tests::invalid_seed_radius_and_work_are_rejected_before_iteration ... ok
+test offset_contact_predictor::tests::parallel_separated_offsets_stop_without_a_certificate ... ok
+test offset_contact_tangent::tests::a_unique_contact_band_does_not_prove_a_regular_centerline ... ok
+test loft_reparameterization::tests::retention_includes_original_nonunit_section_normalization ... ok
+test offset_contact_tangent::tests::moving_plane_contacts_have_full_band_derivatives ... ok
+test offset_contact_tangent::tests::periodic_start_seams_cannot_admit_an_undefined_offset_normal ... ok
+test offset_contact_tangent::tests::curved_rational_cylinder_plane_branch_has_uniform_tangent_bounds_in_rotated_frames ... ok
+test offset_contact_tangent::tests::source_continuity_is_required_for_implicit_tangents ... ok
+test offset_contact_pcurve::tests::proposed_uv_curves_follow_both_original_contact_parameters ... ok
+test offset_contact_pcurve::tests::overlapping_source_chart_is_rejected_even_when_world_points_coincide ... ok
+test gordon::tangent_fields::tests::rational_boundary_derivative_includes_weight_derivative_and_authored_scale ... ok
+test offset_envelope::tests::both_signed_contact_sides_and_rigid_frames_are_admitted ... ok
+test offset_envelope::tests::curved_centerline_has_regular_envelope_in_rotated_frames ... ok
+test offset_envelope::tests::malformed_radius_and_budget_do_not_enter_envelope ... ok
+test offset_envelope::tests::quarter_cylinder_envelope_covers_entire_band_and_arc ... ok
+test offset_envelope::tests::work_stop_retains_full_unresolved_arc ... ok
+test offset_envelope_fit::tests::candidate_domains_and_continuity_are_part_of_admission ... ok
+test offset_contact_path::tests::curved_path_adapts_and_work_stop_preserves_the_requested_cover ... ok
+test offset_envelope_fit::tests::modified_patch_and_work_stop_cannot_gain_qualification ... ok
+test coons::tests::preparation_handles_nonbinary_corner_weights ... ok
+test offset_face_loops::tests::holes_wrong_contact_and_work_stop_do_not_gain_replacement_regions ... ok
+test offset_face_loops::tests::malformed_contact_is_not_hidden_by_exhausted_audit_budget ... ok
+test offset_face_loops::tests::multiple_selected_curves_and_unaffected_holes_keep_their_ownership ... ok
+test offset_face_loops::tests::piecewise_contact_keeps_original_edges_and_rejects_disconnected_path ... ok
+test offset_face_loops::tests::rational_contact_replaces_source_arc_with_exact_retained_definitions ... ok
+test offset_face_loops::tests::tangent_rational_corner_arc_replaces_two_original_boundary_edges ... ok
+test offset_face_loops::tests::wrapped_arc_in_rotated_chart_keeps_original_curve_addresses ... ok
+test offset_patch_boundary::tests::end_sections_and_contacts_share_exact_corners_without_knot_reflection ... ok
+test offset_patch_boundary::tests::rotated_patch_preserves_authored_boundary_controls_and_weights ... ok
+test offset_patch_boundary::tests::valid_unclamped_patch_cannot_gain_original_boundary_identity ... ok
+test offset_path_pcurves::tests::planar_source_pcurves_have_complete_branch_and_region_evidence ... ok
+test foundation::periodic_surface_rebuild_tests::both_periodic_axes_keep_wrapping_and_certify_dense_error ... ok
+test gordon::cartesian::tests::checked_curved_rational_network_retains_all_six_authored_curves ... ok
+test offset_path_pcurves::tests::station_and_correspondence_work_stops_cannot_admit_partial_curves ... ok
+test offset_path_trims::tests::malformed_second_region_cannot_hide_behind_first_work_stop ... ok
+test offset_path_trims::tests::membership_and_region_work_stops_keep_complete_unqualified_coverage ... ok
+test offset_source_boundary::tests::all_original_coedges_require_full_parameter_agreement ... ok
+test offset_source_boundary::tests::multispan_boundaries_keep_tolerance_and_exact_identity_separate ... ok
+test foundation::periodic_rebuild_tests::rebuilds_periodic_degrees_with_wrapped_controls_and_bounded_error ... ok
+test offset_source_boundary::tests::shared_boundary_limits_retain_unvisited_coedges_and_never_promote_approximation ... ok
+test paths::miter_sections::tests::cyclic_miter_preserves_seam_bisectors_and_segment_extrusion ... ok
+test paths::miter_sections::tests::cyclic_miter_refuses_unmatched_frame_holonomy ... ok
+test paths::miter_sections::tests::rejects_unbounded_corners_nonplanar_profiles_and_consumed_segments ... ok
+test paths::miter_sections::tests::right_angle_preserves_rational_profile_and_meets_bisector ... ok
+test paths::miter_sections::tests::spatial_segments_keep_corresponding_transverse_locations ... ok
+test paths::round_polyline::tests::closed_corners_match_seam_and_preserve_all_cyclic_fillets ... ok
+test curve_partition_agreement::tests::rational_multispan_partition_retains_original_parameter_coverage_and_bounded_error ... ok
+test paths::round_polyline::tests::refuses_overlapping_fillets_reversals_and_degenerate_segments ... ok
+test paths::round_polyline::tests::right_angle_has_exact_circle_radius_and_tangent_line_joins ... ok
+test offset_source_boundary::tests::out_of_domain_pcurves_never_gain_source_boundary_admission ... ok
+test paths::round_polyline::tests::transition_matches_position_tangent_and_zero_curvature_at_spatial_joins ... ok
+test paths::round_polyline::tests::transition_midpoint_and_derivative_follow_independent_quintic_formula ... ok
+test paths::tests::composition_preserves_rational_pieces_with_different_weight_scales_and_domains ... ok
+test paths::tests::json_paths_validate_weights_and_compose_references_as_curve_values ... ok
+test paths::tests::rational_bezier_matches_independent_homogeneous_casteljau ... ok
+test planar_area::tests::knot_domain_change_and_coordinate_scale_preserve_units ... ok
+test planar_area::tests::open_chain_and_invalid_budget_are_rejected ... ok
+test planar_area::tests::polynomial_area_reverse_translation_and_work_limit ... ok
+test offset_path_trims::tests::full_connected_path_requires_both_original_regions ... ok
+test planar_area::tests::signed_integral_does_not_claim_simple_material ... ok
+test polynomial::tests::constant_graph_and_invalid_inputs ... ok
+test polynomial::tests::degree_twelve_and_json_boundary_are_supported ... ok
+test polynomial::tests::matches_nonseparable_polynomial_and_derivatives ... ok
+test polynomial::tests::nonseparable_rational_patch_and_json_dispatch ... ok
+test polynomial::tests::rational_circle_chart_and_sign_normalization ... ok
+test paths::round_polyline::tests::cyclic_corner_paths_refine_with_closed_rmf_sections ... ok
+test primitives::canonical_quarter_tests::full_ellipse_and_signed_quadrants_share_authored_axis_coefficients ... ok
+test radial_bounds::tests::axis_gap_recomputes_original_rational_weights_and_controls ... ok
+test radial_bounds::tests::constant_radius_is_certified_from_polynomial_coefficients ... ok
+test ray_surface::tests::covers_two_separate_roots_without_seed_sampling ... ok
+test polynomial::tests::spatial_curve_and_overhanging_patch_follow_xyz_polynomials ... ok
+test ray_surface::tests::mid_plane_crossings_survive_subdivision_and_rounding_stays_explicit ... ok
+test ray_surface::tests::outer_boundary_roots_cannot_be_counted_as_isolated_interior_crossings ... ok
+test ray_surface::tests::rational_weights_and_multiple_spans_are_covered ... ok
+test ray_surface::tests::nonbinary_knots_and_negative_direction_keep_parameter_enclosures ... ok
+test ray_surface::tests::transverse_plane_root_and_exclusion ... ok
+test retained_wall_coefficients::tests::complete_family_checks_face_count_partition_and_source_damage ... ok
+test retained_wall_coefficients::tests::contour_json_boundary_does_not_claim_a_filled_region ... ok
+test retained_wall_coefficients::tests::cyclic_contours_preserve_weights_orientation_and_atomic_budget ... ok
+test ray_surface::tests::tangency_coincidence_and_limits_never_claim_empty_coverage ... ok
+test retained_wall_coefficients::tests::family_and_segmentation_json_boundaries_preserve_proof_scope ... ok
+test retained_wall_coefficients::tests::malformed_or_different_endpoint_weights_never_certify ... ok
+test retained_wall_coefficients::tests::json_boundary_reports_only_coefficient_identity ... ok
+test retained_wall_coefficients::tests::segmented_controls_preserve_authored_rows_and_refuse_partial_budget ... ok
+test retained_wall_coefficients::tests::normalized_ruled_wall_keeps_authored_rational_controls ... ok
+test retained_wall_coefficients::tests::three_edge_contour_rejects_permutation_and_accepts_opposite_traversal ... ok
+test retained_wall_domain::tests::retained_wall_domain_requires_matching_rational_parameterization ... ok
+test section_circle_repair::tests::preserves_shared_tangents_and_refuses_exhausted_budgets ... ok
+test section_circle_repair::transport_tests::json_round_trip_preserves_bounded_candidate_and_atomic_refusal ... ok
+test section_projection::tests::nonplanar_binary64_section_is_corrected_with_a_continuous_bound ... ok
+test retained_wall_domain::tests::retained_wall_domain_requires_complete_trim_and_exact_world_identity ... ok
+test surface::construction_tests::clamped_iso_preserves_authored_coordinates_and_nonuniform_weights ... ok
+test surface::construction_tests::rational_sweep_matches_sum_of_curves ... ok
+test surface::construction_tests::loft_aligns_degrees_and_domains ... ok
+test surface_contact::tests::boundary_contact_and_invalid_boxes_are_not_certificates ... ok
+test surface_contact::tests::alternate_axis_rational_weights_and_nonunit_domains ... ok
+test surface_contact::tests::crossing_planes_have_a_certified_contact ... ok
+test surface_contact::tests::curved_contact_and_singular_coincidence ... ok
+test surface_contact_search::tests::coincident_charts_keep_full_parameter_coverage ... ok
+test surface_contact_search::tests::separated_charts_are_proven_and_crossing_retains_unresolved_volume ... ok
+test paths::round_polyline::tests::spatial_round_path_is_accepted_by_progressive_rmf ... ok
+test surface_contact_search::tests::tangent_root_is_never_lost_at_subdivision_boundaries ... ok
+test surface_distance::tests::original_knots_multiple_spans_and_periodic_seam ... ok
+test surface_distance::tests::planes_and_interior_point_projection ... ok
+test surface_distance::tests::rational_cylinder_patch_and_weight_scaling ... ok
+test surface_distance::tests::translation_and_invalid_inputs ... ok
+test surface_distance::tests::work_limit_is_not_a_completed_minimum ... ok
+test surface_flux::tests::original_domain_area_and_flux_orientation_are_not_normalized_twice ... ok
+test surface_flux::tests::span_partition_and_rational_density_enclose_original_point_samples ... ok
+test surface_distance::tests::joint_minimum_inside_both_curved_surfaces ... ok
+test surface_injectivity::tests::all_spans_must_pass_the_same_global_test ... ok
+test surface_injectivity::tests::clamped_pole_reports_missing_quotient_proof_without_spending_budget ... ok
+test surface_injectivity::tests::diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage ... ok
+test surface_injectivity::tests::folded_and_collapsed_charts_never_claim_injectivity ... ok
+test surface_injectivity::tests::nonlinear_graph_and_vertical_rotation_are_globally_injective ... ok
+test surface_injectivity::tests::normal_bounds_cover_graph_derivatives_and_do_not_collapse_at_points ... ok
+test surface_injectivity::tests::normal_bounds_keep_both_knot_sides_and_refuse_partial_coverage ... ok
+test surface_injectivity::tests::perspective_projection_requires_a_nonzero_denominator_and_full_global_coverage ... ok
+test surface_injectivity::tests::polar_jacobian_bounds_contain_independent_rational_coordinate_derivatives ... ok
+test surface_injectivity::tests::polar_projection_requires_global_coverage_continuity_and_two_independent_parameters ... ok
+test surface_injectivity::tests::rational_normal_bounds_contain_an_independent_separable_formula ... ok
+test surface_linear_monotonicity::tests::folded_chart_cannot_change_projection_between_spans ... ok
+test surface_linear_monotonicity::tests::rational_quarter_wall_has_one_global_oblique_projection ... ok
+test surface_contact_search::tests::overlapping_initial_bounds_need_subdivision_to_prove_separation ... ok
+test surface_linear_monotonicity::tests::transverse_proposal_does_not_mix_long_station_motion_into_profile_row ... ok
+test offset_contact_trims::tests::modified_pcurve_and_malformed_second_operand_cannot_be_hidden_by_earlier_stops ... ok
+test surface_measure::jets::tests::mixed_polynomial_jets_and_corners_match_independent_equations ... ok
+test surface_measure::jets::tests::stable_jets_on_ulp_wide_queries_match_original_rational_derivatives ... ok
+test surface_measure::jets::tests::rational_third_jets_match_separable_weighted_chart ... ok
+test surface_monotonicity::tests::constant_coordinate_does_not_spend_budget_on_impossible_projections ... ok
+test surface_monotonicity::tests::oblique_patch_is_injective_and_exhaustion_is_unproved ... ok
+test surface_monotonicity::tests::locally_regular_fold_cannot_use_different_projections_per_span ... ok
+test surface_monotonicity::tests::rational_reversed_projection_is_certified ... ok
+test surface_offset::tests::collapsed_offset_carrier_cannot_certify_a_unique_contact ... ok
+test surface_monotonicity::tests::positive_rational_reparameterization_needs_bounded_refinement ... ok
+test surface_linear_monotonicity::tests::spatial_station_uses_a_fixed_transverse_integer_projection ... ok
+test surface_offset::tests::contact_band_covers_every_driving_parameter_and_refuses_an_inadequate_tube ... ok
+test surface_offset::tests::crossing_offset_planes_have_a_unique_section_center ... ok
+test surface_offset::tests::offset_contact_does_not_infer_continuity_from_a_periodic_flag ... ok
+test surface_offset::tests::offset_jacobian_keeps_both_incident_knot_sides_and_budget_limits ... ok
+test surface_offset::tests::periodic_endpoints_include_the_wrapped_parameter_branch ... ok
+test surface_offset::tests::periodic_start_bounds_include_the_incident_end_side ... ok
+test surface_offset::tests::offset_intersection_excludes_only_complete_disjoint_carriers ... ok
+test surface_offset::tests::rational_cylinder_plane_offsets_have_a_certified_contact_section ... ok
+test surface_offset::tests::reversing_a_surface_parameter_requires_reversing_the_signed_offset ... ok
+test surface_offset::tests::signed_plane_offsets_and_jets_preserve_authored_geometry ... ok
+test surface_offset::tests::singular_offset_regions_remain_pending_and_invalid_inputs_are_not_hidden ... ok
+test surface_offset::tests::singular_source_and_budget_exhaustion_keep_offset_image_unproven ... ok
+test surface_offset::tests::subnormal_regular_source_normals_do_not_require_an_overflowing_reciprocal ... ok
+test surface_projected_jordan::tests::fold_and_work_exhaustion_do_not_grant_global_projection ... ok
+test surface_projected_jordan::tests::square_and_collapsed_triangle_have_owned_original_projections ... ok
+test surface_projection_jacobian::tests::original_chart_certificate_owns_geometry_and_budget_refuses ... ok
+test surface_projection_jacobian::tests::unsupported_axes_and_periodic_charts_are_errors ... ok
+test surface_offset::tests::rational_cylinder_offsets_cover_complete_parameter_cells ... ok
+test surface_quotient_injectivity::tests::collapsed_triangle_is_injective_only_after_identifying_its_pole_boundary ... ok
+test surface_quotient_injectivity::tests::folding_the_transverse_parameter_is_not_hidden_by_a_collapsed_boundary ... ok
+test surface_quotient_injectivity::tests::polar_blowup_preserves_original_nonunit_charts_and_both_pole_ends ... ok
+test surface_quotient_injectivity::tests::ruled_budget_exhaustion_has_no_direction_certificate ... ok
+test gordon::cartesian::tests::cartesian_cells_retain_three_by_three_rational_network ... ok
+test surface_quotient_injectivity::tests::ruled_fold_repeated_ray_and_nonconstant_pole_remain_unproven ... ok
+test surface_quotient_injectivity::tests::ruled_ray_ratio_covers_nonunit_domains_and_independent_weight_rows ... ok
+test surface_self_chord::tests::independent_parabola_chords_and_reversed_coordinates_stay_inside_bound ... ok
+test surface_self_chord::tests::local_rectangle_spends_only_intersecting_original_spans ... ok
+test surface_self_chord::tests::local_certificate_retains_its_rectangle_and_does_not_prove_full_chart ... ok
+test surface_self_chord::tests::missing_knot_span_or_discontinuous_chart_never_excludes ... ok
+test surface_self_chord::tests::original_rational_weights_have_continuous_exclusion_with_analytic_oracle ... ok
+test surface_self_chord::tests::whole_curved_graph_excludes_aligned_chords_and_retains_source_identity ... ok
+test surface_quotient_injectivity::tests::polar_blowup_refuses_fold_repeated_direction_nonpole_and_work_limit ... ok
+test sweep_cap_boundary::tests::rational_composition_and_refusals_cover_whole_boundary ... ok
+test sweep_cap_wall::tests::whole_side_coverage_uses_continuity_and_exact_endpoints ... ok
+test sweep_cap_wall::tests::whole_wall_exclusion_distinguishes_boundaries_and_unresolved_crossings ... ok
+test sweep_contour_audit::tests::continuous_outer_hole_ownership_requires_simple_separated_contours ... ok
+test sweep_contour_audit::tests::json_transport_retains_scope_and_budget_refusals ... ok
+test sweep_contour_audit::tests::nonplanar_and_crossed_contours_never_promote_cap_domain ... ok
+test surface_flux::tests::taylor_bounds_enclose_independent_polynomial_integrals_on_nonunit_domains ... ok
+test sweep_pair_audit::tests::every_pair_remains_covered_and_shared_boundaries_are_not_skipped ... ok
+test sweep_pair_audit::tests::exact_shared_edge_is_allowed_only_with_proved_opposite_interiors ... ok
+test surface_offset::tests::general_spatial_rational_patch_offset_bounds_and_jets ... ok
+test sweep_pair_audit::tests::linear_oblique_boundary_requires_opposite_interiors ... ok
+test sweep_pair_audit::tests::hierarchy_covers_each_leaf_pair_once_under_every_budget ... ok
+test sweep_pair_audit::tests::oblique_shared_plane_uses_checked_exact_orientation ... ok
+test planar_area::tests::rational_circle_and_multispan_parameterization_enclose_area ... ok
+test sweep_pair_audit::tests::rational_tensor_profile_boundaries_require_opposite_interior_hulls ... ok
+test sweep_seam_audit::tests::ruled_second_jets_keep_rational_weight_terms ... ok
+test sweep_seam_audit::tests::separates_first_second_jets_and_exhausted_seams_without_editing ... ok
+test sweep_seam_audit::tests::sharp_or_singular_seam_cannot_promote_to_smooth ... ok
+test sweep_seam_audit::tests::transport_retains_unproved_budget_and_explicit_tolerance_contract ... ok
+test sweep_seam_set::tests::empty_set_has_no_claim_and_limits_are_native ... ok
+test sweep_seam_set::tests::missing_patch_is_rejected_before_predicate_execution ... ok
+test sweep_seam_set::tests::repeated_seams_charge_one_shared_budget_and_refuse_exhaustion ... ok
+test sweep_section_correction::tests::correction_family_preserves_sources_and_refuses_incompatible_weights ... ok
+test sweep_section_correction::tests::projection_family_shares_work_and_requires_unique_station_corrections ... ok
+test sweep_support::error_upper::tests::error_upper_preserves_zero_and_refuses_invalid_or_overflow ... ok
+test sweep_support::error_upper::tests::sqrt_two_upper_has_independent_exact_squared_oracle ... ok
+test sweep_support::error_upper::tests::transport_owns_rounding_and_complete_boundary_admission ... ok
+test sweep_seam_audit::tests::actual_corner_translation_sweeps_qualify_declared_orders ... ok
+test sweep_support::exact_curve_segments::tests::unclamped_exact_blossoms_certify_hollow_original_domains ... ok
+test curve_offset::tests::periodic_offset_closes_with_a_bounded_seam ... ok
+test sweep_wall_audit::tests::declared_c0_boundary_is_independent_of_pair_separation ... ok
+test sweep_wall_audit::tests::disconnected_parameter_chart_is_rejected_before_audit ... ok
+test sweep_wall_audit::tests::json_boundary_preserves_evidence_and_independent_budget_refusals ... ok
+test sweep_wall_audit::tests::constructor_transport_derives_path_neighbors_and_rejects_correspondence_changes ... ok
+test sweeps::filled_cap_error::tests::boundary_union_refuses_missing_open_caps_and_invalid_bounds ... ok
+test sweeps::filled_cap_error::tests::cap_composition_requires_all_premises_and_both_endpoints ... ok
+test sweeps::filled_cap_error::tests::cap_error_transport_keeps_conditional_bounds_distinct_from_continuous_admission ... ok
+test sweeps::profile_certificate::tests::affine_rational_profile_has_rounding_inclusive_continuous_bound ... ok
+test sweeps::profile_certificate::tests::budgets_and_changed_retained_geometry_never_publish_partial_bounds ... ok
+test sweep_wall_audit::tests::separation_does_not_mask_folded_chart_or_shared_budget_exhaustion ... ok
+test sweeps::profile_certificate::tests::hidden_stationary_tangent_is_unresolved ... ok
+test sweeps::profile_certificate::tests::open_spatial_frame_bound_is_tight_and_parameter_invariant ... ok
+test sweeps::profile_certificate::tests::planar_curved_source_is_bounded_between_stations ... ok
+test sweeps::profile_geometry::tests::exhausted_work_and_one_ulp_periodic_knot_tampering_refuse ... ok
+test sweep_contour_audit::tests::segmented_circle_coefficients_transfer_exactly_into_domain_audit ... ok
+test sweeps::progressive_miter::authored_frame_certificate::guided_axis::tests::authored_guide_points_share_budget_and_refuse_parallel_rails ... ok
+test sweeps::progressive_miter::authored_frame_certificate::guided_axis::tests::moving_authored_axis_guide_encloses_original_normalized_jets ... ok
+test sweeps::progressive_miter::authored_frame_certificate::tests::guide_projection_jets_follow_the_original_rail_and_shared_budget ... ok
+test sweeps::progressive_miter::authored_frame_certificate::tests::rational_frame_encloses_all_axes_and_chain_rule_derivatives ... ok
+test sweeps::progressive_miter::authored_frame_certificate::tests::rotating_frame_has_normalized_traversal_jets_and_shared_budget ... ok
+test moving_envelope::tests::full_original_chart_radial_normals_have_qualified_coverage ... ok
+test sweeps::progressive_miter::authored_frame_certificate::tests::singular_and_parallel_directions_refuse_without_partial_frame ... ok
+test sweeps::progressive_miter::authored_frame_certificate::tests::twist_uses_independent_domain_and_shared_frame_budget ... ok
+test sweeps::progressive_miter::cap_projection_certificate::tests::parallel_oblique_and_reflected_planes ... ok
+test sweeps::progressive_miter::cap_projection_certificate::tests::perpendicular_uncertain_and_exhausted_refuse ... ok
+test sweeps::progressive_miter::cap_projection_certificate::tests::scaled_near_perpendicular_certificates_enclose_analytic_dot ... ok
+test sweeps::progressive_miter::cap_retained_plane_certificate::tests::exact_parallel_axis_and_one_ulp_tilt ... ok
+test sweeps::progressive_miter::cap_retained_plane_certificate::tests::original_oblique_normal_and_projection ... ok
+test sweeps::progressive_miter::cap_endpoint_certificate::tests::original_endpoint_normals_and_shared_budget ... ok
+test sweeps::progressive_miter::cap_retained_plane_certificate::tests::warped_degenerate_and_exhausted_have_no_normal ... ok
+test sweeps::progressive_miter::frame_certificate::tests::affine_remainder_covers_center_curvature_and_axial_projection_derivative ... ok
+test sweeps::progressive_miter::frame_certificate::tests::affine_station_projects_the_same_axis_scale_and_center_into_corner_plane ... ok
+test sweeps::progressive_miter::frame_certificate::tests::authored_station_keeps_path_projection_and_one_law_budget ... ok
+test sweeps::progressive_miter::frame_certificate::tests::degeneracy_limits_and_budget_discard_partial_frames ... ok
+test sweeps::progressive_miter::frame_certificate::tests::independent_right_angle_minimum_rotation ... ok
+test sweeps::progressive_miter::frame_certificate::tests::authored_remainder_covers_rotation_and_axial_miter_scale_product ... ok
+test sweeps::progressive_miter::frame_certificate::tests::integrated_station_laws_preserve_budget_refusal ... ok
+test sweeps::progressive_miter::frame_certificate::tests::interpolation_certificate_bounds_sinusoidal_midpoint_error ... ok
+test sweeps::progressive_miter::frame_certificate::tests::miter_shear_encloses_exact_corner_plane_and_open_endpoint ... ok
+test sweeps::progressive_miter::frame_certificate::tests::rotated_frame_encloses_exact_axes_and_continuous_twist_range ... ok
+test sweeps::progressive_miter::frame_certificate::tests::skew_closed_transport_encloses_holonomy_angle ... ok
+test sweeps::progressive_miter::frame_certificate::tests::ordinary_affine_endpoint_uses_values_without_zero_width_jets ... ok
+test sweeps::progressive_miter::frame_certificate::tests::stored_error_bound_covers_ideal_box_and_displaced_point ... ok
+test sweeps::progressive_miter::frame_certificate::tests::traversal_encloses_exact_rational_chord_ratios ... ok
+test sweeps::progressive_miter::frame_certificate::tests::station_composition_preserves_translated_profile_and_corner ... ok
+test sweep_support::exact_curve_segments::tests::refuses_rounded_arithmetic_and_certifies_exact_spans ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::exhaustion_discards_partial_bounds_and_knots_disable_second_order_remainder ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::huge_constant_origins_do_not_pollute_derivative_bounds ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::independent_linear_jet_on_a_nonunit_domain ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::normalized_mapping_covers_nonunit_endpoints_and_interior_points ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::rational_jets_cover_nondyadic_probes_without_trim ... ok
+test sweeps::progressive_miter::scalar_certificate::tests::unrepresentable_jet_is_unresolved_instead_of_a_partial_certificate ... ok
+test sweeps::progressive_miter::tests::admission_requires_certified_rounding_bound_even_when_samples_match ... ok
+test sweeps::progressive_miter::profile_domain_certificate::tests::original_coordinate_and_oblique_hollow_domains ... ok
+test sweeps::progressive_miter::profile_domain_certificate::tests::endpoint_domains_cover_affine_authored_and_guide_and_refuse_singular_frames ... ok
+test sweeps::progressive_miter::tests::affine_generator_retains_laws_and_certifies_entire_interpolated_profile ... ok
+test sweeps::profile_geometry::tests::periodic_radial_and_height_projections_certify_complete_strips ... ok
+test sweeps::progressive_miter::tests::authored_frame_generation_refines_and_certifies_original_profile_interpolation ... ok
+test sweeps::progressive_miter::tests::constant_laws_match_existing_extrusion_miter_sections ... ok
+test sweeps::progressive_miter::tests::discontinuous_laws_are_refused_and_internal_corners_use_lipschitz_bound ... ok
+test sweeps::progressive_miter::tests::affine_closed_miter_checks_law_closure_and_last_retained_interval ... ok
+test sweeps::progressive_miter::tests::distributed_twist_corrects_skew_loop_holonomy_and_shares_all_corners ... ok
+test sweeps::progressive_miter::tests::combined_authored_frame_affine_laws_certify_actual_interpolation ... ok
+test sweeps::progressive_miter::tests::progression_keeps_unaccepted_preview_and_can_resume_without_promoting_it ... ok
+test sweeps::progressive_miter::tests::real_arithmetic_bound_covers_nondyadic_rational_law_interpolation ... ok
+test sweeps::progressive_miter::tests::retained_level_certificate_counts_stored_error_and_discards_partial_budget ... ok
+test sweeps::progressive_miter::tests::local_phase_hulls_prevent_whole_turn_probe_aliasing ... ok
+test sweeps::progressive_miter::tests::guide_affine_generation_certifies_actual_rail_orientation ... ok
+test sweeps::progressive_miter::tests::unresolved_transport_limit_cannot_promote_a_zero_error_level ... ok
+test sweeps::progressive_miter::tests::wall_regularity_refuses_valid_sections_with_changed_periodicity ... ok
+test sweeps::progressive_miter::trigonometric_certificate::tests::atan2_rectangles_cover_quadrants_axes_and_unresolved_branch ... ok
+test sweeps::progressive_miter::trigonometric_certificate::tests::independently_encloses_pi_and_exact_zero ... ok
+test sweeps::progressive_miter::trigonometric_certificate::tests::interval_covers_all_quadrants_and_interior_probes ... ok
+test sweeps::progressive_miter::trigonometric_certificate::tests::narrow_many_turns_enclose_reference_without_assuming_libm_rounding ... ok
+test sweeps::progressive_miter::trigonometric_certificate::tests::wide_and_huge_angles_keep_a_certified_global_range ... ok
+test sweeps::progressive_miter::vector_certificate::tests::center_offsets_can_be_negative_but_axis_scale_cannot ... ok
+test sweeps::progressive_miter::vector_certificate::tests::shared_budget_discards_partial_axis_hulls ... ok
+test sweeps::progressive_sweep::tests::anisotropic_scale_center_and_twist_match_independent_rational_equation ... ok
+test sweep_pair_audit::tests::overlapping_boxes_use_rational_pair_refinement ... ok
+test sweeps::progressive_sweep::tests::authored_frame_transport_requires_both_laws_and_preserves_metadata ... ok
+test sweeps::progressive_sweep::tests::authored_frames_refuse_sampled_zero_parallel_and_inconsistent_closed_seam ... ok
+test sweeps::progressive_sweep::tests::authored_full_frames_match_independent_equation_and_restart ... ok
+test sweeps::progressive_sweep::tests::authored_shared_grid_and_closed_frame_seam_preserve_retained_sections ... ok
+test sweeps::progressive_sweep::tests::changing_affine_laws_restarts_an_already_accepted_preview ... ok
+test sweeps::progressive_sweep::tests::closed_affine_laws_must_match_at_the_seam ... ok
+test sweeps::progressive_sweep::tests::closed_rmf_with_full_turn_retains_scale_and_twist_seam ... ok
+test sweeps::progressive_sweep::tests::contact_closed_seam_refuses_matching_normals_with_mismatched_widths ... ok
+test sweeps::progressive_miter::tests::scalar_laws_follow_independent_scaled_full_turn_and_fail_closed_mismatch ... ok
+test sweeps::progressive_sweep::tests::contact_guide_fits_rational_anchor_at_every_retained_station ... ok
+test sweeps::progressive_sweep::tests::corrected_frenet_continues_across_a_cubic_inflection_and_straight_path ... ok
+test sweeps::progressive_sweep::tests::corrected_frenet_handles_a_c1_straight_to_curved_join_without_a_defined_second_derivative ... ok
+test sweeps::progressive_sweep::tests::corrected_frenet_resolves_zero_initial_curvature_from_the_first_principal_normal ... ok
+test sweeps::progressive_sweep::tests::dense_profiles_split_without_refitting_and_patch_domains_match ... ok
+test sweeps::progressive_sweep::tests::corrected_frenet_closes_a_rational_circle_with_full_turn_twist ... ok
+test sweeps::progressive_sweep::tests::fixed_orientation_accepts_a_piecewise_linear_path_with_corners ... ok
+test sweeps::progressive_sweep::tests::fixed_frenet_and_normal_orientation_are_distinct_and_fail_singular_frames ... ok
+test sweeps::progressive_sweep::tests::iterator_previews_resume_without_promoting_failed_budget ... ok
+test sweeps::progressive_sweep::tests::independent_preview_levels_preserve_iterator_state_and_admission ... ok
+test sweeps::progressive_sweep::tests::multiple_profiles_refine_together_and_preserve_authored_boundary_joins ... ok
+test sweeps::progressive_sweep::tests::orientation_guide_closed_seam_and_shared_contours ... ok
+test sweeps::progressive_miter::tests::unproved_profile_regularity_refuses_even_a_certified_zero_error_level ... ok
+test sweeps::progressive_sweep::tests::orientation_guide_transport_refuses_conflicting_frames ... ok
+test sweeps::progressive_sweep::tests::orientation_guide_matches_projected_rational_correspondence_and_restarts ... ok
+test sweeps::progressive_sweep::tests::rejects_kinks_and_invalid_resource_budgets ... ok
+test sweeps::progressive_sweep::tests::shared_contact_anchor_preserves_hole_widths_and_restarts_aggregate_grid ... ok
+test sweeps::progressive_sweep::tests::rational_outer_and_reversed_inner_contours_remain_separate_without_refit ... ok
+test sweeps::progressive_sweep::tests::tiny_open_path_is_not_mistaken_for_a_closed_loop ... ok
+test sweeps::progressive_sweep::tests::simultaneous_scale_twist_and_rational_profile_matches_independent_equation ... ok
+test sweeps::scalar::tests::differing_internal_knots_preserve_both_laws ... ok
+test sweeps::scalar::tests::invalid_laws_and_resource_limits_refuse ... ok
+test sweeps::scalar::tests::profile_sweep_scale_and_sampled_refusal ... ok
+test sweeps::scalar::tests::rational_scaled_surface_preserves_formula_jets_and_source_data ... ok
+test tests::brush_moves_controls_locally_and_preserves_rational_definition ... ok
+test tests::brush_rejects_invalid_brushes_and_inputs ... ok
+test tests::certified_general_surface_surface_intersection ... ok
+test tests::certified_projection_reports_uniqueness_and_ambiguity ... ok
+test tests::edits_preserve_geometry_and_domain ... ok
+test tests::foundation_boundary_and_mutation_limits_are_deterministic ... ok
+test tests::foundation_curve_certificate_is_outward_and_positive ... ok
+test tests::foundation_handles_adversarial_positive_weights_and_surface_cells ... ok
+test offset_contact_trims::tests::original_holes_and_shared_work_stop_cannot_gain_contact_trims ... ok
+test tests::foundation_v3_reparameterization_and_fitting_are_typed ... ok
+test sweeps::progressive_miter::tests::certified_closed_rational_levels_cover_profile_interior_and_cyclic_ownership ... ok
+test tests::foundation_v5_adversarial_scales_seams_and_weights ... ok
+test tests::foundation_v5_certified_curve_curve_and_curve_surface ... ok
+test tests::interpolation_approximation_and_exact_reparameterization_are_certified ... ok
+test tests::malformed_boundary_input_returns_errors_without_poisoning_kernel ... ok
+test tests::natural_endpoints_and_periodic_seams_are_supported ... ok
+test tests::output_budget_is_checked_before_elevation ... ok
+test tests::rational_circle_has_analytic_jets ... ok
+test tests::sculpt_edits_preserve_rational_definition ... ok
+test tests::sculpt_targets_expose_polygon_and_net_structure ... ok
+test tests::successor_normal_cone_and_reduction_rollback_are_explicit ... ok
+test tests::foundation_v3_periodic_edits_preserve_wrapping_and_seam_evidence ... ok
+test tests::surface_construction_and_iso_are_consistent ... ok
+test transport::retained_body_coverage::tests::retained_body_coverage_checks_inner_shell_ownership ... ok
+test transport::retained_body_coverage::tests::retained_body_coverage_refuses_missing_duplicate_and_wrong_owners ... ok
+test curve_offset::tests::noncircular_multispan_offset_preserves_domain_and_bounds ... ok
+test offset_envelope_fit::tests::curved_rational_contact_produces_a_finite_patch_with_uniform_error_in_rotated_frames ... ok
+test transport::surface_offset_transport_tests::offset_band_transport_exposes_uniform_coverage_without_global_admission ... ok
+test transport::surface_offset_transport_tests::offset_candidate_transport_retains_incomplete_work_and_validates_second_operand ... ok
+test transport::surface_offset_transport_tests::offset_contact_tangent_transport_does_not_admit_an_envelope ... ok
+test transport::surface_offset_transport_tests::offset_envelope_transport_keeps_full_arc_and_topology_gates ... ok
+test transport::surface_offset_transport_tests::offset_section_transport_does_not_promote_a_contact_to_a_whole_fillet ... ok
+test transport::surface_offset_transport_tests::offset_source_boundary_transport_requires_all_original_spatial_coedges ... ok
+test transport::surface_offset_transport_tests::offset_transport_preserves_numerical_and_interval_claim_boundaries ... ok
+test transport::surface_offset_transport_tests::trimmed_offset_band_transport_requires_whole_domain_membership ... ok
+test trim_domain::tests::bounded_joins_are_explicit_and_large_gaps_are_rejected ... ok
+test trim_domain::tests::exact_joins_distinguish_tiny_gaps_and_unclamped_endpoints ... ok
+test trim_domain::tests::general_weighted_cubic_loops_and_non_knot_boundary_point ... ok
+test trim_domain::tests::periodic_curve_and_crossing_path_keep_winding_semantics ... ok
+test trim_domain::tests::rational_circle_hole_and_orientation ... ok
+test trim_domain::tests::square_regions_vertices_and_full_rectangles ... ok
+test trim_domain::tests::translation_scaling_and_resource_stops ... ok
+test trim_point::screen_tests::refuses_ambiguous_screen_depth_and_degenerate_projection ... ok
+test trim_point::screen_tests::screen_pick_trims_original_depth_and_uses_pixel_capture_distance ... ok
+test trim_point::subdivision_regression::retains_stationary_root_on_subdivision_boundary_for_tilted_arc ... ok
+test trim_point::tests::dispatch_returns_a_trim_report_and_preserves_the_cut_interval ... ok
+test trim_point::tests::refuses_ambiguous_distant_endpoint_and_closed_inputs ... ok
+test trim_point::tests::retains_the_exact_rational_arc ... ok
+test trim_point::tests::trims_both_sides_of_a_rational_line_without_changing_the_source ... ok
+test trim_region_audit::tests::correct_hole_and_reversed_whole_region_are_admitted ... ok
+test trim_region_audit::tests::multispan_rational_outer_with_hole_is_audited_without_chords ... ok
+test trim_region_audit::tests::resource_limits_preserve_unknown_and_do_not_modify_inputs ... ok
+test trim_region_audit::tests::wrong_orientation_outside_nested_and_touching_holes_are_not_admitted ... ok
+test trim_simplicity::tests::coincident_edges_and_small_work_never_bypass_pair_checks ... ok
+test trim_simplicity::tests::multispan_rational_boundary_preserves_original_definition ... ok
+test trim_simplicity::tests::multispan_returning_boundary_never_receives_injectivity_proof ... ok
+test trim_simplicity::tests::rational_quarter_arcs_form_a_simple_loop ... ok
+test trim_simplicity::tests::rotated_rational_arcs_use_interval_separating_directions ... ok
+test trim_simplicity::tests::square_bowtie_and_incomplete_work_are_distinct ... ok
+test trimmed_offset_contact::tests::rational_outer_contours_and_disjoint_holes_preserve_admission ... ok
+test offset_contact_trims::tests::both_contact_curves_follow_original_regions_and_patch_columns ... ok
+test trimmed_offset_contact::tests::region_roles_and_shared_work_limits_cannot_be_bypassed ... ok
+test trimmed_surface_distance::tests::budgets_keep_coverage_and_do_not_fabricate_a_witness ... ok
+test trimmed_surface_distance::tests::empty_domain_is_distinct_from_contact ... ok
+test trimmed_offset_contact::tests::whole_contact_band_must_be_inside_both_audited_original_regions ... ok
+test trimmed_surface_distance::tests::excludes_hole_interior_from_upper_witnesses ... ok
+test trimmed_surface_distance::tests::periodic_witness_stays_in_the_admitted_uv_branch ... ok
+test trimmed_surface_distance::tests::two_finite_trimmed_patches_approach_the_hole_boundary ... ok
+test uv_curve_crossings::tests::coincidence_and_budget_stop_never_admit_crossings ... ok
+test uv_curve_crossings::tests::crossing_nonunit_domains_and_excluded_pair ... ok
+test offset_contact_trims::tests::curved_contact_trims_keep_uv_world_and_patch_correspondence_in_rotated_frames ... ok
+test uv_curve_crossings::tests::rational_crossing_refines_to_requested_original_parameter_widths ... ok
+test uv_curve_crossings::tests::refinement_preserves_certified_root_when_requested_precision_cannot_be_reached ... ok
+test uv_curve_crossings::tests::supplied_boxes_are_rechecked_against_original_spans ... ok
+test sweeps::progressive_sweep::tests::arc_length_stations_and_laws_ignore_nonlinear_rational_path_parameter ... ok
+test offset_envelope_fit::tests::rational_patch_is_qualified_over_the_full_parameter_rectangle ... ok
+test uv_curve_crossings::tests::rational_arc_crossing_preserves_original_parameters ... ok
+test surface_self_chord_coverage::tests::rational_half_cylinder_with_short_exact_normal_chord_cannot_qualify ... ok
+test sweeps::profile_geometry::tests::exact_two_cover_is_regular_but_must_not_be_globally_admitted ... ok
+test transport::surface_offset_transport_tests::contact_qualification_delivery_binds_snapshot_and_retains_angular_work_stops ... ok
+test tests::successor_projection_covers_rational_stationary_and_surface_boundaries ... ok
+test tests::foundation_v4_closes_pre_intersection_gaps ... ok
+test sweeps::progressive_sweep::tests::orientation_guide_arc_length_correspondence_and_degeneracy_refusals ... ok
+test surface_self_chord_coverage::tests::complete_subdivision_proves_strongly_curved_graph_and_missing_work_refuses ... ok
+test transport::surface_offset_transport_tests::finite_envelope_transport_binds_candidate_and_complete_partition ... ok
+test curve_offset::tests::connected_result_keeps_source_parameterization_and_bound ... ok
+test offset_path_pcurves::tests::rational_contact_adapts_with_bit_identical_shared_uv_endpoints ... ok
+test trimmed_surface_distance::tests::rational_circular_hole_excludes_the_surface_center ... ok
+test sweeps::scalar::tests::closed_rmf_seam_requires_matching_scale has been running for over 60 seconds
+test sweeps::scalar::tests::closed_rmf_seam_requires_matching_scale ... ok
+
+test result: ok. 694 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 89.00s
+
+     Running tests/loft_capacity.rs (crates/target/debug/build/nurbs-core/8700684c6cf8298c/out/loft_capacity-8700684c6cf8298c)
+
+running 2 tests
+test natural_loft_retains_all_86_sections_at_256_control_boundary ... ok
+test twelve_sections_and_ten_guides_cross_previous_limits_without_refitting ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+   Doc-tests nurbs_core
+
+running 1 test
+test nurbs-core/src/lib.rs - (line 10) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.40s; merged doctests compilation took 0.31s

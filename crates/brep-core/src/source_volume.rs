@@ -240,9 +240,15 @@ pub fn qualify(geometry: Geometry, limits: Limits) -> Result<Report> {
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
             [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
         ];
-        let planar=crate::source_planar_flux::bound(&geometry,face,limits.axis,limits.origin,
-            limits.absolute_error/(8.*geometry.shell().faces().len() as f64),
-            (limits.cells-out.cells).min(limits.spans-out.spans))?;
+        // Full charts already have a direct tensor-flux integral. Boundary
+        // quadrature is needed for retained trims, and can consume more work.
+        let planar = if geometry.shell().regions().unwrap()[face].whole_chart_material() {
+            crate::source_planar_flux::Report { bound: None, cells: 0 }
+        } else {
+            crate::source_planar_flux::bound(&geometry, face, limits.axis, limits.origin,
+                limits.absolute_error / (8. * geometry.shell().faces().len() as f64),
+                (limits.cells - out.cells).min(limits.spans - out.spans))?
+        };
         out.cells+=planar.cells;out.spans+=planar.cells;
         let fixed=planar.bound.is_some();
         let bound=if let Some(bound)=planar.bound {bound} else {

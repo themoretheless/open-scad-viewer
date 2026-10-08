@@ -239,6 +239,11 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
         && knots[..=degree].iter().all(|x|*x==knots[degree])
         && knots[n..].iter().all(|x|*x==knots[n]);
+    if !bezier(&c.knots,c.degree,c.control_points.len())
+        || !bezier(&s.knots_u,s.degree_u,s.control_points.len())
+        || !bezier(&s.knots_v,s.degree_v,s.control_points[0].len()) {
+        if let Some(identity)=exact_natural_nurbs_boundary(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+    }
     if c.periodic || p.periodic || s.periodic_u || s.periodic_v
         || c.degree>32 || p.degree>8 || s.degree_u>8 || s.degree_v>8
         || !bezier(&c.knots,c.degree,c.control_points.len())
@@ -339,9 +344,116 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
     cad_predicates::rational_bezier_composition_identity(&mut ctx,&cc,&pp,&ss,dd)
         .map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid composition identity request"))
 }
+// A clamped tensor endpoint restricts exactly to its original control row.
+// Matching the complete univariate knot basis and authored controls/weights
+// proves a multi-span trace, without rounded knot insertion or composition.
+// The subsequent predicate sees identical coefficient sequences: its Bezier
+// identity is used only to mint the immutable source/context and charge exact
+// work, never to equate different NURBS coefficient sequences.
+fn exact_natural_nurbs_boundary(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64)
+    -> Result<Option<cad_predicates::BezierIdentityDecision>> {
+    use cad_predicates::{AuthoredScalar,Limits,PredicateContext,SourceArena,ToleranceContext};
+    let clamped=|k:&[f64],d:usize,n:usize|k[..=d].iter().all(|x|*x==k[d])
+        && k[n..].iter().all(|x|*x==k[n])&&k[d+1]>k[d]&&k[n-1]<k[n];
+    let continuous=|k:&[f64],d:usize,n:usize|{
+        let mut i=d+1;
+        while i<n {let mut end=i+1;while end<n&&k[end]==k[i]{end+=1;}
+            if k[i]>k[d]&&k[i]<k[n]&&end-i>d{return false;}i=end;}
+        true
+    };
+    if c.periodic||p.periodic||s.periodic_u||s.periodic_v||p.degree!=1
+        ||p.control_points.len()!=2||p.weights[0]!=p.weights[1]
+        ||p.knots!=[0.,0.,1.,1.]||c.domain()!=[0.,1.]
+        ||c.control_points.len()>33||s.degree_u>8||s.degree_v>8
+        ||!clamped(&c.knots,c.degree,c.control_points.len())
+        ||!clamped(&s.knots_u,s.degree_u,s.control_points.len())
+        ||!clamped(&s.knots_v,s.degree_v,s.control_points[0].len())
+        ||!continuous(&s.knots_u,s.degree_u,s.control_points.len())
+        ||!continuous(&s.knots_v,s.degree_v,s.control_points[0].len()) {return Ok(None);}
+    let sizes=[s.control_points.len(),s.control_points[0].len()];
+    let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+    for fixed in 0..2 {for end in 0..2 {
+        let free=1-fixed;let a=&p.control_points[0];let b=&p.control_points[1];
+        if a[fixed]!=knots[fixed][if end==0{degrees[fixed]}else{sizes[fixed]}]
+            ||b[fixed]!=a[fixed]||knots[free][degrees[free]]!=0.||knots[free][sizes[free]]!=1.
+            ||c.degree!=degrees[free]||c.control_points.len()!=sizes[free] {continue;}
+        let backward=if a[free]==0.&&b[free]==1.{false}
+            else if a[free]==1.&&b[free]==0.{true}else{continue};
+        let mirror=reversed!=backward;
+        if c.knots.len()!=knots[free].len() {continue;}
+        let same_basis=c.knots.iter().enumerate().all(|(i,&x)|{
+            if !mirror{return x==knots[free][i];}
+            let y=knots[free][c.knots.len()-1-i];
+            // TwoSum residual: rounded x+y==1 alone is not exact mirroring.
+            let sum=x+y;let vy=sum-x;
+            sum==1.&&(x-(sum-vy))+(y-vy)==0.
+        });
+        if !same_basis {continue;}
+        let row=if end==0{0}else{sizes[fixed]-1};
+        let indices=|i|if fixed==0{(row,i)}else{(i,row)};
+        let same_controls=(0..sizes[free]).all(|i|{
+            let ci=if mirror{sizes[free]-1-i}else{i};let(u,v)=indices(i);
+            c.control_points[ci]==s.control_points[u][v]&&c.weights[ci]==s.weights[u][v]
+        });
+        if !same_controls {continue;}
+        let mut values=Vec::new();
+        for i in 0..sizes[free] {let ci=if mirror{sizes[free]-1-i}else{i};
+            values.extend(c.control_points[ci].iter().copied());values.push(c.weights[ci]);}
+        for i in 0..sizes[free] {let(u,v)=indices(i);values.extend(s.control_points[u][v].iter().copied());values.push(s.weights[u][v]);}
+        // Bind the complete basis and traversal to the proof context as well.
+        values.extend(c.knots.iter().copied());values.extend(s.knots_u.iter().copied());values.extend(s.knots_v.iter().copied());
+        values.extend(p.knots.iter().copied());values.extend(p.control_points.iter().flatten().copied());values.extend(p.weights.iter().copied());
+        values.extend([c.degree as f64,s.degree_u as f64,s.degree_v as f64,reversed as u8 as f64]);
+        let source=SourceArena::authored("natural-multispan-nurbs-boundary",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect())
+            .map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid NURBS boundary source"))?;
+        let mut index=0;let mut leaf=||{let r=source.leaf(index).unwrap();index+=1;r};
+        let first:Vec<_>=(0..sizes[free]).map(|_|std::array::from_fn(|_|leaf())).collect();
+        let second:Vec<_>=(0..sizes[free]).map(|_|std::array::from_fn(|_|leaf())).collect();
+        let tolerance=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work,..Limits::default()},None);
+        return cad_predicates::rational_bezier_identity(&mut ctx,&first,&second).map(Some)
+            .map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid NURBS boundary identity request"));
+    }}
+    Ok(None)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn multispan_natural_boundaries_preserve_basis_senses_and_work_limits() {
+        use cad_predicates::BezierIdentity;
+        let s=Surface{degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,0.,0.25,1.,1.,1.],
+            control_points:(0..2).map(|u|[0.,1.,3.,5.].iter().map(|z|vec![u as f64,0.,*z]).collect()).collect(),
+            weights:vec![vec![1.,0.75,1.5,1.];2],periodic_u:false,periodic_v:false};
+        let transposed=Surface{degree_u:2,degree_v:1,knots_u:s.knots_v.clone(),knots_v:s.knots_u.clone(),
+            control_points:(0..4).map(|v|(0..2).map(|u|s.control_points[u][v].clone()).collect()).collect(),
+            weights:(0..4).map(|v|(0..2).map(|u|s.weights[u][v]).collect()).collect(),periodic_u:false,periodic_v:false};
+        for (s,fixed) in [(s,0),(transposed,1)] {for end in [0,1] {for backward in [false,true] {for reversed in [false,true] {
+            let mut a=vec![0.,0.];let mut b=a.clone();a[fixed]=end as f64;b[fixed]=a[fixed];
+            a[1-fixed]=if backward{1.}else{0.};b[1-fixed]=1.-a[1-fixed];
+            let p=Curve::from_polyline(vec![a,b]).unwrap();
+            let mut c=Curve{degree:2,knots:if fixed==0{s.knots_v.clone()}else{s.knots_u.clone()},
+                control_points:(0..4).map(|i|if fixed==0{s.control_points[end][i].clone()}else{s.control_points[i][end].clone()}).collect(),
+                weights:(0..4).map(|i|if fixed==0{s.weights[end][i]}else{s.weights[i][end]}).collect(),periodic:false};
+            if backward!=reversed{c=c.reverse().unwrap();}
+            assert_eq!(verify_exact(&c,&p,&s,reversed,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+            let limited=verify_exact(&c,&p,&s,reversed,1).unwrap().unwrap();
+            assert!(matches!(limited.outcome,BezierIdentity::Indeterminate(_)));assert!(limited.work_used<=1);
+            let mut bad=c.clone();bad.knots[3]=bad.knots[3].next_up();
+            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none());
+            let mut bad=c.clone();bad.control_points[1][2]+=1e-12;
+            assert!(verify_exact(&bad,&p,&s,reversed,1_000_000).unwrap().is_none());
+        }}}}
+    }
+    #[test]
+    fn rounded_complement_is_not_an_exact_nurbs_basis_reversal() {
+        let s=Surface{degree_u:1,degree_v:2,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,0.,0.1,1.,1.,1.],
+            control_points:(0..2).map(|u|[0.,1.,3.,5.].iter().map(|z|vec![u as f64,0.,*z]).collect()).collect(),
+            weights:vec![vec![1.,0.75,1.5,1.];2],periodic_u:false,periodic_v:false};
+        let p=Curve::from_polyline(vec![vec![0.,0.],vec![0.,1.]]).unwrap();
+        let c=Curve{degree:2,knots:s.knots_v.clone(),control_points:s.control_points[0].clone(),weights:s.weights[0].clone(),periodic:false}.reverse().unwrap();
+        assert_eq!(c.knots[3]+s.knots_v[3],1.);
+        assert!(verify_exact(&c,&p,&s,true,1_000_000).unwrap().is_none());
+    }
     #[test]
     fn formal_composition_does_not_claim_full_chart_membership() {
         use cad_predicates::BezierIdentity;

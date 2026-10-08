@@ -1,4 +1,4 @@
-name: G1 v63 exact clean matrix
+name: G1 v77 exact clean matrix
 
 # Manual-only: each matrix cell is one fresh hosted job and one frozen clean run.
 # A green aggregate establishes complete matrix evidence, not qualification,
@@ -11,22 +11,80 @@ on:
         description: Exact 40-character commit SHA selected by this workflow dispatch
         required: true
         type: string
+      discovery_only:
+        description: Inspect exact runner images without qualification work
+        required: false
+        default: false
+        type: boolean
+
+      probe_only:
+        description: Execute one diagnostic fragment per host environment; zero qualification work
+        required: false
+        default: false
+        type: boolean
+
+      memory_diagnostic_only:
+        description: Diagnose one WebKit memory run with process RSS tracing; zero qualification work
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: g1-v63-exact-${{ github.ref }}
+  group: g1-v77-exact-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  PLAN_ID: semantic-manifold-g1-plan-v63
-  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v63
+  PLAN_ID: semantic-manifold-g1-plan-v77
+  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v77
   NPM_VERSION: 10.9.8
+  G1_DISCOVERY_ONLY: ${{ (inputs.probe_only || inputs.memory_diagnostic_only) && 'true' || 'false' }}
 
 jobs:
+  discover-runners:
+    if: ${{ inputs.discovery_only }}
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 5
+    steps:
+      - name: Record runner identity
+        shell: pwsh
+        run: |
+          @{runner='${{ matrix.runner }}'; imageOS=$env:ImageOS; imageVersion=$env:ImageVersion; architecture='${{ runner.arch }}'} | ConvertTo-Json | Out-File -Encoding utf8 runner.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: runner-discovery-${{ matrix.runner }}
+          path: runner.json
+  discover-browsers:
+    if: ${{ inputs.discovery_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.2
+      - name: Observe exact browser trees
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 tools/browser-qualification/node_modules/.bin/playwright install chromium webkit
+          node scripts/g1-github-actions.mjs discover-browsers --source-sha '${{ inputs.source_sha }}' --output browser-discovery.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-discovery
+          path: browser-discovery.json
   prepare:
+    if: ${{ !inputs.discovery_only && !inputs.memory_diagnostic_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -48,7 +106,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          matrix="$(node scripts/g1-github-actions.mjs matrix)"
+          matrix="$(node scripts/g1-github-actions.mjs matrix ${{ inputs.probe_only && '--probe-only' || '' }})"
           node_matrix="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify(value.nodes))' "$matrix")"
           browser_matrix="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify(value.browsers))' "$matrix")"
           echo "node_matrix=$node_matrix" >> "$GITHUB_OUTPUT"
@@ -74,14 +132,15 @@ jobs:
           architecture: ${{ contains(matrix.environment, 'macos') && 'arm64' || 'x64' }}
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
-          toolchain: nightly-2026-09-10
+          toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
       - name: Wipe prior state
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           @('node_modules','tools/browser-qualification/node_modules','dist','.vite','.vitest',
-            'output/qualification/semantic-manifold-g1-candidate-run-v63',
+            'output/qualification/semantic-manifold-g1-candidate-run-v77',
             "$HOME/.cache/ms-playwright","$HOME/Library/Caches/ms-playwright") |
             ForEach-Object { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $_ }
           Get-ChildItem -Recurse -Force -Include '*.duckdb','*.duckdb.wal' |
@@ -90,6 +149,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           New-Item -ItemType Directory -Force .qualification-toolchain | Out-Null
           $artifact = switch ('${{ matrix.environment }}') {
             'ubuntu-node20' { 'node-v20.19.0-linux-x64.tar.xz' }
@@ -107,14 +167,24 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           npm install --global $env:NPM_ARCHIVE --registry=https://registry.npmjs.org/ --audit=false --fund=false
           if ((npm --version) -ne '10.9.8') { throw 'npm version mismatch' }
+          if ($IsWindows) {
+            $npmCli = Join-Path (npm root --global) 'npm/bin/npm-cli.js'
+            if (!(Test-Path $npmCli -PathType Leaf)) { throw 'Installed npm CLI is missing' }
+            "NPM_CLI=$npmCli" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          }
           npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
           npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+      - name: Materialize committed release kernels
+        shell: pwsh
+        run: node scripts/materialize-qualification-kernels.mjs
       - name: Verify frozen identities
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           @('NODE_OPTIONS','NODE_PATH','NODE_PRESERVE_SYMLINKS','NPM_CONFIG_PREFIX','NPM_CONFIG_CACHE',
             'npm_config_registry','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy',
             'PLAYWRIGHT_BROWSERS_PATH','PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD','LD_PRELOAD','DYLD_INSERT_LIBRARIES') |
@@ -136,8 +206,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v63-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v63/github-actions/
+          name: g1-v77-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v77/github-actions/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
@@ -162,14 +232,14 @@ jobs:
           architecture: x64
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
-          toolchain: nightly-2026-09-10
+          toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
       - name: Wipe prior state
         shell: bash
         run: |
           set -euo pipefail
           rm -rf node_modules tools/browser-qualification/node_modules dist .vite .vitest \
-            output/qualification/semantic-manifold-g1-candidate-run-v63 \
+            output/qualification/semantic-manifold-g1-candidate-run-v77 \
             "$HOME/.cache/ms-playwright"
           rm -f ./*.duckdb ./*.duckdb.wal
       - name: Fetch and install exact toolchains
@@ -193,8 +263,8 @@ jobs:
           npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev \
             --registry=https://registry.npmjs.org/ --audit=false --fund=false
           tools/browser-qualification/node_modules/.bin/playwright install --with-deps '${{ matrix.browser }}'
-          export RUSTUP_TOOLCHAIN=nightly-2026-09-10
-          npm run build:geometry
+          export RUSTUP_TOOLCHAIN=nightly-2026-09-16
+          node scripts/materialize-qualification-kernels.mjs
       - name: Verify and run frozen browser fragment
         shell: bash
         run: |
@@ -219,14 +289,88 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v63-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v63/github-actions/
+          name: g1-v77-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v77/github-actions/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+
+  memory-diagnostic:
+    if: ${{ inputs.memory_diagnostic_only }}
+    name: Diagnostic WebKit memory (zero qualification work)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node_version }}
+          architecture: x64
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - name: Wipe prior state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules tools/browser-qualification/node_modules dist .vite .vitest \
+            output/qualification/semantic-manifold-g1-candidate-run-v77 \
+            "$HOME/.cache/ms-playwright"
+          rm -f ./*.duckdb ./*.duckdb.wal
+      - name: Fetch and install exact toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .qualification-toolchain
+          node_archive=node-v22.23.2-linux-x64.tar.xz
+          curl --fail --silent --show-error --location \
+            "https://nodejs.org/dist/v22.23.2/$node_archive" \
+            --output ".qualification-toolchain/$node_archive"
+          curl --fail --silent --show-error --location \
+            https://registry.npmjs.org/npm/-/npm-10.9.8.tgz \
+            --output .qualification-toolchain/npm-10.9.8.tgz
+          echo "NODE_ARCHIVE=$PWD/.qualification-toolchain/$node_archive" >> "$GITHUB_ENV"
+          echo "NPM_ARCHIVE=$PWD/.qualification-toolchain/npm-10.9.8.tgz" >> "$GITHUB_ENV"
+          npm install --global "$PWD/.qualification-toolchain/npm-10.9.8.tgz" \
+            --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          test "$(npm --version)" = 10.9.8
+          npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev \
+            --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          tools/browser-qualification/node_modules/.bin/playwright install --with-deps 'webkit'
+          export RUSTUP_TOOLCHAIN=nightly-2026-09-16
+          node scripts/materialize-qualification-kernels.mjs
+      - name: Bind source and run memory diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset NODE_OPTIONS NODE_PATH NODE_PRESERVE_SYMLINKS NPM_CONFIG_PREFIX NPM_CONFIG_CACHE npm_config_registry
+          unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+          unset PLAYWRIGHT_BROWSERS_PATH PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD LD_PRELOAD DYLD_INSERT_LIBRARIES
+          out="output/qualification/$CANDIDATE_ID/memory-diagnostic"
+          mkdir -p "$out"
+          node scripts/g1-github-actions.mjs preflight \
+            --environment 'vite-webkit' \
+            --node-archive "$NODE_ARCHIVE" \
+            --npm-archive "$NPM_ARCHIVE" \
+            --source-sha '${{ inputs.source_sha }}' \
+            --output "$out/preflight.json"
+          node scripts/diagnose-g1-webkit-memory.mjs --output "$out"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: g1-v77-diagnostic-webkit-memory
+          path: output/qualification/semantic-manifold-g1-candidate-run-v77/memory-diagnostic/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
 
   aggregate:
-    if: always()
+    if: ${{ always() && !inputs.discovery_only && !inputs.probe_only && !inputs.memory_diagnostic_only }}
     needs: [prepare, node-fragments, browser-fragments]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -239,18 +383,18 @@ jobs:
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         continue-on-error: true
         with:
-          pattern: g1-v63-*
+          pattern: g1-v77-*
           path: downloaded-g1-v45
       - name: Verify complete artifact set
         run: |
           node scripts/g1-github-actions.mjs aggregate \
             --artifacts downloaded-g1-v45 \
             --source-sha '${{ inputs.source_sha }}' \
-            --output output/qualification/semantic-manifold-g1-candidate-run-v63/github-actions/aggregate/result.json
+            --output output/qualification/semantic-manifold-g1-candidate-run-v77/github-actions/aggregate/result.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v63-aggregate
-          path: output/qualification/semantic-manifold-g1-candidate-run-v63/github-actions/aggregate/
+          name: g1-v77-aggregate
+          path: output/qualification/semantic-manifold-g1-candidate-run-v77/github-actions/aggregate/
           if-no-files-found: error
           retention-days: 90

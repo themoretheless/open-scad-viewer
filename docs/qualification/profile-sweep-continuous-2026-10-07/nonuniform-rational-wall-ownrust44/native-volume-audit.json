@@ -1,0 +1,28 @@
+{
+  "allFacesInjective": true,
+  "allPairsClassified": true,
+  "boundaryEmbeddingCertified": true,
+  "nesting": {
+    "cells": 0,
+    "domainCells": 0,
+    "pairs": [],
+    "parents": [
+      null
+    ],
+    "rolesConsistent": true,
+    "totalPairs": 0,
+    "visitedPairs": 0
+  },
+  "nextPair": null,
+  "orientationCells": 66,
+  "orientationDomainCells": 8,
+  "orientations": [
+    {
+      "attempts": 1,
+      "expectedOutward": true,
+      "outward": true,
+      "shell": 0
+    }
+  ],
+  "solidGeometryCertified": true
+}

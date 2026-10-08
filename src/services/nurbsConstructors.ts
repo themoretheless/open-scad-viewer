@@ -116,10 +116,10 @@ export interface NurbsScaleLaw {
 }
 /** Fixed orientation; origin is the profile scaling center in model coordinates. */
 export const scaledSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,origin:[number,number,number]):NurbsSurface=>
- callNurbsRust('surface_scaled_sweep',{profile,path,origin,scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false}})
-/** RMF transport with positive dimensionless scale; sampled refinement only. */
-export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
- callNurbsRust('surface_profile_sweep',{profile,path,scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},normal,sections,max_deviation:maxDeviation})
+ callNurbsRust('brep_sweep_constructor',{operation:'surface_scaled_sweep',profile,path,origin,scale})
+/** Rust RMF transport admitted by a whole-domain deviation certificate. */
+export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,normal:[number,number,number],sections:number,maxDeviation:number,maxCells?:number):FramedSweepResult=>
+ callNurbsRust('brep_sweep_constructor',{operation:'surface_profile_sweep',profile,path,scale,normal,sections,maxDeviation,...(maxCells===undefined?{}:{maxCells})})
 export interface NurbsVectorLaw {degree:number;knots:number[];values:[number,number,number][];weights:number[]}
 export interface ProgressiveSweepOptions {
  axisScale?:NurbsVectorLaw
@@ -148,19 +148,10 @@ export interface GuidedProgressiveSweepOptions extends Omit<ProgressiveSweepOpti
  contactAnchor?:{profileIndex?:number;parameter:number}
 }
 export type ProgressiveGuidedSurfaceSweepOptions=ProgressiveSurfaceSweepOptions|GuidedProgressiveSweepOptions
-export const sweepGuidePayload=(options:ProgressiveGuidedSurfaceSweepOptions)=>
- 'orientationGuide' in options?{orientation_guide:options.orientationGuide,...(options.contactAnchor?{contact_profile:options.contactAnchor.profileIndex??0,contact_parameter:options.contactAnchor.parameter}:{})}:{}
-export const sweepFrameLawPayload=(options:{orientation?:string;frameAxis?:NurbsVectorLaw;frameNormal?:NurbsVectorLaw})=>{
- if(options.orientation!=='authored') return {}
- const curve=(law:NurbsVectorLaw)=>({degree:law.degree,knots:law.knots,controlPoints:law.values,weights:law.weights,periodic:false})
- if(!options.frameAxis||!options.frameNormal) throw new Error('Authored sweep requires frameAxis and frameNormal')
- return {frame_axis:curve(options.frameAxis),frame_normal:curve(options.frameNormal)}
-}
+export const sweepGuidePayload=(options:ProgressiveGuidedSurfaceSweepOptions)=>callNurbsRust<{orientation_guide?:NurbsCurve;contact_profile?:number;contact_parameter?:number}>('brep_sweep_law_payload',{kind:'guide',options})
+export const sweepFrameLawPayload=(options:{orientation?:string;frameAxis?:NurbsVectorLaw;frameNormal?:NurbsVectorLaw})=>callNurbsRust<{frame_axis?:NurbsCurve;frame_normal?:NurbsCurve}>('brep_sweep_law_payload',{kind:'frame',options})
 /** Positive dimensionless axis scale and local-frame center offsets in mm. */
-export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisScale'|'centerLaw'>)=>({
- axis_scale:options.axisScale?{degree:options.axisScale.degree,knots:options.axisScale.knots,controlPoints:options.axisScale.values,weights:options.axisScale.weights,periodic:false}:null,
- center_law:options.centerLaw?{degree:options.centerLaw.degree,knots:options.centerLaw.knots,controlPoints:options.centerLaw.values,weights:options.centerLaw.weights,periodic:false}:null,
-})
+export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisScale'|'centerLaw'>)=>callNurbsRust<{axis_scale:NurbsCurve|null;center_law:NurbsCurve|null}>('brep_sweep_law_payload',{kind:'affine',options})
 export interface ProgressiveSweepReport {
  accepted:boolean
  sections:number
@@ -176,18 +167,10 @@ export interface ProgressiveSweepReport {
 }
 export interface ProgressiveSweepResult {patches:NurbsSurface[]|null;report:ProgressiveSweepReport;levels:ProgressiveSweepReport[]}
 /** Simultaneous scale/twist; twist values use degrees, normalized traversal. */
-export const progressiveSweepNurbsPatches=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveSweepResult=>
- callNurbsRust('surface_progressive_sweep',{profile,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+export const progressiveSweepNurbsPatches=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveSweepResult=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep',profile,path,scale,twist,options})
 export interface ProgressiveMultiSweepResult extends ProgressiveSweepResult {profilePatchRanges:[number,number][]|null}
 /** Shared stations/budget for ordered curves; preserves boundaries, without sewing or caps. */
-export const progressiveSweepNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveMultiSweepResult=>
- callNurbsRust('surface_progressive_sweep_profiles',{profiles,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+export const progressiveSweepNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveMultiSweepResult=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep_profiles',profiles,path,scale,twist,options})
 export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMiterReport> {
  preview:true
  patches:NurbsSurface[]
@@ -195,11 +178,7 @@ export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMit
  report:R
 }
 /** One preview level; unaccepted patches are not construction results. */
-export const previewProgressiveNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number):ProgressiveSweepPreview<ProgressiveSweepReport>=>
- callNurbsRust('surface_progressive_sweep_level',{preview_sections:sections,profiles,path,...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
-  scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
-  twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+export const previewProgressiveNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number):ProgressiveSweepPreview<ProgressiveSweepReport>=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep_level',preview_sections:sections,profiles,path,scale,twist,options})
 export interface ProgressiveSweepStreamOptions {
  /** Worker cancellation state, sampled at the same boundaries as signal. */
  shouldAbort?:()=>boolean
@@ -238,18 +217,12 @@ export interface ProgressiveMiterReport {
 }
 export interface ProgressiveMiterResult {sections:NurbsCurve[][]|null;levels:ProgressiveMiterReport[];report:ProgressiveMiterReport}
 export interface ProgressiveMiterPreview {preview:true;sections:NurbsCurve[][];report:ProgressiveMiterReport}
-const progressiveMiterPayload=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions)=>({profiles,points,...sweepAffineLawPayload(options),
- ...(options.orientationGuide?{orientation_guide:options.orientationGuide}:{}),
- ...((options.frameAxis||options.frameNormal)?sweepFrameLawPayload({orientation:'authored',frameAxis:options.frameAxis,frameNormal:options.frameNormal}):{}),
- scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(value=>[value,0,0]),weights:scale.weights,periodic:false},
- twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(value=>[value*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
- normal:options.normal,closed:options.closed??false,miter_limit:options.miterLimit??4,initial_steps:options.initialSteps??1,max_steps:options.maxSteps??64,max_deviation:options.maxDeviation,
-})
+const progressiveMiterPayload=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions)=>({profiles,points,scale,twist,options})
 /** Miter stations are retained at every level; laws and holonomy use normalized polyline length. Twist values are degrees. */
 export const progressiveMiterNurbsProfiles=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions):ProgressiveMiterResult=>
- callNurbsRust('curve_progressive_miter',progressiveMiterPayload(profiles,points,scale,twist,options))
+ callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter',...progressiveMiterPayload(profiles,points,scale,twist,options)})
 export const previewProgressiveMiterNurbsProfiles=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,steps:number):ProgressiveMiterPreview=>
- callNurbsRust('curve_progressive_miter_level',{...progressiveMiterPayload(profiles,points,scale,twist,options),preview_steps:steps})
+ callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_level',...progressiveMiterPayload(profiles,points,scale,twist,options),preview_steps:steps})
 /** Geometric prerequisite only: material ownership and boundary pairing are separate. */
 export interface ProgressiveMiterCapProjection {
  normalDots:[[number,number],[number,number]]|null
@@ -261,7 +234,7 @@ export function inspectProgressiveMiterCapProjection(
  profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,
  options:ProgressiveMiterOptions,caps:[NurbsSurface,NurbsSurface],maxCells=10000,maxExactWork=1000000,
 ):ProgressiveMiterCapProjection {
- return callNurbsRust('curve_progressive_miter_cap_projection',{...progressiveMiterPayload(profiles,points,scale,twist,options),caps,maxCells,maxExactWork})
+ return callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_cap_projection',...progressiveMiterPayload(profiles,points,scale,twist,options),caps,maxCells,maxExactWork})
 }
 export interface ProgressiveMiterCapParallelism {
  parallel:[boolean,boolean]|null
@@ -272,7 +245,7 @@ export function inspectProgressiveMiterCapParallelism(
  profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,
  options:ProgressiveMiterOptions,caps:[NurbsSurface,NurbsSurface],maxCells=10000,maxExactWork=1000000,
 ):ProgressiveMiterCapParallelism {
- return callNurbsRust('curve_progressive_miter_cap_parallelism',{...progressiveMiterPayload(profiles,points,scale,twist,options),caps,maxCells,maxExactWork})
+ return callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_cap_parallelism',...progressiveMiterPayload(profiles,points,scale,twist,options),caps,maxCells,maxExactWork})
 }
 export interface ProgressiveMiterIdealCapDomains {
  idealCapDomainsCertified:boolean;localDomainCertified:boolean;sourcePlaneAxis:number|null
@@ -285,7 +258,7 @@ export function inspectProgressiveMiterIdealCapDomains(
  profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,
  options:ProgressiveMiterOptions,loopSizes:number[],budgets={tolerance:.001,maxPairs:1000,maxCells:10000,maxExactWork:1000000},
 ):ProgressiveMiterIdealCapDomains {
- return callNurbsRust('curve_progressive_miter_cap_domains',{...progressiveMiterPayload(profiles,points,scale,twist,options),loopSizes,...budgets})
+ return callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_cap_domains',...progressiveMiterPayload(profiles,points,scale,twist,options),loopSizes,...budgets})
 }
 /** Audit retained walls; path-neighbor declarations are derived by Rust. */
 export function inspectProgressiveMiterWalls(
@@ -294,61 +267,15 @@ export function inspectProgressiveMiterWalls(
  budgets:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'>,
  loopSizes?:number[],
 ):import('./nurbsSweepAudit').SweepWallAudit {
- return callNurbsRust('curve_progressive_miter_wall_audit',{
+ return callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_wall_audit',
   ...progressiveMiterPayload(profiles,points,scale,twist,options),sections,...budgets,...(loopSizes?{loopSizes}:{}),
  })
 }
-export async function* streamProgressiveMiterNurbsProfiles(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,control:ProgressiveSweepStreamOptions={}):AsyncGenerator<ProgressiveMiterPreview,ProgressiveMiterResult,void>{
- const checkAbort=()=>{control.signal?.throwIfAborted();if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')}
- checkAbort()
- // Every level and final audit belongs to one source snapshot.
- ;({profiles,points,scale,twist,options}=structuredClone({profiles,points,scale,twist,options}))
- const levels:ProgressiveMiterReport[]=[]
- let steps=options.initialSteps??1
- const maximum=options.maxSteps??64
- for(;;){
-  checkAbort();await new Promise<void>(resolve=>setTimeout(resolve,0));checkAbort()
-  const level=previewProgressiveMiterNurbsProfiles(profiles,points,scale,twist,options,steps)
-  checkAbort();levels.push(level.report);yield structuredClone(level);checkAbort()
-  if(level.report.accepted||steps===maximum)return {sections:level.report.accepted?level.sections:null,levels,report:level.report}
-  steps=Math.min(2*steps,maximum)
- }
-}
+export async function* streamProgressiveMiterNurbsProfiles(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,control:ProgressiveSweepStreamOptions={}):AsyncGenerator<ProgressiveMiterPreview,ProgressiveMiterResult,void>{return yield* streamNativeSweep({kind:'raw-miter',profiles,points,scale,twist,options},control)}
 /** Yields bounded previews and returns construction patches only after acceptance.
  * Cancellation is cooperative between synchronous kernel calls, not within one call.
  */
-export async function* streamProgressiveNurbsProfiles(
- profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,
- options:ProgressiveGuidedSurfaceSweepOptions,stream:ProgressiveSweepStreamOptions={},
-):AsyncGenerator<ProgressiveSweepPreview,ProgressiveMultiSweepResult,void> {
- const checkAbort=()=>{
-  stream.signal?.throwIfAborted()
-  if(stream.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')
- }
- checkAbort()
- // Preview consumers can edit their copies without changing final geometry.
- ;({profiles,path,scale,twist,options}=structuredClone({profiles,path,scale,twist,options}))
- const levels:ProgressiveSweepReport[]=[]
- const maximum=options.maxSections??257
- let sections=options.initialSections??5
- for(;;){
-  checkAbort()
-  // Yield to worker message dispatch before each bounded kernel request.
-  await new Promise<void>(resolve=>setTimeout(resolve,0))
-  checkAbort()
-  const preview=previewProgressiveNurbsProfiles(profiles,path,scale,twist,options,sections)
-  checkAbort()
-  levels.push(preview.report)
-  yield structuredClone(preview)
-  checkAbort()
-  if(preview.report.accepted||sections>=maximum){
-   return {patches:preview.report.accepted?preview.patches:null,
-    profilePatchRanges:preview.report.accepted?preview.profilePatchRanges:null,
-    report:preview.report,levels}
-  }
-  sections=Math.min(2*(sections-1)+1,maximum)
- }
-}
+export async function* streamProgressiveNurbsProfiles(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,control:ProgressiveSweepStreamOptions={}):AsyncGenerator<ProgressiveSweepPreview,ProgressiveMultiSweepResult,void>{return yield* streamNativeSweep({kind:'raw-profile',profiles,path,scale,twist,options},control)}
 export const clampedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],startTangent:[number,number,number],endTangent:[number,number,number]):NurbsSurface=>callNurbsRust('surface_clamped_loft',{curves,parameters,start_tangent:startTangent,end_tangent:endTangent})
 export const boundaryFillNurbsSurfaces=(boundaries:NurbsCurve[],center:[number,number,number]):NurbsSurface[]=>callNurbsRust('surface_boundary_fill',{boundaries,center})
 export const triangularNurbsPatch=(base:NurbsCurve,sideA:NurbsCurve,sideB:NurbsCurve):NurbsSurface=>callNurbsRust('surface_triangular_patch',{base,side_a:sideA,side_b:sideB})
@@ -370,9 +297,20 @@ export const brushNurbsSurface=(surface:NurbsSurface,brush:GeometryBrush):NurbsS
 /** Homogeneous Coons patch with compatible corner weights and positive control weights; boundaries: bottom, top, left, right. */
 export const coonsNurbsPatch=(boundaries:NurbsCurve[]):NurbsSurface=>callNurbsRust('surface_coons_patch',{boundaries})
 
+/** Native diagnostics for one complete, untrimmed surface; not a Solid certificate. */
+export interface ProfileSweepGeometryCertificate {
+ certified:boolean
+ scope?:'single-untrimmed-surface'
+ reason?:string
+ maxCellsPerPredicate?:number
+ regularity?:{certified:boolean;interiorBasisC1:boolean;cells:number;unresolvedCells:number;scope:'all-original-knot-rectangles'}
+ embedding?:{certified:boolean;cells:number;reason:string;scope:string;method:string;contractionUpper?:number|null;absoluteWinding?:number}
+ solidTopologyCertified:false
+ pairwiseFaceContactsCertified?:false
+}
 export interface FramedSweepResult {
  surface:NurbsSurface|null
- report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'open';continuousBound:false;method:'double-reflection-fourfold-section-refinement'}
+ report:{geometryCertificate?:ProfileSweepGeometryCertificate;accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'G1'|'G2'|'open';seamCertificate?:{certified:boolean;order:number;exact:boolean;regularityCertified:boolean;work:number;reason:string;scope:string;method:string}|null;continuousBound:boolean;method:'double-reflection-fourfold-section-refinement';continuousCertificate?:{errorUpper:number|null;withinBudget:boolean;cells:number;maxCells:number;method:string;reason:string|null;scope:'matched-parameter-profile-deviation';regularityCertified:false;globalEmbeddingCertified:false;seamSmoothnessCertified:false}}
 }
 /** Sampled refinement diagnostic only; not a certified continuous error bound. */
 export const framedSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
@@ -559,3 +497,15 @@ export interface MatchedNurbsLoft {
 }
 /** Certified scaled boundary jets with whole-curve section/guide retention bounds. */
 export const matchNurbsLoftEnds=(surface:NurbsSurface,curves:NurbsCurve[],parameters:number[],budget:number,start?:LoftEndConstraint,end?:LoftEndConstraint,guides:NurbsCurve[]=[],guideParameters:number[]=[]):MatchedNurbsLoft=>callNurbsRust('surface_loft_match_ends',{surface,curves,parameters,budget,start,end,guides,guide_parameters:guideParameters})
+
+/** Browser scheduling and cancellation only; Rust owns source snapshots and refinement. */
+async function* streamNativeSweep<P,R>(request:Record<string,unknown>,control:ProgressiveSweepStreamOptions):AsyncGenerator<P,R,void>{
+ const checkAbort=()=>{control.signal?.throwIfAborted();if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')}
+ checkAbort()
+ const {stream}=callNurbsRust<{stream:string}>('brep_sweep_stream_start',request)
+ try{for(;;){
+  await new Promise<void>(resolve=>setTimeout(resolve,0));checkAbort()
+  const next=callNurbsRust<{done:false;value:P}|{done:true;value:R}>('brep_sweep_stream_next',{stream})
+  checkAbort();if(next.done)return next.value;yield next.value
+ }}finally{callNurbsRust('brep_sweep_stream_release',{stream})}
+}
