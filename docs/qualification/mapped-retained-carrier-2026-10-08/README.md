@@ -2477,3 +2477,37 @@ this curved neighbor. No additional pair admission follows from inventory.
 
 The inventory native fixture passed in 141.07 s, retaining the same
 combined counts [154,162,12,23,54,1] and owner/transport/budget checks.
+
+## Exact ruled trace certificate
+
+A private borrowed certificate now reduces a positive-weight ruled support
+to its exact projected source curve. It requires a clamped degree-one
+linear axis with two rows, identical projected coordinates and weights
+for each corresponding pair, and a bounded complete source layout. The
+nonlinear degree, original knot vector and domain, control coordinates,
+weights, and periodic flag are copied unchanged; no normalization or
+rounded fitted curve is substituted. The certificate retains the actual
+immutable source owner. Shape and cardinality guards precede deep source
+validation to keep work inside the control allowance.
+
+Focused tests cover both parameter orientations, non-unit original domains,
+zero and insufficient control budgets, duplicate projection axes, one-bit
+coordinate and weight perturbations, and independent nonprojected changes.
+The initial ruled_trace filter selected these two tests and an existing
+residual-cancellation refusal test; all three passed. A final focused
+and full native run are in progress. Reduction does not by itself prove
+that the transition avoids the projected curve away from its owned rail.
+
+Final ruled-trace tests passed, including independent source-surface versus
+projected-curve evaluation over both non-unit parameter domains and both
+parameter orientations, plus reversed projection axes. The 1e-12 comparison
+tolerance applies only to independent floating-point test evaluation;
+certificate admission still uses exact coordinate and weight equality.
+The native fixture passed in 252.80 s and freshly admitted face 2's trace:
+curve degree 5, unchanged domain [0,3]. Combined pending pairs remain 154.
+
+A new native XY-projection injectivity check is prepared for the complete
+corrected transition. A midpoint-derived inverse only chooses a finite
+preconditioning matrix in XY; the existing whole-domain principal-minor
+enclosures alone grant proof. Failure or incomplete coverage retains
+the projected contact as unqualified. This new check is being run next.

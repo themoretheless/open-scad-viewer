@@ -231,6 +231,21 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
         #[cfg(test)]
         if rail == 1 && max_work > 0 {
+            if let Some(trace) = crate::source_ruled_projection_contact::exact_trace::certify(
+                neighbor,
+                [0, 1],
+                1,
+                max_controls,
+            )? {
+                assert!(std::ptr::eq(trace.source(), neighbor));
+                assert_eq!(trace.axes(), [0, 1]);
+                assert_eq!(trace.linear_axis(), 1);
+                eprintln!(
+                    "transition curved neighbor exactTrace=true curveDegree={} curveDomain={:?}",
+                    trace.curve().degree,
+                    trace.curve().domain()
+                );
+            }
             eprintln!("transition curved neighbor face={} degrees={:?} knots={:?} controls={:?} weights={:?} sourceFreeAxis={} sourceControls={:?}",
                 index, [neighbor.degree_u,neighbor.degree_v], [&neighbor.knots_u,&neighbor.knots_v],
                 neighbor.control_points,neighbor.weights,free_axis,source.control_points);

@@ -334,3 +334,6 @@ mod tests {
         assert!(trace(&changed, [0, 1], 1).is_some());
     }
 }
+
+#[path = "source_ruled_trace.rs"]
+pub(crate) mod exact_trace;
