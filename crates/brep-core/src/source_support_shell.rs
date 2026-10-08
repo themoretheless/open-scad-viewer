@@ -382,8 +382,21 @@ mod tests {
         let (profile,profile_work)=nurbs_core::normal_alignment::qualify_weight_profile(source,[5,0],18).unwrap();
         let profile=profile.unwrap();assert_eq!(profile_work,18);assert!(std::ptr::eq(profile.source(),source));
         assert!(profile.within_position_tolerance(1e-7).unwrap());
+        let (pole_box,pole_spans)=profile.enclose([[1.,1.],[0.5,0.5]],16).unwrap();
+        assert!(pole_spans>0);let pole_box=pole_box.unwrap();
+        for (interval,position) in pole_box.into_iter().zip([20.,0.,6.]) {
+            assert!(interval[0]<=position&&position<=interval[1]&&interval[1]-interval[0]<1e-10);
+        }
+
         eprintln!("annular original exact weight-profile proposal axis upper {:?} weight upper {}",profile.axis_deviation_upper(),profile.weight_deviation_upper());
         assert!(nurbs_core::normal_alignment::qualify_weight_profile(source,[5,0],17).unwrap().0.is_none());
+        let (profile_direction,direction_spans)=profile.boundary_direction([[1.,1.],[0.5,0.5]],1,1.,16).unwrap();
+        let profile_direction=profile_direction.unwrap();assert_eq!(direction_spans,1);
+        assert!(std::ptr::eq(profile_direction.profile(),&profile));assert_eq!(profile_direction.factor(),Some((true,2)));
+        assert_eq!(profile_direction.boundary(),1.);
+        assert!(profile_direction.components().iter().any(|r|r[0]>0.||r[1]<0.));
+        eprintln!("annular exact profile pole direction {:?}",profile_direction.components());
+
 
         let first=shared.canonical_bounds(0,[[0.25,0.5],[0.,1.]]).unwrap();
         let second=shared.canonical_bounds(1,[[1.5,2.25],[0.,1.]]).unwrap();

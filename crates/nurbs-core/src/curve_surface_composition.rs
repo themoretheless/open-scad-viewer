@@ -250,6 +250,14 @@ pub(crate) fn surface_net_on(
     span: [usize; 2],
     domain: [[f64; 2]; 2],
 ) -> Result<Vec<Vec<[Interval; 4]>>> {
+    surface_net_on_with_weights(s,span,domain,|i,j|Ok(Interval::point(s.weights[i][j])))
+}
+/// Extract from an original chart with an explicitly supplied homogeneous
+/// weight expression. Callers own validation and weight/source correspondence.
+pub(crate) fn surface_net_on_with_weights(
+    s:&Surface,span:[usize;2],domain:[[f64;2];2],
+    weight:impl Fn(usize,usize)->Result<Interval>,
+)->Result<Vec<Vec<[Interval;4]>>> {
     let [iu, iv] = span;
     let (p, q) = (s.degree_u, s.degree_v);
     let mut controls = Vec::new();
@@ -257,7 +265,7 @@ pub(crate) fn surface_net_on(
     for i in iu - p..=iu {
         let mut row = Vec::new();
         for j in iv - q..=iv {
-            let w = Interval::point(s.weights[i][j]);
+            let w = weight(i,j)?;
             weights[0] = weights[0].min(w.lo);
             weights[1] = weights[1].max(w.hi);
             let cp = &s.control_points[i][j];

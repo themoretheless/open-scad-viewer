@@ -445,3 +445,39 @@ a separate error and can reintroduce the pole residual. Applying a correction
 requires retaining its exact factored representation and requalifying seams,
 wall/volume, exchange and history. Shipped WASM and its 28 pending wall pairs
 remain unchanged. No new whole-wall proof follows from positional proximity.
+
+## Evaluation and pole directions of the exact proposed weight profile
+
+`WeightProfile::enclose` evaluates exact row*column/pivot weight expressions
+inside outward homogeneous B-spline extraction. A shared internal extractor
+accepts those weight expressions; its original Surface path supplies unchanged
+original point weights. Target coefficients are never flattened to new f64
+weights. Rectangle validation, complete original span union and work budgets
+remain required. Independent separable rational formulas and missing-span
+controls qualify the new evaluation; the annular proposal also encloses its
+original pole [20,0,6] within a 1e-10 mm point box.
+
+`WeightProfile::boundary_direction` separately binds a private direction
+certificate to the proposed profile identity, endpoint product, axis and natural
+boundary. Exact separability cancels transverse chords for each constant source
+control row even when those rows are different points. It removes the original
+normalized nonnegative free-coordinate factor in the Bernstein basis. Supported
+layouts currently require one clamped Bezier span per axis with degrees 1..8.
+It does not reuse that corrected direction as an original Surface certificate.
+
+For original annular face 0, proposal anchor [5,0], U=1 and V=0.5, the proof
+establishes the high-U factor power 2. Remaining direction intervals are
+[[2.1966991411013588,2.1966991411013996],
+ [5.818466262050285e-14,5.81846626205039e-14],
+ [-5.3033008588991475,-5.303300858899055]].
+The independent control covers this double factor for distinct constant endpoint
+rows and the continuous pole limit. This is a direction after factor removal,
+not the physical secant magnitude. The native artifact preserves the result.
+
+Validation after the shared extraction and direction implementation: all 753
+NURBS lib tests pass (two existing ignored), and all 17 source-support-shell
+tests pass. The original Body, its source definitions and shipped WASM remain
+unchanged. Applying this proposal still requires a closed corrected-body
+representation, neighboring original carrier verification, seam/wall/volume
+checks and STEP/history acceptance. The 28 original pending pairs are not
+promoted by this proposal certificate.
