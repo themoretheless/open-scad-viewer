@@ -62,6 +62,37 @@ pub fn positive_chord_cone_excluded(
     Ok(cosine_upper<I::point(1.).sub(I::point(max_sine_squared))?.lo)
 }
 
+/// Exclude normal alignment for t*c + a*g0 + b*g1, where t is free and
+/// a,b are nonnegative. The caller must prove the shared-curve decomposition
+/// on the original sources. This algebraic decision alone admits no geometry.
+pub fn shared_chord_cone_excluded(shared:[[f64;2];3],transverse:[[[f64;2];3];2],
+    normal:[[f64;2];3],max_sine_squared:f64)->Result<bool> {
+    check(max_sine_squared.is_finite()&&(0. ..1.).contains(&max_sine_squared),
+        "Choose a finite shared-chord angle below one")?;
+    let vectors=[shared,transverse[0],transverse[1]].into_iter().map(|g|Ok([
+        I::new(g[0][0],g[0][1])?,I::new(g[1][0],g[1][1])?,I::new(g[2][0],g[2][1])?
+    ])).collect::<Result<Vec<_>>>()?;
+    let n=[I::new(normal[0][0],normal[0][1])?,I::new(normal[1][0],normal[1][1])?,I::new(normal[2][0],normal[2][1])?];
+    let n2=norm_squared(n)?;if n2.lo<=0. {return Ok(false);}
+    let dot=|a:[I;3],b:[I;3]|->Result<I>{let mut sum=I::point(0.);for k in 0..3 {sum=sum.add(a[k].mul(b[k])?)?;}Ok(sum)};
+    let nd=vectors.iter().map(|g|dot(*g,n)).collect::<Result<Vec<_>>>()?;
+    let weight=I::point(1.).sub(I::point(max_sine_squared))?.mul(n2)?;
+    let mut q=[[I::point(0.);3];3];
+    for a in 0..3 {for b in 0..3 {
+        let gram=if a==b {norm_squared(vectors[a])?}else{dot(vectors[a],vectors[b])?};
+        q[a][b]=weight.mul(gram)?.sub(nd[a].mul(nd[b])?)?;
+    }}
+    if q[0][0].lo<=0. {return Ok(false);}
+    // Eliminate the unrestricted coefficient by a Schur complement. Strict
+    // copositivity of its 2x2 block covers all nonnegative transverse pairs,
+    // including equal directions where a full 3x3 rank test would refuse.
+    let schur=|a:usize,b:usize|q[a][b].sub(q[a][0].mul(q[0][b])?.div(q[0][0])?);
+    let a=schur(1,1)?;let b=schur(2,2)?;let off=schur(1,2)?;
+    if a.lo<=0.||b.lo<=0. {return Ok(false);}
+    if off.lo>=0. {return Ok(true);}
+    Ok(I::point(a.lo).mul(I::point(b.lo))?.sub(square(I::point(off.lo))?)?.lo>0.)
+}
+
 /// A rounded direction proposal only. The interval cone predicate must
 /// independently verify it; midpoint vectors never authorize an exclusion.
 pub(crate) fn chord_cone_projection_proposal(generators:&[[[f64;2];3]])->Option<[f64;3]> {
@@ -91,6 +122,26 @@ mod positive_chord_cone_tests {
         assert!(!excluded(&[[[0.,0.],[0.,0.],[1.,2.]]],n,[0.,0.,1.],1e-6).unwrap());
         assert!(!excluded(&[[[-1.,1.],[0.,0.],[0.,0.]]],n,[1.,0.,0.],1e-6).unwrap());
         assert!(!excluded(&g,[[0.,0.];3],[1.,0.,0.],1e-6).unwrap());
+    }
+    #[test]
+    fn shared_tangent_is_free_but_transverse_cancellation_refuses() {
+        let point=|p:[f64;3]|p.map(|x|[x,x]);
+        let tangent=point([1.,0.,0.]);let up=point([0.,1.,0.]);let down=point([0.,-1.,0.]);let n=point([0.,0.,1.]);
+        assert!(super::shared_chord_cone_excluded(tangent,[up,up],n,1e-6).unwrap());
+        assert!(!super::shared_chord_cone_excluded(tangent,[up,down],n,1e-6).unwrap());
+        assert!(!super::shared_chord_cone_excluded(tangent,[up,up],up,1e-6).unwrap());
+        assert!(!super::shared_chord_cone_excluded(tangent,[up,up],tangent,1e-6).unwrap());
+        assert!(!super::shared_chord_cone_excluded([[0.,0.];3],[up,up],n,1e-6).unwrap());
+        assert!(super::shared_chord_cone_excluded(tangent,[up,up],[[f64::NAN,1.],[0.,0.],[1.,1.]],1e-6).is_err());
+    }
+    #[test]
+    fn shared_cone_bounds_include_nonorthogonal_and_uncertain_paths() {
+        let c=[[1.,1.],[-0.01,0.01],[0.,0.]];
+        let a=[[0.,0.],[1.,1.],[-0.001,0.001]];let n=[[0.,0.],[0.,0.],[1.,1.]];
+        assert!(super::shared_chord_cone_excluded(c,[a,a],n,1e-6).unwrap());
+        let wide=[[0.,0.],[-1.,1.],[0.,0.]];
+        assert!(!super::shared_chord_cone_excluded(c,[wide,a],n,1e-6).unwrap());
+        assert!(!super::shared_chord_cone_excluded(c,[a,a],[[0.,0.];3],1e-6).unwrap());
     }
     #[test]
     fn proposed_bisector_covers_narrow_cone_missed_by_integer_directions() {
@@ -541,6 +592,61 @@ pub(crate) fn validate_rectangle(
     max_spans: usize,
 ) -> Result<()> {
     validate_input(s, domain, [1., 0., 0.], 0., max_spans)
+}
+/// A derivative enclosure tied to its original source and covered parameter path.
+/// Degenerate rectangles allow a boundary line. This is not a body certificate.
+pub struct OriginalDerivativeBounds<'a> {
+    surface: &'a Surface,
+    domain: [[f64; 2]; 2],
+    axis: usize,
+    components: [[f64; 2]; 3],
+}
+impl OriginalDerivativeBounds<'_> {
+    pub fn surface(&self) -> &Surface { self.surface }
+    pub fn domain(&self) -> [[f64; 2]; 2] { self.domain }
+    pub fn axis(&self) -> usize { self.axis }
+    pub fn components(&self) -> [[f64; 2]; 3] { self.components }
+}
+/// Cover every intersected nonempty knot rectangle, including both one-sided
+/// derivatives at knots. Reject jumps across the integrated coordinate.
+pub fn derivative_path_bounds<'a>(s: &'a Surface, domain: [[f64; 2]; 2],
+    axis: usize, max_spans: usize) -> Result<(Option<OriginalDerivativeBounds<'a>>, usize)> {
+    check(axis < 2, "Choose an original derivative coordinate")?;
+    validate_rectangle(s, domain, max_spans)?;
+    let degrees = [s.degree_u, s.degree_v];
+    let counts = [s.control_points.len(), s.control_points[0].len()];
+    let knots = [&s.knots_u, &s.knots_v];
+    if degrees[axis] == 0 { return Ok((None, 0)); }
+    let mut i = degrees[axis] + 1;
+    while i < counts[axis] {
+        let knot = knots[axis][i];
+        let mut end = i + 1;
+        while end < knots[axis].len() && knots[axis][end] == knot { end += 1; }
+        if domain[axis][0] <= knot && knot <= domain[axis][1] && end-i > degrees[axis] {
+            return Ok((None, 0));
+        }
+        i = end;
+    }
+    let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    let mut spans = 0;
+    for u in degrees[0]..counts[0] {
+        for v in degrees[1]..counts[1] {
+            if knots[0][u] == knots[0][u+1] || knots[1][v] == knots[1][v+1] { continue; }
+            let indices = [u,v];
+            let section = std::array::from_fn(|a| [domain[a][0].max(knots[a][indices[a]]),
+                domain[a][1].min(knots[a][indices[a]+1])]);
+            if section.iter().any(|a| a[0] > a[1]) { continue; }
+            if spans == max_spans { return Ok((None, spans)); }
+            let j = jacobian_on(s, indices, section)?;
+            spans += 1;
+            for k in 0..3 {
+                hull[k][0] = hull[k][0].min(j[k][axis].lo);
+                hull[k][1] = hull[k][1].max(j[k][axis].hi);
+            }
+        }
+    }
+    if spans == 0 { return Ok((None, 0)); }
+    Ok((Some(OriginalDerivativeBounds { surface:s, domain, axis, components:hull }), spans))
 }
 pub fn normal_bounds(
     s: &Surface,
@@ -1040,6 +1146,28 @@ mod tests {
     }
 
     use super::*;
+    #[test]
+    fn original_boundary_derivative_keeps_source_and_budget() {
+        let s=plane();
+        let domain=[[0.2,0.8],[1.,1.]];
+        let (bound,spent)=derivative_path_bounds(&s,domain,0,1).unwrap();
+        let bound=bound.unwrap();
+        assert!(std::ptr::eq(bound.surface(),&s));
+        assert_eq!(bound.domain(),domain); assert_eq!(bound.axis(),0); assert_eq!(spent,1);
+        for (r,value) in bound.components().into_iter().zip([1.,0.,0.]) {
+            assert!(r[0]<=value&&value<=r[1]);
+        }
+        assert!(derivative_path_bounds(&s,domain,2,1).is_err());
+        assert!(derivative_path_bounds(&s,[[-0.1,0.8],[1.,1.]],0,1).is_err());
+        assert!(derivative_path_bounds(&s,domain,0,0).is_err());
+        let mut jump=plane();jump.knots_u=vec![0.,0.,0.5,0.5,1.,1.];
+        jump.control_points=vec![jump.control_points[0].clone(),jump.control_points[1].clone(),
+            vec![vec![3.,0.,0.],vec![3.,1.,0.]],vec![vec![4.,0.,0.],vec![4.,1.,0.]]];
+        jump.weights=vec![vec![1.;2];4];
+        assert!(derivative_path_bounds(&jump,domain,0,8).is_err());
+        assert!(derivative_path_bounds(&jump,[[0.2,0.5],[1.,1.]],0,8).is_err());
+
+    }
     fn plane() -> Surface {
         Surface {
             degree_u: 1,

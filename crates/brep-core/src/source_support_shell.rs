@@ -374,6 +374,20 @@ mod tests {
             assert!(std::ptr::eq(proof.body(),&body));assert_eq!(proof.faces(),faces);
             assert_eq!(proof.lower_mm(),5.99);
         }
+        let shared=crate::source_shared_chord_map::prepare(&body,[0,2],100000).unwrap().unwrap();
+        assert!(std::ptr::eq(shared.body(),&body));assert_eq!(shared.faces(),[0,2]);
+        assert_eq!(shared.fixed_axes(),[1,1]);assert_eq!(shared.fixed_values(),[1.,1.]);
+        assert_eq!(shared.free_endpoints(),[[0.,1.],[3.,0.]]);
+        let first=shared.canonical_bounds(0,[[0.25,0.5],[0.,1.]]).unwrap();
+        let second=shared.canonical_bounds(1,[[1.5,2.25],[0.,1.]]).unwrap();
+        assert!(first[0]<=0.25&&first[1]>=0.5);assert!(second[0]<=0.25&&second[1]>=0.5);
+        assert!(shared.canonical_bounds(0,[[-0.01,0.5],[0.,1.]]).is_err());
+        let (tangent,spans)=shared.tangent_bounds([[[0.25,0.5],[0.,1.]],[[1.5,2.25],[0.,1.]]],64).unwrap();
+        assert!(spans>0);assert!(tangent.unwrap().iter().all(|r|r[0].is_finite()&&r[1].is_finite()&&r[0]<=r[1]));
+
+        assert!(crate::source_shared_chord_map::prepare(&body,[0,2],0).unwrap().is_none());
+        let reverse=crate::source_shared_chord_map::prepare(&body,[2,0],100000).unwrap().unwrap();
+        assert_eq!(reverse.edge(),shared.edge());assert_eq!(reverse.free_endpoints(),[[3.,0.],[0.,1.]]);
         let prepared=crate::source_wall_anchor::prepare(&body,[0,1],[[1.,0.],[20.,0.]],[20.,0.,6.],10000000).unwrap();
         assert!(prepared.prepared.is_some());
         assert!(prepared.exact_work>0 && prepared.exact_work<=10000000);

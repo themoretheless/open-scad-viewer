@@ -1933,6 +1933,7 @@ pub mod source_face_gap;
 pub mod source_retained_face_gap;
 pub mod source_wall_pair;
 pub mod source_wall_anchor;
+pub mod source_shared_chord_map;
 pub mod source_material_segment;
 pub mod source_material_chord;
 pub mod source_material_wall;

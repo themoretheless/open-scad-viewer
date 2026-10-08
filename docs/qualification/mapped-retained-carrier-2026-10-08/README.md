@@ -256,3 +256,31 @@ On the original annular whole-wall control this proposal adds **no new proof**:
 false. This diagnostic change remains native and has not replaced the qualified
 3ad19753 WASM/worker/UI artifact. Remaining shared-edge products require stronger
 source chord enclosures; no claim of general fillet qualification is made.
+
+## Shared carrier parameter and derivative preparation
+
+Native `source_shared_chord_map` binds an affine natural-boundary pcurve map to
+one privately admitted Body edge and its two original owned surfaces. It uses
+exact full source-map admission, not sampled world coincidence or promotion of
+retained root endpoints. Curved and nonlinear pcurve maps remain unsupported.
+The original annular faces 0/2 map to canonical s through u=s and u=3(1-s).
+The regression checks both face orders, outward inverse intervals, invalid UV,
+zero edge inspection budget and original shared tangent preparation.
+
+`normal_alignment::derivative_path_bounds` retains source identity, coordinate,
+and domain in private fields. It covers every intersected nonempty knot span,
+including both sides at a knot and zero-width boundary charts, with an explicit
+span budget. Invalid/disconnected source surfaces refuse. The Body map scales
+these original derivative bounds by the original affine chart coefficient.
+
+`shared_chord_cone_excluded` provides a sufficient interval Schur-complement
+and copositivity test for an unrestricted common tangent coefficient and two
+nonnegative transverse coefficients. It refuses opposing transverse vectors,
+normal alignment and uncertain cancellation. This algebraic gate alone is not
+a source chord or whole-wall certificate: the original transverse decomposition
+still must be constructed and connected to the automatic pair controller.
+
+Validation: 21 native normal-alignment tests passed, one existing ignored; the
+annular original Body regression passed. These changes remain native. No new
+whole-wall pair proof or general fillet completion is claimed; WASM remains the
+previously qualified 3ad19753 artifact.
