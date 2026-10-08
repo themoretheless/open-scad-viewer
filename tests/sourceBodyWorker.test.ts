@@ -535,3 +535,29 @@ it('qualifies the original cuboid whole-wall threshold through real WASM worker'
   wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
   elapsedMs:performance.now()-started,results,scope:'Original admitted 10 x 20 x 30 mm cuboid, complete aligned wall lower threshold.'},null,2)+'\n')
 },120000)
+
+it('preserves original pair proofs when close-chart refusals release gap work through real WASM',async()=>{
+ const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
+ const {op:_op,...base}=request,client=realClient(),results=[]
+ for(const expanded of [false,true]){
+  const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
+   normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
+   adaptiveSelf:{planeControls:10000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,
+    pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
+    refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
+   limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:expanded?100000:1000,gapSpans:expanded?100000:2000,maxSineSquared:1e-6}}}
+  const r=await client.run({kind:'sourceBodyRestore',options:o})
+  expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const coverage=r.wallCoverage!;expect(coverage.adaptiveSelf!.allSelfPairsQualified).toBe(true)
+  expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
+  if(expanded){
+   expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(61)
+   expect(coverage.pairs.some(p=>p.reason==='source-face-gap-chart-close'&&!p.proven)).toBe(true)
+   for(const prior of results[0]!.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===prior.faces[0]&&p.faces[1]===prior.faces[1])?.proven).toBe(true)
+  }
+  results.push(coverage)
+ }
+ if(process.env.CAD_SOURCE_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_SOURCE_GAP_WORKER_REPORT,JSON.stringify({
+  wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),
+  results,scope:'Real-worker near-normal wall coverage; close chart points are refusals, not material witnesses.'},null,2)+'\n')
+},180000)
