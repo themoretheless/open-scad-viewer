@@ -166,6 +166,17 @@ pub(crate) fn rational_pole_pair_report(
     sine: f64,
     max_spans: usize,
 ) -> Result<PairExclusion> {
+    rational_pole_pair_report_cached(s, pair, differential, normals, sine, max_spans, None)
+}
+pub(crate) fn rational_pole_pair_report_cached(
+    s: &Surface,
+    pair: [[[f64; 2]; 2]; 2],
+    differential: &crate::rational_pole_differential::Certificate<'_>,
+    normals: &crate::factored_surface_normals::Certificate<'_>,
+    sine: f64,
+    max_spans: usize,
+    cached: Option<&crate::factored_surface_normals::PairBounds<'_>>,
+) -> Result<PairExclusion> {
     check(
         std::ptr::eq(s, differential.surface())
             && std::ptr::eq(s, normals.surface())
@@ -176,6 +187,7 @@ pub(crate) fn rational_pole_pair_report(
         sine.is_finite() && (0. ..1.).contains(&sine),
         "Valid pole pair sine threshold",
     )?;
+    let components = cached.map(|cache| cache.components(normals, pair)).transpose()?;
     if max_spans < 5 {
         return Ok(PairExclusion::default());
     }
@@ -194,7 +206,7 @@ pub(crate) fn rational_pole_pair_report(
     // Scoped to this invocation: source, pole orientation and rectangles have
     // already been validated and remain immutable throughout all three modes.
     // Charge a restriction only when its endpoint bound is first computed.
-    let mut endpoint_bounds = [None; 2];
+    let mut endpoint_bounds = components.map(|values| values.map(Some)).unwrap_or([None; 2]);
     for mode in [0, 1, 2] {
         let cost = if mode == 1 { 6 } else { 5 };
         let coordinate_path = mode == 0;

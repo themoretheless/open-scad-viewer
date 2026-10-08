@@ -309,15 +309,44 @@ fn qualify_impl<'a>(
                 continue;
             }
         }
+        if let Some(threshold) = necessary.filter(|_| out.spans < limits.spans) {
+            if let Some(proof) = factored {
+                if limits.spans - out.spans >= 2 {
+                    let cache = proof.pair_bounds(pair)?;
+                    let components = cache.components(proof, pair)?;
+                    pair_normals = Some(cache);
+                    out.spans += 2;
+                    let r = normal_alignment::inspect_pair_bounds(components, threshold)?;
+                    if r.aligned == Some(false) {
+                        out.angular_exclusions += 1;
+                        out.factored_angular_exclusions += 1;
+                        continue;
+                    }
+                }
+            } else {
+                let r = normal_alignment::inspect_pair(
+                    [s, s],
+                    pair,
+                    threshold,
+                    limits.spans - out.spans,
+                )?;
+                out.spans += r.spans;
+                if r.aligned == Some(false) {
+                    out.angular_exclusions += 1;
+                    continue;
+                }
+            }
+        }
         if let (Some(differential), Some(normals)) = (differential, factored) {
             if out.spans < limits.spans {
-                let r = surface_self_chord::rational_pole_pair_report(
+                let r = surface_self_chord::rational_pole_pair_report_cached(
                     s,
                     pair,
                     differential,
                     normals,
                     max_sine_squared,
                     limits.spans - out.spans,
+                    pair_normals.as_ref(),
                 )?;
                 out.spans += r.spans;
                 out.coordinate_path_attempts += usize::from(r.coordinate_path_attempted);
@@ -351,34 +380,6 @@ fn qualify_impl<'a>(
                 out.polar_exclusions += 1;
                 intrinsic.push(c);
                 continue;
-            }
-        }
-        if let Some(threshold) = necessary.filter(|_| out.spans < limits.spans) {
-            if let Some(proof) = factored {
-                if limits.spans - out.spans >= 2 {
-                    let cache = proof.pair_bounds(pair)?;
-                    let components = cache.components(proof, pair)?;
-                    pair_normals = Some(cache);
-                    out.spans += 2;
-                    let r = normal_alignment::inspect_pair_bounds(components, threshold)?;
-                    if r.aligned == Some(false) {
-                        out.angular_exclusions += 1;
-                        out.factored_angular_exclusions += 1;
-                        continue;
-                    }
-                }
-            } else {
-                let r = normal_alignment::inspect_pair(
-                    [s, s],
-                    pair,
-                    threshold,
-                    limits.spans - out.spans,
-                )?;
-                out.spans += r.spans;
-                if r.aligned == Some(false) {
-                    out.angular_exclusions += 1;
-                    continue;
-                }
             }
         }
         let work = span_count(s, pair[0]) + span_count(s, pair[1]);

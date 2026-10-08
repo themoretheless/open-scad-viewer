@@ -901,6 +901,17 @@ mod tests {
                 && !report.coordinate_path_available
         );
         assert_eq!(report.spans, 12);
+        let cached = normals.pair_bounds(pair).unwrap(); // Two paid restrictions.
+        let reused = crate::surface_self_chord::rational_pole_pair_report_cached(
+            &s, pair, &c, &normals, 1e-4, 11, Some(&cached)).unwrap();
+        assert!(reused.excluded && reused.local_path_excluded);
+        assert_eq!(reused.spans, 11);
+        let no_matrix_budget = crate::surface_self_chord::rational_pole_pair_report_cached(
+            &s, pair, &c, &normals, 1e-4, 10, Some(&cached)).unwrap();
+        assert!(!no_matrix_budget.excluded && no_matrix_budget.spans <= 10);
+        assert!(crate::surface_self_chord::rational_pole_pair_report_cached(
+            &s, [pair[0]; 2], &c, &normals, 1e-4, 0, Some(&cached)).is_err());
+
         let limited =
             crate::surface_self_chord::rational_pole_pair_report(&s, pair, &c, &normals, 1e-4, 11)
                 .unwrap();

@@ -852,3 +852,19 @@ chord/coverage tests include cached exclusion with zero additional budget,
 foreign-source and changed-pair rejection, and incomplete-coverage refusal.
 The separate pair-cache prototype audit is still running; no qualification
 claim follows from these unit tests.
+
+## Shared pair cache and early angular exclusion
+
+The source-owned pair normal cache now also feeds all three pole matrix
+modes. Its source/pair identity is checked before budget refusal. Normal
+queries are paid once upstream; cached projections consume no new normal
+restriction. The independent local inverse-chart fixture still refuses an
+insufficient matrix budget, and altered pairs are rejected even at zero
+budget. Seven pole and thirteen chord/coverage tests passed.
+
+Coverage now attempts the necessary angular condition before the expensive
+pole matrices. This changes traversal partitions under a fixed limit; cell
+and pending counts are not percentages of qualified area. The unchanged
+1024/8192 prototype audit is running as annular-all-cache-self-wall. Whole
+wall qualification remains unproven until that audit and the remaining
+same-face/distinct-face obligations succeed.
