@@ -108,16 +108,20 @@ impl<'a> Certificate<'a> {
     }
 }
 fn split(row: &[[I; 3]], t: I) -> Result<(Vec<[I; 3]>, Vec<[I; 3]>)> {
+    let t = t.intersect(0., 1.)?;
     let mut r = row.to_vec();
     let mut left = vec![r[0]];
     let mut right = vec![*r.last().unwrap()];
-    let one = I::point(1.).sub(t)?;
+    let one = I::point(1.).sub(t)?.intersect(0., 1.)?;
     while r.len() > 1 {
         let mut next = Vec::new();
         for p in r.windows(2) {
             let mut value = [I::point(0.); 3];
             for k in 0..3 {
-                value[k] = p[0][k].mul(one)?.add(p[1][k].mul(t)?)?;
+                // The exact convex blend belongs to the parent hull even when
+                // interval dependency in t and (1-t) widens the arithmetic.
+                value[k] = p[0][k].mul(one)?.add(p[1][k].mul(t)?)?.intersect(
+                    p[0][k].lo.min(p[1][k].lo), p[0][k].hi.max(p[1][k].hi))?;
             }
             next.push(value);
         }
@@ -272,6 +276,22 @@ pub fn prepare(s: &Surface, end: bool, max_work: u64) -> Result<Report<'_>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn convex_restriction_retains_constant_and_parent_hulls_at_closed_endpoints() {
+        let constant = [I::point(1e100), I::point(-1e-100), I::point(0.)];
+        let row = vec![constant; 24];
+        for parameter in [I::new(-f64::EPSILON, f64::EPSILON).unwrap(),
+            I::new(0., 1.).unwrap(), I::new(1.-f64::EPSILON, 1.+f64::EPSILON).unwrap()] {
+            let (a,b) = split(&row, parameter).unwrap();
+            for p in a.iter().chain(&b) {
+                for k in 0..3 {
+                    assert_eq!(p[k].lo, constant[k].lo);
+                    assert_eq!(p[k].hi, constant[k].hi);
+                }
+            }
+        }
+        assert!(split(&row, I::new(2.,3.).unwrap()).is_err());
+    }
     fn collapsed() -> Surface {
         Surface {
             degree_u: 2,

@@ -887,3 +887,18 @@ only a change in proof scheduling. Thirteen chord/coverage tests passed,
 including the rational-cylinder short-normal-chord counterexample and
 insufficient-budget rejection. The unchanged 1024/8192 audit runs as
 annular-early-secant-self-wall; its result is pending.
+
+## Full cache / early angle audit completed
+
+The afe440f0 audit finished at unchanged 1024/8192 limits. Both spatial
+directions match: forward radii retain 8/12 pending pairs on faces 0/10,
+reverse radii 8/13. No pole face is certified; whole same-face coverage
+remains 28/31. All-cache JSON/log archives record original geometry identity
+and classified proof attempts. Counts reflect changed traversal, not area.
+
+Factored normal restriction now intersects every interval de Casteljau blend
+with its parent coefficient hull and its parameter with the closed unit
+interval. These are mathematically valid intersections: the exact blend is
+convex. Four normal tests passed, including independent original cubic
+normals and constant high-degree coefficient hulls at closed endpoints.
+This improvement has not yet been qualified on the prototype bodies.
