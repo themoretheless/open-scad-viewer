@@ -43,6 +43,36 @@ fn separated_square(x: I) -> Result<Option<I>> {
         (upper * upper).next_up(),
     )?))
 }
+fn gram_bounds(j: [[I; 2]; 3]) -> Result<([I; 2], [I; 2], I)> {
+    let mut upper = [I::point(0.); 2];
+    let mut lower = [I::point(0.); 2];
+    let mut off = I::point(0.);
+    for row in j {
+        for a in 0..2 {
+            if let Some(square) = separated_square(row[a])? { lower[a] = lower[a].add(square)?; }
+            let magnitude = row[a].lo.abs().max(row[a].hi.abs());
+            upper[a] = upper[a].add(I::point(magnitude).mul(I::point(magnitude))?)?;
+        }
+        off = off.add(row[0].mul(row[1])?)?;
+    }
+    Ok((upper, lower, off))
+}
+fn direct_gram_lower(lower: [I; 2], off_upper: f64) -> Result<f64> {
+    let d = lower.map(|x| x.lo.max(0.));
+    // Gram entries already contain squared lengths. Normalize before another
+    // square so valid large coordinate units cannot overflow the discriminant.
+    let scale = d[0].max(d[1]).max(off_upper).max(f64::MIN_POSITIVE);
+    let d = [I::point(d[0]).div(I::point(scale))?.lo.max(0.),
+        I::point(d[1]).div(I::point(scale))?.lo.max(0.)];
+    let off = I::point(off_upper).div(I::point(scale))?.hi;
+    let difference = I::point(d[0]).sub(I::point(d[1]))?;
+    let magnitude = difference.lo.abs().max(difference.hi.abs());
+    let discriminant = I::point(magnitude).mul(I::point(magnitude))?
+        .add(I::point(off).mul(I::point(off))?.mul(I::point(4.))?)?;
+    let root_upper = discriminant.hi.sqrt().next_up();
+    Ok(I::point(d[0]).add(I::point(d[1]))?.sub(I::point(root_upper))?
+        .mul(I::point(0.5))?.mul(I::point(scale))?.lo.max(0.))
+}
 fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
     let mut variation = I::point(0.);
     for row in j {
@@ -52,6 +82,11 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
         }
     }
     let mut best = 1_f64;
+    let (_, lower, off) = gram_bounds(j)?;
+    let least = direct_gram_lower(lower, off.lo.abs().max(off.hi.abs()))?;
+    if least > 0. {
+        best = best.min(variation.div(I::point(least))?.hi);
+    }
     let mut gram_determinant = I::point(0.);
     for [a, b] in [[0, 1], [0, 2], [1, 2]] {
         let det = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
@@ -116,19 +151,7 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     }
     // Gershgorin also bounds the largest eigenvalue of the 2x2 Gram
     // matrix. Nearly orthogonal columns need not pay the full trace bound.
-    let mut diagonal = [I::point(0.); 2];
-    let mut diagonal_lower = [I::point(0.); 2];
-    let mut off_diagonal = I::point(0.);
-    for row in j {
-        for a in 0..2 {
-            if let Some(lower) = separated_square(row[a])? {
-                diagonal_lower[a] = diagonal_lower[a].add(lower)?;
-            }
-            let upper = row[a].lo.abs().max(row[a].hi.abs());
-            diagonal[a] = diagonal[a].add(I::point(upper).mul(I::point(upper))?)?;
-        }
-        off_diagonal = off_diagonal.add(row[0].mul(row[1])?)?;
-    }
+    let (diagonal, diagonal_lower, off_diagonal) = gram_bounds(j)?;
     let off_upper = off_diagonal.lo.abs().max(off_diagonal.hi.abs());
     let gershgorin = diagonal[0].hi.max(diagonal[1].hi);
     let mut largest = I::point(gershgorin).add(I::point(off_upper))?.hi.min(trace.hi);
@@ -146,14 +169,7 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     // lambda_min increases with either diagonal and decreases with |b|.
     // Thus lower diagonal norms and the absolute off-diagonal upper bound
     // yield a second independent lower bound for every enclosed matrix.
-    let lower_diagonals = diagonal_lower.map(|x| x.lo.max(0.));
-    let difference = I::point(lower_diagonals[0]).sub(I::point(lower_diagonals[1]))?;
-    let difference_upper = difference.lo.abs().max(difference.hi.abs());
-    let discriminant = I::point(difference_upper).mul(I::point(difference_upper))?
-        .add(I::point(off_upper).mul(I::point(off_upper))?.mul(I::point(4.))?)?;
-    let root_upper = discriminant.hi.sqrt().next_up();
-    let direct_lower = I::point(lower_diagonals[0]).add(I::point(lower_diagonals[1]))?
-        .sub(I::point(root_upper))?.mul(I::point(0.5))?.lo.max(0.);
+    let direct_lower = direct_gram_lower(diagonal_lower, off_upper)?;
     let minor_lower = if determinant.lo > 0. && largest > 0. {
         determinant.div(I::point(largest))?.lo.max(0.)
     } else { 0. };
@@ -596,6 +612,12 @@ mod tests {
             [I::point(0.),I::new(0.9,1.1).unwrap()], [I::point(0.);2]];
         let n = [I::point(0.3),I::point(0.),I::point(1.)];
         let upper = endpoint_matrix_cosine(j,n).unwrap();
+        assert!(cosine_upper(j).unwrap() < 0.1);
+        let large = direct_gram_lower([I::point(1e200);2], 0.).unwrap();
+        assert!(large > 0.99e200 && large <= 1e200);
+        let constant_scaled = [[I::point(1e100),I::point(0.)],
+            [I::point(0.),I::point(1.)], [I::point(0.);2]];
+        assert!(cosine_upper(constant_scaled).unwrap() < 1e-10);
         assert!(upper < 0.13); // Minor / largest-eigenvalue alone exceeds .18.
         for a in [0.9,1.,1.1] { for b in [0.9,1.,1.1] {
             for x in [-1.,0.,1.] { for y in [-1.,0.,1.] {

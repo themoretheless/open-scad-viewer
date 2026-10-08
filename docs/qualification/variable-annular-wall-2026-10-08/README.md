@@ -1138,3 +1138,23 @@ qualifies at ten restrictions and refuses at nine; higher budgets also
 retain its original confined proof. Seven pole and sixteen chord tests
 passed. The fixed 1024/8192 tight-first audit is running separately; no
 whole-wall or performance improvement is claimed before completion.
+
+## Direct Gram lower bound for ordinary intrinsic charts
+
+The direct least-eigenvalue bound now also strengthens ordinary intrinsic
+chord qualification: normal projection variation / least-eigenvalue
+lower bound is combined with the existing separated-minor estimates.
+The same original Jacobian hull covers every mean and endpoint derivative.
+This does not require a pole factor or an inverse-coordinate path.
+
+Gram entries are normalized before their discriminant is squared and
+rescaled outward afterward. Regression includes 1e200 squared column norms
+and an anisotropic constant matrix with a 1e100 column, preserving finite
+bounds. Sixteen chord/coverage and seven pole tests passed, including
+independent curved chord oracles and aligned-short-chord refusal.
+The 12500/100000 ordinary middle-face audit is running as
+annular-intrinsic-gram-middle-self-wall. Whole-wall safety remains unproven.
+
+The preceding tight-first 1024/8192 prototype audit completed and is
+archived separately. Its JSON includes all four unchanged models, every
+unresolved pair and the proven local margin classifications.
