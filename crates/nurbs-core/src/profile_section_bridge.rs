@@ -1114,10 +1114,16 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 continue;
             }
             if tighten && out.spans < max_spans {
-                let (anchored, spent) = self.first_free_from_rail_bounds(
+                let (parts, spent) = self.free_jet_from_rail_parts(
                     rect[0], rect[1], max_spans-out.spans)?;
                 out.spans += spent;
-                if let Some(anchored) = anchored {
+                if let Some((anchor,second,delta)) = parts {
+                    let mut anchored=[[0.;2];3];
+                    for k in 0..3 {
+                        let v=I::new(anchor[k][0],anchor[k][1])?.add(
+                            I::new(second[k][0],second[k][1])?.mul(delta)?)?;
+                        anchored[k]=[v.lo,v.hi];
+                    }
                     for k in 0..3 {
                         let common = I::new(jet[0][k][0],jet[0][k][1])?
                             .intersect(anchored[k][0],anchored[k][1])?;
@@ -1130,7 +1136,10 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                                 .mul(I::new(jet[0][k][0],jet[0][k][1])?)?)?;
                         }
                     }
-                    if projected_principal_minors_positive(j)? {
+                    if projected_principal_minors_positive(j)? ||
+                        (j[0][0].lo>0. && j[1][1].lo>0. &&
+                            second_free_jet::projected_rail_determinant(projection,anchor,second,
+                                delta,[j[0][1],j[1][1]])?.lo>0.) {
                         out.regular.push(rect);
                         continue;
                     }

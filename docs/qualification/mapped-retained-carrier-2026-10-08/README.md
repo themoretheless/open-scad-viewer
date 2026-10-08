@@ -2556,3 +2556,32 @@ control difference. The cap was not changed. Six bridge tests passed in
 15.49 s, including rational weights, both axes, folds, and derivative
 jump refusals. The preceding native stronger-policy run is still live;
 its binary predates this more stable endpoint formula.
+
+The native first-jet integration run (before the stable endpoint formula)
+passed in 684.23 s. XY coverage remains incomplete: 352 accepted,
+179 pending, 1000 cells, 90859 spans. Counts alone cannot compare
+different refinement trees; the next native fixture reports pending
+parameter area and rectangles alongside a direct-policy run with the
+same 1000-cell / 100000-span limits. Combined audit remains at 154
+pending pairs. The stable endpoint formula is now included in that
+next native executable; the previous live handle finished before rerun.
+
+## Shared rail displacement in projected determinant
+
+The stronger policy now retains its first-free-jet decomposition
+A(across) + delta * B(free,across), where A is the exact preserved rail
+first jet and B encloses the average full second jet along the path.
+It bounds the projected determinant as det(A,T) + delta*det(B,T),
+where T is the whole across-column enclosure. The same delta occurs
+in both entries of the free column; expanding it before interval
+evaluation avoids losing this dependency. Both projected diagonal
+entries must still be strictly positive. No diagonal or determinant
+predicate is weakened; all source queries use the same work allowance.
+
+An independent affine-column regression uses A=(epsilon,0.1*epsilon),
+B=(-1,-0.1), delta in [-1,0], T=(1,1). Independent column boxes fail
+while the expanded determinant is strictly positive. Reversing B
+retains the real interior zero. Seven bridge tests passed in 4.59 s,
+including the existing folded-patch refusal under the stronger policy.
+The currently live native comparison predates this determinant change;
+no additional contact or projected-face certificate is claimed yet.

@@ -144,6 +144,24 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         across: [f64; 2],
         budget: usize,
     ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        let (parts, spent) = self.free_jet_from_rail_parts(free, across, budget)?;
+        let Some((first, second, delta)) = parts else {
+            return Ok((None, spent));
+        };
+        let mut out = [[0.; 2]; 3];
+        for k in 0..3 {
+            let v = I::new(first[k][0], first[k][1])?
+                .add(I::new(second[k][0], second[k][1])?.mul(delta)?)?;
+            out[k] = [v.lo, v.hi];
+        }
+        Ok((Some(out), spent))
+    }
+    pub(super) fn free_jet_from_rail_parts(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+    ) -> Result<(Option<([[f64; 2]; 3], [[f64; 2]; 3], I)>, usize)> {
         self.bridge.validate(free, across, budget)?;
         let section = self.section(false);
         let range = section.range();
@@ -185,7 +203,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             jet.map(|k| k[axis])
         };
         if free == [anchor; 2] {
-            return Ok((Some(first), spent));
+            return Ok((Some((first, [[0.; 2]; 3], I::point(0.))), spent));
         }
         let (second, used) =
             self.second_free_derivatives_with_transverse_correction(path, across, budget - spent)?;
@@ -194,13 +212,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
             return Ok((None, spent));
         };
         let delta = I::new(free[0], free[1])?.sub(I::point(anchor))?;
-        let mut out = [[0.; 2]; 3];
-        for k in 0..3 {
-            let v = I::new(first[k][0], first[k][1])?
-                .add(I::new(second[k][0], second[k][1])?.mul(delta)?)?;
-            out[k] = [v.lo, v.hi];
-        }
-        Ok((Some(out), spent))
+        Ok((Some((first, second, delta)), spent))
     }
     /// Includes the second derivatives of both correction basis functions.
     /// A natural rail preserves position and first jets, not the second jet.
@@ -296,9 +308,60 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
     }
 }
 
+// Keep the common displacement in both rows of the free Jacobian column.
+pub(super) fn projected_rail_determinant(
+    projection: [[f64; 3]; 2],
+    first: [[f64; 2]; 3],
+    second: [[f64; 2]; 3],
+    delta: I,
+    across: [I; 2],
+) -> Result<I> {
+    let mut a = [I::point(0.); 2];
+    let mut b = [I::point(0.); 2];
+    for row in 0..2 {
+        for k in 0..3 {
+            if projection[row][k] == 0. {
+                continue;
+            }
+            let scale = I::point(projection[row][k]);
+            a[row] = a[row].add(scale.mul(I::new(first[k][0], first[k][1])?)?)?;
+            b[row] = b[row].add(scale.mul(I::new(second[k][0], second[k][1])?)?)?;
+        }
+    }
+    let anchor = a[0].mul(across[1])?.sub(across[0].mul(a[1])?)?;
+    let curvature = b[0].mul(across[1])?.sub(across[0].mul(b[1])?)?;
+    anchor.add(delta.mul(curvature)?)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rail_determinant_preserves_common_displacement_and_interior_zeros() {
+        let epsilon = 1e-12;
+        let first = [[epsilon; 2], [0.1 * epsilon; 2], [0.; 2]];
+        let second = [[-1.; 2], [-0.1; 2], [0.; 2]];
+        let projection = [[1., 0., 0.], [0., 1., 0.]];
+        let delta = I::new(-1., 0.).unwrap();
+        let x = I::point(epsilon)
+            .add(delta.mul(I::point(-1.)).unwrap())
+            .unwrap();
+        let y = I::point(0.1 * epsilon)
+            .add(delta.mul(I::point(-0.1)).unwrap())
+            .unwrap();
+        assert!(x.sub(y).unwrap().lo < 0.);
+        let bound = projected_rail_determinant(projection, first, second, delta, [I::point(1.); 2])
+            .unwrap();
+        assert!(bound.lo > 0. && bound.hi >= 0.9);
+        let crossing = projected_rail_determinant(
+            projection,
+            first,
+            [[1.; 2], [0.1; 2], [0.; 2]],
+            delta,
+            [I::point(1.); 2],
+        )
+        .unwrap();
+        assert!(crossing.lo < 0. && crossing.hi > 0.);
+    }
     #[test]
     fn first_free_rail_keeps_small_jets_at_large_world_coordinates() {
         let large = 2f64.powi(29);
