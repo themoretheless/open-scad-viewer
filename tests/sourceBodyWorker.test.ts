@@ -594,6 +594,13 @@ it('qualifies bounded retained face products without losing prior proofs through
 it('diagnoses owned sharp endpoints while preserving regular seam refusals through real WASM',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),results=[]
+ const limited:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge:0,endpointLimitsExactWork:1,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
+ const stopped=await client.run({kind:'sourceBodyRestore',options:limited})
+ expect(validSourceBody(sourceBodyExpectation(limited),stopped)).toBe(true)
+ expect(stopped.seamQualification!.qualified).toBe(false)
+ expect(stopped.seamQualification!.endpointLimits!.reason).toBe('source-seam-endpoint-limits-work-limit')
+ expect(stopped.seamQualification!.endpointLimits!.exactWork).toBeLessThanOrEqual(1)
+ expect(stopped.seamQualification!.endpointLimits!.sides).toEqual([])
  for(const edge of [0,1,16,18]){
   const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,seamQualification:{edge,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}
   const r=await client.run({kind:'sourceBodyRestore',options:o})
@@ -615,7 +622,7 @@ it('diagnoses owned sharp endpoints while preserving regular seam refusals throu
   results.push({edge,seam})
  }
  client.dispose()
- if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
+ if(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT)writeFileSync(process.env.CAD_ENDPOINT_LIMITS_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),limited:stopped.seamQualification,results,scope:'Owned singular endpoint diagnostics; regular G1 remains refused.'},null,2)+'\n')
 },180000)
 
 it('qualifies all reference regular seams at UI budgets and preserves singular endpoint refusals through real WASM',async()=>{
