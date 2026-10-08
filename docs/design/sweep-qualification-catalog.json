@@ -246,6 +246,56 @@
         "operation": "surface_profile_sweep",
         "scope": "Accepted RMF scaled square; native and OCCT round-trip."
       }
+    ],
+    "profileSolid": [
+      {
+        "file": "closed-profile-planar-6.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 6
+      },
+      {
+        "file": "closed-profile-planar-7.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 7
+      },
+      {
+        "file": "closed-profile-planar-10.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 10
+      },
+      {
+        "file": "closed-profile-planar-12.step",
+        "nativeAdmission": "certify",
+        "mode": "planar",
+        "stations": 12
+      },
+      {
+        "file": "closed-profile-spatial-6.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 6
+      },
+      {
+        "file": "closed-profile-spatial-7.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 7
+      },
+      {
+        "file": "closed-profile-spatial-10.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 10
+      },
+      {
+        "file": "closed-profile-spatial-12.step",
+        "nativeAdmission": "certify",
+        "mode": "spatial",
+        "stations": 12
+      }
     ]
   },
   "suites": {
@@ -273,7 +323,8 @@
       "tests/sweepCurvedGuideMiter.test.ts",
       "tests/nurbsProgressiveMiterWallAudit.test.ts",
       "tests/sweepViewportEvidence.test.ts",
-      "tests/nurbsScalarSweep.test.ts"
+      "tests/nurbsScalarSweep.test.ts",
+      "tests/profileSolidAdmission.test.ts"
     ],
     "rush": [
       "tests/modelGraphLoft.test.ts",
