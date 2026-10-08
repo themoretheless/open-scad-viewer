@@ -234,6 +234,15 @@ pub fn rational_surface_projected_jacobian(
 ) -> Result<Decision, InputError> {
     compute(ctx, surface, axes, None, None, false)
 }
+/// All exact coefficient signs and outward magnitude enclosures under one
+/// bounded context. Missing work returns no partial coefficient grid.
+pub fn rational_surface_projected_jacobian_bounds(
+    ctx: &mut PredicateContext<'_>,
+    surface: &[Vec<[LeafRef; 4]>],
+    axes: [usize; 2],
+) -> Result<Decision, InputError> {
+    compute(ctx, surface, axes, None, None, true)
+}
 /// One original Bernstein coefficient row. The caller must check every row
 /// of the same immutable chart before claiming interior orientation.
 pub fn rational_surface_projected_jacobian_row(
@@ -305,7 +314,21 @@ mod tests {
                 [0, 0],
             )
             .unwrap();
-            bounds.push(d.coefficient_bounds.unwrap()[0][0]);
+            let selected = d.coefficient_bounds.unwrap()[0][0];
+            let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+            let whole =
+                rational_surface_projected_jacobian_bounds(&mut ctx, &leaves, axes).unwrap();
+            let net = whole.coefficient_bounds.unwrap();
+            assert_eq!(net.len(), 3);
+            assert!(net.iter().all(|row| row.len() == 3));
+            assert_eq!(net[0][0], selected);
+            assert!(whole.signs.unwrap().iter().flatten().all(|s| *s
+                == if axes == [0, 1] {
+                    Sign::Positive
+                } else {
+                    Sign::Negative
+                }));
+            bounds.push(selected);
         }
         assert!(bounds[2][0] > 0.);
         for (axis, ratio) in [(0, 2.), (1, 3.)] {
@@ -328,6 +351,17 @@ mod tests {
             [0, 0],
         )
         .unwrap();
+        assert!(d.signs.is_none() && d.coefficient_bounds.is_none());
+        let mut ctx = PredicateContext::new(
+            &arena,
+            &tolerance,
+            Limits {
+                max_work: 1,
+                ..Limits::default()
+            },
+            None,
+        );
+        let d = rational_surface_projected_jacobian_bounds(&mut ctx, &leaves, [0, 1]).unwrap();
         assert!(d.signs.is_none() && d.coefficient_bounds.is_none());
     }
 

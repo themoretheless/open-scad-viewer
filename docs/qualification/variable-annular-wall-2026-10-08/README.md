@@ -237,3 +237,19 @@ source-face wall pairs, material chord coverage and a proved minimum
 interval are still required. General fillets, named-part acceptance
 and packaging the new native logic into WASM/UI remain open.
 Evidence: `self-wall-gram20000.json.gz` and its completed log.
+
+## Whole original normal numerator grid API
+
+`cad_predicates::rational_surface_projected_jacobian_bounds` returns
+all exact coefficient signs and outward coefficient magnitude bounds
+under one predicate context. It retains the same original input scaling
+across projections. An exhausted query returns neither a partial sign
+net nor a partial magnitude net. This exposes the complete grid needed
+to verify a vanishing boundary factor before using limiting normals.
+It does not itself qualify a singular endpoint or any wall pair.
+
+Seven projected-Jacobian tests pass, including whole-grid dimensions,
+original plane normal signs/magnitudes, agreement with the selected
+coefficient query and complete refusal at insufficient work. Evidence:
+`normal-grid-tests.log.gz`. The remaining pole factor and continuous
+secant qualifications still need to consume and verify this native API.
