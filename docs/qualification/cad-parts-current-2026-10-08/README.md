@@ -18,5 +18,10 @@ uncompressed STEP payloads.
 
 These are controlled existing part chains. General curved fillets, general
 B-rep self-intersection and wall qualification, the complete command matrix,
-and P2/P3 remain unproven. Keyboard acceptance is still running and is not
-claimed by this report.
+and P2/P3 remain unproven. Keyboard histories also passed all three chains, including 20 edits, seven
+preview cancellations, every Undo/Redo state and exact reload. The collector
+checked 422 documents across both input methods, 140 distinct payloads, unique
+topology identities and every snapshot bound within 1e-6 mm. See
+`history/history-audit.json` and its Brotli document archive. Keyboard STEP menu
+export/import/re-export passed six files; independent keyboard measurements
+are still running and are not yet claimed.

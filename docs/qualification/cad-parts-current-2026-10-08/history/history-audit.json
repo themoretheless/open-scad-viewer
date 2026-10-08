@@ -1,0 +1,2190 @@
+{
+  "scope": "controlled bracket/enclosure/flange histories; all-command and general BRep completion unproven",
+  "parts": [
+    {
+      "interaction": "mouse",
+      "name": "bracket",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "mouse",
+      "name": "enclosure",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "mouse",
+      "name": "flange",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "bracket",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "enclosure",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "flange",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    }
+  ],
+  "files": [
+    {
+      "file": "annular-current-ui-fixtures/bracket/initial.json",
+      "sha256": "9c708c746d44007ae27d771f99207aeafaf8dc024f8792ab03accb5d63def9bd",
+      "bytes": 144226
+    },
+    {
+      "file": "annular-current-ui-fixtures/bracket/expected.json",
+      "sha256": "7e008e6a72c885fe07e58af6b1738d4fd4d6fe7e9c01611242093816edd16775",
+      "bytes": 3097560
+    },
+    {
+      "file": "annular-current-ui-fixtures/enclosure/initial.json",
+      "sha256": "01b22793eefd7496f15f10438fdcc07331dada3ed2e6fbc147aa999eed534b88",
+      "bytes": 260654
+    },
+    {
+      "file": "annular-current-ui-fixtures/enclosure/expected.json",
+      "sha256": "c53148e0464feca5f7de149d707f4bd79759651772f453380ea532353d379166",
+      "bytes": 10899833
+    },
+    {
+      "file": "annular-current-ui-fixtures/flange/initial.json",
+      "sha256": "a57f692e26660644582e00cff8f8433b664c348ff0ea569355f3f2c7865b5b6e",
+      "bytes": 415388
+    },
+    {
+      "file": "annular-current-ui-fixtures/flange/expected.json",
+      "sha256": "e2df77da840dd43359b96da88c931b9eb00669778f70ee1cbcf3c22cb36a1d05",
+      "bytes": 3261374
+    },
+    {
+      "file": "annular-current-parts-mouse/result.json",
+      "sha256": "126cab48774a62c7e1e288e6b21c7f681875ea4f7f110c2e38a5d3423c7272ab",
+      "bytes": 210
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-0.json",
+      "sha256": "f273b2ceee6743f533853c1b875e7127c6dfdc2a198d9121f4d53ed31583aa19",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-1.json",
+      "sha256": "d30f1549ff99cdf54860321654d01c827cbc55a564c90841435e7455c04e00eb",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-2.json",
+      "sha256": "820e11ca333468476718046b73ee628cacff19dea5d4eb2c4defa125fc834861",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-3.json",
+      "sha256": "7b9a4a9bdbc12c8a367dbcc8fd124602bfe427221dc563bebf1410cd2e952559",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-4.json",
+      "sha256": "ace7e70813e8948daebaa417a94b16d9a163e0e16462d5135a1036052b53185e",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-5.json",
+      "sha256": "19936bf5356406e5fa30fda5c14309227cb2cc1801d732668553d342eccf6a3f",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-6.json",
+      "sha256": "8e418077213f70a075bc615040b520908122af65a72a5cf5ad8d95e0c258d0fb",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-7.json",
+      "sha256": "6b078e9a689180ff08910a46c87bb0986db8356a773e128616683009d377e823",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-8.json",
+      "sha256": "b1c1abf2b1f31e4061930d7518abc09116e683b59e8700b66da7abf594f99411",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-9.json",
+      "sha256": "fd6215a6c73092fad01afc352330a9cc424f07cc990d16088a22b4229d9c4cc0",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-10.json",
+      "sha256": "aefc8d8ed5ac2fdcc45e6eed61fffe1eb6f8081a9e0b65ce0c35307e7e75d269",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-11.json",
+      "sha256": "a83b913cab9491e27c8cb5228c82f507499f6e159eb0a04a5f6dc329cd1437c7",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-12.json",
+      "sha256": "e07338a65ff47198e36d53f7d7fdf9a4421d0b318ae3256678480736903f1b9b",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-13.json",
+      "sha256": "49a7c9127fa710c1ad5010879800888a39b01f369e739c9ea3dc534353a7f9cc",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-14.json",
+      "sha256": "f27aef6d84c912cb93e695e8a30081d270847edc34d7b90aa495feed928b7a8d",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-15.json",
+      "sha256": "8b95c7228854cc0bc8318f1c1d05ff996a5c5a2cc2a08150e94b20d4bed748ad",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-16.json",
+      "sha256": "86ed1dab1cbcb5b1235800be75dc9be25b3ff5def423c4ef32fe2c0bff81fa23",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-17.json",
+      "sha256": "8858f5cd55c8ba02eda6b4b5fc8d7de6c3302f84df3aaec508a86602a028194a",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-18.json",
+      "sha256": "171591746359b4c2b46230f4b642d77026ccc35ea515d87e4103fb6151d80ffc",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-19.json",
+      "sha256": "948d1d43218bc906f3358a6ee0d405256fa3b46e81a87125f3906ec48e64b2bb",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-20.json",
+      "sha256": "3e3a69440db14af703130c23ecac889531ef8b03e77d5a5d5b4b3dccddf85aa3",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-0.json",
+      "sha256": "f273b2ceee6743f533853c1b875e7127c6dfdc2a198d9121f4d53ed31583aa19",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-1.json",
+      "sha256": "d30f1549ff99cdf54860321654d01c827cbc55a564c90841435e7455c04e00eb",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-2.json",
+      "sha256": "820e11ca333468476718046b73ee628cacff19dea5d4eb2c4defa125fc834861",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-3.json",
+      "sha256": "7b9a4a9bdbc12c8a367dbcc8fd124602bfe427221dc563bebf1410cd2e952559",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-4.json",
+      "sha256": "ace7e70813e8948daebaa417a94b16d9a163e0e16462d5135a1036052b53185e",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-5.json",
+      "sha256": "19936bf5356406e5fa30fda5c14309227cb2cc1801d732668553d342eccf6a3f",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-6.json",
+      "sha256": "8e418077213f70a075bc615040b520908122af65a72a5cf5ad8d95e0c258d0fb",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-7.json",
+      "sha256": "6b078e9a689180ff08910a46c87bb0986db8356a773e128616683009d377e823",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-8.json",
+      "sha256": "b1c1abf2b1f31e4061930d7518abc09116e683b59e8700b66da7abf594f99411",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-9.json",
+      "sha256": "fd6215a6c73092fad01afc352330a9cc424f07cc990d16088a22b4229d9c4cc0",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-10.json",
+      "sha256": "aefc8d8ed5ac2fdcc45e6eed61fffe1eb6f8081a9e0b65ce0c35307e7e75d269",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-11.json",
+      "sha256": "a83b913cab9491e27c8cb5228c82f507499f6e159eb0a04a5f6dc329cd1437c7",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-12.json",
+      "sha256": "e07338a65ff47198e36d53f7d7fdf9a4421d0b318ae3256678480736903f1b9b",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-13.json",
+      "sha256": "49a7c9127fa710c1ad5010879800888a39b01f369e739c9ea3dc534353a7f9cc",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-14.json",
+      "sha256": "f27aef6d84c912cb93e695e8a30081d270847edc34d7b90aa495feed928b7a8d",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-15.json",
+      "sha256": "8b95c7228854cc0bc8318f1c1d05ff996a5c5a2cc2a08150e94b20d4bed748ad",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-16.json",
+      "sha256": "86ed1dab1cbcb5b1235800be75dc9be25b3ff5def423c4ef32fe2c0bff81fa23",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-17.json",
+      "sha256": "8858f5cd55c8ba02eda6b4b5fc8d7de6c3302f84df3aaec508a86602a028194a",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-18.json",
+      "sha256": "171591746359b4c2b46230f4b642d77026ccc35ea515d87e4103fb6151d80ffc",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-undo-19.json",
+      "sha256": "948d1d43218bc906f3358a6ee0d405256fa3b46e81a87125f3906ec48e64b2bb",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-1.json",
+      "sha256": "d30f1549ff99cdf54860321654d01c827cbc55a564c90841435e7455c04e00eb",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-2.json",
+      "sha256": "820e11ca333468476718046b73ee628cacff19dea5d4eb2c4defa125fc834861",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-3.json",
+      "sha256": "7b9a4a9bdbc12c8a367dbcc8fd124602bfe427221dc563bebf1410cd2e952559",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-4.json",
+      "sha256": "ace7e70813e8948daebaa417a94b16d9a163e0e16462d5135a1036052b53185e",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-5.json",
+      "sha256": "19936bf5356406e5fa30fda5c14309227cb2cc1801d732668553d342eccf6a3f",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-6.json",
+      "sha256": "8e418077213f70a075bc615040b520908122af65a72a5cf5ad8d95e0c258d0fb",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-7.json",
+      "sha256": "6b078e9a689180ff08910a46c87bb0986db8356a773e128616683009d377e823",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-8.json",
+      "sha256": "b1c1abf2b1f31e4061930d7518abc09116e683b59e8700b66da7abf594f99411",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-9.json",
+      "sha256": "fd6215a6c73092fad01afc352330a9cc424f07cc990d16088a22b4229d9c4cc0",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-10.json",
+      "sha256": "aefc8d8ed5ac2fdcc45e6eed61fffe1eb6f8081a9e0b65ce0c35307e7e75d269",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-11.json",
+      "sha256": "a83b913cab9491e27c8cb5228c82f507499f6e159eb0a04a5f6dc329cd1437c7",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-12.json",
+      "sha256": "e07338a65ff47198e36d53f7d7fdf9a4421d0b318ae3256678480736903f1b9b",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-13.json",
+      "sha256": "49a7c9127fa710c1ad5010879800888a39b01f369e739c9ea3dc534353a7f9cc",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-14.json",
+      "sha256": "f27aef6d84c912cb93e695e8a30081d270847edc34d7b90aa495feed928b7a8d",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-15.json",
+      "sha256": "8b95c7228854cc0bc8318f1c1d05ff996a5c5a2cc2a08150e94b20d4bed748ad",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-16.json",
+      "sha256": "86ed1dab1cbcb5b1235800be75dc9be25b3ff5def423c4ef32fe2c0bff81fa23",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-17.json",
+      "sha256": "8858f5cd55c8ba02eda6b4b5fc8d7de6c3302f84df3aaec508a86602a028194a",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-18.json",
+      "sha256": "171591746359b4c2b46230f4b642d77026ccc35ea515d87e4103fb6151d80ffc",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-19.json",
+      "sha256": "948d1d43218bc906f3358a6ee0d405256fa3b46e81a87125f3906ec48e64b2bb",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-redo-20.json",
+      "sha256": "3e3a69440db14af703130c23ecac889531ef8b03e77d5a5d5b4b3dccddf85aa3",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-1.json",
+      "sha256": "f273b2ceee6743f533853c1b875e7127c6dfdc2a198d9121f4d53ed31583aa19",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-2.json",
+      "sha256": "7b9a4a9bdbc12c8a367dbcc8fd124602bfe427221dc563bebf1410cd2e952559",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-3.json",
+      "sha256": "8e418077213f70a075bc615040b520908122af65a72a5cf5ad8d95e0c258d0fb",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-4.json",
+      "sha256": "fd6215a6c73092fad01afc352330a9cc424f07cc990d16088a22b4229d9c4cc0",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-5.json",
+      "sha256": "e07338a65ff47198e36d53f7d7fdf9a4421d0b318ae3256678480736903f1b9b",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-6.json",
+      "sha256": "8b95c7228854cc0bc8318f1c1d05ff996a5c5a2cc2a08150e94b20d4bed748ad",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-cancel-preview-7.json",
+      "sha256": "171591746359b4c2b46230f4b642d77026ccc35ea515d87e4103fb6151d80ffc",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-mouse/bracket-reload.json",
+      "sha256": "a652cb7bfa465ede099a3a03e1ec07bfa8921906ea272583545276e05be555bb",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-0.json",
+      "sha256": "142ea2b0cb68f16f58494fbbe3c3d54d0186afab2dc388f4fb49000eb1623aa1",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-1.json",
+      "sha256": "8df4633ffa559ebcd897186806c6b5fd235ccb1bf83b6474fd3298a184de11e9",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-2.json",
+      "sha256": "9b50c7279298c0e165ac9acb3fa2118abfc812b95a001380c52a379330fdb403",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-3.json",
+      "sha256": "e40406a935da6df7f03c04951527648b42e10d08a9aad70e1baf2d8fbb25599b",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-4.json",
+      "sha256": "08d77f60cb0e081a99dd9efe8729d356a2660a991801fb45a63372d325bed113",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-5.json",
+      "sha256": "d4e3c2b45d0a5f5b9e27d5a6038d4265c2caa7adab18dcf9971274488e18cc3c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-6.json",
+      "sha256": "630b06ecca5e48423e342fae692462bc3d092c2fc8e10ff43f06fb12564d3b54",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-7.json",
+      "sha256": "9bca3698aa16f78149e67a7a20f24ad51c255298221fef9d8796f9bfb0321cac",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-8.json",
+      "sha256": "f3f6deafd6d667b013f1fdfdb3374c879ac9d8b8ccf221d12f5fb0a98e7886c4",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-9.json",
+      "sha256": "46bcebfb2e5a108925934f0648fa75e35b04f69791a573be8d42d5401236f860",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-10.json",
+      "sha256": "f57537c68619baa518b0cb40c9a1f6b3fd4153be6c9a3f86fa900397be220fcf",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-11.json",
+      "sha256": "1b89b5c5dc2a59ed79ed651adf2c5a6a9968dca17cb011f217f169c72b78347d",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-12.json",
+      "sha256": "b5b74de1ff56b2cf9c517a712c516b68d54e356bd050b0dbcede6d74c703475f",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-13.json",
+      "sha256": "6b06822efc01dba241b8ce3f01e073c447ebcf35d073f84f53a8475c50be4fa0",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-14.json",
+      "sha256": "b0a9a02c21c965da4b881608bccb39feacb4e06c7a3764df6c9d6cf2c8a66e81",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-15.json",
+      "sha256": "851a6a252a4263154b58fd1c26f84e83b306f50454826be28e03a39a44932702",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-16.json",
+      "sha256": "b197c3b65374ec6915403b6dbf5e8617f9ae6be266cf889f4e436723aebb94ff",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-17.json",
+      "sha256": "00f16423f8b7b7ff9405b38c121e9310303f624e9ec5c66b7db07011a598580f",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-18.json",
+      "sha256": "c7e20dc30e772de6cec4ad532ea712ce219a6a9987098508b501cd23d64afb8b",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-19.json",
+      "sha256": "2a37fa5fe1276490f16ea2b0a56a5ccff45fe8e9aab81e9381089bc2ec9501db",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-20.json",
+      "sha256": "75a421f2a049511e65daeff954fc735e25e1bdd920e2a9cf96f218136517f857",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-0.json",
+      "sha256": "142ea2b0cb68f16f58494fbbe3c3d54d0186afab2dc388f4fb49000eb1623aa1",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-1.json",
+      "sha256": "8df4633ffa559ebcd897186806c6b5fd235ccb1bf83b6474fd3298a184de11e9",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-2.json",
+      "sha256": "9b50c7279298c0e165ac9acb3fa2118abfc812b95a001380c52a379330fdb403",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-3.json",
+      "sha256": "e40406a935da6df7f03c04951527648b42e10d08a9aad70e1baf2d8fbb25599b",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-4.json",
+      "sha256": "08d77f60cb0e081a99dd9efe8729d356a2660a991801fb45a63372d325bed113",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-5.json",
+      "sha256": "d4e3c2b45d0a5f5b9e27d5a6038d4265c2caa7adab18dcf9971274488e18cc3c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-6.json",
+      "sha256": "630b06ecca5e48423e342fae692462bc3d092c2fc8e10ff43f06fb12564d3b54",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-7.json",
+      "sha256": "9bca3698aa16f78149e67a7a20f24ad51c255298221fef9d8796f9bfb0321cac",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-8.json",
+      "sha256": "f3f6deafd6d667b013f1fdfdb3374c879ac9d8b8ccf221d12f5fb0a98e7886c4",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-9.json",
+      "sha256": "46bcebfb2e5a108925934f0648fa75e35b04f69791a573be8d42d5401236f860",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-10.json",
+      "sha256": "f57537c68619baa518b0cb40c9a1f6b3fd4153be6c9a3f86fa900397be220fcf",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-11.json",
+      "sha256": "1b89b5c5dc2a59ed79ed651adf2c5a6a9968dca17cb011f217f169c72b78347d",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-12.json",
+      "sha256": "b5b74de1ff56b2cf9c517a712c516b68d54e356bd050b0dbcede6d74c703475f",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-13.json",
+      "sha256": "6b06822efc01dba241b8ce3f01e073c447ebcf35d073f84f53a8475c50be4fa0",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-14.json",
+      "sha256": "b0a9a02c21c965da4b881608bccb39feacb4e06c7a3764df6c9d6cf2c8a66e81",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-15.json",
+      "sha256": "851a6a252a4263154b58fd1c26f84e83b306f50454826be28e03a39a44932702",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-16.json",
+      "sha256": "b197c3b65374ec6915403b6dbf5e8617f9ae6be266cf889f4e436723aebb94ff",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-17.json",
+      "sha256": "00f16423f8b7b7ff9405b38c121e9310303f624e9ec5c66b7db07011a598580f",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-18.json",
+      "sha256": "c7e20dc30e772de6cec4ad532ea712ce219a6a9987098508b501cd23d64afb8b",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-undo-19.json",
+      "sha256": "2a37fa5fe1276490f16ea2b0a56a5ccff45fe8e9aab81e9381089bc2ec9501db",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-1.json",
+      "sha256": "8df4633ffa559ebcd897186806c6b5fd235ccb1bf83b6474fd3298a184de11e9",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-2.json",
+      "sha256": "9b50c7279298c0e165ac9acb3fa2118abfc812b95a001380c52a379330fdb403",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-3.json",
+      "sha256": "e40406a935da6df7f03c04951527648b42e10d08a9aad70e1baf2d8fbb25599b",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-4.json",
+      "sha256": "08d77f60cb0e081a99dd9efe8729d356a2660a991801fb45a63372d325bed113",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-5.json",
+      "sha256": "d4e3c2b45d0a5f5b9e27d5a6038d4265c2caa7adab18dcf9971274488e18cc3c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-6.json",
+      "sha256": "630b06ecca5e48423e342fae692462bc3d092c2fc8e10ff43f06fb12564d3b54",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-7.json",
+      "sha256": "9bca3698aa16f78149e67a7a20f24ad51c255298221fef9d8796f9bfb0321cac",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-8.json",
+      "sha256": "f3f6deafd6d667b013f1fdfdb3374c879ac9d8b8ccf221d12f5fb0a98e7886c4",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-9.json",
+      "sha256": "46bcebfb2e5a108925934f0648fa75e35b04f69791a573be8d42d5401236f860",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-10.json",
+      "sha256": "f57537c68619baa518b0cb40c9a1f6b3fd4153be6c9a3f86fa900397be220fcf",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-11.json",
+      "sha256": "1b89b5c5dc2a59ed79ed651adf2c5a6a9968dca17cb011f217f169c72b78347d",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-12.json",
+      "sha256": "b5b74de1ff56b2cf9c517a712c516b68d54e356bd050b0dbcede6d74c703475f",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-13.json",
+      "sha256": "6b06822efc01dba241b8ce3f01e073c447ebcf35d073f84f53a8475c50be4fa0",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-14.json",
+      "sha256": "b0a9a02c21c965da4b881608bccb39feacb4e06c7a3764df6c9d6cf2c8a66e81",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-15.json",
+      "sha256": "851a6a252a4263154b58fd1c26f84e83b306f50454826be28e03a39a44932702",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-16.json",
+      "sha256": "b197c3b65374ec6915403b6dbf5e8617f9ae6be266cf889f4e436723aebb94ff",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-17.json",
+      "sha256": "00f16423f8b7b7ff9405b38c121e9310303f624e9ec5c66b7db07011a598580f",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-18.json",
+      "sha256": "c7e20dc30e772de6cec4ad532ea712ce219a6a9987098508b501cd23d64afb8b",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-19.json",
+      "sha256": "2a37fa5fe1276490f16ea2b0a56a5ccff45fe8e9aab81e9381089bc2ec9501db",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-redo-20.json",
+      "sha256": "75a421f2a049511e65daeff954fc735e25e1bdd920e2a9cf96f218136517f857",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-1.json",
+      "sha256": "142ea2b0cb68f16f58494fbbe3c3d54d0186afab2dc388f4fb49000eb1623aa1",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-2.json",
+      "sha256": "e40406a935da6df7f03c04951527648b42e10d08a9aad70e1baf2d8fbb25599b",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-3.json",
+      "sha256": "630b06ecca5e48423e342fae692462bc3d092c2fc8e10ff43f06fb12564d3b54",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-4.json",
+      "sha256": "46bcebfb2e5a108925934f0648fa75e35b04f69791a573be8d42d5401236f860",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-5.json",
+      "sha256": "b5b74de1ff56b2cf9c517a712c516b68d54e356bd050b0dbcede6d74c703475f",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-6.json",
+      "sha256": "851a6a252a4263154b58fd1c26f84e83b306f50454826be28e03a39a44932702",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-cancel-preview-7.json",
+      "sha256": "c7e20dc30e772de6cec4ad532ea712ce219a6a9987098508b501cd23d64afb8b",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-mouse/enclosure-reload.json",
+      "sha256": "887df3f13e6cb5c72207895cd7aaf30315df1aff0e09a23afa07441a1f67af12",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-0.json",
+      "sha256": "99c4428c1c0667295ff3b38e2f9c3d11e2505caedf946d837d7b4c1164c71b0f",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-1.json",
+      "sha256": "8846dbb038d6cdb535f3e2282c9c78ef83b784f6fe58994a28ff2bb6ffdcde89",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-2.json",
+      "sha256": "b65e886675fbf96afab70b6d8408b1a36bc70421d88b0a8ae4379217bb3558ba",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-3.json",
+      "sha256": "cb7e2a69bba55781742b48f0669872b3f85eb153b1abbfef916ea639180e415a",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-4.json",
+      "sha256": "17c77739b6a046739824e4e8f6a044c706dd86d3265ad1e11246520bb06c5f56",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-5.json",
+      "sha256": "3e013989767c99767eb5ee189ac4063e1ce03daa48b634e511470fe77d8e14cd",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-6.json",
+      "sha256": "d8a97d7b151fbcec497841ba746c276fef64be3e79388027b35c5eabf6472e46",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-7.json",
+      "sha256": "56f942f54d11f2b57cd378f7f67a0a279572d2ac3e5d1495da8db7aa5368fee4",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-8.json",
+      "sha256": "2ddc5ed4d76c0db81dfb917d56c6286bb0a3f6d8f17c651ea31266022935c650",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-9.json",
+      "sha256": "5a79ba5f949a757f6950c99ea96b82f4f554be0e781a0eb9b1bae93c869df2e7",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-10.json",
+      "sha256": "5ab4fc9b508e05c80b31bcf5bfa072c539ca738f5365825127c8a7f9b02afdd4",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-11.json",
+      "sha256": "1ad760f20da54826a38febaa2d9e275dc9307d70b3e8702181c3384003926b0c",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-12.json",
+      "sha256": "aac9f84e412a7323ac2e2ce64d251bf978c6f96f820b41d6c6a08ca62d14a18c",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-13.json",
+      "sha256": "6a79cfea0df01e3e1e923ec04819a08ef353553987c545ffecf7067121e8512b",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-14.json",
+      "sha256": "1977738173ff459104da44f9c23594fe3d4b8eade864946023591391c96ec605",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-15.json",
+      "sha256": "2f0c708aef7e216c9b29c004d8c45cd35940b96f64377858e92ba25dc130dd2f",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-16.json",
+      "sha256": "a688f322df1cceba2659c1619ccb9bbe31e1fe60549595b9b9b9a2d62a2ac58e",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-17.json",
+      "sha256": "82508d0ef3f0b194ef26b72a3886cc27fb31c887088415fde48246485e0e169a",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-18.json",
+      "sha256": "4c7003f15b78bacfd0571b0370c54ba25f115998f09f7fe99fa9a8cde32906ea",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-19.json",
+      "sha256": "e31637cba34899cab2de1ddc215548dab9ef5c4756d35dfacb7bd3aa756f9fba",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-20.json",
+      "sha256": "85d93acaca296fd24c07caf1b20e9fc48223d41fe72ada809615f17b1e016e13",
+      "bytes": 372673
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-0.json",
+      "sha256": "99c4428c1c0667295ff3b38e2f9c3d11e2505caedf946d837d7b4c1164c71b0f",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-1.json",
+      "sha256": "8846dbb038d6cdb535f3e2282c9c78ef83b784f6fe58994a28ff2bb6ffdcde89",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-2.json",
+      "sha256": "b65e886675fbf96afab70b6d8408b1a36bc70421d88b0a8ae4379217bb3558ba",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-3.json",
+      "sha256": "cb7e2a69bba55781742b48f0669872b3f85eb153b1abbfef916ea639180e415a",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-4.json",
+      "sha256": "17c77739b6a046739824e4e8f6a044c706dd86d3265ad1e11246520bb06c5f56",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-5.json",
+      "sha256": "3e013989767c99767eb5ee189ac4063e1ce03daa48b634e511470fe77d8e14cd",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-6.json",
+      "sha256": "d8a97d7b151fbcec497841ba746c276fef64be3e79388027b35c5eabf6472e46",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-7.json",
+      "sha256": "56f942f54d11f2b57cd378f7f67a0a279572d2ac3e5d1495da8db7aa5368fee4",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-8.json",
+      "sha256": "2ddc5ed4d76c0db81dfb917d56c6286bb0a3f6d8f17c651ea31266022935c650",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-9.json",
+      "sha256": "5a79ba5f949a757f6950c99ea96b82f4f554be0e781a0eb9b1bae93c869df2e7",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-10.json",
+      "sha256": "5ab4fc9b508e05c80b31bcf5bfa072c539ca738f5365825127c8a7f9b02afdd4",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-11.json",
+      "sha256": "1ad760f20da54826a38febaa2d9e275dc9307d70b3e8702181c3384003926b0c",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-12.json",
+      "sha256": "aac9f84e412a7323ac2e2ce64d251bf978c6f96f820b41d6c6a08ca62d14a18c",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-13.json",
+      "sha256": "6a79cfea0df01e3e1e923ec04819a08ef353553987c545ffecf7067121e8512b",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-14.json",
+      "sha256": "1977738173ff459104da44f9c23594fe3d4b8eade864946023591391c96ec605",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-15.json",
+      "sha256": "2f0c708aef7e216c9b29c004d8c45cd35940b96f64377858e92ba25dc130dd2f",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-16.json",
+      "sha256": "a688f322df1cceba2659c1619ccb9bbe31e1fe60549595b9b9b9a2d62a2ac58e",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-17.json",
+      "sha256": "82508d0ef3f0b194ef26b72a3886cc27fb31c887088415fde48246485e0e169a",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-18.json",
+      "sha256": "4c7003f15b78bacfd0571b0370c54ba25f115998f09f7fe99fa9a8cde32906ea",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-undo-19.json",
+      "sha256": "e31637cba34899cab2de1ddc215548dab9ef5c4756d35dfacb7bd3aa756f9fba",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-1.json",
+      "sha256": "8846dbb038d6cdb535f3e2282c9c78ef83b784f6fe58994a28ff2bb6ffdcde89",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-2.json",
+      "sha256": "b65e886675fbf96afab70b6d8408b1a36bc70421d88b0a8ae4379217bb3558ba",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-3.json",
+      "sha256": "cb7e2a69bba55781742b48f0669872b3f85eb153b1abbfef916ea639180e415a",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-4.json",
+      "sha256": "17c77739b6a046739824e4e8f6a044c706dd86d3265ad1e11246520bb06c5f56",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-5.json",
+      "sha256": "3e013989767c99767eb5ee189ac4063e1ce03daa48b634e511470fe77d8e14cd",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-6.json",
+      "sha256": "d8a97d7b151fbcec497841ba746c276fef64be3e79388027b35c5eabf6472e46",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-7.json",
+      "sha256": "56f942f54d11f2b57cd378f7f67a0a279572d2ac3e5d1495da8db7aa5368fee4",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-8.json",
+      "sha256": "2ddc5ed4d76c0db81dfb917d56c6286bb0a3f6d8f17c651ea31266022935c650",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-9.json",
+      "sha256": "5a79ba5f949a757f6950c99ea96b82f4f554be0e781a0eb9b1bae93c869df2e7",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-10.json",
+      "sha256": "5ab4fc9b508e05c80b31bcf5bfa072c539ca738f5365825127c8a7f9b02afdd4",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-11.json",
+      "sha256": "1ad760f20da54826a38febaa2d9e275dc9307d70b3e8702181c3384003926b0c",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-12.json",
+      "sha256": "aac9f84e412a7323ac2e2ce64d251bf978c6f96f820b41d6c6a08ca62d14a18c",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-13.json",
+      "sha256": "6a79cfea0df01e3e1e923ec04819a08ef353553987c545ffecf7067121e8512b",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-14.json",
+      "sha256": "1977738173ff459104da44f9c23594fe3d4b8eade864946023591391c96ec605",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-15.json",
+      "sha256": "2f0c708aef7e216c9b29c004d8c45cd35940b96f64377858e92ba25dc130dd2f",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-16.json",
+      "sha256": "a688f322df1cceba2659c1619ccb9bbe31e1fe60549595b9b9b9a2d62a2ac58e",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-17.json",
+      "sha256": "82508d0ef3f0b194ef26b72a3886cc27fb31c887088415fde48246485e0e169a",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-18.json",
+      "sha256": "4c7003f15b78bacfd0571b0370c54ba25f115998f09f7fe99fa9a8cde32906ea",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-19.json",
+      "sha256": "e31637cba34899cab2de1ddc215548dab9ef5c4756d35dfacb7bd3aa756f9fba",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-redo-20.json",
+      "sha256": "85d93acaca296fd24c07caf1b20e9fc48223d41fe72ada809615f17b1e016e13",
+      "bytes": 372673
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-1.json",
+      "sha256": "99c4428c1c0667295ff3b38e2f9c3d11e2505caedf946d837d7b4c1164c71b0f",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-2.json",
+      "sha256": "cb7e2a69bba55781742b48f0669872b3f85eb153b1abbfef916ea639180e415a",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-3.json",
+      "sha256": "d8a97d7b151fbcec497841ba746c276fef64be3e79388027b35c5eabf6472e46",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-4.json",
+      "sha256": "5a79ba5f949a757f6950c99ea96b82f4f554be0e781a0eb9b1bae93c869df2e7",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-5.json",
+      "sha256": "aac9f84e412a7323ac2e2ce64d251bf978c6f96f820b41d6c6a08ca62d14a18c",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-6.json",
+      "sha256": "2f0c708aef7e216c9b29c004d8c45cd35940b96f64377858e92ba25dc130dd2f",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-cancel-preview-7.json",
+      "sha256": "4c7003f15b78bacfd0571b0370c54ba25f115998f09f7fe99fa9a8cde32906ea",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-mouse/flange-reload.json",
+      "sha256": "35659e96706c29eb38a941ec9e756dd17d0677b6ece7456f4853ab105e8b368c",
+      "bytes": 372673
+    },
+    {
+      "file": "annular-current-parts-keyboard/result.json",
+      "sha256": "967fd076a9eb014e6eb6cb22c67267361d082e4f086e6b8ff1dd4a908297bc55",
+      "bytes": 213
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-0.json",
+      "sha256": "e9e377c710203e4956fc97662b1b12c3adc13ca0f4cfc05440f6b6c77e62e5ff",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-1.json",
+      "sha256": "ee354ca31cf5e78abcc3b2e47510e00257b7e972130588d483e33456002e5b4c",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-2.json",
+      "sha256": "9af7bf2f72f094e076e706fda11d6323d8d0e530f3b5ad6b0518a1507005ff80",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-3.json",
+      "sha256": "156f2c542c576735af093e105a84cac6aaef0084ba6e936d14ff44424e0e8cd0",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-4.json",
+      "sha256": "68835a374646a73787facd954ec926dd97f23aecfe9f188e1ef41e02dbd6c362",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-5.json",
+      "sha256": "ed9cf58c0ce994b9514a81d7661b494ec2cd4cff7ca34bcee27e9ad3ec13a0a7",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-6.json",
+      "sha256": "5ac6a5a35cedc1ecd007b53f1b18cc0dc4903ccf4b9709cdf379cb1d81a8c442",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-7.json",
+      "sha256": "b0ff3bdaf419f283ea370c7bc845676823bc5d23513b3e14fcf17b03eee4e11e",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-8.json",
+      "sha256": "336d505d1f3330b80b844673894e93f192ea869973d6e50f0813409a4c00b716",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-9.json",
+      "sha256": "8ad6f380eb262fe241d9b9e12b3efb25afb4e94d0b8924538e0b9b1c8e0b8075",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-10.json",
+      "sha256": "f0501a684daa9ac4e74af02ad3c03f6e6462f687c61d58b8b3c2e91e08b918ba",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-11.json",
+      "sha256": "488898aca905c9ea35a133dadde96526a86032a22f797f02ac8d8e5ca72eacc5",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-12.json",
+      "sha256": "03566c6732029e67211f2a4ddfcc3bcee8acaf3bf31508a4bb996741e8fa08d1",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-13.json",
+      "sha256": "6ebb6d7bf2a8eed2d6287304f1beef00dbe72c425fbbb16347eae766b74c7c03",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-14.json",
+      "sha256": "9400e248412121c01e4815ef2a639c9f98462be5fd3749bb9415409fea43e21f",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-15.json",
+      "sha256": "b2ba84a4e50736e9b80cadab15decb13caad205ab59bed9855ae5b1014277cd8",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-16.json",
+      "sha256": "36f2e381d3cc5469f11aad4826173d3a9a1716516be014573f21b5bf2a94b38f",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-17.json",
+      "sha256": "d91100c5c59105c7a4c889a4a9b01e0a4e51ee38185ca66376cc284c91681a90",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-18.json",
+      "sha256": "e2655927c090ea2526cb7f280f4a0380c2097bba462b350039e7e44e82350d6b",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-19.json",
+      "sha256": "0b09cba7de100bb0f5ed412235a56bdd0c9f29893bb8098b80aad2fde7b3a435",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-20.json",
+      "sha256": "75d0bee7fc5abbb2095981fdbb993ab4f729dde791b5964e97c5fd8e96d5da6f",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-0.json",
+      "sha256": "e9e377c710203e4956fc97662b1b12c3adc13ca0f4cfc05440f6b6c77e62e5ff",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-1.json",
+      "sha256": "ee354ca31cf5e78abcc3b2e47510e00257b7e972130588d483e33456002e5b4c",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-2.json",
+      "sha256": "9af7bf2f72f094e076e706fda11d6323d8d0e530f3b5ad6b0518a1507005ff80",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-3.json",
+      "sha256": "156f2c542c576735af093e105a84cac6aaef0084ba6e936d14ff44424e0e8cd0",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-4.json",
+      "sha256": "68835a374646a73787facd954ec926dd97f23aecfe9f188e1ef41e02dbd6c362",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-5.json",
+      "sha256": "ed9cf58c0ce994b9514a81d7661b494ec2cd4cff7ca34bcee27e9ad3ec13a0a7",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-6.json",
+      "sha256": "5ac6a5a35cedc1ecd007b53f1b18cc0dc4903ccf4b9709cdf379cb1d81a8c442",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-7.json",
+      "sha256": "b0ff3bdaf419f283ea370c7bc845676823bc5d23513b3e14fcf17b03eee4e11e",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-8.json",
+      "sha256": "336d505d1f3330b80b844673894e93f192ea869973d6e50f0813409a4c00b716",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-9.json",
+      "sha256": "8ad6f380eb262fe241d9b9e12b3efb25afb4e94d0b8924538e0b9b1c8e0b8075",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-10.json",
+      "sha256": "f0501a684daa9ac4e74af02ad3c03f6e6462f687c61d58b8b3c2e91e08b918ba",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-11.json",
+      "sha256": "488898aca905c9ea35a133dadde96526a86032a22f797f02ac8d8e5ca72eacc5",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-12.json",
+      "sha256": "03566c6732029e67211f2a4ddfcc3bcee8acaf3bf31508a4bb996741e8fa08d1",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-13.json",
+      "sha256": "6ebb6d7bf2a8eed2d6287304f1beef00dbe72c425fbbb16347eae766b74c7c03",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-14.json",
+      "sha256": "9400e248412121c01e4815ef2a639c9f98462be5fd3749bb9415409fea43e21f",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-15.json",
+      "sha256": "b2ba84a4e50736e9b80cadab15decb13caad205ab59bed9855ae5b1014277cd8",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-16.json",
+      "sha256": "36f2e381d3cc5469f11aad4826173d3a9a1716516be014573f21b5bf2a94b38f",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-17.json",
+      "sha256": "d91100c5c59105c7a4c889a4a9b01e0a4e51ee38185ca66376cc284c91681a90",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-18.json",
+      "sha256": "e2655927c090ea2526cb7f280f4a0380c2097bba462b350039e7e44e82350d6b",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-undo-19.json",
+      "sha256": "0b09cba7de100bb0f5ed412235a56bdd0c9f29893bb8098b80aad2fde7b3a435",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-1.json",
+      "sha256": "ee354ca31cf5e78abcc3b2e47510e00257b7e972130588d483e33456002e5b4c",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-2.json",
+      "sha256": "9af7bf2f72f094e076e706fda11d6323d8d0e530f3b5ad6b0518a1507005ff80",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-3.json",
+      "sha256": "156f2c542c576735af093e105a84cac6aaef0084ba6e936d14ff44424e0e8cd0",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-4.json",
+      "sha256": "68835a374646a73787facd954ec926dd97f23aecfe9f188e1ef41e02dbd6c362",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-5.json",
+      "sha256": "ed9cf58c0ce994b9514a81d7661b494ec2cd4cff7ca34bcee27e9ad3ec13a0a7",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-6.json",
+      "sha256": "5ac6a5a35cedc1ecd007b53f1b18cc0dc4903ccf4b9709cdf379cb1d81a8c442",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-7.json",
+      "sha256": "b0ff3bdaf419f283ea370c7bc845676823bc5d23513b3e14fcf17b03eee4e11e",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-8.json",
+      "sha256": "336d505d1f3330b80b844673894e93f192ea869973d6e50f0813409a4c00b716",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-9.json",
+      "sha256": "8ad6f380eb262fe241d9b9e12b3efb25afb4e94d0b8924538e0b9b1c8e0b8075",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-10.json",
+      "sha256": "f0501a684daa9ac4e74af02ad3c03f6e6462f687c61d58b8b3c2e91e08b918ba",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-11.json",
+      "sha256": "488898aca905c9ea35a133dadde96526a86032a22f797f02ac8d8e5ca72eacc5",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-12.json",
+      "sha256": "03566c6732029e67211f2a4ddfcc3bcee8acaf3bf31508a4bb996741e8fa08d1",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-13.json",
+      "sha256": "6ebb6d7bf2a8eed2d6287304f1beef00dbe72c425fbbb16347eae766b74c7c03",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-14.json",
+      "sha256": "9400e248412121c01e4815ef2a639c9f98462be5fd3749bb9415409fea43e21f",
+      "bytes": 217862
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-15.json",
+      "sha256": "b2ba84a4e50736e9b80cadab15decb13caad205ab59bed9855ae5b1014277cd8",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-16.json",
+      "sha256": "36f2e381d3cc5469f11aad4826173d3a9a1716516be014573f21b5bf2a94b38f",
+      "bytes": 217982
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-17.json",
+      "sha256": "d91100c5c59105c7a4c889a4a9b01e0a4e51ee38185ca66376cc284c91681a90",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-18.json",
+      "sha256": "e2655927c090ea2526cb7f280f4a0380c2097bba462b350039e7e44e82350d6b",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-19.json",
+      "sha256": "0b09cba7de100bb0f5ed412235a56bdd0c9f29893bb8098b80aad2fde7b3a435",
+      "bytes": 255160
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-redo-20.json",
+      "sha256": "75d0bee7fc5abbb2095981fdbb993ab4f729dde791b5964e97c5fd8e96d5da6f",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-1.json",
+      "sha256": "e9e377c710203e4956fc97662b1b12c3adc13ca0f4cfc05440f6b6c77e62e5ff",
+      "bytes": 144284
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-2.json",
+      "sha256": "156f2c542c576735af093e105a84cac6aaef0084ba6e936d14ff44424e0e8cd0",
+      "bytes": 176734
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-3.json",
+      "sha256": "5ac6a5a35cedc1ecd007b53f1b18cc0dc4903ccf4b9709cdf379cb1d81a8c442",
+      "bytes": 187016
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-4.json",
+      "sha256": "8ad6f380eb262fe241d9b9e12b3efb25afb4e94d0b8924538e0b9b1c8e0b8075",
+      "bytes": 197298
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-5.json",
+      "sha256": "03566c6732029e67211f2a4ddfcc3bcee8acaf3bf31508a4bb996741e8fa08d1",
+      "bytes": 207580
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-6.json",
+      "sha256": "b2ba84a4e50736e9b80cadab15decb13caad205ab59bed9855ae5b1014277cd8",
+      "bytes": 217922
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-cancel-preview-7.json",
+      "sha256": "e2655927c090ea2526cb7f280f4a0380c2097bba462b350039e7e44e82350d6b",
+      "bytes": 228264
+    },
+    {
+      "file": "annular-current-parts-keyboard/bracket-reload.json",
+      "sha256": "361e7be733181757cf3464e9961994ac394b753455665e1eb020c33fcad6a3c4",
+      "bytes": 238143
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-0.json",
+      "sha256": "e347c80c02fa6f9c857df6b12d3ef73c64069e4b20cc5c9efa784444c6da6fa7",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-1.json",
+      "sha256": "2612afc9c09ceab7fb90eb340b2a43b1b6f625b83b4c8b9d78cd90c70859c0fd",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-2.json",
+      "sha256": "c15ee77e1781b7cabf3d25545815566e0ea30d137aa1d19f892ec928823dddb6",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-3.json",
+      "sha256": "893753bd3b1e585c63971721d933973bc649223e5608bddbfd00b0c8490b9b53",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-4.json",
+      "sha256": "37ce3f9f02ecc9f93463bb7f966adbe4fdb3dff7afb7a3f2df9b62b0caf8a06d",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-5.json",
+      "sha256": "c5a6b0105f7f57ad2fa1fd61304c2181dae7e7c552c254fe5501a18d16f6b227",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-6.json",
+      "sha256": "dbddd6b6b6e0974a46edddb1a943540a0c90c6d3e68fcafccb82737298ebaf2c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-7.json",
+      "sha256": "851dc5e048eec74322021183c9088831dd359aadda5bc6035bde0e88359b92d4",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-8.json",
+      "sha256": "f1f56a74e28f07138cb4a3f33f7cfb88bd8b592b7103127469c4286e84574a08",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-9.json",
+      "sha256": "5e420feb1727f5428f1264ff62481fe168d5b7c4348832c3bc018422fa666fd4",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-10.json",
+      "sha256": "95fbf1c52ab1356e0421d4451fd128a9987e0385c90507cc22ff5a061754b966",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-11.json",
+      "sha256": "535e70bedc9d567572573fbeb03ca3a940037d96e00c25659ea9ecf8470d6fa7",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-12.json",
+      "sha256": "a8480961238ca27602083115eeab554ab2a077286892cba7f23978404baacd33",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-13.json",
+      "sha256": "0070f64a1b8478f68fe61a5180c77c45ee88b7fa14661f15f864afd9923f435b",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-14.json",
+      "sha256": "77ec2630384e6bb0c3f236f93d55cfa4e820f2d201a3677b31cf3e337a0a09fb",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-15.json",
+      "sha256": "5e7a366d182dd6266d5ddf9d694c453018f58143f8725637c04fcaf2a936b5f0",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-16.json",
+      "sha256": "0510b54fc900cbc620628988f99347aa72957f8c6ff509d4eeb7182d3ca198b1",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-17.json",
+      "sha256": "8f7c05065bc3fd028518c6d062f06fd3cb891d58511c1123e51cca9c2c638c0e",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-18.json",
+      "sha256": "b2b753cc231e0897aa12353741a2e14bcf5a7a9e74438e1e159f9582c5e355af",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-19.json",
+      "sha256": "d43ba16c890ac36adec384e97997da33ac7b690592cc23bf7208cfb4fe54cf8a",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-20.json",
+      "sha256": "4c835f76bfa236324403c85c6db81dccad381a5dba79502478b9bc766f04b161",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-0.json",
+      "sha256": "e347c80c02fa6f9c857df6b12d3ef73c64069e4b20cc5c9efa784444c6da6fa7",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-1.json",
+      "sha256": "2612afc9c09ceab7fb90eb340b2a43b1b6f625b83b4c8b9d78cd90c70859c0fd",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-2.json",
+      "sha256": "c15ee77e1781b7cabf3d25545815566e0ea30d137aa1d19f892ec928823dddb6",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-3.json",
+      "sha256": "893753bd3b1e585c63971721d933973bc649223e5608bddbfd00b0c8490b9b53",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-4.json",
+      "sha256": "37ce3f9f02ecc9f93463bb7f966adbe4fdb3dff7afb7a3f2df9b62b0caf8a06d",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-5.json",
+      "sha256": "c5a6b0105f7f57ad2fa1fd61304c2181dae7e7c552c254fe5501a18d16f6b227",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-6.json",
+      "sha256": "dbddd6b6b6e0974a46edddb1a943540a0c90c6d3e68fcafccb82737298ebaf2c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-7.json",
+      "sha256": "851dc5e048eec74322021183c9088831dd359aadda5bc6035bde0e88359b92d4",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-8.json",
+      "sha256": "f1f56a74e28f07138cb4a3f33f7cfb88bd8b592b7103127469c4286e84574a08",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-9.json",
+      "sha256": "5e420feb1727f5428f1264ff62481fe168d5b7c4348832c3bc018422fa666fd4",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-10.json",
+      "sha256": "95fbf1c52ab1356e0421d4451fd128a9987e0385c90507cc22ff5a061754b966",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-11.json",
+      "sha256": "535e70bedc9d567572573fbeb03ca3a940037d96e00c25659ea9ecf8470d6fa7",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-12.json",
+      "sha256": "a8480961238ca27602083115eeab554ab2a077286892cba7f23978404baacd33",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-13.json",
+      "sha256": "0070f64a1b8478f68fe61a5180c77c45ee88b7fa14661f15f864afd9923f435b",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-14.json",
+      "sha256": "77ec2630384e6bb0c3f236f93d55cfa4e820f2d201a3677b31cf3e337a0a09fb",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-15.json",
+      "sha256": "5e7a366d182dd6266d5ddf9d694c453018f58143f8725637c04fcaf2a936b5f0",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-16.json",
+      "sha256": "0510b54fc900cbc620628988f99347aa72957f8c6ff509d4eeb7182d3ca198b1",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-17.json",
+      "sha256": "8f7c05065bc3fd028518c6d062f06fd3cb891d58511c1123e51cca9c2c638c0e",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-18.json",
+      "sha256": "b2b753cc231e0897aa12353741a2e14bcf5a7a9e74438e1e159f9582c5e355af",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-undo-19.json",
+      "sha256": "d43ba16c890ac36adec384e97997da33ac7b690592cc23bf7208cfb4fe54cf8a",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-1.json",
+      "sha256": "2612afc9c09ceab7fb90eb340b2a43b1b6f625b83b4c8b9d78cd90c70859c0fd",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-2.json",
+      "sha256": "c15ee77e1781b7cabf3d25545815566e0ea30d137aa1d19f892ec928823dddb6",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-3.json",
+      "sha256": "893753bd3b1e585c63971721d933973bc649223e5608bddbfd00b0c8490b9b53",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-4.json",
+      "sha256": "37ce3f9f02ecc9f93463bb7f966adbe4fdb3dff7afb7a3f2df9b62b0caf8a06d",
+      "bytes": 341725
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-5.json",
+      "sha256": "c5a6b0105f7f57ad2fa1fd61304c2181dae7e7c552c254fe5501a18d16f6b227",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-6.json",
+      "sha256": "dbddd6b6b6e0974a46edddb1a943540a0c90c6d3e68fcafccb82737298ebaf2c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-7.json",
+      "sha256": "851dc5e048eec74322021183c9088831dd359aadda5bc6035bde0e88359b92d4",
+      "bytes": 428303
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-8.json",
+      "sha256": "f1f56a74e28f07138cb4a3f33f7cfb88bd8b592b7103127469c4286e84574a08",
+      "bytes": 523930
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-9.json",
+      "sha256": "5e420feb1727f5428f1264ff62481fe168d5b7c4348832c3bc018422fa666fd4",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-10.json",
+      "sha256": "95fbf1c52ab1356e0421d4451fd128a9987e0385c90507cc22ff5a061754b966",
+      "bytes": 523680
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-11.json",
+      "sha256": "535e70bedc9d567572573fbeb03ca3a940037d96e00c25659ea9ecf8470d6fa7",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-12.json",
+      "sha256": "a8480961238ca27602083115eeab554ab2a077286892cba7f23978404baacd33",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-13.json",
+      "sha256": "0070f64a1b8478f68fe61a5180c77c45ee88b7fa14661f15f864afd9923f435b",
+      "bytes": 621734
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-14.json",
+      "sha256": "77ec2630384e6bb0c3f236f93d55cfa4e820f2d201a3677b31cf3e337a0a09fb",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-15.json",
+      "sha256": "5e7a366d182dd6266d5ddf9d694c453018f58143f8725637c04fcaf2a936b5f0",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-16.json",
+      "sha256": "0510b54fc900cbc620628988f99347aa72957f8c6ff509d4eeb7182d3ca198b1",
+      "bytes": 725143
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-17.json",
+      "sha256": "8f7c05065bc3fd028518c6d062f06fd3cb891d58511c1123e51cca9c2c638c0e",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-18.json",
+      "sha256": "b2b753cc231e0897aa12353741a2e14bcf5a7a9e74438e1e159f9582c5e355af",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-19.json",
+      "sha256": "d43ba16c890ac36adec384e97997da33ac7b690592cc23bf7208cfb4fe54cf8a",
+      "bytes": 948939
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-redo-20.json",
+      "sha256": "4c835f76bfa236324403c85c6db81dccad381a5dba79502478b9bc766f04b161",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-1.json",
+      "sha256": "e347c80c02fa6f9c857df6b12d3ef73c64069e4b20cc5c9efa784444c6da6fa7",
+      "bytes": 260712
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-2.json",
+      "sha256": "893753bd3b1e585c63971721d933973bc649223e5608bddbfd00b0c8490b9b53",
+      "bytes": 341727
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-3.json",
+      "sha256": "dbddd6b6b6e0974a46edddb1a943540a0c90c6d3e68fcafccb82737298ebaf2c",
+      "bytes": 428305
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-4.json",
+      "sha256": "5e420feb1727f5428f1264ff62481fe168d5b7c4348832c3bc018422fa666fd4",
+      "bytes": 523810
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-5.json",
+      "sha256": "a8480961238ca27602083115eeab554ab2a077286892cba7f23978404baacd33",
+      "bytes": 621732
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-6.json",
+      "sha256": "5e7a366d182dd6266d5ddf9d694c453018f58143f8725637c04fcaf2a936b5f0",
+      "bytes": 725141
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-cancel-preview-7.json",
+      "sha256": "b2b753cc231e0897aa12353741a2e14bcf5a7a9e74438e1e159f9582c5e355af",
+      "bytes": 837358
+    },
+    {
+      "file": "annular-current-parts-keyboard/enclosure-reload.json",
+      "sha256": "c70187032a3fa5b77faa57c2bdf67977acad11effc672169767db2a2cda8f42d",
+      "bytes": 905254
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-0.json",
+      "sha256": "513fff634c1cf94b15f8a3507469ad69e9a3baedadb7f9d6989ec0b2c323ce33",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-1.json",
+      "sha256": "ffe4c8d6c4d3dfcac2e96e601208128554bc0d8a91c7c0710213b1ea3eaea065",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-2.json",
+      "sha256": "f0c6e525447f13a3e424f8a7088ab97a75113818f040fa442ff13b0abc3012bc",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-3.json",
+      "sha256": "7ee3353b3aa61bdeaf336a10f8db1432c420a98a5f53ea222b22dc5718fd448d",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-4.json",
+      "sha256": "4c9ad33365887e0f9d3829f2bc742c8086be9eb7d0f9e7535cb212bb6ba9922a",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-5.json",
+      "sha256": "85465bc1c679f73df86329630de1598483c6063842eca8dc59b978277c0fe8cf",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-6.json",
+      "sha256": "376f9c54653f4ae70f159713f9c8e5fae4c2d9279b3ba2322c6a5a2eba0963c7",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-7.json",
+      "sha256": "9faafacd64df2cfd450e86ac5f3e176fe4d0f20ee02522d53c520d6a173e036f",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-8.json",
+      "sha256": "d2d96cddc8c7a313b400344aa5c0cf3ff819e62e10e36a2c9c1e2cf5c7369b00",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-9.json",
+      "sha256": "f75570ae0c9ff64017f82f990b94accd04ac1773085ca2c187e90f8fc578cbe6",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-10.json",
+      "sha256": "104b4e929ee9537876f17cc2e0e0f151327f4b7b86651f43639736931d9da9f3",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-11.json",
+      "sha256": "491ee40ecd18d3c283d76abbba50584749f17341383aaa8674257017924664b0",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-12.json",
+      "sha256": "15d47e18fae98aeadccdc90d9eb086718dec174534096f4f568d791b1e538d0b",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-13.json",
+      "sha256": "acb1f6a1f0e0fb72b59808c7a6583c8622ac9734ad62a00dd1b183886f1c99b3",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-14.json",
+      "sha256": "7ba8645fe6f0c1e804e000af48386fdfecc95a219116d76e03183ddfd79584e1",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-15.json",
+      "sha256": "3dba30e918388bc940456e0ac357f0b40dd6426bf9112d688a63b8b3291d3392",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-16.json",
+      "sha256": "bfd203f7d39a2eb625809261631b90b6273f0c15a518635a2942f30b3bff5f47",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-17.json",
+      "sha256": "7f1f17c34a301ed10282f08779aa7201497ab710004d5eab8a531c01da7060ce",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-18.json",
+      "sha256": "832057f76d15d0d3374433c8d08e39144b7cc19c9caf02a2262e4dd28abfd7d1",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-19.json",
+      "sha256": "687cd2f2866f333e06315626975fc6420d95023094f73c03297f616089b40efc",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-20.json",
+      "sha256": "30efa6118e55ac349d3ecea61ee4b0c5ec60e2a03c5dafbed0be16210f0df382",
+      "bytes": 372673
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-0.json",
+      "sha256": "513fff634c1cf94b15f8a3507469ad69e9a3baedadb7f9d6989ec0b2c323ce33",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-1.json",
+      "sha256": "ffe4c8d6c4d3dfcac2e96e601208128554bc0d8a91c7c0710213b1ea3eaea065",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-2.json",
+      "sha256": "f0c6e525447f13a3e424f8a7088ab97a75113818f040fa442ff13b0abc3012bc",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-3.json",
+      "sha256": "7ee3353b3aa61bdeaf336a10f8db1432c420a98a5f53ea222b22dc5718fd448d",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-4.json",
+      "sha256": "4c9ad33365887e0f9d3829f2bc742c8086be9eb7d0f9e7535cb212bb6ba9922a",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-5.json",
+      "sha256": "85465bc1c679f73df86329630de1598483c6063842eca8dc59b978277c0fe8cf",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-6.json",
+      "sha256": "376f9c54653f4ae70f159713f9c8e5fae4c2d9279b3ba2322c6a5a2eba0963c7",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-7.json",
+      "sha256": "9faafacd64df2cfd450e86ac5f3e176fe4d0f20ee02522d53c520d6a173e036f",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-8.json",
+      "sha256": "d2d96cddc8c7a313b400344aa5c0cf3ff819e62e10e36a2c9c1e2cf5c7369b00",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-9.json",
+      "sha256": "f75570ae0c9ff64017f82f990b94accd04ac1773085ca2c187e90f8fc578cbe6",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-10.json",
+      "sha256": "104b4e929ee9537876f17cc2e0e0f151327f4b7b86651f43639736931d9da9f3",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-11.json",
+      "sha256": "491ee40ecd18d3c283d76abbba50584749f17341383aaa8674257017924664b0",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-12.json",
+      "sha256": "15d47e18fae98aeadccdc90d9eb086718dec174534096f4f568d791b1e538d0b",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-13.json",
+      "sha256": "acb1f6a1f0e0fb72b59808c7a6583c8622ac9734ad62a00dd1b183886f1c99b3",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-14.json",
+      "sha256": "7ba8645fe6f0c1e804e000af48386fdfecc95a219116d76e03183ddfd79584e1",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-15.json",
+      "sha256": "3dba30e918388bc940456e0ac357f0b40dd6426bf9112d688a63b8b3291d3392",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-16.json",
+      "sha256": "bfd203f7d39a2eb625809261631b90b6273f0c15a518635a2942f30b3bff5f47",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-17.json",
+      "sha256": "7f1f17c34a301ed10282f08779aa7201497ab710004d5eab8a531c01da7060ce",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-18.json",
+      "sha256": "832057f76d15d0d3374433c8d08e39144b7cc19c9caf02a2262e4dd28abfd7d1",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-undo-19.json",
+      "sha256": "687cd2f2866f333e06315626975fc6420d95023094f73c03297f616089b40efc",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-1.json",
+      "sha256": "ffe4c8d6c4d3dfcac2e96e601208128554bc0d8a91c7c0710213b1ea3eaea065",
+      "bytes": 406510
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-2.json",
+      "sha256": "f0c6e525447f13a3e424f8a7088ab97a75113818f040fa442ff13b0abc3012bc",
+      "bytes": 368507
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-3.json",
+      "sha256": "7ee3353b3aa61bdeaf336a10f8db1432c420a98a5f53ea222b22dc5718fd448d",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-4.json",
+      "sha256": "4c9ad33365887e0f9d3829f2bc742c8086be9eb7d0f9e7535cb212bb6ba9922a",
+      "bytes": 358849
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-5.json",
+      "sha256": "85465bc1c679f73df86329630de1598483c6063842eca8dc59b978277c0fe8cf",
+      "bytes": 322423
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-6.json",
+      "sha256": "376f9c54653f4ae70f159713f9c8e5fae4c2d9279b3ba2322c6a5a2eba0963c7",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-7.json",
+      "sha256": "9faafacd64df2cfd450e86ac5f3e176fe4d0f20ee02522d53c520d6a173e036f",
+      "bytes": 313621
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-8.json",
+      "sha256": "d2d96cddc8c7a313b400344aa5c0cf3ff819e62e10e36a2c9c1e2cf5c7369b00",
+      "bytes": 276662
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-9.json",
+      "sha256": "f75570ae0c9ff64017f82f990b94accd04ac1773085ca2c187e90f8fc578cbe6",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-10.json",
+      "sha256": "104b4e929ee9537876f17cc2e0e0f151327f4b7b86651f43639736931d9da9f3",
+      "bytes": 267807
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-11.json",
+      "sha256": "491ee40ecd18d3c283d76abbba50584749f17341383aaa8674257017924664b0",
+      "bytes": 229357
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-12.json",
+      "sha256": "15d47e18fae98aeadccdc90d9eb086718dec174534096f4f568d791b1e538d0b",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-13.json",
+      "sha256": "acb1f6a1f0e0fb72b59808c7a6583c8622ac9734ad62a00dd1b183886f1c99b3",
+      "bytes": 220706
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-14.json",
+      "sha256": "7ba8645fe6f0c1e804e000af48386fdfecc95a219116d76e03183ddfd79584e1",
+      "bytes": 182447
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-15.json",
+      "sha256": "3dba30e918388bc940456e0ac357f0b40dd6426bf9112d688a63b8b3291d3392",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-16.json",
+      "sha256": "bfd203f7d39a2eb625809261631b90b6273f0c15a518635a2942f30b3bff5f47",
+      "bytes": 173496
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-17.json",
+      "sha256": "7f1f17c34a301ed10282f08779aa7201497ab710004d5eab8a531c01da7060ce",
+      "bytes": 137832
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-18.json",
+      "sha256": "832057f76d15d0d3374433c8d08e39144b7cc19c9caf02a2262e4dd28abfd7d1",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-19.json",
+      "sha256": "687cd2f2866f333e06315626975fc6420d95023094f73c03297f616089b40efc",
+      "bytes": 600693
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-redo-20.json",
+      "sha256": "30efa6118e55ac349d3ecea61ee4b0c5ec60e2a03c5dafbed0be16210f0df382",
+      "bytes": 372673
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-1.json",
+      "sha256": "513fff634c1cf94b15f8a3507469ad69e9a3baedadb7f9d6989ec0b2c323ce33",
+      "bytes": 415446
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-2.json",
+      "sha256": "7ee3353b3aa61bdeaf336a10f8db1432c420a98a5f53ea222b22dc5718fd448d",
+      "bytes": 368497
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-3.json",
+      "sha256": "376f9c54653f4ae70f159713f9c8e5fae4c2d9279b3ba2322c6a5a2eba0963c7",
+      "bytes": 322413
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-4.json",
+      "sha256": "f75570ae0c9ff64017f82f990b94accd04ac1773085ca2c187e90f8fc578cbe6",
+      "bytes": 276558
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-5.json",
+      "sha256": "15d47e18fae98aeadccdc90d9eb086718dec174534096f4f568d791b1e538d0b",
+      "bytes": 229400
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-6.json",
+      "sha256": "3dba30e918388bc940456e0ac357f0b40dd6426bf9112d688a63b8b3291d3392",
+      "bytes": 182428
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-cancel-preview-7.json",
+      "sha256": "832057f76d15d0d3374433c8d08e39144b7cc19c9caf02a2262e4dd28abfd7d1",
+      "bytes": 137843
+    },
+    {
+      "file": "annular-current-parts-keyboard/flange-reload.json",
+      "sha256": "34aa58fa7f1bf3dd25eea73b304186e83bafb2c706f5806cbbf0faef0893aa1c",
+      "bytes": 372673
+    }
+  ],
+  "archive": {
+    "file": "documents.jsonl.br",
+    "encoding": "brotli",
+    "bytes": 1031757,
+    "sourceBytes": 72686268,
+    "sha256": "23e97dbc848d0141b106bca6d958a942c2e700c5cb205a118c67157b49dbe846"
+  }
+}
