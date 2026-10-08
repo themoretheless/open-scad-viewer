@@ -22,6 +22,58 @@ fn plane_normal(plane: [[f64; 3]; 3]) -> Result<[I; 3]> {
         a[0].mul(b[1])?.sub(a[1].mul(b[0])?)?,
     ])
 }
+// The caller proves zero position at anchor and continuity on the path.
+// Every derivative query covers a whole interval; no sampled quadrature.
+fn integrated_position<F>(
+    anchor: f64,
+    target: [f64; 2],
+    high: bool,
+    budget: usize,
+    mut derivative: F,
+) -> Result<(Option<I>, usize)>
+where
+    F: FnMut([f64; 2], usize) -> Result<(Option<I>, usize)>,
+{
+    let near = target[usize::from(high)];
+    let mut sum = I::point(0.);
+    let mut spent = 0;
+    let mut previous = anchor;
+    if near != anchor {
+        for step in 1..=8 {
+            let next = if step == 8 {
+                near
+            } else {
+                anchor + (near - anchor) * (step as f64 / 8.)
+            };
+            if next == previous {
+                continue;
+            }
+            if spent == budget {
+                return Ok((None, spent));
+            }
+            let (bound, used) =
+                derivative([previous.min(next), previous.max(next)], budget - spent)?;
+            spent += used;
+            let Some(bound) = bound else {
+                return Ok((None, spent));
+            };
+            sum = sum.add(bound.mul(I::point(next).sub(I::point(previous))?)?)?;
+            previous = next;
+        }
+    }
+    if target[0] != target[1] {
+        if spent == budget {
+            return Ok((None, spent));
+        }
+        let (bound, used) = derivative(target, budget - spent)?;
+        spent += used;
+        let Some(bound) = bound else {
+            return Ok((None, spent));
+        };
+        sum = sum.add(bound.mul(I::new(target[0], target[1])?.sub(I::point(near))?)?)?;
+    }
+    Ok((Some(sum), spent))
+}
 struct Cover {
     accepted: Vec<Rectangle>,
     pending: Vec<Rectangle>,
@@ -334,6 +386,34 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         }
                     }
                 }
+                if !derivative && value.lo <= 0. && value.hi >= 0. && spent < budget {
+                    let (integral, used) = integrated_position(
+                        domain[0][usize::from(rail == 1)],
+                        rect[0],
+                        rail == 1,
+                        budget - spent,
+                        |free, remaining| {
+                            let (jet, used) = constrained
+                                .derivatives_with_transverse_correction(free, rect[1], remaining)?;
+                            let Some(jet) = jet else {
+                                return Ok((None, used));
+                            };
+                            let mut dot = I::point(0.);
+                            for k in 0..3 {
+                                if normal[k].lo == 0. && normal[k].hi == 0. {
+                                    continue;
+                                }
+                                dot =
+                                    dot.add(normal[k].mul(I::new(jet[0][k][0], jet[0][k][1])?)?)?;
+                            }
+                            Ok((Some(dot), used))
+                        },
+                    )?;
+                    spent += used;
+                    if let Some(integral) = integral {
+                        value = value.intersect(integral.lo, integral.hi)?;
+                    }
+                }
                 Ok((Some([value.lo, value.hi]), spent))
             },
         )?;
@@ -358,6 +438,57 @@ mod tests {
     use super::*;
     fn area(r: Rectangle) -> f64 {
         (r[0][1] - r[0][0]) * (r[1][1] - r[1][0])
+    }
+    #[test]
+    fn plane_cover_integral_preserves_zeros_orientation_and_budget() {
+        for high in [false, true] {
+            let anchor = if high { 1. } else { 0. };
+            let (value, spent) = integrated_position(anchor, [0.4, 0.6], high, 9, |r, _| {
+                let t = I::new(r[0], r[1])?;
+                let d = if high {
+                    I::point(-2.).mul(I::point(1.).sub(t)?)?
+                } else {
+                    I::point(2.).mul(t)?
+                };
+                Ok((Some(d), 1))
+            })
+            .unwrap();
+            let value = value.unwrap();
+            assert!(value.lo > 0. && value.lo <= 0.16 && value.hi >= 0.36);
+            assert_eq!(spent, 9);
+        }
+        let (zero, _) = integrated_position(0., [0.5; 2], false, 8, |r, _| {
+            let t = I::new(r[0], r[1])?;
+            let d = I::point(2.).mul(t)?.sub(I::point(6.).mul(t.mul(t)?)?)?;
+            Ok((Some(d), 1))
+        })
+        .unwrap();
+        let zero = zero.unwrap();
+        assert!(zero.lo <= 0. && zero.hi >= 0.);
+        for budget in 0..9 {
+            let exhausted = integrated_position(0., [0.4, 0.6], false, budget, |_, remaining| {
+                assert!(remaining > 0);
+                Ok((Some(I::point(1.)), 1))
+            })
+            .unwrap();
+            assert!(exhausted.0.is_none());
+            assert_eq!(exhausted.1, budget);
+        }
+        for missing in 0..9 {
+            let mut query = 0;
+            let partial = integrated_position(0., [0.4, 0.6], false, 9, |_, _| {
+                let bound = if query == missing {
+                    None
+                } else {
+                    Some(I::point(1.))
+                };
+                query += 1;
+                Ok((bound, 1))
+            })
+            .unwrap();
+            assert!(partial.0.is_none());
+            assert_eq!(partial.1, missing + 1);
+        }
     }
     #[test]
     fn plane_cover_axis_equation_has_exact_zero_components() {

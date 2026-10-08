@@ -2412,3 +2412,33 @@ remains at 155 unqualified pairs.
 The final four plane_cover tests also verify early span exhaustion after
 three queries: all unprocessed area remains pending. The full-path
 interior-zero regression passed. This stage is native only.
+
+## Integrated normal-position enclosure (2026-10-09)
+
+Nonanchored rectangles with inconclusive direct position and second-path
+bounds now have an additional first-derivative integral enclosure. Eight
+whole derivative intervals cover the fixed path from the exact zero rail
+to the near endpoint; a final whole target interval encloses displacement
+from that endpoint to every target parameter. Descending paths retain
+signed widths. The result intersects the direct plane-position interval.
+No point sampling or unchecked quadrature grants proof; every interval
+query is charged to the same span budget. Incomplete paths return none.
+
+Five plane_cover tests passed (0.01 s), including both integration
+orientations, t^2(1-2t)'s additional zero, and work exhaustion. The full
+native fixture is being rerun before any additional certificate claim.
+
+The integral regression now enumerates all nine incomplete work budgets
+and each of nine missing derivative queries. Every partial path returns
+none, including paths with an already positive accumulated integral.
+All five focused tests passed. Native full-shell evaluation is still live.
+
+The integrated-position native fixture passed in 114.84 s and issued the
+first complete owned transition-plane contact certificate for rail 0:
+zero pending rectangles, 89 cells, 38512 spans, 8636 exact work. The
+fixture now requires this certificate instead of merely printing its
+status. Rail 1 remains nonplanar and needs another proof family. Combined
+audit integration is next; the last combined audit still reported 155
+pending pairs because it did not consume transition-plane certificates.
+This one pair proof does not establish global Body validity or fillet
+radius, wall thickness, or packaged WASM integration.

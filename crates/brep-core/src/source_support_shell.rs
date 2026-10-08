@@ -711,6 +711,7 @@ mod tests {
             eprintln!("transition plane rail={} pendingDomains={:?}",rail,plane.pending);
             assert!(plane.cells<=4096 && plane.spans<=100000 && plane.exact_work<=100000000);
             assert!(expression.qualify_transition_plane_contact(rail,0,0,0,0).unwrap().certificate.is_none());
+            if rail==0 { assert!(plane.certificate.is_some() && plane.pending.is_empty()); }
             if let Some(certificate)=plane.certificate {
                 assert_eq!(certificate.rail(),rail);
                 assert!(!certificate.accepted().is_empty());
