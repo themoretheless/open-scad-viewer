@@ -4,7 +4,7 @@ use cad_predicates::{
     AuthoredScalar, Limits, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
 use nurbs_core::{interval_eval::Interval as I, surface::Surface};
-fn normals(s: &Surface, reverse: bool, factor: bool) -> Vec<[I; 3]> {
+pub(crate) fn normals(s: &Surface, reverse: bool, factor: bool) -> Vec<[I; 3]> {
     let mut s = s.clone();
     if reverse {
         s.control_points.reverse();
@@ -86,7 +86,7 @@ fn normals(s: &Surface, reverse: bool, factor: bool) -> Vec<[I; 3]> {
     });
     net
 }
-fn split(net: &[[I; 3]]) -> (Vec<[I; 3]>, Vec<[I; 3]>) {
+pub(crate) fn split(net: &[[I; 3]]) -> (Vec<[I; 3]>, Vec<[I; 3]>) {
     let mut row = net.to_vec();
     let mut a = vec![row[0]];
     let mut b = vec![*row.last().unwrap()];
@@ -119,7 +119,7 @@ fn norm(x: [I; 3]) -> I {
         .map(square)
         .fold(I::point(0.), |a, b| a.add(b).unwrap())
 }
-fn angle(a: &[[I; 3]], b: &[[I; 3]]) -> Option<f64> {
+pub(crate) fn angle(a: &[[I; 3]], b: &[[I; 3]]) -> Option<f64> {
     let hull = |net: &[[I; 3]]| {
         std::array::from_fn(|k| {
             I::new(

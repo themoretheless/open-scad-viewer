@@ -147,3 +147,26 @@ cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
 
 Replacement smooth end construction, global thickness, support-patch junctions,
 general fillets and named-part acceptance remain open.
+
+## Original support patch junctions
+
+All eight entry→middle and middle→exit meridian junctions pass whole-interval
+angular qualification at sine² <= 1e-4. Each requires 511 visited cells with no
+unresolved regions. Original shared control rows and rational weights match
+exactly. Chart transposition and boundary reversal preserve the original
+normalized meridian path; no new surface is fitted.
+
+Three tests pass, including a pair of planes sharing the exact positional
+boundary but forming a 45-degree crease. The original-normal computation
+rejects that crease and accepts the corresponding flat junction, including
+non-unit authored knot domains. `patch-junctions.json.gz` retains every bound.
+
+```sh
+cargo +nightly-2026-09-16 test --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-patch-junctions
+cargo +nightly-2026-09-16 run --locked --manifest-path crates/Cargo.toml \
+  -p brep-core --example variable-annular-patch-junctions -- /tmp/junctions.json
+```
+
+This closes angular qualification for these original support-patch seams;
+exact G1/G2, global thickness and replacement regular end caps remain separate.
