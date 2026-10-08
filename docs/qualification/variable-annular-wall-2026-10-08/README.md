@@ -1480,3 +1480,12 @@ limits (42 ordinary, 36 with reused adaptive-self facts) and the cuboid six-quer
 success/one-query refusal. They must run against the newly packaged binary;
 type checking passed, but these stricter worker checks are not yet claimed as
 executed. The previous binary cannot meet the annular query limits.
+
+### Remaining pair classes in the previously qualified binary
+
+Original shell incidence classifies the archived 253 unproven pairs into nine
+same-face pairs, 32 shared-edge pairs and 212 distinct pairs without a shared
+edge. Of the latter, 210 report no pair proof, one reaches gap resolution and
+one reaches gap work limits. See `unresolved-pair-classification.json`, which
+binds both input archives by hash. This is diagnostic classification of old
+worker evidence; it adds no certificate and is not a new-binary result.
