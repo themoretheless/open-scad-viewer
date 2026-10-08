@@ -105,7 +105,11 @@ fn projected_jacobian(
 fn abs_upper(x: I) -> f64 {
     x.lo.abs().max(x.hi.abs())
 }
-fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
+struct Contraction {
+    upper: f64,
+    scale: f64,
+}
+fn contraction(j: [[I; 2]; 2]) -> Result<Option<Contraction>> {
     let m = j.map(|row| row.map(|x| x.lo / 2. + x.hi / 2.));
     let det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
     if !det.is_finite() || det == 0. {
@@ -118,20 +122,60 @@ fn contraction(j: [[I; 2]; 2]) -> Result<Option<f64>> {
     if y.iter().flatten().any(|x| !x.is_finite()) {
         return Ok(None);
     }
-    let mut maximum = 0_f64;
+    let mut residual = [[0_f64; 2]; 2];
     for r in 0..2 {
-        let mut sum = I::point(0.);
         for c in 0..2 {
             let product = I::point(y[r][0])
                 .mul(j[0][c])?
                 .add(I::point(y[r][1]).mul(j[1][c])?)?;
-            let residual = I::point(if r == c { 1. } else { 0. }).sub(product)?;
-            sum = sum.add(I::point(abs_upper(residual)))?;
+            residual[r][c] = abs_upper(I::point(if r == c { 1. } else { 0. }).sub(product)?);
         }
-        maximum = maximum.max(sum.hi);
     }
-    Ok(Some(maximum))
+    // In the norm max(|x0|,|x1|/t), the two verified row bounds are
+    // B00+B01*t and B11+B10/t. A floating Perron vector is only a proposal:
+    // both inequalities are checked again by outward-rounded arithmetic.
+    let verify = |t: f64| -> Result<f64> {
+        Ok(I::point(residual[0][0])
+            .add(I::point(residual[0][1]).mul(I::point(t))?)?
+            .hi
+            .max(
+                I::point(residual[1][1])
+                    .add(I::point(residual[1][0]).div(I::point(t))?)?
+                    .hi,
+            ))
+    };
+    let mut result = Contraction {
+        upper: verify(1.)?,
+        scale: 1.,
+    };
+    if result.upper < 1. || residual[0][0] >= 1. || residual[1][1] >= 1. {
+        return Ok(Some(result));
+    }
+    let [a, b] = residual[0];
+    let [c, d] = residual[1];
+    let off = b.sqrt() * c.sqrt();
+    let rho = (a + d + (a - d).hypot(2. * off)) / 2.;
+    let proposals = if b == 0. {
+        vec![1. + 2. * c / (1. - d)]
+    } else if c == 0. {
+        vec![(1. - a) / (2. * b)]
+    } else {
+        vec![c / (rho - d), (rho - a) / b, c.sqrt() / b.sqrt()]
+    };
+    for t in proposals {
+        if !t.is_finite() || t <= 0. {
+            continue;
+        }
+        let Ok(upper) = verify(t) else {
+            continue;
+        };
+        if upper < result.upper {
+            result = Contraction { upper, scale: t };
+        }
+    }
+    Ok(Some(result))
 }
+
 fn periodic(s: &Surface, max_cells: usize) -> Result<Value> {
     let mut work = 0usize;
     let failed = |work, reason| {
@@ -250,7 +294,7 @@ fn periodic(s: &Surface, max_cells: usize) -> Result<Value> {
                 // The lower literal bounds pi from below. Exact closed, nonzero
                 // projections have integer winding; fixed derivative sign and
                 // rotation < 4*pi force exactly one turn, with either orientation.
-                if q < 1.
+                if q.upper < 1.
                     && (angular.lo > 0. || angular.hi < 0.)
                     && rotation_upper < 4. * 3.141592653589793
                 {
@@ -258,7 +302,7 @@ fn periodic(s: &Surface, max_cells: usize) -> Result<Value> {
                         json!({"certified":true,"cells":work,"reason":"global-periodic-lift-contraction",
                         "scope":"surface-modulo-periodic-v","method":"periodic-unwrapped-projection-contraction",
                         "projectionAxes":[x,y],"firstCoordinate":if radial {"squared-radius"}else{"height"},
-                        "origin":origin,"contractionUpper":q,"angularDerivative":[angular.lo,angular.hi],
+                        "origin":origin,"contractionUpper":q.upper,"normWeights":[1.,q.scale],"angularDerivative":[angular.lo,angular.hi],
                         "rotationUpper":rotation_upper,"absoluteWinding":1}),
                     );
                 }
@@ -366,5 +410,30 @@ mod tests {
         s.knots_v[0] = s.knots_v[0].next_up();
         assert!(!exact_periodic_basis(&s));
         assert_eq!(periodic(&s, 16384).unwrap()["certified"], false);
+    }
+}
+
+#[cfg(test)]
+mod weighted_norm_tests {
+    use super::*;
+    #[test]
+    fn weighted_norm_proves_skewed_jacobian_without_relaxing_the_bound() {
+        let j = [
+            [I::new(0.9, 1.1).unwrap(), I::new(-10., 10.).unwrap()],
+            [I::new(-0.001, 0.001).unwrap(), I::new(0.9, 1.1).unwrap()],
+        ];
+        let proof = contraction(j).unwrap().unwrap();
+        assert!(proof.upper < 0.21);
+        assert!(proof.scale > 0. && proof.scale < 1.);
+        let unsafe_j = [
+            [I::new(0.5, 1.5).unwrap(), I::new(-1., 1.).unwrap()],
+            [I::new(-1., 1.).unwrap(), I::new(0.5, 1.5).unwrap()],
+        ];
+        assert!(contraction(unsafe_j).unwrap().unwrap().upper >= 1.);
+        assert!(
+            contraction([[I::new(-1., 1.).unwrap(); 2]; 2])
+                .unwrap()
+                .is_none()
+        );
     }
 }

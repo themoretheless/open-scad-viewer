@@ -12,6 +12,8 @@ use crate::{Result, check, curve::Curve, distance_bounds::Interval as I, surface
 type V = [I; 3];
 #[path = "profile_frame_premises.rs"]
 mod frame_premises;
+#[path = "profile_spatial_frame.rs"]
+mod spatial_frame;
 
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -199,6 +201,7 @@ struct Reference<'a> {
     initial_tangent: V,
     coordinates: Vec<V>,
     closed: bool,
+    chart: Option<spatial_frame::Chart>,
 }
 impl Reference<'_> {
     // For Bishop transport, |N'| and |B'| are bounded by |T'|. In
@@ -275,6 +278,11 @@ impl Reference<'_> {
             let beta = dot(self.initial, plane)?;
             let normal = add(scale(cross(plane, tangent)?, alpha)?, scale(plane, beta)?)?;
             (normal, cross(tangent, normal)?)
+        } else if let Some(chart) = &self.chart {
+            match chart.frame(range, tangent, remaining, used)? {
+                Some(frame) => frame,
+                None => return Ok(None),
+            }
         } else if range == [0., 0.] {
             (self.initial, self.initial_side)
         } else if let Some(frame) = self.open_frame(range[1], remaining, used)? {
@@ -428,30 +436,14 @@ pub fn certify(
         })
         .map(|axis| std::array::from_fn(|k| I::point(if k == axis { 1. } else { 0. })))
         .or_else(|| frame_premises::plane(&path.control_points, max_cells, &mut premise_work));
-    if closed && plane.is_some() {
-        let [a, b] = path.domain();
-        let clamped = path.knots[..=path.degree].iter().all(|&k| k == a)
-            && path.knots[path.control_points.len()..]
-                .iter()
-                .all(|&k| k == b);
-        let p = &path.control_points[0];
-        let incoming = &path.control_points[path.control_points.len() - 2];
-        let outgoing = &path.control_points[1];
-        let aligned = clamped
-            && p == path.control_points.last().unwrap()
-            && frame_premises::aligned(
-                incoming,
-                p,
-                outgoing,
-                max_cells.saturating_sub(premise_work),
-                &mut premise_work,
-            );
-        // Without exact endpoint tangent agreement, zero planar holonomy is
-        // not an admissible premise. The unit-frame envelope still includes
-        // every possible closing correction.
-        if !aligned {
-            plane = None;
-        }
+    let closing_tangent_exact = !closed
+        || frame_premises::closing(
+            path,
+            max_cells.saturating_sub(premise_work),
+            &mut premise_work,
+        );
+    if !closing_tangent_exact {
+        plane = None;
     }
     let method = if plane.is_some() {
         "interval-planar-bishop-frame"
@@ -531,6 +523,40 @@ pub fn certify(
             Ok([dot(q, n0)?, dot(q, b0)?, dot(q, t0)?])
         })
         .collect::<Result<Vec<_>>>()?;
+    let mut chart_work = 0;
+    let chart = if plane.is_none() && closing_tangent_exact {
+        let radius = coordinates
+            .iter()
+            .map(|&q| norm(q).map(|r| r.hi))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .fold(0_f64, f64::max);
+        spatial_frame::Chart::build(
+            path,
+            t0,
+            n0,
+            closed,
+            budget / (16. * (radius + 1.)),
+            (max_cells - cells) / 3,
+            &mut chart_work,
+        )
+        .unwrap_or(None)
+    } else {
+        None
+    };
+    cells += chart_work;
+    let method = if chart.is_some() {
+        "interval-connection-bishop-frame"
+    } else {
+        method
+    };
+    let unresolved = |cells, reason| Report {
+        error_upper: None,
+        cells,
+        within_budget: false,
+        method,
+        reason: Some(reason),
+    };
     let reference = Reference {
         path,
         scale: law,
@@ -540,6 +566,7 @@ pub fn certify(
         initial_tangent: t0,
         coordinates,
         closed,
+        chart,
     };
     // Equal-weight one-span lines and affine laws give an affine ideal sweep.
     // Its distance to each affine retained segment is convex, hence endpoints

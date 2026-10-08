@@ -48,6 +48,24 @@ pub(super) fn aligned(a: &[f64], p: &[f64], b: &[f64], remaining: usize, used: &
     proved
 }
 
+pub(super) fn closing(path: &crate::curve::Curve, remaining: usize, used: &mut usize) -> bool {
+    let [a, b] = path.domain();
+    let clamped = path.knots[..=path.degree].iter().all(|&k| k == a)
+        && path.knots[path.control_points.len()..]
+            .iter()
+            .all(|&k| k == b);
+    let p = &path.control_points[0];
+    clamped
+        && p == path.control_points.last().unwrap()
+        && aligned(
+            &path.control_points[path.control_points.len() - 2],
+            p,
+            &path.control_points[1],
+            remaining,
+            used,
+        )
+}
+
 /// Prove that every original positive-weight control lies in one plane.
 /// Interval arithmetic encloses its unit normal; floating coplanarity is never used.
 pub(super) fn plane(
