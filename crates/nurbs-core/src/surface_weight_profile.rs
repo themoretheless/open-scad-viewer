@@ -156,6 +156,109 @@ impl ProfileSection<'_, '_> {
             .normal_bounds(self.rectangle(range)?, max_spans)
     }
 }
+/// Exact cubic Hermite end-transition expression attached to one immutable
+/// profile section. Side rails and the collapsed tip are not B-rep admissions.
+pub struct ProfileEndTransition<'p, 's> {
+    section: ProfileSection<'p, 's>,
+    target: [f64; 3],
+    transverse_scale: f64,
+}
+impl<'p, 's> ProfileSection<'p, 's> {
+    pub fn end_transition(
+        self,
+        target: [f64; 3],
+        transverse_scale: f64,
+    ) -> Result<ProfileEndTransition<'p, 's>> {
+        check(
+            target.iter().all(|x| x.is_finite())
+                && transverse_scale.is_finite()
+                && transverse_scale != 0.,
+            "Require a finite target and nonzero transverse scale",
+        )?;
+        Ok(ProfileEndTransition {
+            section: self,
+            target,
+            transverse_scale,
+        })
+    }
+}
+impl ProfileEndTransition<'_, '_> {
+    pub fn section(&self) -> &ProfileSection<'_, '_> {
+        &self.section
+    }
+    pub fn target(&self) -> [f64; 3] {
+        self.target
+    }
+    pub fn transverse_scale(&self) -> f64 {
+        self.transverse_scale
+    }
+    /// H(s,t)=(2s^3-3s^2+1)S(t)+(s^3-2s^2+s)l D(t)
+    ///          +(-2s^3+3s^2)P. All operations retain exact source expressions.
+    pub fn enclose(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        max_spans: usize,
+    ) -> Result<(Option<[[f64; 2]; 3]>, usize)> {
+        self.section.rectangle(free)?;
+        check(max_spans <= 100000, "Bound transition span work")?;
+        check(
+            across.iter().all(|x| x.is_finite())
+                && across[0] >= 0.
+                && across[1] <= 1.
+                && across[0] <= across[1],
+            "Keep transition parameters inside [0,1]",
+        )?;
+        if across == [0., 0.] {
+            return self.section.enclose(free, max_spans);
+        }
+        if across == [1., 1.] {
+            return Ok((Some(self.target.map(|x| [x, x])), 0));
+        }
+        let (source, spent) = self.section.enclose(free, max_spans)?;
+        let Some(source) = source else {
+            return Ok((None, spent));
+        };
+        if spent == max_spans {
+            return Ok((None, spent));
+        }
+        let (derivative, more) = self.section.transverse_bounds(free, max_spans - spent)?;
+        let Some(derivative) = derivative else {
+            return Ok((None, spent + more));
+        };
+        let s = I::new(across[0], across[1])?;
+        let s2 = s.mul(s)?;
+        let s3 = s2.mul(s)?;
+        let h00 = I::point(2.)
+            .mul(s3)?
+            .sub(I::point(3.).mul(s2)?)?
+            .add(I::point(1.))?;
+        let h10 = s3
+            .sub(I::point(2.).mul(s2)?)?
+            .add(s)?
+            .mul(I::point(self.transverse_scale))?;
+        let h01 = I::point(3.).mul(s2)?.sub(I::point(2.).mul(s3)?)?;
+        let mut bounds = [[0.; 2]; 3];
+        for k in 0..3 {
+            let value = h00
+                .mul(I::new(source[k][0], source[k][1])?)?
+                .add(h10.mul(I::new(derivative[k][0], derivative[k][1])?)?)?
+                .add(h01.mul(I::point(self.target[k]))?)?;
+            bounds[k] = [value.lo, value.hi];
+        }
+        Ok((Some(bounds), spent + more))
+    }
+    /// At s=0, H=S, dH/dt=dS/dt and dH/ds=l D exactly.
+    /// A nonzero support normal therefore proves the same regular tangent
+    /// plane along this owned boundary. Nothing is claimed at the tip or rails.
+    pub fn regular_join(&self, free: [f64; 2], max_spans: usize) -> Result<(Option<bool>, usize)> {
+        let (normal, spent) = self.section.support_normals(free, max_spans)?;
+        Ok((
+            normal.and_then(|n| n.iter().any(|r| r[0] > 0. || r[1] < 0.).then_some(true)),
+            spent,
+        ))
+    }
+}
 fn choose(n: usize, k: usize) -> f64 {
     let mut x = 1u64;
     for i in 0..k.min(n - k) {
@@ -989,6 +1092,49 @@ mod tests {
         assert!(cut.enclose([-0.1, 0.5], 1).is_err());
         assert!(p.section(2, 0.5).is_err());
         assert!(p.section(0, 1.1).is_err());
+        assert!(
+            p.section(0, 0.5)
+                .unwrap()
+                .end_transition([0.; 3], 0.)
+                .is_err()
+        );
+        let transition = p
+            .section(0, 0.5)
+            .unwrap()
+            .end_transition([1., 1., 1.], 0.25)
+            .unwrap();
+        assert_eq!(
+            transition
+                .enclose([0., 1.], [1., 1.], 0)
+                .unwrap()
+                .0
+                .unwrap(),
+            [[1., 1.]; 3]
+        );
+        assert!(
+            transition
+                .enclose([0.3, 0.3], [0.5, 0.5], 1)
+                .unwrap()
+                .0
+                .is_none()
+        );
+        for (t, v) in [(0., 0.2), (0.5, 0.3), (1., 0.8)] {
+            let bounds = transition.enclose([v, v], [t, t], 2).unwrap().0.unwrap();
+            let source = [0.8, 3. * v / (1. + 2. * v), 0.];
+            let derivative = [0.64, 0., 0.];
+            let h00 = 2. * t * t * t - 3. * t * t + 1.;
+            let h10 = t * t * t - 2. * t * t + t;
+            let h01 = 3. * t * t - 2. * t * t * t;
+            for k in 0..3 {
+                let value = h00 * source[k] + h10 * 0.25 * derivative[k] + h01;
+                assert!(bounds[k][0] <= value && value <= bounds[k][1]);
+            }
+        }
+        assert_eq!(
+            transition.regular_join([0.2, 0.4], 1).unwrap().0,
+            Some(true)
+        );
+        assert!(transition.regular_join([0.2, 0.4], 0).is_err());
         s.knots_v = vec![0., 0., 0.5, 1., 1.];
         for row in &mut s.control_points {
             let x = row[0][0];

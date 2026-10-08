@@ -930,3 +930,29 @@ These derivatives provide exact-profile boundary data for transition
 construction. They do not prove an independently authored cap tangent, shared
 position, positive thickness or embedding. Corrected-section ownership in
 shared-edge admission and actual end-transition surfaces remain open.
+
+## Exact Hermite end-transition expression
+
+`ProfileSection::end_transition` constructs an immutable exact expression
+H(s,t)=h00(s) S(t)+h10(s) l D(t)+h01(s) P, with cubic Hermite basis,
+original exact section S, transverse support derivative D, finite target P
+and finite nonzero scale l. Neither section weights nor derivative coefficients
+are flattened into an authored binary64 Surface. Full parameter rectangle
+enclosures share span work across positional and derivative queries; exhausted
+work returns no enclosure. The exact endpoint at s=1 is the target point.
+
+At s=0, H=S, H_t=S_t and H_s=l D identically. The private expression and
+nonzero source normal therefore establish the same regular boundary tangent
+plane. `regular_join` returns no certificate when normal bounds contain zero.
+This is structural boundary equality, not a sampled angular approximation.
+
+Analytic rational planar evaluations and bounded-work refusals pass. All 13
+profile tests passed in 0.03 seconds. The annular transition from U=0.75 to
+[20,0,6] preserves exact section enclosures and a regular join on all 64
+intervals covering the seam. Whole transition enclosure work completes for
+each interval. The B-rep control fixture passed in 2.66 seconds.
+
+This is transition geometry, not a sewn cap. Side rails still need coincidence
+with neighbor replacement contours; the collapsed target has no regularity or
+embedding certificate. Interior Jacobian, self-intersections, thickness,
+corrected shared-edge admission and closed-body/WASM integration remain open.

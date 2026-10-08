@@ -354,6 +354,13 @@ mod tests {
         assert_eq!(pole.point,[20.,0.,6.]);assert!(pole.distinct_tangent_limits);
         eprintln!("corrected profile pole distinct={} sine={:?} normals={:?}",pole.distinct_tangent_limits,pole.sine_squared_interval,pole.components);
         let cut=proposal.profile(0).unwrap().section(0,0.75).unwrap();
+        let transition=proposal.profile(0).unwrap().section(0,0.75).unwrap().end_transition([20.,0.,6.],0.25).unwrap();
+        for i in 0..64 {
+            let free=[i as f64/64.,(i+1) as f64/64.];
+            assert_eq!(transition.regular_join(free,1).unwrap().0,Some(true));
+            assert_eq!(transition.enclose(free,[0.,0.],1).unwrap(),cut.enclose(free,1).unwrap());
+            assert!(transition.enclose(free,[0.,1.],2).unwrap().0.is_some());
+        }
         let middle=cut.enclose([0.5,0.5],1).unwrap().0.unwrap();
         assert!(middle.iter().zip(pole.point).any(|(r,p)|r[1]<p-0.01||r[0]>p+0.01));
         for i in 0..64 {
