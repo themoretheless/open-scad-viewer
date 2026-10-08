@@ -1,0 +1,15 @@
+{
+  "uncompressedSha256": {
+    "pole-self-100k": "c81de1ea68b984daf2fa9e0dc2de1cc2811413968c155ceb90640d5ab18d48fc",
+    "pole-self-100k-run": "9143e32788b83fbb239e86174c579f05f7e8ac2416873ee5c74492ea1baad04e"
+  },
+  "cases": 8,
+  "qualified": 8,
+  "cellsLimit": 4096,
+  "spansLimit": 100000,
+  "maximumCells": 3040,
+  "maximumSpans": 67524,
+  "thresholdMm": 4.74999,
+  "sineSquared": 0.0001,
+  "scope": "Complete original selected face self-chord coverage on authored prototypes. Does not prove general self-intersection absence or whole Body wall clearance; source Body 5.99 mm fixture not yet qualified."
+}
