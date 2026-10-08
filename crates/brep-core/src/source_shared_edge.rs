@@ -21,11 +21,18 @@ impl SharedEdge {
         self.ranges
     }
     pub fn covers_complete_canonical_source(&self) -> bool {
-        self.ranges.is_none_or(|ranges| {
-            ranges.iter().all(|r| {
+        match self.ranges {
+            Some(ranges) => ranges.iter().all(|r| {
                 (r[0][0] == 0. && r[1][0] == r[1][1]) || (r[1][0] == 0. && r[0][0] == r[0][1])
-            })
-        })
+            }),
+            None => self.uses.iter().all(|fragment| {
+                let domain=fragment.curve().domain();
+                let expected=if fragment.reversed() {[domain[1],domain[0]]} else {domain};
+                fragment.endpoints().iter().zip(expected).all(|(endpoint,t)| {
+                    matches!(endpoint, Endpoint::Parameter(value) if *value == t)
+                })
+            }),
+        }
     }
     pub(crate) fn from_mapped(
         uses: [crate::source_affine_use::MappedUse; 2],
@@ -1812,6 +1819,7 @@ mod tests {
         let world=Curve{control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,0.,1.]],weights:vec![1.,middle_weight,1.],..main.clone()};
         let r=qualify(&world,[&a,&b],[false,true],1_000_000).unwrap();
         let edge=r.edge.expect(r.reason);assert!(r.root_checks>0);
+        assert!(!edge.covers_complete_canonical_source());
         let range=edge.uses()[0].parameter_bounds()[1];
         assert!(range[0]<std::f64::consts::FRAC_1_SQRT_2&&range[1]>std::f64::consts::FRAC_1_SQRT_2);
         assert_eq!(edge.uses()[0].definition(),a.definition());assert_eq!(edge.uses()[1].definition(),b.definition());
