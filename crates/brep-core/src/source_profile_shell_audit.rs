@@ -83,7 +83,25 @@ impl ShellContactAudit<'_> {
     }
     /// Transport diagnostics only; this Value never restores geometric authority.
     pub fn diagnostics(&self) -> value_codec::Value {
+        let kind=|face:&ShellFace| match face.kind() {ShellFaceKind::Original(_)=>"original",ShellFaceKind::Retained(_)=>"retained",ShellFaceKind::Transition=>"transition"};
+        let mut pending_reasons=std::collections::BTreeMap::<String,usize>::new();
+        let mut pending_kinds=std::collections::BTreeMap::<String,usize>::new();
+        for pair in &self.pairs {
+            if !matches!(pair.proof,PairContactProof::Pending) {continue;}
+            *pending_reasons.entry(pair.reason.into()).or_default()+=1;
+            let mut kinds=pair.support.faces.map(|i|kind(&self.owners[i]));
+            kinds.sort();
+            *pending_kinds.entry(format!("{}-{}",kinds[0],kinds[1])).or_default()+=1;
+        }
+        let faces=self.owners.iter().enumerate().map(|(index,face)| {
+            match face.kind() {
+                ShellFaceKind::Original(source)=>value_codec::json!({"index":index,"kind":"original","sourceFace":source}),
+                ShellFaceKind::Retained(side)=>value_codec::json!({"index":index,"kind":"retained","retainedSide":side}),
+                ShellFaceKind::Transition=>value_codec::json!({"index":index,"kind":"transition"}),
+            }
+        }).collect::<Vec<_>>();
         value_codec::json!({"version":1,"kind":"expression-shell-contact-audit","pendingPairs":self.pending_pairs(),
+            "faces":faces,"pendingByReason":pending_reasons,"pendingByFaceKinds":pending_kinds,
             "cells":self.cells,"spans":self.spans,"domainCells":self.domain_cells,"exactWork":self.exact_work,"driverCells":self.driver_cells,
             "pairs":self.pairs.iter().map(|p|value_codec::json!({"faces":p.support.faces,"proof":p.proof.kind(),"reason":p.reason,
                 "sharedEdges":p.support.shared_edges,"pendingProducts":p.support.inspection.pending,
@@ -260,5 +278,26 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             });
         }
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn diagnostic_groups_count_only_pending_and_preserve_owner_indices() {
+        let owners=[ShellFace {kind:ShellFaceKind::Original(5),loops:vec![]},ShellFace {kind:ShellFaceKind::Retained(0),loops:vec![]},ShellFace {kind:ShellFaceKind::Transition,loops:vec![]},ShellFace {kind:ShellFaceKind::Original(7),loops:vec![]}];
+        let pair=|faces,reason,proof| AuditedContactPair {support:ShellSupportPair {faces,shared_edges:vec![],inspection:SupportPairReport {separated:vec![],pending:vec![],outside:vec![],domain_cells:0,cells:0,spans:0}},reason,proof};
+        let audit=ShellContactAudit {owners:&owners,pairs:vec![pair([0,1],"budget",PairContactProof::Pending),pair([2,0],"budget",PairContactProof::Pending),pair([1,2],"boundary",PairContactProof::Pending),pair([0,3],"excluded",PairContactProof::Excluded)],cells:0,spans:0,domain_cells:0,exact_work:0,driver_cells:0};
+        let d=audit.diagnostics();
+        assert_eq!(d["pendingPairs"].as_u64(),Some(3));
+        assert_eq!(d["pendingByReason"]["budget"].as_u64(),Some(2));
+        assert_eq!(d["pendingByReason"]["boundary"].as_u64(),Some(1));
+        assert!(d["pendingByReason"]["excluded"].is_null());
+        for key in ["original-retained","original-transition","retained-transition"] {assert_eq!(d["pendingByFaceKinds"][key].as_u64(),Some(1));}
+        assert_eq!(d["faces"][0]["sourceFace"].as_u64(),Some(5));
+        assert_eq!(d["faces"][1]["retainedSide"].as_u64(),Some(0));
+        assert_eq!(d["faces"][2]["kind"].as_str(),Some("transition"));
+        assert_eq!(value_codec::decode_binary(&value_codec::encode_binary(&d).unwrap()).unwrap(),d);
     }
 }
