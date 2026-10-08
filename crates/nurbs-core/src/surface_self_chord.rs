@@ -130,7 +130,18 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     }
     let off_upper = off_diagonal.lo.abs().max(off_diagonal.hi.abs());
     let gershgorin = diagonal[0].hi.max(diagonal[1].hi);
-    let largest = I::point(gershgorin).add(I::point(off_upper))?.hi.min(trace.hi);
+    let mut largest = I::point(gershgorin).add(I::point(off_upper))?.hi.min(trace.hi);
+    // For each enclosed Gram matrix, increasing its diagonals and replacing
+    // its off-diagonal by an absolute upper bound increases lambda_max.
+    // Evaluate that dominating 2x2 matrix with outward arithmetic.
+    let difference = I::point(diagonal[0].hi).sub(I::point(diagonal[1].hi))?;
+    let difference_upper = difference.lo.abs().max(difference.hi.abs());
+    let discriminant = I::point(difference_upper).mul(I::point(difference_upper))?
+        .add(I::point(off_upper).mul(I::point(off_upper))?.mul(I::point(4.))?)?;
+    let root_upper = discriminant.hi.sqrt().next_up();
+    let eigenvalue_upper = I::point(diagonal[0].hi).add(I::point(diagonal[1].hi))?
+        .add(I::point(root_upper))?.mul(I::point(0.5))?.hi;
+    largest = largest.min(eigenvalue_upper);
     let mut numerator = I::point(0.);
     for a in 0..2 {
         let mut dot = I::point(0.);
@@ -554,6 +565,22 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unequal_gram_diagonals_enclose_sheared_independent_chords() {
+        let j = [[I::point(1.), I::point(0.1)],
+            [I::point(0.), I::point(0.5)], [I::point(0.), I::point(0.1)]];
+        let n = [I::point(0.), I::point(0.4), I::point(1.)];
+        let upper = endpoint_matrix_cosine(j, n).unwrap();
+        assert!(upper < 0.31); // Gershgorin alone exceeds .328.
+        for x in [-2., -1., -0.1, 0., 1., 2.] {
+            for y in [-2., -1., 0., 1., 2.] {
+                if x == 0. && y == 0. { continue; }
+                let length_squared = (x+0.1*y)*(x+0.1*y)+0.26*y*y;
+                let cosine_squared = (0.3*y)*(0.3*y)/(1.16*length_squared);
+                assert!(cosine_squared <= upper);
+            }
+        }
+    }
     #[test]
     fn endpoint_gram_eigenvalue_bound_encloses_independent_chord_directions() {
         let j = [[I::point(1.), I::point(0.)],

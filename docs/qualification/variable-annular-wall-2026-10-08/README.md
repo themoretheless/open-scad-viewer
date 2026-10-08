@@ -994,3 +994,22 @@ tests passed, including rank/normal refusals, short aligned normal chords
 and bounded-work refusal. Prototype qualification for this new bound has
 not been run; the preceding all-accounting audit is still live. Whole
 same-face coverage remains 28/31 and global wall safety is unproven.
+
+## All-accounting audit complete and dominating Gram eigenvalue
+
+The 191a0add audit completed at unchanged 1024/8192 limits: forward radii
+retain 7/10 pending pairs on faces 0/10; reverse radii retain 11/13.
+Both spatial directions match. No pole face qualified. Archives retain
+the exact uncertainty rectangles and original serialization invariant.
+
+Endpoint projection now also evaluates the closed-form largest eigenvalue
+of a dominating symmetric 2x2 Gram matrix: upper diagonal norms and the
+absolute upper off-diagonal dot product. Increasing either diagonal or
+the absolute off-diagonal increases its largest eigenvalue. All operations
+are outward; the square-root upper endpoint is rounded upward. The minimum
+of this, Gershgorin and trace bounds still covers every original mean
+matrix. The new unequal-column independent chord fixture gives a cosine
+upper below .31 (Gershgorin alone exceeds .328). Fifteen chord/coverage
+and seven pole tests passed. This closed-form change has not yet been
+audited on the prototype bodies. The preceding Gershgorin prototype audit
+is still running. Whole wall safety remains unproven.
