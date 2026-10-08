@@ -1,0 +1,18 @@
+{
+  "sourceCommits": [
+    "3c24a8e2",
+    "21d50dc5",
+    "a876ca02"
+  ],
+  "uncompressedLogSha256": {
+    "shared-edge": "c5ae3f99773f8462d2c05876485d62a67867dc1394c26df4d79321393cc5f26b",
+    "restoration": "f4e2f5092b5918c2298bee8c9f8a07cb828273e41fc0e61426672e6d433ab810",
+    "partition-contact": "dda67db182f9c07df242c991272831da00fca959572af0e2dc2828c6b4af3249",
+    "source-suite": "1cbdecf2fd8a4421a1ae3dc2491cf83b45d0b763623c9dcd0868027f473e630e"
+  },
+  "sourceSuite": {
+    "passed": 125,
+    "failed": 0
+  },
+  "scope": "Native original shared-edge identity, exact root partitions, source contacts and restoration. Final packaged WASM pending."
+}
