@@ -564,7 +564,7 @@ it('preserves original pair proofs when close-chart refusals release gap work th
 
 it('qualifies bounded retained face products without losing prior proofs through real WASM',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
- const {op:_op,...base}=request,client=realClient(),results=[]
+ const {op:_op,...base}=request,client=realClient(),results=[],elapsedMs:number[]=[]
  for(const retained of [false,true]){
   const o:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
    normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},
@@ -573,7 +573,8 @@ it('qualifies bounded retained face products without losing prior proofs through
     pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000},
     refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000}},
    limits:{pairs:378,planeControls:10000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}
-  const r=await client.run({kind:'sourceBodyRestore',options:o});expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
+  const started=performance.now()
+  const r=await client.run({kind:'sourceBodyRestore',options:o});elapsedMs.push(performance.now()-started);expect(r.admitted).toBe(true);expect(validSourceBody(sourceBodyExpectation(o),r)).toBe(true)
   const c=r.wallCoverage!;expect(c.wholeWallQualified).toBe(false);expect(c.lowerMm).toBeNull();expect(c.adaptiveSelf!.allSelfPairsQualified).toBe(true)
   expect(c.pairs.filter(p=>!p.proven)).toHaveLength(retained?45:61)
   if(retained){
@@ -588,7 +589,7 @@ it('qualifies bounded retained face products without losing prior proofs through
   }
   results.push(c)
  }
- if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
+ if(process.env.CAD_RETAINED_GAP_WORKER_REPORT)writeFileSync(process.env.CAD_RETAINED_GAP_WORKER_REPORT,JSON.stringify({wasmSha256:createHash('sha256').update(readFileSync(new URL('../public/wasm/geometry-kernel.wasm',import.meta.url))).digest('hex'),results,elapsedMs,scope:'Real retained-domain clearance coverage; unresolved material and self-intersection obligations remain.'},null,2)+'\n')
 },180000)
 
 it('admits an exact mapped root chain without promoting its separate retained halves through real WASM',async()=>{
