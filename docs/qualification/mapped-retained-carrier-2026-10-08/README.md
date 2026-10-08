@@ -1625,3 +1625,26 @@ It does not convert the expression into a rounded Surface or admit the
 surrounding shell/Body. Neighbor replacement contours, end closure, volume,
 wall thickness and whole-body intersection checks remain required. The
 implementation remains native-only pending WASM/worker/UI integration.
+
+## Incident original contours split at both shared roots
+
+RootEndedSeam::propose_incident_contours now uses the original shell's
+incident-use addresses to subdivide both face contours at the same admitted
+carrier roots. The source use definition must match the owned carrier use.
+The original directed edge becomes head, retained middle and tail; middle
+endpoints remain Carrier expressions and traversal follows the original use.
+All other edges and all other loops are preserved as source definitions.
+The result records each face and the middle use address for later sewing.
+
+The total fragment budget is checked before contour cloning and construction.
+Insufficient allowance refuses; allowances above the hard cap error. Every
+resulting loop must close using source-expression endpoint identity. Tests
+check both incident faces, exact middle definitions, restoration of all three
+segments, joins and preservation of every unaffected edge.
+
+These are subdivided original contours ready to attach retained rails. They
+do not admit a replacement shell: transition-facing incidence, selected-face
+region replacement and terminal closure still need assembly and qualification.
+
+The final combined annular regression passed in 33.91 seconds, including
+complete owned transition-face admission (328 accepted, zero pending).

@@ -368,6 +368,32 @@ mod tests {
             let rooted_seam=rooted.seam.expect(rooted.reason);
             assert!(std::ptr::eq(rooted_seam.restricted().proposal(),&proposal));
             assert_eq!(rooted_seam.restricted().edge(),edge);
+            assert!(rooted_seam.propose_incident_contours(0).unwrap().proposal.is_none());
+            assert!(rooted_seam.propose_incident_contours(100001).is_err());
+            let contours=rooted_seam.propose_incident_contours(100).unwrap();
+            let contours=contours.proposal.expect(contours.reason);
+            let incident=rooted_seam.incident_fragments().unwrap();
+            for (side,contour) in contours.contours().iter().enumerate() {
+                let original=&body.geometry().shell().regions().unwrap()[contour.face()];
+                assert_eq!(contour.loops().len(),original.loops().len());
+                let [wire,index]=contour.middle();
+                assert_eq!(contour.loops()[wire].len(),original.loops()[wire].len()+2);
+                assert_eq!(contour.loops()[wire][index].definition(),incident[side].definition());
+                for (loop_index,loop_) in original.loops().iter().enumerate() {
+                    for (edge_index,fragment) in loop_.iter().enumerate() {
+                        if loop_index==wire && edge_index==index-1 {continue;}
+                        let shifted=if loop_index==wire && edge_index>=index {edge_index+2}else{edge_index};
+                        assert_eq!(contour.loops()[loop_index][shifted].definition(),fragment.definition());
+                    }
+                }
+                for loop_ in contour.loops() {
+                    assert!((0..loop_.len()).all(|i|loop_[i].joins(&loop_[(i+1)%loop_.len()])));
+                }
+                for fragment in &contour.loops()[wire][index-1..=index+1] {
+                    let restored=crate::source_boundary_fragment::restore(fragment.definition(),100).unwrap();
+                    assert_eq!(restored.definition(),fragment.definition());
+                }
+            }
             let shared=rooted_seam.qualify_incident_edge(100000000,100000).unwrap();
             let shared_edge=shared.edge.expect(shared.reason);
             assert!(shared_edge.uses().iter().all(|u|u.endpoints().iter().all(|e|matches!(e,crate::source_boundary_fragment::Endpoint::Carrier{..}))));
