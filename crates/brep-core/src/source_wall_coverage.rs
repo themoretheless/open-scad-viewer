@@ -463,13 +463,15 @@ pub fn qualify_with_mixed_pair_pass<'a>(
         for pair in out.pairs.iter_mut().filter(|p|!p.proven&&p.faces[0]!=p.faces[1]) {
             if diagnostics.cells==d.cells||diagnostics.spans==d.spans
                 ||diagnostics.domain_cells==d.domain_cells||diagnostics.normal_spans==work.normal_spans {break;}
-            let r=crate::source_wall_pair::qualify(body,pair.faces,minimum_mm,crate::source_wall_pair::Limits{
+            let r=crate::source_wall_pair::qualify_with_factors(body,pair.faces,minimum_mm,crate::source_wall_pair::Limits{
                 cells:(d.cells-diagnostics.cells).min(d.cells_per_pair),
                 spans:(d.spans-diagnostics.spans).min(d.spans_per_pair),
                 domain_cells:(d.domain_cells-diagnostics.domain_cells).min(d.domain_cells_per_pair),
                 domain_cells_per_query:d.domain_cells_per_query,tolerance_uv:d.tolerance_uv,
                 normal_spans:(work.normal_spans-diagnostics.normal_spans).min(work.normal_spans_per_pair),
-                max_sine_squared:limits.max_sine_squared})?;
+                max_sine_squared:limits.max_sine_squared},pair.faces.map(|f|prepared[f].as_ref()),
+                factors.queries-out.factored_queries)?;
+            out.factored_queries+=r.factored_queries;
             diagnostics.cells+=r.cells;diagnostics.spans+=r.spans;
             diagnostics.domain_cells+=r.domain_cells;diagnostics.normal_spans+=r.normal_spans;
             let qualified=r.certificate.is_some();

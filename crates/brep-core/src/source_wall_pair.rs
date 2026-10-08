@@ -42,6 +42,7 @@ pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
     pub normal_spans: usize,
     pub normal_products: usize,
+    pub factored_queries: usize,
     pub cells: usize,
     pub spans: usize,
     pub domain_cells: usize,
@@ -73,6 +74,15 @@ pub fn qualify<'a>(
     faces: [usize; 2],
     minimum_mm: f64,
     limits: Limits,
+) -> Result<Report<'a>> {
+    qualify_with_factors(body,faces,minimum_mm,limits,[None,None],0)
+}
+/// Reuse only source-bound factors already prepared by the whole-wall gate.
+/// Their directions at poles do not establish regular tangent planes.
+pub(crate) fn qualify_with_factors<'a>(
+    body: &'a Body, faces: [usize;2], minimum_mm:f64, limits:Limits,
+    factors:[Option<&nurbs_core::factored_surface_normals::Certificate<'_>>;2],
+    query_budget:usize,
 ) -> Result<Report<'a>> {
     let shell = body.geometry().shell();
     if faces[0] == faces[1]
@@ -111,7 +121,8 @@ pub fn qualify<'a>(
             "Original retained regions are required",
         )
     })?;
-    let surfaces = faces.map(|f| shell.faces()[f][0].edges()[0].surface());
+    // Reuse the exact retained-region sources that own prepared normal facts.
+    let surfaces = faces.map(|f| regions[f].loops()[0][0].surface());
     let natural = surfaces.map(domain);
     let [mut first_normals, mut second_normals] =
         surfaces.map(nurbs_core::normal_alignment::OriginalNormalCache::new);
@@ -120,6 +131,7 @@ pub fn qualify<'a>(
         certificate: None,
         normal_spans: 0,
         normal_products: 0,
+        factored_queries: 0,
         cells: 0,
         spans: 0,
         domain_cells: 0,
@@ -141,11 +153,13 @@ pub fn qualify<'a>(
         out.cells += 1;
         let mut normal_components=[None;2];
         if let Some(sine) = threshold {
-            let normals = match first_normals.inspect_other(
+            let (normals,queries) = match first_normals.inspect_other_with_factors(
                 &mut second_normals,
                 uv,
                 sine,
                 limits.normal_spans - out.normal_spans,
+                if query_budget-out.factored_queries>=2 {factors} else {[None,None]},
+                query_budget-out.factored_queries,
             ) {
                 Ok(report) => report,
                 Err(error) if error.code == "NURBS_NUMERIC_ERROR" => {
@@ -160,6 +174,7 @@ pub fn qualify<'a>(
                 Err(error) => return Err(error),
             };
             out.normal_spans += normals.spans;
+            out.factored_queries += queries;
             normal_components=normals.normal_components;
             if normals.aligned == Some(false) {
                 out.normal_products += 1;

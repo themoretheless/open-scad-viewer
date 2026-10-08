@@ -682,10 +682,11 @@ impl<'a> OriginalNormalCache<'a> {
         domains: [[[f64; 2]; 2]; 2], sine: f64, budget: usize) -> Result<PairReport> {
         Ok(self.inspect_other_with_factors(other,domains,sine,budget,[None,None],0)?.0)
     }
-    fn inspect_other_with_factors(&mut self, other:&mut Self,
+    pub fn inspect_other_with_factors(&mut self, other:&mut Self,
         domains:[[[f64;2];2];2], sine:f64, budget:usize,
         factors:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
         query_budget:usize)->Result<(PairReport,usize)> {
+        check(query_budget<=100000,"Bound original factored normal queries")?;
         for (surface,factor) in [self.surface,other.surface].into_iter().zip(factors) {
             if let Some(c)=factor {check(std::ptr::eq(surface,c.surface()),"Use original factored normal source")?;}
         }
