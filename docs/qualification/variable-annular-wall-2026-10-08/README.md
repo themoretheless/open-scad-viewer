@@ -176,3 +176,17 @@ Both completed reports and logs are preserved in
 `self-wall-secant-regular4096.*.gz` and `self-wall-secant-face5.*.gz`.
 Original model serialization is checked unchanged for every case.
 No new WASM/UI package is claimed for this native change.
+
+## Combined original differential minors
+
+The intrinsic inequality also uses the sum of lower bounds for the three
+squared coordinate minors of the original mean differential. By
+Cauchy--Binet, their sum is a lower bound for det(M^T M), and
+sigma_min(M)^2 >= det(M^T M)/trace(M^T M). This retains all source
+differentials and the existing single-minor bound. Non-separated minors
+contribute zero to the lower sum. All arithmetic is outward rounded.
+
+Eleven native tests pass, including a direct oblique differential enclosure
+with a strictly stronger combined bound and the independent original parabola
+oracles and short true normal-chord rejection. `gram-tests.log.gz` retains
+the results. Annular improvement for this bound remains to be measured.

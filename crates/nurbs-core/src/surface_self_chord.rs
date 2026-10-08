@@ -52,6 +52,7 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
         }
     }
     let mut best = 1_f64;
+    let mut gram_determinant = I::point(0.);
     for [a, b] in [[0, 1], [0, 2], [1, 2]] {
         let det = j[a][0].mul(j[b][1])?.sub(j[a][1].mul(j[b][0])?)?;
         let Some(det_squared) = separated_square(det)? else {
@@ -60,6 +61,7 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
         if det_squared.lo <= 0. {
             continue;
         }
+        gram_determinant = gram_determinant.add(det_squared)?;
         let mut norm = I::point(0.);
         for axis in [a, b] {
             for direction in 0..2 {
@@ -69,6 +71,21 @@ fn cosine_upper(j: [[I; 2]; 3]) -> Result<f64> {
         }
         let ratio = variation.mul(norm)?.div(det_squared)?;
         best = best.min(ratio.hi);
+    }
+    // For every enclosed 3x2 mean differential M, Cauchy--Binet gives
+    // det(M^T M) = sum of its three squared coordinate minors. Hence
+    // sigma_min(M)^2 >= det(M^T M) / trace(M^T M). Summing separated
+    // minor bounds preserves all original differentials and can strengthen
+    // the single-coordinate lower bound above.
+    if gram_determinant.lo > 0. {
+        let mut trace = I::point(0.);
+        for row in j {
+            for x in row {
+                let upper = x.lo.abs().max(x.hi.abs());
+                trace = trace.add(I::point(upper).mul(I::point(upper))?)?;
+            }
+        }
+        best = best.min(variation.mul(trace)?.div(gram_determinant)?.hi);
     }
     Ok(best)
 }
@@ -218,6 +235,17 @@ pub fn qualify_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn combined_minors_strengthen_oblique_differential_lower_bound() {
+        let low = I::new(-0.1, 0.1).unwrap();
+        let high = I::new(0.9, 1.1).unwrap();
+        let j = [[high, low], [high, high], [low, high]];
+        // Independently computed single-minor best is at least
+        // 0.24 * 2.44 / 0.8^2 = 0.915. All three minors jointly
+        // give an upper cosine bound below 0.8 for the same enclosure.
+        assert!(cosine_upper(j).unwrap() < 0.8);
+        assert!(0.24 * 2.44 / 0.8_f64.powi(2) > 0.9);
+    }
     #[test]
     fn parameter_units_preserve_curved_chord_bounds_and_rejections() {
         let mut old_bound_refused = false;
