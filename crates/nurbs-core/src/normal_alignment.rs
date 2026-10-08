@@ -605,6 +605,35 @@ pub fn inspect_pair(
         out.reason = "span-limit";
         return Ok(out);
     }
+    let (Some(a), Some(b)) = (out.normal_components[0], out.normal_components[1]) else {
+        return Ok(out);
+    };
+    let mut bounded = inspect_pair_bounds([a, b], max_sine_squared)?;
+    bounded.spans = out.spans;
+    Ok(bounded)
+}
+/// Compare already proved normal enclosures. This performs no source queries
+/// and does not itself certify ownership or positional agreement.
+pub(crate) fn inspect_pair_bounds(
+    components: [[[f64; 2]; 3]; 2],
+    max_sine_squared: f64,
+) -> Result<PairReport> {
+    check(
+        max_sine_squared.is_finite()
+            && (0. ..1.).contains(&max_sine_squared)
+            && components
+                .iter()
+                .flatten()
+                .all(|x| x[0].is_finite() && x[1].is_finite() && x[0] <= x[1]),
+        "Finite ordered normal enclosures and squared-sine threshold",
+    )?;
+    let mut out = PairReport {
+        aligned: None,
+        sine_squared_interval: None,
+        normal_components: [Some(components[0]), Some(components[1])],
+        spans: 0,
+        reason: "normal-unresolved",
+    };
     let mut normals = [[I::point(0.); 3]; 2];
     for side in 0..2 {
         let Some(hull) = out.normal_components[side] else {
@@ -614,6 +643,9 @@ pub fn inspect_pair(
             return Ok(out);
         }
         let scale = hull.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
+        if scale < f64::MIN_POSITIVE {
+            return Ok(out);
+        }
         for k in 0..3 {
             normals[side][k] = I::new(hull[k][0], hull[k][1])?.div(I::point(scale))?;
         }
@@ -666,6 +698,60 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn exact_factored_limits_resolve_pole_angles_without_inventing_regular_normals() {
+        // Independent S=(3u,3u²v,u³) has factored normal (-u²,0,1).
+        let s = Surface {
+            degree_u: 3,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: (0usize..4)
+                .map(|i| {
+                    (0..2)
+                        .map(|v| {
+                            vec![
+                                i as f64,
+                                (i * i.saturating_sub(1)) as f64 / 2. * v as f64,
+                                if i == 3 { 1. } else { 0. },
+                            ]
+                        })
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 2]; 4],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let pair = [[[0., 0.], [0., 1.]], [[1., 1.], [0., 1.]]];
+        assert!(inspect_pair([&s, &s], pair, 0.1, 2)
+            .unwrap()
+            .aligned
+            .is_none());
+        let c = crate::factored_surface_normals::prepare(&s, false, 10_000_000)
+            .unwrap()
+            .certificate
+            .unwrap();
+        let r = inspect_pair_bounds(
+            [c.bounds(pair[0]).unwrap(), c.bounds(pair[1]).unwrap()],
+            0.1,
+        )
+        .unwrap();
+        assert_eq!(r.aligned, Some(false));
+        let bounds = r.sine_squared_interval.unwrap();
+        assert!(bounds[0] <= 0.5 && bounds[1] >= 0.5);
+        assert_eq!(r.spans, 0); // Pure comparison: the caller pays source queries.
+        let z = [[0., 0.], [0., 0.], [1., 1.]];
+        let minus_z = [[0., 0.], [0., 0.], [-1., -1.]];
+        assert_eq!(
+            inspect_pair_bounds([z, minus_z], 0.1).unwrap().aligned,
+            Some(true)
+        );
+        assert!(inspect_pair_bounds([z, [[0., 0.]; 3]], 0.1)
+            .unwrap()
+            .aligned
+            .is_none());
     }
     #[test]
     #[ignore = "native restriction microbenchmark; no production speed claim"]

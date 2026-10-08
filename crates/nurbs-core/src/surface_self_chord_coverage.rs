@@ -43,6 +43,7 @@ pub struct Report<'a> {
     pub local_coordinate_path_refusals: usize,
     pub polar_factor_refusals: usize,
     pub angular_exclusions: usize,
+    pub factored_angular_exclusions: usize,
     pub direction_exclusions: usize,
     pub distance_exclusions: usize,
     pub pending: usize,
@@ -243,6 +244,7 @@ fn qualify_impl<'a>(
         local_coordinate_path_refusals: 0,
         polar_factor_refusals: 0,
         angular_exclusions: 0,
+        factored_angular_exclusions: 0,
         direction_exclusions: 0,
         distance_exclusions: 0,
         pending: 1,
@@ -336,12 +338,29 @@ fn qualify_impl<'a>(
             }
         }
         if let Some(threshold) = necessary.filter(|_| out.spans < limits.spans) {
-            let r =
-                normal_alignment::inspect_pair([s, s], pair, threshold, limits.spans - out.spans)?;
-            out.spans += r.spans;
-            if r.aligned == Some(false) {
-                out.angular_exclusions += 1;
-                continue;
+            if let Some(proof) = factored {
+                if limits.spans - out.spans >= 2 {
+                    let components = [proof.bounds(pair[0])?, proof.bounds(pair[1])?];
+                    out.spans += 2;
+                    let r = normal_alignment::inspect_pair_bounds(components, threshold)?;
+                    if r.aligned == Some(false) {
+                        out.angular_exclusions += 1;
+                        out.factored_angular_exclusions += 1;
+                        continue;
+                    }
+                }
+            } else {
+                let r = normal_alignment::inspect_pair(
+                    [s, s],
+                    pair,
+                    threshold,
+                    limits.spans - out.spans,
+                )?;
+                out.spans += r.spans;
+                if r.aligned == Some(false) {
+                    out.angular_exclusions += 1;
+                    continue;
+                }
             }
         }
         let work = span_count(s, pair[0]) + span_count(s, pair[1]);

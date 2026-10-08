@@ -764,3 +764,73 @@ fractions. Evidence: `local-self-wall.json.gz`, its completed log, and both
 local test logs. Current angular coverage still compares unfactored normals,
 which can vanish on the pole even when sealed factored limits are separated;
 reusing the exact factored limits is the next angular qualification step.
+
+
+## Exact factored normal angular compatibility
+
+Necessary endpoint-angle compatibility now reuses the sealed original normal
+factor on both endpoint rectangles, paying two source restrictions. Previously
+this stage used unfactored normals that vanish on the pole and lose directional
+information. The pure bounded-normal comparator is shared with the ordinary
+source-surface path; it performs no geometry queries and does not itself prove
+ownership or positional agreement. Coverage establishes source ownership before
+supplying its two exact factor bounds. All one-sided limits remain covered;
+this does not assign a unique regular tangent plane to the collapsed rail.
+
+Seven normal tests and thirteen chord tests pass (20 focused regressions).
+An independent polynomial S=(3u,3u²v,u³) has factored normal (-u²,0,1):
+its pole and U=1 limits have squared sine 0.5, while unfactored original bounds
+remain unresolved at the pole. Anti-parallel limits remain angular-compatible,
+and a zero normal refuses. Existing source identity, work-limit, genuine
+short-normal-chord and whole-chart subdivision regressions remain passing.
+
+The four-body 1024-cell / 8192-restriction run completed. Both directions match:
+
+| Radius order | Face | Cells | Factored angular exclusions | Pending |
+| --- | --- | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 299 | 47 | 9 |
+| 0.5 → 1.25 | 10 | 292 | 62 | 12 |
+| 1.25 → 0.5 | 0 | 287 | 42 | 9 |
+| 1.25 → 0.5 | 10 | 294 | 62 | 10 |
+
+Remaining entry pairs are now at finite U widths (roughly U=.25–.5), rather
+than stalled U~1e-12 pole limits. This changed the next action: a larger bounded
+qualification run was justified for those remaining finite regions. It does
+not establish a certified fraction or complete face admission.
+
+At 4096 cells / 32768 restrictions, pending entry counts are 4/6 and exit
+9/10 for the two radius orders. At 12500 cells / 100000 restrictions:
+
+| Radius order | Face | Cells | Factored angular exclusions | Pending |
+| --- | --- | ---: | ---: | ---: |
+| 0.5 → 1.25 | 0 | 3458 | 746 | 6 |
+| 0.5 → 1.25 | 10 | 3488 | 738 | 10 |
+| 1.25 → 0.5 | 0 | 3346 | 684 | 8 |
+| 1.25 → 0.5 | 10 | 3514 | 729 | 14 |
+
+All original serialization and thresholds are unchanged; no pole face gets a
+complete certificate at any of these limits. Pending counts refer to different
+partitions, not monotonic coverage percentages. Retained whole self-face
+coverage stays 28/31. The matrix stages currently query the same endpoint
+normal facts repeatedly before the angular stage; sharing those restrictions
+and ordering inexpensive exclusions earlier is an available bounded-work
+improvement. Evidence: the factored-angular test logs and all three completed
+`factored-angular*-self-wall.json.gz` reports with their logs.
+
+### Floating candidate probe, not certified thickness evidence
+
+`variable-annular-pole-chord-probe` samples the unchanged original entry face
+in all four bodies. U=.01/.001/.0001, first V=.00018, and second V starts in
+.35–.45 with bounded local refinement. A floating bisection in [.5U,2U]
+approximately matches the original longitudinal anchor coordinate, then ranks
+chords by their smaller squared cosine to the two evaluated normals. Every
+output includes parameters, original points, normals, distance and coordinate
+residual; original model serialization is checked unchanged.
+
+The best sampled/refined minima are around 0.1186, far below the admission
+threshold 0.9999. This search found no aligned candidate in its restricted
+window; it does not prove absence of thin chords elsewhere, nor certify its
+floating angles or distances. Candidate data are deliberately not promoted to
+an exact witness or a wall certificate. Evidence: `pole-chord-candidates.json.gz`
+and its completed log. Full minimum wall, general fillets, STEP/part acceptance,
+P0 and new WASM/UI packaging remain open.
