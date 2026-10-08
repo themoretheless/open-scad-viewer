@@ -60,8 +60,10 @@ pub struct ShellContactAudit<'x> {
     domain_cells: usize,
     exact_work: u64,
     driver_cells: usize,
+    linear_cells: usize,
 }
 impl ShellContactAudit<'_> {
+    pub fn linear_cells(&self) -> usize { self.linear_cells }
     pub fn owners(&self) -> &[ShellFace] {
         self.owners
     }
@@ -104,7 +106,7 @@ impl ShellContactAudit<'_> {
         }).collect::<Vec<_>>();
         value_codec::json!({"version":1,"kind":"expression-shell-contact-audit","pendingPairs":self.pending_pairs(),
             "faces":faces,"pendingByReason":pending_reasons,"pendingByFaceKinds":pending_kinds,
-            "cells":self.cells,"spans":self.spans,"domainCells":self.domain_cells,"exactWork":self.exact_work,"driverCells":self.driver_cells,
+            "cells":self.cells,"spans":self.spans,"domainCells":self.domain_cells,"exactWork":self.exact_work,"driverCells":self.driver_cells,"linearCells":self.linear_cells,
             "pairs":self.pairs.iter().map(|p|value_codec::json!({"faces":p.support.faces,"proof":p.proof.kind(),"reason":p.reason,
                 "sharedEdges":p.support.shared_edges,"pendingProducts":p.support.inspection.pending,
                 "outsideProducts":p.support.inspection.outside,"separatedProducts":p.support.inspection.separated})).collect::<Vec<_>>()})
@@ -212,6 +214,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             domain_cells: supports.domain_cells,
             exact_work: 0,
             driver_cells: 0,
+            linear_cells: 0,
         };
         for support in supports.pairs {
             let mut proof = PairContactProof::Pending;
@@ -299,7 +302,7 @@ mod tests {
     fn diagnostic_groups_count_only_pending_and_preserve_owner_indices() {
         let owners=[ShellFace {kind:ShellFaceKind::Original(5),loops:vec![]},ShellFace {kind:ShellFaceKind::Retained(0),loops:vec![]},ShellFace {kind:ShellFaceKind::Transition,loops:vec![]},ShellFace {kind:ShellFaceKind::Original(7),loops:vec![]}];
         let pair=|faces,reason,proof| AuditedContactPair {support:ShellSupportPair {faces,shared_edges:vec![],inspection:SupportPairReport {separated:vec![],pending:vec![],outside:vec![],domain_cells:0,cells:0,spans:0}},reason,proof};
-        let audit=ShellContactAudit {owners:&owners,pairs:vec![pair([0,1],"budget",PairContactProof::Pending),pair([2,0],"budget",PairContactProof::Pending),pair([1,2],"boundary",PairContactProof::Pending),pair([0,3],"excluded",PairContactProof::Excluded)],cells:0,spans:0,domain_cells:0,exact_work:0,driver_cells:0};
+        let audit=ShellContactAudit {owners:&owners,pairs:vec![pair([0,1],"budget",PairContactProof::Pending),pair([2,0],"budget",PairContactProof::Pending),pair([1,2],"boundary",PairContactProof::Pending),pair([0,3],"excluded",PairContactProof::Excluded)],cells:0,spans:0,domain_cells:0,exact_work:0,driver_cells:0,linear_cells:0};
         let d=audit.diagnostics();
         assert_eq!(d["pendingPairs"].as_u64(),Some(3));
         assert_eq!(d["pendingByReason"]["budget"].as_u64(),Some(2));

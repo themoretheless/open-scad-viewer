@@ -937,6 +937,41 @@ mod tests {
         eprintln!("all-face refined pending={} cells={} spans={} domains={} groups={}",all_refined.pending_pairs(),cells,spans,domains,all_diagnostics["pendingByFaceKinds"]);
         if let Ok(path)=std::env::var("BREP_CONTACT_ALL_REFINED_AUDIT_PATH") {std::fs::write(path,all_diagnostics.to_string()).unwrap();}
 
+        let mut resumed=refined;
+        let previous=resumed.diagnostics();
+        let previous_work=resumed.work();
+        assert!(expression.resume_contact_audit(&mut resumed,ContactAuditLimits{cells:0,..audit_limits},32).is_err());
+        assert_eq!(resumed.diagnostics(),previous);
+        expression.resume_contact_audit(&mut resumed,audit_limits,0).unwrap();
+        assert_eq!(resumed.diagnostics(),previous);
+        let cumulative=ContactAuditLimits{cells:8192,..audit_limits};
+        expression.resume_contact_audit(&mut resumed,cumulative,64).unwrap();
+        assert!(resumed.pending_pairs()<=129);
+        for (old,new) in previous["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+        }
+        let (cells,spans,domains,work,drivers)=resumed.work();
+        assert!(cells>=previous_work.0 && spans>=previous_work.1 && domains>=previous_work.2);
+        assert!(cells<=cumulative.cells && spans<=cumulative.spans && domains<=cumulative.domain_cells && work<=cumulative.exact_work && drivers<=cumulative.driver_cells);
+        eprintln!("resumed audit pending={} cells={} spans={} domains={}",resumed.pending_pairs(),cells,spans,domains);
+        if let Ok(path)=std::env::var("BREP_CONTACT_RESUMED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_linear=resumed.diagnostics();
+        expression.qualify_remaining_original_contacts(&mut resumed,cumulative,0,256).unwrap();
+        assert_eq!(resumed.diagnostics(),before_linear);
+        assert!(expression.qualify_remaining_original_contacts(&mut resumed,cumulative,100001,256).is_err());
+        assert_eq!(resumed.diagnostics(),before_linear);
+        let prior_pending=resumed.pending_pairs();
+        expression.qualify_remaining_original_contacts(&mut resumed,cumulative,10000,256).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.linear_cells()<=10000);
+        for (old,new) in before_linear["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+        }
+        let (cells,spans,domains,work,drivers)=resumed.work();
+        assert!(cells<=cumulative.cells && spans<=cumulative.spans && domains<=cumulative.domain_cells && work<=cumulative.exact_work && drivers<=cumulative.driver_cells);
+        eprintln!("linear-chart contact audit pending={} linearCells={} spans={} work={} drivers={}",resumed.pending_pairs(),resumed.linear_cells(),spans,work,drivers);
+        if let Ok(path)=std::env::var("BREP_CONTACT_LINEAR_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

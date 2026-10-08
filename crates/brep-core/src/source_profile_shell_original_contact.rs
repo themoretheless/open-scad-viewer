@@ -287,6 +287,7 @@ pub struct OriginalAdditionalReport<'x> {
     pub exact_work: u64,
     pub spans: usize,
     pub driver_cells: usize,
+    pub linear_cells: usize,
     pub reason: &'static str,
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
@@ -299,11 +300,30 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         max_spans: usize,
         max_driver_cells: usize,
     ) -> Result<OriginalAdditionalReport<'_>> {
+        self.qualify_original_additional_contact_with_linear_chart(
+            faces,
+            max_work,
+            max_spans,
+            max_driver_cells,
+            0,
+        )
+    }
+    /// Optional fresh injectivity fallback, with its own shared cell budget
+    /// across both contact orders. Zero cells preserves the original protocol.
+    pub fn qualify_original_additional_contact_with_linear_chart(
+        &self,
+        faces: [usize; 2],
+        max_work: u64,
+        max_spans: usize,
+        max_driver_cells: usize,
+        max_linear_cells: usize,
+    ) -> Result<OriginalAdditionalReport<'_>> {
         if faces[0] == faces[1]
             || faces.iter().any(|i| *i >= self.faces.len())
             || max_work > 100000000
             || max_spans > 100000
             || max_driver_cells > 100000
+            || max_linear_cells > 100000
         {
             return Err(Error::new(
                 "BREP_PROFILE_CONTACTS",
@@ -315,6 +335,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             exact_work: 0,
             spans: 0,
             driver_cells: 0,
+            linear_cells: 0,
             reason: "expression-original-contact-face-changed",
         };
         let Some(original) = self.equivalent_original_pair(faces) else {
@@ -352,11 +373,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 max_work - out.exact_work,
                 max_spans - out.spans,
                 max_driver_cells - out.driver_cells,
-                0,
+                max_linear_cells - out.linear_cells,
             )?;
             out.exact_work += report.exact_work;
             out.spans += report.spans;
             out.driver_cells += report.driver_cells;
+            out.linear_cells += report.linear_cells;
             out.reason = report.reason;
             if let Some(proof) = report.certificate {
                 out.certificate = Some(OriginalAdditionalContact {

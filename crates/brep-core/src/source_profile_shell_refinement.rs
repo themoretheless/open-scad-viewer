@@ -46,6 +46,37 @@ where
     report.domain_cells += used_domains;
     Ok(())
 }
+fn validate_resume(
+    owners: &[ShellFace],
+    out: &ShellContactAudit<'_>,
+    limits: ContactAuditLimits,
+    additional_cells_per_pair: usize,
+) -> Result<()> {
+    if !std::ptr::eq(out.owners, owners)
+        || additional_cells_per_pair > 100000
+        || limits.cells > 100000
+        || limits.cells_per_pair > 100000
+        || limits.spans > 100000
+        || limits.domain_cells > 100000
+        || limits.domain_cells_per_pair > 100000
+        || limits.controls_per_enclosure > 1000000
+        || limits.exact_work > 100000000
+        || limits.driver_cells > 100000
+        || !limits.tolerance_uv.is_finite()
+        || limits.tolerance_uv <= 0.
+        || out.cells > limits.cells
+        || out.spans > limits.spans
+        || out.domain_cells > limits.domain_cells
+        || out.exact_work > limits.exact_work
+        || out.driver_cells > limits.driver_cells
+    {
+        return Err(Error::new(
+            "BREP_PROFILE_CONTACTS",
+            "Require owned audit and cumulative bounded work",
+        ));
+    }
+    Ok(())
+}
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     /// Fresh complete audit plus bounded refinement of unqualified original
     /// pairs. The immutable shell produces the frontier internally; callers
@@ -82,6 +113,98 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             ));
         }
         let mut out = self.inspect_contacts_with_profile_region(limits, region)?;
+        self.resume_contact_audit_impl(
+            &mut out,
+            limits,
+            additional_cells_per_pair,
+            include_changed,
+        )?;
+        Ok(out)
+    }
+    /// Continue an audit belonging to this immutable shell. Limits include all
+    /// previous work; diagnostics cannot be used to manufacture this authority.
+    pub fn resume_contact_audit<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        additional_cells_per_pair: usize,
+    ) -> Result<()> {
+        self.resume_contact_audit_impl(audit, limits, additional_cells_per_pair, true)
+    }
+    /// Requalify pending unchanged-source contacts with fresh linear-chart
+    /// injectivity. Every computation is charged to the cumulative audit.
+    pub fn qualify_remaining_original_contacts<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        max_linear_cells: usize,
+        linear_cells_per_pair: usize,
+    ) -> Result<()> {
+        if max_linear_cells > 100000
+            || linear_cells_per_pair > 100000
+            || audit.linear_cells > max_linear_cells
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound cumulative linear-chart work",
+            ));
+        }
+        self.resume_contact_audit(audit, limits, 0)?;
+        if audit.linear_cells == max_linear_cells || linear_cells_per_pair == 0 {
+            return Ok(());
+        }
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && p.support
+                    .faces
+                    .iter()
+                    .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_)))
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let linear =
+                ((max_linear_cells - audit.linear_cells) / remaining).min(linear_cells_per_pair);
+            let work = (limits.exact_work - audit.exact_work) / remaining as u64;
+            let spans = (limits.spans - audit.spans) / remaining;
+            let drivers = (limits.driver_cells - audit.driver_cells) / remaining;
+            remaining -= 1;
+            if linear == 0 || work == 0 || spans == 0 || drivers == 0 {
+                continue;
+            }
+            let report = self.qualify_original_additional_contact_with_linear_chart(
+                pair.support.faces,
+                work,
+                spans,
+                drivers,
+                linear,
+            )?;
+            audit.exact_work += report.exact_work;
+            audit.spans += report.spans;
+            audit.driver_cells += report.driver_cells;
+            audit.linear_cells += report.linear_cells;
+            pair.reason = report.reason;
+            if let Some(certificate) = report.certificate {
+                pair.proof = PairContactProof::VertexOrInterior(certificate);
+            }
+        }
+        Ok(())
+    }
+    fn resume_contact_audit_impl<'x>(
+        &'x self,
+        out: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        additional_cells_per_pair: usize,
+        include_changed: bool,
+    ) -> Result<()> {
+        validate_resume(
+            self.faces.as_slice(),
+            out,
+            limits,
+            additional_cells_per_pair,
+        )?;
         let candidate = |pair: &AuditedContactPair<'_>| {
             matches!(pair.proof, PairContactProof::Pending)
                 && (include_changed
@@ -131,12 +254,87 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 pair.reason = "expression-contact-refined-products-excluded";
             }
         }
-        Ok(out)
+        Ok(())
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn continuation_rejects_foreign_owners_and_insufficient_cumulative_limits() {
+        let faces = [ShellFace {
+            kind: ShellFaceKind::Original(0),
+            loops: vec![],
+        }];
+        let foreign = [ShellFace {
+            kind: ShellFaceKind::Original(0),
+            loops: vec![],
+        }];
+        let audit = ShellContactAudit {
+            owners: &faces,
+            pairs: vec![],
+            cells: 3,
+            spans: 5,
+            domain_cells: 7,
+            exact_work: 11,
+            driver_cells: 13,
+            linear_cells: 17,
+        };
+        let limits = ContactAuditLimits {
+            cells: 3,
+            cells_per_pair: 0,
+            controls_per_enclosure: 0,
+            spans: 5,
+            domain_cells: 7,
+            domain_cells_per_pair: 0,
+            exact_work: 11,
+            driver_cells: 13,
+            tolerance_uv: 1e-8,
+        };
+        let before = audit.diagnostics();
+        assert!(validate_resume(&faces, &audit, limits, 0).is_ok());
+        assert!(validate_resume(&foreign, &audit, limits, 0).is_err());
+        for smaller in [
+            ContactAuditLimits { cells: 2, ..limits },
+            ContactAuditLimits { spans: 4, ..limits },
+            ContactAuditLimits {
+                domain_cells: 6,
+                ..limits
+            },
+            ContactAuditLimits {
+                exact_work: 10,
+                ..limits
+            },
+            ContactAuditLimits {
+                driver_cells: 12,
+                ..limits
+            },
+        ] {
+            assert!(validate_resume(&faces, &audit, smaller, 0).is_err());
+        }
+        for invalid in [
+            ContactAuditLimits {
+                cells: 100001,
+                ..limits
+            },
+            ContactAuditLimits {
+                controls_per_enclosure: 1000001,
+                ..limits
+            },
+            ContactAuditLimits {
+                tolerance_uv: f64::NAN,
+                ..limits
+            },
+            ContactAuditLimits {
+                tolerance_uv: 0.,
+                ..limits
+            },
+        ] {
+            assert!(validate_resume(&faces, &audit, invalid, 0).is_err());
+        }
+        assert!(validate_resume(&faces, &audit, limits, 100001).is_err());
+        assert_eq!(audit.diagnostics(), before);
+    }
     fn volume(p: SupportProduct) -> f64 {
         p.iter().flatten().map(|r| r[1] - r[0]).product()
     }
