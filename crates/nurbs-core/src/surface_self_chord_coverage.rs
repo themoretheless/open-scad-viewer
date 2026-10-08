@@ -73,6 +73,7 @@ fn secant_exclusion(
     boxes: [&Vec<[f64; 2]>; 2],
     sine: f64,
     max_spans: usize,
+    factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
 ) -> Result<(bool, usize)> {
     let mut d = [I::point(0.); 3];
     for k in 0..3 {
@@ -83,7 +84,7 @@ fn secant_exclusion(
         .iter()
         .map(|x| x.lo.abs().max(x.hi.abs()))
         .fold(0_f64, f64::max);
-    if scale == 0. {
+    if scale < f64::MIN_POSITIVE {
         return Ok((false, 0));
     }
     for x in &mut d {
@@ -99,7 +100,13 @@ fn secant_exclusion(
         if spans == max_spans {
             break;
         }
-        let (bounds, used) = normal_alignment::normal_bounds(s, rect, max_spans - spans)?;
+        let (bounds, used) = if let Some(proof) = factored {
+            // A prepared fact covers one original Bezier span. Its exact
+            // preparation budget is separate from this bounded coverage call.
+            (Some(proof.bounds(rect)?), 1)
+        } else {
+            normal_alignment::normal_bounds(s, rect, max_spans - spans)?
+        };
         spans += used;
         let Some(bounds) = bounds else {
             continue;
@@ -109,7 +116,7 @@ fn secant_exclusion(
             .flatten()
             .map(|x| x.abs())
             .fold(0_f64, f64::max);
-        if scale == 0. {
+        if scale < f64::MIN_POSITIVE {
             continue;
         }
         let mut n = [I::point(0.); 3];
@@ -143,6 +150,30 @@ pub fn qualify<'a>(
     minimum_mm: f64,
     max_sine_squared: f64,
     limits: Limits,
+) -> Result<Report<'a>> {
+    qualify_impl(s, minimum_mm, max_sine_squared, limits, None)
+}
+/// Reuse only a sealed exact boundary-factor fact from this same immutable
+/// source. Original exact preparation work is paid before coverage begins.
+pub fn qualify_with_factored_normals<'a>(
+    s: &'a Surface,
+    minimum_mm: f64,
+    max_sine_squared: f64,
+    limits: Limits,
+    proof: &crate::factored_surface_normals::Certificate<'a>,
+) -> Result<Report<'a>> {
+    check(
+        std::ptr::eq(s, proof.surface()),
+        "Use factored normals from the same original surface",
+    )?;
+    qualify_impl(s, minimum_mm, max_sine_squared, limits, Some(proof))
+}
+fn qualify_impl<'a>(
+    s: &'a Surface,
+    minimum_mm: f64,
+    max_sine_squared: f64,
+    limits: Limits,
+    factored: Option<&crate::factored_surface_normals::Certificate<'a>>,
 ) -> Result<Report<'a>> {
     s.validate()?;
     check(
@@ -228,6 +259,7 @@ pub fn qualify<'a>(
                     [&a, &b],
                     max_sine_squared,
                     limits.spans - out.spans,
+                    factored,
                 )?;
                 out.spans += used;
                 if excluded {
@@ -302,20 +334,64 @@ mod tests {
         }
     }
     #[test]
+    fn factored_original_pole_normals_exclude_oblique_secants_but_refuse_foreign_source() {
+        let s = Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.]; 2],
+                vec![vec![0.5, 0., 0.]; 2],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let prepared = crate::factored_surface_normals::prepare(&s, false, 1_000_000).unwrap();
+        let proof = prepared.certificate.unwrap();
+        let pair = [[[0., 0.], [0., 1.]], [[0.5, 0.6], [0., 1.]]];
+        let a = surface_distance::rectangle_bounds(&s, pair[0]).unwrap();
+        let b = surface_distance::rectangle_bounds(&s, pair[1]).unwrap();
+        assert!(
+            !secant_exclusion(&s, pair, [&a, &b], 1e-6, 1, None)
+                .unwrap()
+                .0
+        );
+        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 1, Some(&proof)).unwrap();
+        assert!(excluded && used == 1);
+        let foreign = s.clone();
+        assert!(qualify_with_factored_normals(
+            &foreign,
+            0.1,
+            1e-6,
+            Limits {
+                cells: 10,
+                spans: 100
+            },
+            &proof
+        )
+        .is_err());
+        let r = qualify_with_factored_normals(&s, 0.1, 1e-6, Limits { cells: 1, spans: 1 }, &proof)
+            .unwrap();
+        assert!(r.certificate.is_none() && r.pending > 0 && r.spans <= 1);
+    }
+    #[test]
     fn original_secant_direction_excludes_oblique_chords_and_refuses_overlap_or_no_work() {
         let s = graph();
         let pair = [[[0., 0.01], [0., 0.01]], [[0.1, 0.11], [0., 0.01]]];
         let a = surface_distance::rectangle_bounds(&s, pair[0]).unwrap();
         let b = surface_distance::rectangle_bounds(&s, pair[1]).unwrap();
-        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100).unwrap();
+        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100, None).unwrap();
         assert!(excluded);
         assert!(used > 0 && used <= 100);
         assert_eq!(
-            secant_exclusion(&s, pair, [&a, &b], 1e-6, 0).unwrap(),
+            secant_exclusion(&s, pair, [&a, &b], 1e-6, 0, None).unwrap(),
             (false, 0)
         );
         assert_eq!(
-            secant_exclusion(&s, [pair[0]; 2], [&a, &a], 1e-6, 100).unwrap(),
+            secant_exclusion(&s, [pair[0]; 2], [&a, &a], 1e-6, 100, None).unwrap(),
             (false, 0)
         );
     }
@@ -397,7 +473,7 @@ mod tests {
         let pair = [[[0., 0.001], [0.4, 0.401]], [[0.999, 1.], [0.4, 0.401]]];
         let a = surface_distance::rectangle_bounds(&s, pair[0]).unwrap();
         let b = surface_distance::rectangle_bounds(&s, pair[1]).unwrap();
-        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100).unwrap();
+        let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 100, None).unwrap();
         assert!(!excluded, "the exact diameter must remain a candidate");
         assert!(used > 0 && used <= 100);
         let r = qualify(

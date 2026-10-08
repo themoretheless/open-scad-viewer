@@ -4,6 +4,7 @@ fn main() {
     let output = std::env::args().nth(1).expect("output JSON path");
     let adaptive_enabled = std::env::args().nth(2).as_deref() == Some("adaptive");
     let minimum_mm = 4.74999;
+    let factored_enabled = std::env::args().nth(5).as_deref() == Some("factored");
     let adaptive_cells: usize = std::env::args()
         .nth(3)
         .map(|s| s.parse().unwrap())
@@ -33,15 +34,33 @@ fn main() {
                 }
                 let r = nurbs_core::surface_self_chord::qualify(&f.surface, 1e-4, 4096).unwrap();
                 let adaptive = if adaptive_enabled && r.certificate.is_none() {
-                    let a = nurbs_core::surface_self_chord_coverage::qualify(
-                        &f.surface,
-                        minimum_mm,
-                        1e-4,
-                        nurbs_core::surface_self_chord_coverage::Limits {
-                            cells: adaptive_cells,
-                            spans: adaptive_spans,
-                        },
-                    )
+                    let prepared = if factored_enabled && (face == 0 || face == 10) {
+                        Some(
+                            nurbs_core::factored_surface_normals::prepare(
+                                &f.surface,
+                                face == 10,
+                                100_000_000,
+                            )
+                            .unwrap(),
+                        )
+                    } else {
+                        None
+                    };
+                    let limits = nurbs_core::surface_self_chord_coverage::Limits {
+                        cells: adaptive_cells,
+                        spans: adaptive_spans,
+                    };
+                    let a = if let Some(proof) =
+                        prepared.as_ref().and_then(|p| p.certificate.as_ref())
+                    {
+                        nurbs_core::surface_self_chord_coverage::qualify_with_factored_normals(
+                            &f.surface, minimum_mm, 1e-4, limits, proof,
+                        )
+                    } else {
+                        nurbs_core::surface_self_chord_coverage::qualify(
+                            &f.surface, minimum_mm, 1e-4, limits,
+                        )
+                    }
                     .unwrap();
                     eprintln!(
                         "radii={radii:?} direction={direction} face={face} qualified={} cells={} spans={} pending={} direction_exclusions={} reason={}",
@@ -49,7 +68,7 @@ fn main() {
                         a.direction_exclusions, a.reason,
                     );
                     Some(
-                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"reason":a.reason}),
+                        value_codec::json!({"qualified":a.certificate.is_some(),"minimumMm":minimum_mm,"cells":a.cells,"spans":a.spans,"pending":a.pending,"uncertain":a.uncertain,"intrinsicExclusions":a.intrinsic_exclusions,"angularExclusions":a.angular_exclusions,"distanceExclusions":a.distance_exclusions,"directionExclusions":a.direction_exclusions,"factoredNormalWork":prepared.as_ref().map(|p|p.work),"factoredNormalQualified":prepared.as_ref().map(|p|p.certificate.is_some()),"reason":a.reason}),
                     )
                 } else {
                     None

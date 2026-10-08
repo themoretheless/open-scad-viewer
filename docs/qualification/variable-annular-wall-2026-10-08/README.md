@@ -301,3 +301,30 @@ recorded in `pole-normal-native.json.gz`; its completed log and
 This factor/normal fact is not yet consumed by whole self-chord
 coverage and does not establish end wall thickness or a unique pole
 plane. Retained whole self-face qualification remains 28/31.
+
+## Factored original normals consumed by secant coverage
+
+`qualify_with_factored_normals` accepts only a sealed exact-factor fact
+whose immutable source pointer is the same original surface. Its
+rectangle bounds replace ordinary endpoint normal boxes in the
+secant-direction exclusion; a query covers one original Bezier span.
+Exact factor preparation work is independently bounded and reported
+by the specimen audit. Coverage cell/span limits still apply.
+
+Twelve native chord tests pass, including a bounded pole secant
+that becomes excluded with limiting normals, foreign-source refusal,
+missing-work refusal and retention of the real half-cylinder diameter.
+Subnormal normal/direction scales conservatively refuse normalization
+rather than overflow a reciprocal. `factored-chord-tests.log.gz`
+retains the results.
+
+All eight original end charts were audited at 1024 cells/8192 spans
+after exact factor preparation. No complete self-face certificate
+is produced. Entry face 0 spends 1024 cells/5120 spans with 1025
+pending domains and no direction exclusions. Its unresolved boxes
+contain the shared collapsed point. Exit face 10 has 193 or 249
+direction exclusions but leaves 15 or 19 pending domains.
+`self-wall-factored-poles.*.gz` preserves every result and source
+identity checks. Coverage remains 28/31; a polar intrinsic secant
+argument is needed for the collapsed diagonal, rather than excluding
+that region or treating it as a regular chart.
