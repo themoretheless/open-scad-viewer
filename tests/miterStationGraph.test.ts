@@ -69,9 +69,11 @@ it('reconstructs a closed corrected frame/guide/affine hollow Solid with profile
  expect(report.profileSmoothness.station.extractionComplete).toBe(true)
  expect(report.profileSmoothness.station.edgeIds).toHaveLength(128)
  const joins=report.profileSmoothness.station.g2.seams as {certified:boolean;reason:string}[]
- expect(joins.filter(join=>join.certified)).toHaveLength(96)
- expect(joins.filter(join=>!join.certified)).toHaveLength(32)
- expect(joins.filter(join=>!join.certified).every(join=>join.reason==='constant-projective-jet-relation-different')).toBe(true)
+ // Main's complete-axis audit stops after the first sharp C0 seam and
+ // explicitly marks the unvisited tail, leaving work for the profile proof.
+ expect(joins).toHaveLength(128)
+ expect(joins[0]).toMatchObject({certified:false,reason:'constant-projective-jet-relation-different'})
+ expect(joins.slice(1).every(join=>!join.certified&&join.reason==='seam-audit-skipped-after-refusal')).toBe(true)
  expect(report.sharpStationIndices).toEqual([0,4,8,12])
  expect(report.candidate.wallDisplacementUpper).toBeGreaterThan(0)
  expect(report.boundaryErrorUpper).toBeGreaterThan(report.candidate.wallDisplacementUpper)

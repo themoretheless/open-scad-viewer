@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v63.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v83.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
 ), 'utf8'))
 const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v34.json',
+  root, 'docs/qualification/environment-freeze/g1-github-actions-v36.json',
 ), 'utf8'))
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
@@ -178,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v63',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v83',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })
@@ -217,7 +217,23 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     })
   })
 
-  it.each(['missing', 'duplicate', 'environment mismatch'])('rejects %s artifacts', kind => {
+  it('accepts an observed exact image variant and preserves its recorded identity', () => {
+    const {artifacts,first}=fixture()
+    const fragment=JSON.parse(readFileSync(resolve(first,'fragment.json'),'utf8'))
+    const preflight=JSON.parse(readFileSync(resolve(first,'preflight.json'),'utf8'))
+    const environment=plan.environments.find((item:any)=>item.id===fragment.environmentId)
+    const variant=githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
+    for(const value of [fragment,preflight]) {
+      value.host.runnerImage=variant.imageOS
+      value.host.runnerImageVersion=variant.imageVersion
+    }
+    writeEvidence(first,fragment,preflight)
+    const result=aggregate(artifacts,'observed-image')
+    expect(result.process.status,result.process.stderr).toBe(0)
+    expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+  })
+
+  it.each(['missing', 'duplicate', 'environment mismatch', 'discovery-only'])('rejects %s artifacts', kind => {
     const { artifacts, first } = fixture()
     if (kind === 'missing') {
       rmSync(first, { recursive: true })
@@ -226,8 +242,13 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     } else {
       const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
       const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
-      fragment.host.runnerImageVersion = 'wrong'
-      preflight.host.runnerImageVersion = 'wrong'
+      if(kind==='discovery-only') {
+        fragment.classification='discovery-only'
+        fragment.unitsCompleted=0
+      } else {
+        fragment.host.runnerImageVersion = 'wrong'
+        preflight.host.runnerImageVersion = 'wrong'
+      }
       writeEvidence(first, fragment, preflight)
     }
     const result = aggregate(artifacts, kind.replace(' ', '-'))
@@ -253,4 +274,52 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     expect(result.process.stderr).toMatch(/source SHA differs from GITHUB_SHA/u)
     expect(existsSync(result.output)).toBe(false)
   })
+})
+
+describe('cross-platform frozen runtime execution', () => {
+  it('accepts the actual Node Windows identity and refuses another OS or architecture', async () => {
+    const {matchesNodeHost} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const windows = plan.environments.find((item: any) => item.id === 'windows-node20')
+    expect(matchesNodeHost(windows, 'win32', 'x64')).toBe(true)
+    expect(matchesNodeHost(windows, 'linux', 'x64')).toBe(false)
+    expect(matchesNodeHost(windows, 'win32', 'arm64')).toBe(false)
+    expect(matchesNodeHost(windows, 'windows', 'x64')).toBe(false)
+    const mac = plan.environments.find((item: any) => item.id === 'macos-node20')
+    expect(matchesNodeHost(mac, 'darwin', 'arm64')).toBe(true)
+    const ubuntu = plan.environments.find((item: any) => item.id === 'ubuntu-node20')
+    expect(matchesNodeHost(ubuntu, 'linux', 'x64')).toBe(true)
+  })
+
+  it('preserves frozen test arguments through direct Node execution on Windows', async () => {
+    const {qualificationInvocation} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const invocation = qualificationInvocation(
+      'npm test -- tests/mcpManifoldPlanQualificationSupervisor.test.ts --maxWorkers 2',
+      'C:/Node Runtime/node.exe', root,
+    )
+    expect(invocation.executable).toBe('C:/Node Runtime/node.exe')
+    expect(invocation.args).toEqual([
+      resolve(root, 'node_modules/vitest/vitest.mjs'),
+      'tests/mcpManifoldPlanQualificationSupervisor.test.ts', '--maxWorkers', '2',
+    ])
+    expect(() => qualificationInvocation('powershell arbitrary', 'node', root)).toThrow('Unsupported frozen command')
+  })
+
+  it('probes all frozen hosts without replacing the full matrix', () => {
+    const result = spawnSync(process.execPath, [harness, 'matrix', '--probe-only'], {cwd:root,encoding:'utf8'})
+    expect(result.status, result.stderr).toBe(0)
+    const matrix = JSON.parse(result.stdout)
+    expect(matrix.nodes.include.map((item: any) => item.environment).sort()).toEqual([
+      'macos-node20','ubuntu-node20','ubuntu-node22','windows-node20',
+    ])
+    expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual(['vite-chromium','vite-webkit'])
+  })
+})
+
+it('preserves exact LF checkout bytes for every bound source and native sources', () => {
+  const paths = [...new Set(plan.bindings.bundles.flatMap((item: any) => item.paths))] as string[]
+  paths.push('crates/nurbs-core/src/sweeps/profile_certificate.rs', 'crates/Cargo.toml', 'crates/Cargo.lock')
+  const attributes = execFileSync('git', ['check-attr', '-z', 'eol', '--', ...paths], {cwd:root,encoding:'utf8'}).split('\0')
+  for (let i=0;i<attributes.length-1;i+=3) expect(attributes[i+2], attributes[i]).toBe('lf')
+  const harnessBundle = plan.bindings.bundles.find((item: any) => item.paths.includes('scripts/g1-github-actions.mjs'))
+  expect(harnessBundle.paths).toContain('.gitattributes')
 })

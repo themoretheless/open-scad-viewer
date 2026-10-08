@@ -1,3 +1,5 @@
+import {isBoundaryConnectivity,isMaterialAudit} from './structuralSectionsValidation'
+export {isBoundaryConnectivity}
 import {isSourceBodyRecordPayload} from './sourceBodyArchive'
 import {sourceBodyExpectation,validSourceBody,type SourceBodyOptions,type SourceBodyResult} from './sourceBody'
 import {contactQualificationExpectation,validContactQualification,type OffsetContactQualificationOptions,type OffsetContactQualification,type ContactQualificationExpectation} from './nurbsOffsetContactQualification'
@@ -684,8 +686,22 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     const v=value as MainSolidResults['surfaceBuild'],r=v.report
     return typeof v.error==='string'&&(v.document===null?v.error.length>0:v.error===''&&mainSolidResult({kind:'extrusion'},v.document))
       &&(r===null||!!r&&typeof r.accepted==='boolean'&&finite(r.sampledControlDeviation)&&r.sampledControlDeviation>=0&&finite(r.budget)&&r.budget>=0
-        &&Number.isInteger(r.stations)&&r.stations>0&&Number.isInteger(r.sections)&&r.sections>0&&r.continuousBound===false&&r.method==='double-reflection-fourfold-section-refinement'
-        &&r.accepted===(r.sampledControlDeviation<=r.budget)&&(!v.document||r.accepted))
+        &&Number.isInteger(r.stations)&&r.stations>0&&Number.isInteger(r.sections)&&r.sections>0&&typeof r.continuousBound==='boolean'&&r.method==='double-reflection-fourfold-section-refinement'
+        &&(r.continuousCertificate===undefined?r.continuousBound===false&&r.accepted===(r.sampledControlDeviation<=r.budget)
+          :!!r.continuousCertificate&&r.continuousCertificate.scope==='matched-parameter-profile-deviation'
+            &&typeof r.continuousCertificate.method==='string'&&(r.continuousCertificate.reason===null||typeof r.continuousCertificate.reason==='string')
+            &&r.continuousCertificate.regularityCertified===false&&r.continuousCertificate.globalEmbeddingCertified===false&&r.continuousCertificate.seamSmoothnessCertified===false
+            &&Number.isInteger(r.continuousCertificate.cells)&&r.continuousCertificate.cells>=0
+            &&Number.isInteger(r.continuousCertificate.maxCells)&&r.continuousCertificate.maxCells>=r.continuousCertificate.cells&&r.continuousCertificate.maxCells<=100000
+            &&r.continuousBound===(r.continuousCertificate.errorUpper!==null)
+            &&(r.continuousCertificate.errorUpper===null||finite(r.continuousCertificate.errorUpper)&&r.continuousCertificate.errorUpper>=0)
+            &&r.continuousCertificate.withinBudget===(r.continuousBound&&r.continuousCertificate.errorUpper!<=r.budget)
+            &&r.accepted===r.continuousCertificate.withinBudget)
+        &&(!r.seamContinuity||!['G1','G2'].includes(r.seamContinuity)||!!r.seamCertificate
+          &&r.seamCertificate.certified===true&&r.seamCertificate.exact===true&&r.seamCertificate.regularityCertified===true
+          &&r.seamCertificate.order===(r.seamContinuity==='G2'?2:1)
+          &&r.seamCertificate.scope==='represented-closing-strip-jets'&&r.seamCertificate.method==='dyadic-cubic-closing-strips-exact-predicate'
+          &&Number.isInteger(r.seamCertificate.work)&&r.seamCertificate.work>=0&&r.seamCertificate.work<=1000000)&&(!v.document||r.accepted))
   }
   if(job.kind==='nurbsRefit') {
     const v=value as MainSolidResults['nurbsRefit'],c=v.certificate
@@ -779,51 +795,3 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
 }
 
 /** Validate bounded provenance before accepting a worker report. No mechanics in TS. */
-export function isBoundaryConnectivity(value:unknown,triangles:number,vertices:number):value is BoundaryConnectivity {
-  if(!value||typeof value!=='object')return false
-  const v=value as BoundaryConnectivity
-  if(v.modelKind!=='indexed-edge-boundary-components-v1'||(v.materialConnectivity!=='not-established'&&v.materialConnectivity!=='classified-at-tolerance')
-    ||!Array.isArray(v.components)||!v.components.length||v.components.length>triangles
-    ||!Array.isArray(v.sharedVertices)||v.sharedVertices.length>vertices)return false
-  const seen=new Set<number>()
-  for(let i=0;i<v.components.length;i++){
-    const c=v.components[i]
-    if(!c||c.id!==i||!Number.isFinite(c.signedVolumeMm3)||!Array.isArray(c.sourceTriangles)
-      ||!c.sourceTriangles.length||c.sourceTriangles.length>triangles
-      ||!Array.isArray(c.boundsMm)||c.boundsMm.length!==2
-      ||!c.boundsMm.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))
-      ||c.boundsMm[0].some((x,k)=>x>c.boundsMm[1][k]))return false
-    for(const t of c.sourceTriangles){
-      if(!Number.isInteger(t)||t<0||t>=triangles||seen.has(t))return false
-      seen.add(t)
-    }
-  }
-  if(seen.size!==triangles)return false
-  const shared=new Set<number>()
-  for(const p of v.sharedVertices){
-    if(!p||!Number.isInteger(p.sourceVertex)||p.sourceVertex<0||p.sourceVertex>=vertices||shared.has(p.sourceVertex)
-      ||!Array.isArray(p.components)||p.components.length<2||p.components.length>v.components.length
-      ||!p.components.every((c,i)=>Number.isInteger(c)&&c>=0&&c<v.components.length&&(i===0||c>p.components[i-1])))return false
-    shared.add(p.sourceVertex)
-  }
-  return true
-}
-
-function isMaterialAudit(v:StructuralSections):boolean {
-  const a=v.materialAudit
-  if(!a||typeof a!=='object')return false
-  if(a.status==='unresolved')return v.selfIntersections==='not-checked'
-    &&v.connectivity.materialConnectivity==='not-established'
-    &&typeof a.code==='string'&&a.code.length>0&&a.code.length<=128
-    &&typeof a.message==='string'&&a.message.length>0&&a.message.length<=4096
-  if(a.status!=='classified'||v.selfIntersections!=='checked-at-tolerance'
-    ||v.connectivity.materialConnectivity!=='classified-at-tolerance'||v.connectivity.sharedVertices.length!==0
-    ||!finite(a.toleranceMm)||a.toleranceMm<=0||!Number.isInteger(a.materialRegions)||a.materialRegions<=0
-    ||!Array.isArray(a.shells)||a.shells.length!==v.connectivity.components.length||a.shells.length>128)return false
-  if(!a.shells.every((s,i)=>s&&s.id===i&&s.firstTriangle===v.connectivity.components[i].sourceTriangles[0]
-    &&Number.isInteger(s.depth)&&s.depth>=0&&s.depth<a.shells.length
-    &&s.kind===(s.depth%2===0?'material':'cavity')
-    &&(s.parent===null?s.depth===0:Number.isInteger(s.parent)&&s.parent>=0&&s.parent<a.shells.length&&s.parent!==i)))return false
-  return a.shells.every(s=>s.parent===null||a.shells[s.parent].depth+1===s.depth)
-    &&a.materialRegions===a.shells.filter(s=>s.kind==='material').length
-}

@@ -24,14 +24,6 @@ pub fn nearest_neighbor(queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
         .collect()
 }
 
-/// WGSL source for the nearest-neighbor compute shader (feature `gpu`); the
-/// `gpu` and `cuda` modules both target this exact formula.
-pub const NEAREST_NEIGHBOR_WGSL: &str = include_str!("nearest_neighbor.wgsl");
-
-/// Cooperative target reduction with one workgroup per query. The production
-/// Metal policy uses 64 lanes; the source retains the tunable WG=256 anchor.
-pub const NEAREST_NEIGHBOR_COOPERATIVE_WGSL: &str = include_str!("nearest_neighbor_cooperative.wgsl");
-
 /// `nearest_neighbor` with an optional GPU/CUDA batch kernel.
 /// `Acceleration::Cuda` runs the PTX port through the CUDA driver (feature
 /// `cuda`), then the wgpu shader (feature `gpu`), then the CPU reference;
@@ -50,17 +42,11 @@ pub fn nearest_neighbor_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(values) = crate::cuda::nearest_neighbor_cuda(queries, targets)
-        {
-            return values;
-        }
-        if let Some(values) = crate::gpu::nearest_neighbor_gpu(queries, targets) {
-            return values;
-        }
+    if acceleration.is_gpu()
+        && let Some(values) = crate::device::kernels()
+            .and_then(|kernels| kernels.nearest_neighbor(acceleration, queries, targets))
+    {
+        return values;
     }
     nearest_neighbor(queries, targets)
 }
@@ -120,47 +106,5 @@ mod nearest_neighbor_tests {
         assert!(got.is_empty());
         let got = nearest_neighbor_accelerated(&[[0., 0., 0.]], &[], Acceleration::Gpu);
         assert_eq!(got, vec![(u32::MAX, f64::INFINITY)]);
-    }
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn nearest_neighbor_accelerated_gpu_dispatch_matches_cpu() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Gpu);
-        let want = nearest_neighbor(&queries, &targets);
-        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
-            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
-        }
-    }
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn nearest_neighbor_accelerated_cuda_dispatch_matches_cpu() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Cuda);
-        let want = nearest_neighbor(&queries, &targets);
-        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
-            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
-        }
     }
 }

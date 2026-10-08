@@ -1,0 +1,46 @@
+{
+  "schema": "native-profile-continuous-delivery/1",
+  "recordedAt": "2026-10-07",
+  "implementationCommit": "36fe42f820fa0bec3483b9daa3f7fcabd4776434",
+  "geometryWasm": {
+    "path": "docs/qualification/artifacts/geometry-2aac69cb7606de2192ac55163f42e609b4417566e313f2c8d92de1dc4172d0b0.wasm",
+    "publishedPath": "public/wasm/geometry-kernel.wasm",
+    "sha256": "2aac69cb7606de2192ac55163f42e609b4417566e313f2c8d92de1dc4172d0b0",
+    "byteLength": 12149635,
+    "variants": [
+      {
+        "sha256": "2aac69cb7606de2192ac55163f42e609b4417566e313f2c8d92de1dc4172d0b0",
+        "byteLength": 12149635,
+        "builder": "macos-aarch64",
+        "evidence": "Observed local rebuild. rustc 1.100.0-nightly (215a8af4b 2026-09-15); Node v26.10.0. No foreign-host artifact is inferred."
+      }
+    ]
+  },
+  "sourceBundleSha256": "2cf59dd14d484a605764e1230ef16523a0c292b059723d755b11b5d64070759d",
+  "validated": {
+    "nurbsCoreUnitTests": 688,
+    "bridgeSweepIntegrationTests": 7,
+    "wasmRushProtocolTests": 44,
+    "applicationTests": 4638,
+    "applicationSkippedTests": 9,
+    "browserScenarios": 10,
+    "independentStepFixtures": 2,
+    "currentHostFreezeTests": 24,
+    "distributionAssetBytes": 8314228
+  },
+  "qualification": {
+    "g0Fingerprint": "v51",
+    "g1Plan": "v68",
+    "completedCleanWorkUnits": 0,
+    "requiredCleanWorkUnits": 4740,
+    "runnerDiscovery": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37626657220",
+    "claim": "none"
+  },
+  "remaining": [
+    "Tight spatial Bishop-frame bounds use a conservative envelope and may refuse.",
+    "Surface-wide regularity, global embedding, cap and shell obligations remain independent.",
+    "Closed station counts outside 5/9/17 retain C0.",
+    "Independent STEP fixtures do not cover the new periodic G2 seam.",
+    "Full G1 hosted clean matrix has not yet executed."
+  ]
+}

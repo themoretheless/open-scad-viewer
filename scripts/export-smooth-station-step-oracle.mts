@@ -17,7 +17,8 @@ const signs=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1],[1,0]]
 const profile={degree:2,knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1],
  controlPoints:signs.map(([x,y])=>[x!,y!,0]),weights:signs.map((_,i)=>i%2===0?1:Math.SQRT1_2),periodic:false}
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
-const cases=[false,true,'rush','rush-sharp','rush-guide','rush-moving','rush-closed','weight-half','weight-one','weight-two'].map(mode=>{
+const qualificationCatalog=JSON.parse(readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url),'utf8'))
+const cases=(qualificationCatalog.step.smoothModes as (boolean|string)[]).map(mode=>{
  const curved=mode!==false
  const weightMode=typeof mode==='string'&&mode.startsWith('weight-')
  const middleWeight=mode==='weight-half'?.5:mode==='weight-one'?1:mode==='weight-two'?2:Math.SQRT1_2
@@ -58,5 +59,7 @@ const cases=[false,true,'rush','rush-sharp','rush-guide','rush-moving','rush-clo
   expectedVolume:weightMode||mode==='rush-guide'||mode==='rush-moving'||mode==='rush-closed'?null:Math.PI*(mode==='rush-sharp'?20:10),...(weightMode?{volumeReferenceMethod:'conic-generator-polynomial-integral'}:mode==='rush-guide'||mode==='rush-moving'||mode==='rush-closed'?{volumeReferenceMethod:'canonical-generator-polynomial-integral'}:{}),relativeVolumeTolerance:1e-7,surfaceToleranceMm:1e-8,
   sha256:createHash('sha256').update(text).digest('hex')}
 })
-writeFileSync(resolve(root,'manifest.json'),JSON.stringify({schema:'sweep-external-step/1',units:'mm',artifactProvenance,cases},null,2)+'\n')
+if(new Set(cases.map(c=>c.file)).size!==cases.length||cases.length!==qualificationCatalog.step.smooth.length||qualificationCatalog.step.smooth.some((c:{file:string})=>!cases.some(item=>item.file===c.file)))throw Error('Smooth STEP cases differ from the shared catalog')
+
+writeFileSync(resolve(root,'manifest.json'),JSON.stringify({schema:'sweep-external-step/1',units:'mm',selectionCatalogSha256:createHash('sha256').update(readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url))).digest('hex'),artifactProvenance,cases},null,2)+'\n')
 console.log(root)

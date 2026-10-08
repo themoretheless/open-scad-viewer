@@ -1,6 +1,6 @@
 //! Homogeneous Gordon interpolation of a compatible rational curve network.
 #[path = "gordon/denominators.rs"]
-mod denominators;
+pub(crate) mod denominators;
 #[path = "gordon/cartesian.rs"]
 mod cartesian;
 #[path = "gordon/tangent_fields.rs"]

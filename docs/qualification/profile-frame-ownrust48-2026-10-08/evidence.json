@@ -1,0 +1,68 @@
+{
+  "schema": "profile-frame-local-evidence/1",
+  "nativeSourceCommit": "457a12788c564d974aba315ce2956e15465c0644",
+  "ownRustEvidence": "docs/qualification/own-rust-cad-v48.json",
+  "geometryWasmSha256": "8cecb75d2b4ed4e58e9c4c91bb940181d5cb5ae22fb2834546fcf816b2337cdf",
+  "qualificationClaim": "finite-local-cases-only",
+  "g1ResultImported": false,
+  "files": {
+    "1440-closed-profile-planar-10.r.png": "1e04d73895c8c9439a0092e93fe58a23fa5eb190c85b74642b3612eb83a730b6",
+    "1440-closed-profile-spatial-6.r.png": "ce637fa14e045c656cd883c90bc4b36c0ed390bc6bf61201290cb72e7a260f52",
+    "600-closed-profile-planar-10.r.png": "bb34ec97abd260d97fa73a8f9893c6ab58ce3c98db31b903c64bc2490b0bae37",
+    "600-closed-profile-spatial-6.r.png": "ffd832bf3192e80bc0832e7f43636a45a92d726ae27577fa9c653ef6b4cca73c",
+    "README.md": "cfddbc1abe79958b025fe814ba84e9a043611b3828ff75c995100bede5146ef2",
+    "browser-executor.mjs": "c40b61066e1794b567ff84732f06ac9f782399fc9b3c936a742507f770ff9c37",
+    "browser-report.json": "34527afd8c47cffddef9777f34c6f21da49382e912a24613727390c1e46d7bcf",
+    "closed-profile-planar-10.step": "999c80f74aacbdd61d2c5e5d4208242e8c17fc5053077c83b6f2b5095fa260c0",
+    "closed-profile-planar-12.step": "36003970645fa5fd57f8378d43c359fb36e990702f5417e012920eaa6c140776",
+    "closed-profile-planar-6.step": "162fbf38868fbe6b92180b57cc130270903e8fd59546827e3bce566c72d90de0",
+    "closed-profile-planar-7.step": "8fff0817ddd9b1fabd6030ad7ee4e75b2c1f25a3f8c050ed26a7fa3aeb9807c6",
+    "closed-profile-spatial-10.step": "89786c99a755d67ab303c7460a9bebdb8c220a4173f6761227a18cad0a5eecb8",
+    "closed-profile-spatial-12.step": "e4536503161129e44202b8010dee661659b5ee36a151a33404237b9435bef3e0",
+    "closed-profile-spatial-6.step": "1335e9cb34dd1e34e8cc62b09990fe2c3867f8fab157949024f42cddbc9c8264",
+    "closed-profile-spatial-7.step": "e99e2bdffb1949cda316334145ccb211fe6ad5824f6e38167cfedcd1f123f077",
+    "freeze-tests.log.gz": "69d671fbd6912518f8368fbcaafc40b1420d520edd33cc3c1ddcf199cf30fec6",
+    "manifest.json.gz": "091ea4f7d03a3cc678f9f67c9436102a22704dbde72720650721c817b6ac2d3c",
+    "native-bridge-tests.log.gz": "32c27316e7f7b546a6054d399c5307484eef6aa73b2de501bec5f3faa4072c1d",
+    "native-nurbs-tests.log.gz": "b980b33cf2b2249e925574cadccf839f43ece6a3be76e242bc35a1b99ee3fb43",
+    "opencascade-sweep.json": "1d201feb83961d360745ce5a6759e852d9b4670041b0a936749675b43a128f18",
+    "product-build.log.gz": "e01609fc28c217ae65671e5d37d258512fcd6fc550f5626ccdb6a30251c1203f",
+    "step-oracle.log.gz": "bfdb3b9e92f026cab43b408445829babbe1c752e1e50a584fba0447df2c39e53",
+    "wasm-build.log.gz": "d0178c151275cb359b73ea9ee9de6b88291604a6ae47c18df2382908b6384431",
+    "wasm-profile-tests.log.gz": "11db96e5464ee1b58e4fa38861743c58429f171611719ce104ba501dacc22f64"
+  },
+  "compressedFiles": {
+    "wasm-build.log.gz": {
+      "decodedSha256": "172c2fa7b333d2872a4f35bb779e9aef335430aa21e63472d5ba5ccaf115dd68",
+      "decodedBytes": 7266
+    },
+    "product-build.log.gz": {
+      "decodedSha256": "424e0320b405023ac823665f1cb532dc7e8550bf43dc8ab4c0eec1a594b1d4fc",
+      "decodedBytes": 12837
+    },
+    "native-nurbs-tests.log.gz": {
+      "decodedSha256": "eeefb13be2913a2bf57a93a492aea2e61574804b215b368f7ec96b0d962f07f8",
+      "decodedBytes": 73790
+    },
+    "native-bridge-tests.log.gz": {
+      "decodedSha256": "d5902997d7c085d3c305f6f089604c670bba31696fc37c4c049bc75a6c9c8534",
+      "decodedBytes": 30897
+    },
+    "wasm-profile-tests.log.gz": {
+      "decodedSha256": "469fddd7946c60476bbfb68a8ee269b19c10a61f2a8b4052db62146c75a99f67",
+      "decodedBytes": 256
+    },
+    "freeze-tests.log.gz": {
+      "decodedSha256": "c1171a6f72482291b963e785e56f2ec67cd98b96e8330087965bee6b35d162e4",
+      "decodedBytes": 260
+    },
+    "step-oracle.log.gz": {
+      "decodedSha256": "1d201feb83961d360745ce5a6759e852d9b4670041b0a936749675b43a128f18",
+      "decodedBytes": 15215
+    },
+    "manifest.json.gz": {
+      "decodedSha256": "6da54e96a342a07b5693a2ad1515d3faacbccbe318c838afe9dc3ff9b9e141ac",
+      "decodedBytes": 4756392
+    }
+  }
+}

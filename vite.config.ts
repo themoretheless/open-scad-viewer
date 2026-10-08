@@ -8,6 +8,7 @@ import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
 // their dependencies, so lazy groups never drag the geometry kernel into the
 // entry preload list.
 export default defineConfig({
+  define: { __G1_SHARED_GEOMETRY_MODULE__: 'false' },
   plugins: [compactWgslPlugin(),vue()],
   worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.

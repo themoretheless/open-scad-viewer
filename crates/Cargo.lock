@@ -233,6 +233,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridge-analysis"
+version = "0.1.0"
+dependencies = [
+ "bridge-codec",
+ "mechanics-core",
+ "mesh-section",
+ "planar-geometry",
+ "polygon-core",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-cam"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bridge-codec",
+ "gcode-core",
+ "laser-core",
+ "mesh-section",
+ "planar-geometry",
+ "polygon-core",
+ "slicer-core",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-codec"
+version = "0.1.0"
+dependencies = [
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "bridge-svg"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bridge-codec",
+ "data-url",
+ "gif",
+ "image-webp",
+ "imagesize",
+ "planar-geometry",
+ "resvg",
+ "simplecss",
+ "svgtypes",
+ "ttf-parser",
+ "usvg",
+ "value-codec",
+ "zune-jpeg",
+]
+
+[[package]]
 name = "brotli-decompressor"
 version = "5.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -729,15 +784,15 @@ dependencies = [
  "base64",
  "brep-core",
  "brep-topology",
+ "bridge-analysis",
+ "bridge-cam",
+ "bridge-codec",
+ "bridge-svg",
  "cad-predicates",
  "compute-core",
- "data-url",
  "gcode-core",
  "geometry-ops",
- "gif",
  "gpu-compute",
- "image-webp",
- "imagesize",
  "laser-core",
  "manifold-core",
  "manifold-ops",
@@ -754,15 +809,12 @@ dependencies = [
  "resvg",
  "sdf-core",
  "sha2",
- "simplecss",
  "sketch-core",
  "slicer-core",
  "subdivision-core",
  "svgtypes",
- "ttf-parser",
  "usvg",
  "value-codec",
- "zune-jpeg",
 ]
 
 [[package]]
@@ -1586,6 +1638,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "osv-math-compute"
+version = "0.1.0"
+dependencies = [
+ "compute-core",
+ "compute-cuda",
+ "compute-mlx",
+ "gpu-compute",
+ "osv-math",
+ "rbench",
+ "tensor-core",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1627,6 +1692,7 @@ dependencies = [
  "compute-core",
  "gpu-compute",
  "osv-math",
+ "osv-math-compute",
  "rbench",
 ]
 

@@ -7,7 +7,12 @@
     "conditioning",
     "coordinate_frame",
     "interval_eval",
-    "polynomial"
+    "polynomial",
+    "compensated",
+    "dual",
+    "robust_solvers",
+    "interval_newton",
+    "sturm"
   ],
   "curves": [
     "primitives",
@@ -73,7 +78,12 @@
     "direct_edit",
     "morph",
     "fairing",
-    "curve_extension"
+    "curve_extension",
+    "sweep_section_correction",
+    "circle_sweep_repair",
+    "miter_section_correction",
+    "sweep_section_projection",
+    "section_circle_repair"
   ],
   "joining": [
     "curve_join",
@@ -84,13 +94,29 @@
     "surface_g2",
     "circle_transition",
     "ellipse_transition",
-    "circle_rectangle_transition"
+    "circle_rectangle_transition",
+    "sweep_seam_set"
   ],
   "offsets": [
     "curve_offset",
     "curve_offset_join",
     "curve_offset_wire",
-    "surface_offset"
+    "surface_offset",
+    "trimmed_offset_contact",
+    "offset_source_boundary",
+    "offset_contact_tangent",
+    "offset_envelope",
+    "offset_envelope_fit",
+    "offset_contact_pcurve",
+    "offset_contact_trims",
+    "offset_face_loops",
+    "offset_patch_boundary",
+    "offset_contact_predictor",
+    "offset_contact_path",
+    "offset_path_trims",
+    "offset_path_pcurves",
+    "moving_radius",
+    "moving_envelope"
   ],
   "queries": [
     "curve_differential",
@@ -113,7 +139,14 @@
     "radial_bounds",
     "geodesic",
     "unrolling",
-    "frechet"
+    "frechet",
+    "uv_curve_crossings",
+    "planar_area",
+    "curve_axis_driver",
+    "surface_flux",
+    "convex_distance",
+    "obb_tree",
+    "normal_cone"
   ],
   "parameterization": [
     "curve_pullback",
@@ -128,7 +161,10 @@
     "chord_witness",
     "chord_fill_selection",
     "surface_parameter_bounds",
-    "trimmed_surface_distance"
+    "trimmed_surface_distance",
+    "loft_reparameterization",
+    "boundary_partition",
+    "bezier_extraction"
   ],
   "validation": [
     "curve_self_intersection",
@@ -147,7 +183,23 @@
     "sweep_cap_wall",
     "sweep_seam_audit",
     "trim_region_audit",
-    "trim_simplicity"
+    "trim_simplicity",
+    "retained_wall_coefficients",
+    "retained_wall_domain_certificate",
+    "surface_quotient_injectivity",
+    "normal_alignment",
+    "curve_surface_plane",
+    "curve_surface_affine",
+    "retained_wall_domain",
+    "curve_partition_agreement",
+    "contact_normal_agreement",
+    "curve_surface_lift",
+    "curve_point_identity",
+    "surface_projection_jacobian",
+    "curve_quadratic_separator",
+    "surface_projected_jordan",
+    "surface_self_chord",
+    "surface_self_chord_coverage"
   ],
   "meshing": [
     "curve_tessellation",

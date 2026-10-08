@@ -43,39 +43,3 @@ rbench = { workspace = true }
 [[example]]
 name = "bench_leaf_math"
 path = "examples/bench_leaf_math.rs"
-
-[[example]]
-name = "bench_point_bounds"
-path = "examples/bench_point_bounds.rs"
-
-[[example]]
-name = "bench_point_moments"
-path = "examples/bench_point_moments.rs"
-
-[[example]]
-name = "bench_nearest_two"
-path = "examples/bench_nearest_two.rs"
-
-[[example]]
-name = "bench_chamfer"
-path = "examples/bench_chamfer.rs"
-
-[[example]]
-name = "bench_workgroup_tuning"
-path = "examples/bench_workgroup_tuning.rs"
-required-features = ["gpu"]
-
-[[example]]
-name = "resident_geometry"
-path = "examples/resident_geometry.rs"
-required-features = ["tensor"]
-
-[[example]]
-name = "bench_recorded_nearest"
-path = "examples/bench_recorded_nearest.rs"
-required-features = ["gpu"]
-
-[[example]]
-name = "bench_stable_stats"
-path = "examples/bench_stable_stats.rs"
-required-features = ["gpu"]

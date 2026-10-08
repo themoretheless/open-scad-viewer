@@ -798,7 +798,6 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
         let end=circle_transition::CircleSection {center:field(&v,"end_center")?,normal:field(&v,"end_normal")?,seam:field(&v,"end_seam")?,radius:field(&v,"end_radius")?};
         return encode(circle_transition::ruled(&start,&end)?);
     }
-    if op == "surface_profile_sweep" {return encode(profile_sweep::checked(&field::<curve::Curve>(&v,"profile")?,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,field(&v,"normal")?,field(&v,"sections")?,field(&v,"max_deviation")?)?);}
     if op == "surface_ribbon" {return encode(ribbon::checked(&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"width")?,field(&v,"normal")?,field(&v,"sections")?,field(&v,"max_deviation")?)?);}
     if op == "surface_variable_pipe" {return encode(pipe::checked_variable(&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"radius")?,field(&v,"normal")?,field(&v,"sections")?,field(&v,"max_deviation")?)?);}
     if op == "surface_pipe" {return encode(pipe::checked(&field::<curve::Curve>(&v,"path")?,field(&v,"radius")?,field(&v,"normal")?,field(&v,"sections")?,field(&v,"max_deviation")?)?);}
@@ -827,7 +826,6 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
     if op == "curve_helix" {return encode(helix::approximate(field(&v,"center")?,field(&v,"radius")?,field(&v,"height")?,field(&v,"turns")?,field(&v,"phase_degrees")?,field(&v,"max_deviation")?)?);}
     if op == "surface_twist_sweep" {return encode(twist_sweep::sweep(&field(&v,"profile")?,&field(&v,"path")?,field(&v,"origin")?,field(&v,"axis")?,field(&v,"start_degrees")?,field(&v,"sweep_degrees")?)?);}
     if op == "surface_two_guide_sweep" {return encode(two_guide_sweep::sweep(&field(&v,"profile")?,&field(&v,"guide_a")?,&field(&v,"guide_b")?,field(&v,"width")?,field(&v,"axis_y")?,field(&v,"axis_z")?)?);}
-    if op == "surface_scaled_sweep" {return encode(scaled_sweep::sweep(&field(&v,"profile")?,&field(&v,"path")?,&field(&v,"scale")?,field(&v,"origin")?)?);}
     if op == "surface_boundary_fill" {return encode(boundary_fill::fan(&field::<Vec<curve::Curve>>(&v,"boundaries")?,field(&v,"center")?)?);}
     if op == "surface_triangular_patch" {return encode(triangular_patch::patch(&field(&v,"base")?,&field(&v,"side_a")?,&field(&v,"side_b")?)?);}
     if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
@@ -1603,6 +1601,12 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             optional_field::<f64>(&v, "maxError")?.unwrap_or(1e-6),
         );
     }
+    if op == "surface_scaled_sweep" {
+        return encode(sweeps::scaled_sweep(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "origin")?)?);
+    }
+    if op == "surface_profile_sweep" {
+        return sweeps::checked_profile_sweep_with_cells(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "normal")?, field(&v, "sections")?, match optional_field::<f64>(&v, "maxDeviation")? {Some(x)=>x,None=>field(&v,"max_deviation")?},optional_field::<usize>(&v,"maxCells")?.unwrap_or(16384));
+    }
     if op == "surface_framed_sweep" {
         return encode(framed_sweep::checked_sweep(
             &field(&v, "profile")?,
@@ -1723,4 +1727,23 @@ fn encode_wall_audit(report: sweep_wall_audit::Report) -> Result<Value> {
 fn miter_constant_vector_law(value:[f64;3])->Result<curve::Curve> {
     let curve=curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![value.to_vec();2],weights:vec![1.,1.],periodic:false};
     curve.validate()?;Ok(curve)
+}
+
+#[cfg(test)]
+mod scalar_dispatch_regression {
+    use super::*;
+    #[test]
+    fn profile_dispatch_preserves_continuous_certificate_and_zero_cell_refusal() {
+        let profile = json!({"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[[1.,0.,0.],[2.,0.,0.]],"weights":[1.,1.],"periodic":false});
+        let path = json!({"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[[0.,0.,0.],[0.,0.,4.]],"weights":[1.,1.],"periodic":false});
+        let scale = json!({"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[[1.,0.,0.],[1.,0.,0.]],"weights":[1.,1.],"periodic":false});
+        let mut request = json!({"op":"surface_profile_sweep","profile":profile,"path":path,"scale":scale,"normal":[1.,0.,0.],"sections":5,"max_deviation":0.01});
+        let result = dispatch(request.clone()).unwrap();
+        assert_eq!(result["report"]["continuousCertificate"]["withinBudget"],true);
+        request["maxCells"] = json!(0);
+        let result = dispatch(request).unwrap();
+        assert_eq!(result["report"]["accepted"],false);
+        assert_eq!(result["report"]["continuousCertificate"]["maxCells"],0);
+        assert!(result["surface"].is_null());
+    }
 }

@@ -33,9 +33,6 @@ pub fn nearest_four(queries: &[V3], targets: &[V3]) -> Vec<FourNearest> {
         .collect()
 }
 
-/// WGSL source for the exact top-4 nearest-neighbor compute shader.
-pub const NEAREST_FOUR_WGSL: &str = include_str!("nearest_four.wgsl");
-
 /// [`nearest_four`] with optional GPU/CUDA batch kernels.
 pub fn nearest_four_accelerated(
     queries: &[V3],
@@ -47,17 +44,11 @@ pub fn nearest_four_accelerated(
     }
     #[allow(unused_variables)]
     let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
-    #[cfg(feature = "gpu")]
-    if acceleration.is_gpu() {
-        #[cfg(feature = "cuda")]
-        if acceleration == Acceleration::Cuda
-            && let Some(values) = crate::cuda::nearest_four_cuda(queries, targets)
-        {
-            return values;
-        }
-        if let Some(values) = crate::gpu::nearest_four_gpu(queries, targets) {
-            return values;
-        }
+    if acceleration.is_gpu()
+        && let Some(values) = crate::device::kernels()
+            .and_then(|kernels| kernels.nearest_four(acceleration, queries, targets))
+    {
+        return values;
     }
     nearest_four(queries, targets)
 }
@@ -109,55 +100,5 @@ mod tests {
         assert_eq!(got[0][0], (0, 1.));
         assert_eq!(got[0][1], (1, 4.));
         assert_eq!(got[0][2], (u32::MAX, f64::INFINITY));
-    }
-
-    #[cfg(feature = "gpu")]
-    #[test]
-    fn nearest_four_gpu_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_four_accelerated(&queries, &targets, Acceleration::Gpu);
-        let want = nearest_four(&queries, &targets);
-        for (got, want) in got.iter().zip(&want) {
-            for k in 0..4 {
-                assert_eq!(got[k].0, want[k].0);
-                assert!((got[k].1 - want[k].1).abs() < 5e-3 * want[k].1.max(1.0));
-            }
-        }
-    }
-
-    #[cfg(feature = "cuda")]
-    #[test]
-    fn nearest_four_cuda_matches_reference() {
-        let queries: Vec<V3> = (0..96)
-            .map(|i| {
-                let f = i as f64;
-                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
-            })
-            .collect();
-        let targets: Vec<V3> = (0..30)
-            .map(|i| {
-                let f = i as f64;
-                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
-            })
-            .collect();
-        let got = nearest_four_accelerated(&queries, &targets, Acceleration::Cuda);
-        let want = nearest_four(&queries, &targets);
-        for (got, want) in got.iter().zip(&want) {
-            for k in 0..4 {
-                assert_eq!(got[k].0, want[k].0);
-                assert!((got[k].1 - want[k].1).abs() < 5e-3 * want[k].1.max(1.0));
-            }
-        }
     }
 }

@@ -480,7 +480,7 @@ const editorOpen = ref(false)
 // Keep its GPU resources separate from the active Solid/Mesh viewport.
 const sourceViewportVisible = computed(() =>
   (!directModelerOpen.value && !meshModelerOpen.value && !functionReferenceOpen.value) ||
-  (editorOpen.value && isModelGraphText(code.value) &&
+  (editorOpen.value && isRushFrontend(code.value) &&
     (code.value.includes('progressive_sweep') || code.value.includes('miter_sweep'))))
 watch(sourceViewportVisible, async visible => {
   if (!visible) {

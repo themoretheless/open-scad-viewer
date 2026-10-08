@@ -9,6 +9,18 @@ pub mod level_certificate;
 pub mod scalar_certificate;
 pub mod trigonometric_certificate;
 pub mod vector_certificate;
+/// Certificates for the authored laws and their moving frames.
+pub mod law_certificates {
+    pub use super::{scalar_certificate as scalar, vector_certificate as vector,
+        trigonometric_certificate as trigonometric, frame_certificate as frame,
+        authored_frame_certificate as authored_frame, level_certificate as level};
+}
+/// Miter-specific profile domains and endpoint cap prerequisites.
+pub mod boundary_certificates {
+    pub use super::{profile_domain_certificate as profile_domain,
+        cap_retained_plane_certificate as retained_plane,
+        cap_endpoint_certificate as endpoint, cap_projection_certificate as projection};
+}
 mod law;
 mod serialization;
 use crate::{Result, check, core::vec3_ext::norm, curve::Curve, foundation::guards::{Budget, require_finite_point}};

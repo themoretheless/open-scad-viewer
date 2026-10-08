@@ -14,13 +14,15 @@ import {
 } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {matchesNodeHost,qualificationInvocation} from './g1RuntimeIdentity.mjs'
+import {verifyBrowserPayloadTree as verifyTree} from './browserPayloadTree.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v63.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v83.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
-const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v34.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v63'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v63'
+const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
+const PLAN_ID = 'semantic-manifold-g1-plan-v83'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v83'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
@@ -71,7 +73,7 @@ function args(argv) {
   return result
 }
 
-function matrix() {
+function matrix(probeOnly=false) {
   const plan = loadPlan()
   const nodes = []
   const browsers = []
@@ -107,7 +109,7 @@ function matrix() {
   if (expectedUnits !== plan.executionProtocol.plannedWorkUnits) {
     fail(`Matrix expands to ${expectedUnits}, expected ${plan.executionProtocol.plannedWorkUnits}`)
   }
-  process.stdout.write(`${JSON.stringify({ nodes: { include: nodes }, browsers: { include: browsers } })}\n`)
+  process.stdout.write(`${JSON.stringify({ nodes: { include: probeOnly?nodes.filter((entry,index,all)=>all.findIndex(other=>other.environment===entry.environment)===index):nodes }, browsers: { include: probeOnly?browsers.filter((entry,index,all)=>all.findIndex(other=>other.environment===entry.environment)===index):browsers } })}\n`)
 }
 
 function regularFrozenFile(relativePath) {
@@ -156,10 +158,6 @@ function verifyBindings(plan) {
 
 function normalizedArch(arch) {
   return arch === 'x64' ? 'x86_64' : arch === 'arm64' ? 'aarch64' : arch
-}
-
-function normalizedPlatform(platform) {
-  return platform === 'linux' ? 'ubuntu' : platform === 'darwin' ? 'macos' : platform
 }
 
 function githubRunnerKey(environment) {
@@ -232,32 +230,18 @@ function verifyPlaywrightLicenses() {
   return verified
 }
 
-function verifyTree(directory) {
-  const entries = []
-  function walk(current) {
-    for (const name of readdirSync(current).sort()) {
-      const path = join(current, name)
-      const stat = lstatSync(path)
-      if (stat.isDirectory()) walk(path)
-      else if (stat.isFile()) {
-        const relativePath = relative(directory, path).split(sep).join('/')
-        entries.push(`F\0${relativePath}\0${sha256(readFileSync(path))}\n`)
-      } else if (stat.isSymbolicLink()) {
-        const target = readlinkSync(path)
-        const absoluteTarget = resolve(dirname(path), target)
-        if (absoluteTarget !== directory && !absoluteTarget.startsWith(`${directory}${sep}`)) {
-          fail(`Browser tree symlink escapes revision: ${path}`)
-        }
-        const relativePath = relative(directory, path).split(sep).join('/')
-        entries.push(`L\0${relativePath}\0${target}\n`)
-      }
-      else fail(`Browser tree contains non-file entry: ${path}`)
-    }
-  }
-  walk(directory)
-  const records = entries.sort().join('')
-  const bytes = Buffer.from(records, 'utf8')
-  return { value: sha256(bytes), byteLength: bytes.byteLength, entryCount: entries.length }
+
+function discoverBrowsers(values) {
+  const freeze = loadJson(GITHUB_FREEZE_PATH).playwright
+  const output = values.get('--output')
+  if (!output) fail('discover-browsers requires --output')
+  const sourceSha = verifySource(values.get('--source-sha'))
+  const provisionRoot = resolve(process.env.HOME ?? fail('HOME is required'), '.cache', 'ms-playwright')
+  const trees = Object.fromEntries(Object.keys(freeze.browserTrees).map(revision =>
+    [revision, verifyTree(resolve(provisionRoot, revision), true, freeze.ignoredInstallerMarkers)]))
+  writeFileSync(resolve(output), JSON.stringify({sourceSha,
+    imageOS:process.env.ImageOS, imageVersion:process.env.ImageVersion,
+    qualificationWorkUnits:0, scope:'Downloaded payload trees only; no host dependency or browser execution qualification', trees},null,2)+'\n')
 }
 
 function browserIdentity(plan, environment) {
@@ -270,12 +254,12 @@ function browserIdentity(plan, environment) {
   for (const revision of freeze.requiredTrees[environment.browser.engine]) {
     const revisionPath = resolve(provisionRoot, revision)
     if (!existsSync(revisionPath)) fail(`Frozen browser revision missing: ${revisionPath}`)
-    const actual = verifyTree(revisionPath)
+    const actual = verifyTree(revisionPath, false, freeze.ignoredInstallerMarkers)
     const frozen = freeze.browserTrees[revision]
     if (actual.value !== frozen.treeSha256
         || actual.byteLength !== frozen.manifestByteLength
         || actual.entryCount !== frozen.entryCount) {
-      fail(`Browser tree identity mismatch for ${revision}`)
+      fail(`Browser tree identity mismatch for ${revision}: ${JSON.stringify({actual, expected:frozen})}`)
     }
     trees[revision] = actual
   }
@@ -305,13 +289,12 @@ function verifyToolchain(environmentId, nodeArchivePath, npmArchivePath) {
   if (npmSha1 !== freeze.npm.shasum || npmIntegrity !== freeze.npm.integrity) {
     fail('npm archive identity mismatch')
   }
-  if (normalizedArch(process.arch) !== environment.architecture
-      || !environment.os.startsWith(normalizedPlatform(process.platform))) {
+  if (!matchesNodeHost(environment,process.platform,process.arch)) {
     fail(`Host identity mismatch: ${process.platform}/${process.arch} for ${environmentId}`)
   }
   const observedNpmVersion = execFileSync(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['--version'],
+    process.platform === 'win32' ? process.execPath : 'npm',
+    process.platform === 'win32' ? [process.env.NPM_CLI ?? fail('NPM_CLI is required on Windows'), '--version'] : ['--version'],
     { cwd: root, encoding: 'utf8' },
   ).trim()
   if (observedNpmVersion !== NPM_VERSION) fail(`npm executable is ${observedNpmVersion}`)
@@ -323,6 +306,14 @@ function verifyToolchain(environmentId, nodeArchivePath, npmArchivePath) {
     },
     npmArchive: { npmSha1, npmIntegrity },
   }
+}
+
+// Hosted labels can serve more than one deployed image during a rollout.
+// Admission remains byte/identity based: only explicitly observed, frozen
+// image records are accepted, and every fragment retains its actual record.
+function matchesHostedRunner(expected, imageOS, imageVersion) {
+  return !!expected && [expected, ...(expected.observedVariants ?? [])].some(record =>
+    record.imageOS === imageOS && record.imageVersion === imageVersion)
 }
 
 function preflight(values) {
@@ -343,9 +334,7 @@ function preflight(values) {
   if (inheritedForbidden.length) fail(`Forbidden environment variables present: ${inheritedForbidden.join(', ')}`)
   const githubFreeze = loadJson(GITHUB_FREEZE_PATH)
   const expectedRunner = githubFreeze.runnerImages[githubRunnerKey(environment)]
-  if (!expectedRunner
-      || process.env.ImageOS !== expectedRunner.imageOS
-      || process.env.ImageVersion !== expectedRunner.imageVersion) {
+  if (!matchesHostedRunner(expectedRunner, process.env.ImageOS, process.env.ImageVersion)) {
     fail(`Hosted runner image mismatch for ${environmentId}`)
   }
   const report = {
@@ -383,20 +372,6 @@ function expandCommand(template, runIndex, browser) {
     .replaceAll('<1|2|3>', String(runIndex))
     .replaceAll('<chromium|webkit>', browser)
     .replaceAll('<chromium|firefox|webkit>', browser)
-}
-
-function commandParts(command) {
-  if (command.startsWith('npm test -- ')) {
-    return {
-      executable: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      args: ['test', '--', ...command.slice('npm test -- '.length).split(/\s+/u).filter(Boolean)],
-    }
-  }
-  if (command.startsWith('node ')) {
-    const parts = command.split(/\s+/u).filter(Boolean)
-    return { executable: process.execPath, args: parts.slice(1) }
-  }
-  fail(`Unsupported frozen command: ${command}`)
 }
 
 function cleanEnvironment(seed) {
@@ -450,7 +425,7 @@ async function runFragment(values) {
   }
   const seed = row.work.seeds[runIndex - 1]
   const expanded = expandCommand(row.harness.command, runIndex, environment.browser?.engine ?? '')
-  const invocation = commandParts(expanded)
+  const invocation = qualificationInvocation(expanded,process.execPath,root)
   mkdirSync(output, { recursive: true })
   const stdoutPath = resolve(output, 'stdout.log')
   const stderrPath = resolve(output, 'stderr.log')
@@ -489,6 +464,7 @@ async function runFragment(values) {
     new Promise(resolvePromise => stdout.end(resolvePromise)),
     new Promise(resolvePromise => stderr.end(resolvePromise)),
   ])
+  verifySource(preflight.sourceSha)
   const passed = !timedOut && outcome.exitCode === 0
   const fragment = {
     schema: 'open-scad-viewer/g1-clean-run-fragment',
@@ -498,10 +474,10 @@ async function runFragment(values) {
     environmentId: environment.id,
     runIndex,
     seed,
-    classification: 'clean-post-freeze',
+    classification: process.env.G1_DISCOVERY_ONLY==='true'?'discovery-only':'clean-post-freeze',
     status: passed ? 'passed' : 'failed',
     unitsPlanned: row.work.unitsPerCleanRun,
-    unitsCompleted: passed ? row.work.unitsPerCleanRun : 0,
+    unitsCompleted: passed && process.env.G1_DISCOVERY_ONLY!=='true' ? row.work.unitsPerCleanRun : 0,
     planId: plan.planId,
     candidateRunId: CANDIDATE_ID,
     planSha256: currentPlanSha,
@@ -575,10 +551,7 @@ function aggregate(values) {
   const freeze = loadJson(FREEZE_PATH)
   const githubFreeze = loadJson(GITHUB_FREEZE_PATH)
   const aggregateRunner = githubFreeze.runnerImages['ubuntu-24.04']
-  if (process.env.ImageOS && (
-    process.env.ImageOS !== aggregateRunner.imageOS
-    || process.env.ImageVersion !== aggregateRunner.imageVersion
-  )) fail('Aggregate hosted runner image mismatch')
+  if (process.env.ImageOS && !matchesHostedRunner(aggregateRunner, process.env.ImageOS, process.env.ImageVersion)) fail('Aggregate hosted runner image mismatch')
   const expectedPlanSha = sha256File(resolve(root, PLAN_PATH)).value
   const expected = new Map()
   for (const row of plan.matrix) {
@@ -667,9 +640,7 @@ function aggregate(values) {
       errors.push(`toolchain identity mismatch ${fragment.fragmentId}`)
     }
     const expectedRunner = environment && githubFreeze.runnerImages[githubRunnerKey(environment)]
-    if (!expectedRunner
-        || fragment.host?.runnerImage !== expectedRunner.imageOS
-        || fragment.host?.runnerImageVersion !== expectedRunner.imageVersion) {
+    if (!matchesHostedRunner(expectedRunner, fragment.host?.runnerImage, fragment.host?.runnerImageVersion)) {
       errors.push(`hosted runner identity mismatch ${fragment.fragmentId}`)
     }
     if (environment?.browser) {
@@ -745,7 +716,8 @@ function aggregate(values) {
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2)
-  if (command === 'matrix') matrix()
+  if (command === 'discover-browsers') discoverBrowsers(args(rest))
+  else if (command === 'matrix') matrix(rest.includes('--probe-only'))
   else if (command === 'preflight') preflight(args(rest))
   else if (command === 'run') await runFragment(args(rest))
   else if (command === 'aggregate') aggregate(args(rest))

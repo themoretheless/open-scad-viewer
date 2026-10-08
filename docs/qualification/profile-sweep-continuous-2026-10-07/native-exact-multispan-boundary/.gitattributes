@@ -1,0 +1,2 @@
+# Preserve exact terminal evidence as binary data, including original blank lines.
+*.txt -text -diff

@@ -14,6 +14,10 @@ gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
 
 [dependencies]
+bridge-codec = { path = "../bridge-codec" }
+bridge-cam = { path = "../bridge-cam" }
+bridge-analysis = { path = "../bridge-analysis" }
+bridge-svg = { path = "../bridge-svg" }
 gcode-core = { workspace = true }
 laser-core = { workspace = true }
 mesh-io = { workspace = true }
@@ -44,12 +48,5 @@ usvg = { version = "0.47.0", default-features = false, features = ["text"] }
 svgtypes = "0.16.1"
 base64 = "0.22"
 sha2 = "0.11"
-data-url = "0.3"
-imagesize = "0.14"
-gif = "0.14.1"
-image-webp = "0.2.4"
-zune-jpeg = "0.5.8"
-simplecss = "0.2.2"
-ttf-parser = "0.25.1"
 
 

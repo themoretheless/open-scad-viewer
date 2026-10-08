@@ -1,0 +1,17 @@
+[package]
+name = "bridge-cam"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bridge-codec = { path = "../bridge-codec" }
+value-codec = { path = "../value-codec" }
+gcode-core = { path = "../gcode-core" }
+planar-geometry = { path = "../planar-geometry" }
+polygon-core = { path = "../polygon-core" }
+slicer-core = { path = "../slicer-core" }
+laser-core = { path = "../laser-core" }
+base64 = "0.22"
+mesh-section = { workspace = true }

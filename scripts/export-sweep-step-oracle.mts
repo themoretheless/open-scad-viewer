@@ -782,6 +782,9 @@ const fixtures=process.argv.includes('--rational-phase-contact-only')?[closedCon
   sourceSha256:createHash('sha256').update(affineRushSource).digest('hex'),construction:affineRushConstruction,
   expectedVolume:Math.PI*(.5**2-.2**2)*10*1.5},
 ]
+const qualificationCatalog=JSON.parse(readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url),'utf8'))
+const catalogFiles:string[]=qualificationCatalog.step.baseline.map((entry:{file:string})=>entry.file)
+if(new Set(fixtures.map(f=>f.file)).size!==fixtures.length||fixtures.length!==catalogFiles.length||catalogFiles.some(file=>!fixtures.some(f=>f.file===file)))throw Error('STEP fixtures differ from the shared qualification catalog')
 const cases=fixtures.map(({model,...fixture})=>{
  const auditBudgets={
   ...DEFAULT_SWEEP_VOLUME_BUDGETS,maxTrimPairs:10000,maxTrimCells:100000,

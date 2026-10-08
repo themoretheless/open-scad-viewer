@@ -64,7 +64,7 @@ pub(crate) fn inspect_with_hulls(
     limits: Limits,
     hulls: &[crate::boundary_hull_contact::Certificate],
 ) -> Result<Report> {
-    inspect_with_certificates(model, tolerance_uv, limits, hulls, &[])
+    inspect_with_certificates(model, tolerance_uv, limits, hulls, &[], false)
 }
 /// Cap tuples originate only from native recomputation in boundary embedding.
 pub(crate) fn inspect_with_certificates(
@@ -73,8 +73,9 @@ pub(crate) fn inspect_with_certificates(
     limits: Limits,
     hulls: &[crate::boundary_hull_contact::Certificate],
     caps: &[[usize; 3]],
+    joint_exact_domain: bool,
 ) -> Result<Report> {
-    inspect_impl(model, tolerance_uv, limits, hulls, caps, !caps.is_empty(),false)
+    inspect_impl(model, tolerance_uv, limits, hulls, caps, !caps.is_empty(),joint_exact_domain)
 }
 /// Sweep-only exact hull separation, also for closed bodies without caps.
 /// Every plane is proved on actual positive rational control coefficients.
@@ -203,7 +204,7 @@ fn inspect_impl(
             // Exact control-hull separation is the fast path only for sweep
             // certification, including closed no-cap bodies: the plain face-contact
             // API keeps the frozen trim-search work accounting byte-for-byte.
-            let (hull_disjoint, hull_cells) = if boundary.is_none() && !periodic && sweep_hulls {
+            let (hull_disjoint, hull_cells) = if boundary.is_none() && !periodic && (sweep_hulls || joint_exact_domain) {
                 crate::control_hull_separation::inspect(
                     sa,
                     sb,

@@ -1370,16 +1370,9 @@ mod registry_tests {
         ];
         for (kind, model) in models.iter().enumerate() {
             for detail in [1, 2, 4, 8, 16, 32] {
-                // The sphere's detail-32 subdivision exceeds the documented
-                // 20,000-triangle guard. Require its explicit resource refusal;
-                // admitted detail levels still require every topology invariant.
-                if kind == 0 && detail == 32 {
-                    assert!(nurbs(model, detail).err().unwrap().message
-                        .contains("20000 triangles"));
-                    continue;
-                }
                 let result = nurbs(model, detail)
                     .unwrap_or_else(|e| panic!("model {kind}, detail {detail}: {e}"));
+                assert!(result.built.mesh.indices.len() / 3 <= 20_000);
                 assert!(result.built.report.closed, "model {kind}, detail {detail}");
                 assert_eq!(result.built.report.boundary_edges, 0);
                 assert_eq!(result.built.report.non_manifold_edges, 0);

@@ -16,8 +16,9 @@
 pub mod brep;
 mod miter_smoothness;
 mod sweep_cap_evidence;
+mod sweep_pipeline;
+mod sweep_viewport;
 pub use math_core::Acceleration;
-mod bonded_solid;
 pub mod brep_attestation;
 mod brep_display;
 pub mod brep_envelope;
@@ -81,8 +82,6 @@ mod cad_miter_owned;
 mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
-mod gcode;
-mod laser;
 pub mod intersections;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
@@ -97,11 +96,8 @@ mod mesh_render;
 pub mod mesh_shell;
 pub mod mesh_surface_groups;
 pub mod print_geometry;
-mod print_strength;
 mod frame;
 mod scene_picking;
-mod structural_sections;
-mod truss;
 mod viewport;
 
 #[cfg(feature = "gpu")]
@@ -116,9 +112,6 @@ pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;
-mod svg;
-mod svg_css;
-mod svg_silhouette;
 use nurbs_core::{
     curve::Curve,
     surface::{Surface, SurfaceSampler},
@@ -127,10 +120,10 @@ use polygon_core::{
     BuiltMesh, Mesh, Seams,
     solid::tessellation::{self, Boundary, Options, ParametricSurface},
 };
-use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
 
 pub use math_core::{Error, Result};
+use bridge_codec::{Routed, Router, Deserialize, Serialize, response};
 fn input(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
@@ -349,13 +342,6 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
     }))
 }
 
-fn response(result: Result<Value>) -> String {
-    match result {
-        Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error":error_json(&error)}),
-    }
-    .to_string()
-}
 
 fn curved_graph_boolean_value(
     model: brep_core::Model,
@@ -581,13 +567,21 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
         })
         .collect()
 }
+/// Domain crates tried before the local operations, in order.
+const DOMAINS: &[Router] = &[bridge_cam::dispatch, bridge_analysis::dispatch, bridge_svg::dispatch];
+
 pub fn dispatch(mut v: Value) -> Result<Value> {
+    for domain in DOMAINS {
+        match domain(v) {
+            Routed::Handled(result) => return result,
+            Routed::Unhandled(request) => v = request,
+        }
+    }
+    dispatch_local(v)
+}
+
+fn dispatch_local(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
-        "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
-        "truss_diagnose" => truss::diagnose(v),
-        "truss_buckling" => truss::buckling(v),
-        "truss_modal" => truss::modal(v),
-        "truss_nonlinear" => truss::nonlinear(v),
         "frame_solve" => frame::solve(v),
         "frame_envelope" => frame::envelope(v),
         "frame_diagnose" => frame::diagnose(v),
@@ -595,13 +589,21 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "frame_modal" => frame::modal(v),
         "frame_collapse" => frame::collapse(v),
         "frame_influence" => frame::influence(v),
-        "bonded_solid_solve" => bonded_solid::solve(v),
-        "truss_screen" => print_strength::screening(v),
-        "print_strength_profile" => print_strength::profile(v),
-        "thermal_strength" => print_strength::thermal(v),
-        "structural_sections" => structural_sections::inspect(v),
-        "section_torsion" => structural_sections::torsion(v),
-        "thin_walled_section" => structural_sections::thin_walled(v),
+        "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
+        "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),
+        "brep_sweep_law_payload" => sweep_pipeline::law_payload(v),
+        "brep_sweep_constructor" => sweep_pipeline::constructor(v),
+        "brep_sweep_stream_start" => sweep_pipeline::stream_start(v),
+        "brep_sweep_stream_next" => sweep_pipeline::stream_next(v),
+        "brep_sweep_stream_release" => sweep_pipeline::stream_release(v),
+        "brep_miter_body" => sweep_pipeline::miter(v),
+        "brep_transform_certified_miter" => sweep_pipeline::transform(v),
+        "brep_smooth_certified_miter" => sweep_pipeline::smooth(v,false),
+        "brep_reconstruct_certified_miter" => sweep_pipeline::smooth(v,true),
+        "brep_progressive_miter_body" => sweep_pipeline::progressive_miter(v),
+        "brep_sweep_release_owner" => sweep_pipeline::release(v),
+        "brep_sweep_solid_admission" => sweep_pipeline::admission(v),
+        "brep_miter_correct_sections" => sweep_pipeline::correct(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"
@@ -644,7 +646,6 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "path2d" => path2d::dispatch(v),
-        "svg" => svg::dispatch(v),
         "subdivision_extrude" => encode(subdivision_core::Cage::extrude(
             &field::<Vec<[f64; 3]>>(&v, "profile")?,
             field(&v, "vector")?,
@@ -862,12 +863,6 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 })).collect::<Vec<_>>(),
             }))
         }
-        "mesh_toolpaths" => gcode::toolpaths(&v),
-        "mesh_gcode" => gcode::export(&v),
-        "mesh_gcode_job" => gcode::export_job(&v),
-        "gcode_preview" => gcode::parse(&v),
-        "gcode_parse" => gcode::inspect(&v),
-        "laser_preflight" | "laser_frame_preview" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {

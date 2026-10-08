@@ -18,7 +18,7 @@ import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsP
 import type {SubdivisionCage} from './geometry/subdivision';
 import {tessellateSubdivision} from './geometry/subdivision';
 import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './geometry/sdf';
-import {readMiterAffineReplayRouting,reconstructCertifiedMiterStations,transformCertifiedMiterBody,type CertifiedMiterBoundaryOwner,createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,type ProgressiveMiterBrepBody,createMiterBrepProfileBody,type MiterBrepBody,streamProgressiveBrepProfileBody,createNaturalBrepSectionLoft,createCappedBrepLoftWithCaps,createCappedBrepLoftSurfaces,createProgressiveBrepProfileBody,transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
+import {reconstructCertifiedMiterStations,transformCertifiedMiterBody,type CertifiedMiterBoundaryOwner,createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,type ProgressiveMiterBrepBody,createMiterBrepProfileBody,type MiterBrepBody,streamProgressiveBrepProfileBody,createNaturalBrepSectionLoft,createCappedBrepLoftWithCaps,createCappedBrepLoftSurfaces,createProgressiveBrepProfileBody,transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler';
@@ -416,7 +416,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                 }
                 case 'profile_sweep': {
                     const sweep=checkedProfileSweepNurbsSurface(needCurve(n.inputs[0]),needCurve(n.inputs[1]),n.scale,n.normal,n.sections,n.max_deviation);
-                    if(!sweep.report.accepted||!sweep.surface)throw new Error(`Profile sweep sampled refinement ${sweep.report.sampledControlDeviation}mm exceeds ${sweep.report.budget}mm; refine sections or split the path`);
+                    if(!sweep.report.accepted||!sweep.surface)throw new Error(`Profile sweep continuous deviation is unproved within ${sweep.report.budget}mm (${sweep.report.continuousCertificate?.reason ?? "unresolved"}); refine sections or split the path`);
                     constructionReports[key]=sweep.report;
                     result={kind:'surface',data:sweep.surface};break;
                 }
@@ -730,9 +730,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
             wallRegularityCertified:'wallRegularityCertified' in sourceConstruction?sourceConstruction.wallRegularityCertified:false,
             continuousBound:'continuousBound' in sourceConstruction?sourceConstruction.continuousBound:false,
         }:undefined;
-        const replayOwner=exactMiterPlacements.get(sourceNode)?.body
-        const sweepMiterReplay=replayOwner?readMiterAffineReplayRouting(replayOwner):null
-        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
+        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
         return {...base,...(mesh?{mesh}:{}),nativeGeometry};
     }
     return { ...base, ...(request.action === 'build' && root.kind === 'mesh' ? { mesh: root.data } : {}) };

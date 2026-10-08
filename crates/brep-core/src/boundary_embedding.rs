@@ -90,7 +90,7 @@ fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits,
     let pairs = if sweep_hulls {
         face_contacts::inspect_with_sweep_certificates(model,tolerance_uv,limits.contacts,&hull_contacts,&allowed_caps,exact_domain)?
     } else {
-        face_contacts::inspect_with_certificates(model,tolerance_uv,limits.contacts,&hull_contacts,&allowed_caps)?
+        face_contacts::inspect_with_certificates(model,tolerance_uv,limits.contacts,&hull_contacts,&allowed_caps,exact_domain)?
     };
     if sweep_hulls {
         // Contacts are recomputed for the actual scalar traversal. Group gaps

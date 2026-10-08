@@ -102,13 +102,12 @@ const limits = new Map([
 // Full contact trim/tangent qualification and delivery: measured 3,708,032 bytes.
 // Fresh source Body replay, exact root restrictions and volume admission: 3,871,336 bytes.
 // Coherent native source boundary endpoints: measured 3,881,800 bytes, +5,362.
-// Exact normalized UV chart equations: measured 3,887,392 bytes, +5,592.
-// Rational main chart identity: measured 3,889,012 bytes, +1,620.
-// Fresh inverse shear contact admission: measured 3,899,016 bytes, +10,004.
-// Root-trim STEP: measured 3915708 bytes (+16692); retain the 608-byte margin.
-// Original annular source proofs and seam transport: measured 3,953,416 bytes; retain 608-byte margin.
-// Source wall native proofs: measured packed geometry 3962910 bytes; retain 608-byte margin.
-const geometryChunkBudget = 3_982_608 // Combined CAD adjacency and Laser kerf/order: measured 3,982,000 bytes; retain 608-byte margin. Adaptive original self-wall coverage: measured 3,974,484 bytes; retain 608-byte margin. Continuous intrinsic wall coverage: measured 3,971,664 bytes; retain 608-byte margin.
+// Combined CAD, Laser CAM and native sweep kernel: 4,021,240 packed bytes.
+// Retain 3,760 bytes of headroom.
+// Native continuous profile bounds and exact cubic seam add ~16 KB packed.
+// Combined main domain routers and separated native sweep modules: measured 4,055,798 bytes.
+// Spatial Bishop/weighted periodic proof ownRust49: measured 4,063,364 packed bytes.
+const geometryChunkBudget = 4_068_000
 const jsChunkBudgets = [
   // Shared CAD protocol plus exact source definition binding: measured 100,734 bytes.
   [/^assets\/mainSolidWorkerClient-[^/]+\.js$/, 102_000],
@@ -376,7 +375,9 @@ for (const [name, artifact, compression] of [
 // Fresh inverse shear admission and recipe binding: measured 8,178,675 asset bytes.
 // Rebuilt original annular proofs and seam UI: measured 8,243,477 bytes; retain 761-byte margin.
 // Source wall native, transport and UI: measured 8265356 asset bytes; retain 761-byte margin.
-const totalBudget = 8_308_327 // Combined CAD/Laser CAM: measured 8,307,566 asset bytes; retain 761-byte margin. Adaptive original self-wall integration: measured 8,295,587 asset bytes; retain 761-byte margin. Continuous wall coverage: measured 8,289,348 asset bytes; retain 761-byte margin.
+// Exact-frame ownRust48: local 8,348,171; Node 22 CI 8,350,241 asset bytes.
+// Keep a 9,759-byte delivery margin for the measured cross-host packaging variation.
+const totalBudget = 8_360_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
 
