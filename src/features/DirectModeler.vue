@@ -2140,7 +2140,7 @@ async function qualifySourceWall(scan=false,coverage=false){
  try{
   const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
    displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
-   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,normalProducts:{cells:50000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
+   ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096},limits:{pairs:100000,planeControls:1000000,normalSpans:10000,gapCells:10000,gapSpans:20000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{gapCells:50000,gapSpans:100000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}})}})

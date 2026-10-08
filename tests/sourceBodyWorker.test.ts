@@ -405,9 +405,10 @@ it('cancels automatic scan when its threshold changes and ignores the late reply
 it('reports continuous original whole-wall coverage through the real WASM worker',async()=>{
  const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-annular-body-request.json.gz',import.meta.url))).toString())
  const {op:_op,...base}=request,client=realClient(),started=performance.now(),results=[]
- for(const [pairs,adaptive,products] of [[1,false,0],[378,false,0],[378,true,0],[378,false,1],[378,false,50000],[378,true,50000]] as const){
+ for(const [pairs,adaptive,products,factored] of [[1,false,0,false],[378,false,0,false],[378,true,0,false],[378,false,1,false],[378,false,50000,false],[378,true,50000,false],[378,true,50000,true]] as const){
   const options:SourceBodyOptions={...base,displaySegments:0,faceDisplay:undefined,wallCoverage:{minimumMm:5.99,
    ...(adaptive?{adaptiveSelf:{planeControls:10000,cells:10000,spans:100000,cellsPerFace:512,spansPerFace:4096}}:{}),
+   ...(factored?{factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128}}:{}),
    ...(products?{normalProducts:{cells:products,cellsPerPair:128}}:{}),
    limits:{pairs,planeControls:10000,normalSpans:products?20000:1000,gapCells:1000,gapSpans:2000,maxSineSquared:1e-6}}}
   const r=await client.run({kind:'sourceBodyRestore',options})
@@ -418,7 +419,7 @@ it('reports continuous original whole-wall coverage through the real WASM worker
   expect(coverage.wholeWallQualified).toBe(false);expect(coverage.lowerMm).toBeNull()
   if(pairs===378){
    if(products){
-    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(adaptive?173:177)
+    if(products===50000)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(factored?169:adaptive?173:177)
     else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
     expect(coverage.normalProductCells).toBeGreaterThan(0)
     expect(coverage.normalProductCells).toBeLessThanOrEqual(products)
@@ -430,8 +431,20 @@ it('reports continuous original whole-wall coverage through the real WASM worker
     for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
    }else if(adaptive)expect(coverage.pairs.filter(p=>!p.proven).length).toBeLessThanOrEqual(255)
    else expect(coverage.pairs.filter(p=>!p.proven)).toHaveLength(257)
-   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(products===50000?(adaptive?3916:3922):adaptive?36:42)
+   expect(coverage.cells).toBeLessThanOrEqual(1000);expect(coverage.normalSpans).toBeLessThanOrEqual(factored?20000:products===50000?(adaptive?3916:3922):adaptive?36:42)
    expect(coverage.pairs.some(p=>p.faces[0]===p.faces[1]&&!p.proven)).toBe(true)
+  }
+  if(factored){
+   expect(coverage.factoredExactWork).toBeGreaterThan(0);expect(coverage.factoredExactWork).toBeLessThanOrEqual(100000000)
+   expect(coverage.factoredQueries).toBeGreaterThan(0);expect(coverage.factoredQueries).toBeLessThanOrEqual(10000)
+   expect(coverage.factoredProductCells).toBeGreaterThan(0);expect(coverage.factoredProductCells).toBeLessThanOrEqual(10000)
+   const prior=results.at(-1)!
+   for(const pair of prior.pairs.filter(p=>p.proven))expect(coverage.pairs.find(p=>p.faces[0]===pair.faces[0]&&p.faces[1]===pair.faces[1])?.proven).toBe(true)
+   expect(coverage.pairs.filter(p=>p.reason==='source-wall-factored-normal-pair-excluded').map(p=>p.faces)).toEqual([[0,12],[0,13],[2,10],[3,10]])
+   for(const field of ['factoredExactWork','factoredQueries','factoredProductCells'] as const){
+    const missing=structuredClone(r);delete missing.wallCoverage![field]
+    expect(validSourceBody(sourceBodyExpectation(options),missing)).toBe(false)
+   }
   }
   if(adaptive){
    const a=coverage.adaptiveSelf!;expect(a.faces).toHaveLength(27)
