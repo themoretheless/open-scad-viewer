@@ -867,8 +867,50 @@ pub(crate) fn inspect_pair_bounds(
     Ok(out)
 }
 
+
+/// Exclude every chord in two point enclosures from the required endpoint
+/// normal angle. Callers must bind these enclosures to their original domains.
+/// Overlap, zero direction and numeric uncertainty never exclude a chord.
+pub fn endpoint_chord_excluded(
+    points: [[[f64; 2]; 3]; 2],
+    normals: [Option<[[f64; 2]; 3]>; 2],
+    max_sine_squared: f64,
+) -> Result<bool> {
+    check(max_sine_squared.is_finite() && (0. ..1.).contains(&max_sine_squared)
+        && points.iter().flatten().all(|r|r[0].is_finite() && r[1].is_finite() && r[0]<=r[1]),
+        "Finite original point enclosures and endpoint angular tolerance")?;
+    let mut chord=[[0.;2];3];
+    for k in 0..3 {
+        let difference=I::new(points[1][k][0],points[1][k][1])?
+            .sub(I::new(points[0][k][0],points[0][k][1])?)?;
+        chord[k]=[difference.lo,difference.hi];
+    }
+    for normal in normals.into_iter().flatten() {
+        match inspect_pair_bounds([normal,chord],max_sine_squared) {
+            Ok(report) if report.aligned==Some(false)=>return Ok(true),
+            Ok(_)=>{},
+            Err(error) if error.code=="NURBS_NUMERIC_ERROR"=>{},
+            Err(error)=>return Err(error),
+        }
+    }
+    Ok(false)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn endpoint_chord_requires_continuous_direction_exclusion() {
+        use super::endpoint_chord_excluded as excluded;
+        let origin=[[0.,0.];3];
+        let normal=Some([[0.,0.],[0.,0.],[1.,1.]]);
+        assert!(excluded([origin,[[2.,3.],[0.,0.],[0.,0.]]],[normal,normal],1e-6).unwrap());
+        assert!(!excluded([origin,[[0.,0.],[0.,0.],[2.,3.]]],[normal,normal],1e-6).unwrap());
+        assert!(!excluded([origin,[[-1.,1.];3]],[normal,normal],1e-6).unwrap());
+        assert!(!excluded([origin,[[2.,3.],[0.,0.],[0.,0.]]],[None,None],1e-6).unwrap());
+        assert!(excluded([origin,[[2.,3.],[0.,0.],[0.,0.]]],[None,normal],1e-6).unwrap());
+        assert!(excluded([origin,[[f64::NAN,3.],[0.,0.],[0.,0.]]],[normal,normal],1e-6).is_err());
+    }
+
     #[test]
     fn locally_centered_rational_derivatives_enclose_independent_evaluations() {
         for offset in [0.,1_000_000.] {

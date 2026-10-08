@@ -139,6 +139,7 @@ pub fn qualify<'a>(
             return Ok(out);
         }
         out.cells += 1;
+        let mut normal_components=[None;2];
         if let Some(sine) = threshold {
             let normals = match first_normals.inspect_other(
                 &mut second_normals,
@@ -159,6 +160,7 @@ pub fn qualify<'a>(
                 Err(error) => return Err(error),
             };
             out.normal_spans += normals.spans;
+            normal_components=normals.normal_components;
             if normals.aligned == Some(false) {
                 out.normal_products += 1;
                 continue;
@@ -221,6 +223,13 @@ pub fn qualify<'a>(
             rectangle_bounds(surfaces[1], uv[1])?,
         ];
         if enclosure_distance(&boxes[0], &boxes[1])?.0 >= minimum_mm {
+            continue;
+        }
+        // Positional enclosures and paid normal boxes refer to this same
+        // unchanged chart product. Oblique chords cannot witness wall thickness.
+        let points=std::array::from_fn(|side|std::array::from_fn(|axis|boxes[side][axis]));
+        if nurbs_core::normal_alignment::endpoint_chord_excluded(points,normal_components,limits.max_sine_squared)? {
+            out.normal_products+=1;
             continue;
         }
         let chosen = (0..2)
