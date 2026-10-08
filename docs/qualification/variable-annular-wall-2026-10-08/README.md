@@ -1033,3 +1033,23 @@ wall coverage and global minimum thickness remain unqualified.
 
 The closed-form prototype audit for 182d25e2 is running separately as
 annular-gram-closed-form-self-wall with unchanged limits and thresholds.
+
+## Direct lower Gram eigenvalue
+
+The closed-form upper-eigenvalue prototype audit completed at 1024/8192.
+Its JSON/log archives retain every case and original identity. No pole
+face qualified.
+
+Endpoint projection now independently lower-bounds the least eigenvalue
+using lower column norm squares and the absolute upper column dot product.
+The least eigenvalue increases with either diagonal and decreases with
+absolute off-diagonal. Outward arithmetic and an upward-rounded square
+root give a valid lower bound. The stronger of this and the separated
+minor / largest-eigenvalue bound is used. Zero lower bounds refuse.
+
+An independent interval-matrix oracle checks 72 nonzero chord directions
+across nine actual enclosed matrices. Its cosine upper is below .13,
+where the minor route alone exceeds .18. An actual aligned chord still
+returns an unexcluded bound of one. Sixteen chord/coverage and seven
+pole tests passed. The unchanged prototype audit runs as
+annular-gram-lower-self-wall; whole-face/global wall safety is unproven.

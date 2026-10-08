@@ -100,9 +100,6 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
             determinant = determinant.add(x)?;
         }
     }
-    if determinant.lo <= 0. {
-        return Ok(1.);
-    }
     let mut trace = I::point(0.);
     let mut normal_squared = I::point(0.);
     for k in 0..3 {
@@ -120,9 +117,13 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     // Gershgorin also bounds the largest eigenvalue of the 2x2 Gram
     // matrix. Nearly orthogonal columns need not pay the full trace bound.
     let mut diagonal = [I::point(0.); 2];
+    let mut diagonal_lower = [I::point(0.); 2];
     let mut off_diagonal = I::point(0.);
     for row in j {
         for a in 0..2 {
+            if let Some(lower) = separated_square(row[a])? {
+                diagonal_lower[a] = diagonal_lower[a].add(lower)?;
+            }
             let upper = row[a].lo.abs().max(row[a].hi.abs());
             diagonal[a] = diagonal[a].add(I::point(upper).mul(I::point(upper))?)?;
         }
@@ -142,6 +143,22 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
     let eigenvalue_upper = I::point(diagonal[0].hi).add(I::point(diagonal[1].hi))?
         .add(I::point(root_upper))?.mul(I::point(0.5))?.hi;
     largest = largest.min(eigenvalue_upper);
+    // lambda_min increases with either diagonal and decreases with |b|.
+    // Thus lower diagonal norms and the absolute off-diagonal upper bound
+    // yield a second independent lower bound for every enclosed matrix.
+    let lower_diagonals = diagonal_lower.map(|x| x.lo.max(0.));
+    let difference = I::point(lower_diagonals[0]).sub(I::point(lower_diagonals[1]))?;
+    let difference_upper = difference.lo.abs().max(difference.hi.abs());
+    let discriminant = I::point(difference_upper).mul(I::point(difference_upper))?
+        .add(I::point(off_upper).mul(I::point(off_upper))?.mul(I::point(4.))?)?;
+    let root_upper = discriminant.hi.sqrt().next_up();
+    let direct_lower = I::point(lower_diagonals[0]).add(I::point(lower_diagonals[1]))?
+        .sub(I::point(root_upper))?.mul(I::point(0.5))?.lo.max(0.);
+    let minor_lower = if determinant.lo > 0. && largest > 0. {
+        determinant.div(I::point(largest))?.lo.max(0.)
+    } else { 0. };
+    let singular_lower = direct_lower.max(minor_lower);
+    if singular_lower <= 0. { return Ok(1.); }
     let mut numerator = I::point(0.);
     for a in 0..2 {
         let mut dot = I::point(0.);
@@ -152,8 +169,7 @@ fn endpoint_matrix_cosine(j: [[I; 2]; 3], n: [I; 3]) -> Result<f64> {
         numerator = numerator.add(I::point(upper).mul(I::point(upper))?)?;
     }
     Ok(numerator
-        .mul(I::point(largest))?
-        .div(normal_squared.mul(determinant)?)?
+        .div(normal_squared.mul(I::point(singular_lower))?)?
         .hi
         .min(1.))
 }
@@ -565,6 +581,23 @@ pub fn qualify_rational_polar_rectangle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn direct_gram_lower_bound_covers_interval_matrix_chords_and_aligned_case() {
+        let j = [[I::new(0.9,1.1).unwrap(),I::point(0.)],
+            [I::point(0.),I::new(0.9,1.1).unwrap()], [I::point(0.);2]];
+        let n = [I::point(0.3),I::point(0.),I::point(1.)];
+        let upper = endpoint_matrix_cosine(j,n).unwrap();
+        assert!(upper < 0.13); // Minor / largest-eigenvalue alone exceeds .18.
+        for a in [0.9,1.,1.1] { for b in [0.9,1.,1.1] {
+            for x in [-1.,0.,1.] { for y in [-1.,0.,1.] {
+                if x==0. && y==0. { continue; }
+                let cosine = (0.3*a*x)*(0.3*a*x)/(1.09*((a*x)*(a*x)+(b*y)*(b*y)));
+                assert!(cosine <= upper);
+            }}
+        }}
+        assert_eq!(endpoint_matrix_cosine(j,[I::point(1.),I::point(0.),I::point(0.)])
+            .unwrap(),1.);
+    }
     #[test]
     fn unequal_gram_diagonals_enclose_sheared_independent_chords() {
         let j = [[I::point(1.), I::point(0.1)],
