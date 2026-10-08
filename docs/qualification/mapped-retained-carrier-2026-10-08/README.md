@@ -1382,3 +1382,20 @@ reference exceeded the existing 1e9 coordinate limit and was corrected.
 These source queries provide ingredients for a correlated bridge error
 bound; they are not yet integrated into the full correction. The annular
 regularity result remains 1001 pending rectangles until requalification.
+
+## Common source displacement in bridge derivatives
+
+The full correction's base and both side first jets now bound the difference
+between incident section positions by integrating one common source-profile
+derivative over the intervening coordinate interval. This enclosure is
+intersected with the independent position difference, so it cannot widen
+that term. Source pointer and axis identity are required. Public original
+bridge derivative behavior and its work allowance remain unchanged.
+
+The translated planar bridge reference proves a strictly narrower across
+derivative interval containing the independent exact value. Insufficient
+work refuses. The full corrected interior reference requires 57 spans and
+refuses 56. All 18 profile tests passed in 95.65 seconds, and both bridge
+tests passed in 0.01 seconds. The native annular requalification is running
+separately; the earlier 1001 pending rectangles remain the last qualified
+whole-domain diagnostic until that run completes.

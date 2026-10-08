@@ -208,10 +208,43 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
         across: [f64; 2],
         budget: usize,
     ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
+        self.derivative_bounds_impl(free, across, budget, false)
+    }
+    fn derivative_bounds_impl(
+        &self,
+        free: [f64; 2],
+        across: [f64; 2],
+        budget: usize,
+        common_difference: bool,
+    ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
         self.validate(free, across, budget)?;
-        let (data, spent) = self.data(free, budget, true)?;
+        let (data, mut spent) = self.data(free, budget, true)?;
         let Some(data) = data else {
             return Ok((None, spent));
+        };
+        let common = if common_difference {
+            let a = self.section(false);
+            let b = self.section(true);
+            check(
+                std::ptr::eq(a.profile(), b.profile()) && a.axis() == b.axis(),
+                "Require common source difference ownership",
+            )?;
+            if spent == budget {
+                return Ok((None, spent));
+            }
+            let (difference, used) = a.profile().coordinate_difference_bounds(
+                a.axis(),
+                [a.parameter(), b.parameter()],
+                free,
+                budget - spent,
+            )?;
+            spent += used;
+            let Some(difference) = difference else {
+                return Ok((None, spent));
+            };
+            Some(difference)
+        } else {
+            None
         };
         let t = I::new(across[0], across[1])?;
         let q = I::point(1.).sub(t)?;
@@ -249,8 +282,11 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
             }
         }
         for k in 0..3 {
-            let difference = I::new(data[1][0][k][0], data[1][0][k][1])?
+            let mut difference = I::new(data[1][0][k][0], data[1][0][k][1])?
                 .sub(I::new(data[0][0][k][0], data[0][0][k][1])?)?;
+            if let Some(common) = common {
+                difference = difference.intersect(common[k][0], common[k][1])?;
+            }
             across_d[k] = across_d[k].add(d[2].mul(difference)?)?;
         }
         Ok((
@@ -670,7 +706,9 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 return Ok((Some(out), used));
             }
         }
-        let (base, mut spent) = self.bridge.derivative_bounds(free, across, budget)?;
+        let (base, mut spent) = self
+            .bridge
+            .derivative_bounds_impl(free, across, budget, true)?;
         let Some(base) = base else {
             return Ok((None, spent));
         };
@@ -750,9 +788,12 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                         let (j, used) = if query == 5 {
                             (bridge_jet, 0)
                         } else {
-                            let (j, used) =
-                                self.bridge
-                                    .derivative_bounds(rail_free, across, budget - spent)?;
+                            let (j, used) = self.bridge.derivative_bounds_impl(
+                                rail_free,
+                                across,
+                                budget - spent,
+                                true,
+                            )?;
                             bridge_jet = j;
                             (j, used)
                         };
@@ -1140,6 +1181,51 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn common_source_difference_tightens_translated_bridge_jet() {
+        let surface = crate::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![1e8, 0., 0.], vec![1e8, 1., 0.]],
+                vec![vec![1e8 + 1., 0., 0.], vec![1e8 + 1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let profile = crate::normal_alignment::qualify_weight_profile(&surface, [0, 0], 4)
+            .unwrap()
+            .0
+            .unwrap();
+        let bridge = ProfileSectionBridge::new(
+            profile.section(0, 0.5).unwrap(),
+            profile.section(0, 0.75).unwrap(),
+            [0.25; 2],
+        )
+        .unwrap();
+        let old = bridge
+            .derivative_bounds([0.25, 0.75], [0.25, 0.75], 8)
+            .unwrap()
+            .0
+            .unwrap();
+        let (new, spent) = bridge
+            .derivative_bounds_impl([0.25, 0.75], [0.25, 0.75], 9, true)
+            .unwrap();
+        let new = new.unwrap();
+        assert_eq!(spent, 9);
+        assert!(new[1][0][0] <= 0.25 && new[1][0][1] >= 0.25);
+        assert!(new[1][0][1] - new[1][0][0] < old[1][0][1] - old[1][0][0]);
+        assert!(
+            bridge
+                .derivative_bounds_impl([0.25, 0.75], [0.25, 0.75], 8, true)
+                .unwrap()
+                .0
+                .is_none()
+        );
+    }
     #[test]
     fn principal_minors_admit_nonsymmetric_maps_and_refuse_orientation_failures() {
         let matrix = |m: [[f64; 2]; 2]| m.map(|row| row.map(I::point));

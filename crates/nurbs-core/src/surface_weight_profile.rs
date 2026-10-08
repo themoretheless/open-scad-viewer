@@ -1782,12 +1782,12 @@ mod tests {
             let exact=u*u*u*u*free*free;
             let full=corrected.enclose_with_transverse_correction([free;2],[across;2],32).unwrap().0.unwrap();
             assert!(full[2][0]<=exact && exact<=full[2][1]);
-            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[across;2],54).unwrap();
-            assert_eq!(spent,54);
+            let (jet,spent)=corrected.derivatives_with_transverse_correction([free;2],[across;2],57).unwrap();
+            assert_eq!(spent,57);
             let jet=jet.unwrap();
             let expected=[[0.,1.,2.*u.powi(4)*free],[0.25,0.,u.powi(3)*free*free]];
             for axis in 0..2 {for k in 0..3 {assert!(jet[axis][k][0]<=expected[axis][k] && expected[axis][k]<=jet[axis][k][1]);}}
-            assert!(corrected.derivatives_with_transverse_correction([free;2],[across;2],53).unwrap().0.is_none());
+            assert!(corrected.derivatives_with_transverse_correction([free;2],[across;2],56).unwrap().0.is_none());
 
             let old=corrected.enclose([free;2],[across;2],14).unwrap().0.unwrap();
             assert!(exact<old[2][0] || exact>old[2][1],"position-only correction must differ on this reference");
