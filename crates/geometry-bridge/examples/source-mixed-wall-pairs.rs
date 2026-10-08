@@ -113,8 +113,36 @@ fn main() {
                     Err(e)=>{attempts.push(json!({"error":e.to_string()}));break 'proposals;}
                 }
             }}}
+            // Nearest authored pcurve endpoint is a proposal only. Both
+            // original surfaces must prove the same world anchor exactly.
+            let proposed_uv:Vec<_>=(0..2).map(|side|{
+                regions[faces[side]].loops().iter().flatten().flat_map(|f|{
+                    let c=f.curve();[c.control_points.first(),c.control_points.last()]
+                }).flatten().filter(|p|p.len()==2).min_by(|a,b|{
+                    let score=|p:&Vec<f64>|(0..2).map(|k|{
+                        let mid=uv[side][k][0]*0.5+uv[side][k][1]*0.5;(p[k]-mid).abs()
+                    }).sum::<f64>();score(a).total_cmp(&score(b))
+                }).map(|p|[p[0],p[1]])
+            }).collect();
+            let mut anchored=Vec::new();
+            if let [Some(a),Some(b)]=proposed_uv.as_slice() {
+                let image=surfaces[0].evaluate(a[0],a[1]).unwrap().point;
+                let world=[image[0],image[1],image[2]];
+                let first=nurbs_core::surface_self_chord::qualify_surface_anchor(surfaces[0],*a,world,100000).unwrap();
+                let second=nurbs_core::surface_self_chord::qualify_surface_anchor(surfaces[1],*b,world,100000).unwrap();
+                anchored.push(json!({"uv":[a,b],"worldProposal":world,"exactAnchors":[first.0.is_some(),second.0.is_some()],"exactWork":[first.1,second.1]}));
+                if let (Some(first),Some(second))=(first.0,second.0) {
+                    'anchor_proposals:for x in -1..=1 {for y in -1..=1 {for z in -1..=1 {
+                        if x==0&&y==0&&z==0 {continue;}
+                        let projection=[x as f64,y as f64,z as f64];
+                        let (cert,used)=nurbs_core::surface_self_chord::qualify_anchored_chords([&first,&second],*uv,projection,1e-6,64).unwrap();
+                        let excluded=cert.is_some();anchored.push(json!({"projection":projection,"spans":used,"excluded":excluded}));
+                        if excluded {break 'anchor_proposals;}
+                    }}}
+                }
+            }
             json!({"uv":uv,"boundsMm":bounds,"boxDistanceMm":[distance.0,distance.1],
-                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans})
+                "cornerSides":corners,"cornerAttempts":attempts,"cornerSpans":corner_spans,"anchorAttempts":anchored})
         }).collect();
         results.push(json!({"faces":faces,"qualified":r.certificate.is_some(),"cells":r.cells,
             "spans":r.spans,"normalSpans":r.normal_spans,"normalProducts":r.normal_products,
