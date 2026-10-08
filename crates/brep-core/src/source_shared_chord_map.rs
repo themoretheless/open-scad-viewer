@@ -44,16 +44,21 @@ impl<'a> SharedBoundary<'a> {
     /// Returns exclusion, original derivative spans, and normal spans consumed.
     pub fn exclude_normal_chords(&self, rectangles:[[[f64;2];2];2], sine:f64,
         max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
-        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,false)
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,0)
     }
     /// Optional interval mean integration. It spends up to eight path pieces
     /// per transverse column and is not selected by automatic wall coverage.
     pub fn exclude_normal_chords_with_mean(&self, rectangles:[[[f64;2];2];2], sine:f64,
         max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
-        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,true)
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,1)
+    }
+    /// Correlated original rational secants where the source layout is supported.
+    pub fn exclude_normal_chords_with_secant(&self, rectangles:[[[f64;2];2];2], sine:f64,
+        max_spans:usize,max_normal_spans:usize)->Result<(bool,usize,usize)> {
+        self.exclude_normal_chords_impl(rectangles,sine,max_spans,max_normal_spans,2)
     }
     fn exclude_normal_chords_impl(&self, rectangles:[[[f64;2];2];2], sine:f64,
-        max_spans:usize,max_normal_spans:usize,mean:bool)->Result<(bool,usize,usize)> {
+        max_spans:usize,max_normal_spans:usize,method:usize)->Result<(bool,usize,usize)> {
         if !sine.is_finite()||!(0. ..1.).contains(&sine) {
             return Err(Error::new("BREP_SHARED_CHORD_MAP","Require squared sine in [0,1)"));
         }
@@ -69,7 +74,10 @@ impl<'a> SharedBoundary<'a> {
             let knots=[&s.knots_u,&s.knots_v];let degrees=[s.degree_u,s.degree_v];
             let direction=if self.fixed[side]==knots[axis][degrees[axis]] {1.}else{-1.};
             let sign=direction*if side==0 {-1.}else{1.};
-            let (components,used)=if mean {
+            let (components,used)=if method==2 {
+                let (proof,used)=nurbs_core::normal_alignment::boundary_secant_bounds(s,rectangles[side],axis,self.fixed[side],max_spans-spent)?;
+                (proof.map(|p|p.components()),used)
+            } else if method==1 {
                 let (proof,used)=nurbs_core::normal_alignment::boundary_mean_bounds(s,rectangles[side],axis,self.fixed[side],8,max_spans-spent)?;
                 (proof.map(|p|p.components()),used)
             } else {

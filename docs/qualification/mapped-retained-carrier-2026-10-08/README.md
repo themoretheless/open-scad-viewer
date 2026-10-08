@@ -360,3 +360,31 @@ it is not enabled in the automatic UI controller. The experiment artifact is
 native-only and does not replace the qualified 7525a8b0 WASM. The observed lack
 of gain motivates correlated secant bounds rather than a larger integration
 budget. No claim of wall completion or performance improvement follows.
+
+## Correlated original rational boundary secants
+
+Native `normal_alignment::boundary_secant_bounds` constructs the homogeneous
+Bernstein numerator H(u,v)W(u,b)-H(u,b)W(u,v), preserving its common free
+coordinate. Its boundary coefficient is symbolically zero by antisymmetry of
+the common polynomial product; the parameter factor is divided out in the
+Bernstein basis before interval evaluation. The resulting private source-bound
+certificate encloses the original coordinate secant and its boundary limit.
+It supports one original clamped integrated Bezier span of degree 1..8 and
+multiple original free-coordinate spans of degree up to 8. Unsupported layouts
+refuse. Missing free-span coverage refuses with charged work. No sampled
+coincidence or fitted coefficient authorizes the division.
+
+Three tests cover polynomial/rational analytic secants, boundary limits, UV
+transposition, multiple free knot spans, unsupported integrated layout and
+budget/invalid boundary controls. The admitted annular Body regression also
+checks the optional `exclude_normal_chords_with_secant` method.
+
+The native experiment selected secants in place of transverse derivative hulls:
+all aggregate counters and statuses are unchanged (17/45, 2247 pending products,
+62406 geometric spans, 12406 normal spans). No new complete proof is claimed.
+Automatic coverage therefore retains its previous path. The new secant method
+is available separately for further native qualification; shipped WASM remains
+7525a8b0. Original face 0 has a collapsed high-U control rail with unequal
+weights, whereas face 2 has no collapsed U rail. Further directional proof must
+handle this original zero factor explicitly rather than normalize a vector
+whose interval contains zero. The experiment artifact records this boundary.

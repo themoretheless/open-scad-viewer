@@ -39,6 +39,7 @@ pub mod surface_contact;
 pub mod surface_contact_search;
 pub mod radial_bounds;
 pub mod ray_surface;
+mod surface_boundary_secant;
 pub mod normal_alignment;
 pub mod factored_surface_normals;
 mod polar_surface_differential;
