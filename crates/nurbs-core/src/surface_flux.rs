@@ -8,6 +8,58 @@ pub struct Report {
     pub bound: Option<Bound>,
     pub spans: usize,
 }
+/// Conservative chart flux from outward position and first-derivative bounds.
+/// Derivatives must use the same parameters as `domain`. This numerical bound
+/// carries no chart, trim, orientation or solid-admission authority.
+pub fn bound_expression(
+    position: [[f64; 2]; 3],
+    derivatives: [[[f64; 2]; 3]; 2],
+    domain: [[f64; 2]; 2],
+    axis: usize,
+    origin: f64,
+    reversed: bool,
+) -> Result<Bound> {
+    check(axis < 3 && origin.is_finite(), "Choose a finite expression flux axis and origin")?;
+    let mut area = I::point(1.);
+    for range in domain {
+        I::new(range[0], range[1])?;
+        area = area.mul(I::point(range[1]).sub(I::point(range[0]))?)?;
+    }
+    let p = position.map(|r| I::new(r[0], r[1]));
+    let d = derivatives.map(|row| row.map(|r| I::new(r[0], r[1])));
+    // Validate every component, including coordinates absent from this axis.
+    for value in &p { value.clone()?; }
+    for row in &d { for value in row { value.clone()?; } }
+    let k = (axis + 1) % 3;
+    let l = (axis + 2) % 3;
+    let normal = d[0][k].clone()?.mul(d[1][l].clone()?)?
+        .sub(d[0][l].clone()?.mul(d[1][k].clone()?)?)?;
+    let mut density = p[axis].clone()?.sub(I::point(origin))?.mul(normal)?;
+    if reversed { density = density.mul(I::point(-1.))?; }
+    let integral = density.mul(area)?;
+    Ok(Bound { density: [density.lo, density.hi], integral: [integral.lo, integral.hi] })
+}
+
+#[cfg(test)]
+mod expression_tests {
+    use super::*;
+    #[test]
+    fn expression_flux_preserves_parameter_area_and_orientation() {
+        let p = [[0., 2.], [0., 3.], [5., 5.]];
+        let d = [[[1., 1.], [0., 0.], [0., 0.]], [[0., 0.], [1., 1.], [0., 0.]]];
+        let domain = [[0., 2.], [0., 3.]];
+        for reversed in [false, true] {
+            let b = bound_expression(p, d, domain, 2, 1., reversed).unwrap();
+            let expected = if reversed { -24. } else { 24. };
+            assert!(b.integral[0] <= expected && expected <= b.integral[1]);
+            assert!(b.integral[1] - b.integral[0] < 1e-10);
+        }
+        assert!(bound_expression(p, d, [[2., 0.], [0., 3.]], 2, 1., false).is_err());
+        assert!(bound_expression(p, d, domain, 3, 1., false).is_err());
+        let mut invalid = p; invalid[0] = [f64::NAN; 2];
+        assert!(bound_expression(invalid, d, domain, 2, 1., false).is_err());
+    }
+}
 fn magnitude(x: I) -> f64 {
     x.lo.abs().max(x.hi.abs())
 }
