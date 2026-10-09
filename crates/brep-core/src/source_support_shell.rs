@@ -1139,6 +1139,18 @@ mod tests {
         eprintln!("transition material XY bounds audit pending={} spans={} work={}",resumed.pending_pairs(),resumed.work().1,resumed.work().3);
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_MATERIAL_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
+        let before_transition_refinement=resumed.diagnostics();
+        let expanded=ContactAuditLimits{cells:16384,..cumulative};
+        expression.resume_transition_contact_audit(&mut resumed,expanded,256).unwrap();
+        assert!(resumed.pending_pairs()<=before_transition_refinement["pendingPairs"].as_u64().unwrap() as usize);
+        assert!(resumed.work().0<=expanded.cells && resumed.work().1<=expanded.spans && resumed.work().2<=expanded.domain_cells);
+        for (old,new) in before_transition_refinement["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if !new.support().faces.contains(&transition_id) {assert_eq!(old["reason"].as_str(),Some(new.reason()));}
+        }
+        eprintln!("focused transition support audit pending={} cells={} spans={}",resumed.pending_pairs(),resumed.work().0,resumed.work().1);
+        if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_SUPPORT_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

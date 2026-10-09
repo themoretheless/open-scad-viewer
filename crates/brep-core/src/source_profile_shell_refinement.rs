@@ -118,6 +118,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             limits,
             additional_cells_per_pair,
             include_changed,
+            false,
         )?;
         Ok(out)
     }
@@ -129,7 +130,16 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         limits: ContactAuditLimits,
         additional_cells_per_pair: usize,
     ) -> Result<()> {
-        self.resume_contact_audit_impl(audit, limits, additional_cells_per_pair, true)
+        self.resume_contact_audit_impl(audit, limits, additional_cells_per_pair, true, false)
+    }
+    /// Spend remaining support-query work only on pending transition pairs.
+    pub fn resume_transition_contact_audit<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        additional_cells_per_pair: usize,
+    ) -> Result<()> {
+        self.resume_contact_audit_impl(audit, limits, additional_cells_per_pair, true, true)
     }
     /// Requalify pending unchanged-source contacts with fresh linear-chart
     /// injectivity. Every computation is charged to the cumulative audit.
@@ -448,6 +458,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         limits: ContactAuditLimits,
         additional_cells_per_pair: usize,
         include_changed: bool,
+        only_transition: bool,
     ) -> Result<()> {
         validate_resume(
             self.faces.as_slice(),
@@ -455,15 +466,22 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             limits,
             additional_cells_per_pair,
         )?;
-        let candidate = |pair: &AuditedContactPair<'_>| {
-            matches!(pair.proof, PairContactProof::Pending)
-                && (include_changed
-                    || pair
-                        .support
-                        .faces
-                        .iter()
-                        .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_))))
-        };
+        let candidate =
+            |pair: &AuditedContactPair<'_>| {
+                matches!(pair.proof, PairContactProof::Pending)
+                    && if only_transition {
+                        matches!(
+                            pair.support.faces.map(|i| self.faces[i].kind()),
+                            [ShellFaceKind::Original(_), ShellFaceKind::Transition]
+                                | [ShellFaceKind::Transition, ShellFaceKind::Original(_)]
+                        )
+                    } else {
+                        include_changed
+                            || pair.support.faces.iter().all(|&i| {
+                                matches!(self.faces[i].kind(), ShellFaceKind::Original(_))
+                            })
+                    }
+            };
         let mut remaining = out.pairs.iter().filter(|p| candidate(p)).count();
         for pair in &mut out.pairs {
             if !candidate(pair) {
