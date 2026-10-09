@@ -323,7 +323,6 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'scripts/refresh-qualification-fingerprints-v68-v85.mjs': '3a44e4dea2e0ea300403d04c897402f49ae12bd1f50bdbc031b3c6e5a4f9daa7',
   'scripts/release-own-rust-v51.mjs': '0003bb91cae41613f9d1a407144fca216cb594b2253e6377b7aabdc107c0df32',
   'docs/qualification/historical-record-restoration-20261009.json': '312668fd2acedc2c756276b490d00fc1b2178d310fe3fc3db272769fe472392b',
-  'docs/qualification/artifacts/geometry-d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8.wasm': 'd883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8',
   'docs/qualification/native-integration-20261009/step-primary.json': 'b305ea3d6e9ad757f964e47570489f1caef02e83ffb143116dbae1e976934901',
   'docs/qualification/native-integration-20261009/step-profile.json': '541f3405de130a9d0b9df0f5f4f04a89c4bcbc9716126b250a0934c1a49f9eeb',
   'docs/qualification/native-integration-20261009/step-scalar.json': '25e742d3aa6daf8c8b638e56afb79fba23924990c556162f0249958b20ce1345',

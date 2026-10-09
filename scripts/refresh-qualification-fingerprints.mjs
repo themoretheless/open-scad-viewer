@@ -10,7 +10,7 @@ import { REFREEZE_CORE, digest, jsonBytes, shaRecord, bundleBytes, ordinaryBytes
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v69-g1-v86-refreeze-review.md'
-export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v52.json'
+export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v53.json'
 const MODULE_DELIVERY_PATHS = [
   'src/services/geometry/kernel.ts',
   'src/services/geometry/kernelCompilation.ts',
@@ -182,7 +182,7 @@ export function prepareQualificationRefresh({
     .map(item => /^geometry-v3-source-(\d+)$/u.exec(item.id)?.[1])
     .filter(Boolean).map(Number))
   const geometryArtifacts = [
-    { id: 'own-rust-cad-v52-evidence', path: OWN_RUST_EVIDENCE },
+    { id: 'own-rust-cad-v53-evidence', path: OWN_RUST_EVIDENCE },
     ...ownRust.sourceBundle.paths
       .filter(path => !existingArtifactPaths.has(path))
       .map(path => ({
