@@ -2141,6 +2141,13 @@ mod tests {
         let bridge=crate::normal_alignment::ProfileSectionBridge::new(
             p.section(0,0.5).unwrap(),p.section(0,0.75).unwrap(),[0.25;2]).unwrap();
         let corrected=bridge.constrain_original_rails(100).unwrap().0.unwrap();
+        for high in [false,true] {
+            let join=corrected.inspect_transverse_corrected_section_join(high,[0.,1.],100,1000).unwrap();
+            assert!(join.complete_regular);assert!(join.pending.is_empty());
+            assert_eq!(join.reason,"full-section-join-qualified");
+            let refused=corrected.inspect_transverse_corrected_section_join(high,[0.,1.],0,1000).unwrap();
+            assert!(!refused.complete_regular);assert!(!refused.pending.is_empty());
+        }
         for free in [0.2,0.5,0.8] {for across in [0.2,0.5,0.8] {
             let u=0.5+0.25*across;
             let exact=u*u*u*u*free*free;

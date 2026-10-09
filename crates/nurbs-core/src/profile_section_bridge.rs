@@ -1202,6 +1202,24 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
     /// Exact side first-jet identity is established by the full Hermite
     /// expression. Only regular source support normals remain to be enclosed.
     /// This checks the original profile support, not neighboring Body ownership.
+    pub fn inspect_transverse_corrected_section_join(&self,high:bool,free:[f64;2],
+        max_cells:usize,max_spans:usize
+    )->Result<crate::surface_weight_profile::TransitionRegularityReport> {
+        let across=[if high {1.}else{0.};2];
+        self.bridge.validate(free,across,max_spans)?;
+        let section=self.bridge.section(high);
+        // The full correction vanishes with its first jet at across=0/1;
+        // exact section position and the nonzero scaled transverse derivative
+        // are inherited. Coverage below proves source support regularity.
+        let mut domain=[[section.parameter();2];2];
+        domain[1-section.axis()]=free;
+        let mut report=section.profile().inspect_regularity(domain,max_cells,max_spans)?;
+        report.reason=if report.complete_regular {"full-section-join-qualified"}else{"full-section-join-regularity-unproven"};
+        Ok(report)
+    }
+
+    /// Cover a free-end rail of the exact full corrected expression. Body
+    /// ownership and neighbor angle remain separate qualification steps.
     pub fn inspect_transverse_corrected_side_join(
         &self,
         high: bool,

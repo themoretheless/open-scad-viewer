@@ -493,6 +493,7 @@ mod tests {
         let mut rooted_seams=Vec::new();
         let mut whole_seam_diagnostics=Vec::new();
         let mut pole_diagnostics=Vec::new();
+        let mut section_join_diagnostics=Vec::new();
         // Source pole limits are diagnostic only: they cannot admit the changed
         // profile, nor replace an undefined regular endpoint normal.
         let source_profile=proposal.profile(0).unwrap().source();
@@ -611,6 +612,17 @@ mod tests {
             }
             let original_bridge=make_bridge(proposal.profile(0).unwrap(),0.9);
             let original_bridge=original_bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+            for section_high in [false,true] {
+                let join=original_bridge.inspect_transverse_corrected_section_join(section_high,[0.,1.],1000,10000).unwrap();
+                eprintln!("transition section join high={section_high} qualified={} cells={} spans={} pending={:?}",
+                    join.complete_regular,join.cells,join.spans,join.pending);
+                assert!(join.complete_regular,"{}",join.reason);
+                if edge==0 {
+                    section_join_diagnostics.push(value_codec::json!({"high":section_high,
+                        "parameter":if section_high {0.9}else{0.75},"qualified":join.complete_regular,
+                        "cells":join.cells,"spans":join.spans,"pending":join.pending,"reason":join.reason}));
+                }
+            }
             let bound=rooted_seam.qualify_transition_side(&original_bridge,1000,1000).unwrap();
             let bound=bound.side.expect(bound.reason);
             assert!(std::ptr::eq(bound.rooted(),&rooted_seam));assert_eq!(bound.high_free_end(),high);
@@ -633,7 +645,8 @@ mod tests {
 
         }
         if let Ok(path)=std::env::var("BREP_EXPRESSION_WHOLE_SEAMS_PATH") {
-            std::fs::write(path,value_codec::json!({"seams":whole_seam_diagnostics,"poles":pole_diagnostics}).to_string()).unwrap();
+            std::fs::write(path,value_codec::json!({"seams":whole_seam_diagnostics,"poles":pole_diagnostics,
+                "sectionJoins":section_join_diagnostics}).to_string()).unwrap();
         }
         let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
             proposal.profile(0).unwrap().section(0,0.75).unwrap(),proposal.profile(0).unwrap().section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
@@ -658,6 +671,12 @@ mod tests {
             let parts=ends.each_ref().map(|end|end.split_source_use(100).unwrap().partition.unwrap());
             let section=boundary.propose_section_contours(high,[&parts[0],&parts[1]],100).unwrap();
             let section=section.section.expect(section.reason);
+            let join=section.qualify_join(1000,1000,10000).unwrap();
+            let joined=join.join.expect(join.reason);
+            assert!(std::ptr::eq(joined.section(),&section));
+            assert!(join.regularity.unwrap().pending.is_empty());
+            assert!(section.qualify_join(0,1000,10000).unwrap().join.is_none());
+            assert!(section.qualify_join(1000,0,10000).unwrap().join.is_none());
             assert!(std::ptr::eq(section.boundary(),&boundary));
             assert_eq!(section.edge_index(),if high {1}else{3});
             assert!(section.qualify_exterior(0,0).unwrap().region.is_none());
@@ -789,6 +808,32 @@ mod tests {
             "whole XY transition injectivity must be qualified");
         let xy_owned=boundary.qualify_face_from_rails(xy_projection,1000,2000,100000).unwrap();
         let xy_face=xy_owned.face.expect("fresh owned XY transition admission");
+        let wrong_centers=nurbs_core::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
+            control_points:vec![vec![0.,0.,0.];2],weights:vec![1.;2],periodic:false};
+        let wrong_radius=nurbs_core::curve::Curve{degree:1,knots:vec![0.,0.,1.,1.],
+            control_points:vec![vec![1.,0.];2],weights:vec![1.;2],periodic:false};
+        let radius=xy_face.qualify_radius(&wrong_centers,&wrong_radius,0.1,1000,100,10000).unwrap();
+        assert!(radius.certificate.is_none());
+        assert_eq!(radius.reason,"expression-radius-law-mismatch");
+        assert!(radius.coverage.unwrap().violation.unwrap().error_bounds[0]>0.1);
+        assert!(xy_face.qualify_radius(&wrong_centers,&wrong_radius,0.1,0,100,10000).unwrap().certificate.is_none());
+        assert!(xy_face.qualify_radius(&wrong_centers,&wrong_radius,0.1,1000,0,10000).unwrap().certificate.is_none());
+        let authored=crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
+        let mut reversed=authored.surface.clone();reversed.control_points.reverse();reversed.weights.reverse();
+        assert_eq!(proposal.profile(0).unwrap().source(),&reversed,"radius law must match the actual original parameter orientation");
+        let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
+        let law_domains=[[0.75,0.9];2];
+        let radius=xy_face.qualify_radius_on_domains(&centers,&law,law_domains,1e-4,1000,1000,100000).unwrap();
+        let coverage=radius.coverage.unwrap();
+        eprintln!("owned transition authored radius qualified={} reason={} cells={} spans={} pending={} acceptedError={}",
+            radius.certificate.is_some(),radius.reason,coverage.cells,coverage.spans,coverage.pending.len(),coverage.accepted_error_upper);
+        if let Ok(path)=std::env::var("BREP_EXPRESSION_RADIUS_PATH") {
+            std::fs::write(path,value_codec::json!({"qualified":radius.certificate.is_some(),"reason":radius.reason,
+                "tolerance":1e-4,"lawDomains":law_domains,"cells":coverage.cells,"spans":coverage.spans,
+                "acceptedErrorUpper":coverage.accepted_error_upper,"pending":coverage.pending,
+                "violation":coverage.violation.map(|v|value_codec::json!({"domain":v.domain,"errorBounds":v.error_bounds,
+                    "squaredResidual":v.squared_residual}))}).to_string()).unwrap();
+        }
         assert!(std::ptr::eq(xy_face.boundary(),&boundary));
         assert_eq!(xy_face.projection(),xy_projection);
         assert!(xy_face.qualify_original_xy_region(1e-8,0,0).unwrap().certificate.is_none());

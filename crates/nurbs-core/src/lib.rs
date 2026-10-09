@@ -42,6 +42,7 @@ pub mod ray_surface;
 mod surface_boundary_secant;
 mod surface_weight_profile;
 mod profile_section_bridge;
+pub mod profile_expression_radius;
 pub mod normal_alignment;
 pub mod factored_surface_normals;
 mod polar_surface_differential;

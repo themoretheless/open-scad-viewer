@@ -266,7 +266,36 @@ impl<'s,'p,'b> TransitionBoundary<'s,'p,'b> {
 /// Two complementary original source-chart contours at one owned section.
 /// Selection of the retained region and profile-face admission remain separate.
 pub struct TransitionSection<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,high:bool,contours:CutContourProposal}
+/// Owned exact section first-jet identity with complete regularity coverage.
+/// Does not admit the whole shell, radius or wall thickness.
+pub struct TransitionSectionJoin<'j,'a,'s,'p,'b> {section:&'j TransitionSection<'a,'s,'p,'b>}
+impl TransitionSectionJoin<'_,'_,'_,'_,'_> {
+    pub fn section(&self)->&TransitionSection<'_,'_,'_,'_> {self.section}
+}
+pub struct TransitionSectionJoinReport<'j,'a,'s,'p,'b> {
+    pub join:Option<TransitionSectionJoin<'j,'a,'s,'p,'b>>,
+    pub regularity:Option<nurbs_core::normal_alignment::TransitionRegularityReport>,
+    pub reason:&'static str,
+}
 impl<'a,'s,'p,'b> TransitionSection<'a,'s,'p,'b> {
+    /// Rebuild this section's owned full corrected bridge recipe and cover
+    /// the entire natural section boundary before issuing join authority.
+    pub fn qualify_join<'j>(&'j self,controls:usize,cells:usize,spans:usize)
+    ->Result<TransitionSectionJoinReport<'j,'a,'s,'p,'b>> {
+        let root=self.boundary.rooted[0];
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let first=profile.section(root.axis,root.parameters[0])?;
+        let last=profile.section(root.axis,root.parameters[1])?;
+        let range=first.range();let width=root.parameters[1]-root.parameters[0];
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(first,last,[width;2])?;
+        let (bridge,_)=bridge.constrain_original_rails(controls)?;
+        let Some(bridge)=bridge else {return Ok(TransitionSectionJoinReport{join:None,regularity:None,
+            reason:"profile-section-join-recipe-unproven"});};
+        let regularity=bridge.inspect_transverse_corrected_section_join(self.high,range,cells,spans)?;
+        let join=regularity.complete_regular.then_some(TransitionSectionJoin{section:self});
+        let reason=if join.is_some() {"profile-section-join-qualified"}else{"profile-section-join-regularity-unproven"};
+        Ok(TransitionSectionJoinReport{join,regularity:Some(regularity),reason})
+    }
     /// Whole-source convex hulls and monotonic implicit-root side proofs.
     pub fn qualify_exterior<'r>(&'r self,max_controls:usize,max_driver_cells:usize)->Result<ExteriorSectionReport<'r,'a,'s,'p,'b>> {
         use crate::source_boundary_fragment::{Endpoint,Role};
@@ -376,7 +405,48 @@ pub struct TransitionSectionReport<'a,'s,'p,'b> {pub section:Option<TransitionSe
 /// Admitted embedded transition expression with its root-owned contour.
 /// This does not establish closure or embedding of the surrounding Body.
 pub struct TransitionFace<'a,'s,'p,'b> {boundary:&'a TransitionBoundary<'s,'p,'b>,projection:[[f64;3];2]}
+/// Complete radius-law coverage attached to the admitted exact face recipe.
+/// Normal alignment, shell contacts and wall thickness remain separate gates.
+pub struct TransitionRadius<'f,'a,'s,'p,'b> {
+    face:&'f TransitionFace<'a,'s,'p,'b>,centers:nurbs_core::curve::Curve,
+    radius:nurbs_core::curve::Curve,law_domains:[[f64;2];2],error_upper:f64,
+}
+impl TransitionRadius<'_,'_,'_,'_,'_> {
+    pub fn face(&self)->&TransitionFace<'_,'_,'_,'_> {self.face}
+    pub fn centers(&self)->&nurbs_core::curve::Curve {&self.centers}
+    pub fn radius(&self)->&nurbs_core::curve::Curve {&self.radius}
+    pub fn error_upper(&self)->f64 {self.error_upper}
+    pub fn law_domains(&self)->[[f64;2];2] {self.law_domains}
+}
+pub struct TransitionRadiusReport<'f,'a,'s,'p,'b> {
+    pub certificate:Option<TransitionRadius<'f,'a,'s,'p,'b>>,
+    pub coverage:Option<nurbs_core::profile_expression_radius::Report>,pub reason:&'static str,
+}
 impl<'a,'s,'p,'b> TransitionFace<'a,'s,'p,'b> {
+    pub fn qualify_radius<'f>(&'f self,centers:&nurbs_core::curve::Curve,radius:&nurbs_core::curve::Curve,
+        tolerance:f64,controls:usize,cells:usize,spans:usize
+    )->Result<TransitionRadiusReport<'f,'a,'s,'p,'b>> {
+        centers.validate()?;radius.validate()?;
+        self.qualify_radius_on_domains(centers,radius,[centers.domain(),radius.domain()],tolerance,controls,cells,spans)
+    }
+    pub fn qualify_radius_on_domains<'f>(&'f self,centers:&nurbs_core::curve::Curve,radius:&nurbs_core::curve::Curve,
+        law_domains:[[f64;2];2],tolerance:f64,controls:usize,cells:usize,spans:usize
+    )->Result<TransitionRadiusReport<'f,'a,'s,'p,'b>> {
+        let root=self.boundary.rooted[0];
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let first=profile.section(root.axis,root.parameters[0])?;
+        let last=profile.section(root.axis,root.parameters[1])?;
+        let width=root.parameters[1]-root.parameters[0];
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(first,last,[width;2])?;
+        let (bridge,_)=bridge.constrain_original_rails(controls)?;
+        let Some(bridge)=bridge else {return Ok(TransitionRadiusReport{certificate:None,coverage:None,
+            reason:"profile-transition-radius-recipe-unproven"});};
+        let coverage=bridge.inspect_radius_on_domains(centers,radius,law_domains,tolerance,cells,spans)?;
+        let certificate=coverage.complete.then(||TransitionRadius{face:self,centers:centers.clone(),
+            radius:radius.clone(),law_domains,error_upper:coverage.accepted_error_upper});
+        let reason=coverage.reason;
+        Ok(TransitionRadiusReport{certificate,coverage:Some(coverage),reason})
+    }
     /// Fresh retained-edge admission followed by opposite directed incidence.
     pub fn qualify_rail_incidence<'f>(&'f self,work_per_rail:u64,drivers_per_rail:usize,fragments_per_rail:usize)->Result<TransitionRailReport<'f,'a,'s,'p,'b>> {
         let mut out=TransitionRailReport{incidence:None,work:0,reason:"profile-transition-rail-incidence-unproven"};
