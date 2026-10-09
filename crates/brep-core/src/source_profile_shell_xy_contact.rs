@@ -249,7 +249,11 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             }
             let report = crate::source_planar_material_hull::certify(shell, original, max_work)?;
             out.exact_work = report.exact_work;
-            if let Some(hull) = report.certificate {
+            let Some(hull) = report.certificate else {
+                out.reason = report.reason;
+                return Ok(out);
+            };
+            {
                 let mut b = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
                 for point in hull.points() {
                     for a in 0..2 {
