@@ -966,6 +966,7 @@ mod tests {
         eprintln!("exact expression clearance complete={} lower={:?} cells={} spans={} pending={}",
             gap.complete,gap.lower_mm,gap.cells,gap.spans,gap.pending.len());
         assert_eq!(gap.complete,gap.pending.is_empty());
+        assert!(gap.complete,"whole transition/inner-face clearance must qualify");
         assert_eq!(gap.complete,gap_certificate.is_some());
         if let Some(proof)=gap_certificate {
             assert!(std::ptr::eq(proof.shell(),&expression));

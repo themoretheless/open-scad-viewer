@@ -230,6 +230,53 @@ mod tests {
             .unwrap();
         let net = net.unwrap();
         assert!(spans <= 100000 && work <= 1000000);
+        let centers = vec![
+            vec![I::point(0.), I::point(0.), I::point(0.), I::point(1.)],
+            vec![I::point(1.), I::point(0.), I::point(0.), I::point(1.)],
+        ];
+        let radius = vec![vec![I::point(1.), I::point(0.), I::point(1.)]];
+        let mut radius_work = 0;
+        let mut reason = "unverified";
+        let residual = crate::moving_radius::bound_coefficient_nets(
+            &net,
+            &centers,
+            &radius,
+            1,
+            1.,
+            &mut radius_work,
+            100000000,
+            &mut reason,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(residual.0[0] <= 0. && residual.0[1] >= 0.);
+        assert!(residual.1 < 1e-6, "coefficient radius error {}", residual.1);
+        let wrong = vec![vec![I::point(2.), I::point(0.), I::point(1.)]];
+        let mismatch = crate::moving_radius::bound_coefficient_nets(
+            &net,
+            &centers,
+            &wrong,
+            1,
+            2.,
+            &mut radius_work,
+            100000000,
+            &mut reason,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(mismatch.0[0] <= -3. && mismatch.0[1] >= -3. && mismatch.0[1] < 0.);
+        assert!(crate::moving_radius::bound_coefficient_nets(
+            &net,
+            &centers,
+            &radius,
+            1,
+            1.,
+            &mut 0,
+            0,
+            &mut reason
+        )
+        .unwrap()
+        .is_none());
         assert_eq!([net.len(), net[0].len()], [6, 5]);
         for free in [0.1, 0.3, 0.7, 0.9] {
             for across in [0.2, 0.5, 0.8] {

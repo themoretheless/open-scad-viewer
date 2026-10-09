@@ -167,13 +167,33 @@ fn cell(
     }
     let centers = curve_net(c, cs, uv[0], origin)?;
     let radius = curve_net(r, rs, uv[0], &[0., 0.])?;
+    let rlo = r.control_points.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min);
+    bound_coefficient_nets(&net,&centers,&radius,0,rlo,work,max,reason)
+}
+/// Correlated homogeneous polynomial residual. Caller-owned interval nets
+/// carry no geometry admission. Both law nets vary along the selected axis.
+pub(crate) fn bound_coefficient_nets(
+    net:&[Vec<[I;4]>],centers:&[Vec<I>],radius:&[Vec<I>],axis:usize,rlo:f64,
+    work:&mut u64,max:u64,reason:&mut &'static str,
+)->Result<Option<([f64;2],f64)>> {
+    check(axis<2 && !net.is_empty() && !net[0].is_empty()
+        && net.iter().all(|r|r.len()==net[0].len()) && !centers.is_empty() && !radius.is_empty()
+        && centers.iter().all(|h|h.len()==4) && radius.iter().all(|h|h.len()==3)
+        && rlo.is_finite() && rlo>=0. && *work<=max,
+        "Match homogeneous radius coefficient nets and work")?;
+    let degrees=[net.len()-1,net[0].len()-1];
+    if (0..2).any(|a|2*(degrees[a]+if a==axis {centers.len()+radius.len()-2}else{0})>48) {
+        *reason="moving-radius-degree-unproven";return Ok(None);
+    }
     let sp = |k| {
         net.iter()
             .map(|row| row.iter().map(|h| h[k]).collect())
             .collect::<Poly>()
     };
-    let cp = |k| centers.iter().map(|h| vec![h[k]]).collect::<Poly>();
-    let rp = |k| radius.iter().map(|h| vec![h[k]]).collect::<Poly>();
+    let cp = |k| if axis==0 {centers.iter().map(|h|vec![h[k]]).collect::<Poly>()}
+        else {vec![centers.iter().map(|h|h[k]).collect()]};
+    let rp = |k| if axis==0 {radius.iter().map(|h|vec![h[k]]).collect::<Poly>()}
+        else {vec![radius.iter().map(|h|h[k]).collect()]};
     macro_rules! product {
         ($a:expr,$b:expr) => {
             match mul(&$a, &$b, work, max)? {
@@ -214,11 +234,6 @@ fn cell(
         }
     }
     let max_residual = bounds[0].abs().max(bounds[1].abs());
-    let rlo = r
-        .control_points
-        .iter()
-        .map(|p| p[0])
-        .fold(f64::INFINITY, f64::min);
     let mut error = max_residual.sqrt().next_up();
     if rlo > 0. {
         error = error.min(I::point(max_residual).div(I::point(rlo))?.hi);
