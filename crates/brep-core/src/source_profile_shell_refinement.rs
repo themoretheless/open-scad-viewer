@@ -192,6 +192,73 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+    /// Fresh strict separators, with no inheritance from Body diagnostics.
+    pub fn qualify_remaining_original_hulls<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && p.support
+                    .faces
+                    .iter()
+                    .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_)))
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let budget = (limits.exact_work - audit.exact_work) / remaining as u64;
+            remaining -= 1;
+            if budget == 0 {
+                continue;
+            }
+            let report = self.qualify_original_hull_contact(pair.support.faces, budget)?;
+            audit.exact_work += report.exact_work;
+            pair.reason = report.reason;
+            if let Some(c) = report.certificate {
+                pair.proof = PairContactProof::Hull(c);
+            }
+        }
+        Ok(())
+    }
+    pub fn qualify_remaining_original_poles<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && p.support
+                    .faces
+                    .iter()
+                    .all(|&i| matches!(self.faces[i].kind(), ShellFaceKind::Original(_)))
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let work = (limits.exact_work - audit.exact_work) / remaining as u64;
+            let driver = (limits.driver_cells - audit.driver_cells) / remaining;
+            remaining -= 1;
+            if work == 0 || driver == 0 {
+                continue;
+            }
+            let report = self.qualify_original_pole_contact(pair.support.faces, work, driver)?;
+            audit.exact_work += report.exact_work;
+            audit.driver_cells += report.driver_cells;
+            pair.reason = report.reason;
+            if let Some(c) = report.certificate {
+                pair.proof = PairContactProof::Pole(c);
+            }
+        }
+        Ok(())
+    }
     fn resume_contact_audit_impl<'x>(
         &'x self,
         out: &mut ShellContactAudit<'x>,

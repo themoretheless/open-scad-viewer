@@ -454,3 +454,155 @@ mod refinement_tests {
         ));
     }
 }
+
+/// Fresh strict hull separation transferred only over complete unchanged regions.
+pub struct OriginalHullContact<'x> {
+    owners: [&'x ShellFace; 2],
+    source: crate::source_hull_separation::Certificate,
+}
+impl OriginalHullContact<'_> {
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn source(&self) -> &crate::source_hull_separation::Certificate {
+        &self.source
+    }
+}
+pub struct OriginalHullReport<'x> {
+    pub certificate: Option<OriginalHullContact<'x>>,
+    pub exact_work: u64,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn qualify_original_hull_contact(
+        &self,
+        faces: [usize; 2],
+        max_work: u64,
+    ) -> Result<OriginalHullReport<'_>> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|&i| i >= self.faces.len())
+            || max_work > 100000000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound distinct owned hull pair work",
+            ));
+        }
+        let mut out = OriginalHullReport {
+            certificate: None,
+            exact_work: 0,
+            reason: "expression-original-contact-face-changed",
+        };
+        let Some(original) = self.equivalent_original_pair(faces) else {
+            return Ok(out);
+        };
+        if max_work == 0 {
+            out.reason = "expression-original-hull-work-limit";
+            return Ok(out);
+        }
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let shell = root.restricted.proposal.body.geometry().shell();
+        let report = crate::source_hull_separation::certify_shell(shell, original, max_work)?;
+        out.exact_work = report.exact_work;
+        out.reason = report.reason;
+        if let Some(source) = report.certificate {
+            out.certificate = Some(OriginalHullContact {
+                owners: faces.map(|i| &self.faces[i]),
+                source,
+            });
+            out.reason = "expression-unchanged-hull-separation-qualified";
+        }
+        Ok(out)
+    }
+}
+
+pub enum OriginalPoleProof {
+    Paired(crate::source_pole_paired_contact::Certificate),
+    Planar(crate::source_pole_planar_contact::Certificate),
+}
+pub struct OriginalPoleContact<'x> {
+    owners: [&'x ShellFace; 2],
+    proof: OriginalPoleProof,
+}
+impl OriginalPoleContact<'_> {
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn proof(&self) -> &OriginalPoleProof {
+        &self.proof
+    }
+}
+pub struct OriginalPoleReport<'x> {
+    pub certificate: Option<OriginalPoleContact<'x>>,
+    pub exact_work: u64,
+    pub driver_cells: usize,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    /// Fresh pole/fiber contact authority over identical complete original regions.
+    pub fn qualify_original_pole_contact(
+        &self,
+        faces: [usize; 2],
+        max_work: u64,
+        max_driver: usize,
+    ) -> Result<OriginalPoleReport<'_>> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|&i| i >= self.faces.len())
+            || max_work > 100000000
+            || max_driver > 100000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound distinct original pole pair work",
+            ));
+        }
+        let mut out = OriginalPoleReport {
+            certificate: None,
+            exact_work: 0,
+            driver_cells: 0,
+            reason: "expression-original-contact-face-changed",
+        };
+        let Some(original) = self.equivalent_original_pair(faces) else {
+            return Ok(out);
+        };
+        if max_work == 0 || max_driver == 0 {
+            out.reason = "expression-original-pole-work-limit";
+            return Ok(out);
+        }
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let shell = root.restricted.proposal.body.geometry().shell();
+        let paired =
+            crate::source_pole_paired_contact::certify(shell, original, max_work, max_driver)?;
+        out.exact_work += paired.exact_work;
+        out.driver_cells += paired.driver_cells;
+        out.reason = paired.reason;
+        if let Some(c) = paired.certificate {
+            out.certificate = Some(OriginalPoleContact {
+                owners: faces.map(|i| &self.faces[i]),
+                proof: OriginalPoleProof::Paired(c),
+            });
+            out.reason = "expression-original-paired-pole-contact-qualified";
+            return Ok(out);
+        }
+        if out.exact_work == max_work || out.driver_cells == max_driver {
+            return Ok(out);
+        }
+        let planar = crate::source_pole_planar_contact::certify(
+            shell,
+            original,
+            max_work - out.exact_work,
+            max_driver - out.driver_cells,
+        )?;
+        out.exact_work += planar.exact_work;
+        out.driver_cells += planar.driver_cells;
+        out.reason = planar.reason;
+        if let Some(c) = planar.certificate {
+            out.certificate = Some(OriginalPoleContact {
+                owners: faces.map(|i| &self.faces[i]),
+                proof: OriginalPoleProof::Planar(c),
+            });
+            out.reason = "expression-original-planar-pole-contact-qualified";
+        }
+        Ok(out)
+    }
+}

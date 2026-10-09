@@ -1563,3 +1563,7 @@ pub use projected_region::{OriginalProjectedRegion,OriginalProjectedRegionReport
 pub use assembled_shell::{TransitionRuledContact,TransitionRuledReport};
 
 pub use assembled_shell::{TransitionSectionContact,TransitionSectionContactReport};
+
+pub use assembled_shell::{OriginalHullContact, OriginalHullReport};
+
+pub use assembled_shell::{OriginalPoleContact, OriginalPoleProof, OriginalPoleReport};

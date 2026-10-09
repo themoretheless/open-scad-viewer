@@ -876,9 +876,11 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),151);
-        let mut kinds=[0usize;8];
+        let mut kinds=[0usize;10];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
+                PairContactProof::Hull(c)=>(8,Some(c.owners())),
+                PairContactProof::Pole(c)=>(9,Some(c.owners())),
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
                 PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
@@ -889,7 +891,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[151,162,12,23,54,1,1,2]);
+        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(151));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -971,6 +973,38 @@ mod tests {
         assert!(cells<=cumulative.cells && spans<=cumulative.spans && domains<=cumulative.domain_cells && work<=cumulative.exact_work && drivers<=cumulative.driver_cells);
         eprintln!("linear-chart contact audit pending={} linearCells={} spans={} work={} drivers={}",resumed.pending_pairs(),resumed.linear_cells(),spans,work,drivers);
         if let Ok(path)=std::env::var("BREP_CONTACT_LINEAR_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_hulls=resumed.diagnostics();
+        let prior_pending=resumed.pending_pairs();
+        let spent_work=resumed.work().3;
+        expression.qualify_remaining_original_hulls(&mut resumed,ContactAuditLimits{exact_work:spent_work,..cumulative}).unwrap();
+        assert_eq!(resumed.diagnostics(),before_hulls);
+        assert!(expression.qualify_original_hull_contact([0,0],1000).is_err());
+        assert!(expression.qualify_original_hull_contact([1,2],0).unwrap().certificate.is_none());
+        expression.qualify_remaining_original_hulls(&mut resumed,cumulative).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work);
+        for (old,new) in before_hulls["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::Hull(c)=new.proof() {for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}}
+        }
+        eprintln!("fresh hull contact audit pending={} work={}",resumed.pending_pairs(),resumed.work().3);
+        if let Ok(path)=std::env::var("BREP_CONTACT_HULL_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_poles=resumed.diagnostics();
+        let prior_pending=resumed.pending_pairs();
+        let spent_work=resumed.work().3;
+        expression.qualify_remaining_original_poles(&mut resumed,ContactAuditLimits{exact_work:spent_work,..cumulative}).unwrap();
+        assert_eq!(resumed.diagnostics(),before_poles);
+        assert!(expression.qualify_original_pole_contact([1,1],1000,1000).is_err());
+        assert!(expression.qualify_original_pole_contact([1,2],1000,0).unwrap().certificate.is_none());
+        expression.qualify_remaining_original_poles(&mut resumed,cumulative).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work && resumed.work().4<=cumulative.driver_cells);
+        for (old,new) in before_poles["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::Pole(c)=new.proof() {for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}}
+        }
+        eprintln!("fresh pole contact audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
+        if let Ok(path)=std::env::var("BREP_CONTACT_POLE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);

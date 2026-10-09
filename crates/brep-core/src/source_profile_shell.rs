@@ -660,7 +660,7 @@ mod original_contact;
 pub use original_contact::{
     OriginalAdditionalContact, OriginalAdditionalProof, OriginalAdditionalReport,
     OriginalContactReport, OriginalFiberContact, OriginalFiberProof, OriginalFiberReport,
-    OriginalPlanarContact,
+    OriginalPlanarContact, OriginalHullContact, OriginalHullReport, OriginalPoleContact, OriginalPoleProof, OriginalPoleReport,
 };
 #[path = "source_profile_shell_audit.rs"]
 mod audit;

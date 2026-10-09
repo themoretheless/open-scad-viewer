@@ -13,6 +13,8 @@ pub struct ContactAuditLimits {
     pub tolerance_uv: f64,
 }
 pub enum PairContactProof<'x> {
+    Pole(OriginalPoleContact<'x>),
+    Hull(OriginalHullContact<'x>),
     Pending,
     Excluded,
     Planar(OriginalPlanarContact<'x>),
@@ -25,6 +27,8 @@ pub enum PairContactProof<'x> {
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
         match self {
+            Self::Pole(_) => "pole-contact",
+            Self::Hull(_) => "hull-separated",
             Self::Pending => "pending",
             Self::Excluded => "excluded",
             Self::Planar(_) => "planar",
