@@ -1486,12 +1486,12 @@ mod tests {
             let refused=geometry.inspect_volume(volume_limits(0)).unwrap();
             assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
             let volume=geometry.inspect_volume(volume_limits(512)).unwrap();
-            eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.reason);
+            eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} planarFaces={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.planar_faces,volume.reason);
             assert!(volume.cells<=512 && volume.spans<=200000 && volume.domain_cells<=10000);
             if let Some([lo,hi])=volume.signed_bounds {assert!(lo.is_finite() && hi.is_finite() && lo<=hi);}
             if volume.complete {let [lo,hi]=volume.signed_bounds.unwrap();assert!(hi-lo<=20.);}
             if let Ok(path)=std::env::var("BREP_EXPRESSION_VOLUME_PATH") {
-                std::fs::write(path,value_codec::json!({"signedBounds":volume.signed_bounds,"complete":volume.complete,"cells":volume.cells,"spans":volume.spans,"domainCells":volume.domain_cells,"reason":volume.reason,"uncertainFace":volume.uncertain_face,"uncertainDomain":volume.uncertain_domain}).to_string()).unwrap();
+                std::fs::write(path,value_codec::json!({"signedBounds":volume.signed_bounds,"complete":volume.complete,"cells":volume.cells,"spans":volume.spans,"domainCells":volume.domain_cells,"planarFaces":volume.planar_faces,"reason":volume.reason,"uncertainFace":volume.uncertain_face,"uncertainDomain":volume.uncertain_domain}).to_string()).unwrap();
             }
         }
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
