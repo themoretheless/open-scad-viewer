@@ -38,7 +38,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             exact_work: 0,
             reason: "transition-xy-image-owner-unproven",
         };
-        if !std::ptr::eq(region.face(), self.assembly.patch.rails.face) {
+        // TransitionFace stores this immutable boundary plus a proof projection.
+        // Different admitted projections retain the same transition expression.
+        if !std::ptr::eq(
+            region.face().boundary(),
+            self.assembly.patch.rails.face.boundary(),
+        ) {
             return Ok(out);
         }
         let root = self.assembly.patch.rails.face.boundary.rooted[0];
@@ -149,7 +154,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             spans: 0,
             reason: "transition-xy-bounds-owner-unproven",
         };
-        if !std::ptr::eq(region.face(), self.assembly.patch.rails.face) {
+        // TransitionFace stores this immutable boundary plus a proof projection.
+        // Different admitted projections retain the same transition expression.
+        if !std::ptr::eq(
+            region.face().boundary(),
+            self.assembly.patch.rails.face.boundary(),
+        ) {
             return Ok(out);
         }
         let root = self.assembly.patch.rails.face.boundary.rooted[0];

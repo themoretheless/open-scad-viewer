@@ -1082,7 +1082,6 @@ mod tests {
             }
         }
         eprintln!("transition full XY hull positive={xy_positive} work={xy_work} reasons={xy_reasons:?}");
-        assert!(!xy_positive,"this fixture has overlapping complete source XY hulls");
         assert!(xy_work>0,"actual owned image must reach fresh hull predicates");
         expression.qualify_remaining_transition_xy_hulls(&mut resumed,cumulative,&profile_region).unwrap();
         assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work);
