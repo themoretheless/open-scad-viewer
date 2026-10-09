@@ -686,3 +686,97 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         Ok(out)
     }
 }
+
+pub enum OriginalBoundaryProof {
+    Paired(crate::source_paired_fiber_contact::Certificate),
+    Ruled(crate::source_ruled_projection_contact::Certificate),
+}
+pub struct OriginalBoundaryContact<'x> {
+    owners: [&'x ShellFace; 2],
+    proof: OriginalBoundaryProof,
+}
+impl OriginalBoundaryContact<'_> {
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn proof(&self) -> &OriginalBoundaryProof {
+        &self.proof
+    }
+}
+pub struct OriginalBoundaryReport<'x> {
+    pub certificate: Option<OriginalBoundaryContact<'x>>,
+    pub exact_work: u64,
+    pub driver_cells: usize,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn qualify_original_boundary_contact(
+        &self,
+        faces: [usize; 2],
+        tolerance: f64,
+        max_work: u64,
+        max_driver: usize,
+    ) -> Result<OriginalBoundaryReport<'_>> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|&i| i >= self.faces.len())
+            || !tolerance.is_finite()
+            || tolerance <= 0.
+            || max_work > 100000000
+            || max_driver > 100000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound original boundary contact work",
+            ));
+        }
+        let mut out = OriginalBoundaryReport {
+            certificate: None,
+            exact_work: 0,
+            driver_cells: 0,
+            reason: "expression-original-contact-face-changed",
+        };
+        let Some(original) = self.equivalent_original_pair(faces) else {
+            return Ok(out);
+        };
+        if max_work == 0 || max_driver == 0 {
+            out.reason = "expression-original-boundary-work-limit";
+            return Ok(out);
+        }
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let shell = root.restricted.proposal.body.geometry().shell();
+        let paired =
+            crate::source_paired_fiber_contact::certify(shell, original, max_work, max_driver)?;
+        out.exact_work += paired.exact_work;
+        out.driver_cells += paired.driver_cells;
+        out.reason = paired.reason;
+        if let Some(c) = paired.certificate {
+            out.certificate = Some(OriginalBoundaryContact {
+                owners: faces.map(|i| &self.faces[i]),
+                proof: OriginalBoundaryProof::Paired(c),
+            });
+            out.reason = "expression-original-paired-boundary-qualified";
+            return Ok(out);
+        }
+        if out.exact_work == max_work || out.driver_cells == max_driver {
+            return Ok(out);
+        }
+        let ruled = crate::source_ruled_projection_contact::certify(
+            shell,
+            original,
+            tolerance,
+            max_work - out.exact_work,
+            max_driver - out.driver_cells,
+        )?;
+        out.exact_work += ruled.exact_work;
+        out.driver_cells += ruled.driver_cells;
+        out.reason = ruled.reason;
+        if let Some(c) = ruled.certificate {
+            out.certificate = Some(OriginalBoundaryContact {
+                owners: faces.map(|i| &self.faces[i]),
+                proof: OriginalBoundaryProof::Ruled(c),
+            });
+            out.reason = "expression-original-ruled-boundary-qualified";
+        }
+        Ok(out)
+    }
+}

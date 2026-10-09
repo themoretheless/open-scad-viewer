@@ -678,3 +678,5 @@ mod section_contact;
 pub use section_contact::{TransitionSectionContact, TransitionSectionContactReport};
 
 pub use original_contact::{ProfileHullContact, ProfileHullReport};
+
+pub use original_contact::{OriginalBoundaryContact,OriginalBoundaryProof,OriginalBoundaryReport};
