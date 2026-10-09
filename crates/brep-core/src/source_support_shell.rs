@@ -364,6 +364,33 @@ mod tests {
 
     }
     #[test]
+    fn adjacent_annular_curved_faces_have_owned_opposite_plane_fibers() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        for ids in [[0,5],[5,0]] {
+            let report=crate::source_paired_fiber_contact::certify(&shell,ids,10000000,10000).unwrap();
+            eprintln!("adjacent curved source pair={ids:?} qualified={} work={} drivers={} reason={}",report.certificate.is_some(),report.exact_work,report.driver_cells,report.reason);
+            let proof=report.certificate.expect(report.reason);
+            assert_eq!(proof.faces(),ids);
+            assert_eq!(proof.fibers()[0].plane(),proof.fibers()[1].plane());
+            assert_ne!(proof.fibers()[0].side(),proof.fibers()[1].side());
+            assert!(!proof.edges().is_empty());
+            assert!(report.exact_work<=10000000 && report.driver_cells<=10000);
+            let selected=ids.iter().position(|&i|i==0).unwrap();
+            let fiber=&proof.fibers()[selected];
+            let (profile,_) = nurbs_core::normal_alignment::qualify_weight_profile(fiber.surface(),[5,0],1000).unwrap();
+            let profile=profile.unwrap();let (axis,upper)=fiber.boundary();
+            let transfer=crate::source_profile_boundary_identity::certify_plane_image(&profile,fiber.plane(),axis,upper,10000000).unwrap();
+            let transfer=transfer.certificate.expect(transfer.reason);
+            assert!(std::ptr::eq(transfer.boundary().profile(),&profile));
+            assert_eq!(transfer.image().plane(),fiber.plane());
+            assert_eq!(transfer.image().side(),fiber.side());
+            assert!(transfer.image().poles().is_empty());
+            assert!(crate::source_paired_fiber_contact::certify(&shell,ids,1,10000).unwrap().certificate.is_none());
+        }
+    }
+
+    #[test]
     fn annular_raw_profile_hull_uses_only_fresh_neighbor_material() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
