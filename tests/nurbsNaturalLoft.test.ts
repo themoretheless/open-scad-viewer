@@ -34,3 +34,18 @@ it('preserves differently weighted sections at nonuniform stations and refuses w
  const bad=sections.map((c,j)=>({...c,weights:c.weights.map(w=>w/[1,1.2,1.4][j]!*[1,.01,10][j]!)}))
  expect(()=>naturalLoftNurbsCurves(bad,[0,.5,1])).toThrow(/positive control weights/)
 })
+
+it('retains 86 native sections across JSON and WASM and refuses the 87th without refitting',()=>{
+ const sections=Array.from({length:86},(_,i)=>bezierNurbsCurve([[0,0,i],[1,0,i]]))
+ const parameters=sections.map((_,i)=>i)
+ const before=JSON.stringify({sections,parameters})
+ const surface=naturalLoftNurbsCurves(sections,parameters)
+ expect(surface.controlPoints[0]).toHaveLength(256)
+ for(const i of [0,1,40,85]){
+  const p=evaluateNurbsSurface(surface,.37,i/85).point
+  expect(p[0]).toBeCloseTo(.37,11)
+  expect(p[2]).toBeCloseTo(i,10)
+ }
+ expect(()=>naturalLoftNurbsCurves([...sections,bezierNurbsCurve([[0,0,86],[1,0,86]])],[...parameters,86])).toThrow(/86 sections/)
+ expect(JSON.stringify({sections,parameters})).toBe(before)
+})

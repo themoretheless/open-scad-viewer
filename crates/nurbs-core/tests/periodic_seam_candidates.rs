@@ -161,7 +161,6 @@ fn invalid_seams_and_control_limits_are_atomic() {
     let c = periodic(1, (0..255).map(|i| i as f64).collect(), 255.);
     assert!(periodic_seam::curve_candidate(&c, 0.375).is_err());
     assert!(periodic_seam::curve_candidate(&c, 0.).is_ok());
-    let c = periodic(1, (0..31).map(|i| i as f64).collect(), 31.);
     let s = surface::extrude(&c, [0., 0., 1.]).unwrap();
     let before = s.clone();
     assert!(periodic_seam::surface_candidate(&s, Axis::U, 0.375).is_err());

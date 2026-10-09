@@ -301,7 +301,7 @@ pub fn cholesky_banded(n: usize, bw: usize, a: &mut [f64], b: &mut [f64]) -> Opt
                 s -= a[k * bw + (i - k)] * a[k * bw + (j - k)];
             }
             let d = a[j * bw];
-            if !(d > 0.) || !d.is_finite() {
+            if d <= 0. || !d.is_finite() {
                 return None;
             }
             a[j * bw + (i - j)] = s / d;
@@ -311,7 +311,7 @@ pub fn cholesky_banded(n: usize, bw: usize, a: &mut [f64], b: &mut [f64]) -> Opt
             let l = a[k * bw + (i - k)];
             d -= l * l;
         }
-        if !(d > 0.) || !d.is_finite() {
+        if d <= 0. || !d.is_finite() {
             return None;
         }
         a[i * bw] = d.sqrt();
@@ -355,11 +355,11 @@ mod banded_tests {
         let mut state = 0x9E3779B97F4A7C15;
         // Random lower-banded R; A = R·Rᵀ + I is SPD with half-bandwidth BW.
         let mut r = [[0.; N]; N];
-        for i in 0..N {
-            for j in i.saturating_sub(BW - 1)..=i {
-                r[i][j] = lcg(&mut state) - 0.5;
+        for (i, row) in r.iter_mut().enumerate() {
+            for value in row.iter_mut().take(i + 1).skip(i.saturating_sub(BW - 1)) {
+                *value = lcg(&mut state) - 0.5;
             }
-            r[i][i] += 2.;
+            row[i] += 2.;
         }
         let mut dense = [[0.; N]; N];
         for i in 0..N {
@@ -428,6 +428,9 @@ mod banded_tests {
         let mut a = vec![1., 2., 1., 0.];
         let mut b = vec![1., 1.];
         assert!(cholesky_banded(2, 2, &mut a, &mut b).is_none());
+        for pivot in [0., -0., f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(cholesky_banded(1, 1, &mut [pivot], &mut [1.]).is_none());
+        }
         // Malformed storage.
         assert!(cholesky_banded(3, 0, &mut [], &mut []).is_none());
         let mut a = vec![1.; 5];
