@@ -1079,6 +1079,25 @@ impl<'source> WeightProfile<'source> {
     ) -> Result<crate::normal_alignment::PairReport> {
         self.inspect_normal_pair(original, None, domains, max_sine_squared, max_spans)
     }
+    /// Compare exact factored profile normal limits with an unchanged original
+    /// surface. Diagnostic angle only; a collapsed pole stays nonregular.
+    pub fn inspect_original_factored_pole_normals(&self,original:&Surface,
+        domains:[[[f64;2];2];2],high:bool,threshold:f64,max_spans:usize
+    )->Result<crate::normal_alignment::PairReport> {
+        check(threshold.is_finite() && (0. ..1.).contains(&threshold) && max_spans<=100000,
+            "Bound factored normal comparison")?;
+        crate::normal_alignment::validate_rectangle(original,domains[1],max_spans)?;
+        let (a,used)=self.factored_pole_normal_bounds(domains[0],high,max_spans)?;
+        let mut out=crate::normal_alignment::PairReport{aligned:None,sine_squared_interval:None,
+            normal_components:[a.map(|normal|normal.components),None],spans:used,reason:"span-limit"};
+        if out.normal_components[0].is_none() || used==max_spans {return Ok(out);}
+        let (b,spent)=crate::normal_alignment::normal_bounds(original,domains[1],max_spans-used)?;
+        out.spans+=spent;out.normal_components[1]=b;
+        if let [Some(a),Some(b)]=out.normal_components {
+            let mut compared=crate::normal_alignment::inspect_pair_bounds([a,b],threshold)?;
+            compared.spans=out.spans;Ok(compared)
+        } else {Ok(out)}
+    }
     /// Complete rectangle angle bounds for two exact proposed profiles.
     pub fn inspect_profile_normals(
         &self,
@@ -1139,7 +1158,15 @@ impl<'source> WeightProfile<'source> {
         max_cells: usize,
         max_spans: usize,
     ) -> Result<ProfilePathReport> {
-        self.inspect_path(original, None, endpoints, threshold, max_cells, max_spans)
+        self.inspect_path(original, None, endpoints, threshold, max_cells, max_spans, None)
+    }
+    /// Full affine-path comparison of factored profile limits against an
+    /// original surface. Includes pole limits, but never certifies immersion
+    /// at a collapsed point or positional agreement between the surfaces.
+    pub fn inspect_original_factored_pole_path(&self,original:&Surface,
+        endpoints:[[[f64;2];2];2],high:bool,threshold:f64,max_cells:usize,max_spans:usize
+    )->Result<ProfilePathReport> {
+        self.inspect_path(original,None,endpoints,threshold,max_cells,max_spans,Some(high))
     }
     /// Complete angular comparison of two exact proposed weight profiles.
     /// Shared position and body ownership still require separate admission.
@@ -1158,6 +1185,7 @@ impl<'source> WeightProfile<'source> {
             threshold,
             max_cells,
             max_spans,
+            None,
         )
     }
     fn inspect_path(
@@ -1168,6 +1196,7 @@ impl<'source> WeightProfile<'source> {
         threshold: f64,
         max_cells: usize,
         max_spans: usize,
+        pole: Option<bool>,
     ) -> Result<ProfilePathReport> {
         check(
             (1..=100000).contains(&max_cells)
@@ -1216,13 +1245,25 @@ impl<'source> WeightProfile<'source> {
                 }
             }
             out.cells += 1;
-            let r = self.inspect_normal_pair(
+            let r = if let Some(high)=pole {
+                let (a,used)=self.factored_pole_normal_bounds(domains[0],high,max_spans-out.spans)?;
+                out.spans+=used;
+                let Some(a)=a else {
+                    out.pending.push(q);out.reason="profile-path-pole-factor-unproven";return Ok(out);
+                };
+                let (b,used)=crate::normal_alignment::normal_bounds(original,domains[1],max_spans-out.spans)?;
+                out.spans+=used;
+                let Some(b)=b else {
+                    out.pending.push(q);return Ok(out);
+                };
+                crate::normal_alignment::inspect_pair_bounds([a.components,b],threshold)?
+            } else {self.inspect_normal_pair(
                 original,
                 other,
                 domains,
                 threshold,
                 max_spans - out.spans,
-            )?;
+            )?};
             out.spans += r.spans;
             if r.aligned == Some(true) {
                 upper = upper.max(r.sine_squared_interval.unwrap()[1]);
@@ -1250,12 +1291,34 @@ impl<'source> WeightProfile<'source> {
         }
         out.aligned = Some(true);
         out.upper_sine_squared = Some(upper);
-        out.reason = "profile-path-tangent-planes-qualified";
+        out.reason = if pole.is_some() {"profile-path-factored-limit-angles-qualified"}else{"profile-path-tangent-planes-qualified"};
         Ok(out)
     }
-    /// Compare factored one-sided transverse directions at both ends of a
-    /// collapsed U rail. The ordinary U derivative is combined with the exact
-    /// removed transverse factor; this is a pole diagnostic, not regularity.
+    /// Compare limiting normal directions after removing both longitudinal
+    /// and transverse collapse factors. This never admits a regular G1 pole.
+    pub fn factored_pole_limits(&self,high:bool,threshold:f64,max_spans:usize)->Result<(Option<ProfilePoleLimits>,usize)> {
+        check(threshold.is_finite() && (0. ..1.).contains(&threshold) && max_spans<=100000,
+            "Bound exact factored pole diagnostics")?;
+        let s=self.source;
+        let u=s.knots_u[if high {s.control_points.len()}else{s.degree_u}];
+        let vs=[s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]];
+        let mut spent=0;let mut normals=Vec::new();
+        for v in vs {
+            let (normal,used)=self.factored_pole_normal_bounds([[u;2],[v;2]],high,max_spans-spent)?;
+            spent+=used;
+            let Some(normal)=normal else {return Ok((None,spent));};
+            normals.push(normal);
+        }
+        check(normals[0].point==normals[1].point,"Use one exact collapsed pole")?;
+        let components=[normals[0].components,normals[1].components];
+        let compared=crate::normal_alignment::inspect_pair_bounds(components,threshold)?;
+        Ok((Some(ProfilePoleLimits{point:normals[0].point,components,
+            sine_squared_interval:compared.sine_squared_interval,
+            distinct_tangent_limits:compared.aligned==Some(false)}),spent))
+    }
+
+    /// First transverse factor diagnostic; higher longitudinal collapse can
+    /// require `factored_pole_limits`. Neither method admits pole immersion.
     pub fn pole_limits(
         &self,
         high: bool,
@@ -1651,6 +1714,17 @@ mod tests {
             if high {s.control_points[0]=vec![vec![1.,0.,0.],vec![1.,1.,0.]];s.control_points[1]=vec![vec![0.,0.,0.];2];}
             else {s.control_points[0][1]=vec![0.,0.,0.];}
             let profile=qualify_weight_profile(&s,[0,0],4).unwrap().0.unwrap();
+            let original=surface();
+            let paths=[[[0.,0.],[1.,0.]],[[0.,0.],[1.,0.]]];
+            let path=profile.inspect_original_factored_pole_path(&original,paths,high,1e-6,100,1000).unwrap();
+            assert_eq!(path.aligned,Some(true));assert!(path.pending.is_empty());
+            assert!(path.upper_sine_squared.unwrap()<=1e-6);
+            assert!(profile.inspect_original_factored_pole_path(&original,paths,high,1e-6,1,1).unwrap().aligned.is_none());
+            let (limits,work)=profile.factored_pole_limits(high,1e-6,12).unwrap();
+            let limits=limits.unwrap();assert_eq!(work,12);
+            assert!(!limits.distinct_tangent_limits);
+            assert!(limits.sine_squared_interval.unwrap()[1]<=1e-6);
+            assert!(profile.factored_pole_limits(high,1e-6,11).unwrap().0.is_none());
             assert!(profile.factored_pole_normal_bounds([[0.,1.],[0.,1.]],high,5).unwrap().0.is_none());
             let (normal,spent)=profile.factored_pole_normal_bounds([[0.,1.],[0.,1.]],high,6).unwrap();
             let normal=normal.unwrap();assert_eq!(spent,6);assert_eq!(normal.power,1);assert_eq!(normal.high,high);
@@ -1665,6 +1739,10 @@ mod tests {
             s.control_points=if high {vec![outer,vec![pole.clone();2],vec![pole;2]]}else{vec![vec![pole.clone();2],vec![pole;2],outer]};
             s.weights=vec![vec![1.;2];3];
             let p=qualify_weight_profile(&s,[0,0],6).unwrap().0.unwrap();
+            let (limits,work)=p.factored_pole_limits(high,1e-6,12).unwrap();
+            let limits=limits.unwrap();assert_eq!(work,12);
+            assert!(!limits.distinct_tangent_limits);
+            assert!(limits.sine_squared_interval.unwrap()[1]<=1e-6);
             let normal=p.factored_pole_normal_bounds([[2.,4.],[0.,1.]],high,6).unwrap().0.unwrap();
             assert_eq!(normal.power,3);let expected=if high {-1.}else{1.};
             assert!(normal.components[2][0]<=expected && normal.components[2][1]>=expected);
@@ -2189,6 +2267,12 @@ mod tests {
         assert_eq!(spent, 4);
         assert_eq!(limits.point, [0.; 3]);
         assert!(limits.distinct_tangent_limits);
+        let (factored,spent)=profile.factored_pole_limits(false,1e-6,14).unwrap();
+        let factored=factored.unwrap();assert_eq!(spent,14);
+        assert_eq!(factored.point,[0.;3]);assert!(factored.distinct_tangent_limits);
+        assert!(factored.sine_squared_interval.unwrap()[0]>1e-6);
+        assert!(profile.factored_pole_limits(false,1e-6,13).unwrap().0.is_none());
+        assert!(profile.factored_pole_limits(true,1e-6,14).unwrap().0.is_none());
         assert!(profile.pole_limits(false, 1e-6, 3).unwrap().0.is_none());
         assert!(profile.pole_limits(true, 1e-6, 4).unwrap().0.is_none());
     }

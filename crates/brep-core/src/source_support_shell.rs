@@ -449,6 +449,36 @@ mod tests {
     }
 
     #[test]
+    fn exact_profile_owned_curved_seam_limits() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let proposal=crate::source_profile_body::prepare(&body,
+            &[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]}],
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap().proposal.unwrap();
+        for edge in [0,1] {
+            let report=proposal.inspect_edge_pole_limit_angles(0,edge,true,1e-6,1000,10000).unwrap();
+            eprintln!("curved seam edge={edge} aligned={:?} pending={:?} reason={} cells={} spans={}",
+                report.aligned,report.pending,report.reason,report.cells,report.spans);
+            if edge==0 {
+                assert_eq!(report.aligned,Some(true),"{}",report.reason);
+                assert!(report.pending.is_empty());
+            } else {
+                assert_eq!(report.aligned,None);
+                assert!(!report.pending.is_empty());
+                assert_eq!(report.reason,"profile-path-work-limit");
+                let refined=proposal.inspect_edge_pole_limit_angles(0,edge,true,1e-6,10000,100000).unwrap();
+                eprintln!("refined curved seam edge={edge} aligned={:?} pending={:?} reason={} cells={} spans={} upper={:?}",
+                    refined.aligned,refined.pending,refined.reason,refined.cells,refined.spans,refined.upper_sine_squared);
+                assert_eq!(refined.aligned,Some(true),"{}",refined.reason);
+            }
+        }
+    }
+
+    #[test]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -461,7 +491,54 @@ mod tests {
             crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap();
         let proposal=report.proposal.unwrap();
         let mut rooted_seams=Vec::new();
+        let mut whole_seam_diagnostics=Vec::new();
+        let mut pole_diagnostics=Vec::new();
+        // Source pole limits are diagnostic only: they cannot admit the changed
+        // profile, nor replace an undefined regular endpoint normal.
+        let source_profile=proposal.profile(0).unwrap().source();
+        for end in [false,true] {
+            let factored=nurbs_core::factored_surface_normals::prepare(source_profile,end,100_000_000).unwrap();
+            if let Some(proof)=factored.certificate {
+                let limits=proof.boundary_limits(1e-6).unwrap();
+                eprintln!("original selected pole end={end} collapsed={:?} distinctLimits={} sine2={:?}",
+                    limits.collapsed_point,limits.distinct_tangent_limits,limits.sine_squared_interval);
+            }
+            let (limits,spans)=proposal.profile(0).unwrap().factored_pole_limits(end,1e-6,16).unwrap();
+            if let Some(limits)=limits {
+                eprintln!("exact changed profile pole end={end} point={:?} distinctLimits={} sine2={:?}",
+                    limits.point,limits.distinct_tangent_limits,limits.sine_squared_interval);
+                pole_diagnostics.push(value_codec::json!({"face":0,"high":end,"point":limits.point,
+                    "normalLimits":limits.components,"distinctTangentLimits":limits.distinct_tangent_limits,
+                    "sineSquaredInterval":limits.sine_squared_interval,"spans":spans,
+                    "regularPoleCertified":false}));
+            } else {
+                pole_diagnostics.push(value_codec::json!({"face":0,"high":end,"spans":spans,
+                    "reason":"profile-pole-factor-recipe-or-budget-unproven","regularPoleCertified":false}));
+            }
+        }
         for (edge,canonical,faces) in [(0,[0.1,0.25],[0,1]),(1,[0.75,0.9],[0,2])] {
+            let limits=Some(proposal.inspect_edge_pole_limit_angles(0,edge,true,1e-6,1000,10000).unwrap());
+            let r=limits.as_ref().unwrap();
+            eprintln!("owned curved seam limit angles edge={edge} aligned={:?} pending={} upper={:?} reason={}",
+                r.aligned,r.pending.len(),r.upper_sine_squared,r.reason);
+            let whole=proposal.qualify_edge(edge,100,1e-6,100000,100000).unwrap();
+            eprintln!("whole retained fillet seam edge={edge} qualified={} reason={}",whole.seam.is_some(),whole.reason);
+            whole_seam_diagnostics.push(value_codec::json!({
+                "edge":edge,"faces":faces,"canonicalInterval":[0.,1.],
+                "qualified":whole.seam.is_some(),"reason":whole.reason,
+                "upperSineSquared":whole.seam.as_ref().map(|seam|seam.upper_sine_squared()),
+                "pending":whole.angular.as_ref().map(|angular|&angular.pending),
+                "cells":whole.angular.as_ref().map(|angular|angular.cells),
+                "spans":whole.angular.as_ref().map(|angular|angular.spans),
+                "factoredLimitAngles":limits.as_ref().map(|r|value_codec::json!({"aligned":r.aligned,
+                    "pending":r.pending,"cells":r.cells,"spans":r.spans,"upperSineSquared":r.upper_sine_squared,"reason":r.reason})),
+                "carrierMapping":"owned-original-pcurve",
+            }));
+            if let Some(seam)=whole.seam.as_ref() {
+                assert!(std::ptr::eq(seam.proposal(),&proposal));
+                assert_eq!(seam.edge(),edge);assert_eq!(seam.faces(),faces);
+                assert!(seam.upper_sine_squared()<=seam.threshold());
+            }
             let report=proposal.qualify_edge_interval(edge,canonical,1e-6,100000,100000).unwrap();
             let seam=report.seam.expect(report.angular.reason);
             assert!(std::ptr::eq(seam.proposal(),&proposal));
@@ -554,6 +631,9 @@ mod tests {
             assert!(limited.seam.is_none());assert!(!limited.angular.pending.is_empty());
             rooted_seams.push(rooted_seam);
 
+        }
+        if let Ok(path)=std::env::var("BREP_EXPRESSION_WHOLE_SEAMS_PATH") {
+            std::fs::write(path,value_codec::json!({"seams":whole_seam_diagnostics,"poles":pole_diagnostics}).to_string()).unwrap();
         }
         let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
             proposal.profile(0).unwrap().section(0,0.75).unwrap(),proposal.profile(0).unwrap().section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
@@ -1489,6 +1569,9 @@ mod tests {
             assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
             let qualification=geometry.qualify_volume(volume_limits(32768)).unwrap();
             let volume=&qualification.report;
+            let sign_is_enclosed=volume.signed_bounds.is_some_and(|[lo,hi]|lo>0. || hi<0.);
+            assert_eq!(qualification.certificate.is_some(),volume.complete && sign_is_enclosed,
+                "a complete nonzero oriented volume must issue its owned certificate");
             if let Some(certificate)=&qualification.certificate {
                 assert!(std::ptr::eq(certificate.geometry(),&geometry));
                 assert_eq!(certificate.signed_bounds(),volume.signed_bounds.unwrap());

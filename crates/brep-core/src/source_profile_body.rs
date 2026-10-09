@@ -1257,6 +1257,24 @@ impl<'a> Proposal<'a> {
     fn inspect_curved_edge_interval(
         &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],
     )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        self.inspect_curved_edge_interval_policy(face,neighbor,index,threshold,max_cells,max_spans,canonical,None)
+    }
+    /// Diagnostic full-edge limit angles on the owned nonlinear pcurve map.
+    /// This does not issue a regular seam or admit a collapsed vertex.
+    pub fn inspect_edge_pole_limit_angles(&self,face:usize,index:usize,high:bool,
+        threshold:f64,cells:usize,spans:usize)->Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let uses=self.body.geometry().shell().uses().get(index)
+            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an owned edge"))?;
+        let side=uses.iter().position(|u|u.face==face)
+            .ok_or_else(||Error::new("BREP_PROFILE_SEAM","Choose an incident proposed face"))?;
+        if self.profile(face).is_none() || self.profile(uses[1-side].face).is_some() {
+            return Err(Error::new("BREP_PROFILE_SEAM","Require proposed face and unchanged neighbor"));
+        }
+        self.inspect_curved_edge_interval_policy(face,uses[1-side].face,index,threshold,cells,spans,[0.,1.],Some(high))
+    }
+    fn inspect_curved_edge_interval_policy(
+        &self,face:usize,neighbor:usize,index:usize,threshold:f64,max_cells:usize,max_spans:usize,canonical:[f64;2],pole:Option<bool>,
+    )->Result<nurbs_core::normal_alignment::ProfilePathReport> {
         use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
         if !canonical.iter().all(|x|x.is_finite()) || canonical[0]<0. || canonical[1]>1. || canonical[0]>=canonical[1]
             || !(1..=100000).contains(&max_cells)
@@ -1341,7 +1359,10 @@ impl<'a> Proposal<'a> {
                 out.pending.push(q);
                 return Ok(out);
             }
-            let r = match self.profile(neighbor) {
+            let r = if let Some(high)=pole {
+                profile.inspect_original_factored_pole_normals(edge.uses()[order[1]].surface(),rectangles,high,
+                    threshold,max_spans-out.spans)?
+            } else {match self.profile(neighbor) {
                 Some(other) => profile.inspect_profile_normals(
                     other,
                     rectangles,
@@ -1354,7 +1375,7 @@ impl<'a> Proposal<'a> {
                     threshold,
                     max_spans - out.spans,
                 )?,
-            };
+            }};
             out.spans += r.spans;
             if r.aligned == Some(true) {
                 upper = upper.max(r.sine_squared_interval.unwrap()[1]);
@@ -1387,7 +1408,7 @@ impl<'a> Proposal<'a> {
         }
         out.aligned = Some(true);
         out.upper_sine_squared = Some(upper);
-        out.reason = "profile-path-tangent-planes-qualified";
+        out.reason = if pole.is_some() {"profile-edge-factored-limit-angles-qualified"}else{"profile-path-tangent-planes-qualified"};
         Ok(out)
     }
     pub fn original_body(&self) -> &'a Body {
