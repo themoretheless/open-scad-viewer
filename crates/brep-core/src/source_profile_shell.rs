@@ -680,3 +680,7 @@ pub use section_contact::{TransitionSectionContact, TransitionSectionContactRepo
 pub use original_contact::{ProfileHullContact, ProfileHullReport};
 
 pub use original_contact::{OriginalBoundaryContact,OriginalBoundaryProof,OriginalBoundaryReport};
+
+#[path="source_profile_shell_xy_contact.rs"]
+mod xy_contact;
+pub use xy_contact::{TransitionXyHullContact,TransitionXyHullReport};

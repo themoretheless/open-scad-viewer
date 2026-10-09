@@ -1571,3 +1571,5 @@ pub use assembled_shell::{OriginalPoleContact, OriginalPoleProof, OriginalPoleRe
 pub use assembled_shell::{ProfileHullContact, ProfileHullReport};
 
 pub use assembled_shell::{OriginalBoundaryContact,OriginalBoundaryProof,OriginalBoundaryReport};
+
+pub use assembled_shell::{TransitionXyHullContact,TransitionXyHullReport};
