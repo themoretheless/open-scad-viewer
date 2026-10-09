@@ -698,3 +698,7 @@ pub use coordinate_contact::{TransitionCoordinateContact,TransitionCoordinateRep
 #[path="source_profile_shell_boundary_contact.rs"]
 mod profile_boundary_contact;
 pub use profile_boundary_contact::{ProfileBoundaryContact,ProfileBoundaryReport};
+
+#[path="source_profile_shell_paired_contact.rs"]
+mod profile_paired_contact;
+pub use profile_paired_contact::{ProfilePairedContact,ProfilePairedReport};

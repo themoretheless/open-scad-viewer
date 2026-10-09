@@ -416,6 +416,31 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+    pub fn qualify_remaining_profile_paired_contacts<'x>(
+        &'x self, audit: &mut ShellContactAudit<'x>, limits: ContactAuditLimits,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && matches!(p.support.faces.map(|i|self.faces[i].kind()),
+                    [ShellFaceKind::Original(_),ShellFaceKind::Retained(_)]
+                    | [ShellFaceKind::Retained(_),ShellFaceKind::Original(_)])
+        };
+        let mut remaining=audit.pairs.iter().filter(|p|candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {continue;}
+            let work=(limits.exact_work-audit.exact_work)/remaining as u64;
+            let drivers=(limits.driver_cells-audit.driver_cells)/remaining;
+            remaining-=1;
+            if work==0 || drivers==0 {continue;}
+            let report=self.qualify_profile_paired_contact(pair.support.faces,work,drivers)?;
+            audit.exact_work+=report.exact_work;
+            audit.driver_cells+=report.driver_cells;
+            pair.reason=report.reason;
+            if let Some(c)=report.certificate {pair.proof=PairContactProof::ProfilePaired(c);}
+        }
+        Ok(())
+    }
     pub fn qualify_remaining_profile_boundaries<'x>(
         &'x self, audit: &mut ShellContactAudit<'x>, limits: ContactAuditLimits,
     ) -> Result<()> {

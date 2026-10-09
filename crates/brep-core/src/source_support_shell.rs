@@ -964,9 +964,10 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),150);
-        let mut kinds=[0usize;18];
+        let mut kinds=[0usize;19];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
+                PairContactProof::ProfilePaired(c)=>(18,Some(c.owners())),
                 PairContactProof::ProfileRuled(c)=>(17,Some(c.image().owners())),
                 PairContactProof::ProfileBoundary(c)=>(16,Some(c.owners())),
                 PairContactProof::Hull(c)=>(8,Some(c.owners())),
@@ -987,7 +988,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0,0]);
+        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(150));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -1315,6 +1316,17 @@ mod tests {
                 assert!(report.exact_work<=10000000 && report.boundary_cells<=10000 && report.driver_cells<=10000);
             }
         }
+        assert!(expression.qualify_profile_paired_contact([0,0],1000,100).is_err());
+        assert!(expression.qualify_profile_paired_contact([0,5],0,100).unwrap().certificate.is_none());
+        for ids in [[0,5],[5,0]] {
+            let report=expression.qualify_profile_paired_contact(ids,10000000,10000).unwrap();
+            eprintln!("retained paired contact pair={ids:?} qualified={} work={} drivers={} reason={}",report.certificate.is_some(),report.exact_work,report.driver_cells,report.reason);
+            let proof=report.certificate.expect(report.reason);
+            for side in 0..2 {assert!(std::ptr::eq(proof.owners()[side],&expression.faces()[ids[side]]));}
+            for addresses in proof.shared() {assert!(expression.pairs().iter().any(|p|p.uses()==*addresses));}
+            assert!(proof.image().image().poles().is_empty());
+            assert!(report.exact_work<=10000000 && report.driver_cells<=10000);
+        }
         assert!(expression.qualify_profile_boundary_contact([0,0],1000,100).is_err());
         assert!(expression.qualify_profile_boundary_contact([0,1],0,100).unwrap().certificate.is_none());
         assert!(expression.qualify_profile_boundary_contact([0,1],1000,0).unwrap().certificate.is_none());
@@ -1367,6 +1379,25 @@ mod tests {
         }
         eprintln!("profile ruled audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_RULED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_profile_paired=resumed.diagnostics();
+        let spent_profile_paired=ContactAuditLimits{exact_work:resumed.work().3,driver_cells:resumed.work().4,..cumulative};
+        expression.qualify_remaining_profile_paired_contacts(&mut resumed,spent_profile_paired).unwrap();
+        assert_eq!(resumed.diagnostics(),before_profile_paired);
+        let prior_pending=resumed.pending_pairs();
+        expression.qualify_remaining_profile_paired_contacts(&mut resumed,cumulative).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work && resumed.work().4<=cumulative.driver_cells);
+        for (old,new) in before_profile_paired["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::ProfilePaired(c)=new.proof() {
+                for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
+                for addresses in c.shared() {assert!(expression.pairs().iter().any(|p|p.uses()==*addresses));}
+                assert!(c.image().image().poles().is_empty());
+            }
+        }
+        eprintln!("profile paired audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
+        if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_PAIRED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
 
 
 
