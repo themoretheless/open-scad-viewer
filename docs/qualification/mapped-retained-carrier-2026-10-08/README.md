@@ -3076,3 +3076,8 @@ The full anchored Hermite run stopped after 202.49 s at the frozen initial count
 ### Verified anchored initial audit stage
 
 The repeated full fixture passed the exact initial type-count gate [150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0], including every actual owner pointer, codec roundtrip and cumulative budget. Comparison with the saved 151-pending initial report identifies exactly one changed pair: [9,28], pending to expression-contact-products-excluded, with two rigorously separated product cells. Saved `contact-audit-anchored-base-150.json`, SHA256 ca091e1aaee2ffcf5cd49be7e3064780e8859e784b71b73df01a592cf09d4678. This is intermediate-stage evidence; full repeated fixture is still running and the final residual is not yet qualified.
+
+
+### Verified anchored Hermite full audit: 9 pending pairs
+
+Complete native control fixture passed in 250.59 s. Anchored interval bounds closed bottom-original/transition pairs [4,28] and [9,28], reducing the final residual from 11 to 9. Remaining groups: 8 original-retained and 1 original-transition [6,28]. Prior proof preservation, actual owner pointers, reversed cases, codec restoration and every cumulative budget gate pass. Cumulative cells 7,949; spans 84,868; exact work 12,058,349. Saved `contact-audit-anchored-final-9.json`, SHA256 7d30ba8d4339fb30e76579460362ed557e5249dcafffa8cdb0c28378dc2adcbb. This qualifies the recorded fixture only. Remaining retained contacts and upper transition contact, complete Body admission, radius/wall qualification, WASM/UI delivery and full part acceptance remain incomplete.
