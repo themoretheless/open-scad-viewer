@@ -33,7 +33,7 @@ pub enum PairContactProof<'x> {
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
         match self {
-            Self::TransitionCoordinate(_) => "transition-coordinate-separated",            Self::ProfileVertex(_) => "profile-vertex-contact",            Self::TransitionXyBounds(_) => "transition-xy-bounds-separated",
+            Self::TransitionCoordinate(_) => "transition-coordinate-separated",            Self::ProfileVertex(c) => if c.excluded_domain().is_some() {"profile-vertex-excluded"} else {"profile-vertex-contact"},            Self::TransitionXyBounds(_) => "transition-xy-bounds-separated",
             Self::TransitionXyHull(_) => "transition-xy-hull-separated",
             Self::Boundary(_) => "boundary-contact",
             Self::ProfileHull(_) => "profile-hull-separated",

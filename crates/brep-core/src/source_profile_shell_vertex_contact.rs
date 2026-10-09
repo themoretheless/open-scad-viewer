@@ -4,8 +4,12 @@ pub struct ProfileVertexContact<'x> {
     owners: [&'x ShellFace; 2],
     source: crate::source_vertex_contact::Certificate,
     image: crate::source_corner_plane_image::Certificate,
+    excluded_domain: Option<[[f64; 2]; 2]>,
 }
 impl ProfileVertexContact<'_> {
+    pub fn excluded_domain(&self) -> Option<[[f64; 2]; 2]> {
+        self.excluded_domain
+    }
     pub fn owners(&self) -> [&ShellFace; 2] {
         self.owners
     }
@@ -99,10 +103,6 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             }
             _ => false,
         });
-        if !owns {
-            out.reason = "profile-vertex-retained-corner-unproven";
-            return Ok(out);
-        }
         if out.exact_work == max_work {
             out.reason = "profile-vertex-work-limit";
             return Ok(out);
@@ -118,6 +118,16 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             out.reason = "profile-vertex-single-point-image-unproven";
             return Ok(out);
         };
+        let excluded_domain = if owns {
+            None
+        } else {
+            let domain = self.support_domain(faces[profile_side])?;
+            if corner_locus_absent(&image, domain, &mut out.exact_work, max_work)? != Some(true) {
+                out.reason = "profile-vertex-retained-corner-unproven";
+                return Ok(out);
+            }
+            Some(domain)
+        };
         // This fresh single-Bezier proof uses only exact control-plane signs,
         // positive Bernstein bases and collapsed zero edges. Exact positive
         // factorized weights retain all three properties and the same corner.
@@ -125,8 +135,120 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             owners: faces.map(|i| &self.faces[i]),
             source,
             image,
+            excluded_domain,
         });
-        out.reason = "profile-owned-single-point-contact-qualified";
+        out.reason = if excluded_domain.is_some() {
+            "profile-single-point-locus-excluded"
+        } else {
+            "profile-owned-single-point-contact-qualified"
+        };
         Ok(out)
+    }
+}
+
+/// The admitted positive Bezier chart has no interior plane preimages.
+/// Natural edge interiors vanish only if every edge coefficient vanishes.
+fn corner_locus_absent(
+    image: &crate::source_corner_plane_image::Certificate,
+    domain: [[f64; 2]; 2],
+    work: &mut u64,
+    max_work: u64,
+) -> Result<Option<bool>> {
+    use cad_predicates::Sign;
+    let s = image.surface();
+    let p = s.degree_u;
+    let q = s.degree_v;
+    let natural = [
+        [s.knots_u[p], s.knots_u[s.control_points.len()]],
+        [s.knots_v[q], s.knots_v[s.control_points[0].len()]],
+    ];
+    if (0..2).any(|a| {
+        domain[a].iter().any(|v| !v.is_finite())
+            || domain[a][0] > domain[a][1]
+            || domain[a][0] < natural[a][0]
+            || domain[a][1] > natural[a][1]
+    }) {
+        return Ok(Some(false));
+    }
+    let plane = image.plane();
+    let mut signs = vec![];
+    for row in &s.control_points {
+        let mut values = vec![];
+        for c in row {
+            let Some(sign) = crate::source_allowed_contact::orient(
+                &[plane[0], plane[1], plane[2], [c[0], c[1], c[2]]],
+                None,
+                work,
+                max_work,
+            )?
+            else {
+                return Ok(None);
+            };
+            values.push(sign);
+        }
+        signs.push(values);
+    }
+    let contains = |a: usize, x: f64| domain[a][0] <= x && x <= domain[a][1];
+    for (i, j, u, v) in [
+        (0, 0, natural[0][0], natural[1][0]),
+        (p, 0, natural[0][1], natural[1][0]),
+        (p, q, natural[0][1], natural[1][1]),
+        (0, q, natural[0][0], natural[1][1]),
+    ] {
+        if signs[i][j] == Sign::Zero && contains(0, u) && contains(1, v) {
+            return Ok(Some(false));
+        }
+    }
+    for (axis, end, edge) in [
+        (0, 0, (0..=q).map(|j| (0, j)).collect::<Vec<_>>()),
+        (0, 1, (0..=q).map(|j| (p, j)).collect()),
+        (1, 0, (0..=p).map(|i| (i, 0)).collect()),
+        (1, 1, (0..=p).map(|i| (i, q)).collect()),
+    ] {
+        if edge.iter().all(|&(i, j)| signs[i][j] == Sign::Zero)
+            && contains(axis, natural[axis][end])
+        {
+            return Ok(Some(false));
+        }
+    }
+    Ok(Some(true))
+}
+#[cfg(test)]
+mod exclusion_tests {
+    use super::*;
+    #[test]
+    fn excluded_corner_checks_collapsed_edge_and_closed_trim_boundary() {
+        let mut s = nurbs_core::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 1.]],
+                vec![vec![1., 0., 1.], vec![1., 1., 1.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let plane = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]];
+        let proof = crate::source_corner_plane_image::certify(&s, plane, [0., 0., 0.], 100000)
+            .unwrap()
+            .certificate
+            .unwrap();
+        let absent = |proof, domain| corner_locus_absent(proof, domain, &mut 0, 100000).unwrap();
+        assert_eq!(absent(&proof, [[0.25, 1.], [0., 1.]]), Some(true));
+        assert_eq!(absent(&proof, [[0., 0.75], [0., 1.]]), Some(false));
+        assert_eq!(
+            corner_locus_absent(&proof, [[0.25, 1.], [0., 1.]], &mut 0, 0).unwrap(),
+            None
+        );
+        s.control_points[0][1] = vec![0., 0., 0.];
+        let collapsed = crate::source_corner_plane_image::certify(&s, plane, [0., 0., 0.], 100000)
+            .unwrap()
+            .certificate
+            .unwrap();
+        assert_eq!(absent(&collapsed, [[0., 0.75], [0.25, 0.75]]), Some(false));
+        assert_eq!(absent(&collapsed, [[0.25, 1.], [0.25, 0.75]]), Some(true));
     }
 }

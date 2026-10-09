@@ -1187,6 +1187,11 @@ mod tests {
             if let PairContactProof::ProfileVertex(c)=new.proof() {
                 for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
                 assert_eq!(c.source().point(),c.image().point());
+                if let Some(domain)=c.excluded_domain() {
+                    let retained=new.support().faces.iter().copied().find(|&i|matches!(expression.faces()[i].kind(),ShellFaceKind::Retained(_))).unwrap();
+                    assert_eq!(domain,expression.support_domain(retained).unwrap());
+                    assert_eq!(new.proof().kind(),"profile-vertex-excluded");
+                }
                 assert!(expression.qualify_profile_vertex_contact([new.support().faces[1],new.support().faces[0]],10000000).unwrap().certificate.is_some());
             }
         }
