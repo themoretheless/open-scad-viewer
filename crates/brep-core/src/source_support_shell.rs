@@ -879,7 +879,7 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),151);
-        let mut kinds=[0usize;14];
+        let mut kinds=[0usize;15];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
                 PairContactProof::Hull(c)=>(8,Some(c.owners())),
@@ -888,6 +888,7 @@ mod tests {
                 PairContactProof::Boundary(c)=>(11,Some(c.owners())),
                 PairContactProof::TransitionXyHull(c)=>(12,Some(c.owners())),
                 PairContactProof::TransitionXyBounds(c)=>(13,Some(c.owners())),
+                PairContactProof::ProfileVertex(c)=>(14,Some(c.owners())),
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
                 PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
@@ -898,7 +899,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0,0,0,0,0]);
+        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0,0,0,0,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(151));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -1150,6 +1151,26 @@ mod tests {
         }
         eprintln!("focused transition support audit pending={} cells={} spans={}",resumed.pending_pairs(),resumed.work().0,resumed.work().1);
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_SUPPORT_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_vertices=resumed.diagnostics();
+        let spent_work=resumed.work().3;
+        expression.qualify_remaining_profile_vertices(&mut resumed,ContactAuditLimits{exact_work:spent_work,..expanded}).unwrap();
+        assert_eq!(resumed.diagnostics(),before_vertices);
+        assert!(expression.qualify_profile_vertex_contact([0,0],1000).is_err());
+        assert!(expression.qualify_profile_vertex_contact([0,1],0).unwrap().certificate.is_none());
+        assert!(expression.qualify_profile_vertex_contact([1,transition_id],1000).unwrap().certificate.is_none());
+        expression.qualify_remaining_profile_vertices(&mut resumed,expanded).unwrap();
+        assert!(resumed.pending_pairs()<=before_vertices["pendingPairs"].as_u64().unwrap() as usize && resumed.work().3<=expanded.exact_work);
+        for (old,new) in before_vertices["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::ProfileVertex(c)=new.proof() {
+                for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
+                assert_eq!(c.source().point(),c.image().point());
+                assert!(expression.qualify_profile_vertex_contact([new.support().faces[1],new.support().faces[0]],10000000).unwrap().certificate.is_some());
+            }
+        }
+        eprintln!("profile vertex audit pending={} work={}",resumed.pending_pairs(),resumed.work().3);
+        if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_VERTEX_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);

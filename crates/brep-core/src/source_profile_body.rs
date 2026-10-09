@@ -1575,3 +1575,5 @@ pub use assembled_shell::{OriginalBoundaryContact,OriginalBoundaryProof,Original
 pub use assembled_shell::{TransitionXyHullContact,TransitionXyHullReport};
 
 pub use assembled_shell::{TransitionXyBoundsContact, TransitionXyBoundsReport};
+
+pub use assembled_shell::{ProfileVertexContact,ProfileVertexReport};

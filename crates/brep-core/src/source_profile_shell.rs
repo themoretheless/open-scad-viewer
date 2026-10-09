@@ -686,3 +686,7 @@ mod xy_contact;
 pub use xy_contact::{TransitionXyHullContact,TransitionXyHullReport};
 
 pub use xy_contact::{TransitionXyBoundsContact, TransitionXyBoundsReport};
+
+#[path="source_profile_shell_vertex_contact.rs"]
+mod vertex_contact;
+pub use vertex_contact::{ProfileVertexContact,ProfileVertexReport};
