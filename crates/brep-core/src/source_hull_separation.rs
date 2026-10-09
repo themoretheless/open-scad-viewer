@@ -33,6 +33,49 @@ pub struct Report {
 pub fn certify(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
     certify_points(regions, original_points(regions), [None, None], max_work)
 }
+/// Propose separators in XY, then recheck the vertical plane and every actual
+/// original 3D control. Thus only XY separation can authorize this certificate.
+pub fn certify_xy(regions: [&SourceRegion; 2], max_work: u64) -> Result<Report> {
+    certify_xy_points(regions, original_points(regions), max_work)
+}
+fn certify_xy_points(
+    regions: [&SourceRegion; 2],
+    points: [Vec<[f64; 3]>; 2],
+    max_work: u64,
+) -> Result<Report> {
+    let projected = points
+        .each_ref()
+        .map(|ps| ps.iter().map(|p| [p[0], p[1], 0.]).collect());
+    let mut out = certify_points(regions, projected, [None, None], max_work)?;
+    let Some(certificate) = out.certificate.take() else {
+        return Ok(out);
+    };
+    let plane = certificate.plane();
+    // Exact normal-Z component. A merely small component is insufficient.
+    if crate::source_allowed_contact::orient(&plane, Some([0, 1]), &mut out.exact_work, max_work)?
+        != Some(Sign::Zero)
+    {
+        out.reason = "source-xy-hull-vertical-plane-unproven";
+        return Ok(out);
+    }
+    for side in 0..2 {
+        for point in &points[side] {
+            if crate::source_allowed_contact::orient(
+                &[plane[0], plane[1], plane[2], *point],
+                None,
+                &mut out.exact_work,
+                max_work,
+            )? != Some(certificate.sides()[side])
+            {
+                out.reason = "source-xy-hull-original-sign-unproven";
+                return Ok(out);
+            }
+        }
+    }
+    out.certificate = Some(certificate);
+    out.reason = "source-xy-hull-strict-separation-qualified";
+    Ok(out)
+}
 fn original_points(regions: [&SourceRegion; 2]) -> [Vec<[f64; 3]>; 2] {
     regions.map(|r| {
         r.loops()[0][0]
@@ -267,6 +310,52 @@ mod tests {
         .unwrap()
         .shell
         .unwrap()
+    }
+    #[test]
+    fn xy_separator_rechecks_actual_z_and_refuses_projection_contact() {
+        let shell = shell([1., 1.], std::f64::consts::TAU);
+        let regions = shell.regions().unwrap();
+        let refs = [&regions[0], &regions[1]];
+        // Isolate the exact plane protocol with synthetic hulls, as in the
+        // midpoint regression. Public entry derives all points from regions.
+        let separated = [
+            vec![[0., 0., -100.], [0., 1., 100.]],
+            vec![[2., 0., 100.], [2., 1., -100.]],
+        ];
+        let proof = certify_xy_points(refs, separated.clone(), 100000).unwrap();
+        let c = proof.certificate.unwrap();
+        assert_ne!(c.sides()[0], c.sides()[1]);
+        assert!(c.material_hulls().iter().all(Option::is_none));
+        assert!(
+            certify_xy_points(refs, [separated[1].clone(), separated[0].clone()], 100000)
+                .unwrap()
+                .certificate
+                .is_some()
+        );
+        assert!(
+            certify_xy_points(refs, separated, 1)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        // Spatially separated Z hulls with identical XY projections must refuse.
+        let same_xy = [
+            vec![[0., 0., -100.], [1., 1., -99.]],
+            vec![[0., 0., 99.], [1., 1., 100.]],
+        ];
+        assert!(
+            certify_xy_points(refs, same_xy, 100000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        let touch = [vec![[0., 0., -10.]], vec![[0., 0., 10.]]];
+        assert!(
+            certify_xy_points(refs, touch, 100000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
     }
     #[test]
     fn rounded_midpoint_cannot_admit_a_zero_contact_sign() {
