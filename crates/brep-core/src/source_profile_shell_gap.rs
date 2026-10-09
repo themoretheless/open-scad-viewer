@@ -57,6 +57,7 @@ pub struct ExpressionGapReport {
     pub lower_mm: Option<f64>,
     pub cells: usize,
     pub spans: usize,
+    pub cache_hits: usize,
     pub pending: Vec<[[[f64; 2]; 2]; 2]>,
     pub reason: &'static str,
 }
@@ -92,6 +93,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             lower_mm: None,
             cells: 0,
             spans: 0,
+            cache_hits: 0,
             pending: vec![natural],
             reason: "expression-gap-work-limit",
         };
@@ -116,6 +118,10 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             Some(bridge) => bridge.constrain_original_rails(controls)?.0,
             None => None,
         };
+        // Caches are local to this immutable shell and fixed face pair. Exact
+        // parameter bits key already-proven enclosures; never cache refusals.
+        let mut cache: [std::collections::BTreeMap<[u64; 4], [[f64; 2]; 3]>; 2] =
+            std::array::from_fn(|_| std::collections::BTreeMap::new());
         while let Some(pair) = out.pending.pop() {
             if out.cells == max_cells || out.spans == max_spans {
                 out.pending.push(pair);
@@ -124,6 +130,17 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             out.cells += 1;
             let mut boxes = Vec::new();
             for side in 0..2 {
+                let key = [
+                    pair[side][0][0].to_bits(),
+                    pair[side][0][1].to_bits(),
+                    pair[side][1][0].to_bits(),
+                    pair[side][1][1].to_bits(),
+                ];
+                if let Some(bounds) = cache[side].get(&key) {
+                    boxes.push(*bounds);
+                    out.cache_hits += 1;
+                    continue;
+                }
                 let (bounds, used) =
                     if matches!(self.faces[faces[side]].kind, ShellFaceKind::Transition) {
                         match constrained.as_ref() {
@@ -147,6 +164,9 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     out.pending.push(pair);
                     return Ok(out);
                 };
+                if cache[side].len() < 8192 {
+                    cache[side].insert(key, bounds);
+                }
                 boxes.push(bounds);
             }
             let bound = nurbs_core::surface_distance::enclosure_distance(&boxes[0], &boxes[1])?.0;

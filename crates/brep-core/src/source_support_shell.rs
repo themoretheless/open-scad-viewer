@@ -952,7 +952,7 @@ mod tests {
         if let Ok(path)=std::env::var("BREP_EXPRESSION_GAP_PATH") {
             std::fs::write(path,value_codec::json!({"faces":gap.faces,"requestedLowerMm":gap.requested_lower_mm,
                 "complete":gap.complete,"lowerMm":gap.lower_mm,"cells":gap.cells,"spans":gap.spans,
-                "pending":gap.pending,"reason":gap.reason}).to_string()).unwrap();
+                "cacheHits":gap.cache_hits,"pending":gap.pending,"reason":gap.reason}).to_string()).unwrap();
         }
         let (refused,refused_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,0,10000).unwrap();
         assert!(refused_certificate.is_none());
