@@ -61,6 +61,24 @@ pub struct ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     components: usize,
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    /// Flux of a complete support rectangle in its native chart orientation.
+    /// The caller must classify material trim and apply shell orientation before
+    /// summing volume. A support rectangle alone never admits a solid.
+    pub fn enclose_support_flux(
+        &self, face: usize, domain: [[f64; 2]; 2], axis: usize, origin: f64,
+        max_controls: usize, max_spans: usize,
+    ) -> Result<(Option<nurbs_core::surface_flux::Bound>, usize)> {
+        if axis >= 3 || !origin.is_finite() {
+            return Err(Error::new("BREP_PROFILE_SHELL", "Choose a finite support flux axis and origin"));
+        }
+        let (position, position_spans) = self.enclose_support(face, domain, max_controls, max_spans)?;
+        let Some(position) = position else { return Ok((None, position_spans)); };
+        let (derivatives, derivative_spans) = self.enclose_support_derivatives(face, domain, max_controls, max_spans - position_spans)?;
+        let spent = position_spans + derivative_spans;
+        let Some(derivatives) = derivatives else { return Ok((None, spent)); };
+        let bound = nurbs_core::surface_flux::bound_expression(position, derivatives, domain, axis, origin, false)?;
+        Ok((Some(bound), spent))
+    }
     /// First derivatives in the same parameters as `enclose_support`.
     /// These enclose the supporting expression, without a trim classification.
     pub fn enclose_support_derivatives(

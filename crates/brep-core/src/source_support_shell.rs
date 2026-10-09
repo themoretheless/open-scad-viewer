@@ -836,7 +836,16 @@ mod tests {
             let (owned,spent)=expression.enclose_support_derivatives(id,derivative_domain,1000,10000).unwrap();
             assert_eq!(owned,direct_profile_derivatives.map(|b|std::array::from_fn(|axis|std::array::from_fn(|k|b[k][axis]))));
             assert_eq!(spent,direct_profile_spans);
+            let (position,position_spans)=expression.enclose_support(id,derivative_domain,1000,10000).unwrap();
+            let direct_flux=nurbs_core::surface_flux::bound_expression(position.unwrap(),owned.unwrap(),derivative_domain,2,0.,false).unwrap();
+            let (flux,flux_spans)=expression.enclose_support_flux(id,derivative_domain,2,0.,1000,10000).unwrap();
+            let flux=flux.unwrap();
+            assert_eq!(flux.density,direct_flux.density);
+            assert_eq!(flux.integral,direct_flux.integral);
+            assert_eq!(flux_spans,position_spans+spent);
         }
+        assert!(expression.enclose_support_flux(retained_ids[0],derivative_domain,3,0.,1000,10000).is_err());
+        assert!(expression.enclose_support_flux(retained_ids[0],derivative_domain,2,f64::NAN,1000,10000).is_err());
         assert!(expression.enclose_support_derivatives(usize::MAX,derivative_domain,1000,10000).is_err());
         assert!(expression.enclose_support_derivatives(retained_ids[0],[[f64::NAN;2],[0.,1.]],1000,10000).is_err());
         assert!(expression.enclose_support_derivatives(retained_ids[0],derivative_domain,1000,100001).is_err());
