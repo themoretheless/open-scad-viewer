@@ -2,11 +2,12 @@
 //! inclusions with an invertible preconditioner and contraction certify roots.
 //! Unresolved cells remain explicit; this module does not classify solid volume.
 use crate::{
-    Result, check,
+    check,
     distance_bounds::Interval as I,
     resource,
     surface::Surface,
     surface_distance::{interpolate, rectangle_bounds},
+    Result,
 };
 type Net = Vec<Vec<[I; 2]>>;
 #[derive(Debug)]
@@ -416,6 +417,39 @@ pub fn intersections(
 
 /// Conservative line parameter range of a complete surface rectangle, using
 /// the ray's dominant coordinate. Useful for rejecting regions behind a ray.
+/// Conservative finite-line parameters that can meet a certified position box.
+/// None proves exclusion; Some does not prove a surface intersection or material.
+pub fn finite_line_enclosure_parameters(
+    bounds: [[f64; 2]; 3],
+    origin: [f64; 3],
+    direction: [f64; 3],
+) -> Result<Option<[f64; 2]>> {
+    check(
+        origin.iter().chain(&direction).all(|x| x.is_finite())
+            && direction.iter().any(|&x| x != 0.),
+        "Choose a finite nonzero line",
+    )?;
+    let mut parameter = [0_f64, 1_f64];
+    for axis in 0..3 {
+        let box_axis = I::new(bounds[axis][0], bounds[axis][1])?;
+        if direction[axis] == 0. {
+            if !box_axis.contains(origin[axis]) {
+                return Ok(None);
+            }
+            continue;
+        }
+        let t = box_axis
+            .sub(I::point(origin[axis]))?
+            .div_signed(I::point(direction[axis]))?;
+        parameter[0] = parameter[0].max(t.lo);
+        parameter[1] = parameter[1].min(t.hi);
+        if parameter[0] > parameter[1] {
+            return Ok(None);
+        }
+    }
+    Ok(Some(parameter))
+}
+
 pub fn parameter_bounds(
     s: &Surface,
     uv: [[f64; 2]; 2],
@@ -441,6 +475,34 @@ pub fn parameter_bounds(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn finite_line_box_exclusion_preserves_crossings_and_tangencies() {
+        let bounds = [[0., 1.]; 3];
+        let t = finite_line_enclosure_parameters(bounds, [-1., 0.5, 0.5], [3., 0., 0.])
+            .unwrap()
+            .unwrap();
+        assert!(t[0] <= 1. / 3. && t[1] >= 2. / 3.);
+        let reverse = finite_line_enclosure_parameters(bounds, [2., 0.5, 0.5], [-3., 0., 0.])
+            .unwrap()
+            .unwrap();
+        assert!(reverse[0] <= 1. / 3. && reverse[1] >= 2. / 3.);
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., 2., 0.5], [3., 0., 0.])
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., -3., 0.5], [3., 3., 0.])
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            finite_line_enclosure_parameters(bounds, [-1., 1., 0.5], [1., 0., 0.])
+                .unwrap()
+                .is_some()
+        );
+        assert!(finite_line_enclosure_parameters(bounds, [0.; 3], [0.; 3]).is_err());
+    }
     fn plane() -> Surface {
         Surface {
             degree_u: 1,
