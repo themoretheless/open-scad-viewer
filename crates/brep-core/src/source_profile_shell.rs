@@ -702,3 +702,7 @@ pub use profile_boundary_contact::{ProfileBoundaryContact,ProfileBoundaryReport}
 #[path="source_profile_shell_paired_contact.rs"]
 mod profile_paired_contact;
 pub use profile_paired_contact::{ProfilePairedContact,ProfilePairedReport};
+
+#[path="source_profile_shell_xy_plane_contact.rs"]
+mod xy_plane_contact;
+pub use xy_plane_contact::{TransitionXyPlaneContact,TransitionXyPlaneReport};

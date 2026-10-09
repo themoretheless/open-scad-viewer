@@ -1395,6 +1395,17 @@ mod tests {
                 assert!(c.image().image().poles().is_empty());
             }
         }
+        assert!(expression.qualify_transition_xy_material_plane([6,transition_id],&profile_region,0,10000000).unwrap().certificate.is_none());
+        assert!(expression.qualify_transition_xy_material_plane([6,transition_id],&profile_region,10000,0).unwrap().certificate.is_none());
+        for ids in [[6,transition_id],[transition_id,6]] {
+            let report=expression.qualify_transition_xy_material_plane(ids,&profile_region,10000,10000000).unwrap();
+            eprintln!("transition material XY plane pair={ids:?} qualified={} work={} spans={} reason={}",report.certificate.is_some(),report.exact_work,report.spans,report.reason);
+            let proof=report.certificate.expect(report.reason);
+            for side in 0..2 {assert!(std::ptr::eq(proof.owners()[side],&expression.faces()[ids[side]]));}
+            assert_eq!(proof.domain(),profile_region.source_domain());
+            assert_eq!([proof.plane()[0][0],proof.plane()[0][1]],[proof.plane()[2][0],proof.plane()[2][1]]);
+            assert!(report.exact_work<=10000000 && report.spans<=10000);
+        }
         eprintln!("profile paired audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_PAIRED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
