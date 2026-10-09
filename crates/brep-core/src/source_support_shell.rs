@@ -467,13 +467,20 @@ mod tests {
         let mut reversed=authored.surface.clone();reversed.control_points.reverse();reversed.weights.reverse();
         assert_eq!(profile.source(),&reversed);
         let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
-        let report=bridge.inspect_radius_on_domains(&centers,&law,[[0.75,0.9];2],1e-4,1000,100000).unwrap();
+        let report=bridge.inspect_radius_on_domains(&centers,&law,[[0.75,0.9];2],1e-4,10000,1000000).unwrap();
         eprintln!("annular exact radius complete={} cells={} spans={} pending={} reason={} violation={:?}",
             report.complete,report.cells,report.spans,report.pending.len(),report.reason,
             report.violation.as_ref().map(|v|(v.domain,v.error_bounds)));
-        assert!(report.cells<=1000 && report.spans<=100000);
+        assert!(report.cells<=10000 && report.spans<=1000000);
         assert_eq!(report.complete,report.pending.is_empty());
         if report.complete {assert!(report.accepted_error_upper<=1e-4);}
+        if let Ok(path)=std::env::var("BREP_FOCUSED_EXPRESSION_RADIUS_PATH") {
+            std::fs::write(path,value_codec::json!({"complete":report.complete,"tolerance":1e-4,
+                "cells":report.cells,"spans":report.spans,"acceptedCells":report.accepted_cells,
+                "acceptedErrorUpper":report.accepted_error_upper,"pending":report.pending,"reason":report.reason,
+                "violation":report.violation.map(|v|value_codec::json!({"domain":v.domain,"errorBounds":v.error_bounds,
+                    "squaredResidual":v.squared_residual}))}).to_string()).unwrap();
+        }
     }
 
     #[test]

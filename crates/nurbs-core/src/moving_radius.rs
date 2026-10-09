@@ -9,6 +9,20 @@ pub struct ExpressionBound {
     pub error_lower:f64,
     pub error_upper:f64,
 }
+pub(crate) fn refine_expression_bound(mut direct:ExpressionBound,residual:[f64;2],radius:[f64;2])->Result<ExpressionBound> {
+    let residual=I::new(direct.squared_residual[0].max(residual[0]),direct.squared_residual[1].min(residual[1]))?;
+    let maximum=residual.lo.abs().max(residual.hi.abs());
+    let mut upper=maximum.sqrt().next_up();
+    if radius[0]>0. {upper=upper.min(I::point(maximum).div(I::point(radius[0]))?.hi);}
+    let minimum=if residual.lo>0. {residual.lo}else if residual.hi<0. {-residual.hi}else{0.};
+    // |S-C| <= r_upper + direct error, hence this bounds |S-C|+r.
+    let denominator=I::point(2.).mul(I::point(radius[1]))?.add(I::point(direct.error_upper))?.hi;
+    if minimum>0. && denominator>0. {
+        direct.error_lower=direct.error_lower.max(I::point(minimum).div(I::point(denominator))?.lo.max(0.));
+    }
+    direct.error_upper=direct.error_upper.min(upper);
+    direct.squared_residual=[residual.lo,residual.hi];Ok(direct)
+}
 pub fn bound_expression(position:[[f64;2];3],centers:[[f64;2];3],radius:[f64;2])
 ->Result<ExpressionBound> {
     check(position.iter().chain(centers.iter()).chain(std::iter::once(&radius))

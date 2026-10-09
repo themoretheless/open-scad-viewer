@@ -3219,3 +3219,9 @@ Native `profile_expression_radius` adaptively checks every point of the correcte
 The full owned-section gate fixture subsequently passed in 520.18 s. Actual certificate owner identity and refusal with zero recipe/regularity budgets passed for both sections; saved `expression-owned-section-joins.json`. This run predates the annular radius check.
 
 The focused annular expression radius test passed as a diagnostic in 20.77 s: qualification remains incomplete after 1,000 cells / 34,034 spans, with 27 pending rectangles and no proven violation. A rigorous center-point probe can refute a radius law but cannot admit any rectangle; it found no violation here. This is not a radius certificate. Correlated or derivative-based residual bounds remain necessary to qualify the requested 0.0001 mm tolerance efficiently.
+
+### Mean-value residual refinement
+
+The native radius check now intersects direct squared-residual bounds with a whole-cell mean-value enclosure. Actual corrected-expression first derivatives and original rational law jets bound the residual gradient; source-parameter derivatives are scaled to normalized across coordinates. Discontinuous law/source charts cannot use this refinement. The original direct enclosure remains valid when a derivative query exhausts work. Eleven radius regressions pass, including nonunit law domains, positive/negative refusal cases and rational-cylinder full coverage.
+
+The first annular mean-value run remained incomplete after 764 cells / 100,000 spans, with 12 pending rectangles and no proven violation; its diagnostic test passed in 53.23 s. An extended run is active with 10,000 cells / 1,000,000 spans at the same 0.0001 mm tolerance. It exports accepted-cell error bounds and every pending rectangle via `BREP_FOCUSED_EXPRESSION_RADIUS_PATH`. Radius qualification remains pending, and these changes are not yet packaged into WASM.
