@@ -3050,3 +3050,12 @@ Extended the fresh profile vertex protocol with a distinct `profile-vertex-exclu
 ### Verified coordinate pass: conservative refusal
 
 Full coordinate-inclusive native fixture passed in 251.37 s. Direct coordinate cover closes no transition pairs; it reaches cumulative spans 100,000 at cells 8,415. All three transition coordinate covers remain incomplete. No positive coordinate certificate is established on this body, and no defect is inferred from interval overlap. The following profile vertex phase again reaches 13 pending, with unchanged qualified source/image contacts. Saved coordinate-stage `contact-audit-coordinate-17.json`, SHA256 cddb580e4a70d02813393ac02ec28f4515234228f2405a9aa4faae23eeb5ddfe. The current removed-corner-inclusive binary logs `/tmp/profile-corner-exclusion-native.log`, artifact `/tmp/profile-corner-exclusion-audit.json`; no new exclusion result claimed yet.
+
+
+### Verified removed corner exclusion: 11 pending pairs
+
+Full native fixture passed in 251.34 s. Fresh positive-profile corner-locus exclusion closed two more pairs, [0,23] and [6,27], reducing 13 to 11. Closed trim boundaries and collapsed zero edges remain conservative refusal cases. Prior proofs, reversed owners and cumulative budgets passed. Remaining groups: 8 original-retained and 3 original-transition. Cumulative exact work 12,191,096; spans 100,000; cells 8,415. Saved `contact-audit-profile-corner-exclusion-11.json`, SHA256 530c7aad200b4813b7de992f0b593000ca661a15cf79f729f60c7d62570e2968. This verifies the control fixture only; complete Body admission, WASM packaging and UI acceptance remain incomplete.
+
+### Anchored Hermite enclosure prepared
+
+The position enclosure now intersects the previous direct interval with two algebraically equivalent anchored forms using h00+h01=1. Monotonic h01 on [0,1] gives outward endpoint bounds; no source geometry substitution or sampling authority is used. Four profile-section bridge regressions and 18 assembled-shell regressions pass. Full control-fixture qualification is running; no further contact reduction is claimed.

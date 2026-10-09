@@ -7,6 +7,20 @@ fn projected_principal_minors_positive(j: [[I; 2]; 2]) -> Result<bool> {
     let determinant = j[0][0].mul(j[1][1])?.sub(j[0][1].mul(j[1][0])?)?;
     Ok(j[0][0].lo > 0. && j[1][1].lo > 0. && (determinant.lo > 0. || symmetric.lo > 0.))
 }
+// h01(t)=t^2(3-2t) increases on [0,1] since h01'=6t(1-t).
+// Point interval evaluation encloses both endpoint values; analytic monotonicity
+// encloses the whole interval without treating samples as authority.
+fn anchored_position_range(across:[f64;2],a:I,b:I,tangent:I,direct:I)->Result<I> {
+    check(across.iter().all(|v|v.is_finite()) && across[0]>=0. && across[0]<=across[1] && across[1]<=1., "Keep Hermite blend in [0,1]")?;
+    let value=|x:f64|->Result<I> {let t=I::point(x);t.mul(t)?.mul(I::point(3.).sub(I::point(2.).mul(t)?)?)};
+    let left=value(across[0])?;let right=value(across[1])?;
+    let w=I::new(left.lo.max(0.),right.hi.min(1.))?;
+    let first=a.add(w.mul(b.sub(a)?)?)?.add(tangent)?;
+    let second=b.add(I::point(1.).sub(w)?.mul(a.sub(b)?)?)?.add(tangent)?;
+    // All three forms are the same exact Hermite expression. Their outward
+    // enclosures may be intersected; no source/profile substitution is made.
+    I::new(direct.lo.max(first.lo).max(second.lo),direct.hi.min(first.hi).min(second.hi))
+}
 pub struct ProfileSectionBridge<'a, 'b, 'c, 'd> {
     sections: [Section<'a, 'b, 'c, 'd>; 2],
     scales: [f64; 2],
@@ -184,6 +198,11 @@ impl<'a, 'b, 'c, 'd> ProfileSectionBridge<'a, 'b, 'c, 'd> {
                 value = value
                     .add(h[term].mul(I::new(data[side][slot][k][0], data[side][slot][k][1])?)?)?;
             }
+            let a=I::new(data[0][0][k][0],data[0][0][k][1])?;
+            let b=I::new(data[1][0][k][0],data[1][0][k][1])?;
+            let tangent=h[1].mul(I::new(data[0][1][k][0],data[0][1][k][1])?)?
+                .add(h[3].mul(I::new(data[1][1][k][0],data[1][1][k][1])?)?)?;
+            let value=anchored_position_range(across,a,b,tangent,value)?;
             bounds[k] = [value.lo, value.hi];
         }
         Ok((Some(bounds), spent))
@@ -1441,6 +1460,23 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn anchored_hermite_enclosure_preserves_constant_coordinate_and_real_cubic() {
+        let r=anchored_position_range([0.,1.],I::point(6.),I::point(6.),I::point(0.),I::new(0.,12.).unwrap()).unwrap();
+        assert!(r.lo<=6. && r.hi>=6. && r.hi-r.lo<1e-10);
+        assert!(anchored_position_range([-0.1,1.],I::point(1.),I::point(2.),I::point(0.),I::new(0.,3.).unwrap()).is_err());
+        for range in [[0.,1.],[0.125,0.75],[0.5,0.5]] {
+            let t=I::new(range[0],range[1]).unwrap();let q=I::point(1.).sub(t).unwrap();
+            let tangent=t.mul(q).unwrap().mul(q).unwrap().mul(I::point(2.)).unwrap()
+                .sub(t.mul(t).unwrap().mul(q).unwrap().mul(I::point(-3.)).unwrap()).unwrap();
+            let r=anchored_position_range(range,I::point(3.),I::point(7.),tangent,I::new(-100.,100.).unwrap()).unwrap();
+            for i in 0..=32 {
+                let t=range[0]+(range[1]-range[0])*i as f64/32.;let q=1.-t;
+                let expected=3.*q*q*(1.+2.*t)+7.*t*t*(3.-2.*t)+2.*t*q*q+3.*t*t*q;
+                assert!(r.lo<=expected && expected<=r.hi,"{range:?}: {r:?} misses {expected}");
+            }
+        }
+    }
     #[test]
     fn full_corrected_injectivity_refuses_a_genuinely_folded_patch() {
         // x(u)=(u-0.625)^2: distinct u values in [0.5,0.75]
