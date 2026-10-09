@@ -449,6 +449,16 @@ mod tests {
     }
 
     #[test]
+    fn annular_authored_source_radius_baseline() {
+        let authored=crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
+        let report=authored.qualify_radius(1e-6,100,100000000).unwrap();
+        eprintln!("annular source radius reason={} error={:?} work={}",report.reason,report.error_upper,report.work);
+        let certificate=report.certificate.expect("original annular radius baseline");
+        assert_eq!(certificate.surface(),&authored.surface);
+        assert_eq!(certificate.centers(),&authored.centers);
+    }
+
+    #[test]
     fn annular_corrected_expression_authored_radius() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
