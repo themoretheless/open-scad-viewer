@@ -964,9 +964,10 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),150);
-        let mut kinds=[0usize;19];
+        let mut kinds=[0usize;20];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
+                PairContactProof::TransitionXyPlane(c)=>(19,Some(c.owners())),
                 PairContactProof::ProfilePaired(c)=>(18,Some(c.owners())),
                 PairContactProof::ProfileRuled(c)=>(17,Some(c.image().owners())),
                 PairContactProof::ProfileBoundary(c)=>(16,Some(c.owners())),
@@ -988,7 +989,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0,0,0]);
+        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0,0,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(150));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -1408,6 +1409,29 @@ mod tests {
         }
         eprintln!("profile paired audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_PAIRED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_xy_plane=resumed.diagnostics();
+        let spent_xy_exact=ContactAuditLimits{exact_work:resumed.work().3,..cumulative};
+        expression.qualify_remaining_transition_xy_material_planes(&mut resumed,spent_xy_exact,&profile_region).unwrap();
+        assert_eq!(resumed.diagnostics(),before_xy_plane);
+        let spent_xy_spans=ContactAuditLimits{spans:resumed.work().1,..cumulative};
+        expression.qualify_remaining_transition_xy_material_planes(&mut resumed,spent_xy_spans,&profile_region).unwrap();
+        assert_eq!(resumed.diagnostics(),before_xy_plane);
+        let prior_pending=resumed.pending_pairs();
+        expression.qualify_remaining_transition_xy_material_planes(&mut resumed,cumulative,&profile_region).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work && resumed.work().1<=cumulative.spans);
+        for (old,new) in before_xy_plane["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::TransitionXyPlane(c)=new.proof() {
+                for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
+                assert_eq!(c.domain(),profile_region.source_domain());
+                assert_eq!([c.plane()[0][0],c.plane()[0][1]],[c.plane()[2][0],c.plane()[2][1]]);
+                assert!(expression.qualify_transition_xy_material_plane([new.support().faces[1],new.support().faces[0]],&profile_region,10000,10000000).unwrap().certificate.is_some());
+            }
+        }
+        eprintln!("transition material XY plane audit pending={} work={} spans={}",resumed.pending_pairs(),resumed.work().3,resumed.work().1);
+        if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
 
 
 

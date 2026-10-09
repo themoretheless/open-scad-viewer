@@ -13,6 +13,7 @@ pub struct ContactAuditLimits {
     pub tolerance_uv: f64,
 }
 pub enum PairContactProof<'x> {
+    TransitionXyPlane(TransitionXyPlaneContact<'x>),
     ProfilePaired(ProfilePairedContact<'x, 'x>),
     ProfileRuled(ProfileRuledContact<'x, 'x>),
     ProfileBoundary(ProfileBoundaryContact<'x, 'x>),
@@ -36,6 +37,7 @@ pub enum PairContactProof<'x> {
 impl PairContactProof<'_> {
     pub fn kind(&self) -> &'static str {
         match self {
+            Self::TransitionXyPlane(_) => "transition-xy-material-plane-separated",
             Self::ProfilePaired(_) => "profile-paired-contact",
             Self::ProfileRuled(_) => "profile-ruled-contact",
             Self::ProfileBoundary(_) => "profile-boundary-contact",
