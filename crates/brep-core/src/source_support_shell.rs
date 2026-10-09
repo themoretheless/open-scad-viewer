@@ -843,6 +843,15 @@ mod tests {
             assert_eq!(flux.density,direct_flux.density);
             assert_eq!(flux.integral,direct_flux.integral);
             assert_eq!(flux_spans,position_spans+spent);
+            let masked=expression.enclose_material_flux(id,derivative_domain,2,0.,1e-8,1000,10000,0).unwrap();
+            let masked_bounds=masked.bound.unwrap();
+            assert!(masked_bounds[0]<=0. && masked_bounds[1]>=0.);
+            assert_eq!(masked.domain_cells,0);
+            assert_eq!(masked.spans,flux_spans);
+            let classified=expression.enclose_material_flux(id,derivative_domain,2,0.,1e-8,1000,10000,1000).unwrap();
+            let classified_bounds=classified.bound.unwrap();
+            assert!(masked_bounds[0]<=classified_bounds[0] && classified_bounds[1]<=masked_bounds[1]);
+            assert!(classified.domain_cells<=1000);
         }
         assert!(expression.enclose_support_flux(retained_ids[0],derivative_domain,3,0.,1000,10000).is_err());
         assert!(expression.enclose_support_flux(retained_ids[0],derivative_domain,2,f64::NAN,1000,10000).is_err());
