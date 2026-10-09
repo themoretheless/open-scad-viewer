@@ -1067,10 +1067,12 @@ mod tests {
         assert!(expression.qualify_transition_xy_hull_contact([1,transition_id],&profile_region,0).unwrap().certificate.is_none());
         assert!(expression.qualify_transition_xy_hull_contact([0,1],&profile_region,1000).unwrap().certificate.is_none());
         let mut xy_positive=false;
+        let mut xy_work=0u64;let mut xy_reasons=std::collections::BTreeMap::new();
         for (id,face) in expression.faces().iter().enumerate() {
             if !matches!(face.kind(),ShellFaceKind::Original(_)) {continue;}
             let report=expression.qualify_transition_xy_hull_contact([id,transition_id],&profile_region,100000).unwrap();
             assert!(report.exact_work<=100000);
+            xy_work+=report.exact_work;*xy_reasons.entry(report.reason).or_insert(0usize)+=1;
             if let Some(c)=report.certificate {
                 assert!(std::ptr::eq(c.owners()[0],face));
                 assert!(std::ptr::eq(c.owners()[1],&expression.faces()[transition_id]));
@@ -1079,7 +1081,9 @@ mod tests {
                 xy_positive=true;break;
             }
         }
-        assert!(xy_positive,"actual owned transition image must have at least one strictly separated original XY hull");
+        eprintln!("transition full XY hull positive={xy_positive} work={xy_work} reasons={xy_reasons:?}");
+        assert!(!xy_positive,"this fixture has overlapping complete source XY hulls");
+        assert!(xy_work>0,"actual owned image must reach fresh hull predicates");
         expression.qualify_remaining_transition_xy_hulls(&mut resumed,cumulative,&profile_region).unwrap();
         assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work);
         for (old,new) in before_xy["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
