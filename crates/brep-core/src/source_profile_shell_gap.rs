@@ -96,6 +96,26 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             reason: "expression-gap-work-limit",
         };
         let mut lower = f64::INFINITY;
+        // Reuse the immutable rail recipe across all product cells. Only
+        // enclosure queries vary; their native span costs remain charged.
+        let needs_transition = faces
+            .iter()
+            .any(|&face| matches!(self.faces[face].kind, ShellFaceKind::Transition));
+        let bridge = if needs_transition && max_cells > 0 && max_spans > 0 {
+            let root = self.assembly.patch.rails.face.boundary.rooted[0];
+            let profile = root.restricted.proposal.profile(root.face).unwrap();
+            Some(nurbs_core::normal_alignment::ProfileSectionBridge::new(
+                profile.section(root.axis, root.parameters[0])?,
+                profile.section(root.axis, root.parameters[1])?,
+                [root.parameters[1] - root.parameters[0]; 2],
+            )?)
+        } else {
+            None
+        };
+        let constrained = match bridge.as_ref() {
+            Some(bridge) => bridge.constrain_original_rails(controls)?.0,
+            None => None,
+        };
         while let Some(pair) = out.pending.pop() {
             if out.cells == max_cells || out.spans == max_spans {
                 out.pending.push(pair);
@@ -104,12 +124,24 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             out.cells += 1;
             let mut boxes = Vec::new();
             for side in 0..2 {
-                let (bounds, used) = self.enclose_support(
-                    faces[side],
-                    pair[side],
-                    controls,
-                    (max_spans - out.spans).min(100000),
-                )?;
+                let (bounds, used) =
+                    if matches!(self.faces[faces[side]].kind, ShellFaceKind::Transition) {
+                        match constrained.as_ref() {
+                            Some(bridge) => bridge.enclose_with_transverse_correction(
+                                pair[side][0],
+                                pair[side][1],
+                                (max_spans - out.spans).min(100000),
+                            )?,
+                            None => (None, 0),
+                        }
+                    } else {
+                        self.enclose_support(
+                            faces[side],
+                            pair[side],
+                            controls,
+                            (max_spans - out.spans).min(100000),
+                        )?
+                    };
                 out.spans += used;
                 let Some(bounds) = bounds else {
                     out.pending.push(pair);

@@ -91,7 +91,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         c: &[I],
         r: I,
         budget: usize,
-    ) -> Result<(Option<[f64; 2]>, usize)> {
+    ) -> Result<(Option<([f64; 2], [f64; 2])>, usize)> {
         for (curve, domain) in [centers, radius].into_iter().zip(domains) {
             if !continuous_knots(
                 &curve.knots,
@@ -201,13 +201,14 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         }
         gradient[1] = gradient[1].sub(I::point(2.).mul(r)?.mul(rd[0])?)?;
         let mut residual = I::new(point.squared_residual[0], point.squared_residual[1])?;
+        let mut contributions = [0.; 2];
         for axis in 0..2 {
-            residual = residual.add(
-                gradient[axis]
-                    .mul(I::new(rect[axis][0], rect[axis][1])?.sub(I::point(midpoint[axis]))?)?,
-            )?;
+            let contribution = gradient[axis]
+                .mul(I::new(rect[axis][0], rect[axis][1])?.sub(I::point(midpoint[axis]))?)?;
+            contributions[axis] = contribution.lo.abs().max(contribution.hi.abs());
+            residual = residual.add(contribution)?;
         }
-        Ok((Some([residual.lo, residual.hi]), spent))
+        Ok((Some(([residual.lo, residual.hi], contributions)), spent))
     }
     /// Center and radius curves are mapped over their complete domains by
     /// normalized across coordinate. Radius uses coordinate zero. All free
@@ -306,6 +307,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 std::array::from_fn(|axis| [c[axis].lo, c[axis].hi]),
                 [r[0].lo.max(0.), r[0].hi],
             )?;
+            let mut split_contributions = None;
             if bound.error_upper > tolerance && max_spans - out.spans >= 100 {
                 let (residual, spent) = self.mean_radius_residual(
                     centers,
@@ -318,7 +320,8 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                     max_spans - out.spans,
                 )?;
                 out.spans += spent;
-                if let Some(residual) = residual {
+                if let Some((residual, contributions)) = residual {
+                    split_contributions = Some(contributions);
                     bound = crate::moving_radius::refine_expression_bound(
                         bound,
                         residual,
@@ -378,9 +381,14 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 out.reason = "expression-radius-law-mismatch";
                 return Ok(out);
             }
-            let axis = usize::from(
+            let balanced_axis = usize::from(
                 rect[1][1] - rect[1][0] > (rect[0][1] - rect[0][0]) / (range[1] - range[0]),
             );
+            // Split the dominant whole-cell residual contribution. This only
+            // chooses coverage order; every child still requires interval proof.
+            let axis = split_contributions
+                .filter(|c| c[0] != c[1])
+                .map_or(balanced_axis, |c| usize::from(c[1] > c[0]));
             let mid = rect[axis][0] * 0.5 + rect[axis][1] * 0.5;
             if mid <= rect[axis][0] || mid >= rect[axis][1] {
                 out.pending.push(rect);
