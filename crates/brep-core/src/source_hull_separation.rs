@@ -94,6 +94,22 @@ pub fn certify_shell(
     faces: [usize; 2],
     max_work: u64,
 ) -> Result<Report> {
+    certify_shell_impl(shell, faces, None, max_work)
+}
+/// Keep one side's full positive control hull, while freshly qualifying only
+/// the other side's original planar material. The raw side is never trimmed
+/// using material of its old weight profile.
+pub fn certify_shell_with_raw_side(
+    shell: &crate::source_shell_incidence::Shell,
+    faces: [usize;2], raw_side: usize, max_work:u64,
+) -> Result<Report> {
+    if raw_side>1 {return Err(Error::new("BREP_SOURCE_CONTACT","Choose an owned raw hull side"));}
+    certify_shell_impl(shell,faces,Some(raw_side),max_work)
+}
+fn certify_shell_impl(
+    shell: &crate::source_shell_incidence::Shell,
+    faces:[usize;2], raw_side:Option<usize>, max_work:u64,
+) -> Result<Report> {
     if !(1..=100_000_000).contains(&max_work) || faces[0] == faces[1] {
         return Err(Error::new(
             "BREP_SOURCE_CONTACT",
@@ -114,6 +130,7 @@ pub fn certify_shell(
     let mut hulls = [None, None];
     let mut used = initial.exact_work;
     for slot in 0..2 {
+        if raw_side==Some(slot) {continue;}
         if used == max_work {
             return Ok(Report {
                 certificate: None,

@@ -3091,3 +3091,12 @@ Added `qualify_profile_boundary_contact`: fresh original boundary/pole plane con
 ### Cumulative retained boundary audit integration prepared
 
 Added a separate ProfileBoundary pair-proof kind and candidate-only cumulative pass. It first validates actual audit owners and every cumulative limit through the existing continuation gate, fairly divides remaining exact and driver work, and skips all queries when either budget is spent. Existing nonpending proofs are retained. The full fixture checks spent-budget diagnostics equality, prior-proof preservation, actual owner pointers, current shared-address membership and reversed positive cases. The 17-type initial count remains exactly fixed, with the new kind zero before this pass. All 19 assembled-shell regressions pass after integration. The already-live direct ownership fixture predates this cumulative phase; it remains running, so neither direct positive ownership nor final cumulative reduction is claimed yet. Latest completed residual remains 9.
+
+
+### Verified direct retained boundary contacts
+
+Complete native ownership fixture passed in 246.21 s. Pairs [0,1] and [1,27] qualify in both owner orders, including actual pointer owners, current root-ended shared edges and native plane-image identity. Each direct qualification uses 31,246 exact operations and one driver cell. This run predates cumulative ProfileBoundary classification, so its final residual remains 9; no lower cumulative count is claimed.
+
+### Fresh neighbor-only material hull prepared
+
+Added `certify_shell_with_raw_side`: retain the designated full positive control hull and freshly qualify material only on the other original side. Profile hull contact validates complete unchanged neighbor contours, keeps the modified selected side raw, and can now use this fresh neighbor material certificate. Four native hull regressions and 19 assembled-shell regressions pass. The fixture guard now requires the retained side material certificate to be absent while allowing a fresh unchanged-neighbor certificate. A full cumulative run is active; its compiled fixture predates this guard update and may stop at the obsolete all-material-certificates-absent expectation if a new positive material case occurs. It will not be called complete on partial output. Latest fully verified residual remains 9.

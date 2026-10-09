@@ -1061,7 +1061,14 @@ mod tests {
         assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work);
         for (old,new) in before_profile_hulls["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
             if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
-            if let PairContactProof::ProfileHull(c)=new.proof() {for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}assert!(c.source().material_hulls().iter().all(Option::is_none));}
+            if let PairContactProof::ProfileHull(c)=new.proof() {
+                for side in 0..2 {
+                    assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));
+                    if matches!(expression.faces()[new.support().faces[side]].kind(),ShellFaceKind::Retained(_)) {
+                        assert!(c.source().material_hulls()[side].is_none());
+                    }
+                }
+            }
         }
         eprintln!("profile control-hull audit pending={} work={}",resumed.pending_pairs(),resumed.work().3);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_HULL_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}

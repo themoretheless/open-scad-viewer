@@ -674,9 +674,11 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             || faces.iter().zip(ids).any(|(&face,original)|self.faces[face].loops.iter().flatten().any(|u|!matches!(u,ShellUse::Source(f) if f.surface()==regions[original].loops()[0][0].surface()))) {
             out.reason="profile-hull-source-controls-unproven";return Ok(out);
         }
-        // Raw full control hulls only: source material trims cannot bound the
-        // modified profile image. Positive target factors require no rounding.
-        let report = crate::source_hull_separation::certify(ids.map(|i| &regions[i]), max_work)?;
+        // The changed profile always keeps its full positive control hull.
+        // Only the complete unchanged neighbor may receive a fresh original
+        // planar material bound; never substitute the selected old trim.
+        let raw_side=if ids[0]==root.face {0} else {1};
+        let report = crate::source_hull_separation::certify_shell_with_raw_side(shell,ids,raw_side,max_work)?;
         out.exact_work = report.exact_work;
         out.reason = report.reason;
         if let Some(source) = report.certificate {
@@ -684,7 +686,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 owners: faces.map(|i| &self.faces[i]),
                 source,
             });
-            out.reason = "profile-full-control-hull-separation-qualified";
+            out.reason = "profile-positive-control-hull-separation-qualified";
         }
         Ok(out)
     }
