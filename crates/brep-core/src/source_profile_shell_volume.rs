@@ -37,6 +37,13 @@ impl Eq for Priority {}
 impl PartialOrd for Priority { fn partial_cmp(&self, b: &Self) -> Option<Ordering> { Some(self.cmp(b)) } }
 impl Ord for Priority { fn cmp(&self, b: &Self) -> Ordering { self.1.total_cmp(&b.1).then(self.0.cmp(&b.0)) } }
 
+fn refine_sum(previous: I, left: I, right: I) -> Result<I> {
+    let sum = left.add(right)?;
+    // Both enclose the integral of the same complete material rectangle.
+    // Retain the tighter old enclosure if child dependency bounds are wider.
+    I::new(previous.lo.max(sum.lo), previous.hi.min(sum.hi))
+}
+
 impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
     pub fn inspect_volume(&self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeReport> {
         if limits.axis >= 3 || !limits.origin.is_finite()
@@ -92,7 +99,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             let Some(a) = evaluate(face, left, &mut out)? else { out.reason = "expression-volume-work-limit"; return Ok(out); };
             let Some(b) = evaluate(face, right, &mut out)? else { out.reason = "expression-volume-work-limit"; return Ok(out); };
             let children = [nodes.len(), nodes.len() + 1];
-            nodes[index].children = Some(children); nodes[index].bound = a.add(b)?;
+            nodes[index].children = Some(children); nodes[index].bound = refine_sum(nodes[index].bound, a, b)?;
             for (domain, bound, child) in [(left, a, children[0]), (right, b, children[1])] {
                 nodes.push(Node { face, domain, bound, parent: Some(index), children: None });
                 queue.push(Priority(child, bound.hi - bound.lo));
@@ -100,8 +107,21 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             let mut current = index;
             while let Some(parent) = nodes[current].parent {
                 let [a, b] = nodes[parent].children.unwrap();
-                nodes[parent].bound = nodes[a].bound.add(nodes[b].bound)?; current = parent;
+                nodes[parent].bound = refine_sum(nodes[parent].bound, nodes[a].bound, nodes[b].bound)?; current = parent;
             }
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn subdivision_preserves_complete_old_bounds_and_refuses_contradiction() {
+        let old = I::new(10., 20.).unwrap();
+        let wide = refine_sum(old, I::new(-100., 100.).unwrap(), I::new(-100., 100.).unwrap()).unwrap();
+        assert_eq!([wide.lo, wide.hi], [10., 20.]);
+        let tight = refine_sum(old, I::new(5., 6.).unwrap(), I::new(6., 7.).unwrap()).unwrap();
+        assert!(tight.lo <= 11. && tight.hi >= 13. && tight.lo > old.lo && tight.hi < old.hi);
+        assert!(refine_sum(old, I::point(-5.), I::point(-5.)).is_err());
     }
 }
