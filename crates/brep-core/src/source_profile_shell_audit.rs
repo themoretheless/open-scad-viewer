@@ -85,6 +85,30 @@ pub struct ShellContactAudit<'x> {
     linear_cells: usize,
 }
 impl ShellContactAudit<'_> {
+    /// Complete cross-face coverage only. This does not admit individual face
+    /// charts, signed volume, radius, thickness or a surrounding Body.
+    pub fn complete_cross_face_contacts(&self) -> bool {
+        let count = self.owners.len();
+        if count < 2 || self.pending_pairs() != 0 {
+            return false;
+        }
+        let Some(expected) = count.checked_mul(count - 1).map(|n| n / 2) else {
+            return false;
+        };
+        if self.pairs.len() != expected {
+            return false;
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for pair in &self.pairs {
+            let [a, b] = pair.support.faces;
+            if a >= count || b >= count || a == b
+                || !seen.insert([a.min(b), a.max(b)])
+            {
+                return false;
+            }
+        }
+        seen.len() == expected
+    }
     pub fn linear_cells(&self) -> usize { self.linear_cells }
     pub fn owners(&self) -> &[ShellFace] {
         self.owners
@@ -335,6 +359,27 @@ mod tests {
         assert_eq!(d["faces"][1]["retainedSide"].as_u64(),Some(0));
         assert_eq!(d["faces"][2]["kind"].as_str(),Some("transition"));
         assert_eq!(value_codec::decode_binary(&value_codec::encode_binary(&d).unwrap()).unwrap(),d);
+    }
+    #[test]
+    fn complete_contacts_require_every_distinct_pair_and_no_pending() {
+        let owners = (0..3).map(|i| ShellFace { kind: ShellFaceKind::Original(i), loops: vec![] }).collect::<Vec<_>>();
+        let pair = |faces| AuditedContactPair {
+            support: ShellSupportPair { faces, shared_edges: vec![], inspection: SupportPairReport { separated: vec![], pending: vec![], outside: vec![], domain_cells: 0, cells: 0, spans: 0 } },
+            reason: "test-only", proof: PairContactProof::Excluded,
+        };
+        let mut audit = ShellContactAudit { owners: &owners, pairs: vec![], cells: 0, spans: 0, domain_cells: 0, exact_work: 0, driver_cells: 0, linear_cells: 0 };
+        assert!(!audit.complete_cross_face_contacts());
+        audit.pairs = vec![pair([0,1]), pair([2,0]), pair([1,2])];
+        assert!(audit.complete_cross_face_contacts());
+        audit.pairs[2].proof = PairContactProof::Pending;
+        assert!(!audit.complete_cross_face_contacts());
+        for invalid in [[1,0], [2,2], [1,3]] {
+            audit.pairs[2] = pair(invalid);
+            assert!(!audit.complete_cross_face_contacts());
+        }
+        audit.pairs.clear();
+        audit.owners = &[];
+        assert!(!audit.complete_cross_face_contacts());
     }
 }
 

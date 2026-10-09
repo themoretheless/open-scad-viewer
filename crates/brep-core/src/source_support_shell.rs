@@ -1430,6 +1430,7 @@ mod tests {
             }
         }
         eprintln!("transition material XY plane audit pending={} work={} spans={}",resumed.pending_pairs(),resumed.work().3,resumed.work().1);
+        assert_eq!(resumed.complete_cross_face_contacts(),resumed.pending_pairs()==0);
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
 
