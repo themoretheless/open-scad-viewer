@@ -684,3 +684,5 @@ pub use original_contact::{OriginalBoundaryContact,OriginalBoundaryProof,Origina
 #[path="source_profile_shell_xy_contact.rs"]
 mod xy_contact;
 pub use xy_contact::{TransitionXyHullContact,TransitionXyHullReport};
+
+pub use xy_contact::{TransitionXyBoundsContact, TransitionXyBoundsReport};

@@ -331,6 +331,41 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+    pub fn qualify_remaining_transition_xy_bounds<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && matches!(
+                    p.support.faces.map(|i| self.faces[i].kind()),
+                    [ShellFaceKind::Original(_), ShellFaceKind::Transition]
+                        | [ShellFaceKind::Transition, ShellFaceKind::Original(_)]
+                )
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let spans = (limits.spans - audit.spans) / remaining;
+            remaining -= 1;
+            if spans == 0 {
+                continue;
+            }
+            let report =
+                self.qualify_transition_xy_bounds_contact(pair.support.faces, region, spans)?;
+            audit.spans += report.spans;
+            pair.reason = report.reason;
+            if let Some(c) = report.certificate {
+                pair.proof = PairContactProof::TransitionXyBounds(c);
+            }
+        }
+        Ok(())
+    }
     pub fn qualify_remaining_transition_xy_hulls<'x>(
         &'x self,
         audit: &mut ShellContactAudit<'x>,
