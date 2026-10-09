@@ -6,14 +6,24 @@ use crate::{check, distance_bounds::Interval as I, Result};
 /// Each row encloses the Bernstein coefficients of one nodal basis function.
 /// Insufficient work refuses before allocating a coefficient basis.
 pub(crate) fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>>>, usize)> {
+    basis_on(nodes, [0., 1.], max_work)
+}
+/// Preserve original node coordinates; rounded normalization changes the
+/// polynomial interpolation problem and cannot establish exact coefficients.
+pub(crate) fn basis_on(
+    nodes: &[f64],
+    domain: [f64; 2],
+    max_work: usize,
+) -> Result<(Option<Vec<Vec<I>>>, usize)> {
     check(
-        !nodes.is_empty()
+        domain.iter().all(|x| x.is_finite())
+            && domain[0] < domain[1]
+            && !nodes.is_empty()
             && nodes.len() <= 17
-            && nodes
-                .iter()
-                .enumerate()
-                .all(|(i, x)| x.is_finite() && *x >= 0. && *x <= 1. && !nodes[..i].contains(x)),
-        "Choose distinct finite polynomial nodes in [0,1]",
+            && nodes.iter().enumerate().all(|(i, x)| {
+                x.is_finite() && *x >= domain[0] && *x <= domain[1] && !nodes[..i].contains(x)
+            }),
+        "Choose distinct finite polynomial nodes in their original domain",
     )?;
     let n = nodes.len() - 1;
     let required = nodes.len() * n * (n + 3) / 2;
@@ -29,8 +39,12 @@ pub(crate) fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>
             }
             let denominator = I::point(node).sub(I::point(other))?;
             let factor = [
-                I::point(0.).sub(I::point(other))?.div_signed(denominator)?,
-                I::point(1.).sub(I::point(other))?.div_signed(denominator)?,
+                I::point(domain[0])
+                    .sub(I::point(other))?
+                    .div_signed(denominator)?,
+                I::point(domain[1])
+                    .sub(I::point(other))?
+                    .div_signed(denominator)?,
             ];
             let degree = coefficients.len();
             let mut product = vec![I::point(0.); degree + 1];
@@ -75,6 +89,19 @@ pub(crate) fn reconstruct(samples: &[I], basis: &[Vec<I>]) -> Result<Vec<I>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_nonunit_nodes_preserve_polynomial_coordinates() {
+        let nodes = [2., 2.7, 4.];
+        let samples = nodes.map(|x| I::point(x).mul(I::point(x)).unwrap());
+        let matrix = basis_on(&nodes, [2., 4.], 100).unwrap().0.unwrap();
+        let coefficients = reconstruct(&samples, &matrix).unwrap();
+        for (bound, expected) in coefficients.iter().zip([4., 8., 16.]) {
+            assert!(bound.contains(expected));
+            assert!(bound.width() < 1e-10);
+        }
+        assert!(basis_on(&nodes, [4., 2.], 100).is_err());
+        assert!(basis_on(&nodes, [2.1, 4.], 100).is_err());
+    }
     #[test]
     fn degree_eight_reconstructs_independent_de_casteljau_coefficients() {
         let nodes: Vec<_> = (0..=8).map(|i| i as f64 / 8.).collect();

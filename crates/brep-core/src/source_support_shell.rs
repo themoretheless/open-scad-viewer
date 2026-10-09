@@ -962,7 +962,7 @@ mod tests {
             outside_segment.boundary_excluded,outside_segment.cells,touching_segment.candidates.len(),
             touching_segment.pending.len(),touching_segment.spans);
         assert!(expression.inspect_segment_supports([0.;3],[0.;3],0.01,1000,1000,10000).is_err());
-        let (gap,gap_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,1000,10000).unwrap();
+        let (gap,gap_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,10000,100000).unwrap();
         eprintln!("exact expression clearance complete={} lower={:?} cells={} spans={} pending={}",
             gap.complete,gap.lower_mm,gap.cells,gap.spans,gap.pending.len());
         assert_eq!(gap.complete,gap.pending.is_empty());
