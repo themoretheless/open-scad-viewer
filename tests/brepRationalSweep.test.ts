@@ -226,11 +226,10 @@ it('clamps body stream levels to cap-reserved face limits and retains cap refusa
 })
 
 
-it('streams Rush body levels while preserving native body definitions and cap refusal',async()=>{
+it.each(['progressive-hollow-body','authored-progressive-hollow-body','affine-hollow-body','contact-progressive-hollow-body','closed-progressive-hollow-body'])('streams %s while preserving native body definitions and cap refusal',async(name)=>{
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/services/rushFrontend')
  const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
- for(const name of ['progressive-hollow-body','authored-progressive-hollow-body','affine-hollow-body','contact-progressive-hollow-body','closed-progressive-hollow-body']){
   const document=compileRushFrontend(readFileSync(`examples/rush/${name}.r`,'utf8')).document
   const node=document.nodes.find(n=>n.op==='brep_progressive_sweep')!
   const expected=buildOwnNurbs(document,{action:'build'}),reports:unknown[]=[]
@@ -241,7 +240,6 @@ it('streams Rush body levels while preserving native body definitions and cap re
   }})
   expect(result,name).toEqual(expected)
   expect(reports,name).toEqual((expected.report.construction![node.id] as {levels:unknown[]}).levels)
- }
 })
 
 
