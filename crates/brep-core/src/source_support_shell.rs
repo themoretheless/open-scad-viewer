@@ -860,6 +860,19 @@ mod tests {
         assert!(expression.enclose_support_derivatives(usize::MAX,derivative_domain,1000,10000).is_err());
         assert!(expression.enclose_support_derivatives(retained_ids[0],[[f64::NAN;2],[0.,1.]],1000,10000).is_err());
         assert!(expression.enclose_support_derivatives(retained_ids[0],derivative_domain,1000,100001).is_err());
+        let original_whole=expression.faces().iter().enumerate().find_map(|(id,f)|match f.kind() {
+            ShellFaceKind::Original(source) if body.geometry().shell().regions().unwrap()[source].whole_chart_material()=>Some((id,source)),_=>None,
+        }).expect("control has an unchanged whole material chart");
+        let original_domain=expression.support_domain(original_whole.0).unwrap().map(|r|[r[0]*0.75+r[1]*0.25,r[0]*0.5+r[1]*0.5]);
+        let original_surface=body.geometry().shell().faces()[original_whole.1][0].edges()[0].surface();
+        let direct_original_flux=nurbs_core::surface_flux::bound(original_surface,original_domain,2,0.,10000).unwrap();
+        let native_original_flux=expression.enclose_material_flux(original_whole.0,original_domain,2,0.,1e-8,1000,10000,0).unwrap();
+        let direct_original_integral=direct_original_flux.bound.unwrap().integral;
+        let mut direct_original_bound=nurbs_core::interval_eval::Interval::new(direct_original_integral[0],direct_original_integral[1]).unwrap();
+        if body.geometry().shell().regions().unwrap()[original_whole.1].chart_winding()==-1 {direct_original_bound=direct_original_bound.mul(nurbs_core::interval_eval::Interval::point(-1.)).unwrap();}
+        assert_eq!(native_original_flux.bound,Some([direct_original_bound.lo,direct_original_bound.hi]));
+        assert_eq!(native_original_flux.spans,direct_original_flux.spans);
+        assert_eq!(native_original_flux.domain_cells,0);
         let support_pair=expression.inspect_support_pair(retained_ids,[[[0.,0.75],[0.,1.]],[[0.9,1.],[0.,1.]]],32,1000,256).unwrap();
         eprintln!("retained support pair separated={} pending={} cells={} spans={}",support_pair.separated.len(),support_pair.pending.len(),support_pair.cells,support_pair.spans);
         assert!(support_pair.complete_separated());

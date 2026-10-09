@@ -21,7 +21,9 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         &self, face: usize, domain: [[f64; 2]; 2], axis: usize, origin: f64,
         tolerance_uv: f64, controls: usize, spans: usize, domain_cells: usize,
     ) -> Result<MaterialFluxReport> {
-        if !tolerance_uv.is_finite() || tolerance_uv <= 0. || domain_cells > 100000 {
+        if !tolerance_uv.is_finite() || tolerance_uv <= 0. || domain_cells > 100000
+            || controls > 1000000 || spans > 100000 || axis >= 3 || !origin.is_finite()
+        {
             return Err(Error::new("BREP_PROFILE_FLUX", "Bound material classification tolerance and work"));
         }
         let natural = self.support_domain(face)?;
@@ -29,19 +31,27 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             return Err(Error::new("BREP_PROFILE_FLUX", "Keep flux rectangle in owned support domain"));
         }
         let mut out = MaterialFluxReport { bound: None, spans: 0, domain_cells: 0, reason: "expression-flux-enclosure-unproven" };
-        let (flux, used) = self.enclose_support_flux(face, domain, axis, origin, controls, spans)?;
-        out.spans = used;
-        let Some(flux) = flux else { return Ok(out); };
         let root = self.assembly.patch.rails.face.boundary.rooted[0];
         let source = root.restricted.proposal.body.geometry().shell();
+        let unchanged = self.equivalent_original_face(face);
+        let (flux, used) = if let Some(original) = unchanged {
+            let surface = source.faces()[original][0].edges()[0].surface();
+            let report = nurbs_core::surface_flux::bound(surface, domain, axis, origin, spans)?;
+            (report.bound, report.spans)
+        } else {
+            self.enclose_support_flux(face, domain, axis, origin, controls, spans)?
+        };
+        out.spans = used;
+        let Some(flux) = flux else { return Ok(out); };
         let mut integral = I::new(flux.integral[0], flux.integral[1])?;
         let winding = match self.faces[face].kind() {
             ShellFaceKind::Transition => if self.assembly.patch.rails.reverse_face { -1 } else { 1 },
             kind => {
                 let original = match kind { ShellFaceKind::Original(i) => i, _ => root.face };
                 let winding = source.regions().unwrap()[original].chart_winding();
-                integral = unknown_material_mask(&flux, domain)?;
-                if domain_cells > 0 {
+                let whole_chart = unchanged == Some(original) && source.regions().unwrap()[original].whole_chart_material();
+                if !whole_chart { integral = unknown_material_mask(&flux, domain)?; }
+                if !whole_chart && domain_cells > 0 {
                     let loops = self.faces[face].loops.iter().map(|wire| wire.iter().filter_map(|u| match u {
                         ShellUse::Source(f) => Some(f.clone()), ShellUse::Transition(_) => None,
                     }).collect()).collect::<Vec<Vec<_>>>();
