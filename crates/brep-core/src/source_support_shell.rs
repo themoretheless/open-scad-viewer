@@ -937,9 +937,10 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),150);
-        let mut kinds=[0usize;17];
+        let mut kinds=[0usize;18];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
+                PairContactProof::ProfileRuled(c)=>(17,Some(c.image().owners())),
                 PairContactProof::ProfileBoundary(c)=>(16,Some(c.owners())),
                 PairContactProof::Hull(c)=>(8,Some(c.owners())),
                 PairContactProof::Pole(c)=>(9,Some(c.owners())),
@@ -959,7 +960,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0]);
+        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(150));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -1321,6 +1322,25 @@ mod tests {
         }
         eprintln!("profile boundary audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_BOUNDARY_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
+        let before_profile_ruled=resumed.diagnostics();
+        let spent_profile_ruled=ContactAuditLimits{exact_work:resumed.work().3,driver_cells:resumed.work().4,domain_cells:resumed.work().2,..cumulative};
+        expression.qualify_remaining_profile_ruled_contacts(&mut resumed,spent_profile_ruled).unwrap();
+        assert_eq!(resumed.diagnostics(),before_profile_ruled);
+        let prior_pending=resumed.pending_pairs();
+        expression.qualify_remaining_profile_ruled_contacts(&mut resumed,cumulative).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().3<=cumulative.exact_work && resumed.work().4<=cumulative.driver_cells && resumed.work().2<=cumulative.domain_cells);
+        for (old,new) in before_profile_ruled["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::ProfileRuled(c)=new.proof() {
+                for side in 0..2 {assert!(std::ptr::eq(c.image().owners()[side],&expression.faces()[new.support().faces[side]]));}
+                assert!(std::ptr::eq(c.boundary().profile(),c.image().profile().profile()));
+                for addresses in c.shared() {assert!(expression.pairs().iter().any(|p|p.uses()==*addresses));}
+            }
+        }
+        eprintln!("profile ruled audit pending={} work={} drivers={}",resumed.pending_pairs(),resumed.work().3,resumed.work().4);
+        if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_RULED_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
 
 
         for edge in outer.edges() {
