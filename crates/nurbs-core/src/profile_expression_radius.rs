@@ -8,6 +8,7 @@ use crate::{
     Result,
 };
 pub struct Report {
+    pub domain: [[f64; 2]; 2],
     pub complete: bool,
     pub cells: usize,
     pub spans: usize,
@@ -16,6 +17,24 @@ pub struct Report {
     pub pending: Vec<[[f64; 2]; 2]>,
     pub reason: &'static str,
     pub violation: Option<Violation>,
+}
+impl Report {
+    /// Diagnostic parameter-area fraction, not physical surface area or proof.
+    /// Admission continues to require complete coverage with no pending cells.
+    pub fn pending_parameter_fraction(&self) -> f64 {
+        self.pending
+            .iter()
+            .map(|rect| {
+                (0..2)
+                    .map(|axis| {
+                        (rect[axis][1] - rect[axis][0])
+                            / (self.domain[axis][1] - self.domain[axis][0])
+                    })
+                    .product::<f64>()
+            })
+            .sum::<f64>()
+            .clamp(0., 1.)
+    }
 }
 pub struct Violation {
     pub domain: [[f64; 2]; 2],
@@ -267,6 +286,7 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         )?;
         let range = self.section(false).range();
         let mut out = Report {
+            domain: [range, [0., 1.]],
             complete: false,
             cells: 0,
             spans: 0,
@@ -330,38 +350,50 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                 }
             }
             // A rigorously enclosed point may refute the law, never admit the
-            // rectangle. Probe the initial center before depth-first coverage
+            // rectangle. Probe initial interior points before depth-first coverage
             // spends all work near a boundary with zero residual.
             if out.cells == 1 && bound.error_upper > tolerance && max_spans - out.spans >= 34 {
-                let point = rect.map(|d| [d[0] * 0.5 + d[1] * 0.5; 2]);
-                let (p, used) = self.enclose_with_transverse_correction(
-                    point[0],
-                    point[1],
-                    (max_spans - out.spans).min(100000),
-                )?;
-                out.spans += used;
-                if let Some(p) = p {
-                    let ct = mapped(domains[0], point[1])?;
-                    let rt = mapped(domains[1], point[1])?;
-                    let used = spans(centers, ct) + spans(radius, rt);
-                    if used <= max_spans - out.spans {
-                        out.spans += used;
-                        let c = interval_eval::evaluate_interval(centers, ct)?;
-                        let r = interval_eval::evaluate_interval(radius, rt)?;
-                        let probe = crate::moving_radius::bound_expression(
-                            p,
-                            std::array::from_fn(|axis| [c[axis].lo, c[axis].hi]),
-                            [r[0].lo.max(0.), r[0].hi],
-                        )?;
-                        if probe.error_lower > tolerance {
-                            out.violation = Some(Violation {
-                                domain: point,
-                                error_bounds: [probe.error_lower, probe.error_upper],
-                                squared_residual: probe.squared_residual,
-                            });
-                            out.pending.push(rect);
-                            out.reason = "expression-radius-law-mismatch";
-                            return Ok(out);
+                let interior = rect.map(|d| {
+                    let middle = d[0] * 0.5 + d[1] * 0.5;
+                    [middle, d[0] * 0.5 + middle * 0.5, middle * 0.5 + d[1] * 0.5]
+                });
+                for probe_index in 0..9 {
+                    if max_spans - out.spans < 34 {
+                        break;
+                    }
+                    let point = [
+                        [interior[0][probe_index / 3]; 2],
+                        [interior[1][probe_index % 3]; 2],
+                    ];
+                    let (p, used) = self.enclose_with_transverse_correction(
+                        point[0],
+                        point[1],
+                        (max_spans - out.spans).min(100000),
+                    )?;
+                    out.spans += used;
+                    if let Some(p) = p {
+                        let ct = mapped(domains[0], point[1])?;
+                        let rt = mapped(domains[1], point[1])?;
+                        let used = spans(centers, ct) + spans(radius, rt);
+                        if used <= max_spans - out.spans {
+                            out.spans += used;
+                            let c = interval_eval::evaluate_interval(centers, ct)?;
+                            let r = interval_eval::evaluate_interval(radius, rt)?;
+                            let probe = crate::moving_radius::bound_expression(
+                                p,
+                                std::array::from_fn(|axis| [c[axis].lo, c[axis].hi]),
+                                [r[0].lo.max(0.), r[0].hi],
+                            )?;
+                            if probe.error_lower > tolerance {
+                                out.violation = Some(Violation {
+                                    domain: point,
+                                    error_bounds: [probe.error_lower, probe.error_upper],
+                                    squared_residual: probe.squared_residual,
+                                });
+                                out.pending.push(rect);
+                                out.reason = "expression-radius-law-mismatch";
+                                return Ok(out);
+                            }
                         }
                     }
                 }
@@ -487,6 +519,7 @@ mod tests {
             report.pending.len()
         );
         assert!(report.pending.is_empty());
+        assert_eq!(report.pending_parameter_fraction(), 0.);
         assert!(report.accepted_error_upper <= 0.1);
         let mut extended = centers.clone();
         extended.control_points[0][0] = -1.;
@@ -515,8 +548,28 @@ mod tests {
                 .unwrap();
             assert!(!refused.complete);
             assert!(!refused.pending.is_empty());
+            assert_eq!(refused.pending_parameter_fraction(), 1.);
         }
         let mut wrong = radius.clone();
+        // Radius equals the cylinder at the center but differs at interior
+        // quarter parameters. A center-only refutation probe misses this law.
+        let off_center_law = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![1.2, 0.], vec![0.8, 0.], vec![1.2, 0.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let off_center = corrected
+            .inspect_radius(&centers, &off_center_law, 0.01, 100, 10000)
+            .unwrap();
+        assert_eq!(off_center.reason, "expression-radius-law-mismatch");
+        assert!(!off_center.complete);
+        let violation = off_center.violation.as_ref().unwrap();
+        assert!(violation.error_bounds[0] > 0.01);
+        assert_eq!(off_center.cells, 1);
+        assert_eq!(violation.domain[1][0], violation.domain[1][1]);
+        assert_ne!(violation.domain[1][0], 0.5);
         for p in &mut wrong.control_points {
             p[0] = 2.;
         }

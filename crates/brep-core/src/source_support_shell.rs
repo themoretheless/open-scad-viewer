@@ -477,6 +477,7 @@ mod tests {
         if let Ok(path)=std::env::var("BREP_FOCUSED_EXPRESSION_RADIUS_PATH") {
             std::fs::write(path,value_codec::json!({"complete":report.complete,"tolerance":1e-4,
                 "cells":report.cells,"spans":report.spans,"acceptedCells":report.accepted_cells,
+                "domain":report.domain,"pendingParameterFraction":report.pending_parameter_fraction(),
                 "acceptedErrorUpper":report.accepted_error_upper,"pending":report.pending,"reason":report.reason,
                 "violation":report.violation.map(|v|value_codec::json!({"domain":v.domain,"errorBounds":v.error_bounds,
                     "squaredResidual":v.squared_residual}))}).to_string()).unwrap();
