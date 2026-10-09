@@ -40,7 +40,7 @@ const sensitive=new Set(['sin','cos','tan','asin','acos','atan','atan2','hypot',
 const unreviewed=rows.filter(r=>!r.generated&&r.mathCalls.some(m=>sensitive.has(m))&&!registry.decisions.some(d=>d.files.includes(r.file)))
 const stale=registry.decisions.flatMap(d=>d.files.filter(f=>!rows.some(r=>r.file===f)).map(file=>({decision:d.id,file})))
 const report={schemaVersion:1,scope:'Production src TS/Vue/MJS; file ownership and callable census. Not a proof of algorithm completeness or migration parity.',sourceFiles:rows.length,callables:rows.reduce((n,r)=>n+r.functions.length,0),unreviewedNumericalFiles:unreviewed.map(r=>r.file),staleDecisions:stale,rows}
-const output=resolve(root,'docs/qualification/algorithm-owners-2026-10-03.json')
+const output=resolve(root,'docs/qualification/algorithm-owners-2026-10-09.json')
 if(process.argv.includes('--write'))writeFileSync(output,JSON.stringify(report,null,2)+'\n')
 if(process.argv.includes('--check')){
  const saved=JSON.parse(readFileSync(output,'utf8'))

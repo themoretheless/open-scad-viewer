@@ -118,3 +118,17 @@ mod tests {
         assert!(sample(CurveKind::Arc, [0., 0.], 0., 0., 90.).is_err());
     }
 }
+
+/// Authored capsule arc definitions. Sampling uses the same native endpoint
+/// arithmetic as retained sketch arcs; no near-duplicate connectors are added.
+pub fn slot_caps(a:[f64;2],b:[f64;2],width:f64)->Option<([f64;2],[f64;2],f64,f64)> {
+    let r=width/2.;
+    if !a.into_iter().chain(b).chain([width]).all(|x|x.is_finite() && x.abs()<=1e6) || !(0.02..=1e6).contains(&width) || (b[0]-a[0]).hypot(b[1]-a[1])<1e-6 || a.into_iter().chain(b).any(|x|x.abs()+r>1e6){return None;}
+    Some((a,b,r,(b[1]-a[1]).atan2(b[0]-a[0])*180./std::f64::consts::PI))
+}
+pub fn numeric_rectangle(origin:[f64;2],size:[f64;2])->Option<[[f64;2];4]> {
+    if !origin.into_iter().all(|x|x.is_finite() && x.abs()<=1e6) || !size.into_iter().all(|x|x.is_finite() && (0.01..=1e6).contains(&x)){return None;}
+    let end=[origin[0]+size[0],origin[1]+size[1]];
+    if end.into_iter().any(|x|!x.is_finite() || x.abs()>1e6){return None;}
+    Some([origin,[end[0],origin[1]],end,[origin[0],end[1]]])
+}

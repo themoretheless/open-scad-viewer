@@ -21,10 +21,7 @@ export interface QuotientProof {
 export function faceAbsenceProven(f:SelfIntersection['faces'][number]):boolean{return !!(f.result?.proven||f.quotientProof?.proven)}
 export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number,boundaryAudit?:BoundaryAuditLimits){
  const spans=(knots:number[],degree:number,count:number)=>knots.slice(degree,count).filter((k,i)=>k<knots[degree+i+1]).length
- const projectiveData=model.faces.map(({surface:s})=>[0,1,2].map(axis=>{
-  const anchor=s.controlPoints[s.controlPoints.length-1][0][axis]
-  return [s.controlPoints[0][0][axis],anchor,s.controlPoints.reduce((n,row)=>row.reduce((m,p)=>Math.max(m,Math.abs(p[axis]-anchor)),n),0)]
- }))
+ const projectiveCandidates=callGeometryRust<number[][][][]>('cad_client_geometry',{operation:'projectiveCandidates',surfaces:model.faces.map(f=>f.surface)})
  const collapsed=model.faces.map(({surface:s})=>{
   const p=s.controlPoints,eq=(a:number[],b:number[])=>a.every((n,k)=>n===b[k])
   return [0,p.length-1].some(i=>{
@@ -35,7 +32,7 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveCandidates,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 function quotientExpectation(model:NurbsBrep,face:number){
  const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
@@ -75,25 +72,13 @@ function validQuotient(expected:ReturnType<typeof quotientExpectation>,q:Quotien
  if(q.bandMarginsLower!==null&&(!Array.isArray(q.bandMarginsLower)||q.bandMarginsLower.length!==16||!q.bandMarginsLower.every(Number.isFinite)||Math.min(...q.bandMarginsLower)!==margin))return false
  if(q.proven){
   if(a<=0||b<=0||margin<=0)return false
-  if(q.reason==='global-weighted-quotient-dominance')return q.bandMarginsLower===null&&margin<=a*b-c*e
+  if(q.reason==='global-weighted-quotient-dominance')return q.bandMarginsLower===null&&callGeometryRust<boolean>('cad_client_geometry',{operation:'quotientWitness',bounds:q.weightedBounds,margin})
   return q.reason==='global-localized-weighted-quotient-dominance'&&q.bandMarginsLower!==null&&q.bandMarginsLower.every(m=>m>0)
  }
  return q.reason==='weighted-projection-not-proven'&&(a<=0||b<=0||margin<=0)
 }
 function polarCandidates(s:NurbsBrep['faces'][number]['surface']):number[][][]{
- const p=s.controlPoints,w=s.weights
- if(s.degreeU!==2||p.length!==3||s.degreeV>8||!s.knotsU.slice(0,3).every(k=>k===s.knotsU[2])||!s.knotsU.slice(3).every(k=>k===s.knotsU[3])||!s.knotsV.slice(0,s.degreeV+1).every(k=>k===s.knotsV[s.degreeV]))return []
- const dot=(a:number[],b:number[])=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
- const cross=(a:number[],b:number[])=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
- const first=p[0][0],last=p[2][0],weights=[w[0][0],2*w[1][0],w[2][0]],denominator=weights[0]+weights[1]+weights[2]
- const middle=first.map((n,k)=>(n*weights[0]+p[1][0][k]*weights[1]+last[k]*weights[2])/denominator)
- const a=middle.map((n,k)=>n-first[k]),b=last.map((n,k)=>n-first[k]),n=cross(a,b),squared=dot(n,n)
- if(!Number.isFinite(squared)||squared===0)return []
- const an=dot(a,a),bn=dot(b,b),bx=cross(b,n),nx=cross(n,a)
- const center=first.map((v,k)=>v+(an*bx[k]+bn*nx[k])/(2*squared)),radial=middle.map((v,k)=>v-center[k]),radius=Math.sqrt(dot(radial,radial)),normal=Math.sqrt(dot(n,n))
- if(!center.every(Number.isFinite)||!Number.isFinite(radius)||radius===0||!Number.isFinite(normal)||normal===0)return []
- const x=radial.map(v=>v/radius),z=n.map(v=>v/normal),y=cross(z,x),affine=(d:number[])=>[...d,-dot(d,center)]
- return [1,-1].map(sign=>[affine(x),affine(y),affine(z.map(v=>v*sign))]).filter(c=>c.flat().every(Number.isFinite))
+ return callGeometryRust<number[][][]>('cad_client_geometry',{operation:'polarCandidates',surface:s})
 }
 const linearProjections=[[[1,1,0],[0,0,1]],[[1,-1,0],[0,0,1]],[[1,0,1],[0,1,0]],[[1,0,-1],[0,1,0]],[[0,1,1],[1,0,0]],[[0,1,-1],[1,0,0]]]
 export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpectation>,value:unknown):value is SelfIntersection {
@@ -131,11 +116,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
    }else if(x.reason==='global-projective-projection-contraction'){
     const basis=x.projectiveProjection
     if(x.projection!==null||x.linearProjection!==null||!Array.isArray(basis)||basis.length!==3||!basis.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)))return false
-    const candidate=[2,2,0,0,1,1].findIndex((axis,c)=>{
-     const free=axis===2?[0,1]:axis===0?[1,2]:[0,2]
-     const sign=c%2===0?1:-1,data=e.projectiveData[i]
-     return basis.every((row,j)=>row.every((n,k)=>n===(j<2?(k===3?-data[free[j]][0]:k===free[j]?1:0):k===3?data[axis][2]-sign*data[axis][1]:k===axis?sign:0)))
-    })
+    const candidate=e.projectiveCandidates[i].findIndex(c=>c.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
     if(candidate<0||x.spans!==e.faceSpans[i]*(97+16*(candidate+1)))return false
    }else if(x.reason==='global-polar-projection-contraction'){
     const basis=x.polarProjection

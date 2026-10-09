@@ -11,7 +11,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::line",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
         "tests/nurbsBasicPaths.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/line-extrusion.r"
@@ -50,7 +50,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::polyline",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
         "tests/nurbsBasicPaths.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/polyline-extrusion.r"
@@ -89,7 +89,8 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::circle",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsBasicPaths.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/circle-extrusion.r"
@@ -128,7 +129,8 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::circle_arc",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsBasicPaths.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/circle-arc-extrusion.r"
@@ -167,7 +169,8 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::ellipse_arc",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/ellipse-extrusion.r"
@@ -206,7 +209,8 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::ellipse_arc",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/ellipse-extrusion.r"
@@ -245,7 +249,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::parabola",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/parabola-extrusion.r"
@@ -284,7 +288,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::hyperbola",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/conics.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/hyperbola-extrusion.r"
@@ -323,7 +327,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::paths::bezier",
       "evidence": [
-        "crates/nurbs-core/src/paths.rs",
+        "crates/nurbs-core/src/construct/curves/paths.rs",
         "tests/nurbsBezierPaths.test.ts",
         "examples/rush/bezier-extrusion.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -362,7 +366,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::paths::compose",
       "evidence": [
-        "crates/nurbs-core/src/paths.rs",
+        "crates/nurbs-core/src/construct/curves/paths.rs",
         "tests/nurbsBezierPaths.test.ts",
         "examples/rush/composite-curve-extrusion.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -401,7 +405,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::involute::approximate",
       "evidence": [
-        "crates/nurbs-core/src/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
         "docs/design/nurbs-involute-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsInvolute.test.ts",
@@ -443,7 +447,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::archimedean_spiral::approximate",
       "evidence": [
-        "crates/nurbs-core/src/archimedean_spiral.rs",
+        "crates/nurbs-core/src/construct/curves/archimedean_spiral.rs",
         "docs/design/nurbs-archimedean-spiral-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsArchimedeanSpiral.test.ts",
@@ -485,7 +489,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::logarithmic_spiral::approximate",
       "evidence": [
-        "crates/nurbs-core/src/logarithmic_spiral.rs",
+        "crates/nurbs-core/src/construct/curves/logarithmic_spiral.rs",
         "docs/design/nurbs-logarithmic-spiral-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsLogarithmicSpiral.test.ts",
@@ -527,7 +531,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::clothoid::approximate",
       "evidence": [
-        "crates/nurbs-core/src/clothoid.rs",
+        "crates/nurbs-core/src/construct/curves/clothoid.rs",
         "docs/design/nurbs-clothoid-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsClothoid.test.ts",
@@ -569,7 +573,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::trochoid::approximate_cycloid",
       "evidence": [
-        "crates/nurbs-core/src/trochoid.rs",
+        "crates/nurbs-core/src/construct/curves/trochoid.rs",
         "docs/design/nurbs-trochoid-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsTrochoid.test.ts",
@@ -611,7 +615,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::circular_rolling::approximate_epicycloid",
       "evidence": [
-        "crates/nurbs-core/src/circular_rolling.rs",
+        "crates/nurbs-core/src/construct/curves/circular_rolling.rs",
         "docs/design/nurbs-circular-rolling-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCircularRolling.test.ts",
@@ -653,7 +657,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::circular_rolling::approximate_hypocycloid",
       "evidence": [
-        "crates/nurbs-core/src/circular_rolling.rs",
+        "crates/nurbs-core/src/construct/curves/circular_rolling.rs",
         "docs/design/nurbs-circular-rolling-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCircularRolling.test.ts",
@@ -695,7 +699,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::trochoid::approximate",
       "evidence": [
-        "crates/nurbs-core/src/trochoid.rs",
+        "crates/nurbs-core/src/construct/curves/trochoid.rs",
         "docs/design/nurbs-trochoid-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsTrochoid.test.ts",
@@ -737,7 +741,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::catenary::approximate",
       "evidence": [
-        "crates/nurbs-core/src/catenary.rs",
+        "crates/nurbs-core/src/construct/curves/catenary.rs",
         "docs/design/nurbs-catenary-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCatenary.test.ts",
@@ -779,7 +783,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::lissajous::approximate",
       "evidence": [
-        "crates/nurbs-core/src/lissajous.rs",
+        "crates/nurbs-core/src/construct/curves/lissajous.rs",
         "docs/design/nurbs-lissajous-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsLissajous.test.ts",
@@ -821,7 +825,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::helix::approximate",
       "evidence": [
-        "crates/nurbs-core/src/helix.rs",
+        "crates/nurbs-core/src/construct/curves/helix.rs",
         "docs/design/nurbs-helix-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsHelix.test.ts",
@@ -863,7 +867,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::helix::approximate_conical",
       "evidence": [
-        "crates/nurbs-core/src/helix.rs",
+        "crates/nurbs-core/src/construct/curves/helix.rs",
         "docs/design/nurbs-helix-variants-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsHelixVariants.test.ts",
@@ -905,7 +909,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::helix::approximate_variable_pitch",
       "evidence": [
-        "crates/nurbs-core/src/helix.rs",
+        "crates/nurbs-core/src/construct/curves/helix.rs",
         "docs/design/nurbs-variable-pitch-helix-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsVariablePitchHelix.test.ts",
@@ -947,7 +951,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::helix::approximate_elliptic",
       "evidence": [
-        "crates/nurbs-core/src/helix.rs",
+        "crates/nurbs-core/src/construct/curves/helix.rs",
         "docs/design/nurbs-helix-variants-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsHelixVariants.test.ts",
@@ -989,7 +993,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::spherical_spiral::approximate",
       "evidence": [
-        "crates/nurbs-core/src/spherical_spiral.rs",
+        "crates/nurbs-core/src/construct/curves/spherical_spiral.rs",
         "docs/design/nurbs-spherical-spiral-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsSphericalSpiral.test.ts",
@@ -1031,7 +1035,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::toroidal_spiral::approximate",
       "evidence": [
-        "crates/nurbs-core/src/toroidal_spiral.rs",
+        "crates/nurbs-core/src/construct/curves/toroidal_spiral.rs",
         "docs/design/nurbs-toroidal-trajectories-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsToroidalTrajectories.test.ts",
@@ -1073,13 +1077,12 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::toroidal_spiral::approximate_knot",
       "evidence": [
-        "crates/nurbs-core/src/toroidal_spiral.rs",
+        "crates/nurbs-core/src/construct/curves/toroidal_spiral.rs",
         "docs/design/nurbs-toroidal-trajectories-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsToroidalTrajectories.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/torus-knot-extrusion.r",
-        "crates/nurbs-core/src/extrusion_patches.rs",
         "docs/design/nurbs-extrusion-patches-2026-10-01.md"
       ],
       "remainingQualification": [
@@ -1117,7 +1120,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::hermite::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/hermite.rs",
+        "crates/nurbs-core/src/construct/curves/hermite.rs",
         "tests/nurbsHermiteCurve.test.ts",
         "examples/rush/hermite-extrusion.r",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -1171,7 +1174,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::patches::plane",
       "evidence": [
-        "crates/nurbs-core/src/patches.rs",
+        "crates/nurbs-core/src/construct/surfaces/patches.rs",
         "tests/nurbsBezierPatches.test.ts",
         "examples/rush/plane-patch.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1210,7 +1213,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::patches::bilinear",
       "evidence": [
-        "crates/nurbs-core/src/patches.rs",
+        "crates/nurbs-core/src/construct/surfaces/patches.rs",
         "tests/nurbsBezierPatches.test.ts",
         "examples/rush/bilinear-patch.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1249,7 +1252,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::patches::bezier",
       "evidence": [
-        "crates/nurbs-core/src/patches.rs",
+        "crates/nurbs-core/src/construct/surfaces/patches.rs",
         "tests/nurbsBezierPatches.test.ts",
         "examples/rush/bezier-surface.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1288,7 +1291,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::cylinder",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsCircularSurfaces.test.ts",
         "examples/rush/cylinder-surface.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1327,7 +1330,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::elliptic_cylinder",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/elliptic-cylinder.r"
@@ -1366,7 +1369,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::cone",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsCircularSurfaces.test.ts",
         "examples/rush/cone-surface.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1405,7 +1408,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::cone_frustum",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/cone-frustum.r"
@@ -1444,7 +1447,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::sphere",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsCircularSurfaces.test.ts",
         "examples/rush/sphere-surface.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -1483,7 +1486,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::ellipsoid",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/ellipsoid.r",
@@ -1531,7 +1534,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::torus",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/elliptic-torus.r"
@@ -1570,7 +1573,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::torus",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/elliptic-torus.r"
@@ -1609,7 +1612,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::quadratic_patch",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/quadratic-paraboloid.r"
@@ -1648,7 +1651,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::quadratic_patch",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives.rs",
         "tests/nurbsPrimitives.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/quadratic-saddle.r"
@@ -1687,7 +1690,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::hyperboloid_one_sheet",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/hyperboloid-one-sheet.r"
@@ -1726,7 +1729,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::primitives::hyperboloid_two_sheet",
       "evidence": [
-        "crates/nurbs-core/src/primitives.rs",
+        "crates/nurbs-core/src/construct/curves/primitives/revolution.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/hyperboloid-two-sheet.r"
@@ -1765,7 +1768,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::helicoid::approximate",
       "evidence": [
-        "crates/nurbs-core/src/helicoid.rs",
+        "crates/nurbs-core/src/construct/surfaces/helicoid.rs",
         "docs/design/nurbs-helicoid-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsHelicoid.test.ts",
@@ -1809,7 +1812,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::catenoid::approximate",
       "evidence": [
-        "crates/nurbs-core/src/catenoid.rs",
+        "crates/nurbs-core/src/construct/surfaces/catenoid.rs",
         "docs/design/nurbs-catenoid-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCatenoid.test.ts",
@@ -1853,7 +1856,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::surface::revolve",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "tests/nurbsSectionSurfaces.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/profile-revolution.r"
@@ -1892,7 +1895,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::screw_surface::approximate",
       "evidence": [
-        "crates/nurbs-core/src/screw_surface.rs",
+        "crates/nurbs-core/src/construct/surfaces/screw_surface.rs",
         "docs/design/nurbs-screw-surface-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsScrewSurface.test.ts",
@@ -1941,7 +1944,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::surface::extrude",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "tests/nurbsSectionSurfaces.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/bezier-extrusion.r"
@@ -1980,7 +1983,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::surface::loft",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "tests/nurbsSectionSurfaces.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/ruled-surface.r"
@@ -2019,7 +2022,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::surface::loft_aligned",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "tests/nurbsSectionSurfaces.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/section-loft.r"
@@ -2058,7 +2061,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::guided_loft::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/guided_loft.rs",
+        "crates/nurbs-core/src/construct/surfaces/loft/guided_loft.rs",
         "docs/design/progressive-loft-2026-10-01.md",
         "tests/nurbsGuidedLoft.test.ts",
         "crates/brep-core/tests/guided_loft_step.rs",
@@ -2074,7 +2077,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::natural_loft::closed",
       "evidence": [
-        "crates/nurbs-core/src/natural_loft.rs",
+        "crates/nurbs-core/src/construct/surfaces/loft/natural_loft.rs",
         "docs/design/nurbs-closed-loft-2026-10-01.md",
         "tests/nurbsClosedLoft.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -2114,7 +2117,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::coons::patch",
       "evidence": [
-        "crates/nurbs-core/src/coons.rs",
+        "crates/nurbs-core/src/construct/surfaces/coons.rs",
         "tests/nurbsCoonsGraph.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/coons-patch.r"
@@ -2153,7 +2156,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::gordon::patch",
       "evidence": [
-        "crates/nurbs-core/src/gordon.rs",
+        "crates/nurbs-core/src/construct/surfaces/gordon.rs",
         "docs/design/nurbs-gordon-2026-10-01.md",
         "tests/nurbsGordon.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -2193,7 +2196,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::triangular_patch::patch",
       "evidence": [
-        "crates/nurbs-core/src/triangular_patch.rs",
+        "crates/nurbs-core/src/construct/surfaces/triangular_patch.rs",
         "docs/design/nurbs-triangular-patch-2026-10-01.md",
         "tests/nurbsTriangularPatch.test.ts",
         "examples/rush/triangular-patch.r",
@@ -2233,7 +2236,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::boundary_fill::fan",
       "evidence": [
-        "crates/nurbs-core/src/boundary_fill.rs",
+        "crates/nurbs-core/src/construct/surfaces/boundary_fill.rs",
         "docs/design/nurbs-boundary-fill-2026-10-01.md",
         "tests/nurbsBoundaryFill.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -2281,7 +2284,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::pipe::checked",
       "evidence": [
-        "crates/nurbs-core/src/pipe.rs",
+        "crates/nurbs-core/src/sweeps/pipe.rs",
         "docs/design/nurbs-pipe-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsPipe.test.ts",
@@ -2306,7 +2309,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::pipe::checked_variable",
       "evidence": [
-        "crates/nurbs-core/src/pipe.rs",
+        "crates/nurbs-core/src/sweeps/pipe.rs",
         "docs/design/nurbs-variable-pipe-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsVariablePipe.test.ts",
@@ -2331,9 +2334,8 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::profile_sweep::checked",
       "evidence": [
-        "crates/nurbs-core/src/profile_sweep.rs",
+        "crates/nurbs-core/src/sweeps/profile_sweep.rs",
         "docs/design/nurbs-profile-sweep-2026-10-01.md",
-        "crates/nurbs-core/src/progressive_sweep.rs",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsProfileSweep.test.ts",
         "tests/nurbsProgressiveSweep.test.ts",
@@ -2344,7 +2346,7 @@
         "examples/rush/closed-progressive-sweep.r",
         "examples/rush/arc-length-progressive-sweep.r",
         "docs/design/sweep-coverage-2026-10-01.md",
-        "docs/qualification/sweep-coverage-2026-10-01/wasm-tests.json"
+        "docs/qualification/native-integration-20261009/capacity/summary.json"
       ],
       "remainingQualification": [
         "continuous scaled RMF approximation qualification",
@@ -2382,7 +2384,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::twist_sweep::sweep",
       "evidence": [
-        "crates/nurbs-core/src/twist_sweep.rs",
+        "crates/nurbs-core/src/sweeps/twist_sweep.rs",
         "docs/design/nurbs-twist-sweep-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsTwistSweep.test.ts",
@@ -2423,7 +2425,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::scaled_sweep::sweep",
       "evidence": [
-        "crates/nurbs-core/src/scaled_sweep.rs",
+        "crates/nurbs-core/src/sweeps/scaled_sweep.rs",
         "docs/design/nurbs-scaled-sweep-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsScaledSweep.test.ts",
@@ -2465,7 +2467,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::two_guide_sweep::sweep",
       "evidence": [
-        "crates/nurbs-core/src/two_guide_sweep.rs",
+        "crates/nurbs-core/src/sweeps/two_guide_sweep.rs",
         "docs/design/nurbs-two-guide-sweep-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsTwoGuideSweep.test.ts",
@@ -2521,7 +2523,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::ribbon::checked",
       "evidence": [
-        "crates/nurbs-core/src/ribbon.rs",
+        "crates/nurbs-core/src/sweeps/ribbon.rs",
         "docs/design/nurbs-ribbon-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsRibbon.test.ts",
@@ -2572,7 +2574,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::circle_transition::ruled",
       "evidence": [
-        "crates/nurbs-core/src/circle_transition.rs",
+        "crates/nurbs-core/src/construct/surfaces/transitions/circle.rs",
         "docs/design/nurbs-circle-transition-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCircleTransition.test.ts",
@@ -2614,7 +2616,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::circle_rectangle_transition::ruled",
       "evidence": [
-        "crates/nurbs-core/src/circle_rectangle_transition.rs",
+        "crates/nurbs-core/src/construct/surfaces/transitions/circle_rectangle.rs",
         "docs/design/nurbs-circle-rectangle-transition-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsCircleRectangleTransition.test.ts",
@@ -2656,7 +2658,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::ellipse_transition::ruled",
       "evidence": [
-        "crates/nurbs-core/src/ellipse_transition.rs",
+        "crates/nurbs-core/src/construct/surfaces/transitions/ellipse.rs",
         "docs/design/nurbs-ellipse-transition-2026-10-01.md",
         "src/services/nurbsConstructors.ts",
         "tests/nurbsEllipseTransition.test.ts",
@@ -2698,7 +2700,7 @@
       "status": "native",
       "nativeApi": "nurbs_core::curve_offset_wire::bevel_wire",
       "evidence": [
-        "crates/nurbs-core/src/curve_offset_wire.rs",
+        "crates/nurbs-core/src/offset/curve_offset_wire.rs",
         "crates/nurbs-core/tests/profile_offset.rs",
         "docs/design/nurbs-profile-offset.md"
       ],
@@ -2754,8 +2756,17 @@
       "status": "planned",
       "nativeApi": null,
       "partialNativeApi": "brep_core::gear::gear_with_report",
-      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
-      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+      "evidence": [
+        "crates/brep-core/src/gear.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/involute_quintic.rs",
+        "docs/design/nurbs-gear-flank.md"
+      ],
+      "remainingQualification": [
+        "rounding-inclusive flank error qualification",
+        "root transition and gear-specific independent topology qualification",
+        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
+      ]
     },
     {
       "id": "NURBS-0082",
@@ -2763,8 +2774,17 @@
       "status": "planned",
       "nativeApi": null,
       "partialNativeApi": "brep_core::gear::gear_with_report",
-      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
-      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+      "evidence": [
+        "crates/brep-core/src/gear.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/involute_quintic.rs",
+        "docs/design/nurbs-gear-flank.md"
+      ],
+      "remainingQualification": [
+        "rounding-inclusive flank error qualification",
+        "root transition and gear-specific independent topology qualification",
+        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
+      ]
     },
     {
       "id": "NURBS-0083",
@@ -2779,15 +2799,30 @@
       "status": "planned",
       "nativeApi": null,
       "partialNativeApi": "brep_core::gear::gear_with_report",
-      "evidence": ["crates/brep-core/src/gear.rs", "crates/nurbs-core/src/involute.rs", "crates/nurbs-core/tests/involute_quintic.rs", "docs/design/nurbs-gear-flank.md"],
-      "remainingQualification": ["rounding-inclusive flank error qualification", "root transition and gear-specific independent topology qualification", "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"]
+      "evidence": [
+        "crates/brep-core/src/gear.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/involute_quintic.rs",
+        "docs/design/nurbs-gear-flank.md"
+      ],
+      "remainingQualification": [
+        "rounding-inclusive flank error qualification",
+        "root transition and gear-specific independent topology qualification",
+        "helical sweep has a continuous real-arithmetic remainder; binary64 rounding qualification remains"
+      ]
     },
     {
       "id": "NURBS-0085",
       "name": "рейка",
       "status": "native",
       "nativeApi": "nurbs_core::rack::profile",
-      "evidence": ["crates/nurbs-core/src/rack.rs", "crates/nurbs-core/tests/rack.rs", "docs/design/nurbs-rack.md", "crates/brep-core/src/rack.rs", "crates/brep-core/tests/rack.rs"]
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/rack.rs",
+        "crates/nurbs-core/tests/rack.rs",
+        "docs/design/nurbs-rack.md",
+        "crates/brep-core/src/rack.rs",
+        "crates/brep-core/tests/rack.rs"
+      ]
     },
     {
       "id": "NURBS-0086",
@@ -2816,8 +2851,16 @@
       "status": "planned",
       "nativeApi": null,
       "partialNativeApi": "nurbs_core::thread::patches",
-      "evidence": ["crates/nurbs-core/src/thread.rs", "crates/nurbs-core/tests/thread.rs", "docs/design/nurbs-thread-patches.md"],
-      "remainingQualification": ["finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain", "closed external core or internal wall and caps", "rounding-inclusive error qualification and independent solid validation"]
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/thread.rs",
+        "crates/nurbs-core/tests/thread.rs",
+        "docs/design/nurbs-thread-patches.md"
+      ],
+      "remainingQualification": [
+        "finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain",
+        "closed external core or internal wall and caps",
+        "rounding-inclusive error qualification and independent solid validation"
+      ]
     },
     {
       "id": "NURBS-0090",
@@ -2825,8 +2868,16 @@
       "status": "planned",
       "nativeApi": null,
       "partialNativeApi": "nurbs_core::thread::patches",
-      "evidence": ["crates/nurbs-core/src/thread.rs", "crates/nurbs-core/tests/thread.rs", "docs/design/nurbs-thread-patches.md"],
-      "remainingQualification": ["finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain", "closed external core or internal wall and caps", "rounding-inclusive error qualification and independent solid validation"]
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/thread.rs",
+        "crates/nurbs-core/tests/thread.rs",
+        "docs/design/nurbs-thread-patches.md"
+      ],
+      "remainingQualification": [
+        "finite axial UV trim candidates and continuous retained-Z bounds implemented; exact clipping coverage and trim topology remain",
+        "closed external core or internal wall and caps",
+        "rounding-inclusive error qualification and independent solid validation"
+      ]
     },
     {
       "id": "NURBS-0091",
@@ -2890,7 +2941,7 @@
       "status": "native",
       "nativeApi": "nurbs_core::function_surface::approximate",
       "evidence": [
-        "crates/nurbs-core/src/function_surface.rs",
+        "crates/nurbs-core/src/construct/surfaces/function_surface.rs",
         "crates/nurbs-core/tests/function_surface.rs",
         "docs/design/nurbs-function-surface.md"
       ],
@@ -2911,7 +2962,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::polynomial::parametric_curve",
       "evidence": [
-        "crates/nurbs-core/src/polynomial.rs",
+        "crates/nurbs-core/src/construct/surfaces/polynomial.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/polynomial-curve.r"
@@ -2950,7 +3001,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::polynomial::parametric_surface",
       "evidence": [
-        "crates/nurbs-core/src/polynomial.rs",
+        "crates/nurbs-core/src/construct/surfaces/polynomial.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/polynomial-surface.r"
@@ -2989,7 +3040,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::polynomial::rational_curve",
       "evidence": [
-        "crates/nurbs-core/src/polynomial.rs",
+        "crates/nurbs-core/src/construct/surfaces/polynomial.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/rational-polynomial-curve.r"
@@ -3028,7 +3079,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::polynomial::rational_surface",
       "evidence": [
-        "crates/nurbs-core/src/polynomial.rs",
+        "crates/nurbs-core/src/construct/surfaces/polynomial.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/rational-polynomial-surface.r"
@@ -3067,7 +3118,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::polynomial::graph",
       "evidence": [
-        "crates/nurbs-core/src/polynomial.rs",
+        "crates/nurbs-core/src/construct/surfaces/polynomial.rs",
         "tests/nurbsPolynomialHost.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
         "examples/rush/polynomial-graph.r"
@@ -3144,7 +3195,7 @@
         ]
       },
       "evidence": [
-        "crates/nurbs-core/src/formula.rs",
+        "crates/nurbs-core/src/construct/curves/formula.rs",
         "tests/nurbsFormulaSurface.test.ts",
         "examples/rush/formula-surface.r",
         "tests/nurbsPrimitiveGraph.test.ts"
@@ -3183,7 +3234,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::natural_spline::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/natural_spline.rs",
+        "crates/nurbs-core/src/construct/curves/natural_spline.rs",
         "tests/nurbsNaturalSpline.test.ts",
         "examples/rush/natural-spline-extrusion.r",
         "docs/design/nurbs-natural-spline-2026-10-01.md",
@@ -3223,7 +3274,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::natural_spline::clamped",
       "evidence": [
-        "crates/nurbs-core/src/natural_spline.rs",
+        "crates/nurbs-core/src/construct/curves/natural_spline.rs",
         "tests/nurbsClampedSpline.test.ts",
         "examples/rush/clamped-spline-extrusion.r",
         "docs/design/nurbs-clamped-spline-2026-10-01.md",
@@ -3263,7 +3314,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::closed_spline::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/closed_spline.rs",
+        "crates/nurbs-core/src/construct/curves/closed_spline.rs",
         "tests/nurbsClosedSpline.test.ts",
         "examples/rush/closed-spline-extrusion.r",
         "docs/design/nurbs-closed-spline-2026-10-01.md",
@@ -3303,7 +3354,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::hermite_patch::patch",
       "evidence": [
-        "crates/nurbs-core/src/hermite_patch.rs",
+        "crates/nurbs-core/src/construct/surfaces/hermite_patch.rs",
         "tests/nurbsHermitePatch.test.ts",
         "examples/rush/hermite-patch.r",
         "docs/design/nurbs-hermite-patch-2026-10-01.md",
@@ -3343,7 +3394,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::grid_spline::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/grid_spline.rs",
+        "crates/nurbs-core/src/construct/surfaces/grid_spline.rs",
         "tests/nurbsGridSpline.test.ts",
         "examples/rush/grid-spline-surface.r",
         "docs/design/nurbs-grid-spline-2026-10-01.md",
@@ -3383,7 +3434,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::natural_loft::interpolate",
       "evidence": [
-        "crates/nurbs-core/src/natural_loft.rs",
+        "crates/nurbs-core/src/construct/surfaces/loft/natural_loft.rs",
         "docs/design/nurbs-natural-loft-2026-10-01.md",
         "tests/nurbsNaturalLoft.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -3423,7 +3474,7 @@
       "status": "integrated",
       "nativeApi": "nurbs_core::natural_loft::clamped",
       "evidence": [
-        "crates/nurbs-core/src/natural_loft.rs",
+        "crates/nurbs-core/src/construct/surfaces/loft/natural_loft.rs",
         "docs/design/nurbs-clamped-loft-2026-10-01.md",
         "tests/nurbsClampedLoft.test.ts",
         "tests/nurbsPrimitiveGraph.test.ts",
@@ -3469,7 +3520,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::rounded_rectangle",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/examples/engineering_profiles.rs"
       ]
     },
@@ -3485,7 +3536,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::capsule",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/examples/engineering_profiles.rs"
       ]
     },
@@ -3501,7 +3552,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::annular_sector",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/examples/engineering_profiles.rs"
       ]
     },
@@ -3517,7 +3568,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::keyway",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3535,7 +3586,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::t_slot",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3553,7 +3604,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::dovetail",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3571,7 +3622,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::poly_v_belt",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3589,7 +3640,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::toothed_belt",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3607,7 +3658,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::o_ring_groove",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "crates/nurbs-core/examples/o_ring_groove.rs",
         "docs/design/nurbs-machining-profiles.md"
@@ -3625,7 +3676,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::retaining_ring",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
       ]
@@ -3642,7 +3693,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::hex_fastener",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
       ]
@@ -3659,7 +3710,7 @@
       ],
       "nativeApi": "nurbs_core::engineering_profiles::square_fastener",
       "evidence": [
-        "crates/nurbs-core/src/engineering_profiles.rs",
+        "crates/nurbs-core/src/construct/curves/engineering_profiles.rs",
         "crates/nurbs-core/tests/machining_profiles.rs",
         "docs/design/nurbs-machining-profiles.md"
       ]
@@ -3676,7 +3727,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::insert",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3693,7 +3744,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::elevate",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3710,7 +3761,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::split",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3727,7 +3778,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::trim",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3744,7 +3795,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::reverse",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/knot_ops.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3761,7 +3812,7 @@
       ],
       "nativeApi": "nurbs_core::curve::Curve::decompose",
       "evidence": [
-        "crates/nurbs-core/src/curve.rs",
+        "crates/nurbs-core/src/core/curve/decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3829,11 +3880,10 @@
       ],
       "partialNativeApi": "nurbs_core::periodic_seam::curve_candidate",
       "evidence": [
-        "crates/nurbs-core/src/periodic_seam.rs",
+        "crates/nurbs-core/src/join/periodic_seam_verification.rs",
         "crates/nurbs-core/tests/periodic_seam.rs",
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
-        "crates/nurbs-core/src/periodic_seam_verification.rs",
         "docs/design/nurbs-periodic-seam-verification.md"
       ],
       "nativeApi": "nurbs_core::periodic_seam::curve_report"
@@ -3866,7 +3916,7 @@
       ],
       "nativeApi": "nurbs_core::weight_edit::curve",
       "evidence": [
-        "crates/nurbs-core/src/weight_edit.rs",
+        "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
         "docs/design/nurbs-weight-edit.md"
       ]
@@ -3883,7 +3933,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::insert",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -3901,7 +3951,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::elevate",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -3919,7 +3969,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::split",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -3937,7 +3987,7 @@
       ],
       "nativeApi": "nurbs_core::surface::Surface::trim",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -3954,7 +4004,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::transpose",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -3972,7 +4022,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::reverse",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -3990,7 +4040,7 @@
       ],
       "nativeApi": "nurbs_core::surface_edit::decompose",
       "evidence": [
-        "crates/nurbs-core/src/surface_edit.rs",
+        "crates/nurbs-core/src/editing/surface_edit.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -4059,11 +4109,10 @@
       ],
       "partialNativeApi": "nurbs_core::periodic_seam::surface_candidate",
       "evidence": [
-        "crates/nurbs-core/src/periodic_seam.rs",
+        "crates/nurbs-core/src/join/periodic_surface_verification.rs",
         "crates/nurbs-core/tests/periodic_seam.rs",
         "docs/design/nurbs-periodic-seam.md",
         "crates/nurbs-core/tests/periodic_seam_candidates.rs",
-        "crates/nurbs-core/src/periodic_surface_verification.rs",
         "crates/nurbs-core/tests/periodic_surface_verification.rs",
         "docs/design/nurbs-periodic-surface-verification.md"
       ],
@@ -4080,7 +4129,7 @@
       ],
       "nativeApi": "nurbs_core::weight_edit::surface",
       "evidence": [
-        "crates/nurbs-core/src/weight_edit.rs",
+        "crates/nurbs-core/src/editing/weight_edit.rs",
         "crates/nurbs-core/tests/weight_edit.rs",
         "docs/design/nurbs-weight-edit.md"
       ]
@@ -4096,7 +4145,7 @@
       ],
       "nativeApi": "nurbs_core::curve_measure::length",
       "evidence": [
-        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
         "docs/design/nurbs-curve-measure.md"
@@ -4113,7 +4162,7 @@
       ],
       "nativeApi": "nurbs_core::surface_measure::area",
       "evidence": [
-        "crates/nurbs-core/src/surface_measure.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
         "crates/nurbs-core/src/surface_measure/jets.rs",
         "crates/nurbs-core/tests/surface_measure.rs",
         "crates/nurbs-core/examples/surface_measure.rs",
@@ -4131,7 +4180,7 @@
       ],
       "nativeApi": "nurbs_core::curve_measure::point_at_length",
       "evidence": [
-        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
         "docs/design/nurbs-curve-measure.md"
@@ -4148,7 +4197,7 @@
       ],
       "nativeApi": "nurbs_core::curve_measure::divide_by_length",
       "evidence": [
-        "crates/nurbs-core/src/curve_measure.rs",
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
         "crates/nurbs-core/tests/curve_measure.rs",
         "crates/nurbs-core/examples/curve_measure.rs",
         "docs/design/nurbs-curve-measure.md"
@@ -4165,7 +4214,7 @@
       ],
       "nativeApi": "nurbs_core::curve_distance::nearest_point",
       "evidence": [
-        "crates/nurbs-core/src/curve_distance.rs",
+        "crates/nurbs-core/src/distance/curve_distance.rs",
         "crates/nurbs-core/tests/nearest_point.rs",
         "docs/design/nurbs-nearest-point.md"
       ]
@@ -4181,7 +4230,7 @@
       ],
       "nativeApi": "nurbs_core::surface_distance::nearest_point",
       "evidence": [
-        "crates/nurbs-core/src/surface_distance.rs",
+        "crates/nurbs-core/src/distance/surface_distance.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
         "docs/design/nurbs-surface-distance-queries.md"
       ]
@@ -4197,7 +4246,7 @@
       ],
       "nativeApi": "nurbs_core::curve_distance::distance",
       "evidence": [
-        "crates/nurbs-core/src/curve_distance.rs",
+        "crates/nurbs-core/src/distance/curve_distance.rs",
         "crates/nurbs-core/tests/curve_pair_distance.rs",
         "docs/design/nurbs-curve-distance.md"
       ]
@@ -4213,7 +4262,7 @@
       ],
       "nativeApi": "nurbs_core::curve_surface_distance::distance",
       "evidence": [
-        "crates/nurbs-core/src/curve_surface_distance.rs",
+        "crates/nurbs-core/src/distance/curve_surface_distance.rs",
         "crates/nurbs-core/tests/curve_surface_distance.rs",
         "docs/design/nurbs-curve-surface-distance.md"
       ]
@@ -4229,7 +4278,7 @@
       ],
       "nativeApi": "nurbs_core::surface_distance::distance",
       "evidence": [
-        "crates/nurbs-core/src/surface_distance.rs",
+        "crates/nurbs-core/src/distance/surface_distance.rs",
         "crates/nurbs-core/tests/surface_distance_queries.rs",
         "docs/design/nurbs-surface-distance-queries.md"
       ]
@@ -4245,8 +4294,7 @@
       ],
       "nativeApi": "nurbs_core::curve_differential::at",
       "evidence": [
-        "crates/nurbs-core/src/curve_differential.rs",
-        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/src/analysis/curve_differential.rs",
         "crates/nurbs-core/tests/curve_differential.rs",
         "crates/nurbs-core/examples/curve_differential.rs",
         "docs/design/nurbs-curve-differential.md"
@@ -4265,7 +4313,7 @@
       ],
       "nativeApi": "nurbs_core::surface_differential::at",
       "evidence": [
-        "crates/nurbs-core/src/surface_differential.rs",
+        "crates/nurbs-core/src/analysis/surface_differential.rs",
         "crates/nurbs-core/tests/surface_differential.rs",
         "docs/design/nurbs-surface-differential.md"
       ]
@@ -4282,7 +4330,7 @@
       ],
       "nativeApi": "nurbs_core::surface::Surface::iso",
       "evidence": [
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/core/surface.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md"
       ]
@@ -4300,7 +4348,7 @@
       ],
       "partialNativeApi": "nurbs_core::curve_plane::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_plane.rs",
+        "crates/nurbs-core/src/analysis/curve_plane.rs",
         "crates/nurbs-core/tests/curve_plane.rs",
         "docs/design/nurbs-curve-plane.md"
       ]
@@ -4312,7 +4360,10 @@
       "prioritySet": "core-200",
       "category": "Пересечения и trim",
       "partialNativeApi": "nurbs_core::intersection::intersect_curve_curve_report",
-      "evidence": ["crates/nurbs-core/src/intersection.rs", "docs/design/nurbs-curve-curve-audit.md"],
+      "evidence": [
+        "crates/nurbs-core/src/intersection.rs",
+        "docs/design/nurbs-curve-curve-audit.md"
+      ],
       "remainingQualification": [
         "original-curve outward interval exclusion implemented; coincidence, existence and contact qualification remain",
         "independent geometric tests and invalid-input tests",
@@ -4348,7 +4399,7 @@
       ],
       "nativeApi": "nurbs_core::ray_surface::ray_intersections",
       "evidence": [
-        "crates/nurbs-core/src/ray_surface.rs",
+        "crates/nurbs-core/src/analysis/ray_surface.rs",
         "crates/nurbs-core/tests/ray_surface.rs",
         "docs/design/nurbs-ray-surface.md"
       ]
@@ -4364,7 +4415,7 @@
       ],
       "nativeApi": "nurbs_core::curve_self_intersection::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_self_intersection.rs",
+        "crates/nurbs-core/src/intersection/self_curve.rs",
         "crates/nurbs-core/tests/curve_self_intersection.rs",
         "docs/design/nurbs-self-intersection-audits.md"
       ]
@@ -4380,8 +4431,7 @@
       ],
       "nativeApi": "nurbs_core::surface_self_intersection::inspect",
       "evidence": [
-        "crates/nurbs-core/src/surface_self_intersection.rs",
-        "crates/nurbs-core/src/surface_injectivity.rs",
+        "crates/nurbs-core/src/intersection/self_surface.rs",
         "crates/nurbs-core/tests/surface_self_intersection.rs",
         "docs/design/nurbs-self-intersection-audits.md"
       ]
@@ -4398,7 +4448,7 @@
       ],
       "nativeApi": "nurbs_core::trim_domain::exact_loop_joins",
       "evidence": [
-        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_closure.rs",
         "docs/design/nurbs-uv-closure.md"
       ]
@@ -4415,7 +4465,7 @@
       ],
       "nativeApi": "nurbs_core::trim_simplicity::inspect",
       "evidence": [
-        "crates/nurbs-core/src/trim_simplicity.rs",
+        "crates/nurbs-core/src/trim/trim_simplicity.rs",
         "crates/nurbs-core/tests/uv_simplicity.rs",
         "docs/design/nurbs-uv-simplicity.md"
       ]
@@ -4432,7 +4482,7 @@
       ],
       "nativeApi": "nurbs_core::trim_domain::TrimDomain::classify_point",
       "evidence": [
-        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_point.rs",
         "docs/design/nurbs-uv-point.md"
       ]
@@ -4449,7 +4499,7 @@
       ],
       "nativeApi": "nurbs_core::trim_domain::TrimDomain::new",
       "evidence": [
-        "crates/nurbs-core/src/trim_domain.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
         "crates/nurbs-core/tests/uv_point.rs",
         "docs/design/nurbs-uv-point.md"
       ]
@@ -4465,7 +4515,7 @@
       ],
       "nativeApi": "nurbs_core::curve_pullback::project",
       "evidence": [
-        "crates/nurbs-core/src/curve_pullback.rs",
+        "crates/nurbs-core/src/analysis/curve_pullback.rs",
         "crates/nurbs-core/tests/curve_pullback.rs",
         "docs/design/nurbs-curve-pullback.md"
       ]
@@ -4480,7 +4530,8 @@
         "typed Rust implementation or audit of existing API",
         "independent geometric tests and invalid-input tests",
         "documented domain, tolerance, degeneracy and resource limits"
-      ]
+      ],
+      "evidence": []
     },
     {
       "id": "NURBS-0174",
@@ -4494,8 +4545,7 @@
       ],
       "nativeApi": "nurbs_core::sections::compatible",
       "evidence": [
-        "crates/nurbs-core/src/sections.rs",
-        "crates/nurbs-core/src/surface.rs",
+        "crates/nurbs-core/src/construct/surfaces/sections/sections.rs",
         "crates/nurbs-core/tests/sections.rs",
         "docs/design/nurbs-section-compatibility.md"
       ]
@@ -4512,7 +4562,7 @@
       ],
       "nativeApi": "nurbs_core::sections::orient",
       "evidence": [
-        "crates/nurbs-core/src/sections.rs",
+        "crates/nurbs-core/src/construct/surfaces/sections/sections.rs",
         "crates/nurbs-core/tests/sections.rs",
         "docs/design/nurbs-section-compatibility.md"
       ]
@@ -4530,8 +4580,7 @@
       ],
       "nativeApi": "nurbs_core::section_phase::align",
       "evidence": [
-        "crates/nurbs-core/src/section_phase.rs",
-        "crates/nurbs-core/src/periodic_seam_verification.rs",
+        "crates/nurbs-core/src/construct/surfaces/sections/phase.rs",
         "crates/nurbs-core/tests/section_phase.rs",
         "docs/design/nurbs-section-phase.md"
       ]
@@ -4548,8 +4597,7 @@
       ],
       "nativeApi": "nurbs_core::curve_join::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_join.rs",
-        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
         "docs/design/nurbs-curve-join.md"
       ]
@@ -4566,8 +4614,7 @@
       ],
       "nativeApi": "nurbs_core::curve_join::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_join.rs",
-        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
         "docs/design/nurbs-curve-join.md"
       ]
@@ -4584,8 +4631,7 @@
       ],
       "nativeApi": "nurbs_core::curve_join::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_join.rs",
-        "crates/nurbs-core/src/curve_jets.rs",
+        "crates/nurbs-core/src/join/curve_join.rs",
         "crates/nurbs-core/tests/curve_join.rs",
         "docs/design/nurbs-curve-join.md"
       ]
@@ -4602,7 +4648,7 @@
       ],
       "nativeApi": "nurbs_core::surface_join::inspect_g0",
       "evidence": [
-        "crates/nurbs-core/src/surface_join.rs",
+        "crates/nurbs-core/src/join/surface_join.rs",
         "crates/nurbs-core/tests/surface_join.rs",
         "docs/design/nurbs-surface-g0.md"
       ]
@@ -4620,8 +4666,7 @@
       ],
       "partialNativeApi": "nurbs_core::continuity::inspect_surface_jets_checked_report",
       "evidence": [
-        "crates/nurbs-core/src/surface_g1.rs",
-        "crates/nurbs-core/src/surface_measure/jets.rs",
+        "crates/nurbs-core/src/join/surface_g1.rs",
         "crates/nurbs-core/tests/surface_g1.rs",
         "docs/design/nurbs-surface-g1.md"
       ],
@@ -4640,13 +4685,13 @@
       ],
       "partialNativeApi": "nurbs_core::continuity::inspect_surface_jets_checked_report",
       "evidence": [
-        "crates/nurbs-core/src/continuity.rs",
+        "crates/nurbs-core/src/join/continuity.rs",
         "crates/nurbs-core/tests/surface_jet_inspection.rs",
         "docs/design/nurbs-surface-jet-inspection.md",
-        "crates/nurbs-core/src/surface_shape_operator.rs",
+        "crates/nurbs-core/src/analysis/surface_shape_operator.rs",
         "crates/nurbs-core/tests/surface_shape_operator.rs",
         "docs/design/nurbs-surface-shape-operator.md",
-        "crates/nurbs-core/src/surface_g2.rs",
+        "crates/nurbs-core/src/join/surface_g2.rs",
         "crates/nurbs-core/tests/surface_g2.rs",
         "docs/design/nurbs-surface-g2-affine.md"
       ],
@@ -4665,7 +4710,7 @@
       ],
       "nativeApi": "nurbs_core::surface_regularity::inspect",
       "evidence": [
-        "crates/nurbs-core/src/surface_regularity.rs",
+        "crates/nurbs-core/src/analysis/surface_regularity.rs",
         "crates/nurbs-core/tests/surface_regularity.rs",
         "docs/design/nurbs-surface-regularity.md"
       ]
@@ -4681,7 +4726,7 @@
       ],
       "nativeApi": "nurbs_core::curve_deviation::inspect",
       "evidence": [
-        "crates/nurbs-core/src/curve_deviation.rs",
+        "crates/nurbs-core/src/analysis/curve_deviation.rs",
         "crates/nurbs-core/tests/curve_deviation.rs",
         "docs/design/nurbs-curve-deviation.md"
       ]
@@ -4697,7 +4742,7 @@
       ],
       "nativeApi": "nurbs_core::continuity::deviation::positional_upper",
       "evidence": [
-        "crates/nurbs-core/src/continuity/deviation.rs",
+        "crates/nurbs-core/src/join/continuity/deviation.rs",
         "crates/nurbs-core/tests/surface_deviation.rs",
         "docs/design/nurbs-surface-deviation.md"
       ]
@@ -4714,7 +4759,7 @@
       ],
       "nativeApi": "nurbs_core::curve_offset::approximate_curve",
       "evidence": [
-        "crates/nurbs-core/src/curve_offset.rs",
+        "crates/nurbs-core/src/offset/curve_offset.rs",
         "crates/nurbs-core/tests/curve_offset.rs",
         "docs/design/nurbs-planar-offset-native.md"
       ]
@@ -4731,7 +4776,7 @@
       ],
       "nativeApi": "nurbs_core::curve_offset_join::miter_at_knot",
       "evidence": [
-        "crates/nurbs-core/src/curve_offset_join.rs",
+        "crates/nurbs-core/src/offset/curve_offset_join.rs",
         "crates/nurbs-core/tests/offset_join.rs",
         "docs/design/nurbs-offset-joins.md"
       ]
@@ -4749,7 +4794,7 @@
       ],
       "partialNativeApi": "nurbs_core::chord_fill_selection::boundary_curves",
       "evidence": [
-        "crates/nurbs-core/src/chord_fill_selection.rs",
+        "crates/nurbs-core/src/offset/chord/fill_selection.rs",
         "crates/nurbs-core/tests/chord_region.rs",
         "docs/design/nurbs-offset-region-audit.md"
       ]
@@ -4764,7 +4809,8 @@
         "typed Rust implementation or audit of existing API",
         "independent geometric tests and invalid-input tests",
         "documented domain, tolerance, degeneracy and resource limits"
-      ]
+      ],
+      "evidence": []
     },
     {
       "id": "NURBS-0190",
@@ -4776,7 +4822,8 @@
         "typed Rust implementation or audit of existing API",
         "independent geometric tests and invalid-input tests",
         "documented domain, tolerance, degeneracy and resource limits"
-      ]
+      ],
+      "evidence": []
     },
     {
       "id": "NURBS-0191",
@@ -4790,7 +4837,7 @@
       ],
       "nativeApi": "nurbs_core::curve_tessellation::tessellate",
       "evidence": [
-        "crates/nurbs-core/src/curve_tessellation.rs",
+        "crates/nurbs-core/src/tessellation/curve_tessellation.rs",
         "crates/nurbs-core/tests/curve_tessellation.rs",
         "docs/design/nurbs-curve-tessellation-native.md"
       ]
@@ -4808,7 +4855,7 @@
       ],
       "nativeApi": "nurbs_core::surface_tessellation::tessellate",
       "evidence": [
-        "crates/nurbs-core/src/surface_tessellation.rs",
+        "crates/nurbs-core/src/tessellation/surface_tessellation.rs",
         "crates/nurbs-core/tests/surface_tessellation.rs",
         "docs/design/nurbs-surface-tessellation-native.md"
       ]
@@ -4824,7 +4871,7 @@
       ],
       "nativeApi": "nurbs_core::shared_tessellation::tessellate",
       "evidence": [
-        "crates/nurbs-core/src/shared_tessellation.rs",
+        "crates/nurbs-core/src/tessellation/shared_tessellation.rs",
         "crates/nurbs-core/tests/shared_tessellation.rs",
         "docs/design/nurbs-shared-tessellation.md"
       ]
@@ -4840,7 +4887,7 @@
       ],
       "nativeApi": "nurbs_core::affine::curve",
       "evidence": [
-        "crates/nurbs-core/src/affine.rs",
+        "crates/nurbs-core/src/core/affine.rs",
         "crates/nurbs-core/tests/affine_bounds.rs",
         "docs/design/nurbs-affine-bounds.md"
       ]
@@ -4856,11 +4903,9 @@
       ],
       "nativeApi": "nurbs_core::bounds::union",
       "evidence": [
-        "crates/nurbs-core/src/bounds.rs",
+        "crates/nurbs-core/src/core/bounds.rs",
         "crates/nurbs-core/tests/affine_bounds.rs",
-        "docs/design/nurbs-affine-bounds.md",
-        "crates/nurbs-core/src/curve.rs",
-        "crates/nurbs-core/src/surface.rs"
+        "docs/design/nurbs-affine-bounds.md"
       ]
     },
     {
@@ -4886,7 +4931,11 @@
       "prioritySet": "core-200",
       "category": "Производственные операции",
       "partialNativeApi": "brep_core::watertight::inspect",
-      "evidence": ["crates/brep-core/src/watertight.rs", "crates/brep-core/tests/watertight.rs", "docs/design/nurbs-watertight-audit.md"],
+      "evidence": [
+        "crates/brep-core/src/watertight.rs",
+        "crates/brep-core/tests/watertight.rs",
+        "docs/design/nurbs-watertight-audit.md"
+      ],
       "remainingQualification": [
         "continuous seam audit, unique whole-edge affine matches and explicit partial-boundary qualification implemented; automatic partial and nonlinear correspondence remain",
         "independent geometric tests and invalid-input tests",
@@ -4904,8 +4953,7 @@
       ],
       "nativeApi": "nurbs_core::curve_surface_agreement::verify",
       "evidence": [
-        "crates/nurbs-core/src/curve_surface_agreement.rs",
-        "crates/nurbs-core/src/curve_surface_composition.rs",
+        "crates/nurbs-core/src/analysis/curve_surface_agreement.rs",
         "docs/design/nurbs-rounding-deviation-certificate.md"
       ]
     },
@@ -4920,7 +4968,7 @@
       ],
       "nativeApi": "nurbs_core::conditioning::curve",
       "evidence": [
-        "crates/nurbs-core/src/conditioning.rs",
+        "crates/nurbs-core/src/numerics/conditioning.rs",
         "crates/nurbs-core/tests/conditioning.rs",
         "docs/design/nurbs-conditioning.md"
       ]
@@ -4937,7 +4985,7 @@
       ],
       "nativeApi": "nurbs_core::coordinate_frame::curve",
       "evidence": [
-        "crates/nurbs-core/src/coordinate_frame.rs",
+        "crates/nurbs-core/src/core/coordinate_frame.rs",
         "crates/nurbs-core/tests/coordinate_frame.rs",
         "docs/design/nurbs-coordinate-frame.md"
       ]

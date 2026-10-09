@@ -67,3 +67,6 @@ pub use types::{ID, M3, V2, V3};
 pub mod camera_gestures;
 pub mod orbit_camera;
 pub mod viewport;
+
+pub mod witness_bounds;
+pub mod profile_plane;

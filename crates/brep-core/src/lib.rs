@@ -12,14 +12,12 @@
 mod rational_identity;
 #[cfg(feature = "codec")]
 mod serialization;
-
 use nurbs_core::{
     Error, Result,
     curve::Curve,
     surface::{Surface, SurfaceSampler},
 };
 use std::collections::{BTreeMap, BTreeSet};
-
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
 
 pub mod analysis;
@@ -1690,3 +1688,5 @@ pub mod source_wall_self_coverage;
 pub(crate) mod source_planar_flux;
 
 pub use analytic::{LoftCap,capped_loft_with_caps,capped_loft_with_caps_checked};
+
+pub mod wall_search;

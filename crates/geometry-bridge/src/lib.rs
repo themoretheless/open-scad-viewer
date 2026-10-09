@@ -42,6 +42,7 @@ mod cad_boundary_agreement;
 mod cad_bridge_curve;
 mod cad_centered_lattice;
 mod cad_clearance;
+mod cad_client_geometry;
 mod cad_diagnostics;
 mod cad_dimensions;
 mod cad_display;
@@ -416,6 +417,7 @@ fn dispatch_local(mut v: Value) -> Result<Value> {
         "cad_solid_distance" => cad_solid_distance::measure(v),
         "cad_material_segment" => cad_material_segment::inspect(v),
         "cad_source_body_restore" => cad_source_body::restore(v),
+        "cad_client_geometry" => cad_client_geometry::run(v),
         "cad_material_chord" => cad_material_chord::inspect(v),
         "cad_material_wall" => cad_material_wall::inspect(v),
         "cad_whole_wall" => cad_whole_wall::inspect(v),

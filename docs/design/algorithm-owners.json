@@ -208,6 +208,22 @@
         "src/services/geometry/module.ts"
       ],
       "reason": "Binary decoding, allocation and WASM lifecycle are host transport."
+    },
+    {
+      "id": "native-client-geometry-boundaries",
+      "owner": "osv-math + planar-geometry + nurbs-core + brep-core",
+      "action": "native-adapter",
+      "files": [
+        "src/services/mainSolidProtocol.ts",
+        "src/services/numericSketchAuthoring.ts",
+        "src/services/solidDistance.ts",
+        "src/services/solidMaterialVolume.ts",
+        "src/services/solidProfilePreparation.ts",
+        "src/services/solidSelfIntersection.ts",
+        "src/services/solidWallSearch.ts",
+        "src/services/sourceBodyDisplay.ts"
+      ],
+      "reason": "Native profile_plane and witness_bounds own common-plane geometry and numerical report consistency. Native sketch_shapes owns rectangle and capsule definitions, surface_injectivity owns polar proposals, brep-core wall_search owns bounded samples and wall proposals. geometry-bridge adapts source display budgets and these native calls. TS keeps document transactions, structural response checks, worker cancellation and the explicit caller-supplied evaluator hook; samples never certify coverage."
     }
   ],
   "families": [

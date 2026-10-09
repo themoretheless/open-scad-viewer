@@ -587,7 +587,8 @@ fn polar_cells(s: &Surface, subdivisions: usize) -> usize {
     active(&s.knots_u,s.degree_u,s.control_points.len())
         * active(&s.knots_v,s.degree_v,s.control_points[0].len()) * subdivisions * subdivisions
 }
-fn polar_projection_candidates(s: &Surface) -> Result<Vec<[[f64;4];3]>> {
+pub fn polar_projection_candidates(s: &Surface) -> Result<Vec<[[f64;4];3]>> {
+    s.validate()?;
     // Restrict automatic frame guesses to one clamped quadratic iso-curve.
     // The public verifier also accepts other degrees and explicit frames.
     if s.degree_u != 2 || s.control_points.len() != 3
@@ -732,6 +733,11 @@ fn projective_section_jacobian(s:&Surface,span:[usize;2],domain:[[f64;2];2],nume
     Ok(Some([result[0],result[1]]))
 }
 
+/// Deterministic proposals from a validated source, not certificates.
+pub fn projective_projection_candidates(s:&Surface)->Result<[[[f64;4];3];6]> {
+    s.validate()?;
+    Ok(projective_projections(s))
+}
 fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
     std::array::from_fn(|i|{
         let axis=[2,2,0,0,1,1][i];let free=match axis{2=>[0,1],0=>[1,2],_=>[0,2]};

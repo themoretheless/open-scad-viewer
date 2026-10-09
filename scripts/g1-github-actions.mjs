@@ -18,11 +18,11 @@ import {matchesNodeHost,qualificationInvocation} from './g1RuntimeIdentity.mjs'
 import {verifyBrowserPayloadTree as verifyTree} from './browserPayloadTree.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v91.json'
+const PLAN_PATH = 'docs/qualification/semantic-manifold-g1-plan-v92.json'
 const FREEZE_PATH = 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'
 const GITHUB_FREEZE_PATH = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
-const PLAN_ID = 'semantic-manifold-g1-plan-v91'
-const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v91'
+const PLAN_ID = 'semantic-manifold-g1-plan-v92'
+const CANDIDATE_ID = 'semantic-manifold-g1-candidate-run-v92'
 const NPM_VERSION = '10.9.8'
 const OUTPUT_ROOT = `output/qualification/${CANDIDATE_ID}/github-actions`
 const FORBIDDEN_ENV = [
