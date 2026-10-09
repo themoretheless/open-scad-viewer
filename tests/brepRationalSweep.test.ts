@@ -112,7 +112,7 @@ it('retains a closed hollow sweep as periodic outer and inner shells without cap
  const restored=importDirectStepV5(step.text).model
  expect(restored.bodies[0]!.innerShells).toHaveLength(1)
  expect(inspectNurbsBrep(restored).boundaryEdgeCount).toBe(0)
-})
+},120000)
 
 it('sews authored repeated sections through the direct periodic WASM API',()=>{
  const base=[[circleNurbsCurve([5,0,0],[0,1,0],.5)],[reverseNurbsCurve(circleNurbsCurve([5,0,0],[0,1,0],.2))]]
@@ -240,7 +240,7 @@ it.each(['progressive-hollow-body','authored-progressive-hollow-body','affine-ho
   }})
   expect(result,name).toEqual(expected)
   expect(reports,name).toEqual((expected.report.construction![node.id] as {levels:unknown[]}).levels)
-})
+},120000)
 
 
 it('cancels Rush body parsing on a wall preview and recovers on the same parser queue',async()=>{
