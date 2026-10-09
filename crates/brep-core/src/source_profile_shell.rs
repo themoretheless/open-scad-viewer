@@ -8,7 +8,7 @@ mod flux;
 pub use flux::MaterialFluxReport;
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
-pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport};
+pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport,ExpressionVolumeQualification,OrientedExpressionVolume};
 use super::*;
 use crate::source_boundary_fragment::Fragment;
 use crate::source_shell_incidence::Address;

@@ -1483,9 +1483,19 @@ mod tests {
                 axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,
                 controls_per_enclosure:1000,cells,spans:200000,domain_cells:100000,domain_cells_per_rectangle:256,
             };
-            let refused=geometry.inspect_volume(volume_limits(0)).unwrap();
+            let refused_qualification=geometry.qualify_volume(volume_limits(0)).unwrap();
+            assert!(refused_qualification.certificate.is_none());
+            let refused=refused_qualification.report;
             assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
-            let volume=geometry.inspect_volume(volume_limits(32768)).unwrap();
+            let qualification=geometry.qualify_volume(volume_limits(32768)).unwrap();
+            let volume=&qualification.report;
+            if let Some(certificate)=&qualification.certificate {
+                assert!(std::ptr::eq(certificate.geometry(),&geometry));
+                assert_eq!(certificate.signed_bounds(),volume.signed_bounds.unwrap());
+                let bounds=certificate.positive_bounds();
+                assert!(bounds[0]>0. && bounds[0]<=bounds[1]);
+                assert_eq!(certificate.reverse_orientation(),certificate.signed_bounds()[1]<0.);
+            }
             eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} planarFaces={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.planar_faces,volume.reason);
             assert!(volume.cells<=32768 && volume.spans<=200000 && volume.domain_cells<=100000);
             if let Some([lo,hi])=volume.signed_bounds {assert!(lo.is_finite() && hi.is_finite() && lo<=hi);}

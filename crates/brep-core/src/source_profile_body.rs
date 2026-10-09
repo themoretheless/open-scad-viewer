@@ -1580,3 +1580,4 @@ pub use assembled_shell::{ProfileVertexContact,ProfileVertexReport};
 
 pub use assembled_shell::{TransitionCoordinateContact,TransitionCoordinateReport};
 pub use assembled_shell::{EmbeddedExpressionGeometry,MaterialFluxReport,ExpressionVolumeLimits,ExpressionVolumeReport};
+pub use assembled_shell::{ExpressionVolumeQualification,OrientedExpressionVolume};

@@ -26,6 +26,43 @@ pub struct ExpressionVolumeReport {
     pub uncertain_domain: Option<[[f64; 2]; 2]>,
     pub reason: &'static str,
 }
+/// Native volume and orientation tied to the actual embedded expression.
+/// Radius, thickness and component containment remain separate qualifications.
+pub struct OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    geometry: &'v EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>,
+    signed_bounds: [f64; 2],
+    positive_bounds: [f64; 2],
+    reverse_orientation: bool,
+}
+impl OrientedExpressionVolume<'_, '_, '_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn geometry(&self) -> &EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> { self.geometry }
+    pub fn signed_bounds(&self) -> [f64; 2] { self.signed_bounds }
+    pub fn positive_bounds(&self) -> [f64; 2] { self.positive_bounds }
+    pub fn reverse_orientation(&self) -> bool { self.reverse_orientation }
+}
+pub struct ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    pub report: ExpressionVolumeReport,
+    pub certificate: Option<OrientedExpressionVolume<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>>,
+}
+fn admitted_volume_bounds(bounds: Option<[f64; 2]>, complete: bool, error: f64) -> Result<Option<([f64; 2], bool)>> {
+    if !complete { return Ok(None); }
+    let Some([lo, hi]) = bounds else { return Ok(None); };
+    let value = I::new(lo, hi)?;
+    if I::point(value.hi).sub(I::point(value.lo))?.hi > error || (lo <= 0. && hi >= 0.) { return Ok(None); }
+    if hi < 0. { Ok(Some(([-hi, -lo], true))) } else { Ok(Some(([lo, hi], false))) }
+}
+impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
+    /// Recompute all volume work from immutable geometry. Caller diagnostics
+    /// and previously serialized intervals never construct this certificate.
+    pub fn qualify_volume<'v>(&'v self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
+        let error = limits.absolute_error;
+        let report = self.inspect_volume(limits)?;
+        let certificate = admitted_volume_bounds(report.signed_bounds, report.complete, error)?.map(|(positive_bounds, reverse_orientation)| {
+            OrientedExpressionVolume { geometry: self, signed_bounds: report.signed_bounds.unwrap(), positive_bounds, reverse_orientation }
+        });
+        Ok(ExpressionVolumeQualification { report, certificate })
+    }
+}
 struct Node {
     face: usize,
     domain: [[f64; 2]; 2],
@@ -168,5 +205,14 @@ mod tests {
         assert_eq!(planar_allowance(512, 0, 29), 0);
         assert_eq!(planar_allowance(0, 1000, 29), 0);
         assert_eq!(planar_allowance(512, 1000, 0), 0);
+    }
+    #[test]
+    fn volume_admission_refuses_pending_zero_sign_and_excess_error() {
+        assert!(admitted_volume_bounds(Some([7000., 7001.]), false, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(None, true, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(Some([-1., 1.]), true, 20.).unwrap().is_none());
+        assert!(admitted_volume_bounds(Some([7000., 7030.]), true, 20.).unwrap().is_none());
+        assert_eq!(admitted_volume_bounds(Some([7000., 7001.]), true, 20.).unwrap(), Some(([7000., 7001.], false)));
+        assert_eq!(admitted_volume_bounds(Some([-7001., -7000.]), true, 20.).unwrap(), Some(([7000., 7001.], true)));
     }
 }
