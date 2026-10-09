@@ -1,6 +1,7 @@
 //! Pinned against the host derivers in src/core/semanticProgram.ts; every
 //! expected digest below was produced by running the TS functions in node.
 use super::*;
+use super::canonical_json::js_f64;
 use value_codec::json;
 
 fn root_path() -> Vec<Value> {
@@ -149,7 +150,10 @@ fn js_number_formatting_matches_json_stringify() {
     assert_eq!(js_number(&Number::Float(42.0)), "42");
 }
 
-#[expect(clippy::too_many_arguments, reason = "test fixture mirrors the operation wire shape")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "test fixture mirrors the operation wire shape"
+)]
 fn operation(
     id: u64,
     parent: Value,
@@ -321,7 +325,10 @@ fn refuses_wrong_by_one_operation_mutations() {
     assert!(validate_operations(&long_root).is_err());
 }
 
-#[expect(clippy::too_many_arguments, reason = "test fixture mirrors the occurrence wire shape")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "test fixture mirrors the occurrence wire shape"
+)]
 fn occurrence(
     id: u64,
     occurrence_id: &str,

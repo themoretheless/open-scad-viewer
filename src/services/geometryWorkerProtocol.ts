@@ -1,3 +1,4 @@
+import {isWellFormedUnicode,isNonNegativeSafeInteger,isNonNegativeFiniteNumber} from './workerPayloadPrimitives'
 import {isNativeGeometryArtifact,MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import type { GeometryEvaluationResult, GeometryPhaseTimings, GeometryQuality } from '../core/build'
 import {
@@ -86,6 +87,8 @@ export interface GeometrySweepPreview extends GeometryJobEnvelope {
  sections:number
  accepted:boolean
  continuousErrorUpper?:number
+ /** Maximum for the certified subset of profiles, not the full boundary. */
+ knownProfileErrorUpper?:number
  profileRegularityCertified?:boolean
  wallRegularityCertified?:boolean|null
  certifiedErrorUpper?:number|null
@@ -196,17 +199,6 @@ function isDenseExactArray(value: unknown, maximumLength = Number.MAX_SAFE_INTEG
   return true
 }
 
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
-}
-
 function hasExactKeys(
   value: Record<string, unknown>,
   required: readonly string[],
@@ -256,14 +248,6 @@ function optionalKey(
   predicate: (candidate: unknown) => boolean,
 ): boolean {
   return !Object.hasOwn(value, key) || predicate(value[key])
-}
-
-function isNonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0
-}
-
-function isNonNegativeFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
 function isPhaseTimings(value: unknown): value is GeometryPhaseTimings {
@@ -757,7 +741,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
         return hasExactKeys(value,[
           'protocolVersion','documentRevision','jobId','quality','sourceSha256',
           'status','phase','nodeId','sections','accepted','sampledControlDeviation','budget','meshes',
-        ],['phaseResolved','continuousErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
+        ],['phaseResolved','continuousErrorUpper','knownProfileErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
           && typeof value.nodeId==='string' && value.nodeId.length>0
           && value.nodeId.length<=GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
           && Number.isInteger(value.sections) && (value.sections as number)>=2 && (value.sections as number)<=1025
@@ -772,7 +756,9 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
           && (value.certifiedErrorUpper===undefined||value.certifiedErrorUpper===null||isNonNegativeFiniteNumber(value.certifiedErrorUpper))
           && (value.endpointContourErrorUpper===undefined||value.endpointContourErrorUpper===null||(Array.isArray(value.endpointContourErrorUpper)&&value.endpointContourErrorUpper.length===2&&value.endpointContourErrorUpper.every(isNonNegativeFiniteNumber)))
           && (value.continuousErrorUpper===undefined||isNonNegativeFiniteNumber(value.continuousErrorUpper))
-          && value.accepted===((value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number))))
+          && (value.knownProfileErrorUpper===undefined||isNonNegativeFiniteNumber(value.knownProfileErrorUpper))
+          && (value.knownProfileErrorUpper===undefined||value.continuousErrorUpper===undefined||value.knownProfileErrorUpper===value.continuousErrorUpper)
+          && value.accepted===((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number))))
           && (value.meshes as unknown[]).every(mesh=>isMeshData(mesh)&&!('nativeGeometry' in mesh)
             && mesh.faceIdsAuthoritative===false && mesh.provenance.every(run=>run.source===null))
       case 'succeeded':

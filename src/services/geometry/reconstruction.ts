@@ -11,7 +11,8 @@ export interface SubdivisionReconstruction {
  cage:SubdivisionCage;iterations:number;vertexResidualBeforeMm:number;vertexResidualAfterMm:number;
  deviation:SampledDeviation;correspondence:'source_triangle_topology_one_refinement_step'
 }
-export interface NurbsPatchSet {
+export interface NurbsSurfaceSet {patches:NurbsSurface[];faceIds:number[]}
+export interface NurbsPatchSet extends NurbsSurfaceSet {
  patches:NurbsSurface[];faceIds:number[];mode:'faceted'|'point_normal';
  sampledMaxDeviationMm:number;sampleCount:number;errorBoundCertified:false
 }

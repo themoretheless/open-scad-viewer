@@ -37,6 +37,8 @@
 //! classification. Resolved contacts are exact rational circles (four
 //! 90-degree arcs, weights cos(pi/4)) with iso-v lifts on all four side
 //! patches of both cones. Nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 use super::sphere_sphere::{RECOGNITION, circle_curve};
@@ -352,24 +354,6 @@ pub fn intersect_cone_cone(
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for ConeConeComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                first_uv,
-                second_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"firstUv":first_uv,"secondUv":second_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 #[cfg(test)]

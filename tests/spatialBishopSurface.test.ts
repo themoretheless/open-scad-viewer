@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve,checkedProfileSweepNurbsSurface} from '../src/services/nurbsConstructors'
 import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
@@ -34,7 +34,7 @@ it('refuses broken authored tangents and exhausted frame work without a partial 
 })
 
 it('carries the Rust spatial-frame and surface proofs through sync and async Rush construction',async()=>{
- const graph=compileModelGraphText(readFileSync('examples/rush/spatial-bishop-g2-surface-6.r','utf8')).document
+ const graph=compileRushFrontend(readFileSync('examples/rush/spatial-bishop-g2-surface-6.r','utf8')).document
  const node=graph.nodes.find(n=>n.op==='profile_sweep')!
  const request={action:'build' as const,display:{segments:4,subdivisionLevels:0}}
  for(const built of [buildOwnNurbs(graph,request),await buildOwnNurbsAsync(graph,request)]){

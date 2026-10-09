@@ -154,10 +154,10 @@ unit, интеграционные `tests/*` моста тоже). Полный 
 | --- | --- | --- |
 | `engineManifest` (`kernelFingerprint`), `g0ToolchainFingerprints` (WASM-отпечаток), `qualificationPlanArtifact` (v27: `g1-pinned-legacy-support-bundle` теперь тоже отличается, потому что изменён `openscadParser.ts`) | ядро и парсер изменились по существу; заморозки G0/G1 и манифест `own-rust-node-v2` требуют новой версии по существующей процедуре (`scripts/release-own-rust-v*.mjs`, re-freeze генератор). Это квалификационное событие, которое должен провести владелец, здесь не имитировалось | эта ветка |
 | `g0ToolchainFingerprints` «package.json: expected 2822» | `package.json` на HEAD `fdf7b1a` уже 2929 байт: отпечаток устарел до этой ветки | HEAD |
-| `mcpServer`, `modelGraphNurbsMcp` (лишний инструмент `modelgraph_nurbs_intersect`) | инструмент зарегистрирован коммитом `ddce85c`, тесты не обновлены | HEAD |
+| `mcpServer`, `rushGraphNurbsMcp` (лишний инструмент `rush_nurbs_intersect`) | инструмент зарегистрирован коммитом `ddce85c`, тесты не обновлены | HEAD |
 | `brepAnalytic` (torus ∪ box больше не бросает), `brepNativeProgramSemantics` (sphere ∩ sphere выполняется) | `brep-core` не зависит от `polygon-core` и не тронут; ядро в основном checkout собрано в 16:48, до merge `5734538` (16:54) с новыми сферическими булеанами, так что ожидания тестов отстали от HEAD | HEAD |
 | `brepQualificationV5…V12` («Cannot find package ajv/dist/2020.js»), `wasmBrotliPacking` (нет `photogrammetry_wasm.wasm` в target этого worktree) | окружение worktree (node_modules и target из основного checkout) | среда |
-| 20 падений `modelGraph*`, `mcpDirectGeometrySupervisor`, `brepDiagnosticExecutor` | contention одноразовых worker'ов при параллельных файлах; при `--no-file-parallelism` проходят | среда |
+| 20 падений `rushGraph*`, `mcpDirectGeometrySupervisor`, `brepDiagnosticExecutor` | contention одноразовых worker'ов при параллельных файлах; при `--no-file-parallelism` проходят | среда |
 
 ## 6. Воспроизведение
 

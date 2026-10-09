@@ -1,0 +1,59 @@
+{
+  "schema": "scalar-sweep-step-occt/1",
+  "scope": "Two capped square sweep fixtures; finite geometry, topology and volume verification. No global sweep guarantee.",
+  "artifactProvenance": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "79f12832a71cf5cb9669b76b610fe2cb812debbcc6c8cb3a6f2806ab511f84d3",
+    "geometryWasmByteLength": 11820187,
+    "publicAndPackedVerified": true
+  },
+  "cases": [
+    {
+      "op": "scaled_sweep",
+      "nativeRoundTrip": true,
+      "occtRoundTrip": [
+        {
+          "valid": true,
+          "faces": 6,
+          "solids": 1,
+          "volume": 31.360713924991348,
+          "expectedVolume": 31.36071272367147,
+          "maxSurfaceErrorMm": 2.175583928816829e-15
+        },
+        {
+          "valid": true,
+          "faces": 6,
+          "solids": 1,
+          "volume": 31.360713924990197,
+          "expectedVolume": 31.36071272367147,
+          "maxSurfaceErrorMm": 7.997416018131667e-13
+        }
+      ],
+      "passed": true
+    },
+    {
+      "op": "profile_sweep",
+      "nativeRoundTrip": true,
+      "occtRoundTrip": [
+        {
+          "valid": true,
+          "faces": 6,
+          "solids": 1,
+          "volume": 46.66666666666667,
+          "expectedVolume": 46.666666666666664,
+          "maxSurfaceErrorMm": 8.881784197001252e-16
+        },
+        {
+          "valid": true,
+          "faces": 6,
+          "solids": 1,
+          "volume": 46.66666666666667,
+          "expectedVolume": 46.666666666666664,
+          "maxSurfaceErrorMm": 8.881784197001252e-16
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

@@ -4,8 +4,10 @@ Does not certify continuous sweep error, general embedding or seam smoothness.
 from fractions import Fraction
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
+from step_rational_basis import same_positive_projective_weights
 from OCP.STEPControl import STEPControl_Reader
 from OCP.IFSelect import IFSelect_RetDone
 from OCP.gp import gp_Pnt, gp_Vec, gp_Pnt2d, gp_Vec2d
@@ -107,12 +109,53 @@ def exact_cap_planarity(case):
                             exactCoplanar=witness is None, nonplanarityWitness=witness))
     return reports
 
+def converged_occt_volume(shape):
+    # Span-aware Gauss-Kronrod remains entirely independent of source/reference
+    # volumes. Require agreement at two requested accuracies; the old adaptive
+    # Gauss error estimate alone can understate error on rational straight edges.
+    values = []
+    for eps in [1e-10, 1e-12]:
+        props = GProp_GProps()
+        error = BRepGProp.VolumePropertiesGK_s(shape, props, eps, True, True)
+        values.append(dict(eps=eps, volume=props.Mass(), estimatedError=error))
+    volume = values[-1]['volume']
+    threshold = 1e-10*max(1., abs(volume))
+    converged = (all(math.isfinite(v['volume']) and math.isfinite(v['estimatedError'])
+                     and v['estimatedError'] >= 0 for v in values)
+                 and abs(values[0]['volume']-volume) <= threshold)
+    return volume, values[-1]['estimatedError'], dict(method='OpenCascade/span-aware-Gauss-Kronrod',
+        values=values, agreementThreshold=threshold, converged=converged)
+
+
 root = Path(sys.argv[1])
 manifest = json.loads((root / 'manifest.json').read_text())
 if not manifest['cases']:
     raise ValueError('Empty sweep oracle matrix')
 reports = []
-for case in manifest['cases']:
+for case_index, case in enumerate(manifest['cases'], start=1):
+    print(f"OCCT {case_index}/{len(manifest['cases'])}: {case['file']}", file=sys.stderr, flush=True)
+    if case.get('volumeReferenceMethod') == 'analytic-hollow-rectangular-prism':
+        reference = case.get('volumeReference', {})
+        if reference.get('method') != case['volumeReferenceMethod']:
+            raise ValueError('Compute the independent rectangular prism reference before OCCT verification')
+        exact_volume = Fraction(int(reference['numerator']), int(reference['denominator']))
+        if exact_volume <= 0 or float(exact_volume) != case['expectedVolume']:
+            raise ValueError('Rectangular prism volume reference metadata mismatch')
+    if case.get('volumeReferenceMethod') == 'polynomial-boundary-divergence-integral':
+        reference = case.get('volumeReference', {})
+        if reference.get('method') != case['volumeReferenceMethod']:
+            raise ValueError('Compute the independent polynomial volume reference before OCCT verification')
+        exact_volume = Fraction(int(reference['numerator']), int(reference['denominator']))
+        if exact_volume <= 0 or float(exact_volume) != case['expectedVolume']:
+            raise ValueError('Polynomial volume reference metadata mismatch')
+    if case.get('volumeReferenceMethod') == 'rational-boundary-gauss-reference':
+        reference = case.get('volumeReference', {})
+        values = reference.get('values', [])
+        if reference.get('method') != case['volumeReferenceMethod'] or reference.get('orders') != [16,32,64] or len(values) != 3:
+            raise ValueError('Compute independent converged rational volume before OCCT verification')
+        threshold = 1e-12*max(1.,abs(values[-1]))
+        if not all(math.isfinite(v) and v > 0 for v in values) or values[-1] != case['expectedVolume'] or any(abs(values[i+1]-values[i]) > threshold for i in range(2)):
+            raise ValueError('Rational numerical volume reference metadata mismatch')
     path = root / case['file']
     if hashlib.sha256(path.read_bytes()).hexdigest() != case['sha256']:
         raise ValueError('Fixture hash mismatch: ' + case['file'])
@@ -140,12 +183,26 @@ for case in manifest['cases']:
     derivative_error = 0.0
     coefficient_preserved = True
     exact_shared_basis = True
+    # Rust STEP canonicalizes reversed shell face uses by U -> u0+u1-U.
+    # Verify that exact chart correspondence, including coefficients and UVs,
+    # rather than comparing different parameters on the same retained face.
+    wall_reversed = case.get('wallFaceReversed', [False]*len(case['wallSamples']))
+    if len(wall_reversed) != len(case['wallSamples']):
+        raise ValueError('Missing wall face orientation correspondence')
+    wall_u_sums = []
+    for expected in case['wallSurfaces']:
+        degree = expected['degreeU']
+        wall_u_sums.append(expected['knotsU'][degree]+expected['knotsU'][-degree-1])
     for chart_index, samples in enumerate(case['wallSamples']):
+        reversed_u = wall_reversed[chart_index]
+        u_sum = wall_u_sums[chart_index]
+        def imported_u(u):
+            return u_sum-u if reversed_u else u
         candidates = []
         for index, surface in enumerate(surfaces):
             if index in matched:
                 continue
-            error = max(max(abs(a-b) for a,b in zip(surface.Value(sample['u'], sample['v']).Coord(), sample['point'])) for sample in samples)
+            error = max(max(abs(a-b) for a,b in zip(surface.Value(imported_u(sample['u']), sample['v']).Coord(), sample['point'])) for sample in samples)
             candidates.append((error, index))
         error, index = min(candidates)
         matched.add(index)
@@ -160,19 +217,23 @@ for case in manifest['cases']:
                       spline.IsVPeriodic() == bool(expected.get('periodicV', False)))
         knot_u = [spline.UKnot(i) for i in range(1, spline.NbUKnots()+1) for _ in range(spline.UMultiplicity(i))]
         knot_v = [spline.VKnot(i) for i in range(1, spline.NbVKnots()+1) for _ in range(spline.VMultiplicity(i))]
-        shared_basis = compatible and knot_u == expected['knotsU'] and knot_v == expected['knotsV']
+        expected_u_knots = [u_sum-k for k in reversed(expected['knotsU'])] if reversed_u else expected['knotsU']
+        shared_basis = compatible and knot_u == expected_u_knots and knot_v == expected['knotsV']
         if compatible:
             for u, row in enumerate(expected['controlPoints']):
                 for v, control in enumerate(row):
-                    shared_basis &= spline.Weight(u+1,v+1) == expected['weights'][u][v] and expected['weights'][u][v] > 0
-                    squared = sum((Fraction(a)-Fraction(b))**2 for a,b in zip(spline.Pole(u+1,v+1).Coord(),control))
+                    imported_pole_u = len(expected['controlPoints'])-u if reversed_u else u+1
+                    shared_basis &= spline.Weight(imported_pole_u,v+1) == expected['weights'][u][v] and expected['weights'][u][v] > 0
+                    squared = sum((Fraction(a)-Fraction(b))**2 for a,b in zip(spline.Pole(imported_pole_u,v+1).Coord(),control))
                     coefficient_preserved &= squared <= Fraction(case['surfaceToleranceMm'])**2
         exact_shared_basis &= shared_basis
         coefficient_preserved &= compatible
         surface_error = max(surface_error, error)
         for sample in samples:
             point, du, dv = gp_Pnt(), gp_Vec(), gp_Vec()
-            surfaces[index].D1(sample['u'], sample['v'], point, du, dv)
+            surfaces[index].D1(imported_u(sample['u']), sample['v'], point, du, dv)
+            if reversed_u:
+                du.Reverse()
             if sample['du'] is None or sample['dv'] is None:
                 raise ValueError('Missing source derivative sample')
             for actual, expected in [(du.Coord(), sample['du']), (dv.Coord(), sample['dv'])]:
@@ -196,8 +257,9 @@ for case in manifest['cases']:
         compatible = (spline.Degree() == expected['degree'] and spline.NbPoles() == len(expected['controlPoints']) and knots == expected['knots'] and spline.IsPeriodic() == bool(expected.get('periodic',False)))
         edge_coefficients_preserved &= compatible
         if compatible:
+            edge_coefficients_preserved &= same_positive_projective_weights(
+                [spline.Weight(i+1) for i in range(spline.NbPoles())], expected['weights'])
             for i, control in enumerate(expected['controlPoints']):
-                edge_coefficients_preserved &= spline.Weight(i+1) == expected['weights'][i] and expected['weights'][i] > 0
                 squared = sum((Fraction(a)-Fraction(b))**2 for a,b in zip(spline.Pole(i+1).Coord(),control))
                 edge_coefficients_preserved &= squared <= Fraction(case['surfaceToleranceMm'])**2
         edge_coefficients_preserved &= error <= case['surfaceToleranceMm']
@@ -291,6 +353,8 @@ for case in manifest['cases']:
                                      and not expected_uv.get('periodic',False) and len(points) == 2
                                      and expected_uv['weights'][0] == expected_uv['weights'][1]
                                      and expected_uv['weights'][0] > 0)
+                    if wall_reversed[chart]:
+                        points = [[wall_u_sums[chart]-point[0], point[1]] for point in points]
                     if use['reversed']:
                         points = list(reversed(points))
                     identity = compatible_uv and all(
@@ -325,13 +389,14 @@ for case in manifest['cases']:
     opposite_edge_uses = all(uses.count(TopAbs_FORWARD) == 1 and uses.count(TopAbs_REVERSED) == 1 and len(uses) == 2 for uses in oriented_uses)
     manifold_edges = bool(edge_uses) and all(uses == 2 for uses in edge_uses)
     shell_volumes = []
+    shell_volume_integrations = []
     shell_closed = []
     explorer = TopExp_Explorer(shape, TopAbs_SHELL)
     while explorer.More():
         shell_closed.append(BRep_Tool.IsClosed_s(explorer.Current()))
-        shell_props = GProp_GProps()
-        BRepGProp.VolumeProperties_s(explorer.Current(), shell_props, 1e-10, True)
-        shell_volumes.append(shell_props.Mass())
+        shell_volume, _, shell_integration = converged_occt_volume(explorer.Current())
+        shell_volumes.append(shell_volume)
+        shell_volume_integrations.append(shell_integration)
         explorer.Next()
     hole_faces = 0
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
@@ -346,8 +411,9 @@ for case in manifest['cases']:
     shell_orientation = (sum(v > 0 for v in shell_volumes) == 1 and
                          sum(v < 0 for v in shell_volumes) == case['shells'] - 1)
     props = GProp_GProps()
-    integration_error = BRepGProp.VolumeProperties_s(shape, props, 1e-10, True)
-    volume = props.Mass()
+    legacy_integration_error = BRepGProp.VolumeProperties_s(shape, props, 1e-10, True)
+    legacy_volume = props.Mass()
+    volume, integration_error, volume_integration = converged_occt_volume(shape)
     relative = abs(volume-case['expectedVolume'])/case['expectedVolume']
     solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
     if not solid_explorer.More():
@@ -381,6 +447,7 @@ for case in manifest['cases']:
         face_index += 1
     full_uv_gate = (wall_pcurve_full_domain is True and wall_pcurve_uses == 4*len(case["wallCoedges"])) if manifest.get("schema") == "sweep-external-step/2" else True
     passed = material_side_agreement and material_side_probes>0 and full_uv_gate and same_parameter and pcurve_samples > 0 and max(pcurve_error,pcurve_derivative_error) <= case['surfaceToleranceMm'] and face_loop_ownership_preserved and edge_coefficients_preserved and len(matched_edges) == case['edges'] and len(edge_uses) == case['edges'] and opposite_edge_uses and manifold_edges and all(shell_closed) and coefficient_preserved and exact_shared_basis and surface_preserved and shell_orientation and hole_faces == case['capHoleFaces'] and valid and counts == [case['faces'], case['solids'], case['shells']] and volume > 0 and relative <= case['relativeVolumeTolerance']
+    passed &= volume_integration['converged'] and all(s['converged'] for s in shell_volume_integrations)
     expected_cap_uses = sum(len(case['faceLoops'][i]['outer'])+sum(len(h) for h in case['faceLoops'][i]['holes']) for i in case.get('capFaces',[]))
     cap_full_domain_gate = cap_coedges_full_domain and cap_coedge_uses == expected_cap_uses
     passed &= cap_full_domain_gate
@@ -417,6 +484,9 @@ for case in manifest['cases']:
         passed = passed and material_agreement
     reports.append(dict(file=case['file'], stepSha256=case['sha256'], retained_cap_planarity_agreement=retained_cap_planarity_agreement, authored_cap_exact_planarity=cap_planarity, native_volume_certified=native.get('solidGeometryCertified') if native else None, native_external_material_agreement=material_agreement, valid=valid, faces=counts[0], solids=counts[1], shells=counts[2], shell_closed=shell_closed, edges=len(edge_uses), same_parameter=same_parameter, sampled_material_side_probe_agreement=material_side_agreement, material_side_probes=material_side_probes, pcurve_samples=pcurve_samples, full_domain_wall_pcurve_uv_preserved=wall_pcurve_full_domain, full_domain_wall_pcurve_uses=wall_pcurve_uses, sampled_pcurve_surface_max_error_mm=pcurve_error, sampled_pcurve_derivative_max_error=pcurve_derivative_error, face_loop_ownership_preserved=face_loop_ownership_preserved, matched_source_edges=len(matched_edges), full_domain_edge_distance_within_tolerance=edge_coefficients_preserved, edge_face_uses=sorted(set(edge_uses)), manifold_edges=manifold_edges, opposite_edge_uses=opposite_edge_uses, sampled_wall_faces=len(matched), sampled_surface_max_error_mm=surface_error, sampled_derivative_max_error=derivative_error, surface_preserved=surface_preserved, control_net_within_tolerance=coefficient_preserved, exact_shared_basis=exact_shared_basis, full_domain_wall_distance_within_tolerance=coefficient_preserved and exact_shared_basis, shell_volumes=shell_volumes, cap_hole_faces=hole_faces, shell_orientation=shell_orientation, volume=volume, expected_volume=case['expectedVolume'], relative_volume_error=relative, integration_error=integration_error, passed=passed))
     reports[-1]['full_domain_cap_coedge_distance_within_tolerance'] = cap_full_domain_gate
+    reports[-1]['volume_integration'] = volume_integration
+    reports[-1]['shell_volume_integrations'] = shell_volume_integrations
+    reports[-1]['legacy_adaptive_gauss'] = dict(volume=legacy_volume, estimatedError=legacy_integration_error)
     reports[-1]['full_domain_cap_coedge_uses'] = cap_coedge_uses
 result = dict(oracle='OpenCascade/cadquery-ocp', manifestSha256=hashlib.sha256((root / 'manifest.json').read_bytes()).hexdigest(), artifactProvenance=manifest.get('artifactProvenance'), cases=reports, passed=all(r['passed'] for r in reports), scope='fixture import, topology and analytic volume; surface/seam/containment matrix remains separate')
 (root / 'opencascade-sweep.json').write_text(json.dumps(result, indent=2)+'\n')

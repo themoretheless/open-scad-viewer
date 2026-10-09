@@ -165,7 +165,7 @@ terminal. Если даже fallback-terminal не удалось отправи
 crash. Протокол, bounded cancellation, очередь и запрет выдачи результата
 до подтверждённого join сохраняются.
 
-38 тестов в пяти файлах (supervisor, ModelGraph, profiles, assembly, MCP CLI)
+38 тестов в пяти файлах (supervisor, RushGraph, profiles, assembly, MCP CLI)
 прошли, включая новую реальную последовательность failure -> success.
 `bench:workers` добавляет воспроизводимую проверку штатного lifecycle без
 увеличения тайм-аутов. Первый прогон: 15 started / 15 joined, 0 admitted,

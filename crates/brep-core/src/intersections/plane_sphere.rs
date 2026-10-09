@@ -27,6 +27,8 @@
 //! `sphere_sphere::lift_clipped` (clipped arcs, with exact endpoint
 //! inversion), and exact rational quadratic ellipse arcs in the plane UV.
 //! Nothing here authorizes a topology change.
+#[cfg(feature = "codec")]
+mod serialization;
 use super::sphere_sphere::{self, CanonicalSphere, RECOGNITION, SpherePatchCircle};
 use super::*;
 use crate::Model;
@@ -579,30 +581,6 @@ pub fn intersect_plane_sphere(
         EllipseClip::Full => {}
     }
     Ok(report)
-}
-
-impl value_codec::Serialize for PlanePatchCurve {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
-    }
-}
-impl value_codec::Serialize for PlaneSphereComponent {
-    fn to_value(&self) -> value_codec::Value {
-        match self {
-            Self::Circle {
-                curve,
-                center,
-                radius,
-                normal,
-                full,
-                plane_uv,
-                sphere_uv,
-                max_sample_residual,
-            } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
-                "normal":normal,"full":full,"planeUv":plane_uv,"sphereUv":sphere_uv,
-                "maxSampleResidual":max_sample_residual}),
-        }
-    }
 }
 
 /// Builds the canonical planar patch operand: a one-face open model with an

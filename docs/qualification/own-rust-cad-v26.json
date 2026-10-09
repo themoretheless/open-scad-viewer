@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v26",
   "successorOf": "docs/qualification/own-rust-cad-v25.json",
-  "previousSha256": "acd8ab94479c640308960a1272762924477fdb9439dc453801673f451d3ae9c1",
+  "previousSha256": "8c5649c8644885cbec9f100f885e6d82999b036e26ac8b824ca52a2be7ec9a09",
   "recordedAt": "2026-09-29",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v34 / G1 v51 re-freeze. Drift since G0 v33 / G1 v50: the concurrent feature branch completed its face-contact work and rebuilt the kernel with the shared-edge plane criterion (tests/solidFaceContacts.test.ts now passes 7/7), so both the packed kernel WASM and the source-bundle digest changed; scripts/verify-dist.mjs raised the geometry chunk budget to 3231000 for the 3230813-byte packed kernel per its documented convention. Notices and lockfiles are byte-identical to own-rust-cad-v25, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

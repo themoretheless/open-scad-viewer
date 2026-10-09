@@ -1,10 +1,11 @@
-//! OpenSCAD value evaluator (migration stage 2): a faithful port of the
-//! evaluator half of `src/services/openscadParser.ts` for both language
-//! profiles. Geometry modules contribute accounted shape descriptors (name +
-//! dimension) through the same shape-list algebra as the TS evaluator
-//! (boolean/extrude/hull combine to one, transforms pass through or union per
-//! profile); the real geometry kernels arrive with stage 3 via the shared
-//! `geometry-bridge` handle store.
+//! OpenSCAD value evaluation for both repository language profiles.
+//! Default evaluation accounts shape names and dimensions for diagnostics.
+//! Opt-in recording emits a typed solid program for supported operations;
+//! independent geometry kernels execute that program through the host adapter.
+mod expressions;
+mod comprehensions;
+mod function_calls;
+mod recording;
 use crate::ast::*;
 use crate::builtins::{self, BuiltinContext, BuiltinError};
 use crate::lexer::TT;
@@ -41,6 +42,7 @@ pub enum Quality {
 /// Host knobs for one evaluation. `should_abort` is the synchronous
 /// cancellation flag (TS `shouldAbort` polled at statement/loop checkpoints).
 pub struct EvaluatorOptions<'h> {
+    pub record_geometry: bool,
     pub should_abort: Option<&'h dyn Fn() -> bool>,
     /// Unseeded `rands` stream. TS uses `Math.random`; the deterministic
     /// default here is a splitmix64 stream (seeded `rands` is exact either way).
@@ -53,6 +55,7 @@ pub struct EvaluatorOptions<'h> {
 impl Default for EvaluatorOptions<'_> {
     fn default() -> Self {
         Self {
+            record_geometry: false,
             should_abort: None,
             random: None,
             animation_time: 0.0,
@@ -63,6 +66,7 @@ impl Default for EvaluatorOptions<'_> {
 
 /// Result of a successful evaluation.
 pub struct Evaluation {
+    pub geometry: Option<geometry_ops::solid_program::Program>,
     pub shapes: Vec<ShapeDescriptor>,
     pub warnings: Vec<String>,
     pub reduced: bool,
@@ -117,6 +121,9 @@ impl<'a> Ctx<'a> {
 
 /// Shared evaluator state (one per `evaluate` call).
 pub struct Evaluator<'a> {
+    record_geometry: bool,
+    geometry: RefCell<Vec<geometry_ops::solid_program::Node>>,
+    profiles: RefCell<Vec<geometry_ops::profile_program::Node>>,
     units: &'a [u16],
     profile: LanguageProfile,
     quality: Quality,
@@ -161,6 +168,9 @@ impl<'a> Evaluator<'a> {
         collect_functions(statements, &mut functions);
         collect_modules(statements, &mut modules);
         Self {
+            record_geometry: options.record_geometry,
+            geometry: RefCell::new(Vec::new()),
+            profiles: RefCell::new(Vec::new()),
             units,
             profile,
             quality: options.quality,
@@ -178,6 +188,65 @@ impl<'a> Evaluator<'a> {
         }
     }
 
+    fn store_geometry(
+        &self,
+        node: geometry_ops::solid_program::Node,
+        p: usize,
+    ) -> EvalResult<usize> {
+        let mut nodes = self.geometry.borrow_mut();
+        if nodes.len() >= crate::MAX_AST_NODES {
+            return Err(self.error(p, "Native geometry program budget exceeded"));
+        }
+        let id = nodes.len();
+        nodes.push(node);
+        Ok(id)
+    }
+    fn emit_geometry(
+        &self,
+        name: &str,
+        node: geometry_ops::solid_program::Node,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let mut shape = descriptor(name, 3);
+        if self.record_geometry {
+            shape.geometry = Some(self.store_geometry(node, p)?)
+        }
+        Ok(vec![shape])
+    }
+    fn emit_profile(
+        &self,
+        name: &str,
+        node: geometry_ops::profile_program::Node,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        let mut shape = descriptor(name, 2);
+        let mut profiles = self.profiles.borrow_mut();
+        if profiles.len() >= crate::MAX_AST_NODES {
+            return Err(self.error(p, "Native profile program budget exceeded"));
+        }
+        shape.profile = Some(profiles.len());
+        profiles.push(node);
+        Ok(vec![shape])
+    }
+    fn affine_geometry(
+        &self,
+        mut shapes: Vec<ShapeDescriptor>,
+        matrix: geometry_ops::solid_program::affine::AffineMatrix,
+        p: usize,
+    ) -> EvalResult<Vec<ShapeDescriptor>> {
+        if self.record_geometry {
+            for shape in &mut shapes {
+                let input = shape
+                    .geometry
+                    .ok_or_else(|| self.error(p, "Unsupported native geometry input"))?;
+                shape.geometry = Some(self.store_geometry(
+                    geometry_ops::solid_program::Node::Transform { input, matrix },
+                    p,
+                )?);
+            }
+        }
+        Ok(shapes)
+    }
     fn is_stable(&self) -> bool {
         self.profile.is_stable()
     }
@@ -432,635 +501,9 @@ impl<'a> Evaluator<'a> {
     // Expressions
     // ------------------------------------------------------------------
 
-    fn eval_expression(
-        &self,
-        expr: &'a Expr,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        self.bump_ops(expr_p(expr))?;
-        if depth >= MAX_EXPRESSION_DEPTH {
-            return Err(self.error(
-                expr_p(expr),
-                format!("Expression exceeds {MAX_EXPRESSION_DEPTH} evaluated levels"),
-            ));
-        }
-        match expr {
-            Expr::Literal { value, .. } => Ok(match value {
-                LiteralValue::Undef => Value::Undef,
-                LiteralValue::Bool(v) => Value::Bool(*v),
-                LiteralValue::Number(v) => Value::Number(*v),
-                LiteralValue::String(v) => Value::string(v.clone()),
-            }),
-            Expr::Identifier { name, p } => {
-                if name == "PI" {
-                    return Ok(Value::Number(std::f64::consts::PI));
-                }
-                let resolved = if self.is_stable() {
-                    self.resolve_stable_variable(name, ctx)?
-                } else {
-                    match ctx.env.borrow().get(name) {
-                        Some(value) => VariableResolution {
-                            found: true,
-                            value: value.clone(),
-                        },
-                        None => VariableResolution {
-                            found: false,
-                            value: Value::Undef,
-                        },
-                    }
-                };
-                if !resolved.found {
-                    if !self.is_stable() {
-                        return Err(self.error(*p, format!("Unknown variable {name}")));
-                    }
-                    self.warn(format!("Ignoring unknown variable '{name}'"));
-                    return Ok(Value::Undef);
-                }
-                Ok(resolved.value)
-            }
-            Expr::Vector { items, p } => {
-                if !self.is_stable() {
-                    let mut values = Vec::with_capacity(items.len());
-                    for item in items {
-                        values.push(self.eval_expression(item, ctx, depth + 1)?);
-                    }
-                    return Ok(Value::vector(
-                        Rc::try_unwrap(self.register_vector(
-                            Rc::new(values),
-                            *p,
-                            "Evaluated value",
-                        )?)
-                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
-                    ));
-                }
-                let mut values: Vec<Value<'a>> = Vec::new();
-                for item in items {
-                    let value = self.eval_expression(item, ctx, depth + 1)?;
-                    if item.is_list_comprehension()
-                        && let Value::Vector(comprehension) = &value
-                    {
-                        self.append_comprehension_values(&mut values, comprehension, item)?;
-                        continue;
-                    }
-                    values.push(value);
-                }
-                Ok(Value::vector(
-                    Rc::try_unwrap(self.register_vector(Rc::new(values), *p, "Evaluated value")?)
-                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
-                ))
-            }
-            Expr::Range {
-                start,
-                step,
-                end,
-                p,
-            } => {
-                if self.is_stable() {
-                    let start = self.eval_expression(start, ctx, depth + 1)?;
-                    let end = self.eval_expression(end, ctx, depth + 1)?;
-                    let step = match step {
-                        None => Value::Number(1.0),
-                        Some(step) => self.eval_expression(step, ctx, depth + 1)?,
-                    };
-                    let (Value::Number(start), Value::Number(step), Value::Number(end)) =
-                        (&start, &step, &end)
-                    else {
-                        self.warn("Invalid range bounds produce undef");
-                        return Ok(Value::Undef);
-                    };
-                    if ![start, step, end].iter().all(|v| v.is_finite()) {
-                        self.warn("Invalid range bounds produce undef");
-                        return Ok(Value::Undef);
-                    }
-                    if *step > 0.0 && start > end {
-                        self.warn("begin is greater than the end, but step is positive");
-                    } else if *step < 0.0 && start < end {
-                        self.warn("begin is smaller than the end, but step is negative");
-                    }
-                    return Ok(Value::Range {
-                        start: *start,
-                        step: *step,
-                        end: *end,
-                    });
-                }
-                let start = self.finite_number(
-                    &self.eval_expression(start, ctx, depth + 1)?,
-                    *p,
-                    "range start",
-                )?;
-                let end = self.finite_number(
-                    &self.eval_expression(end, ctx, depth + 1)?,
-                    *p,
-                    "range end",
-                )?;
-                let step = match step {
-                    None => 1.0,
-                    Some(step) => self.finite_number(
-                        &self.eval_expression(step, ctx, depth + 1)?,
-                        *p,
-                        "range step",
-                    )?,
-                };
-                if step == 0.0 {
-                    return Err(self.error(*p, "Range step cannot be zero"));
-                }
-                let mut values = Vec::new();
-                let forward = step > 0.0;
-                let mut value = start;
-                while if forward {
-                    value <= end + 1e-10
-                } else {
-                    value >= end - 1e-10
-                } {
-                    values.push(Value::Number(value));
-                    if values.len() > MAX_RANGE_ITEMS {
-                        return Err(self.error(
-                            *p,
-                            format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS)),
-                        ));
-                    }
-                    value += step;
-                }
-                Ok(Value::vector(
-                    Rc::try_unwrap(self.register_vector(Rc::new(values), *p, "Evaluated value")?)
-                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
-                ))
-            }
-            Expr::Unary { op, value, p } => {
-                let value = self.eval_expression(value, ctx, depth + 1)?;
-                if self.is_stable() {
-                    return unary(*op, &value, &mut self.semantics(*p));
-                }
-                if *op == TT::Not {
-                    return Ok(Value::Bool(!truthy(&value)));
-                }
-                let number = self.finite_number(&value, *p, "unary operand")?;
-                Ok(Value::Number(if *op == TT::Minus {
-                    -number
-                } else {
-                    number
-                }))
-            }
-            Expr::Binary { op, left, right, p } => {
-                if self.is_stable() {
-                    let left = self.eval_expression(left, ctx, depth + 1)?;
-                    if *op == TT::And && !truthy(&left) {
-                        return Ok(Value::Bool(false));
-                    }
-                    if *op == TT::Or && truthy(&left) {
-                        return Ok(Value::Bool(true));
-                    }
-                    let right = self.eval_expression(right, ctx, depth + 1)?;
-                    return binary(*op, &left, &right, &mut self.semantics(*p));
-                }
-                if *op == TT::And {
-                    let left = self.eval_expression(left, ctx, depth + 1)?;
-                    if !truthy(&left) {
-                        return Ok(Value::Bool(false));
-                    }
-                    let right = self.eval_expression(right, ctx, depth + 1)?;
-                    return Ok(Value::Bool(truthy(&right)));
-                }
-                if *op == TT::Or {
-                    let left = self.eval_expression(left, ctx, depth + 1)?;
-                    if truthy(&left) {
-                        return Ok(Value::Bool(true));
-                    }
-                    let right = self.eval_expression(right, ctx, depth + 1)?;
-                    return Ok(Value::Bool(truthy(&right)));
-                }
-                let left = self.eval_expression(left, ctx, depth + 1)?;
-                let right = self.eval_expression(right, ctx, depth + 1)?;
-                if *op == TT::EqEq {
-                    return Ok(Value::Bool(deep_equal(&left, &right)));
-                }
-                if *op == TT::NotEq {
-                    return Ok(Value::Bool(!deep_equal(&left, &right)));
-                }
-                if matches!(op, TT::Lt | TT::Gt | TT::LtEq | TT::GtEq) {
-                    let a = self.finite_number(&left, *p, "comparison operand")?;
-                    let b = self.finite_number(&right, *p, "comparison operand")?;
-                    return Ok(Value::Bool(match op {
-                        TT::Lt => a < b,
-                        TT::Gt => a > b,
-                        TT::LtEq => a <= b,
-                        _ => a >= b,
-                    }));
-                }
-                let a = self.finite_number(&left, *p, "arithmetic operand")?;
-                let b = self.finite_number(&right, *p, "arithmetic operand")?;
-                let result = match op {
-                    TT::Plus => a + b,
-                    TT::Minus => a - b,
-                    TT::Star => a * b,
-                    TT::Slash => a / b,
-                    TT::Percent => a % b,
-                    _ => a.powf(b),
-                };
-                if !result.is_finite() {
-                    return Err(self.error(*p, "Expression produced a non-finite number"));
-                }
-                Ok(Value::Number(result))
-            }
-            Expr::Ternary { test, yes, no, .. } => {
-                let condition = self.eval_expression(test, ctx, depth + 1)?;
-                if truthy(&condition) {
-                    self.eval_expression(yes, ctx, depth + 1)
-                } else {
-                    self.eval_expression(no, ctx, depth + 1)
-                }
-            }
-            Expr::Index { value, index, p } => {
-                let value = self.eval_expression(value, ctx, depth + 1)?;
-                if self.is_stable() {
-                    let index = self.eval_expression(index, ctx, depth + 1)?;
-                    return index_value(&value, &index, &mut self.semantics(*p));
-                }
-                let raw =
-                    self.finite_number(&self.eval_expression(index, ctx, depth + 1)?, *p, "index")?;
-                let index = raw.trunc();
-                match &value {
-                    Value::Vector(items) => {
-                        if index < 0.0 || index >= items.len() as f64 {
-                            return Ok(Value::Undef);
-                        }
-                        Ok(items[index as usize].clone())
-                    }
-                    // The JS host indexes strings by UTF-16 code unit.
-                    Value::Str(s) => {
-                        if index < 0.0 {
-                            return Ok(Value::Undef);
-                        }
-                        Ok(s.encode_utf16()
-                            .nth(index as usize)
-                            .map_or(Value::Undef, |unit| {
-                                Value::string(String::from_utf16_lossy(&[unit]))
-                            }))
-                    }
-                    _ => Err(self.error(*p, "Only vectors and strings can be indexed")),
-                }
-            }
-            Expr::Member { value, name, p } => {
-                let value = self.eval_expression(value, ctx, depth + 1)?;
-                if self.is_stable() {
-                    return member(&value, name, &mut self.semantics(*p));
-                }
-                if let Value::Vector(items) = &value {
-                    let index = match name.as_str() {
-                        "x" => Some(0),
-                        "y" => Some(1),
-                        "z" => Some(2),
-                        _ => None,
-                    };
-                    if let Some(index) = index {
-                        return Ok(items.get(index).cloned().unwrap_or(Value::Undef));
-                    }
-                }
-                Err(self.error(*p, format!("Value has no member {name}")))
-            }
-            Expr::Function { params, body, .. } => {
-                let value = FunctionValue {
-                    name: None,
-                    params,
-                    body,
-                    closure: Rc::new(ctx.env.borrow().clone()),
-                    lexical_scope: if self.is_stable() {
-                        ctx.stable_scope.clone()
-                    } else {
-                        None
-                    },
-                };
-                Ok(Value::Function(Rc::new(value)))
-            }
-            Expr::Call { .. } => self.eval_function_call(expr, ctx, depth),
-            Expr::Let { args, body, p } => {
-                if !self.is_stable() {
-                    return Err(self.error(*p, "let expression is not supported"));
-                }
-                let env = self.evaluate_sequential_bindings(args, ctx, depth + 1)?;
-                let overlay = self.stable_overlay_context(ctx, env);
-                self.eval_expression(body, &overlay, depth + 1)
-            }
-            Expr::Assert { args, body, p } => {
-                if !self.is_stable() {
-                    return Err(self.error(*p, "assert expression is not supported"));
-                }
-                self.eval_assert_expression(args, body.as_deref(), *p, ctx, depth)
-            }
-            Expr::Echo { args, body, p } => {
-                if !self.is_stable() {
-                    return Err(self.error(*p, "echo expression is not supported"));
-                }
-                self.eval_echo_expression(args, body.as_deref(), ctx, depth)
-            }
-            Expr::LcFor { .. }
-            | Expr::LcForC { .. }
-            | Expr::LcIf { .. }
-            | Expr::LcLet { .. }
-            | Expr::LcEach { .. } => {
-                if !self.is_stable() {
-                    return Err(self.error(expr_p(expr), "list comprehension is not supported"));
-                }
-                let values = self.eval_list_comprehension(expr, ctx, depth)?;
-                Ok(Value::vector(
-                    Rc::try_unwrap(self.register_vector(
-                        Rc::new(values),
-                        expr_p(expr),
-                        "list comprehension",
-                    )?)
-                    .unwrap_or_else(|_| unreachable!("fresh Rc")),
-                ))
-            }
-        }
-    }
 
-    fn finite_number(&self, value: &Value, p: usize, label: &str) -> EvalResult<f64> {
-        match value.as_number() {
-            Some(v) if v.is_finite() => Ok(v),
-            _ => Err(self.error(p, format!("{label} must be a finite number"))),
-        }
-    }
 
-    fn vector_value(&self, value: &Value, p: usize, label: &str) -> EvalResult<Vec<f64>> {
-        let Some(items) = value.as_vector() else {
-            return Err(self.error(p, format!("{label} must be a vector")));
-        };
-        let items = items.clone();
-        items
-            .iter()
-            .map(|item| self.finite_number(item, p, label))
-            .collect()
-    }
 
-    fn evaluate_sequential_bindings(
-        &self,
-        args: &'a [ExpressionArgument],
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<HashMap<String, Value<'a>>> {
-        let mut env = ctx.env.borrow().clone();
-        let mut assigned = HashSet::new();
-        for argument in args {
-            let overlay = self.stable_overlay_context(ctx, env.clone());
-            let value = self.eval_expression(&argument.value, &overlay, depth + 1)?;
-            let Some(name) = &argument.name else {
-                self.warn(format!(
-                    "Ignoring assignment without variable name {}",
-                    format_value(&value)
-                ));
-                continue;
-            };
-            if assigned.contains(name) {
-                self.warn(format!(
-                    "Ignoring duplicate variable assignment {name} = {}",
-                    format_value(&value)
-                ));
-                continue;
-            }
-            assigned.insert(name.clone());
-            env.insert(name.clone(), value);
-        }
-        Ok(env)
-    }
-
-    fn stable_iterable(
-        &self,
-        value: &Value<'a>,
-        _ctx: &Ctx<'a>,
-        position: usize,
-    ) -> EvalResult<Vec<Value<'a>>> {
-        match value {
-            Value::Range { start, step, end } => {
-                materialize_range(*start, *step, *end, &mut self.semantics(position))
-            }
-            Value::Vector(items) => Ok(items.as_ref().clone()),
-            Value::Str(s) => {
-                let items: Vec<Value<'a>> =
-                    s.chars().map(|c| Value::string(c.to_string())).collect();
-                Ok(Rc::try_unwrap(self.register_vector(
-                    Rc::new(items),
-                    position,
-                    "string iteration",
-                )?)
-                .unwrap_or_else(|_| unreachable!("fresh Rc")))
-            }
-            Value::Undef => Ok(Vec::new()),
-            other => Ok(vec![other.clone()]),
-        }
-    }
-
-    fn append_comprehension_values(
-        &self,
-        output: &mut Vec<Value<'a>>,
-        values: &[Value<'a>],
-        expr: &Expr,
-    ) -> EvalResult<()> {
-        if output.len() + values.len() > MAX_VALUE_ELEMENTS {
-            return Err(self.error(
-                expr_p(expr),
-                format!(
-                    "List comprehension exceeds {} elements",
-                    locale(MAX_VALUE_ELEMENTS)
-                ),
-            ));
-        }
-        output.extend(values.iter().cloned());
-        Ok(())
-    }
-
-    fn eval_comprehension_element(
-        &self,
-        expr: &'a Expr,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Vec<Value<'a>>> {
-        let value = self.eval_expression(expr, ctx, depth + 1)?;
-        if expr.is_list_comprehension()
-            && let Value::Vector(items) = &value
-        {
-            return Ok(items.as_ref().clone());
-        }
-        Ok(vec![value])
-    }
-
-    fn eval_list_comprehension(
-        &self,
-        expr: &'a Expr,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Vec<Value<'a>>> {
-        match expr {
-            Expr::LcEach { value, p } => {
-                let value = self.eval_expression(value, ctx, depth + 1)?;
-                self.stable_iterable(&value, ctx, *p)
-            }
-            Expr::LcIf {
-                condition, yes, no, ..
-            } => {
-                let condition = self.eval_expression(condition, ctx, depth + 1)?;
-                let selected = if truthy(&condition) {
-                    Some(yes)
-                } else {
-                    no.as_ref()
-                };
-                match selected {
-                    None => Ok(Vec::new()),
-                    Some(selected) => self.eval_comprehension_element(selected, ctx, depth + 1),
-                }
-            }
-            Expr::LcLet { args, body, .. } => {
-                let env = self.evaluate_sequential_bindings(args, ctx, depth + 1)?;
-                let overlay = self.stable_overlay_context(ctx, env);
-                self.eval_list_comprehension(body, &overlay, depth + 1)
-            }
-            Expr::LcFor { args, body, p } => {
-                let mut output: Vec<Value<'a>> = Vec::new();
-                self.lc_for_visit(
-                    args,
-                    0,
-                    ctx,
-                    &mut |iteration_ctx| {
-                        let values =
-                            self.eval_comprehension_element(body, iteration_ctx, depth + 1)?;
-                        self.append_comprehension_values(&mut output, &values, expr)?;
-                        Ok(())
-                    },
-                    *p,
-                )?;
-                Ok(output)
-            }
-            Expr::LcForC {
-                init,
-                condition,
-                update,
-                body,
-                p,
-            } => {
-                let mut output: Vec<Value<'a>> = Vec::new();
-                let env = self.evaluate_sequential_bindings(init, ctx, depth + 1)?;
-                let mut iteration_ctx = self.stable_overlay_context(ctx, env);
-                loop {
-                    let condition_value =
-                        self.eval_expression(condition, &iteration_ctx, depth + 1)?;
-                    if !truthy(&condition_value) {
-                        break;
-                    }
-                    self.bump_ops(*p)?;
-                    let values =
-                        self.eval_comprehension_element(body, &iteration_ctx, depth + 1)?;
-                    self.append_comprehension_values(&mut output, &values, expr)?;
-                    let env =
-                        self.evaluate_sequential_bindings(update, &iteration_ctx, depth + 1)?;
-                    iteration_ctx = self.stable_overlay_context(&iteration_ctx, env);
-                }
-                Ok(output)
-            }
-            _ => unreachable!("list comprehension kind checked by caller"),
-        }
-    }
-
-    fn lc_for_visit(
-        &self,
-        args: &'a [ExpressionArgument],
-        binding_index: usize,
-        ctx: &Ctx<'a>,
-        visit: &mut dyn FnMut(&Ctx<'a>) -> EvalResult<()>,
-        p: usize,
-    ) -> EvalResult<()> {
-        if binding_index >= args.len() {
-            return visit(ctx);
-        }
-        let binding = &args[binding_index];
-        let iterable = {
-            let value = self.eval_expression(&binding.value, ctx, 1)?;
-            self.stable_iterable(&value, ctx, binding.p)?
-        };
-        let Some(name) = &binding.name else {
-            self.warn("Ignoring for() iterator without variable name");
-            return Ok(());
-        };
-        for value in iterable {
-            self.bump_ops(p)?;
-            let mut env = ctx.env.borrow().clone();
-            env.insert(name.clone(), value);
-            let overlay = self.stable_overlay_context(ctx, env);
-            self.lc_for_visit(args, binding_index + 1, &overlay, visit, p)?;
-        }
-        Ok(())
-    }
-
-    fn eval_assert_expression(
-        &self,
-        args: &'a [ExpressionArgument],
-        body: Option<&'a Expr>,
-        p: usize,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        let resolved =
-            self.resolve_stable_expression_arguments(args, &["condition", "message"], ctx);
-        let condition_argument = resolved.get("condition");
-        let message_argument = resolved.get("message");
-        let condition = match condition_argument {
-            Some(argument) => self.eval_expression(&argument.value, ctx, depth + 1)?,
-            None => Value::Undef,
-        };
-        let message = match message_argument {
-            Some(argument) => self.eval_expression(&argument.value, ctx, depth + 1)?,
-            None => Value::Undef,
-        };
-        if !truthy(&condition) {
-            let condition_text = match condition_argument {
-                Some(argument) => {
-                    compact_diagnostic_text(&self.slice_units(argument.p, argument.end), 240)
-                }
-                None => "undef".to_string(),
-            };
-            let detail = if message_argument.is_some() {
-                format!(
-                    ": {}",
-                    compact_diagnostic_text(&format_value(&message), 240)
-                )
-            } else {
-                String::new()
-            };
-            return Err(self.error(p, format!("Assertion '{condition_text}' failed{detail}")));
-        }
-        match body {
-            None => Ok(Value::Undef),
-            Some(body) => self.eval_expression(body, ctx, depth + 1),
-        }
-    }
-
-    fn eval_echo_expression(
-        &self,
-        args: &'a [ExpressionArgument],
-        body: Option<&'a Expr>,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        let mut values = Vec::new();
-        for argument in args {
-            let value = format_value(&self.eval_expression(&argument.value, ctx, depth + 1)?);
-            values.push(match &argument.name {
-                None => value,
-                Some(name) => format!("{name} = {value}"),
-            });
-        }
-        self.warnings.borrow_mut().push(format!(
-            "ECHO:{}",
-            if values.is_empty() {
-                String::new()
-            } else {
-                format!(" {}", values.join(", "))
-            }
-        ));
-        match body {
-            None => Ok(Value::Undef),
-            Some(body) => self.eval_expression(body, ctx, depth + 1),
-        }
-    }
 
     // ------------------------------------------------------------------
     // Function calls
@@ -1098,357 +541,7 @@ impl<'a> Evaluator<'a> {
         resolved
     }
 
-    fn eval_function_call(
-        &self,
-        expr: &'a Expr,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        let Expr::Call {
-            name,
-            callee,
-            args,
-            p,
-        } = expr
-        else {
-            unreachable!()
-        };
-        if let Some(name) = name {
-            let declaration = if self.is_stable() {
-                ctx.stable_scope
-                    .as_ref()
-                    .and_then(|scope| scope.function_declaration(name))
-            } else {
-                None
-            };
-            let definition = declaration
-                .as_ref()
-                .map(|(node, _)| *node)
-                .or_else(|| self.functions.get(name).copied());
-            if let Some(definition) = definition
-                && (!self.is_stable() || declaration.is_some())
-            {
-                let closure = match &declaration {
-                    Some((_, scope)) => scope.env.borrow().clone(),
-                    None => ctx.env.borrow().clone(),
-                };
-                let value = FunctionValue {
-                    name: Some(definition.name.clone()),
-                    params: &definition.params,
-                    body: &definition.body,
-                    closure: Rc::new(closure),
-                    lexical_scope: if self.is_stable() {
-                        declaration
-                            .as_ref()
-                            .map(|(_, scope)| scope.clone())
-                            .or_else(|| ctx.stable_scope.clone())
-                    } else {
-                        None
-                    },
-                };
-                return self.invoke_user_function(&value, args, ctx, depth);
-            }
-            let resolved = if self.is_stable() {
-                self.resolve_stable_variable(name, ctx)?
-            } else {
-                match ctx.env.borrow().get(name) {
-                    Some(value) => VariableResolution {
-                        found: true,
-                        value: value.clone(),
-                    },
-                    None => VariableResolution {
-                        found: false,
-                        value: Value::Undef,
-                    },
-                }
-            };
-            if resolved.found
-                && let Value::Function(function) = &resolved.value
-            {
-                let function = function.clone();
-                return self.invoke_user_function(&function, args, ctx, depth);
-            }
-            return self.eval_builtin(name, args, *p, ctx, depth);
-        }
-        let callee = self.eval_expression(callee, ctx, depth + 1)?;
-        let Value::Function(function) = &callee else {
-            return Err(self.error(*p, "Expression is not callable"));
-        };
-        let function = function.clone();
-        self.invoke_user_function(&function, args, ctx, depth)
-    }
 
-    fn invoke_user_function(
-        &self,
-        function: &FunctionValue<'a>,
-        args: &'a [ExpressionArgument],
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        if ctx.function_stack.len() >= MAX_EVAL_DEPTH {
-            return Err(self.error(
-                args.first().map_or(expr_p(function.body), |a| a.p),
-                format!("Evaluation exceeds {MAX_EVAL_DEPTH} nested function calls"),
-            ));
-        }
-        if self.is_stable() {
-            let lexical_scope = function
-                .lexical_scope
-                .clone()
-                .or_else(|| ctx.stable_scope.clone());
-            let Some(lexical_scope) = lexical_scope else {
-                return Err(self.error(
-                    args.first().map_or(expr_p(function.body), |a| a.p),
-                    "Stable function is missing its lexical scope",
-                ));
-            };
-            let parameter_names: Vec<&str> =
-                function.params.iter().map(|p| p.name.as_str()).collect();
-            let resolved = self.resolve_stable_expression_arguments(args, &parameter_names, ctx);
-            let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
-            for argument in args {
-                caller_values.push(self.eval_expression(&argument.value, ctx, depth + 1)?);
-            }
-            let caller_value_of = |argument: &ExpressionArgument| -> Value<'a> {
-                // ExpressionArgument identity by position in the args slice.
-                let index = args.iter().position(|a| std::ptr::eq(a, argument)).unwrap();
-                caller_values[index].clone()
-            };
-            let mut definition_env = (*function.closure).clone();
-            overlay_dynamic_variables(&mut definition_env, &ctx.env.borrow());
-            let definition_ctx = Ctx {
-                env: env_of(definition_env.clone()),
-                stable_scope: Some(lexical_scope),
-                scope_visible_before: usize::MAX,
-                ..ctx.clone()
-            };
-            let mut env = definition_env.clone();
-            for parameter in function.params {
-                let value = match resolved.get(&parameter.name) {
-                    Some(supplied) => caller_value_of(supplied),
-                    None => match &parameter.default_value {
-                        Some(default) => self.eval_expression(
-                            default,
-                            &definition_ctx.with_env(definition_env.clone()),
-                            depth + 1,
-                        )?,
-                        None => Value::Undef,
-                    },
-                };
-                env.insert(parameter.name.clone(), value);
-            }
-            let body_ctx = Ctx {
-                function_stack: ctx
-                    .push_function(function.name.as_deref().unwrap_or("<anonymous>")),
-                ..self.stable_overlay_context(&definition_ctx, env)
-            };
-            return self.eval_expression(function.body, &body_ctx, depth + 1);
-        }
-        // Subset profile: positional + named with strict validation.
-        let positional: Vec<&ExpressionArgument> =
-            args.iter().filter(|a| a.name.is_none()).collect();
-        let mut named: HashMap<&str, &ExpressionArgument> = HashMap::new();
-        for argument in args.iter().filter(|a| a.name.is_some()) {
-            named.insert(argument.name.as_deref().unwrap(), argument);
-        }
-        let parameter_names: HashSet<&str> =
-            function.params.iter().map(|p| p.name.as_str()).collect();
-        for name in named.keys() {
-            if !parameter_names.contains(name) {
-                let p = args
-                    .iter()
-                    .find(|a| a.name.as_deref() == Some(name))
-                    .map_or(expr_p(function.body), |a| a.p);
-                return Err(self.error(p, format!("Unknown argument {name}")));
-            }
-        }
-        if positional.len() > function.params.len() {
-            let p = positional
-                .get(function.params.len())
-                .map_or(expr_p(function.body), |a| a.p);
-            return Err(self.error(p, "Too many function arguments"));
-        }
-        let mut caller_values: Vec<Value<'a>> = Vec::with_capacity(args.len());
-        for argument in args {
-            caller_values.push(self.eval_expression(&argument.value, ctx, depth + 1)?);
-        }
-        let caller_value_of = |argument: &ExpressionArgument| -> Value<'a> {
-            let index = args.iter().position(|a| std::ptr::eq(a, argument)).unwrap();
-            caller_values[index].clone()
-        };
-        let mut env = (*function.closure).clone();
-        for (index, parameter) in function.params.iter().enumerate() {
-            let supplied = named
-                .get(parameter.name.as_str())
-                .copied()
-                .or_else(|| positional.get(index).copied());
-            let value = match supplied {
-                Some(argument) => caller_value_of(argument),
-                None => match &parameter.default_value {
-                    Some(default) => {
-                        let default_ctx = ctx.with_env(env.clone());
-                        self.eval_expression(default, &default_ctx, depth + 1)?
-                    }
-                    None => Value::Undef,
-                },
-            };
-            env.insert(parameter.name.clone(), value);
-        }
-        let body_ctx = Ctx {
-            env: env_of(env),
-            function_stack: ctx.push_function(function.name.as_deref().unwrap_or("<anonymous>")),
-            ..ctx.clone()
-        };
-        self.eval_expression(function.body, &body_ctx, depth + 1)
-    }
-
-    fn compatibility_string(&self, value: &Value) -> String {
-        match value {
-            Value::Undef => String::new(),
-            Value::Str(s) => s.to_string(),
-            Value::Number(v) => js_number_to_string(*v),
-            Value::Bool(v) => if *v { "true" } else { "false" }.to_string(),
-            other => format_value(other),
-        }
-    }
-
-    fn eval_dxf_query_builtin(
-        &self,
-        name: &str,
-        args: &'a [ExpressionArgument],
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        let supported: HashSet<&str> = if name == "dxf_dim" {
-            ["file", "layer", "origin", "scale", "name"]
-                .into_iter()
-                .collect()
-        } else {
-            ["file", "layer", "origin", "scale"].into_iter().collect()
-        };
-        let mut values: HashMap<String, Value<'a>> = HashMap::new();
-        for argument in args {
-            let value = self.eval_expression(&argument.value, ctx, depth + 1)?;
-            let argument_name = argument.name.clone().unwrap_or_default();
-            if !supported.contains(argument_name.as_str()) {
-                self.warn(format!("{name}(..., {argument_name}=...) is not supported"));
-                continue;
-            }
-            values.insert(argument_name, value);
-        }
-        let specifier = self.compatibility_string(values.get("file").unwrap_or(&Value::Undef));
-        // Project compilation arrives with stage 4; without a project the
-        // reference runtime warns and yields undef.
-        self.warn(format!("Can't open DXF file '{specifier}'!"));
-        Ok(Value::Undef)
-    }
-
-    fn eval_builtin(
-        &self,
-        name: &str,
-        args: &'a [ExpressionArgument],
-        p: usize,
-        ctx: &Ctx<'a>,
-        depth: usize,
-    ) -> EvalResult<Value<'a>> {
-        if name == "assert" {
-            return Err(self.error(
-                p,
-                "Expression-form assert() is not supported; use statement assert()",
-            ));
-        }
-        if self.is_stable() && (name == "dxf_dim" || name == "dxf_cross") {
-            return self.eval_dxf_query_builtin(name, args, ctx, depth);
-        }
-        if !self.is_stable() && args.iter().any(|argument| argument.name.is_some()) {
-            return Err(self.error(
-                p,
-                format!("{name}() does not accept named arguments in this engine revision"),
-            ));
-        }
-        let is_undef_probe = self.is_stable() && name == "is_undef" && args.len() == 1;
-        let mut access = |index: usize| -> Result<Value<'a>, BuiltinError> {
-            let argument = &args[index];
-            // OpenSCAD permits probing an undeclared bare name with is_undef()
-            // without emitting the ordinary unknown-variable warning.
-            if is_undef_probe && let Expr::Identifier { name, .. } = &argument.value {
-                if name == "PI" {
-                    return Ok(Value::Number(std::f64::consts::PI));
-                }
-                let resolved = self.resolve_stable_variable(name, ctx)?;
-                return Ok(if resolved.found {
-                    resolved.value
-                } else {
-                    Value::Undef
-                });
-            }
-            Ok(self.eval_expression(&argument.value, ctx, depth + 1)?)
-        };
-        let mut warn = |message: String| self.warn(message);
-        let mut register_array =
-            |items: Vec<Value<'a>>, label: &str| -> EvalResult<Vec<Value<'a>>> {
-                if items.len() > MAX_VALUE_ELEMENTS {
-                    return Err(self.error(
-                        p,
-                        format!("{label} exceeds {} elements", locale(MAX_VALUE_ELEMENTS)),
-                    ));
-                }
-                Ok(
-                    Rc::try_unwrap(self.register_vector(Rc::new(items), p, label)?)
-                        .unwrap_or_else(|_| unreachable!("fresh Rc")),
-                )
-            };
-        let mut register_string = |value: String, label: &str| -> EvalResult<String> {
-            if value.encode_utf16().count() > MAX_VALUE_ELEMENTS {
-                return Err(self.error(
-                    p,
-                    format!("{label} exceeds {} characters", locale(MAX_VALUE_ELEMENTS)),
-                ));
-            }
-            self.register_string(value, p, label)
-        };
-        let mut random = || {
-            if let Some(host) = self.random_host
-                && let Ok(mut host) = host.try_borrow_mut()
-            {
-                return (host)();
-            }
-            let (next, value) = splitmix64(self.random_state.get());
-            self.random_state.set(next);
-            value
-        };
-        let parent_module = |depth: usize| -> Option<String> {
-            let stack = &ctx.module_stack;
-            stack
-                .len()
-                .checked_sub(1 + depth)
-                .map(|index| stack[index].clone())
-        };
-        let mut builtin_ctx = BuiltinContext {
-            warn: &mut warn,
-            register_array: &mut register_array,
-            register_string: &mut register_string,
-            random: &mut random,
-            parent_module: &parent_module,
-        };
-        let Some(result) =
-            builtins::evaluate_builtin(name, args.len(), &mut access, &mut builtin_ctx)
-        else {
-            return Err(self.error(p, format!("Unsupported function {name}()")));
-        };
-        match result {
-            Ok(value) => Ok(value),
-            Err(BuiltinError::Eval(failure)) => Err(failure),
-            Err(BuiltinError::Fail(message)) => {
-                if self.is_stable() {
-                    self.warn(message);
-                    Ok(Value::Undef)
-                } else {
-                    Err(self.error(p, message))
-                }
-            }
-        }
-    }
 
     // ------------------------------------------------------------------
     // Statements
@@ -1609,6 +702,75 @@ impl<'a> Evaluator<'a> {
     }
 
     fn eval_node(&self, node: &'a CallNode, parent: &Ctx<'a>) -> EvalResult<Vec<ShapeDescriptor>> {
+        if self.record_geometry
+            && ((self.is_stable()
+                && !matches!(
+                    node.name.as_str(),
+                    "cube"
+                        | "rotate"
+                        | "multmatrix"
+                        | "translate"
+                        | "scale"
+                        | "mirror"
+                        | "cylinder"
+                        | "sphere"
+                        | "square"
+                        | "circle"
+                        | "polygon"
+                        | "linear_extrude"
+                        | "rotate_extrude"
+                        | "projection"
+                        | "resize"
+                        | "polyhedron"
+                        | "offset"
+                        | "hull"
+                        | "minkowski"
+                        | "intersection"
+                        | "difference"
+                        | "union"
+                        | "for"
+                        | "if"
+                        | "let"
+                        | "children"
+                        | "assert"
+                        | "echo"
+                        | "group"
+                        | "render"
+                )
+                && !self.modules.contains_key(&node.name))
+                || (!self.is_stable()
+                    && !matches!(
+                        node.name.as_str(),
+                        "cube"
+                            | "rotate"
+                            | "scale"
+                            | "mirror"
+                            | "multmatrix"
+                            | "sphere"
+                            | "cylinder"
+                            | "translate"
+                            | "union"
+                            | "intersection"
+                            | "difference"
+                            | "for"
+                            | "if"
+                            | "let"
+                            | "children"
+                            | "assert"
+                            | "echo"
+                            | "group"
+                            | "render"
+                    )
+                    && !self.modules.contains_key(&node.name)))
+        {
+            return Err(self.error(
+                node.p,
+                format!(
+                    "Native geometry recording does not yet support {}() for this profile",
+                    node.name
+                ),
+            ));
+        }
         if self.is_stable() && !parent.viewport_root_locked && has_modifier(node, "root") {
             let locked = Ctx {
                 viewport_root_locked: true,
@@ -1652,9 +814,43 @@ impl<'a> Evaluator<'a> {
             "assert" => self.eval_assert_statement(node, &ctx),
             "cube" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("cube", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("cube", 3)]);
+                    }
+                    use crate::primitive_plan::{Size, box_plan};
+                    let size = match values.get("size") {
+                        None | Some(Value::Undef) => Size::Missing,
+                        Some(Value::Number(value)) => Size::Scalar(*value),
+                        Some(Value::Vector(values)) => {
+                            Size::Vector(values.iter().map(Value::as_number).collect())
+                        }
+                        _ => Size::Invalid,
+                    };
+                    let plan = box_plan(
+                        &size,
+                        true,
+                        matches!(values.get("center"), Some(Value::Bool(true))),
+                    );
+                    if plan.defaulted {
+                        self.warn("cube size was not a scalar or exact 3-component numeric vector; unit size is used".to_string());
+                    }
+                    if plan.empty {
+                        return self.emit_geometry(
+                            "cube",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    return self.emit_geometry(
+                        "cube",
+                        geometry_ops::solid_program::Node::Cube {
+                            size: [plan.dimensions[0], plan.dimensions[1], plan.dimensions[2]],
+                            center: plan.center,
+                        },
+                        node.p,
+                    );
                 }
                 let raw = self.arg(node, "size", 0, Value::Number(1.0), &ctx)?;
                 let size = match &raw {
@@ -1675,14 +871,47 @@ impl<'a> Evaluator<'a> {
                 if dimensions.iter().any(|v| *v <= 0.0) {
                     return Err(self.error(node.p, "Cube dimensions must be positive"));
                 }
-                self.arg(node, "center", 1, Value::Bool(false), &ctx)?;
-                Ok(vec![descriptor("cube", 3)])
+                let center = truthy(&self.arg(node, "center", 1, Value::Bool(false), &ctx)?);
+                self.emit_geometry(
+                    "cube",
+                    geometry_ops::solid_program::Node::Cube {
+                        size: dimensions,
+                        center,
+                    },
+                    node.p,
+                )
             }
             "sphere" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
+                    let values =
+                        self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("sphere", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("sphere", 3)]);
+                    }
+                    let radius = crate::primitive_plan::radius_pair(
+                        values.get("r").and_then(Value::as_number),
+                        values.get("d").and_then(Value::as_number),
+                    );
+                    if radius.shadowed {
+                        self.warn("sphere uses d; the paired r value has no effect".to_string());
+                    }
+                    if crate::primitive_plan::radial_empty(radius.value) {
+                        return self.emit_geometry(
+                            "sphere",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    let segments = self.stable_fragment_count(&values, &ctx, radius.value)?;
+                    return self.emit_geometry(
+                        "sphere",
+                        geometry_ops::solid_program::Node::Sphere {
+                            radius: radius.value,
+                            segments,
+                        },
+                        node.p,
+                    );
                 }
                 let mut radius = self.arg(node, "r", 0, Value::Undef, &ctx)?;
                 let diameter = self.arg(node, "d", -1, Value::Undef, &ctx)?;
@@ -1698,19 +927,67 @@ impl<'a> Evaluator<'a> {
                 if r <= 0.0 {
                     return Err(self.error(node.p, "Sphere radius must be positive"));
                 }
-                self.segments(node, &ctx, 32.0, 4.0, r)?;
-                Ok(vec![descriptor("sphere", 3)])
+                let segments = self.segments(node, &ctx, 32.0, 4.0, r)? as usize;
+                self.emit_geometry(
+                    "sphere",
+                    geometry_ops::solid_program::Node::Sphere {
+                        radius: r,
+                        segments,
+                    },
+                    node.p,
+                )
             }
             "cylinder" => {
                 if self.is_stable() {
-                    self.bind_stable_module(
+                    let values = self.bind_stable_module(
                         node,
                         &ctx,
                         &["h", "r1", "r2", "center"],
                         &["r", "d", "d1", "d2", "$fn", "$fa", "$fs"],
                     )?;
                     self.warn_ignored_primitive_children(node);
-                    return Ok(vec![descriptor("cylinder", 3)]);
+                    if !self.record_geometry {
+                        return Ok(vec![descriptor("cylinder", 3)]);
+                    }
+                    use crate::primitive_plan::{cylinder_plan, radius_pair};
+                    let number = |name: &str| values.get(name).and_then(Value::as_number);
+                    let common = radius_pair(number("r"), number("d"));
+                    let low = radius_pair(number("r1"), number("d1"));
+                    let high = radius_pair(number("r2"), number("d2"));
+                    for (pair, r, d) in [(common, "r", "d"), (low, "r1", "d1"), (high, "r2", "d2")]
+                    {
+                        if pair.shadowed {
+                            self.warn(format!(
+                                "cylinder uses {d}; the paired {r} value has no effect"
+                            ));
+                        }
+                    }
+                    let plan = cylinder_plan(number("h"), common, low, high);
+                    if plan.ambiguous {
+                        self.warn(
+                            "cylinder combines a shared radius with an end-specific radius"
+                                .to_string(),
+                        );
+                    }
+                    if plan.empty {
+                        return self.emit_geometry(
+                            "cylinder",
+                            geometry_ops::solid_program::Node::Empty,
+                            node.p,
+                        );
+                    }
+                    let segments =
+                        self.stable_fragment_count(&values, &ctx, plan.fragment_radius)?;
+                    return self.emit_geometry(
+                        "cylinder",
+                        geometry_ops::solid_program::Node::Cylinder {
+                            height: plan.height,
+                            radii: [plan.radius1, plan.radius2],
+                            segments,
+                            center: matches!(values.get("center"), Some(Value::Bool(true))),
+                        },
+                        node.p,
+                    );
                 }
                 let height = self.finite_number(
                     &self.arg(node, "h", 0, Value::Number(1.0), &ctx)?,
@@ -1757,18 +1034,28 @@ impl<'a> Evaluator<'a> {
                         "Cylinder radii must be non-negative and not both zero",
                     ));
                 }
-                self.arg(node, "center", 3, Value::Bool(false), &ctx)?;
-                self.segments(node, &ctx, 32.0, 3.0, r1.max(r2))?;
-                Ok(vec![descriptor("cylinder", 3)])
+                let center = truthy(&self.arg(node, "center", 3, Value::Bool(false), &ctx)?);
+                let segments = self.segments(node, &ctx, 32.0, 3.0, r1.max(r2))? as usize;
+                self.emit_geometry(
+                    "cylinder",
+                    geometry_ops::solid_program::Node::Cylinder {
+                        height,
+                        radii: [r1, r2],
+                        segments,
+                        center,
+                    },
+                    node.p,
+                )
             }
             "polyhedron" => {
                 if self.is_stable() {
-                    self.bind_stable_module(
+                    let values = self.bind_stable_module(
                         node,
                         &ctx,
                         &["points", "faces", "convexity"],
                         &["triangles"],
                     )?;
+                    if self.record_geometry { return self.record_stable_polyhedron(&values,node); }
                     self.warn_ignored_primitive_children(node);
                     return Ok(vec![descriptor("polyhedron", 3)]);
                 }
@@ -1834,8 +1121,39 @@ impl<'a> Evaluator<'a> {
             }
             "square" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["size", "center"], &[])?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        use crate::primitive_plan::{Size, box_plan};
+                        let size = match values.get("size") {
+                            None | Some(Value::Undef) => Size::Missing,
+                            Some(Value::Number(value)) => Size::Scalar(*value),
+                            Some(Value::Vector(values)) => {
+                                Size::Vector(values.iter().map(Value::as_number).collect())
+                            }
+                            _ => Size::Invalid,
+                        };
+                        let plan = box_plan(
+                            &size,
+                            false,
+                            matches!(values.get("center"), Some(Value::Bool(true))),
+                        );
+                        if plan.defaulted {
+                            self.warn("square size was not a scalar or exact 2-component numeric vector; unit size is used".to_string());
+                        }
+                        return self.emit_profile(
+                            "square",
+                            if plan.empty {
+                                geometry_ops::profile_program::Node::Empty
+                            } else {
+                                geometry_ops::profile_program::Node::Rectangle {
+                                    size: [plan.dimensions[0], plan.dimensions[1]],
+                                    center: plan.center,
+                                }
+                            },
+                            node.p,
+                        );
+                    }
                     return Ok(vec![descriptor("square", 2)]);
                 }
                 let raw = self.arg(node, "size", 0, Value::Number(1.0), &ctx)?;
@@ -1858,8 +1176,37 @@ impl<'a> Evaluator<'a> {
             }
             "circle" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
+                    let values =
+                        self.bind_stable_module(node, &ctx, &["r"], &["d", "$fn", "$fa", "$fs"])?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        let radius = crate::primitive_plan::radius_pair(
+                            values.get("r").and_then(Value::as_number),
+                            values.get("d").and_then(Value::as_number),
+                        );
+                        if radius.shadowed {
+                            self.warn(
+                                "circle uses d; the paired r value has no effect".to_string(),
+                            );
+                        }
+                        if crate::primitive_plan::radial_empty(radius.value) {
+                            self.warn("circle parameters describe an empty object".to_string());
+                            return self.emit_profile(
+                                "circle",
+                                geometry_ops::profile_program::Node::Empty,
+                                node.p,
+                            );
+                        }
+                        let segments = self.stable_fragment_count(&values, &ctx, radius.value)?;
+                        return self.emit_profile(
+                            "circle",
+                            geometry_ops::profile_program::Node::Circle {
+                                radius: radius.value,
+                                segments,
+                            },
+                            node.p,
+                        );
+                    }
                     return Ok(vec![descriptor("circle", 2)]);
                 }
                 let mut radius = self.arg(node, "r", 0, Value::Undef, &ctx)?;
@@ -1881,8 +1228,16 @@ impl<'a> Evaluator<'a> {
             }
             "polygon" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["points", "paths", "convexity"], &[])?;
+                    let values = self.bind_stable_module(
+                        node,
+                        &ctx,
+                        &["points", "paths", "convexity"],
+                        &[],
+                    )?;
                     self.warn_ignored_primitive_children(node);
+                    if self.record_geometry {
+                        return self.record_stable_polygon(&values, node.p);
+                    }
                     return Ok(vec![descriptor("polygon", 2)]);
                 }
                 let points_value = self.arg(node, "points", 0, Value::vector(Vec::new()), &ctx)?;
@@ -1916,7 +1271,10 @@ impl<'a> Evaluator<'a> {
             }
             "translate" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -1930,12 +1288,59 @@ impl<'a> Evaluator<'a> {
                     ]),
                     &ctx,
                 )?;
-                self.vector_value(&raw, node.p, "translate vector")?;
-                self.eval_nodes(&node.children, &ctx, true)
+                let vector = self.vector_value(&raw, node.p, "translate vector")?;
+                let delta = std::array::from_fn(|i| vector.get(i).copied().unwrap_or(0.));
+                let mut shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry {
+                    for shape in &mut shapes {
+                        let input = shape.geometry.ok_or_else(|| {
+                            self.error(node.p, "Unsupported native geometry input")
+                        })?;
+                        shape.geometry = Some(self.store_geometry(
+                            geometry_ops::solid_program::Node::Translate { input, delta },
+                            node.p,
+                        )?);
+                    }
+                }
+                Ok(shapes)
             }
             "rotate" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["a", "v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["a", "v"], &[])?;
+                    if self.record_geometry {
+                        use crate::transform_plan::{
+                            euler_arguments, euler_matrix, scalar_rotation,
+                        };
+                        let axis = values.get("v").filter(|value| !value.is_undef());
+                        let matrix = if let Some(Value::Vector(components)) = values.get("a") {
+                            let numbers =
+                                components.iter().map(Value::as_number).collect::<Vec<_>>();
+                            let plan = euler_arguments(&numbers, components.len());
+                            if !plan.valid {
+                                self.warn("rotate retained its component-wise fallback matrix after a vector conversion problem".to_string());
+                            } else if axis.is_some() {
+                                self.warn("rotate ignores v when a is a vector".to_string());
+                            }
+                            euler_matrix(plan.angles)
+                        } else {
+                            let numbers = match axis {
+                                Some(Value::Vector(components)) => Some(
+                                    components.iter().map(Value::as_number).collect::<Vec<_>>(),
+                                ),
+                                _ => None,
+                            };
+                            let plan = scalar_rotation(
+                                values.get("a").and_then(Value::as_number),
+                                numbers.as_deref(),
+                                axis.is_some(),
+                            );
+                            if !plan.valid {
+                                self.warn("rotate replaced an invalid scalar angle or axis with its neutral/default value".to_string());
+                            }
+                            plan.matrix
+                        };
+                        return self.stable_matrix_geometry(node, &ctx, matrix);
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let angle = self.arg(node, "a", 0, Value::Number(0.0), &ctx)?;
@@ -1979,11 +1384,36 @@ impl<'a> Evaluator<'a> {
                         }
                     }
                 }
+                if self.record_geometry && !shapes.is_empty() {
+                    use geometry_ops::solid_program::affine;
+                    let matrix = if matches!(angle, Value::Vector(_)) {
+                        let v = self.vector_value(&angle, node.p, "rotation")?;
+                        affine::euler_degrees(std::array::from_fn(|i| {
+                            v.get(i).copied().unwrap_or(0.)
+                        }))
+                    } else {
+                        let degrees = self.finite_number(&angle, node.p, "rotation")?;
+                        if axis.is_undef() {
+                            affine::euler_degrees([0., 0., degrees])
+                        } else {
+                            let v = self.vector_value(&axis, node.p, "rotation axis")?;
+                            affine::axis_angle_degrees(
+                                std::array::from_fn(|i| v.get(i).copied().unwrap_or(0.)),
+                                degrees,
+                            )
+                            .ok_or_else(|| self.error(node.p, "Rotation axis cannot be zero"))?
+                        }
+                    };
+                    return self.affine_geometry(shapes, matrix, node.p);
+                }
                 Ok(shapes)
             }
             "scale" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -2007,11 +1437,16 @@ impl<'a> Evaluator<'a> {
                 if [sx, sy, sz].contains(&0.0) {
                     return Err(self.error(node.p, "Scale values cannot be zero"));
                 }
-                self.eval_nodes(&node.children, &ctx, true)
+                let shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                self.affine_geometry(
+                    shapes,
+                    geometry_ops::solid_program::affine::scaling([sx, sy, sz]),
+                    node.p,
+                )
             }
             "resize" => {
                 self.require_stable(node)?;
-                self.bind_stable_module(node, &ctx, &["newsize", "auto", "convexity"], &[])?;
+                let values = self.bind_stable_module(node, &ctx, &["newsize", "auto", "convexity"], &[])?;
                 let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                 if shapes.is_empty() {
                     return Ok(shapes);
@@ -2020,11 +1455,39 @@ impl<'a> Evaluator<'a> {
                 if shapes.iter().any(|s| s.dimension != dimension) {
                     return Err(self.error(node.p, "resize() cannot mix 2D and 3D children"));
                 }
+                if self.record_geometry {
+                    let raw_targets = match values.get("newsize") {
+                        None => Some(Vec::new()),
+                        Some(Value::Vector(values)) => Some(values.iter().map(Value::as_number).collect::<Vec<_>>()),
+                        _ => None,
+                    };
+                    let invalid_newsize = raw_targets.is_none();
+                    let target = |axis:usize| raw_targets.as_ref().and_then(|values| values.get(axis).copied().flatten()).filter(|value| value.is_finite() && *value>0.);
+                    let automatic = |axis:usize| match values.get("auto") {
+                        Some(Value::Bool(true)) => true,
+                        Some(Value::Vector(values)) => matches!(values.get(axis),Some(Value::Bool(true))),
+                        _ => false,
+                    };
+                    let union=self.boolean_shapes(shapes,"union",node.p,"resize")?;
+                    if dimension==2 {
+                        let input=union[0].profile.ok_or_else(|| self.error(node.p,"Unsupported native resize profile"))?;
+                        return self.emit_profile("resize",geometry_ops::profile_program::Node::Resize {
+                            input,invalid_newsize,targets:std::array::from_fn(target),automatic:std::array::from_fn(automatic),
+                        },node.p);
+                    }
+                    let input=union[0].geometry.ok_or_else(|| self.error(node.p,"Unsupported native resize solid"))?;
+                    return self.emit_geometry("resize",geometry_ops::solid_program::Node::Resize {
+                        input,invalid_newsize,targets:std::array::from_fn(target),automatic:std::array::from_fn(automatic),
+                    },node.p);
+                }
                 Ok(shapes)
             }
             "mirror" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["v"], &[])?;
+                    if self.record_geometry {
+                        return self.stable_vector_geometry(node, &ctx, values.get("v"));
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let raw = self.arg(
@@ -2038,18 +1501,48 @@ impl<'a> Evaluator<'a> {
                     ]),
                     &ctx,
                 )?;
-                self.vector_value(&raw, node.p, "mirror normal")?;
-                self.eval_nodes(&node.children, &ctx, true)
+                let v = self.vector_value(&raw, node.p, "mirror normal")?;
+                let shapes = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry && !shapes.is_empty() {
+                    let matrix =
+                        geometry_ops::solid_program::affine::reflection(std::array::from_fn(|i| {
+                            v.get(i).copied().unwrap_or(0.)
+                        }))
+                        .ok_or_else(|| self.error(node.p, "Mirror normal cannot be zero"))?;
+                    return self.affine_geometry(shapes, matrix, node.p);
+                }
+                Ok(shapes)
             }
             "multmatrix" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["m"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["m"], &[])?;
+                    if self.record_geometry {
+                        let rows = match values.get("m") {
+                            Some(Value::Vector(rows)) => Some(
+                                rows.iter()
+                                    .take(4)
+                                    .map(|row| match row {
+                                        Value::Vector(cells) => cells
+                                            .iter()
+                                            .take(4)
+                                            .map(Value::as_number)
+                                            .collect::<Vec<_>>(),
+                                        _ => Vec::new(),
+                                    })
+                                    .collect::<Vec<_>>(),
+                            ),
+                            _ => None,
+                        };
+                        let plan = crate::transform_plan::authored_matrix(rows.as_deref());
+                        return self.stable_matrix_geometry(node, &ctx, plan.matrix);
+                    }
                     return self.transform_stable_children(node, &ctx);
                 }
                 let value = self.arg(node, "m", 0, Value::Undef, &ctx)?;
                 let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                 let has_2d = shapes.iter().any(|s| s.dimension == 2);
                 let has_3d = shapes.iter().any(|s| s.dimension == 3);
+                let mut matrix = geometry_ops::solid_program::affine::IDENTITY;
                 if has_3d || has_2d {
                     let Some(rows) = value.as_vector().cloned() else {
                         return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
@@ -2057,14 +1550,17 @@ impl<'a> Evaluator<'a> {
                     if rows.len() < 3 {
                         return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
                     }
-                    for row in rows.iter() {
+                    for (index, row) in rows.iter().enumerate() {
                         let row = self.vector_value(row, node.p, "matrix row")?;
                         if row.len() < 4 {
                             return Err(self.error(node.p, "multmatrix requires a 4x4 matrix"));
                         }
+                        if index < 3 {
+                            matrix[index].copy_from_slice(&row[..4]);
+                        }
                     }
                 }
-                Ok(shapes)
+                self.affine_geometry(shapes, matrix, node.p)
             }
             "color" => {
                 let color_value = self.arg(
@@ -2113,6 +1609,36 @@ impl<'a> Evaluator<'a> {
                 if shapes.len() == 1 {
                     return Ok(shapes);
                 }
+                if self.record_geometry {
+                    if dimension == 2 {
+                        let inputs = shapes
+                            .iter()
+                            .map(|shape| {
+                                shape.profile.ok_or_else(|| {
+                                    self.error(node.p, "Unsupported native Minkowski profile")
+                                })
+                            })
+                            .collect::<EvalResult<Vec<_>>>()?;
+                        return self.emit_profile(
+                            "minkowski",
+                            geometry_ops::profile_program::Node::Minkowski { inputs },
+                            node.p,
+                        );
+                    }
+                    let inputs = shapes
+                        .iter()
+                        .map(|shape| {
+                            shape.geometry.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native Minkowski geometry")
+                            })
+                        })
+                        .collect::<EvalResult<Vec<_>>>()?;
+                    return self.emit_geometry(
+                        "minkowski",
+                        geometry_ops::solid_program::Node::Minkowski { inputs },
+                        node.p,
+                    );
+                }
                 shapes.truncate(1);
                 Ok(vec![descriptor("minkowski", dimension)])
             }
@@ -2129,6 +1655,36 @@ impl<'a> Evaluator<'a> {
                     self.warn("hull() ignored child geometry with a different dimension");
                     shapes.retain(|s| s.dimension == dimension);
                 }
+                if self.record_geometry {
+                    if dimension == 2 {
+                        let inputs = shapes
+                            .iter()
+                            .map(|shape| {
+                                shape.profile.ok_or_else(|| {
+                                    self.error(node.p, "Unsupported native hull profile")
+                                })
+                            })
+                            .collect::<EvalResult<Vec<_>>>()?;
+                        return self.emit_profile(
+                            "hull",
+                            geometry_ops::profile_program::Node::Hull { inputs },
+                            node.p,
+                        );
+                    }
+                    let inputs = shapes
+                        .iter()
+                        .map(|shape| {
+                            shape.geometry.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native hull geometry")
+                            })
+                        })
+                        .collect::<EvalResult<Vec<_>>>()?;
+                    return self.emit_geometry(
+                        "hull",
+                        geometry_ops::solid_program::Node::Hull { inputs },
+                        node.p,
+                    );
+                }
                 Ok(vec![descriptor("hull", dimension)])
             }
             "linear_extrude" => {
@@ -2143,6 +1699,13 @@ impl<'a> Evaluator<'a> {
                     None
                 };
                 let sections = self.eval_nodes(&node.children, &ctx, true)?;
+                if self.record_geometry && sections.is_empty() {
+                    return self.emit_geometry(
+                        "linear_extrude",
+                        geometry_ops::solid_program::Node::Empty,
+                        node.p,
+                    );
+                }
                 let sections = self.boolean_shapes(sections, "union", node.p, "union")?;
                 if sections.is_empty() {
                     return Ok(Vec::new());
@@ -2187,6 +1750,12 @@ impl<'a> Evaluator<'a> {
                     }
                     self.arg(node, "center", -1, Value::Bool(false), &ctx)?;
                 }
+                if self.record_geometry {
+                    if let Some(values) = evaluated {
+                        let fragments = self.stable_fragment_specials(&values, &ctx)?;
+                        return self.record_stable_extrusion(sections, &values, fragments, node.p);
+                    }
+                }
                 Ok(vec![descriptor("linear_extrude", 3)])
             }
             "rotate_extrude" => {
@@ -2214,6 +1783,55 @@ impl<'a> Evaluator<'a> {
                         node.p,
                         "revolve angle",
                     )?;
+                }
+                if self.record_geometry {
+                    if let Some(values) = evaluated {
+                        let angle = values.get("angle").and_then(Value::as_number);
+                        let plan = crate::extrusion_plan::revolution_parameters(
+                            angle,
+                            values.contains_key("angle"),
+                            1.,
+                            1.,
+                        );
+                        if plan.angle_defaulted {
+                            self.warn(
+                                "Invalid rotate_extrude angle was replaced with 360".to_string(),
+                            );
+                        }
+                        if plan.empty {
+                            return self.emit_geometry(
+                                "rotate_extrude",
+                                geometry_ops::solid_program::Node::Empty,
+                                node.p,
+                            );
+                        }
+                        let root = sections[0].profile.ok_or_else(|| {
+                            self.error(node.p, "Unsupported native revolution profile")
+                        })?;
+                        let profile = geometry_ops::profile_program::Program::from_roots(
+                            &self.profiles.borrow(),
+                            &[root],
+                        )
+                        .map_err(|error| self.error(node.p, &error.to_string()))?;
+                        let fragments = self.stable_fragment_specials(&values, &ctx)?;
+                        return self.emit_geometry(
+                            "rotate_extrude",
+                            geometry_ops::solid_program::Node::RevolveProfile {
+                                profile,
+                                angle: plan.angle,
+                                segments: 0,
+                                fragment_policy: Some(geometry_ops::fragment_resolution::Policy {
+                                    fragments,
+                                    maximum: if self.quality == Quality::Preview {
+                                        48
+                                    } else {
+                                        256
+                                    },
+                                }),
+                            },
+                            node.p,
+                        );
+                    }
                 }
                 Ok(vec![descriptor("rotate_extrude", 3)])
             }
@@ -2272,7 +1890,7 @@ impl<'a> Evaluator<'a> {
             }
             "projection" => {
                 if self.is_stable() {
-                    self.bind_stable_module(node, &ctx, &["cut", "convexity"], &[])?;
+                    let values = self.bind_stable_module(node, &ctx, &["cut", "convexity"], &[])?;
                     let children = self.eval_nodes(&node.children, &ctx, true)?;
                     let solids: Vec<_> = children.iter().filter(|s| s.dimension == 3).collect();
                     if solids.len() != children.len() {
@@ -2280,6 +1898,16 @@ impl<'a> Evaluator<'a> {
                     }
                     if solids.is_empty() {
                         return Ok(Vec::new());
+                    }
+                    if self.record_geometry {
+                        let shapes = solids.into_iter().cloned().collect();
+                        let union = self.boolean_shapes(shapes, "union", node.p, "projection")?;
+                        let input = union[0].geometry.ok_or_else(|| self.error(node.p,"Unsupported native projection input"))?;
+                        let solid = geometry_ops::solid_program::Program::from_roots(&self.geometry.borrow(), &[input])
+                            .map_err(|error| self.error(node.p,error.message))?;
+                        return self.emit_profile("projection", geometry_ops::profile_program::Node::Projection {
+                            solid: Box::new(solid), cut: matches!(values.get("cut"),Some(Value::Bool(true))),
+                        }, node.p);
                     }
                     return Ok(vec![descriptor("projection", 2)]);
                 }
@@ -2297,35 +1925,81 @@ impl<'a> Evaluator<'a> {
             }
             "offset" => {
                 if self.is_stable() {
-                    // Bind for side effects; full join-type resolution arrives
-                    // with the geometry stage.
+                    let mut values = HashMap::new();
                     let r_expression = call_args(node)
                         .iter()
                         .find(|(key, _)| key == "r")
                         .or_else(|| call_args(node).iter().find(|(key, _)| key == "_0"));
-                    for expression in [
-                        r_expression.map(|(_, expression)| expression),
-                        call_args(node)
-                            .iter()
-                            .find(|(key, _)| key == "delta")
-                            .map(|(_, expression)| expression),
-                        call_args(node)
-                            .iter()
-                            .find(|(key, _)| key == "chamfer")
-                            .map(|(_, expression)| expression),
+                    for (name, expression) in [
+                        ("r", r_expression.map(|(_, expression)| expression)),
+                        (
+                            "delta",
+                            call_args(node)
+                                .iter()
+                                .find(|(key, _)| key == "delta")
+                                .map(|(_, expression)| expression),
+                        ),
+                        (
+                            "chamfer",
+                            call_args(node)
+                                .iter()
+                                .find(|(key, _)| key == "chamfer")
+                                .map(|(_, expression)| expression),
+                        ),
                     ]
                     .into_iter()
-                    .flatten()
-                    {
-                        self.eval_expression(expression, &ctx, 0)?;
+                    .filter_map(|(name, expression)| {
+                        expression.map(|expression| (name, expression))
+                    }) {
+                        values.insert(name.to_string(), self.eval_expression(expression, &ctx, 0)?);
                     }
+                    let plan = crate::offset_plan::resolve(
+                        values.get("r").and_then(Value::as_number),
+                        values.get("delta").and_then(Value::as_number),
+                        matches!(values.get("chamfer"), Some(Value::Bool(true))),
+                    );
+                    let segments =
+                        if self.record_geometry && plan.join == crate::offset_plan::Join::Round {
+                            for name in ["$fn", "$fa", "$fs"] {
+                                if let Some((_, expression)) =
+                                    call_args(node).iter().find(|(key, _)| key == name)
+                                {
+                                    values.insert(
+                                        name.to_string(),
+                                        self.eval_expression(expression, &ctx, 0)?,
+                                    );
+                                }
+                            }
+                            self.stable_fragment_count(&values, &ctx, plan.distance.abs())?
+                        } else {
+                            8
+                        };
                     let shapes = self.eval_nodes(&node.children, &ctx, true)?;
                     let mut output = Vec::new();
                     for shape in shapes {
                         if shape.dimension != 2 {
                             return Err(self.error(node.p, "offset() requires 2D children"));
                         }
-                        output.push(descriptor("offset", 2));
+                        if self.record_geometry {
+                            if !plan.distance.is_finite() {
+                                return Err(self.error(node.p, "Invalid offset"));
+                            }
+                            let input = shape.profile.ok_or_else(|| {
+                                self.error(node.p, "Unsupported native offset profile")
+                            })?;
+                            output.extend(self.emit_profile(
+                                "offset",
+                                geometry_ops::profile_program::Node::Offset {
+                                    input,
+                                    distance: plan.distance,
+                                    join: plan.join,
+                                    segments,
+                                },
+                                node.p,
+                            )?);
+                        } else {
+                            output.push(descriptor("offset", 2));
+                        }
                     }
                     return Ok(output);
                 }
@@ -2611,175 +2285,16 @@ impl<'a> Evaluator<'a> {
             .collect())
     }
 
-    fn segments(
-        &self,
-        node: &'a CallNode,
-        ctx: &Ctx<'a>,
-        fallback: f64,
-        minimum: f64,
-        _radius: f64,
-    ) -> EvalResult<f64> {
-        if self.is_stable() {
-            return Ok(0.0); // fragment resolution belongs to the geometry stage
-        }
-        let local = self.arg(node, "$fn", -1, Value::Undef, ctx)?;
-        let global = ctx.env.borrow().get("$fn").cloned().unwrap_or(Value::Undef);
-        let raw = if local.is_undef() || local.as_number() == Some(0.0) {
-            global
-        } else {
-            local
-        };
-        let requested = if raw.is_undef() || raw.as_number() == Some(0.0) {
-            None
-        } else {
-            Some(self.finite_number(&raw, node.p, "$fn")?.round())
-        };
-        let max_segments = if self.quality == Quality::Preview {
-            48.0
-        } else {
-            MAX_FN
-        };
-        let preview_fallback = if self.quality == Quality::Preview {
-            fallback.min(24.0)
-        } else {
-            fallback
-        };
-        let mut value = requested.unwrap_or(preview_fallback);
-        if value > max_segments {
-            self.warn(format!(
-                "$fn={} was clamped to {} for {} rendering",
-                js_number_to_string(value),
-                js_number_to_string(max_segments),
-                if self.quality == Quality::Preview {
-                    "preview"
-                } else {
-                    "full"
-                }
-            ));
-            value = max_segments;
-        }
-        value = value.max(minimum);
-        if self.quality == Quality::Preview {
-            let full_value = requested.unwrap_or(fallback).min(MAX_FN).max(minimum);
-            if value != full_value {
-                self.reduced.set(true);
-            }
-        }
-        Ok(value)
-    }
-
-    fn parse_legacy_color(&self, value: &Value, p: usize) -> EvalResult<()> {
-        match value {
-            Value::Vector(_) => {
-                self.vector_value(value, p, "color")?;
-                Ok(())
-            }
-            Value::Str(name) => {
-                let lower = name.to_lowercase();
-                if CSS_COLORS.contains(&lower.as_str()) {
-                    return Ok(());
-                }
-                if is_hex_color(name) {
-                    return Ok(());
-                }
-                Err(self.error(p, format!("Unknown color {name}")))
-            }
-            _ => Err(self.error(p, "color() expects a name or RGB(A) vector")),
+    fn indexed_rows(&self, values: &HashMap<String,Value<'a>>, name:&str) -> Vec<Vec<Option<f64>>> {
+        match values.get(name) {
+            Some(Value::Vector(rows)) => rows.iter().map(|row| match row {
+                Value::Vector(values)=>values.iter().map(Value::as_number).collect(),
+                _=>Vec::new(),
+            }).collect(),
+            _=>Vec::new(),
         }
     }
 
-    fn transform_stable_children(
-        &self,
-        node: &'a CallNode,
-        ctx: &Ctx<'a>,
-    ) -> EvalResult<Vec<ShapeDescriptor>> {
-        let shapes = self.eval_nodes(&node.children, ctx, true)?;
-        self.boolean_shapes(shapes, "union", node.p, &node.name)
-    }
-
-    fn boolean_shapes(
-        &self,
-        mut shapes: Vec<ShapeDescriptor>,
-        operation: &str,
-        p: usize,
-        diagnostic_name: &str,
-    ) -> EvalResult<Vec<ShapeDescriptor>> {
-        if shapes.is_empty() {
-            return Ok(shapes);
-        }
-        let dimension = shapes[0].dimension;
-        if shapes.iter().any(|s| s.dimension != dimension) {
-            if !self.is_stable() {
-                return Err(self.error(
-                    p,
-                    format!("{diagnostic_name}() cannot mix 2D and 3D children"),
-                ));
-            }
-            self.warn(format!(
-                "{diagnostic_name}() ignored child geometry with a different dimension"
-            ));
-            if operation == "intersection" {
-                return Ok(Vec::new());
-            }
-            shapes.retain(|s| s.dimension == dimension);
-        }
-        if shapes.len() == 1 {
-            return Ok(shapes);
-        }
-        Ok(vec![descriptor(operation, dimension)])
-    }
-
-    fn difference_children(
-        &self,
-        node: &'a CallNode,
-        ctx: &Ctx<'a>,
-    ) -> EvalResult<Vec<ShapeDescriptor>> {
-        if node.children.is_empty() {
-            return Ok(Vec::new());
-        }
-        if self.is_stable() {
-            let child_context = self.enter_stable_statement_scope(&node.children, ctx)?;
-            let base = self.boolean_shapes(
-                self.eval_prepared_nodes(&node.children[..1], &child_context)?,
-                "union",
-                node.p,
-                "union",
-            )?;
-            let cutters = self.boolean_shapes(
-                self.eval_prepared_nodes(&node.children[1..], &child_context)?,
-                "union",
-                node.p,
-                "union",
-            )?;
-            if base.is_empty() || cutters.is_empty() {
-                return Ok(base);
-            }
-            if base[0].dimension != cutters[0].dimension {
-                self.warn("difference() ignored child geometry with a different dimension");
-                return Ok(base);
-            }
-            return Ok(vec![descriptor("difference", base[0].dimension)]);
-        }
-        let base = self.boolean_shapes(
-            self.eval_nodes(&node.children[..1], ctx, true)?,
-            "union",
-            node.p,
-            "union",
-        )?;
-        let cutters = self.boolean_shapes(
-            self.eval_nodes(&node.children[1..], ctx, true)?,
-            "union",
-            node.p,
-            "union",
-        )?;
-        if base.is_empty() || cutters.is_empty() {
-            return Ok(base);
-        }
-        if base[0].dimension != cutters[0].dimension {
-            return Err(self.error(node.p, "difference() cannot mix 2D and 3D children"));
-        }
-        Ok(vec![descriptor("difference", base[0].dimension)])
-    }
 
     fn eval_for(
         &self,
@@ -3129,56 +2644,47 @@ impl<'a> Evaluator<'a> {
             Value::Number(_) => vec![value.clone()],
             Value::Vector(items) => items.as_ref().clone(),
             Value::Range { start, step, end } => {
-                if *step == 0.0 || ![start, step, end].iter().all(|v| v.is_finite()) {
-                    self.warn("Invalid children range was ignored");
-                    return Ok(Vec::new());
-                }
-                let forward = *step > 0.0;
-                let epsilon = 1.0_f64.max(start.abs()).max(end.abs()) * 1e-12;
-                let mut output = Vec::new();
-                let mut item = *start;
-                while if forward {
-                    item <= end + epsilon
-                } else {
-                    item >= end - epsilon
-                } {
-                    if output.len() >= MAX_RANGE_ITEMS {
+                match crate::children_selection::expand_range(
+                    *start,
+                    *step,
+                    *end,
+                    MAX_RANGE_ITEMS as u64,
+                ) {
+                    Ok(values) => values.into_iter().map(Value::Number).collect(),
+                    Err(crate::children_selection::RangeIssue::Invalid) => {
+                        self.warn("Invalid children range was ignored");
+                        return Ok(Vec::new());
+                    }
+                    Err(crate::children_selection::RangeIssue::Limit) => {
                         self.warn(format!("Range exceeds {} items", locale(MAX_RANGE_ITEMS)));
                         return Ok(Vec::new());
                     }
-                    output.push(Value::Number(item));
-                    item += step;
                 }
-                output
             }
             _ => {
                 self.warn("children accepts an empty argument list, number, vector, or range");
                 return Ok(Vec::new());
             }
         };
-        let mut selected = Vec::new();
-        for candidate in candidates {
-            let Some(raw) = candidate.as_number() else {
-                self.warn("Non-numeric children index was ignored");
-                continue;
-            };
-            if !raw.is_finite() {
-                self.warn("Non-numeric children index was ignored");
-                continue;
-            }
-            let truncated = raw.trunc();
-            let index = if truncated == 0.0 { 0.0 } else { truncated };
-            if index < 0.0 || index >= child_count as f64 {
-                self.warn(format!(
+        let values = candidates.iter().map(Value::as_number).collect::<Vec<_>>();
+        let selection = crate::children_selection::select(&values, child_count as u64);
+        for issue in selection.issues {
+            match issue {
+                crate::children_selection::Issue::Invalid { .. } => {
+                    self.warn("Non-numeric children index was ignored")
+                }
+                crate::children_selection::Issue::OutOfBounds { index } => self.warn(format!(
                     "Children index {} is outside 0..{}",
                     js_number_to_string(index),
                     child_count.saturating_sub(1)
-                ));
-                continue;
+                )),
             }
-            selected.push(index as usize);
         }
-        Ok(selected)
+        Ok(selection
+            .indices
+            .into_iter()
+            .map(|index| index as usize)
+            .collect())
     }
 
     fn slice_units(&self, start: usize, end: usize) -> String {
@@ -3255,7 +2761,23 @@ impl<'a> Evaluator<'a> {
             ));
         }
         shapes.retain(|s| s.dimension == 3);
+        let geometry = if self.record_geometry {
+            let roots = shapes
+                .iter()
+                .map(|s| {
+                    s.geometry
+                        .ok_or_else(|| self.error(0, "Unsupported native geometry root"))
+                })
+                .collect::<EvalResult<Vec<_>>>()?;
+            Some(geometry_ops::solid_program::Program {
+                nodes: self.geometry.borrow().clone(),
+                roots,
+            })
+        } else {
+            None
+        };
         Ok(Evaluation {
+            geometry,
             shapes,
             warnings: self.warnings.borrow().clone(),
             reduced: self.reduced.get(),
@@ -3273,6 +2795,8 @@ fn descriptor(name: &str, dimension: u8) -> ShapeDescriptor {
     ShapeDescriptor {
         name: name.to_string(),
         dimension,
+        geometry: None,
+        profile: None,
     }
 }
 
@@ -3431,3 +2955,15 @@ pub fn evaluate_source(
         Err(EvalFailure::ViewportRoot(_)) => unreachable!("root selection is caught at top level"),
     }
 }
+
+#[cfg(test)]
+mod profile_recording_tests;
+
+#[cfg(test)]
+mod profile_matrix_tests;
+
+#[cfg(test)]
+mod extrusion_recording_tests;
+
+#[cfg(test)]
+mod polygon_recording_tests;

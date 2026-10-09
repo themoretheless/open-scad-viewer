@@ -13,12 +13,17 @@ export function projectNurbsSection(curves:NurbsCurve[],plane:{axis:0|1|2;coeffi
  return callNurbsRust('curve_project_section',{curves,...plane,...options})
 }
 
+/** Project against an authored axis using the native bounded correction. */
+export function projectAuthoredNurbsSection(curves:NurbsCurve[],frameAxis:NurbsCurve,traversal:number,options:{quantum:number;tolerance:number;maxWork:number}):NurbsSectionProjection {
+ return callNurbsRust('curve_project_section_authored_axis',{curves,frameAxis,traversal,...options})
+}
+
 export interface SweepSectionCorrection {
  sections:NurbsCurve[][]|null
  wallDisplacementUpper:number|null
  exactPlanarSections:number[]
  work:number
- reason:'bounded-circle-section-interpolation'|'bounded-section-interpolation'|'incompatible-section-basis'|'work-limit'|'projection-unproved'
+ reason:'automatic-bounded-cap-planarity'|'bounded-periodic-profile-interpolation'|'bounded-rational-periodic-profile-interpolation'|'bounded-circle-section-interpolation'|'bounded-section-interpolation'|'incompatible-section-basis'|'work-limit'|'projection-unproved'
 }
 /** With identical positive rational bases at all stations, the whole ruled
  * interpolation displacement is a convex combination of pole displacements.

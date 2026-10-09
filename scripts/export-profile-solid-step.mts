@@ -18,12 +18,19 @@ const spatial:NurbsCurve={degree:3,knots:[0,0,0,0,.25,.25,.25,.5,.5,.5,.75,.75,.
 const catalogBytes=readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url))
 const catalog=JSON.parse(catalogBytes.toString('utf8'))
 const cases=[]
-for(const {mode,stations:count,file,nativeAdmission} of catalog.step.profileSolid){
+for(const {mode,stations:count,file,nativeAdmission,maxDeviation,strictRefusalBudget} of catalog.step.profileSolid){
  if(!['planar','spatial'].includes(mode)||nativeAdmission!=='certify')throw Error('Unsupported catalog case')
  const y=mode==='spatial'?.015625:0
  const points=[[2.875,y,-.125],[2.875,-y,.125],[3.125,-y,.125],[3.125,y,-.125]]
  const profiles=points.map((p,i)=>line(p,points[(i+1)%4]!))
- const body=createProgressiveBrepProfileBody([profiles],mode==='spatial'?spatial:planar,scale,twist,{normal:[0,0,1],orientation:'rmf',initialSections:count,maxSections:count,maxDeviation:1})
+ const options={normal:[0,0,1] as [number,number,number],orientation:'rmf' as const,initialSections:count,maxSections:count,maxDeviation}
+ if(strictRefusalBudget!==undefined){
+  let refused=false
+  try{createProgressiveBrepProfileBody([profiles],mode==='spatial'?spatial:planar,scale,twist,{...options,maxDeviation:strictRefusalBudget})}
+  catch(error){if(!/continuous retained-patch error or refinement exceeds budget/.test(String(error)))throw error;refused=true}
+  if(!refused)throw Error(`Expected strict source-budget refusal: ${mode}/${count}`)
+ }
+ const body=createProgressiveBrepProfileBody([profiles],mode==='spatial'?spatial:planar,scale,twist,options)
  if(!body.volume.solidGeometryCertified)throw Error(`Native body unproved: ${mode}/${count}`)
  const model=body.model,text=exportDirectStepV5(model).text
  writeFileSync(resolve(root,file),text)
@@ -33,7 +40,7 @@ for(const {mode,stations:count,file,nativeAdmission} of catalog.step.profileSoli
   exactWork+=report.work
   return {face:faceId,wire:face.outer,coedge:index,edge:c.edge,...report}
  }))
- cases.push({file,mode,stations:count,faces:model.faces.length,solids:1,shells:1,capHoleFaces:0,capFaces:[],requireNativeSolid:true,
+ cases.push({file,mode,stations:count,constructionBudget:{maxDeviation,strictRefusalBudget:strictRefusalBudget??null},boundaryContinuousBound:body.boundaryContinuousBound,boundaryErrorUpper:body.boundaryErrorUpper,faces:model.faces.length,solids:1,shells:1,capHoleFaces:0,capFaces:[],requireNativeSolid:true,
   nativeVolume:body.volume,nativeExactUses,exactWork,sourceShells:model.shells,
   edges:model.edges.length,faceLoops:model.faces.map(face=>({outer:model.loops[face.outer]!.coedges.map(c=>c.edge),holes:[]})),
   edgeCurves:model.edges.map(edge=>({curve:edge.curve,samples:[0,.25,.5,.75,1].map(u=>({u,point:evaluateNurbsCurve(edge.curve,u).point}))})),

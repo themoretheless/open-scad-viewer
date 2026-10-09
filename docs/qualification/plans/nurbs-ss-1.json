@@ -24,7 +24,7 @@
       "coverage verifier missed-branch proof with ToleranceContext binding and topology authority revocation on unresolved",
       "rational curved UV arrangement/DCEL with overlaps loops holes singular strata",
       "exact/interval pcurve/3D correspondence and CoedgeTrim maps",
-      "Rust WASM TypeScript ModelGraph MCP product queries",
+      "Rust WASM TypeScript RushGraph MCP product queries",
       "independent multiprecision SS oracle and adversarial corpus"
     ],
     "excluded": [
@@ -49,8 +49,8 @@
       "crates/nurbs-core/src/lib.rs",
       "crates/nurbs-core/src/tests.rs",
       "src/services/nurbsFoundation.ts",
-      "src/services/modelGraphNurbsKernel.ts",
-      "src/mcp/modelGraphNurbsTools.ts",
+      "src/services/rushGraphNurbsKernel.ts",
+      "src/mcp/rushGraphNurbsTools.ts",
       "tests/nurbsFoundation.test.ts",
       "scripts/nurbs-ss-1-oracle.py"
     ],

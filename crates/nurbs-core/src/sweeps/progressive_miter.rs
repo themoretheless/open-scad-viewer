@@ -22,12 +22,13 @@ pub mod boundary_certificates {
         cap_endpoint_certificate as endpoint, cap_projection_certificate as projection};
 }
 mod law;
-use crate::{Result, check, sweep_support::vec3_ext::norm, curve::Curve};
+mod serialization;
+use crate::{Result, check, core::vec3_ext::norm, curve::Curve, foundation::guards::{Budget, require_finite_point}};
 use law::{law, scalar_bounds, validate_law};
 use math_core::{cross, dot, sub};
 type V = [f64; 3];
 fn unit(v: V) -> Result<V> {
-    crate::sweep_support::vec3_ext::unit(v, "Miter direction must be finite and nonzero")
+    crate::core::vec3_ext::unit(v, "Miter direction must be finite and nonzero")
 }
 fn rotate(n: V, t: V, a: f64) -> V {
     let (s, c) = a.sin_cos();
@@ -135,6 +136,7 @@ impl<'a> Sweep<'a> {
             points.first() != points.last() && points.iter().flatten().all(|x| x.is_finite()),
             "Miter sites must be finite and omit a repeated endpoint",
         )?;
+        require_finite_point(&options.normal, "normal")?;
         check(
             options.miter_limit.is_finite() && options.miter_limit >= 1.,
             "Miter limit must be finite and at least one",
@@ -405,7 +407,10 @@ impl<'a> Sweep<'a> {
         let stations = self.tangents.len() * fine_steps + 1;
         let mut maximum = 0_f64;
         let mut previous = self.at(0, fine_steps)?;
+        // Unified guard as a backstop over the refinement-station budget.
+        let mut guard = Budget::with_iterations(stations + 1)?.guard("miter_preview");
         for i in 1..stations {
+            guard.tick()?;
             let fine = self.at(i, fine_steps)?;
             let j = (i / 4).min(sections.len() - 2);
             let f = (i - 4 * j) as f64 / 4.;
@@ -591,7 +596,11 @@ pub fn approximate(
 ) -> Result<Approximation> {
     let mut levels = Vec::new();
     let mut sections = None;
+    // Unified guard over the adaptive level progression (doubling toward
+    // `max_steps`); the iterator's own stop conditions stay authoritative.
+    let mut guard = Budget::with_iterations(64)?.guard("progressive_miter");
     for level in Sweep::new(profiles, points, scale, twist, options)? {
+        guard.tick()?;
         let level = level?;
         if level.report.accepted {
             sections = Some(level.sections);
@@ -602,5 +611,5 @@ pub fn approximate(
 }
 
 #[cfg(test)]
-#[path="tests/progressive_miter_tests.rs"]
+#[path = "tests/progressive_miter.rs"]
 mod tests;

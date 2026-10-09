@@ -264,9 +264,10 @@ fn validate_tessellation_intents(request: &Value, intents: &[Value]) -> Result<(
         let minimum = segments(&intent["minSegments"])?;
         let maximum = segments(&intent["maxSegments"])?;
         if let (Some(minimum), Some(maximum)) = (minimum, maximum)
-            && maximum < minimum {
-                return Err(invalid("maxSegments cannot be below minSegments"));
-            }
+            && maximum < minimum
+        {
+            return Err(invalid("maxSegments cannot be below minSegments"));
+        }
     }
     Ok(())
 }

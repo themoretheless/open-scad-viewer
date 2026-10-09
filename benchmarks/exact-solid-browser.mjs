@@ -53,7 +53,7 @@ try {
   const sources = [
     'cube([10,20,30], center=true);',
     'cube(2); translate([8,0,0]) cube(3);',
-    await readFile('examples/modelgraph-text/planetary-spinner.mg', 'utf8'),
+    await readFile('examples/rush-frontend/planetary-spinner.r', 'utf8'),
   ]
   const profiler = process.env.EXACT_SOLID_PROFILE === '1' ? await page.context().newCDPSession(page) : null
   if (profiler) { await profiler.send('Profiler.enable'); await profiler.send('Profiler.start') }

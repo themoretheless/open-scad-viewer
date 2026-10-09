@@ -1,5 +1,5 @@
 import {sha256Hex} from '../core/sha256'
-import {ownNurbsDisplayMesh} from '../services/modelGraphTextScene'
+import {ownNurbsDisplayMesh} from '../services/rushFrontendScene'
 import {tessellateNurbsPatches} from '../services/geometry/reconstruction'
 import {
   defaultGeometryBuildEngine,
@@ -215,6 +215,7 @@ async function runBuild(
         mesh.faceIdsAuthoritative=false
         const event=jobEvent(request,{status:'sweep-preview',phase:'compiling',nodeId,
           sections:preview.report.sections,accepted:preview.report.accepted,
+          ...(!('phaseResolved' in preview.report)?{...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{}),...(preview.report.knownProfileErrorUpper!=null?{knownProfileErrorUpper:preview.report.knownProfileErrorUpper}:{})}:{}),
           ...('phaseResolved' in preview.report?{phaseResolved:preview.report.phaseResolved,frameTransportCertified:preview.report.frameTransportCertified,certifiedErrorUpper:preview.report.certifiedErrorUpper,endpointContourErrorUpper:preview.report.endpointContourErrorUpper,profileRegularityCertified:preview.report.profileRegularityCertified,wallRegularityCertified:preview.report.wallRegularityCertified,continuousErrorUpper:preview.report.continuousErrorUpper}:{}),
           sampledControlDeviation:preview.report.sampledControlDeviation,budget:preview.report.budget,meshes:[mesh]})
         if(!isGeometryWorkerEvent(event))throw new Error('Sweep preview exceeds worker payload contract')

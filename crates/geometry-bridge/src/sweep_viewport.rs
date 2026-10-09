@@ -69,6 +69,11 @@ pub fn read(v: Value) -> Result<Value> {
     let Ok(document) = value_codec::from_str::<Value>(&text) else {
         return Ok(Value::Null);
     };
+    // Profile-body source error has its own scope and display contract. Its
+    // accompanying volume report is not a retained-miter boundary certificate.
+    if document["sweepBodyBoundaryEvidence"].is_object() {
+        return Ok(Value::Null);
+    }
     let e = &document["sweepEvidence"];
     if !e.is_object() || e["volume"]["solidGeometryCertified"].as_bool().is_none() {
         return Ok(Value::Null);

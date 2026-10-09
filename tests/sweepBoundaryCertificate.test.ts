@@ -82,10 +82,10 @@ it('bounds nonparallel filled caps in the moving-axis guide affine family and re
 
 it('carries the nonparallel cap budget and explicit chart work through Rush and JSON',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileModelGraphText}=await import('../src/services/modelGraphText')
- const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/modelGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r','utf8')
- const graph=compileModelGraphText(source).document
+ const graph=compileRushFrontend(source).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  expect(node).toMatchObject({retained_wall_max_injectivity_cells:10000})
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -97,12 +97,12 @@ it('carries the nonparallel cap budget and explicit chart work through Rush and 
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,payload.geometry)?.solidGeometryCertified).toBe(true)
  const broken=structuredClone(payload.geometry)
  broken.faces[0].surface.controlPoints[1][1][2]+=1e-12
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,broken)).toThrow(/exact boundary agreement/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,broken)).toThrow(/snapshot binding/)
  expect(payload.sweepEvidence.volume.solidGeometryCertified).toBe(true) // A stale positive flag cannot admit changed geometry.
- const tight=compileModelGraphText(source.replace('max_deviation: 0.6mm','max_deviation: 0.45mm')).document
+ const tight=compileRushFrontend(source.replace('max_deviation: 0.6mm','max_deviation: 0.45mm')).document
  expect(()=>buildOwnNurbs(tight,{action:'build'})).toThrow(/complete boundary error/)
  await expect(buildOwnNurbsAsync(tight,{action:'build'})).rejects.toThrow(/complete boundary error/)
- const exhausted=compileModelGraphText(source.replace('retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 0')).document
+ const exhausted=compileRushFrontend(source.replace('retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 0')).document
  expect(()=>buildOwnNurbs(exhausted,{action:'build'})).toThrow(/retained wall regularity unproved/)
- expect(()=>compileModelGraphText(source.replace('retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 10mm'))).toThrow()
+ expect(()=>compileRushFrontend(source.replace('retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 10mm'))).toThrow()
 })

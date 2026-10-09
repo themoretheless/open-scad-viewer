@@ -189,7 +189,11 @@ const FMT_F64: u32 = 1;
 /// Per-format element ceiling for a vertex buffer that must fit the general
 /// request allocator (`LIMIT` bytes).
 const fn vertex_limit(fmt: u32, bytes_limit: usize) -> usize {
-    if fmt == FMT_F64 { bytes_limit / 8 } else { bytes_limit / 4 }
+    if fmt == FMT_F64 {
+        bytes_limit / 8
+    } else {
+        bytes_limit / 4
+    }
 }
 
 /// Copy an uploaded vertex/matrix buffer into an owned f64 Vec. Legacy f32
@@ -290,27 +294,23 @@ pub unsafe fn abi_solid_placement(
             "Solid placement exceeds transport limit",
         ))));
     }
-    let (vertices, matrix) = match (
-        unsafe { read_vertices_f64(fmt, vp, vl) },
-        unsafe { read_vertices_f64(fmt, mp, ml) },
-    ) {
+    let (vertices, matrix) = match (unsafe { read_vertices_f64(fmt, vp, vl) }, unsafe {
+        read_vertices_f64(fmt, mp, ml)
+    }) {
         (Ok(v), Ok(m)) => (v, m),
         (Err(e), _) | (_, Err(e)) => return packed(geometry(Err(e))),
     };
-    let result = polygon_core::solid::placement::place(
-        &vertices,
-        &unsafe { read_u32(ip, il) },
-        &matrix,
-    )
-    .map(|result| {
-        result.map_or(0, |mesh| {
-            mesh_analysis::store(mesh_analysis::AnalysisBuffers::Placement {
-                positions: mesh.positions,
-                indices: mesh.indices,
+    let result =
+        polygon_core::solid::placement::place(&vertices, &unsafe { read_u32(ip, il) }, &matrix)
+            .map(|result| {
+                result.map_or(0, |mesh| {
+                    mesh_analysis::store(mesh_analysis::AnalysisBuffers::Placement {
+                        positions: mesh.positions,
+                        indices: mesh.indices,
+                    })
+                })
             })
-        })
-    })
-    .and_then(encode);
+            .and_then(encode);
     packed(geometry(result))
 }
 
@@ -329,19 +329,19 @@ pub unsafe fn abi_export_prepare(
     if fmt > FMT_F64 || vl > EXPORT_VERTEX_LIMIT || il > 2_250_000 || ml > 16 || float32 > 1 {
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
-    let (vertices, matrix) = match (
-        unsafe { read_vertices_f64(fmt, vp, vl) },
-        unsafe { read_vertices_f64(fmt, mp, ml) },
-    ) {
+    let (vertices, matrix) = match (unsafe { read_vertices_f64(fmt, vp, vl) }, unsafe {
+        read_vertices_f64(fmt, mp, ml)
+    }) {
         (Ok(v), Ok(m)) => (v, m),
         (Err(e), _) | (_, Err(e)) => return packed(geometry(Err(e))),
     };
-    let result = polygon_core::solid::export_prepare::prepare(
+    let result = mesh_io::export_prepare::prepare(
         &vertices,
         &unsafe { read_u32(ip, il) },
         &matrix,
         float32 == 1,
     )
+    .map_err(legacy_mesh_error)
     .map(|mesh| {
         mesh_analysis::store(mesh_analysis::AnalysisBuffers::Export {
             positions: mesh.positions,
@@ -376,23 +376,17 @@ pub unsafe fn abi_export_append(
         mesh_export_file::poison(handle);
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
-    let (vertices, matrix) = match (
-        unsafe { read_vertices_f64(fmt, vp, vl) },
-        unsafe { read_vertices_f64(fmt, mp, ml) },
-    ) {
+    let (vertices, matrix) = match (unsafe { read_vertices_f64(fmt, vp, vl) }, unsafe {
+        read_vertices_f64(fmt, mp, ml)
+    }) {
         (Ok(v), Ok(m)) => (v, m),
         (Err(e), _) | (_, Err(e)) => {
             mesh_export_file::poison(handle);
             return packed(geometry(Err(e)));
         }
     };
-    let result = mesh_export_file::append(
-        handle,
-        &vertices,
-        &unsafe { read_u32(ip, il) },
-        &matrix,
-    )
-    .map(|()| Value::Null);
+    let result = mesh_export_file::append(handle, &vertices, &unsafe { read_u32(ip, il) }, &matrix)
+        .map(|()| Value::Null);
     packed(geometry(result))
 }
 
@@ -440,7 +434,7 @@ pub unsafe fn abi_bvh_build(
     }
     let vertices = unsafe { read_f32(vp, vl) };
     let indices = unsafe { read_u32(ip, il) };
-    let bvh = polygon_core::solid::bvh::build_mesh_bvh(&vertices, &indices, stride, leaf);
+    let bvh = mesh_query::build_mesh_bvh(&vertices, &indices, stride, leaf);
     let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Bvh {
         bounds: bvh.bounds,
         nodes: bvh.nodes,
@@ -473,7 +467,7 @@ pub unsafe fn abi_semantic_edges(
     let indices = unsafe { read_u32(ip, il) };
     let merge_from = unsafe { read_u32(mfp, mfl) };
     let merge_to = unsafe { read_u32(mtp, mtl) };
-    let edges = polygon_core::solid::edges::extract_semantic_edges(
+    let edges = mesh_topology::edges::extract_semantic_edges(
         &vertices,
         &indices,
         &merge_from,
@@ -575,4 +569,114 @@ pub unsafe fn abi_array_field(handle: usize, slot: u32) -> usize {
 /// The handle must reference a live array result; it is consumed by this call.
 pub unsafe fn abi_array_free(handle: usize) {
     mesh_analysis::free(handle)
+}
+
+mod manifold;
+pub use manifold::{abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean};
+
+
+#[cfg(test)]
+#[path = "tests/abi.rs"]
+mod tests;
+
+/// Decode bounded mesh bytes without expanding each byte through the value codec.
+/// # Safety
+/// `ptr..ptr+len` must be a live allocation owned by this kernel.
+pub unsafe fn abi_mesh_decode(format: u32, ptr: usize, len: usize) -> u64 {
+    if len > 20_000_000 {
+        return packed(geometry(Err(input("Mesh input exceeds byte budget"))));
+    }
+    let bytes = if len == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
+    };
+    let result = (|| {
+        use mesh_io::import;
+        let mesh = match format {
+            0 => import::obj(bytes)?,
+            1 => import::ply(bytes)?,
+            2 => import::stl(bytes)?,
+            3 => import::off(bytes)?,
+            4 => {
+                let positions = import::binary_stl(bytes)?
+                    .into_iter()
+                    .map(f64::from)
+                    .collect::<Vec<_>>();
+                let indices = (0..positions.len() / 3).collect();
+                import::RawMesh { positions, indices }
+            }
+            _ => return Err(input("Unknown mesh decoder format")),
+        };
+        let indices = mesh
+            .indices
+            .into_iter()
+            .map(|i| u32::try_from(i).map_err(|_| input("Import index exceeds u32")))
+            .collect::<Result<Vec<_>>>()?;
+        encode(mesh_analysis::store(
+            mesh_analysis::AnalysisBuffers::Placement {
+                positions: mesh.positions,
+                indices,
+            },
+        ))
+    })();
+    packed(geometry(result))
+}
+/// Prepare display triangle soup into retained typed result buffers.
+/// # Safety
+/// `ptr` references `len` live f32 components owned by this kernel.
+pub unsafe fn abi_mesh_soup_render(ptr: usize, len: usize) -> u64 {
+    if len > 250_000 * 9 {
+        return packed(geometry(Err(input("Triangle soup exceeds budget"))));
+    }
+    let positions = unsafe { read_f32(ptr, len) };
+    let result = (|| {
+        let soup = mesh_topology::soup::render(&positions)?;
+        let discarded = soup.discarded;
+        let handle = mesh_analysis::store(mesh_analysis::AnalysisBuffers::Render(
+            crate::mesh::RenderMesh {
+                vertices: soup.vertices,
+                indices: soup.indices,
+                merge_from: Vec::new(),
+                merge_to: Vec::new(),
+                face_ids: soup.face_ids,
+            },
+        ));
+        encode(json!({"handle":handle,"discarded":discarded}))
+    })();
+    packed(geometry(result))
+}
+
+/// Build an owned transparency tree from packed f64 triangle attributes.
+/// # Safety
+/// vp/vl must reference a live caller-owned f64 buffer, read only.
+pub unsafe fn abi_transparent_bsp(
+    width: usize,
+    vp: usize,
+    vl: usize,
+    limit: usize,
+    operations: usize,
+    tolerance: f64,
+) -> u64 {
+    if vl > LIMIT / 8
+        || width > LIMIT / 24
+        || limit > u32::MAX as usize
+        || operations > u32::MAX as usize
+    {
+        return packed(geometry(Err(input(
+            "Transparency input exceeds transport limit",
+        ))));
+    }
+    let result = crate::transparent_bsp::buffers(
+        width,
+        unsafe { read_pod::<f64>(vp, vl) },
+        geometry_ops::transparency::Limits {
+            fragments: limit,
+            operations,
+            tolerance,
+        },
+    )
+    .map(|v| mesh_analysis::store(mesh_analysis::AnalysisBuffers::Transparency(v)))
+    .and_then(encode);
+    packed(geometry(result))
 }

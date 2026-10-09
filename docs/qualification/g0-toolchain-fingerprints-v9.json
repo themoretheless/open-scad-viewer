@@ -215,5 +215,5 @@
       "note": "Current bytes are newly bound in v9; v8 remains archived. Bind the qualified bounded multi-span NURBS finite cell, rebuilt own-Rust WASM, and strict V5 release contracts while preserving every prior freeze."
     }
   ],
-  "previousFingerprintSha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62"
+  "previousFingerprintSha256": "0218cbadd2406103c7844f44eaff6d112a778dcd7d966eebd72682b6318e4cf6"
 }

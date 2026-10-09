@@ -7,4 +7,4 @@ publish.workspace = true
 [lib]
 crate-type = ["cdylib"]
 [dependencies]
-photogrammetry-ffi = { path = "../photogrammetry-ffi" }
+photogrammetry-ffi = { workspace = true }

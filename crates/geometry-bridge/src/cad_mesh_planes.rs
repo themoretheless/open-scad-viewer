@@ -208,7 +208,8 @@ pub fn planar(v: Value) -> Result<Value> {
             if open.len() >= planes.len() || open.iter().any(|&i| i >= planes.len()) {
                 return Err(input("Keep at least one closed face."));
             }
-            let (min, max) = polygon_core::scene_flatten::bounds(std::slice::from_ref(&mesh.positions))?;
+            let (min, max) =
+                polygon_core::scene_flatten::bounds(std::slice::from_ref(&mesh.positions))?;
             let span = (0..3).map(|k| max[k] - min[k]).fold(0., f64::max) * 3. + amount;
             if !span.is_finite() {
                 return Err(input("Shell extent exceeds finite numeric range."));

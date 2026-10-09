@@ -4,6 +4,11 @@
 //! treat it as an imprint authority. Failure is a typed refusal, never a silent
 //! downgrade to NumericallyResolved.
 
+#[cfg(feature = "codec")]
+mod serialization;
+#[cfg(feature = "codec")]
+pub use serialization::verify_general_ss_report_coverage;
+
 use crate::intersections::{Coverage, Report, UnresolvedReason};
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result};
@@ -244,14 +249,21 @@ pub fn verify_incomplete_refusal<T>(report: &Report<T>) -> Result<CoverageAudit>
     })
 }
 
-/// Verify a nurbs-ss/1 Value report: empty unresolved when Complete, ToleranceContext
-/// bind, missed-branch proof, and Boolean mutation authority stays false.
-pub fn verify_general_ss_report_coverage(report: &value_codec::Value) -> Result<CoverageAudit> {
-    let audit = nurbs_core::ss_intersection::verify_ss_coverage(report)?;
+/// Audit a typed NURBS report under the independently supplied tolerance context.
+pub fn verify_general_ss_native_coverage(
+    report: &nurbs_core::ss_intersection::SurfaceSurfaceIntersection,
+    context: &ToleranceContext,
+) -> Result<CoverageAudit> {
+    // Native coverage and mutation authority are represented by the report's
+    // type, rather than independently editable JSON flags. Bind its context
+    // without allocating or copying every branch and UV sample.
+    if report.tolerance.spec_identity() != context.spec_identity() {
+        return Err(refuse("General SS coverage ToleranceContext mismatch"));
+    }
     Ok(CoverageAudit {
-        complete: audit["complete"].as_bool().unwrap_or(false),
-        component_count: audit["componentCount"].as_u64().unwrap_or(0) as usize,
-        unresolved_count: audit["unresolvedCount"].as_u64().unwrap_or(0) as usize,
+        complete: report.complete(),
+        component_count: report.components.len(),
+        unresolved_count: report.unresolved.len(),
         notes: vec![
             "general_ss_coverage_verified",
             "no_graph_patch_iso_fixture",
@@ -350,5 +362,39 @@ mod tests {
         assert!(ok.complete);
         assert!(ok.notes.contains(&"uv_holes_present"));
         assert!(verify_uv_arrangement_coverage(true, 0, 1, 0, true).is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "codec")]
+    fn native_general_coverage_matches_wire_and_retains_unresolved_count() {
+        use nurbs_core::ss_intersection::{
+            UnresolvedSurfaceIntersection, intersect_surface_surface_report,
+        };
+        let context = ToleranceContext::default_valid();
+        let first = plane_surface(0.);
+        for second in [plane_surface(0.), plane_surface(3.)] {
+            let mut report = intersect_surface_surface_report(&first, &second, None).unwrap();
+            for unresolved in [false, true] {
+                if unresolved {
+                    for _ in 0..3 {
+                        report.unresolved.push(UnresolvedSurfaceIntersection {
+                            parameter_box: None,
+                            reason: nurbs_core::intersection::UnresolvedReason::ResourceBoundary,
+                            classification: None,
+                        });
+                    }
+                }
+                let native = verify_general_ss_native_coverage(&report, &context).unwrap();
+                let wire =
+                    verify_general_ss_report_coverage(&value_codec::to_value(&report).unwrap())
+                        .unwrap();
+                assert_eq!(native, wire);
+                assert_eq!(native.unresolved_count, if unresolved { 3 } else { 0 });
+            }
+            let mut spec = context.specification().clone();
+            spec.policy.push_str("-other");
+            let other = ToleranceContext::new(spec).unwrap();
+            assert!(verify_general_ss_native_coverage(&report, &other).is_err());
+        }
     }
 }

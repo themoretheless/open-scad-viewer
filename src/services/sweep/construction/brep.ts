@@ -28,7 +28,7 @@ export interface SmoothStationWallCandidate {
 /** Bounded candidate only: no regularity, embedding or Solid certificate. */
 export const proposeSmoothStationWalls=(sections:NurbsCurve[][][],sharp:number[],closed:boolean,quantum:number,tolerance:number,maxWork:number):SmoothStationWallCandidate=>callGeometryRust('brep_nurbs_smooth_station_walls',{sections,sharp,closed,quantum,tolerance,maxWork})
 
-export interface ProgressiveMiterBrepBody {profileSmoothness:MiterProfileSmoothness;boundaryCertificate:SweepBoundaryCertificate;retainedCapDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedCapDecomposition|null;retainedDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedDecomposition|null;capParallelism:import('../../nurbsConstructors').ProgressiveMiterCapParallelism|null;boundaryErrorWithinBudget:boolean|null;boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null;idealCapDomains:import('../../nurbsConstructors').ProgressiveMiterIdealCapDomains|null;capProjection:import('../../nurbsConstructors').ProgressiveMiterCapProjection|null;retainedWallErrorUpper:number|null;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;model:NurbsBrep;approximation:ProgressiveMiterResult;wallAudit:import('../certificates/nurbsSweepAudit').SweepWallAudit;retainedCorrespondence:SweepRetainedCorrespondence;retainedCaps:SweepRetainedCaps|null;retainedWallCharts:SweepRetainedChartEvidence;capDomains:[SweepContourAudit,SweepContourAudit]|null;capContacts:SweepCapContactEvidence[]|null;capPairs:SweepCapPairEvidence|null;embedding:SweepEmbeddingAudit|null;volume:SweepVolumeAudit;globalEmbeddingCertified:false}
+export interface ProgressiveMiterBrepBody {sweepMiterReplay?:unknown;profileSmoothness:MiterProfileSmoothness;boundaryCertificate:SweepBoundaryCertificate;retainedCapDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedCapDecomposition|null;retainedDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedDecomposition|null;capParallelism:import('../../nurbsConstructors').ProgressiveMiterCapParallelism|null;boundaryErrorWithinBudget:boolean|null;boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null;idealCapDomains:import('../../nurbsConstructors').ProgressiveMiterIdealCapDomains|null;capProjection:import('../../nurbsConstructors').ProgressiveMiterCapProjection|null;retainedWallErrorUpper:number|null;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;model:NurbsBrep;approximation:ProgressiveMiterResult;wallAudit:import('../certificates/nurbsSweepAudit').SweepWallAudit;retainedCorrespondence:SweepRetainedCorrespondence;retainedCaps:SweepRetainedCaps|null;retainedWallCharts:SweepRetainedChartEvidence;capDomains:[SweepContourAudit,SweepContourAudit]|null;capContacts:SweepCapContactEvidence[]|null;capPairs:SweepCapPairEvidence|null;embedding:SweepEmbeddingAudit|null;volume:SweepVolumeAudit;globalEmbeddingCertified:false}
 // Bind source certificates to the exact constructor-owned geometry. Mutation,
 // JSON copies or caller-authored evidence cannot transfer an old boundary bound.
 export interface CertifiedMiterBoundaryOwner {model:NurbsBrep;boundaryCertificate:SweepBoundaryCertificate}
@@ -50,7 +50,18 @@ export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterP
 export const createMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):MiterBrepBody=>callBodyRust('brep_miter_body',{loops,points,normal,miterLimit,closed,capCorrection})
 export const createRationalBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep=>callGeometryRust('brep_nurbs_rational_section_loft',{sections})
 
-export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;volume:import('../certificates/nurbsSweepEmbedding').SweepVolumeAudit;globalEmbeddingCertified:false}
+export interface ProgressiveBrepBody {volume:SweepVolumeAudit;model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
+ bodyDecompositionErrorUpper?:number|null;bodyDecompositionProducts?:number
+ capProjection?:{idealCapDomainsCertified:boolean;normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null;
+  cells:number;exactWork:number;reason:string|null;scope:'constructor-owned-endpoint-plane-projection'}|null
+ capCorrectionErrorUpper?:number|null
+ filledCapErrorUpper?:[number,number]|null;boundaryContinuousBound?:boolean;boundaryErrorUpper?:number|null
+ boundaryErrorWithinBudget?:boolean|null
+ boundaryErrorScope?:'constructor-owned-retained-wall-and-cap-union'
+ retainedWalls?:{certified:boolean;faceCoverageCertified:boolean;coefficientFamilyCertified:boolean;inspectedFaces:number;exactWork:number;reason:string}
+ retainedCaps?:{exact:boolean;capErrorUpper:0|null;exactWork:number;inspectedEdges:number;reason:string;
+  scope:'constructor-owned-retained-endpoint-regions';continuousBound:false;globalEmbeddingCertified:false}|null}
+export type ProgressiveBodyBoundaryEvidence=Omit<ProgressiveBrepBody,'model'|'approximation'> & {budget:number;closedPath:boolean}
 /** Open-path caps or closed-path periodic shells, constrained by the shared B-rep face budget. Twist values are degrees. */
 export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveBrepBody=>callBodyRust('brep_progressive_profile_body',{loops,path,scale,twist,options})
 
@@ -115,6 +126,7 @@ async function* nativeBodyStream<P,B>(request:Record<string,unknown>,control:imp
  }finally{callGeometryRust('brep_sweep_stream_release',{stream})}
 }
 export interface NativeTransformedMiterBody extends CertifiedMiterBoundaryOwner {
+ sweepMiterReplay?:unknown
  placement:ExactAffineLatticePlacement;profileSmoothness:MiterProfileSmoothness;retainedWallCharts:SweepRetainedChartEvidence;volume:SweepVolumeAudit
  continuousBound:boolean;boundaryErrorUpper:number|null;boundaryErrorWithinBudget:boolean|null;budget:number;filledCapErrorUpper:[number,number]|null;retainedWallErrorUpper:number|null
  wallRegularityCertified:boolean;profileRegularityCertified:boolean;globalEmbeddingCertified:false

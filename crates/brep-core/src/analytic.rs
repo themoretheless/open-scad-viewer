@@ -2,6 +2,9 @@
 //! and preserve ordinary manifold incidence without collapsed pole edges.
 use super::*;
 mod loft;
+mod rational_loft;
+pub use rational_loft::{ProgressiveBodyEvidence,EndpointCapCorrection,progressive_profile_body_with_evidence,progressive_profile_body_with_evidence_and_correction,progressive_profile_body_with_rmf_policy};
+pub use rational_loft::{periodic_section_loft, progressive_guided_profile_body, progressive_authored_profile_body, progressive_affine_profile_body, rational_section_loft, natural_section_loft, capped_loft_surfaces, section_loft_surfaces, SmoothStationWalls, smooth_station_walls, progressive_profile_body};
 pub(crate) use loft::piecewise_ruled_loft;
 pub use loft::ruled_loft;
 
@@ -860,10 +863,7 @@ pub fn revolve_angle(profile: &[[f64; 2]], angle_degrees: f64) -> Result<Model> 
 #[path="tests/analytic_tests.rs"]
 mod tests;
 
-mod rational_loft;
 mod rational_loft_legacy;
 pub use rational_loft_legacy::{capped_loft_with_caps, capped_loft_with_caps_checked, LoftCap};
-pub use rational_loft::{SmoothStationWalls, smooth_station_walls, section_loft_surfaces};
-pub use rational_loft::{rational_section_loft, natural_section_loft, capped_loft_surfaces, periodic_section_loft};
 
 pub use rational_loft::section_loft_source_matches;

@@ -1,0 +1,1077 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-09T00:36:05.395Z",
+  "scope": "Finite retained-miter UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Native probes pause actual geometry abi_request activations and verify Worker destruction; they do not measure unconstrained cancellation latency.",
+  "nativeCancelProbe": true,
+  "nativeRunningCancelProbe": false,
+  "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+  "artifactProvenance": {
+    "sha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+    "byteLength": 11820185,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-C2gv4B9o.js"
+    ]
+  },
+  "appSourceSha256": "de0d9387f1d2190d3b1310517e028ad242b82a65640342a09cf428295fbc2852",
+  "distIndexSha256": "629e3ee71f83bc4abfd9b13ef7bee2f32c0cab7d8f6733b18ae0d5e52bde11bf",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-guide-affine-hollow-corrected.r",
+      "sourceSha256": "19eaa0cd14573f5afc25951cfe5d4b0d9afcf21489e39766ddd4b3ad1139e364",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "73bd8881a27cf0ec2d29df91bce475e000d0ffe001faef02705e86f17471964c",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func4453",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 3102837
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 154530
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Xe",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 6593
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 14423
+                },
+                "url": ""
+              },
+              {
+                "functionName": "c",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 12188
+                },
+                "url": ""
+              },
+              {
+                "functionName": "",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 28049
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 28040
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 40526
+                },
+                "url": ""
+              },
+              {
+                "functionName": "ei",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 42615
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$r",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 11431
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Li",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 61570
+                },
+                "url": ""
+              },
+              {
+                "functionName": "n",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 7,
+                  "columnNumber": 235820
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 20,
+          "workerDestroyedAfterMs": 58,
+          "scope": "Actual geometry abi_request paused by Debugger; Worker destruction, not unconstrained latency"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func7483",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7171853
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5887",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5238366
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5836",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5101065
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5728",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 4684413
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 154586
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "wr",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 6208
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 21,
+          "workerDestroyedAfterMs": 35,
+          "scope": "Actual geometry abi_request paused by Debugger; terminated Worker cannot publish stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func36",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 48442
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func95",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 139296
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func19",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 37688
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func10158",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 10352496
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func460",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 232342
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func1982",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 755906
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7494",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7226447
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7497",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7238213
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7483",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7208043
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5887",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5238366
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5836",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5101065
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5728",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 4684413
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 154586
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "wr",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 6208
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 18,
+          "scope": "Actual geometry abi_request paused by Debugger; terminated Worker cannot publish stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (8) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "b78f1d3090c84e49cceaa34eb5cfeec61361edb816f90381b4c2cc8ff86b59f9",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-combined-frame-guide-affine-hollow-corrected.r",
+      "sourceSha256": "19eaa0cd14573f5afc25951cfe5d4b0d9afcf21489e39766ddd4b3ad1139e364",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "73bd8881a27cf0ec2d29df91bce475e000d0ffe001faef02705e86f17471964c",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func4309",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 2939609
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func4308",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 2819414
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 154530
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "11",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Xe",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 6593
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 14423
+                },
+                "url": ""
+              },
+              {
+                "functionName": "c",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 12188
+                },
+                "url": ""
+              },
+              {
+                "functionName": "",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 28049
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 28040
+                },
+                "url": ""
+              },
+              {
+                "functionName": "y",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 40526
+                },
+                "url": ""
+              },
+              {
+                "functionName": "ei",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 42615
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$r",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 11431
+                },
+                "url": ""
+              },
+              {
+                "functionName": "Li",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 61570
+                },
+                "url": ""
+              },
+              {
+                "functionName": "n",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 7,
+                  "columnNumber": 235820
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 20,
+          "workerDestroyedAfterMs": 59,
+          "scope": "Actual geometry abi_request paused by Debugger; Worker destruction, not unconstrained latency"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func1750",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 690014
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7054",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 6823202
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7483",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7188222
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5887",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5238366
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5836",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5101065
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5728",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 4684413
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 154586
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "wr",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 6208
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 20,
+          "workerDestroyedAfterMs": 32,
+          "scope": "Actual geometry abi_request paused by Debugger; terminated Worker cannot publish stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "nativeStack": {
+            "geometryWasmSha256": "d883bb6d89f0d2b69818b01d22560cf189d3492c6f4c0baf585d7016ac8c16f8",
+            "abiRequestFunctionIndex": 106,
+            "wasmScriptUrl": "wasm://wasm/02d17266",
+            "suspension": "Debugger paused an executing geometry abi_request",
+            "frames": [
+              {
+                "functionName": "$func929",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 313736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7072",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 6845373
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7061",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 6837870
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7053",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 6820207
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func7483",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 7187826
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5887",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5238366
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5836",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 5101065
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func5728",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 4684413
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$func114",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 154586
+                },
+                "url": ""
+              },
+              {
+                "functionName": "$abi_request",
+                "location": {
+                  "scriptId": "14",
+                  "lineNumber": 0,
+                  "columnNumber": 147761
+                },
+                "url": ""
+              },
+              {
+                "functionName": "D",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1458
+                },
+                "url": ""
+              },
+              {
+                "functionName": "k",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 0,
+                  "columnNumber": 1736
+                },
+                "url": ""
+              },
+              {
+                "functionName": "wr",
+                "location": {
+                  "scriptId": "3",
+                  "lineNumber": 2,
+                  "columnNumber": 6208
+                },
+                "url": ""
+              }
+            ]
+          },
+          "observationToCancelInitiationMs": null,
+          "terminateCalledAfterMs": 4,
+          "workerDestroyedAfterMs": 18,
+          "scope": "Actual geometry abi_request paused by Debugger; terminated Worker cannot publish stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (8) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.250000 mm  / 0.300000 mm  · в допуске"
+      ],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 10,
+        "shells": 1,
+        "geometrySha256": "b78f1d3090c84e49cceaa34eb5cfeec61361edb816f90381b4c2cc8ff86b59f9",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "selection": {
+    "startAt": null,
+    "fullInventory": [
+      "1440:miter-combined-frame-guide-affine-hollow-corrected.r",
+      "600:miter-combined-frame-guide-affine-hollow-corrected.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:miter-combined-frame-guide-affine-hollow-corrected.r",
+      "600:miter-combined-frame-guide-affine-hollow-corrected.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "de0d9387f1d2190d3b1310517e028ad242b82a65640342a09cf428295fbc2852",
+    "src/services/sweepRetainedCorrespondence.ts": "a31669d53ed842fabd1cd64cdc421cb0bdf9eaf5805310f3022ee83442b1da79",
+    "src/services/geometry/brep.ts": "fe9d9c8a86b81dffb2ef186f343aede1bd1cdfe562d7c15652ae16e3f7fd966c",
+    "src/services/nurbsMiterOwnedBoundary.ts": "c323be51de8360daf985ddf0a041d0337cde31d5113b3f29f86cd429c5f0c477",
+    "crates/brep-core/src/sweep_miter_owned.rs": "058ac192e2eeec66dcf99b78916299905c3d745dfcc380204747aed1eca3837f",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "d31bb3ecc9da4fbb9a4369ea772293627aa198038d313d44047763c0c887c481",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "84e0f2e5b1ff1f25cb3bd8593ac0d10b526bad35cf17ec0942ef9b31a9c98e67",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "70357bb77e6fc7982f3052075c72117921bcd60b17941d114792c1e316698520",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "9516c463ece2f5d7fd692b0ed094926e6b6a4d4f821dbd96ee23a38bc76b5505",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "7c89bbbfd2f3da7a775a2ac48787b16be12dfa9fef87682ae32dc0d794c496e6",
+    "src/services/nurbsSectionProjection.ts": "778044c67856b01fbca992bc6e62c770c98e4f2e7b2a1c231449332f24b7db4c",
+    "src/services/nurbsCircleSectionRepair.ts": "0d6d4e74407971fdf9ec518fa59f1f9bc76db54b320f18c43b8d349d32616e15",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "925435546a8239471a97b6cc7825e68ff3317d417051780659f65e975736fb76",
+    "src/features/DirectModeler.vue": "51e219fb624a66f579b4d8318d4067a8c4b6169fb95a9bfd27008d0394a6cc0e",
+    "src/generated/geometry-kernels/bytes.ts": "c2ab62263c2d1d554915d9887fa5f4b8bc9186b4e7db0cc064fc532c5c90b481",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "838d938dbd33de1af763d1c9a75e52724f07fe25e06980ffd2987b30bc43fe84",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

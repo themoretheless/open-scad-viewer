@@ -1,0 +1,28 @@
+---
+name: rush
+description: Build and revise parameterized 3D models using the RushGraph MCP language, validate real geometry and export through the connected OpenSCAD tools.
+---
+
+Call rush_language before authoring documents, or read the equivalent MCP resource openscad://language/rush-1. It contains the current JSON Schema, functional language guide, units and examples. If resource reading is unavailable, read references/rush-1-prompt.md and the accompanying schema in this skill.
+
+Use RushGraph JSON as the source of truth. Prefer strict units, named parameters and pure reusable functions. Run rush_compile, then rush_check. Fix structured errors and inspect actual geometry measurements. Use rush_set_parameters with the returned document hash for parameter edits. Keep the returned document in the user's project when they ask to save work.
+
+When available, use rush_export with the document for STL, stl_binary, 3MF, OBJ, PLY, OFF or AMF. Otherwise use the generated source with openscad_export. Inspect available tool schemas before calling them; read the returned artifact resource. This integration uses an ephemeral catalog per process: save desired documents and export artifacts before the session ends. Do not promise persistence in the MCP catalog.
+
+Report separately: schema validation, declared constraints, actual geometry checks and printability checks. Declared wall thickness constraints do not measure mesh wall thickness. Call rush_report for front/top/isometric images and operation provenance; inspect images_status because bounded previews can be unavailable. Never claim to have visually inspected an image or tested a print unless that actually happened. Unsupported operations should be reported explicitly, not fabricated.
+
+For assemblies, use named anchors and optional limited revolute/slider joints. Read the language resource for nested assembly semantics. Call rush_interference to check current-pose volume overlap (up to 32 leaf components); unknown does not mean clear. This does not check contact or swept motion.
+
+For NURBS, read rush_nurbs_language or openscad://language/rush-nurbs-1 and use explicit rush/nurbs-1 documents. This is our own TypeScript spline and tessellation kernel. Call compile/evaluate/build/export tools with the rush_nurbs_ prefix. JSON retains native rational definitions; STL/3MF/AMF require a derived closed mesh; OBJ/PLY/OFF can represent open meshes. Do not claim STEP, general B-rep booleans or certified printability.
+
+Use rush_modify for measured XYZ resizing or splitting a solid into two independent documents at an axis-aligned plane. Save both split results if requested. These generated transforms/cutters depend on current parameter values: rerun the tool after parameter edits. New profile operations include offset, projection and section; extrude their output before export. Read the schema for affine, mirror, hull, advanced_extrude, cone, torus and linear/circular patterns.
+
+For gears and threads, read openscad://language/rush-mechanical or the mechanical_examples in the main language resource. Call rush_generate with kind gear, planetary_gears or thread and numeric options. Read mechanical_reports for actual design parameters and limits; keep the returned document for parameter edits. Planetary mechanical_parts contains local documents for separate printing plus assembly poses. The planetary generator produces only sun, ring and planets, without a physical carrier or shafts. Threads are faceted 60-degree basic profiles without tolerance classes. Use matching pitch/starts/handedness for pairs and select clearance for the intended printer.
+
+3MF retains separate scene meshes and world placement, with lossless compression. Boolean-unioned inputs do not retain their original part identities. MCP does not control browser drafts, camera or scanning-plane UI; do not claim browser changes.
+
+For compact human-authored code, read rush_language.text_guide and call rush_frontend_compile. The source begins with // @rush/1. It supports arithmetic, unit literals, unary lexical functions, repeat patterns, pipelines and ranged parameters. Pass the returned canonical document to rush_check/report/export. Do not send compact text to official OpenSCAD tools.
+
+Fluent checks are supported in compact source: validate gap |> between(0mm, 0.6mm) |> message("Choose a gap in range"); assert body |> isWatertight(); assert measure(body).height |> approximately(height, tolerance: 0.01mm). Read text_guide for all checks and bounds. Scalar violations are collected in error.details; geometry_assertions survive canonical compilation and must be evaluated with rush_check/report. Inspect every checks entry: unknown is not passed. Geometry checks currently target the final root only. hasBodies counts connected triangle components per scene mesh using exact position welding; watertightness checks topology, not printability or self-intersection. Failed or unknown assertions prevent export.
+
+Ranges and comprehensions: angles = 0deg..<360deg count 18; parts = [for angle in angles => body.translate(x: orbit).rotate(z: angle)]. Use .. for inclusive ends, ..< for exclusive ends, by for step or count for exact quantity; never combine by/count. Dimensioned ranges require one of them. Nested for, where, let, zip (equal lengths) and enumerate are supported. show parts preserves separate parts; union(parts) explicitly merges them. Refer to text_guide and schema for limits; generated positional references do not provide stable key identities. Parameter-dependent ranges remain expressions in canonical JSON.

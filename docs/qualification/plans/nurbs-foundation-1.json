@@ -40,7 +40,7 @@
       "analytic degree-one projection uniqueness and conservative global candidates",
       "piecewise-linear interpolation and conservative Hausdorff approximation",
       "zero-error insertion/elevation wrappers and exact affine monotone reparameterization",
-      "ToleranceContext identity/evidence through Rust, WASM, TypeScript and ModelGraph reports"
+      "ToleranceContext identity/evidence through Rust, WASM, TypeScript and RushGraph reports"
     ],
     "excluded": [
       "general interval stationary-root isolation",
@@ -67,7 +67,7 @@
     ],
     "typescript": [
       "src/services/nurbsFoundation.ts",
-      "src/services/modelGraphNurbsKernel.ts",
+      "src/services/rushGraphNurbsKernel.ts",
       "tests/nurbsFoundation.test.ts"
     ],
     "registry": "src/services/geometry/brepCapability.ts",

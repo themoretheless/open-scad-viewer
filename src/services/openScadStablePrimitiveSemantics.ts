@@ -1,3 +1,4 @@
+import { languageRequest } from './languages/kernel'
 /**
  * Kernel-neutral parameter plans for the OpenSCAD 2021.01 primitives.
  *
@@ -97,6 +98,9 @@ export interface OpenScadCylinderPrimitivePlan extends OpenScadPrimitivePlanBase
 
 export interface OpenScadPolyhedronPrimitivePlan extends OpenScadPrimitivePlanBase {
   readonly kind: 'polyhedron'
+  readonly vertices: readonly number[]
+  readonly indices: readonly number[]
+  readonly usable: boolean
   /** Coordinate polygons in authored face order, after index conversion/skips. */
   readonly polygons: readonly (readonly OpenScadVec3[])[]
   readonly facesSource: 'faces' | 'triangles' | 'default'
@@ -149,18 +153,6 @@ export interface OpenScadPolygonPrimitiveInput {
   readonly limits?: OpenScadPrimitiveSafetyLimits
 }
 
-function authoredNumber(value: unknown): value is number {
-  // OpenSCAD's numeric type includes NaN and infinities. Geometry creation,
-  // rather than argument conversion, decides whether they make an empty node.
-  return typeof value === 'number'
-}
-
-function exactNumericVector(value: unknown, length: number): value is number[] {
-  return Array.isArray(value)
-    && value.length === length
-    && value.every(authoredNumber)
-}
-
 function freeze2(x: number, y: number): OpenScadVec2 {
   return Object.freeze([x, y])
 }
@@ -196,32 +188,18 @@ function boxPlan(
   input: OpenScadBoxPrimitiveInput,
   context: OpenScadStablePrimitiveContext,
 ): OpenScadBoxPrimitivePlan {
-  let values: readonly number[] = axes === 3 ? [1, 1, 1] : [1, 1]
-  let sizeSource: OpenScadBoxPrimitivePlan['sizeSource'] = 'default'
-  if (authoredNumber(input.size)) {
-    values = axes === 3
-      ? [input.size, input.size, input.size]
-      : [input.size, input.size]
-    sizeSource = 'scalar'
-  } else if (exactNumericVector(input.size, axes)) {
-    values = [...input.size]
-    sizeSource = 'vector'
-  } else if (input.size !== undefined) {
-    // cube's three-coordinate conversion writes directly into its initialized
-    // dimensions. A later non-number therefore leaves an observable numeric
-    // prefix in place even though conversion as a whole reports failure.
-    if (kind === 'cube' && Array.isArray(input.size) && input.size.length === 3) {
-      const partial = [1, 1, 1]
-      let prefix = 0
-      while (prefix < 3 && authoredNumber(input.size[prefix])) {
-        partial[prefix] = input.size[prefix]
-        prefix++
-      }
-      if (prefix > 0) {
-        values = partial
-        sizeSource = 'partial-vector'
-      }
-    }
+  const encodeNumber = (value: number): number | string => Number.isFinite(value) ? value : String(value)
+  const size = typeof input.size === 'number' ? encodeNumber(input.size)
+    : Array.isArray(input.size) && input.size.length <= 3
+      ? input.size.map(value => typeof value === 'number' ? encodeNumber(value) : null)
+      : null
+  const response = languageRequest(17, {kind, size, missing: input.size === undefined, center: input.center === true}) as {
+    ok: boolean; value: {dimensions: (number | string)[]; sizeSource: OpenScadBoxPrimitivePlan['sizeSource']; empty: boolean; defaulted: boolean}; error?: {message: string}
+  }
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native box normalization failed')
+  const values = response.value.dimensions.map(value => typeof value === 'number' ? value : Number(value))
+  const sizeSource = response.value.sizeSource
+  if (response.value.defaulted) {
     warn(context, {
       code: 'OPENSCAD_PRIMITIVE_SIZE_DEFAULTED',
       message: `${kind} size was not a scalar or exact ${axes}-component numeric vector; unit size is used`,
@@ -231,7 +209,7 @@ function boxPlan(
     })
   }
 
-  const empty = values.some(value => !(value > 0) || !Number.isFinite(value))
+  const empty = response.value.empty
   if (empty) rangeEmpty(kind, input.size, context)
   return Object.freeze({
     kind,
@@ -260,33 +238,39 @@ export function resolveOpenScadSquare(
   return boxPlan('square', 2, input, context)
 }
 
-interface RadiusPair {
-  readonly value: number
-  readonly source: 'default' | 'radius' | 'diameter'
-  readonly supplied: boolean
+function nativeRadialPlan(
+  kind: 'sphere' | 'circle' | 'cylinder',
+  input: OpenScadCylinderPrimitiveInput,
+): Record<string, unknown> & {shadowed: boolean[]; empty: boolean; ambiguous?: boolean} {
+  const request: Record<string, unknown> = {kind}
+  for (const field of ['r','d','r1','d1','r2','d2','h'] as const) {
+    const value = input[field]
+    request[field] = typeof value === 'number' ? Number.isFinite(value) ? value : String(value) : null
+  }
+  const response = languageRequest(18,request) as {ok:boolean;value:Record<string,unknown> & {shadowed:boolean[];empty:boolean;ambiguous?:boolean};error?:{message:string}}
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native radial normalization failed')
+  for (const field of ['radius','radius1','radius2','height','fragmentRadius']) {
+    const value = response.value[field]
+    if (typeof value === 'string') response.value[field] = Number(value)
+  }
+  return response.value
 }
 
-function radiusPair(
-  primitive: 'sphere' | 'circle' | 'cylinder',
-  radiusField: string,
-  diameterField: string,
-  radius: unknown,
-  diameter: unknown,
+function radiusWarnings(
+  kind: 'sphere' | 'circle' | 'cylinder',
+  input: OpenScadCylinderPrimitiveInput,
+  shadowed: readonly boolean[],
   context: OpenScadStablePrimitiveContext,
-): RadiusPair {
-  const radiusIsNumber = authoredNumber(radius)
-  if (authoredNumber(diameter)) {
-    if (radiusIsNumber) warn(context, {
+): void {
+  const fields = ['r','r1','r2'] as const
+  const diameters = ['d','d1','d2'] as const
+  shadowed.forEach((present,index) => {
+    if (present) warn(context, {
       code: 'OPENSCAD_PRIMITIVE_RADIUS_SHADOWED',
-      message: `${primitive} uses ${diameterField}; the paired ${radiusField} value has no effect`,
-      primitive,
-      field: radiusField,
-      value: radius,
+      message: `${kind} uses ${diameters[index]}; the paired ${fields[index]} value has no effect`,
+      primitive: kind, field: fields[index], value: input[fields[index]],
     })
-    return Object.freeze({ value: diameter / 2, source: 'diameter', supplied: true })
-  }
-  if (radiusIsNumber) return Object.freeze({ value: radius, source: 'radius', supplied: true })
-  return Object.freeze({ value: 1, source: 'default', supplied: false })
+  })
 }
 
 function radialPlan(
@@ -294,18 +278,10 @@ function radialPlan(
   input: OpenScadRadialPrimitiveInput,
   context: OpenScadStablePrimitiveContext,
 ): OpenScadRadialPrimitivePlan {
-  const radius = radiusPair(kind, 'r', 'd', input.r, input.d, context)
-  const empty = !(radius.value > 0) || !Number.isFinite(radius.value)
-  if (empty) rangeEmpty(kind, radius.value, context)
-  return Object.freeze({
-    kind,
-    radius: radius.value,
-    radiusSource: radius.source,
-    fragmentRadius: radius.value,
-    empty,
-    reduced: false,
-    reduction: null,
-  })
+  const {shadowed,...plan} = nativeRadialPlan(kind,input)
+  radiusWarnings(kind,input,shadowed,context)
+  if (plan.empty) rangeEmpty(kind,plan.radius,context)
+  return Object.freeze({kind,...plan,reduced:false,reduction:null}) as unknown as OpenScadRadialPrimitivePlan
 }
 
 export function resolveOpenScadSphere(
@@ -326,70 +302,30 @@ export function resolveOpenScadCylinder(
   input: OpenScadCylinderPrimitiveInput = {},
   context: OpenScadStablePrimitiveContext = SILENT_CONTEXT,
 ): OpenScadCylinderPrimitivePlan {
-  const common = radiusPair('cylinder', 'r', 'd', input.r, input.d, context)
-  const low = radiusPair('cylinder', 'r1', 'd1', input.r1, input.d1, context)
-  const high = radiusPair('cylinder', 'r2', 'd2', input.r2, input.d2, context)
-  if (common.supplied && (low.supplied || high.supplied)) warn(context, {
+  const {shadowed,ambiguous,...plan} = nativeRadialPlan('cylinder',input)
+  radiusWarnings('cylinder',input,shadowed,context)
+  if (ambiguous) warn(context, {
     code: 'OPENSCAD_CYLINDER_AMBIGUOUS_RADII',
     message: 'cylinder combines a shared radius with an end-specific radius',
     primitive: 'cylinder',
   })
-
-  const height = authoredNumber(input.h) ? input.h : 1
-  const radius1 = low.supplied ? low.value : common.supplied ? common.value : 1
-  const radius2 = high.supplied ? high.value : common.supplied ? common.value : 1
-  const radius1Source: OpenScadCylinderPrimitivePlan['radius1Source'] = low.supplied
-    ? low.source === 'diameter' ? 'diameter1' : 'radius1'
-    : common.supplied ? common.source : 'default'
-  const radius2Source: OpenScadCylinderPrimitivePlan['radius2Source'] = high.supplied
-    ? high.source === 'diameter' ? 'diameter2' : 'radius2'
-    : common.supplied ? common.source : 'default'
-  const empty = !(height > 0) || !Number.isFinite(height)
-    || radius1 < 0 || radius2 < 0
-    || !Number.isFinite(radius1) || !Number.isFinite(radius2)
-    || (radius1 === 0 && radius2 === 0)
-  if (empty) rangeEmpty('cylinder', { height, radius1, radius2 }, context)
-
-  return Object.freeze({
-    kind: 'cylinder',
-    height,
-    radius1,
-    radius2,
-    center: input.center === true,
-    radius1Source,
-    radius2Source,
-    fragmentRadius: Math.max(radius1, radius2),
-    empty,
-    reduced: false,
-    reduction: null,
-  })
+  if (plan.empty) rangeEmpty('cylinder', {height:plan.height,radius1:plan.radius1,radius2:plan.radius2}, context)
+  return Object.freeze({kind:'cylinder',...plan,center:input.center===true,reduced:false,reduction:null}) as unknown as OpenScadCylinderPrimitivePlan
 }
 
-function convexity(value: unknown): number {
-  if (!authoredNumber(value) || !Number.isFinite(value)) return 1
-  return Math.max(1, Math.trunc(value))
+interface IndexedPolicy {
+  readonly maximumPoints:number
+  readonly maximumFacesOrPaths:number
+  readonly maximumIndices:number
+  readonly convexity:number
 }
-
-interface NormalizedLimits {
-  readonly maximumPoints: number
-  readonly maximumFacesOrPaths: number
-  readonly maximumIndices: number
-}
-
-function limit(value: number | undefined, label: string): number {
-  if (value === undefined) return Number.POSITIVE_INFINITY
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new RangeError(`${label} must be a non-negative safe integer`)
-  }
-  return value
-}
-
-function normalizeLimits(limits: OpenScadPrimitiveSafetyLimits | undefined): NormalizedLimits {
-  return Object.freeze({
-    maximumPoints: limit(limits?.maximumPoints, 'maximumPoints'),
-    maximumFacesOrPaths: limit(limits?.maximumFacesOrPaths, 'maximumFacesOrPaths'),
-    maximumIndices: limit(limits?.maximumIndices, 'maximumIndices'),
-  })
+function indexedPolicy(limits:OpenScadPrimitiveSafetyLimits|undefined,convexity:unknown):IndexedPolicy {
+  const encode=(value:unknown)=>typeof value==='number'?Number.isFinite(value)?value:String(value):null
+  const values=[limits?.maximumPoints,limits?.maximumFacesOrPaths,limits?.maximumIndices]
+  const response=languageRequest(30,{limits:values.map(value=>({missing:value===undefined,number:encode(value)})),convexity:encode(convexity)}) as {ok:boolean;field?:string;value:{limits:(number|string)[];convexity:number}}
+  if(!response.ok)throw new RangeError(`${response.field} must be a non-negative safe integer`)
+  const [maximumPoints,maximumFacesOrPaths,maximumIndices]=response.value.limits.map(Number)
+  return Object.freeze({maximumPoints,maximumFacesOrPaths,maximumIndices,convexity:response.value.convexity})
 }
 
 function reduction(
@@ -415,35 +351,6 @@ function asVector(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? value : []
 }
 
-function point3(value: unknown): OpenScadVec3 | null {
-  if (exactNumericVector(value, 2)) {
-    if (!value.every(Number.isFinite)) return null
-    return freeze3(value[0], value[1], 0)
-  }
-  if (exactNumericVector(value, 3)) {
-    if (!value.every(Number.isFinite)) return null
-    return freeze3(value[0], value[1], value[2])
-  }
-  return null
-}
-
-function point2(value: unknown): OpenScadVec2 | null {
-  // The pinned polygon conversion rejects infinities here, while NaN remains
-  // a numeric coordinate for the later polygon sanitizer to handle.
-  if (!exactNumericVector(value, 2)
-    || value.some(component => component === Number.POSITIVE_INFINITY
-      || component === Number.NEGATIVE_INFINITY)) return null
-  return freeze2(value[0], value[1])
-}
-
-function unsignedIndex(value: unknown): number {
-  if (!authoredNumber(value)) return 0
-  if (!Number.isFinite(value)) return Number.MAX_SAFE_INTEGER
-  const truncated = Math.trunc(value)
-  if (truncated < 0 || truncated > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER
-  return Object.is(truncated, -0) ? 0 : truncated
-}
-
 function frozenPolygons3(polygons: OpenScadVec3[][]): readonly (readonly OpenScadVec3[])[] {
   return Object.freeze(polygons.map(polygon => Object.freeze([...polygon])))
 }
@@ -452,16 +359,29 @@ function frozenOutlines2(outlines: OpenScadVec2[][]): readonly (readonly OpenSca
   return Object.freeze(outlines.map(outline => Object.freeze([...outline])))
 }
 
+function indexedNumber(value:unknown):number|string|null {
+  return typeof value==='number'?Number.isFinite(value)?value:String(value):null
+}
+/** Bound transport at the first native index-limit event, preserving authored positions. */
+function indexedRows(rows:readonly unknown[],maximum:number):(number|string|null)[][] {
+  let remaining=maximum+1
+  return Array.from(rows,row=>{
+    const entries=asVector(row),count=Math.min(entries.length,remaining)
+    remaining-=count
+    return Array.from(entries.slice(0,count),indexedNumber)
+  })
+}
+
 export function resolveOpenScadPolyhedron(
   input: OpenScadPolyhedronPrimitiveInput = {},
   context: OpenScadStablePrimitiveContext = SILENT_CONTEXT,
 ): OpenScadPolyhedronPrimitivePlan {
-  const limits = normalizeLimits(input.limits)
+  const limits = indexedPolicy(input.limits,input.convexity)
   const points = asVector(input.points)
   if (points.length > limits.maximumPoints) {
     const limited = reduction('polyhedron', 'points', points.length, limits.maximumPoints, context)
     return Object.freeze({
-      kind: 'polyhedron', polygons: Object.freeze([]), facesSource: 'default', convexity: convexity(input.convexity),
+      kind: 'polyhedron', vertices: Object.freeze([]), indices: Object.freeze([]), usable: false, polygons: Object.freeze([]), facesSource: 'default', convexity: limits.convexity,
       aborted: true, sourcePointCount: points.length, empty: true, reduced: true, reduction: limited,
     })
   }
@@ -479,167 +399,79 @@ export function resolveOpenScadPolyhedron(
   if (faces.length > limits.maximumFacesOrPaths) {
     const limited = reduction('polyhedron', 'faces', faces.length, limits.maximumFacesOrPaths, context)
     return Object.freeze({
-      kind: 'polyhedron', polygons: Object.freeze([]), facesSource, convexity: convexity(input.convexity),
+      kind: 'polyhedron', vertices: Object.freeze([]), indices: Object.freeze([]), usable: false, polygons: Object.freeze([]), facesSource, convexity: limits.convexity,
       aborted: true, sourcePointCount: points.length, empty: true, reduced: true, reduction: limited,
     })
   }
 
-  const polygons: OpenScadVec3[][] = []
-  let indexCount = 0
-  for (let faceIndex = 0; faceIndex < faces.length; faceIndex++) {
-    const authoredFace = asVector(faces[faceIndex])
-    const polygon: OpenScadVec3[] = []
-    polygons.push(polygon)
-    for (let facePointIndex = 0; facePointIndex < authoredFace.length; facePointIndex++) {
-      indexCount++
-      if (indexCount > limits.maximumIndices) {
-        const limited = reduction('polyhedron', 'indices', indexCount, limits.maximumIndices, context)
-        return Object.freeze({
-          kind: 'polyhedron', polygons: frozenPolygons3(polygons), facesSource,
-          convexity: convexity(input.convexity), aborted: true, sourcePointCount: points.length,
-          empty: polygons.every(candidate => candidate.length < 3), reduced: true, reduction: limited,
-        })
-      }
-      const index = unsignedIndex(authoredFace[facePointIndex])
-      if (index >= points.length) {
-        warn(context, {
-          code: 'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
-          message: 'polyhedron skipped a face entry whose point index is outside the point vector',
-          primitive: 'polyhedron',
-          field: `faces[${faceIndex}]`,
-          index,
-          value: authoredFace[facePointIndex],
-        })
-        continue
-      }
-      const converted = point3(points[index])
-      if (converted === null) {
-        warn(context, {
-          code: 'OPENSCAD_PRIMITIVE_POINT_INVALID',
-          message: 'polyhedron stopped after a referenced point failed exact vec2/vec3 conversion',
-          primitive: 'polyhedron',
-          field: `points[${index}]`,
-          index,
-          value: points[index],
-        })
-        return Object.freeze({
-          kind: 'polyhedron', polygons: frozenPolygons3(polygons), facesSource,
-          convexity: convexity(input.convexity), aborted: true, sourcePointCount: points.length,
-          empty: polygons.every(candidate => candidate.length < 3), reduced: false, reduction: null,
-        })
-      }
-      polygon.push(converted)
-    }
+  const nativePoints=points.map(point=>Array.isArray(point)&&point.length<=3?Array.from(point,indexedNumber):[])
+  const maximumIndices=Number.isFinite(limits.maximumIndices)?limits.maximumIndices:Number.MAX_SAFE_INTEGER
+  const nativeFaces=indexedRows(faces,maximumIndices)
+  type Event={kind:'bounds'|'point'|'limit';face?:number;entry?:number;index?:number;actual?:number}
+  const response=languageRequest(28,{points:nativePoints,faces:nativeFaces,maximumIndices}) as {ok:boolean;value:{vertices:number[];indices:number[];usable:boolean;polygons:number[][][];events:Event[];aborted:boolean;empty:boolean};error?:{message:string}}
+  if(!response.ok)throw new Error(response.error?.message??'Native polyhedron expansion failed')
+  let limited:OpenScadPrimitiveReduction|null=null
+  for(const event of response.value.events){
+    if(event.kind==='limit')limited=reduction('polyhedron','indices',event.actual!,limits.maximumIndices,context)
+    else if(event.kind==='bounds')warn(context,{
+      code:'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
+      message:'polyhedron skipped a face entry whose point index is outside the point vector',
+      primitive:'polyhedron',field:`faces[${event.face}]`,index:event.index,
+      value:asVector(faces[event.face!])[event.entry!],
+    })
+    else warn(context,{
+      code:'OPENSCAD_PRIMITIVE_POINT_INVALID',
+      message:'polyhedron stopped after a referenced point failed exact vec2/vec3 conversion',
+      primitive:'polyhedron',field:`points[${event.index}]`,index:event.index,value:points[event.index!],
+    })
   }
-
-  return Object.freeze({
-    kind: 'polyhedron',
-    polygons: frozenPolygons3(polygons),
-    facesSource,
-    convexity: convexity(input.convexity),
-    aborted: false,
-    sourcePointCount: points.length,
-    empty: polygons.every(polygon => polygon.length < 3),
-    reduced: false,
-    reduction: null,
-  })
+  const polygons=response.value.polygons.map(polygon=>polygon.map(point=>freeze3(point[0],point[1],point[2])))
+  return Object.freeze({kind:'polyhedron',vertices:Object.freeze(response.value.vertices),indices:Object.freeze(response.value.indices),usable:response.value.usable,polygons:frozenPolygons3(polygons),facesSource,
+    convexity:limits.convexity,aborted:response.value.aborted,sourcePointCount:points.length,
+    empty:response.value.empty,reduced:limited!==null,reduction:limited})
 }
 
 export function resolveOpenScadPolygon(
   input: OpenScadPolygonPrimitiveInput = {},
   context: OpenScadStablePrimitiveContext = SILENT_CONTEXT,
 ): OpenScadPolygonPrimitivePlan {
-  const limits = normalizeLimits(input.limits)
+  const limits = indexedPolicy(input.limits,input.convexity)
   const authoredPoints = asVector(input.points)
   if (authoredPoints.length > limits.maximumPoints) {
     const limited = reduction('polygon', 'points', authoredPoints.length, limits.maximumPoints, context)
     return Object.freeze({
       kind: 'polygon', points: Object.freeze([]), outlines: Object.freeze([]), pathSource: 'implicit',
-      convexity: convexity(input.convexity), aborted: true, empty: true, reduced: true, reduction: limited,
+      convexity: limits.convexity, aborted: true, empty: true, reduced: true, reduction: limited,
     })
   }
 
-  const points: OpenScadVec2[] = []
-  for (let pointIndex = 0; pointIndex < authoredPoints.length; pointIndex++) {
-    const converted = point2(authoredPoints[pointIndex])
-    if (converted === null) {
-      warn(context, {
-        code: 'OPENSCAD_PRIMITIVE_POINT_INVALID',
-        message: 'polygon produced no outlines because a point failed exact vec2 conversion',
-        primitive: 'polygon',
-        field: `points[${pointIndex}]`,
-        index: pointIndex,
-        value: authoredPoints[pointIndex],
-      })
-      return Object.freeze({
-        kind: 'polygon', points: Object.freeze(points), outlines: Object.freeze([]), pathSource: 'implicit',
-        convexity: convexity(input.convexity), aborted: true, empty: true, reduced: false, reduction: null,
-      })
-    }
-    points.push(converted)
-  }
-
-  const authoredPaths = asVector(input.paths)
-  const pathSource: OpenScadPolygonPrimitivePlan['pathSource'] = authoredPaths.length === 0 && points.length > 2
-    ? 'implicit'
-    : 'explicit'
-  if (authoredPaths.length > limits.maximumFacesOrPaths) {
-    const limited = reduction('polygon', 'paths', authoredPaths.length, limits.maximumFacesOrPaths, context)
-    return Object.freeze({
-      kind: 'polygon', points: Object.freeze(points), outlines: Object.freeze([]), pathSource,
-      convexity: convexity(input.convexity), aborted: true, empty: true, reduced: true, reduction: limited,
+  const points=Array.from(authoredPoints,point=>Array.isArray(point)&&point.length===2?Array.from(point,indexedNumber):[])
+  const authoredPaths=asVector(input.paths)
+  const maximumPaths=Number.isFinite(limits.maximumFacesOrPaths)?limits.maximumFacesOrPaths:Number.MAX_SAFE_INTEGER
+  const maximumIndices=Number.isFinite(limits.maximumIndices)?limits.maximumIndices:Number.MAX_SAFE_INTEGER
+  const paths=authoredPaths.length>maximumPaths?[]:indexedRows(authoredPaths,maximumIndices)
+  type Event={kind:'bounds'|'point'|'limit'|'paths';face?:number;entry?:number;index?:number;actual?:number}
+  type NativePoint=(number|string)[]
+  const response=languageRequest(29,{points,paths,pathCount:authoredPaths.length,maximumPaths,maximumIndices}) as {ok:boolean;value:{points:NativePoint[];outlines:NativePoint[][];events:Event[];pathSource:'implicit'|'explicit';aborted:boolean;empty:boolean};error?:{message:string}}
+  if(!response.ok)throw new Error(response.error?.message??'Native polygon expansion failed')
+  let limited:OpenScadPrimitiveReduction|null=null
+  for(const event of response.value.events){
+    if(event.kind==='limit'||event.kind==='paths')limited=reduction('polygon',event.kind==='limit'?'indices':'paths',event.actual!,event.kind==='limit'?limits.maximumIndices:limits.maximumFacesOrPaths,context)
+    else if(event.kind==='bounds')warn(context,{
+      code:'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
+      message:'polygon skipped a path entry whose point index is outside the point vector',
+      primitive:'polygon',field:`paths[${event.face}]`,index:event.index,
+      value:asVector(authoredPaths[event.face!])[event.entry!],
+    })
+    else warn(context,{
+      code:'OPENSCAD_PRIMITIVE_POINT_INVALID',
+      message:'polygon produced no outlines because a point failed exact vec2 conversion',
+      primitive:'polygon',field:`points[${event.index}]`,index:event.index,value:authoredPoints[event.index!],
     })
   }
-
-  if (pathSource === 'implicit') {
-    const outline = Object.freeze([...points])
-    return Object.freeze({
-      kind: 'polygon', points: Object.freeze(points), outlines: Object.freeze([outline]), pathSource,
-      convexity: convexity(input.convexity), aborted: false, empty: false, reduced: false, reduction: null,
-    })
-  }
-
-  const outlines: OpenScadVec2[][] = []
-  let indexCount = 0
-  for (let pathIndex = 0; pathIndex < authoredPaths.length; pathIndex++) {
-    const authoredPath = asVector(authoredPaths[pathIndex])
-    const outline: OpenScadVec2[] = []
-    outlines.push(outline)
-    for (let pathPointIndex = 0; pathPointIndex < authoredPath.length; pathPointIndex++) {
-      indexCount++
-      if (indexCount > limits.maximumIndices) {
-        const limited = reduction('polygon', 'indices', indexCount, limits.maximumIndices, context)
-        return Object.freeze({
-          kind: 'polygon', points: Object.freeze(points), outlines: frozenOutlines2(outlines), pathSource,
-          convexity: convexity(input.convexity), aborted: true,
-          empty: outlines.every(candidate => candidate.length < 3), reduced: true, reduction: limited,
-        })
-      }
-      const index = unsignedIndex(authoredPath[pathPointIndex])
-      if (index >= points.length) {
-        warn(context, {
-          code: 'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
-          message: 'polygon skipped a path entry whose point index is outside the point vector',
-          primitive: 'polygon',
-          field: `paths[${pathIndex}]`,
-          index,
-          value: authoredPath[pathPointIndex],
-        })
-        continue
-      }
-      outline.push(points[index])
-    }
-  }
-
-  return Object.freeze({
-    kind: 'polygon',
-    points: Object.freeze(points),
-    outlines: frozenOutlines2(outlines),
-    pathSource,
-    convexity: convexity(input.convexity),
-    aborted: false,
-    empty: outlines.every(outline => outline.length < 3),
-    reduced: false,
-    reduction: null,
-  })
+  const point=(values:NativePoint)=>freeze2(Number(values[0]),Number(values[1]))
+  return Object.freeze({kind:'polygon',points:Object.freeze(response.value.points.map(point)),
+    outlines:frozenOutlines2(response.value.outlines.map(outline=>outline.map(point))),
+    pathSource:response.value.pathSource,convexity:limits.convexity,aborted:response.value.aborted,
+    empty:response.value.empty,reduced:limited!==null,reduction:limited})
 }

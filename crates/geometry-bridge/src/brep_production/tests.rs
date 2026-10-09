@@ -43,16 +43,9 @@ fn rederive_occurrence_digests(occurrences: &mut [Value], operations: &[Value]) 
     let mut ids: Vec<String> = Vec::with_capacity(occurrences.len());
     for occurrence in occurrences.iter_mut() {
         let operation = occurrence["operation"].as_u64().unwrap() as usize;
-        let parent = occurrence["parent"]
-            .as_u64()
-            .map(|row| row as usize);
-        let static_parent = occurrence["staticParent"]
-            .as_u64()
-            .map(|row| row as usize);
-        let slots = occurrence["dynamicSlots"]
-            .as_array()
-            .unwrap()
-            .clone();
+        let parent = occurrence["parent"].as_u64().map(|row| row as usize);
+        let static_parent = occurrence["staticParent"].as_u64().map(|row| row as usize);
+        let slots = occurrence["dynamicSlots"].as_array().unwrap().clone();
         let id = super::super::brep_identity::derive_occurrence_id(
             parent.map(|row| ids[row].as_str()),
             static_parent.map(|row| ids[row].as_str()),

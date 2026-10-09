@@ -1,0 +1,70 @@
+{
+  "schema": "native-integration-finite-evidence/1",
+  "recordedAt": "2026-10-09",
+  "artifact": {
+    "sha256": "79f12832a71cf5cb9669b76b610fe2cb812debbcc6c8cb3a6f2806ab511f84d3",
+    "byteLength": 11820187,
+    "host": "macos-aarch64"
+  },
+  "records": [
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/step-primary.json",
+      "sha256": "b59b0a43a7cd49e81a8c02625721abfc7a50b6060692544522cfc2107821600b",
+      "cases": 135
+    },
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/step-profile.json",
+      "sha256": "3cbe9283f45ab14b8d476455a61861fb0f6c584b1220a743fe22ebbcd9d7f0d1",
+      "cases": 8
+    },
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/step-scalar.json",
+      "sha256": "87cbbf82a9c9ddd2141a94d228df3b3ebcc5945ec4e300b3f64cdf47e432821f",
+      "cases": 2
+    },
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/step-smooth.json",
+      "sha256": "a5402d74dc3d994b700b729e3ce57960ef9fa18a8357af3fb4963d7f3f732a35",
+      "cases": 10
+    },
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/ui-laws.json",
+      "sha256": "7ae99331ba102f93f0cda8fd69bd6069e4f9fee37cebe7bf27eadcd8e74a7a39",
+      "cases": 32
+    },
+    {
+      "path": "docs/qualification/native-integration-20261009/capacity/ui-native-cancel.json",
+      "sha256": "eaa39dcd563566c53577ffaf8b1eadf959fc5089f02244315aea6440dcfaa7c1",
+      "cases": 2
+    }
+  ],
+  "nativePrimaryStepOutcomes": {
+    "certified": 130,
+    "refused": 5
+  },
+  "nativeSuites": {
+    "nurbsUnitPassed": 1537,
+    "nurbsIntegrationPassed": 291,
+    "nurbsIntegrationTargets": 58,
+    "mathTestsAndThreeClippyCommandsPassed": true
+  },
+  "applicationSuite": {
+    "passedFiles": 623,
+    "passedTests": 5836,
+    "pendingMetadataFiles": 2,
+    "skippedFiles": 4,
+    "skippedTests": 9
+  },
+  "uiAssertions": {
+    "laws": 384,
+    "nativeCancel": 38
+  },
+  "scope": [
+    "Geometry, source-law mapping, correction, certificates and actual-model Solid admission execute in Rust; client code transports reports and renders UI.",
+    "Finite STEP import/control-net, topology and volume evidence, not universal sweep/loft embedding or seam smoothness.",
+    "The profile STEP positives declare 256 mm; planar 1 mm requests refuse. Spatial profile source-error bounds remain unproved.",
+    "Native cancellation probes suspend ABI execution before Worker destruction; lifecycle evidence does not prove unrestricted cooperative kernel polling latency.",
+    "Apple Metal UI evidence only. SwiftShader lost its device on this host and remains unqualified.",
+    "No clean G0/G1 semantic qualification or production approval; all 4740 successor work units begin incomplete."
+  ]
+}

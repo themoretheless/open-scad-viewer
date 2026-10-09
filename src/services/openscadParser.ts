@@ -1,7 +1,8 @@
-import { isModelGraphText } from './modelGraphTextDetect'
+import {resolveLegacyOpenScadSegments} from './openScadLegacySegments'
+import { isRushFrontend } from './rushFrontendDetect'
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import { brepGearFaceCount } from './geometry/brep'
-import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
+import { evaluateRushGraphGeometry, requireRushGraphChecks } from './rushGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by the official geometry kernel.
  *
@@ -77,9 +78,9 @@ import {
   resolveOpenScadTranslate,
   type OpenScadStableTransformContext,
   type OpenScadStableTransformPlan,
+  resolveOpenScadViewerAxisAngle,
 } from './openScadStableTransformSemantics'
 import {
-  openScadMinkowski2dViaProduct,
   resolveOpenScad2dMultmatrix,
   resolveOpenScadChildrenSelection,
   resolveOpenScadLinearExtrude,
@@ -175,7 +176,8 @@ export interface ParseOptions {
    * "alive but heavy" from "wedged" instead of killing legitimate long builds.
    */
   onYield?: () => void
-  onSweepPreview?: import('./modelGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
+  /** Approximate sweep levels; never authoritative scene results. */
+  onSweepPreview?: import('./rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
   /** Injectable monotonic clock for deterministic phase-timing tests. */
   now?: () => number
   /** Injectable macrotask yield used by cooperative-cancellation tests. */
@@ -191,7 +193,6 @@ const MAX_SOURCE_LENGTH = 250_000
 const MAX_AST_NODES = 25_000
 const MAX_SHAPES = 1_000
 const MAX_TRIANGLES = 750_000
-const MAX_FN = 256
 /** Cap on linear_extrude slices — passed straight into the geometry kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 const MAX_EXTRUDE_SLICES = 512
@@ -1738,24 +1739,13 @@ function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
 
-  const vertices: number[] = []
-  const indices: number[] = []
-  for (const polygon of plan.polygons) {
-    if (polygon.length < 3) continue
-    const base = vertices.length / 3
-    for (const point of polygon) vertices.push(point[0], point[1], point[2])
-    // OpenSCAD's authored exterior winding is opposite the kernel mesh input.
-    for (let index = 1; index < polygon.length - 1; index++) {
-      indices.push(base, base + index + 1, base + index)
-    }
-  }
-  if (indices.length === 0 || vertices.some(value => !Number.isFinite(Math.fround(value)))) {
+  if (!plan.usable) {
     warn(ctx, 'polyhedron() produced no usable finite faces')
     return [stableEmptyShape(3, color, ctx)]
   }
 
   try {
-    const geometry = ctx.kernel.ofMesh(new Float64Array(vertices), new Uint32Array(indices))
+    const geometry = ctx.kernel.ofMesh(new Float64Array(plan.vertices), new Uint32Array(plan.indices))
     if (ctx.kernel.isEmpty(geometry)) {
       warn(ctx, 'polyhedron() topology did not produce a manifold solid')
       return [stableEmptyShape(3, color, ctx)]
@@ -1817,23 +1807,11 @@ function segments(node: CallNode, ctx: EvalContext, fallback: number, minimum: n
   const local = arg(node, '$fn', -1, undefined, ctx)
   const global = ctx.env.get('$fn')
   const raw = local === undefined || local === 0 ? global : local
-  const requested = raw === undefined || raw === 0 ? undefined : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
-  const maxSegments = ctx.quality === 'preview' ? 48 : MAX_FN
-  const previewFallback = ctx.quality === 'preview' ? Math.min(fallback, 24) : fallback
-  let value = requested ?? previewFallback
-  if (value > maxSegments) {
-    warn(ctx, `$fn=${value} was clamped to ${maxSegments} for ${ctx.quality} rendering`)
-    value = maxSegments
-  }
-  value = Math.max(minimum, value)
-  if (ctx.quality === 'preview') {
-    // This is the only place quality changes evaluation. Record whether the
-    // preview reduction actually altered the segment count a full-quality
-    // evaluation of the same call would have used.
-    const fullValue = Math.max(minimum, Math.min(requested ?? fallback, MAX_FN))
-    if (value !== fullValue) ctx.reduced.value = true
-  }
-  return value
+  const requested = raw === undefined || raw === 0 ? null : finiteNumber(raw, ctx, node.p, '$fn')
+  const selection=resolveLegacyOpenScadSegments(requested,fallback,minimum,ctx.quality)
+  if(selection.clamped)warn(ctx,`$fn=${selection.beforeCap} was clamped to ${selection.maximum} for ${ctx.quality} rendering`)
+  if(selection.reduced)ctx.reduced.value=true
+  return selection.segments
 }
 
 function makeCylinder(node: CallNode, ctx: EvalContext): Shape[] {
@@ -2537,11 +2515,22 @@ async function transformStableChildren(node: CallNode, ctx: EvalContext): Promis
     return [stableEmptyShape(shape.dimension, shape.color, ctx)]
   }
 
+  if (shape.dimension === 2 && !plan.affine2d) {
+    warn(ctx, `${node.name}() transform could not be represented by the geometry kernel`)
+    return [stableEmptyShape(shape.dimension, shape.color, ctx)]
+  }
+
   try {
     if (shape.dimension === 3) {
+      const matrix = [...plan.matrix]
+      // Stable multmatrix honors an authored projective fourth row through
+      // the dedicated kernel operation; every other transform is affine.
+      const projective = matrix[3] !== 0 || matrix[7] !== 0 || matrix[11] !== 0 || matrix[15] !== 1
       return [{
         ...shape,
-        geometry: ctx.kernel.transform3(shape.geometry, [...plan.matrix]),
+        geometry: projective
+          ? ctx.kernel.transform3Projective(shape.geometry, matrix)
+          : ctx.kernel.transform3(shape.geometry, matrix),
         entityId: currentEntityId(ctx),
       }]
     }
@@ -2576,17 +2565,9 @@ function rotateShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[
 }
 
 function axisAngleMatrix(axis: number[], degrees: number, ctx: EvalContext, p: number): number[] {
-  const length = Math.hypot(axis[0] ?? 0, axis[1] ?? 0, axis[2] ?? 0)
-  if (length === 0) evaluationError(ctx, p, 'Rotation axis cannot be zero')
-  const x = (axis[0] ?? 0) / length, y = (axis[1] ?? 0) / length, z = (axis[2] ?? 0) / length
-  const angle = degrees * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle), t = 1 - c
-  // Kernel matrices are column-major.
-  return [
-    t*x*x+c, t*x*y+s*z, t*x*z-s*y, 0,
-    t*x*y-s*z, t*y*y+c, t*y*z+s*x, 0,
-    t*x*z+s*y, t*y*z-s*x, t*z*z+c, 0,
-    0, 0, 0, 1,
-  ]
+  const matrix = resolveOpenScadViewerAxisAngle(axis, degrees)
+  if (matrix === null) evaluationError(ctx, p, 'Rotation axis cannot be zero')
+  return [...matrix]
 }
 
 function transformByMatrix(shapes: Shape[], value: Value, node: CallNode, ctx: EvalContext): Shape[] {
@@ -2754,24 +2735,14 @@ async function resizeChildren(node: CallNode, ctx: EvalContext): Promise<Shape[]
     evaluationError(ctx, node.p, 'resize() cannot mix 2D and 3D children')
   }
 
-  const axes = dimension === 3 ? 3 : 2
-  const min = Array.from({ length: axes }, () => Infinity)
-  const max = Array.from({ length: axes }, () => -Infinity)
-  let hasGeometry = false
-  for (const shape of shapes) {
-    if (ctx.kernel.isEmpty(shape.geometry)) continue
-    hasGeometry = true
-    const bounds = ctx.kernel.bounds(shape.geometry)
-    for (let axis = 0; axis < axes; axis++) {
-      min[axis] = Math.min(min[axis], bounds.min[axis] ?? Infinity)
-      max[axis] = Math.max(max[axis], bounds.max[axis] ?? -Infinity)
-    }
-  }
-  if (!hasGeometry) return shapes
+  const bounds = shapes
+    .filter(shape => !ctx.kernel.isEmpty(shape.geometry))
+    .map(shape => ctx.kernel.bounds(shape.geometry))
+  if (bounds.length === 0) return shapes
 
   const resolved = resolveOpenScadResize({
     dimension,
-    extents: max.map((value, axis) => value - min[axis]),
+    bounds,
     // Omitted newsize has the stable identity default. An explicitly invalid
     // non-vector still reaches the helper and produces a soft diagnostic.
     newsize: rawNewsize ?? [],
@@ -2800,25 +2771,7 @@ function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Sha
 
   try {
     if (dimension === 2) {
-      const geometry = openScadMinkowski2dViaProduct(
-        shapes.map(shape => (shape as Shape2D).geometry),
-        {
-          anchor: section => {
-            // The kernel exposes Minkowski as an anchored dilation. Anchor at an
-            // actual contour vertex (not a bounding-box corner, which may lie
-            // outside a circle) so the normalized structuring set contains 0.
-            const point = ctx.kernel.polygons(section)[0]?.[0]
-            return point === undefined ? [0, 0] : [point[0], point[1]]
-          },
-          translate: (section, offset) => ctx.kernel.translate(section, offset),
-          extrudeUnitPrism: section => ctx.kernel.linearExtrude(
-            section, 1, 0, 0, [1, 1], false,
-          ),
-          minkowskiSum: (left, right) => ctx.kernel.minkowskiSum3(left, right),
-          projectTo2d: solid => ctx.kernel.projection(solid, false),
-        },
-      )
-      if (geometry === undefined) return []
+      const geometry = ctx.kernel.minkowskiSum2(shapes.map(shape => (shape as Shape2D).geometry))
       return [{
         dimension: 2,
         geometry,
@@ -3060,7 +3013,9 @@ function stableRotateExtrudeSections(
 ): Shape[] {
   if (sections.length === 0) return []
   if (sections[0].dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
-  const bounds = ctx.kernel.bounds(sections[0].geometry)
+  const bounds = ctx.kernel.isEmpty(sections[0].geometry)
+    ? { min: [0, 0], max: [0, 0] }
+    : ctx.kernel.bounds(sections[0].geometry)
   const radius = Math.max(Math.abs(bounds.min[0] ?? 0), Math.abs(bounds.max[0] ?? 0))
   const fragmentInput = stableFragmentInputFromEvaluated(evaluated, ctx, radius)
   const resolved = resolveOpenScadRotateExtrude({
@@ -3542,18 +3497,23 @@ let parseQueue: Promise<void> = Promise.resolve()
 /** Parse and evaluate the supported OpenSCAD subset in a serialized WASM scope. */
 export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promise<ParseResult> {
   const run = async () => {
-    if (isModelGraphText(source)) {
-      const { compileModelGraphText } = await import('./modelGraphText')
-      const compiled = compileModelGraphText(source)
+    if (isRushFrontend(source)) {
+      const { compileRushFrontend } = await import('./rushFrontend')
+      const compiled = compileRushFrontend(source)
       if (compiled.execution_target === 'own-nurbs') {
-        const { buildTextNurbsScene } = await import('./modelGraphTextScene')
+        const { buildTextNurbsScene } = await import('./rushFrontendScene')
         if (options.shouldAbort?.()) throw new AbortedError()
-        const result = await buildTextNurbsScene(compiled.document, options.quality, {shouldAbort:options.shouldAbort,onYield:options.onYield,onSweepPreview:options.onSweepPreview})
-        if (options.shouldAbort?.()) throw new AbortedError()
-        return result
+        try {
+          const result = await buildTextNurbsScene(compiled.document, options.quality, {shouldAbort:options.shouldAbort,onYield:options.onYield,onSweepPreview:options.onSweepPreview})
+          if (options.shouldAbort?.()) throw new AbortedError()
+          return result
+        } catch(error) {
+          if(error instanceof DOMException && error.name==='AbortError')throw new AbortedError()
+          throw error
+        }
       }
       const result = await parseInternal(compiled.source, options)
-      requireModelGraphChecks(await evaluateModelGraphGeometry(compiled.geometry_assertions, result.meshes, async source => (await parseInternal(source, options)).meshes))
+      requireRushGraphChecks(await evaluateRushGraphGeometry(compiled.geometry_assertions, result.meshes, async source => (await parseInternal(source, options)).meshes))
       // Generated SCAD spans are not spans in the authored compact document.
       for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
       return result

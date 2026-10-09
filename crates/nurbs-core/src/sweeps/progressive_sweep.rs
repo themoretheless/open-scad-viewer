@@ -1,13 +1,35 @@
 //! Progressive profile transport with simultaneous scale and angular twist.
 //!
 //! Each level is a retained piecewise-linear NURBS patch set. Refinement compares
-//! profile controls against fourfold finer transport; this is sampled evidence,
-//! not a continuous RMF, injectivity, or rounding-inclusive certificate.
-use crate::{Result, check, sweep_support::vec3_ext::norm, curve::Curve, surface::Surface};
+//! profile controls against fourfold finer transport. Open parameter-spaced
+//! authored frames also carry original-law continuous retained-patch error
+//! certificates. Other transport, global injectivity and capped-body admission
+//! remain separate obligations; sampled acceptance is not their proof.
+use crate::{Result, check, core::vec3_ext::norm, curve::Curve, surface::Surface};
 use math_core::{cross, dot, sub};
 use std::f64::consts::TAU;
 
 type V = [f64; 3];
+mod authored_error;
+mod evidence_api;
+mod section_frames;
+mod arc_guide;
+mod contact_anchor;
+mod source_plane;
+mod source_line;
+mod retained_regularity;
+mod retained_smoothness;
+mod original_smoothness;
+mod endpoint_jets;
+mod rmf_transport;
+pub use rmf_transport::{OriginalRmfTransportReport,OriginalRmfSectionImagesReport,RmfNormalCell,certify_original_rmf_transport,certify_original_rmf_section_images};
+pub use original_smoothness::{OriginalFrameSmoothnessReport,ClosedAuthoredFrameSmoothnessReport,ClosedPathFrameSmoothnessReport};
+pub use retained_smoothness::{RetainedSeamReport,RetainedSmoothnessReport,RetainedDecompositionReport,RetainedDecompositionSmoothnessReport};
+mod profile_domain;
+pub use profile_domain::{IdealEndpointDomainsReport,IdealEndpointPlanesReport,EndpointCapProjectionReport};
+pub use retained_regularity::{RetainedRegularityReport, inspect as inspect_retained_regularity};
+pub use contact_anchor::{ContactAnchorReport, ContactFitReport};
+pub use authored_error::{InitialCoordinatesReport, SectionInterpolationReport, PatchErrorReport};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Orientation {
@@ -51,6 +73,18 @@ pub struct LevelReport {
     pub budget: f64,
     pub closed_path: bool,
     pub length_residual_upper: Option<f64>,
+    pub continuous_error_upper: Option<f64>,
+    /// Bounds both original end-section contours, before decomposition/correction.
+    pub original_section_endpoint_error_upper: Option<f64>,
+    /// Retained end contours, including decomposition, before correction/caps.
+    pub endpoint_contour_error_upper: Option<[f64;2]>,
+    /// Maximum among certified profiles, even when the complete union is unresolved.
+    /// This controls conservative admission but is not a bound for every profile.
+    pub known_profile_error_upper: Option<f64>,
+    pub error_certificate_cells: usize,
+    pub decomposition_products: usize,
+    pub error_certificate_reason: Option<&'static str>,
+    pub continuous_bound: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -79,6 +113,9 @@ pub struct Sweep<'a> {
     frame_laws: Option<(&'a Curve, &'a Curve)>,
     orientation_guide: Option<&'a Curve>,
     contact_point: Option<V>,
+    /// Original anchor ownership, including the reference contour in MultiSweep.
+    contact_source: Option<(&'a Curve, f64)>,
+    spatial_rmf_error_limits: Option<[usize;3]>,
     options: Options,
     next_sections: Option<usize>,
 }
@@ -266,6 +303,8 @@ impl<'a> Sweep<'a> {
             frame_laws: None,
             orientation_guide: None,
             contact_point: None,
+            contact_source: None,
+            spatial_rmf_error_limits: None,
             options,
             next_sections: Some(options.initial_sections),
         })
@@ -287,6 +326,7 @@ impl<'a> Sweep<'a> {
         )?;
         self.orientation_guide = Some(guide);
         self.contact_point = None;
+        self.contact_source = None;
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
     }
@@ -304,7 +344,10 @@ impl<'a> Sweep<'a> {
             "Contact anchor parameter is outside profile domain",
         )?;
         let p = self.profile.evaluate(profile_parameter)?.point;
-        self.with_contact_point(guide, [p[0], p[1], p[2]])
+        let profile = self.profile;
+        let mut result = self.with_contact_point(guide, [p[0], p[1], p[2]])?;
+        result.contact_source = Some((profile, profile_parameter));
+        Ok(result)
     }
 
     fn with_contact_point(self, guide: &'a Curve, point: V) -> Result<Self> {
@@ -372,6 +415,8 @@ impl<'a> Sweep<'a> {
             .transpose()
     }
 
+
+
     /// Axis scale is a positive dimensionless 3-vector law; center is a local
     /// frame offset in model units. q' = uniform_scale * axis_scale * q + center,
     /// then twist/frame transport. Laws use normalized traversal independently.
@@ -387,16 +432,30 @@ impl<'a> Sweep<'a> {
             axis_scale.control_points.iter().flatten().all(|x| *x > 0.),
             "Every axis-scale control must be positive",
         )?;
-        self.affine_laws = Some((axis_scale, center));
+        // Equal rational poles define the exact identity for every parameter,
+        // regardless of knots or positive weights. Keep generated default laws
+        // from consuming certificate work for an absent affine transform.
+        let identity=axis_scale.control_points.iter().all(|p|p.iter().all(|x|*x==1.))
+            && center.control_points.iter().all(|p|p.iter().all(|x|*x==0.));
+        self.affine_laws = if identity {None} else {Some((axis_scale, center))};
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
     }
 
     fn parameters(&self, count: usize) -> Result<(Vec<f64>, Option<f64>)> {
+        if let (Some(guide),Some(_),Spacing::ArcLength {tolerance,max_cells})=(self.orientation_guide,self.contact_point,self.options.spacing) {
+            let phase=arc_guide::certify(self.path,guide,max_cells)?;
+            let tolerance=phase.scale_upper.filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down());
+            return self.curve_parameters_with_budget(self.path,count,Some(max_cells-phase.cells),Some(tolerance));
+        }
         self.curve_parameters(self.path, count)
     }
 
     fn curve_parameters(&self, curve: &Curve, count: usize) -> Result<(Vec<f64>, Option<f64>)> {
+        self.curve_parameters_with_budget(curve,count,None,None)
+    }
+
+    fn curve_parameters_with_budget(&self,curve:&Curve,count:usize,remaining:Option<usize>,tolerance_override:Option<f64>)->Result<(Vec<f64>,Option<f64>)> {
         let [a, b] = curve.domain();
         match self.options.spacing {
             Spacing::Parameter => Ok((
@@ -416,7 +475,7 @@ impl<'a> Sweep<'a> {
                 max_cells,
             } => {
                 let division =
-                    crate::curve_measure::divide_by_length(curve, count - 1, tolerance, max_cells)?;
+                    crate::curve_measure::divide_by_length(curve, count - 1, tolerance_override.unwrap_or(tolerance), remaining.map_or(max_cells,|r|r.min(max_cells)))?;
                 check(
                     division.within_tolerance && division.points.len() == count,
                     &format!(
@@ -441,285 +500,11 @@ impl<'a> Sweep<'a> {
     }
 
     fn sections(&self, count: usize) -> Result<(Vec<Curve>, bool, Option<f64>)> {
-        let (parameters, mut residual) = self.parameters(count)?;
-        let samples = parameters
-            .iter()
-            .map(|&t| sample(self.path, t))
-            .collect::<Result<Vec<_>>>()?;
-        let (start, t0) = samples[0];
-        let (end, t1) = samples[count - 1];
-        let closed = closed_extent(self.path, start, end)?;
-        check(
-            !self.path.periodic || closed,
-            "Periodic sweep endpoints must coincide",
-        )?;
-        if closed {
-            check(
-                count >= 4 && self.options.initial_sections >= 4,
-                "Closed progressive sweep needs at least four sections",
-            )?;
-            check(
-                self.options.orientation == Orientation::Fixed || norm(sub(t0, t1)) < 1e-10,
-                "Closed sweep tangent endpoints must agree",
-            )?;
-            check(
-                law(self.scale, 0.)? == law(self.scale, 1.)?,
-                "Closed sweep scale endpoints must agree",
-            )?;
-            if let Some((axis_scale, center)) = self.affine_laws {
-                for curve in [axis_scale, center] {
-                    check(
-                        vector_law(curve, 0.)? == vector_law(curve, 1.)?,
-                        "Closed sweep axis scale and center endpoints must agree",
-                    )?;
-                }
-            }
-            let twist = law(self.twist, 1.)? - law(self.twist, 0.)?;
-            check(
-                twist.is_finite() && (twist / TAU - (twist / TAU).round()).abs() <= 1e-12,
-                "Closed sweep twist endpoints must differ by whole turns",
-            )?;
-        }
-        let principal_normal = |i: usize| -> Result<Option<V>> {
-            let e = self.path.evaluate(parameters[i])?;
-            let Some(d2) = e.d2 else { return Ok(None); };
-            let acceleration = [d2[0], d2[1], d2[2]];
-            check(acceleration.iter().all(|x| x.is_finite()), "Sweep curvature must be finite")?;
-            if acceleration.iter().all(|x| *x == 0.) { return Ok(None); }
-            let n = unit(acceleration)?;
-            let tangent = samples[i].1;
-            let transverse = sub(n, tangent.map(|x| x * dot(n, tangent)));
-            if norm(transverse) <= 1e-12 { Ok(None) } else { unit(transverse).map(Some) }
-        };
-        let frenet = |i: usize| -> Result<V> {
-            principal_normal(i)?.ok_or_else(|| crate::input("Frenet sweep needs a unique nonzero principal normal"))
-        };
-        let mut contact_widths = Vec::new();
-        let guide_normals = if let Some(guide) = self.orientation_guide {
-            let (guide_parameters, guide_residual) = self.curve_parameters(guide, count)?;
-            residual = match (residual, guide_residual) {
-                (Some(a), Some(b)) => Some(a.max(b)),
-                (a, b) => a.or(b),
-            };
-            let normals = guide_parameters
-                .iter()
-                .zip(&samples)
-                .map(|(&t, &(position, tangent))| {
-                    let p = guide.evaluate(t)?.point;
-                    let offset = sub([p[0], p[1], p[2]], position);
-                    if self.contact_point.is_some() {
-                        let width = norm(offset);
-                        check(
-                            width.is_finite()
-                                && width > 0.
-                                && dot(offset, tangent).abs() <= 1e-10 * width,
-                            "Contact rail must lie in the path normal plane",
-                        )?;
-                        contact_widths.push(width);
-                    }
-                    project(offset, tangent)
-                })
-                .collect::<Result<Vec<_>>>()?;
-            if closed && self.contact_point.is_some() {
-                check(
-                    (contact_widths[0] - contact_widths[count - 1]).abs()
-                        <= 1e-10 * contact_widths[0],
-                    "Closed contact rail widths must agree",
-                )?;
-            }
-            if closed {
-                check(
-                    norm(sub(normals[0], *normals.last().unwrap())) < 1e-10,
-                    "Closed sweep orientation-guide endpoints must agree",
-                )?;
-            }
-            Some(normals)
-        } else {
-            None
-        };
-        let initial_frame = self.authored_frame(0.)?;
-        let coordinate_axis = initial_frame.map_or(t0, |f| f.0);
-        let initial = if let Some(normals) = &guide_normals {
-            normals[0]
-        } else if let Some((_, normal)) = initial_frame {
-            normal
-        } else if self.options.orientation == Orientation::Frenet {
-            frenet(0)?
-        } else if self.options.orientation == Orientation::CorrectedFrenet {
-            let mut first = None;
-            for i in 0..count {
-                if let Some(normal) = principal_normal(i)? {
-                    first = Some((i, normal));
-                    break;
-                }
-            }
-            if let Some((index, mut normal)) = first {
-                // Resolve an initially straight interval from the first available
-                // principal normal rather than introducing a seed-normal jump.
-                for i in (1..=index).rev() {
-                    normal = transported_normal(normal, samples[i].1, samples[i - 1].1,
-                        sub(samples[i - 1].0, samples[i].0))?;
-                }
-                normal
-            } else { project(self.options.normal, t0)? }
-        } else {
-            project(self.options.normal, t0)?
-        };
-        let side = cross(coordinate_axis, initial);
-        let contact_anchor = if let Some(p) = self.contact_point {
-            let q = sub([p[0], p[1], p[2]], start);
-            let width = dot(q, initial);
-            check(
-                width > 0.
-                    && norm(sub(q, initial.map(|v| v * contact_widths[0])))
-                        <= 1e-10 * contact_widths[0],
-                "Initial contact anchor must coincide with orientation rail",
-            )?;
-            Some(width)
-        } else {
-            None
-        };
-        let coordinates: Vec<V> = self
-            .profile
-            .control_points
-            .iter()
-            .map(|p| {
-                let q = sub([p[0], p[1], p[2]], start);
-                [dot(q, initial), dot(q, side), dot(q, coordinate_axis)]
-            })
-            .collect();
-        let mut normals = vec![initial];
-        let mut lengths = vec![0.];
-        for i in 1..count {
-            let (previous, previous_tangent) = samples[i - 1];
-            let (position, tangent) = samples[i];
-            let chord = sub(position, previous);
-            lengths.push(lengths[i - 1] + norm(chord));
-            let next = if let Some(normals) = &guide_normals {
-                normals[i]
-            } else if let Some((_, normal)) = self.authored_frame(i as f64 / (count - 1) as f64)? {
-                normal
-            } else {
-                match self.options.orientation {
-                    Orientation::Fixed => initial,
-                    Orientation::FixedNormal => project(self.options.normal, tangent)?,
-                    Orientation::Frenet => frenet(i)?,
-                    Orientation::CorrectedFrenet => {
-                        let transported = transported_normal(normals[i - 1], previous_tangent, tangent, chord)?;
-                        match principal_normal(i)? {
-                            Some(n) => if dot(n, transported) < 0. { n.map(|x| -x) } else { n },
-                            None => transported,
-                        }
-                    }
-                    Orientation::RotationMinimizing => transported_normal(normals[i - 1], previous_tangent, tangent, chord)?,
-                }
-            };
-            normals.push(next);
-        }
-        let correction = if closed
-            && self.orientation_guide.is_none()
-            && self.options.orientation == Orientation::RotationMinimizing
-        {
-            dot(t0, cross(normals[count - 1], initial)).atan2(dot(normals[count - 1], initial))
-        } else {
-            0.
-        };
-        if closed
-            && matches!(
-                self.options.orientation,
-                Orientation::Frenet | Orientation::CorrectedFrenet | Orientation::FixedNormal
-            )
-        {
-            check(
-                norm(sub(normals[count - 1], initial)) < 1e-10,
-                "Closed sweep orientation endpoints must agree",
-            )?;
-        }
-        if closed && self.frame_laws.is_some() {
-            let first = self.authored_frame(0.)?.unwrap();
-            let last = self.authored_frame(1.)?.unwrap();
-            check(
-                norm(sub(first.0, last.0)) < 1e-10 && norm(sub(first.1, last.1)) < 1e-10,
-                "Closed sweep authored frame endpoints must agree",
-            )?;
-        }
-        let total = lengths[count - 1];
-        check(
-            total.is_finite() && total > 0.,
-            "Sweep path traversal has zero or nonfinite sampled length",
-        )?;
-        let mut curves = Vec::with_capacity(count);
-        for i in 0..count {
-            let fraction = i as f64 / (count - 1) as f64;
-            let scale = law(self.scale, fraction)?;
-            let twist = law(self.twist, fraction)?;
-            check(
-                scale.is_finite() && scale > 0. && twist.is_finite(),
-                "Sweep law evaluation is invalid",
-            )?;
-            let (axes, center) = if let Some((axes, center)) = self.affine_laws {
-                (vector_law(axes, fraction)?, vector_law(center, fraction)?)
-            } else {
-                ([1.; 3], [0.; 3])
-            };
-            check(
-                axes.iter().all(|x| x.is_finite() && *x > 0.)
-                    && center.iter().all(|x| x.is_finite()),
-                "Affine sweep law evaluation is invalid",
-            )?;
-            let contact_fit = if let Some(anchor) = contact_anchor {
-                check(
-                    center[1] == 0. && center[2] == 0.,
-                    "Contact guide requires zero side/longitudinal center offset",
-                )?;
-                let transformed = scale * axes[0] * anchor + center[0];
-                check(
-                    transformed.is_finite() && transformed > 0.,
-                    "Contact anchor scale must remain positive",
-                )?;
-                let fit = contact_widths[i] / transformed;
-                check(fit.is_finite() && fit > 0., "Contact width fit overflowed")?;
-                fit
-            } else {
-                1.
-            };
-            let tangent = if let Some((axis, _)) = self.authored_frame(fraction)? {
-                axis
-            } else if self.options.orientation == Orientation::Fixed {
-                t0
-            } else {
-                samples[i].1
-            };
-            let normal = rotate(normals[i], tangent, twist + correction * lengths[i] / total);
-            let side = cross(tangent, normal);
-            let mut curve = self.profile.clone();
-            curve.control_points = coordinates
-                .iter()
-                .map(|q| {
-                    (0..3)
-                        .map(|k| {
-                            if self.affine_laws.is_none() && contact_anchor.is_none() {
-                                return samples[i].0[k]
-                                    + scale
-                                        * (q[0] * normal[k] + q[1] * side[k] + q[2] * tangent[k]);
-                            }
-                            samples[i].0[k]
-                                + contact_fit * (scale * axes[0] * q[0] + center[0]) * normal[k]
-                                + (scale * axes[1] * q[1] + center[1]) * side[k]
-                                + (scale * axes[2] * q[2] + center[2]) * tangent[k]
-                        })
-                        .collect()
-                })
-                .collect();
-            curve.validate()?;
-            curves.push(curve);
-        }
-        if closed {
-            let first = curves[0].clone();
-            *curves.last_mut().unwrap() = first;
-        }
-        Ok((curves, closed, residual))
+        let (curves,closed,residual,_)=self.sections_with_frame_identity(count)?;
+        Ok((curves,closed,residual))
     }
+
+
 
     /// Retained section curves for downstream authored topology. These are
     /// previews; admission still requires a level report satisfying the budget.
@@ -743,6 +528,15 @@ impl<'a> Sweep<'a> {
     }
 
     fn level(&self, count: usize) -> Result<Level> {
+        let [_,cells,products]=self.spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+        self.level_with_error_budget(count,cells,products)
+    }
+    fn level_with_error_budget(&self, count: usize, max_cells: usize, max_products: usize) -> Result<Level> {
+        self.level_with_error_budget_and_length(count,max_cells,max_products,None,None,None)
+    }
+    fn level_with_error_budget_and_length(&self,count:usize,max_cells:usize,max_products:usize,
+        shared_length:Option<&crate::curve_measure::DivisionReport>,shared_guide:Option<&crate::curve_measure::DivisionReport>,
+        shared_rmf:Option<&rmf_transport::OriginalRmfTransportReport>)->Result<Level>{
         let (coarse, closed, coarse_residual) = self.sections(count)?;
         let (fine, _, fine_residual) = self.sections(4 * (count - 1) + 1)?;
         let mut error = 0_f64;
@@ -761,16 +555,48 @@ impl<'a> Sweep<'a> {
         check(error.is_finite(), "Progressive sweep refinement overflowed")?;
         let patches = patches(&coarse)?;
         let length_residual_upper = coarse_residual.map(|r| r.max(fine_residual.unwrap()));
+        let certificate = if let Some([steps,_,_])=self.spatial_rmf_error_limits {
+            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf)?)
+        }else if self.frame_laws.is_some() {
+            Some(authored_error::patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+        } else if self.contact_source.is_some() {
+            Some(authored_error::contact_patch_error_with_lengths(self,count,max_cells,max_products,shared_length,shared_guide)?)
+        } else if self.orientation_guide.is_some() {
+            Some(authored_error::guided_patch_error_with_lengths(self,count,max_cells,max_products,shared_length,shared_guide)?)
+        } else if self.options.orientation==Orientation::Fixed {
+            Some(authored_error::fixed_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+        } else if self.options.orientation==Orientation::FixedNormal {
+            Some(authored_error::fixed_normal_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+        } else if self.options.orientation==Orientation::Frenet {
+            Some(authored_error::frenet_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+        } else if self.options.orientation==Orientation::RotationMinimizing {
+            Some(if !authored_error::original_line(self.path) {
+                authored_error::rmf_planar_patch_error_with_length(self,count,max_cells,max_products,shared_length)?
+            } else {self.rmf_straight_patch_error_bound(count,max_cells,max_products)?})
+        } else if self.options.orientation==Orientation::CorrectedFrenet {
+            Some(authored_error::corrected_patch_error_with_length(self,count,max_cells,max_products,shared_length)?)
+        } else {None};
         Ok(Level {
             patches,
             report: LevelReport {
-                accepted: error <= self.options.max_deviation,
+                accepted: error <= self.options.max_deviation
+                    && certificate.as_ref().and_then(|r|r.error_upper).is_none_or(|upper|upper<=self.options.max_deviation)
+                    && (self.spatial_rmf_error_limits.is_none() || certificate.as_ref().is_some_and(|r|
+                        r.status==super::progressive_miter::scalar_certificate::Status::Certified && r.within_budget)),
                 sections: count,
                 stations: fine.len(),
                 sampled_control_deviation: error,
                 budget: self.options.max_deviation,
                 closed_path: closed,
                 length_residual_upper,
+                continuous_error_upper: certificate.as_ref().and_then(|r|r.error_upper),
+                original_section_endpoint_error_upper: certificate.as_ref().and_then(|r|r.original_section_endpoint_error_upper),
+                endpoint_contour_error_upper: certificate.as_ref().and_then(|r|r.endpoint_contour_error_upper),
+                known_profile_error_upper: certificate.as_ref().and_then(|r|r.error_upper),
+                error_certificate_cells: certificate.as_ref().map_or(0,|r|r.cells),
+                decomposition_products: certificate.as_ref().map_or(0,|r|r.products),
+                error_certificate_reason: certificate.as_ref().and_then(|r|r.reason).or(if certificate.is_none() {Some("transport-mode-error-unproved")} else {None}),
+                continuous_bound: certificate.as_ref().is_some_and(|r|r.status==super::progressive_miter::scalar_certificate::Status::Certified),
             },
         })
     }
@@ -859,6 +685,10 @@ impl<'a> MultiSweep<'a> {
 }
 
 impl<'a> MultiSweep<'a> {
+    pub fn with_spatial_rmf_error_limits(mut self,steps:usize,cells:usize,products:usize)->Result<Self>{
+        self.sweeps=self.sweeps.into_iter().map(|s|s.with_spatial_rmf_error_limits(steps,cells,products)).collect::<Result<_>>()?;
+        Ok(self)
+    }
     /// Retained preview sections in authored profile order, each on the same grid.
     /// Body admission still requires an accepted aggregate level report.
     pub fn sections_at(&self, count: usize) -> Result<Vec<Vec<Curve>>> {
@@ -881,11 +711,16 @@ impl<'a> MultiSweep<'a> {
             .remove(profile_index)
             .with_contact_guide(guide, parameter)?;
         let point = reference.contact_point.unwrap();
+        let source = reference.contact_source.unwrap();
         self.sweeps.insert(profile_index, reference);
         self.sweeps = self
             .sweeps
             .into_iter()
-            .map(|s| s.with_contact_point(guide, point))
+            .map(|s| {
+                let mut result = s.with_contact_point(guide, point)?;
+                result.contact_source = Some(source);
+                Ok(result)
+            })
             .collect::<Result<_>>()?;
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
@@ -935,8 +770,57 @@ impl MultiSweep<'_> {
         let mut patches = Vec::new();
         let mut ranges = Vec::new();
         let mut report: Option<LevelReport> = None;
+        // One invocation owns the original path and all profile certificates.
+        // Measure that shared source once; per-profile pose and decomposition
+        // work still consume the remaining aggregate budget.
+        let first=&self.sweeps[0];
+        let [_,cell_limit,product_limit]=first.spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+        let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
+            &&first.orientation_guide.is_some_and(|g|!g.periodic)
+            &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
+        let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
+            && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
+            && !first.path.periodic&&!path_is_closed(first.path)?)) {
+            if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
+                check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
+                    "Shared length certificate requires identical original source and spacing")?;
+                let phase=if first.contact_point.is_some() {first.orientation_guide.map(|guide|arc_guide::certify(first.path,guide,max_cells.min(cell_limit))).transpose()?}else{None};
+                let phase_cells=phase.as_ref().map_or(0,|p|p.cells);
+                let tolerance=phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down());
+                // The shared source division owns both the exact phase premise
+                // and the inverse-length cells, preserving the aggregate ceiling.
+                let mut division=crate::curve_measure::divide_by_length(first.path,count-1,tolerance,max_cells.min(cell_limit)-phase_cells)?;
+                division.cells+=phase_cells;
+                Some(division)
+            }else{None}
+        }else{None};
+        let mut cells=shared_length.as_ref().map_or(0,|report|report.cells);
+        let shared_guide=if shared_guided&&shared_length.is_some()&&cells<cell_limit {
+            let guide=first.orientation_guide.unwrap();
+            check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
+                "Shared guide length certificate requires identical original guide")?;
+            let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing else{unreachable!()};
+            let report=crate::curve_measure::divide_by_length(guide,count-1,tolerance,max_cells.min(cell_limit-cells))?;
+            cells+=report.cells;Some(report)
+        }else{None};
+        // Both station policies share precisely the same original Bishop
+        // transport and closing phase. Source arc division is also shared.
+        // Every profile query/decomposition consumes the remaining allowance.
+        let shared_rmf=if let Some([steps,_,_])=first.spatial_rmf_error_limits {
+                check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)
+                    &&s.options.normal==first.options.normal&&s.options.spacing==first.options.spacing
+                    &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
+                    "Shared RMF certificate requires identical original source and policy")?;
+                let remaining=cell_limit-cells;
+                let proof=rmf_transport::certify_original_rmf_transport_shared(first.path,first.options.normal,
+                    steps,remaining,path_is_closed(first.path)?)?;
+                cells+=proof.cells+proof.exact_work as usize;Some(proof)
+        }else{None};
+        let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level(count)?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref())?;
+            cells+=level.report.error_certificate_cells;
+            products+=level.report.decomposition_products;
             check(
                 patches.len() + level.patches.len() <= 4096,
                 "Multi-profile sweep exceeds 4096 total retained patches",
@@ -949,14 +833,32 @@ impl MultiSweep<'_> {
                 total.sampled_control_deviation = total
                     .sampled_control_deviation
                     .max(level.report.sampled_control_deviation);
+                total.continuous_bound &= level.report.continuous_bound;
+                total.known_profile_error_upper = match (total.known_profile_error_upper,level.report.known_profile_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),(a,b)=>a.or(b),
+                };
+                total.continuous_error_upper = match (total.continuous_error_upper,level.report.continuous_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),_=>None,
+                };
+                total.original_section_endpoint_error_upper = match (total.original_section_endpoint_error_upper,level.report.original_section_endpoint_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),_=>None,
+                };
+                total.endpoint_contour_error_upper = match (total.endpoint_contour_error_upper,level.report.endpoint_contour_error_upper) {
+                    (Some(a),Some(b))=>Some([a[0].max(b[0]),a[1].max(b[1])]),_=>None,
+                };
+                total.error_certificate_cells += level.report.error_certificate_cells;
+                total.decomposition_products += level.report.decomposition_products;
+                total.error_certificate_reason = total.error_certificate_reason.or(level.report.error_certificate_reason);
             } else {
                 report = Some(level.report);
             }
         }
+        let mut report=report.unwrap();
+        report.error_certificate_cells=cells;
         Ok(MultiLevel {
             patches,
             profile_patch_ranges: ranges,
-            report: report.unwrap(),
+            report,
         })
     }
 }
@@ -998,6 +900,19 @@ pub fn approximate_affine_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_affine_laws(axis_scale, center)?,
     )
+}
+
+/// Original closed spatial RMF error policy, shared across all profiles.
+pub fn approximate_spatial_rmf_profiles(
+    profiles: &[Curve], path: &Curve, scale: &Curve, twist: &Curve,
+    affine: Option<(&Curve, &Curve)>, options: Options,
+    transport_steps: usize, max_cells: usize, max_products: usize,
+) -> Result<MultiApproximation> {
+    let sweep = MultiSweep::new(profiles, path, scale, twist, options)?;
+    let sweep = if let Some((axes, center)) = affine {
+        sweep.with_affine_laws(axes, center)?
+    } else { sweep };
+    collect_profiles(sweep.with_spatial_rmf_error_limits(transport_steps, max_cells, max_products)?)
 }
 
 /// Complete authored frames, simultaneous affine laws and aggregate admission.
@@ -1058,7 +973,7 @@ pub fn approximate_contact_profiles(
     )
 }
 
-fn collect_profiles(sweep: MultiSweep<'_>) -> Result<MultiApproximation> {
+pub(crate) fn collect_profiles(sweep: MultiSweep<'_>) -> Result<MultiApproximation> {
     let mut result = MultiApproximation {
         patches: None,
         profile_patch_ranges: None,
@@ -1102,8 +1017,7 @@ fn closed_extent(path: &Curve, start: V, end: V) -> Result<bool> {
     Ok(start == end || norm(sub(end, start)) / extent <= 64. * f64::EPSILON)
 }
 
-fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
-    let parts = |curve: &Curve| -> Result<Vec<Curve>> {
+fn profile_parts(curve: &Curve) -> Result<Vec<Curve>> {
         if curve.control_points.len() <= 32 {
             return Ok(vec![curve.clone()]);
         }
@@ -1116,8 +1030,9 @@ fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
             .iter()
             .map(|s| s.definition().clone())
             .collect())
-    };
-    let rows = sections.iter().map(parts).collect::<Result<Vec<_>>>()?;
+}
+fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
+    let rows = sections.iter().map(profile_parts).collect::<Result<Vec<_>>>()?;
     let count = sections.len();
     let columns = (count - 1).div_ceil(31);
     check(
@@ -1148,5 +1063,5 @@ fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
 #[path = "progressive_sweep/serialization.rs"]
 mod serialization;
 #[cfg(test)]
-#[path = "progressive_sweep/tests.rs"]
+#[path = "progressive_sweep/tests/mod.rs"]
 mod tests;

@@ -18,7 +18,7 @@ import {fileURLToPath} from 'node:url'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const kernels = [
   {cu: 'crates/sdf-core/src/sdf_grid.cu', ptx: 'crates/sdf-core/src/sdf_grid.ptx'},
-  {cu: 'crates/geometry-bridge/src/lattice.cu', ptx: 'crates/geometry-bridge/src/lattice.ptx'},
+  {cu: 'crates/polygon-core/src/lattice.cu', ptx: 'crates/polygon-core/src/lattice.ptx'},
   {cu: 'crates/math-compute/src/nearest_neighbor.cu', ptx: 'crates/math-compute/src/nearest_neighbor.ptx'},
   {cu: 'crates/math-compute/src/distance_pairs.cu', ptx: 'crates/math-compute/src/distance_pairs.ptx'},
   {cu: 'crates/math-compute/src/distance_pair_sum.cu', ptx: 'crates/math-compute/src/distance_pair_sum.ptx'},

@@ -40,223 +40,8 @@ struct Cap {
     surface: Surface,
     loops: Vec<Vec<Curve>>,
 }
-fn certify_cap_chart(surface: &Surface, max_cells: usize, max_spans: usize) -> Result<()> {
-    if max_cells == 0 || max_spans == 0 {
-        return Err(err("Cap chart certificate budget exhausted"));
-    }
-    if !nurbs_core::surface_regularity::inspect(surface, max_cells)?.spanwise_regular {
-        return Err(err("Cap chart regularity unproved"));
-    }
-    let injectivity = nurbs_core::surface_injectivity::certify(surface, max_spans)?;
-    if !injectivity.proven {
-        return Err(err(format!("Cap chart injectivity unproved: {}", injectivity.reason)));
-    }
-    Ok(())
-}
-fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
-    cap_with_boundary_budget(loops, 1e-9, 100000)
-}
-fn cap_with_boundary_budget(loops: &[Vec<Curve>], tolerance: f64, max_products: usize) -> Result<Cap> {
-    if let Some(cap)=coordinate_cap(loops,tolerance,max_products)? {return Ok(cap);}
-    let origin = point(&loops[0][0], true);
-    let u = unit(minus(point(&loops[0][0], false), origin))?;
-    let candidate = loops[0]
-        .iter()
-        .flat_map(|c| &c.control_points)
-        .map(|p| cross(u, minus([p[0], p[1], p[2]], origin)))
-        .max_by(|a, b| dot(*a, *a).total_cmp(&dot(*b, *b)))
-        .unwrap();
-    let n = unit(candidate)?;
-    let v = cross(n, u);
-    let mut projected = loops.to_vec();
-    let mut min = [f64::INFINITY; 2];
-    let mut max = [f64::NEG_INFINITY; 2];
-    for p in projected
-        .iter_mut()
-        .flatten()
-        .flat_map(|c| &mut c.control_points)
-    {
-        let delta = minus([p[0], p[1], p[2]], origin);
-        if dot(delta, n).abs() > 1e-9 {
-            return Err(err("Cap section controls must be coplanar"));
-        }
-        *p = vec![dot(delta, u), dot(delta, v)];
-        for k in 0..2 {
-            min[k] = min[k].min(p[k]);
-            max[k] = max[k].max(p[k]);
-        }
-    }
-    let width = [max[0] - min[0], max[1] - min[1]];
-    if width.iter().any(|x| !x.is_finite() || *x <= 1e-8) {
-        return Err(err("Collapsed cap bounds"));
-    }
-    for p in projected
-        .iter_mut()
-        .flatten()
-        .flat_map(|c| &mut c.control_points)
-    {
-        for k in 0..2 {
-            p[k] = (p[k] - min[k]) / width[k];
-        }
-    }
-    let audit = nurbs_core::trim_region_audit::inspect(&projected, 1e-10, 100000, 100000, 1000000)?;
-    if audit.valid != Some(true) {
-        return Err(err(format!(
-            "Cap trim region unresolved or invalid: {}",
-            audit.reason
-        )));
-    }
-    let world = |a: f64, b: f64| {
-        (0..3)
-            .map(|k| origin[k] + a * u[k] + b * v[k])
-            .collect::<Vec<_>>()
-    };
-    let mut result = Cap {
-        normal: n,
-        surface: Surface {
-            degree_u: 1,
-            degree_v: 1,
-            knots_u: vec![0., 0., 1., 1.],
-            knots_v: vec![0., 0., 1., 1.],
-            control_points: vec![
-                vec![world(min[0], min[1]), world(min[0], max[1])],
-                vec![world(max[0], min[1]), world(max[0], max[1])],
-            ],
-            weights: vec![vec![1.; 2]; 2],
-            periodic_u: false,
-            periodic_v: false,
-        },
-        loops: projected,
-    };
-    if audit.winding[0] == Some(-1) {
-        result.normal = result.normal.map(|x| -x);
-        for row in &mut result.surface.control_points {
-            row.reverse();
-        }
-        for p in result
-            .loops
-            .iter_mut()
-            .flatten()
-            .flat_map(|c| &mut c.control_points)
-        {
-            p[1] = 1. - p[1];
-        }
-    }
-    certify_cap_chart(&result.surface, 1000, 1)?;
-    // Verify the actual stored surface/UV data after orientation changes.
-    // Coplanar controls alone do not bound projection and reconstruction error.
-    let mut products = 0;
-    for (world_loop, uv_loop) in loops.iter().zip(&result.loops) {
-        for (world_curve, uv_curve) in world_loop.iter().zip(uv_loop) {
-            let report = nurbs_core::sweep_cap_boundary::inspect(
-                &result.surface, world_curve, uv_curve, tolerance, max_products - products,
-            )?;
-            products += report.products;
-            if !report.within_budget {
-                return Err(err(format!("Cap boundary composition unproved: {}",
-                    report.reason.unwrap_or("unresolved certificate"))));
-            }
-        }
-    }
-    Ok(result)
-}
-
-/// Keep natural UV coordinates on a coordinate-plane cap. No rounded inverse
-/// frame or UV normalization is needed, and orientation swaps coordinates only.
-fn coordinate_cap(loops:&[Vec<Curve>],tolerance:f64,max_products:usize)->Result<Option<Cap>> {
-    let first=&loops[0][0].control_points[0];
-    // Prefer natural coordinate graphs over rounded orthonormal projection.
-    // These are candidates only: exact composition below is mandatory.
-    let mut graph=None;
-    'search: for axis in 0..3 {
-        let axes:Vec<_>=(0..3).filter(|k|*k!=axis).collect();
-        for a in [0.,0.5,-0.5,1.,-1.,2.,-2.] {
-            for b in [0.,0.5,-0.5,1.,-1.,2.,-2.] {
-                let offset=first[axis]-a*first[axes[0]]-b*first[axes[1]];
-                if loops.iter().flatten().flat_map(|c|&c.control_points).all(|p|p[axis]==offset+a*p[axes[0]]+b*p[axes[1]]) {
-                    graph=Some((axis,a,b,offset));break 'search;
-                }
-            }
-        }
-    }
-    let Some((axis,a,b,offset))=graph else {return Ok(None);};
-    let axes:Vec<_>=(0..3).filter(|k|*k!=axis).collect();
-    let mut projected=loops.to_vec();
-    let mut min=[f64::INFINITY;2];let mut max=[f64::NEG_INFINITY;2];
-    for p in projected.iter_mut().flatten().flat_map(|c|&mut c.control_points) {
-        *p=vec![p[axes[0]],p[axes[1]]];
-        for k in 0..2 {min[k]=min[k].min(p[k]);max[k]=max[k].max(p[k]);}
-    }
-    if (0..2).any(|k|!max[k].is_finite() || max[k]-min[k]<=1e-8) {return Err(err("Collapsed cap bounds"));}
-    let audit=nurbs_core::trim_region_audit::inspect(&projected,1e-10,100000,100000,1000000)?;
-    if audit.valid!=Some(true) {return Err(err(format!("Cap trim region unresolved or invalid: {}",audit.reason)));}
-    let world=|u:f64,v:f64|{let mut p=first.clone();p[axes[0]]=u;p[axes[1]]=v;p[axis]=offset+a*u+b*v;p};
-    let mut normal=[0.;3];normal[axis]=1.;normal[axes[0]]=-a;normal[axes[1]]=-b;
-    if axis==1 {normal=normal.map(|x|-x);}
-    normal=unit(normal)?;
-    let mut result=Cap{normal,surface:Surface{degree_u:1,degree_v:1,
-        knots_u:vec![min[0],min[0],max[0],max[0]],knots_v:vec![min[1],min[1],max[1],max[1]],
-        control_points:vec![vec![world(min[0],min[1]),world(min[0],max[1])],vec![world(max[0],min[1]),world(max[0],max[1])]],
-        weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false},loops:projected};
-    if audit.winding[0]==Some(-1) {
-        result.normal=result.normal.map(|x|-x);
-        std::mem::swap(&mut result.surface.knots_u,&mut result.surface.knots_v);
-        result.surface.control_points=(0..2).map(|i|(0..2).map(|j|result.surface.control_points[j][i].clone()).collect()).collect();
-        for p in result.loops.iter_mut().flatten().flat_map(|c|&mut c.control_points) {p.swap(0,1);}
-    }
-    certify_cap_chart(&result.surface,1000,1)?;
-    let mut products=0;let mut work=0;
-    for (world_loop,uv_loop) in loops.iter().zip(&result.loops) {for (world,uv) in world_loop.iter().zip(uv_loop) {
-        let report=nurbs_core::sweep_cap_boundary::inspect(&result.surface,world,uv,tolerance,max_products-products)?;
-        products+=report.products;
-        if !report.within_budget {return Err(err("Cap boundary composition unproved"));}
-        let exact=nurbs_core::curve_surface_agreement::verify_exact(world,uv,&result.surface,false,1000000-work)?;
-        let Some(exact)=exact else {return Ok(None);};
-        work+=exact.work_used;
-        if exact.outcome!=cad_predicates::BezierIdentity::Equal {return Ok(None);}
-    }}
-    Ok(Some(result))
-}
-
-/// Preserve stored coefficients when every active span already is Bezier.
-/// Renaming each knot domain to [0,1] is an exact parameter correspondence;
-/// there is no homogeneous re-evaluation or weight division on this path.
-fn retained_bezier_pieces(curve: &Curve) -> Result<Vec<Curve>> {
-    let [a, b] = curve.domain();
-    let segmented = curve
-        .knots
-        .iter()
-        .copied()
-        .filter(|k| *k > a && *k < b)
-        .all(|k| curve.knots.iter().filter(|v| **v == k).count() >= curve.degree);
-    let clamped = curve.knots.iter().filter(|k| **k == a).count() == curve.degree + 1
-        && curve.knots.iter().filter(|k| **k == b).count() == curve.degree + 1;
-    if segmented && clamped && !curve.periodic {
-        return Ok((curve.degree..curve.control_points.len())
-            .filter(|i| curve.knots[*i] < curve.knots[*i + 1])
-            .map(|i| Curve {
-                degree: curve.degree,
-                knots: std::iter::repeat_n(0., curve.degree + 1)
-                    .chain(std::iter::repeat_n(1., curve.degree + 1))
-                    .collect(),
-                control_points: curve.control_points[i - curve.degree..=i].to_vec(),
-                weights: curve.weights[i - curve.degree..=i].to_vec(),
-                periodic: false,
-            })
-            .collect());
-    }
-    curve
-        .decompose()?
-        .into_iter()
-        .map(|span| {
-            let mut c = span.definition().clone();
-            c.knots = std::iter::repeat_n(0., c.degree + 1)
-                .chain(std::iter::repeat_n(1., c.degree + 1))
-                .collect();
-            Ok(c)
-        })
-        .collect()
-}
+mod caps;
+use caps::*;
 
 /// Sections contain one outer loop followed by clockwise holes in a common
 /// authored correspondence. Curves are decomposed exactly into Bezier spans;
@@ -652,7 +437,104 @@ fn progressive_body_laws(
     guidance: Option<(&Curve, Option<(usize, f64)>)>,
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
+    let result=progressive_profile_body_with_evidence(loops,path,scale,twist,affine,frames,guidance,options)?;
+    Ok((result.model,result.approximation))
+}
+
+/// Evidence belongs to the model and endpoints produced in this construction.
+/// Cap material identity remains separate from original-domain and boundary E.
+#[derive(Clone,Copy)]
+pub struct EndpointCapCorrection {
+    pub quantum:f64,
+    pub tolerance:f64,
+    pub max_work:u64,
+}
+pub struct ProgressiveBodyEvidence {
+    pub model:Model,
+    pub approximation:nurbs_core::progressive_sweep::MultiApproximation,
+    pub retained_caps:Option<crate::sweep_retained_caps::Report>,
+    pub cap_projection:Option<nurbs_core::progressive_sweep::EndpointCapProjectionReport>,
+    pub filled_cap_error_upper:Option<[f64;2]>,
+    pub cap_correction_error_upper:Option<f64>,
+    pub retained_walls:crate::sweep_retained_walls::Report,
+    pub boundary_error_upper:Option<f64>,
+    pub boundary_error_within_budget:Option<bool>,
+    pub body_decomposition_error_upper:Option<f64>,
+    pub body_decomposition_products:usize,
+}
+
+/// Reproduce the constructor's retained sections and certify their complete
+/// correspondence to each original transported section. The error can be
+/// interpolated along a wall only when rational bases agree at every station.
+fn retained_section_partition(sections:&[Vec<Vec<Curve>>],max_products:usize)
+    ->Result<(Vec<Vec<Vec<Curve>>>,Option<f64>,usize)>{
+    if max_products>1000000 {return Err(err("Body decomposition product budget exceeds1000000"));}
+    let mut retained=Vec::new();let mut upper=Some(0f64);let mut products=0;
+    for station in sections {
+        let mut rings=Vec::new();
+        for ring in station {
+            let mut pieces=Vec::new();
+            for curve in ring {
+                let parts=retained_bezier_pieces(curve)?;
+                // Already segmented profiles are copied coefficient-for-
+                // coefficient by the constructor, with no extraction rounding.
+                let exact=nurbs_core::retained_wall_coefficients::segmented_bezier_controls(curve,1000000)
+                    .is_some_and(|source|source==parts);
+                if !exact && upper.is_some() {
+                    let proof=nurbs_core::curve_decomposition_certificate::inspect_partition(curve,&parts,max_products-products)?;
+                    products+=proof.products;
+                    upper=upper.zip(proof.error_upper).map(|(a,b)|a.max(b));
+                }
+                pieces.extend(parts);
+            }
+            rings.push(pieces);
+        }
+        retained.push(rings);
+    }
+    if let Some(first)=retained.first() {
+        if retained.iter().any(|station|station.len()!=first.len() || station.iter().zip(first).any(|(a,b)|
+            a.len()!=b.len() || a.iter().zip(b).any(|(a,b)|a.degree!=b.degree || a.knots!=b.knots || a.weights!=b.weights || a.periodic!=b.periodic))) {
+            upper=None;
+        }
+    } else {upper=None;}
+    Ok((retained,upper,products))
+}
+
+#[cfg(test)]
+#[path="tests/rational_loft_body_partition_tests.rs"]
+mod body_partition_tests;
+
+pub fn progressive_profile_body_with_evidence(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,
+    options:nurbs_core::progressive_sweep::Options,
+)->Result<ProgressiveBodyEvidence>{
+    progressive_profile_body_with_evidence_and_correction(loops,path,scale,twist,affine,frames,guidance,options,None)
+}
+pub fn progressive_profile_body_with_evidence_and_correction(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,
+)->Result<ProgressiveBodyEvidence>{
+    progressive_profile_body_with_rmf_policy(loops,path,scale,twist,affine,frames,guidance,options,correction,None)
+}
+
+/// Optional bounded original spatial RMF proof; existing callers retain their policy.
+pub fn progressive_profile_body_with_rmf_policy(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,rmf_policy:Option<(usize,usize,usize)>,
+)->Result<ProgressiveBodyEvidence>{
     use nurbs_core::progressive_sweep::{Sweep, approximate_profiles};
+    if rmf_policy.is_some() && (frames.is_some() || guidance.is_some()) {
+        return Err(err("Spatial RMF policy excludes authored frames and guides"));
+    }
+    if (frames.is_some() || guidance.is_some()) && affine.is_none() || frames.is_some() && guidance.is_some() {
+        return Err(err("Progressive body frame/guide configuration requires affine laws and one frame source"));
+    }
     if options.max_sections > 1025
         || loops.is_empty()
         || loops.len() > 16
@@ -683,7 +565,11 @@ fn progressive_body_laws(
             .min((MAX_FACES - cap_faces) / spans + 1),
         ..options
     };
-    let approximation = if let Some((guide, anchor)) = guidance {
+    let approximation = if let Some((steps,cells,products)) = rmf_policy {
+        nurbs_core::progressive_sweep::approximate_spatial_rmf_profiles(
+            &profiles,path,scale,twist,affine,options,steps,cells,products,
+        )?
+    } else if let Some((guide, anchor)) = guidance {
         let (axes, center) = affine.unwrap();
         if let Some((index, parameter)) = anchor {
             nurbs_core::progressive_sweep::approximate_contact_profiles(
@@ -716,7 +602,12 @@ fn progressive_body_laws(
     };
     let report = approximation.levels.last().unwrap();
     if !report.accepted {
-        return Err(err("Progressive body misses sampled refinement budget"));
+        if rmf_policy.is_some() {
+            return Err(err(&format!("Progressive body continuous retained-patch error is unproved or exceeds budget: {}",
+                report.error_certificate_reason.unwrap_or("configured RMF error budget"))));
+        }
+        return Err(err(&format!("Progressive body continuous retained-patch error or refinement exceeds budget: sections={}, budget={}, sampled={}, known_bound={:?}, reason={:?}",
+            report.sections, report.budget, report.sampled_control_deviation, report.known_profile_error_upper, report.error_certificate_reason)));
     }
     let transported = if let Some((guide, anchor)) = guidance {
         let sweep =
@@ -749,7 +640,7 @@ fn progressive_body_laws(
             })
             .collect::<nurbs_core::Result<Vec<_>>>()?
     };
-    let sections = (0..report.sections)
+    let mut sections = (0..report.sections)
         .map(|station| {
             let mut first = 0;
             loops
@@ -765,12 +656,69 @@ fn progressive_body_laws(
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
+    let cap_correction_error_upper=if let Some(correction)=correction {
+        if report.closed_path{return Err(err("Closed progressive body has no caps to correct"));}
+        let mut work=0_u64;let mut displacement=0_f64;
+        for end in [false,true] {
+            let station=if end {sections.len()-1}else{0};
+            let normal=if let Some((axis,_))=frames {
+                let domain=axis.domain();axis.evaluate(if end {domain[1]}else{domain[0]})?.point
+            }else{
+                let domain=path.domain();let parameter=if end&&options.orientation!=nurbs_core::progressive_sweep::Orientation::Fixed {domain[1]}else{domain[0]};
+                path.evaluate(parameter)?.d1.ok_or_else(||err("Cap correction needs an endpoint tangent"))?
+            };
+            let axis=nurbs_core::progressive_sweep::constant_vector_law([normal[0],normal[1],normal[2]])?;
+            let curves=sections[station].iter().flatten().cloned().collect::<Vec<_>>();
+            let projected=nurbs_core::section_projection::project_authored_axis(&curves,&axis,0.,correction.quantum,
+                correction.tolerance,correction.max_work.checked_sub(work).ok_or_else(||err("Cap correction work exhausted"))?)?;
+            work+=projected.work;
+            if !projected.exact_planar{return Err(err(&format!("Progressive cap correction refused: {}",projected.reason)));}
+            let corrected=projected.curves.ok_or_else(||err("Progressive cap correction has no geometry"))?;
+            displacement=displacement.max(projected.displacement_upper.ok_or_else(||err("Cap correction displacement unproved"))?);
+            let mut at=0;
+            for ring in &mut sections[station]{for curve in ring{*curve=corrected[at].clone();at+=1;}}
+        }
+        Some(displacement)
+    }else{None};
     let model = if report.closed_path {
         periodic_section_loft(&sections)?
     } else {
         rational_section_loft(&sections)?
     };
-    Ok((model, approximation))
+    let (retained_sections,body_decomposition_error_upper,body_decomposition_products)=retained_section_partition(&sections,1000000)?;
+    let retained_caps=if report.closed_path {None} else {
+        Some(crate::sweep_retained_caps::inspect(&model,&[retained_sections[0].clone(),retained_sections.last().unwrap().clone()],
+            crate::sweep_cap_contacts::Budgets {max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,
+                max_trim_pairs:100000,max_trim_cells:100000,max_trim_domain_cells:1000000},1024)?)
+    };
+    let cap_projection=if report.closed_path {None} else {
+        let mut source=nurbs_core::progressive_sweep::MultiSweep::new(&profiles,path,scale,twist,options)?;
+        if let Some((axes,center))=affine {source=source.with_affine_laws(axes,center)?;}
+        if let Some((axis,normal))=frames {source=source.with_frame_laws(axis,normal)?;}
+        if let Some((guide,anchor))=guidance {
+            source=if let Some((index,parameter))=anchor {source.with_contact_guide(guide,index,parameter)?}else{source.with_orientation_guide(guide)?};
+        }
+        if let Some((steps,cells,products))=rmf_policy {source=source.with_spatial_rmf_error_limits(steps,cells,products)?;}
+        let sizes=loops.iter().map(Vec::len).collect::<Vec<_>>();
+        let caps=[model.faces[model.faces.len()-2].surface.clone(),model.faces.last().unwrap().surface.clone()];
+        Some(source.certify_endpoint_cap_projection(&sizes,&caps,1e-9,10000,100000,1000000)?)
+    };
+    let filled_cap_error_upper=cap_projection.as_ref().and_then(|projection|nurbs_core::sweeps::filled_cap_error::filled_caps(
+        &nurbs_core::sweeps::filled_cap_error::Premises {
+            ideal_domains_certified:projection.original.domains.ideal_endpoint_domains_certified,
+            retained_regions_exact:retained_caps.as_ref().is_some_and(|r|r.exact),
+            projection_normal_dots:projection.normal_dots,endpoint_error:report.endpoint_contour_error_upper,
+            correction:Some(cap_correction_error_upper.unwrap_or(0.)),decomposition:body_decomposition_error_upper.map(|e|[e;2]),parallel_planes:[false;2],
+        }));
+    let retained_walls=crate::sweep_retained_walls::inspect(&model,&retained_sections,report.closed_path,1024,1000000)?;
+    // Preview may itself have been decomposed; keeping its full error and adding
+    // constructor extraction is conservative even when both include that term.
+    let original_wall_error=if retained_walls.certified {report.continuous_error_upper.zip(body_decomposition_error_upper)
+        .and_then(|(a,b)|nurbs_core::numerics::error_upper::add(a,b))}else{None};
+    let wall_error=if let Some(correction)=cap_correction_error_upper {original_wall_error.and_then(|e|nurbs_core::numerics::error_upper::add(e,correction))}else{original_wall_error};
+    let boundary_error_upper=nurbs_core::sweeps::filled_cap_error::boundary(wall_error,filled_cap_error_upper,report.closed_path);
+    let boundary_error_within_budget=boundary_error_upper.map(|upper|upper<=options.max_deviation);
+    Ok(ProgressiveBodyEvidence {model,approximation,retained_caps,cap_projection,filled_cap_error_upper,cap_correction_error_upper,retained_walls,boundary_error_upper,boundary_error_within_budget,body_decomposition_error_upper,body_decomposition_products})
 }
 
 #[cfg(test)]
@@ -788,3 +736,7 @@ mod supplied_multispan_tests;
 #[cfg(test)]
 #[path="tests/rational_loft_nonuniform_wall_regression.rs"]
 mod nonuniform_wall_regression;
+
+#[cfg(test)]
+#[path="tests/rational_loft_closed_planar_rmf_boundary_tests.rs"]
+mod closed_planar_rmf_boundary_tests;

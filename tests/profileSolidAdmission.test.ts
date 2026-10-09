@@ -24,5 +24,5 @@ it.each([6,10])('delivers whole closed spatial body proofs and fresh Solid admis
  const changed=structuredClone(body.model)
  changed.faces[0]!.surface.controlPoints[0]![0]![0]!+=.0001
  const forged=createNativeGeometryArtifact('placed','brep',{...changed,volume:{solidGeometryCertified:true}},document)
- expect(()=>inspectProgressiveSweepSolidAdmission(forged,changed)).toThrow(/exact boundary agreement/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(forged,changed)).toThrow(/snapshot model binding/)
 })

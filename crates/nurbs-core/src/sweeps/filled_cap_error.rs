@@ -1,6 +1,6 @@
 //! Conditional boundary-set error composition. Premise provenance, topology,
 //! orientation and global embedding must be established independently.
-use crate::sweep_support::error_upper;
+use crate::numerics::error_upper;
 #[derive(Clone)]
 pub struct Premises {
     pub ideal_domains_certified: bool,
@@ -77,5 +77,62 @@ mod tests{
         assert_eq!(boundary(None,Some([0.,0.]),false),None);
         assert_eq!(boundary(Some(-1.),Some([0.,0.]),false),None);
         assert_eq!(boundary(Some(0.),Some([0.,f64::NAN]),false),None);
+    }
+}
+
+pub struct BoundaryCertificate {
+    pub continuous_bound:bool,pub within_budget:Option<bool>,pub error_upper:Option<f64>,
+    pub wall_error_upper:Option<f64>,pub filled_cap_error_upper:Option<[f64;2]>,pub reason:Option<&'static str>,
+}
+/// Conditional composition only: source ownership belongs to the constructor.
+/// A complete bound can be proved while failing the caller's tolerance.
+pub fn compose_boundary(wall:Option<f64>,caps:Option<[f64;2]>,closed:bool,budget:Option<f64>)->BoundaryCertificate {
+    let valid=|x:f64|x.is_finite()&&x>=0.;
+    let wall=wall.filter(|&x|valid(x));
+    let valid_caps=caps.filter(|c|c.iter().all(|&x|valid(x)));
+    let budget=budget.filter(|x|x.is_finite()&&*x>0.);
+    let error_upper=budget.and_then(|_|boundary(wall,valid_caps,closed));
+    let within_budget=error_upper.zip(budget).map(|(upper,budget)|upper<=budget);
+    let reason=if budget.is_none() {Some("invalid-budget")}
+        else if wall.is_none() {Some("wall-bound-unproved")}
+        else if error_upper.is_none() {Some("filled-cap-bound-unproved")}
+        else if within_budget==Some(false) {Some("boundary-budget-exceeded")}else{None};
+    BoundaryCertificate {continuous_bound:error_upper.is_some(),within_budget,error_upper,
+        wall_error_upper:wall,filled_cap_error_upper:if closed {None}else{valid_caps},reason}
+}
+#[cfg(test)]
+mod boundary_certificate_tests {
+    use super::*;
+    #[test]
+    fn union_certificate_distinguishes_completeness_tolerance_and_missing_premises() {
+        #[cfg(feature="transport")]
+        {
+            let request=value_codec::json!({"op":"sweep_boundary_certificate","wall":0.1,
+                "caps":[0.2,0.3],"closed":false,"budget":0.4});
+            let r=crate::transport::dispatch(request.clone()).unwrap();
+            assert_eq!(r["continuousBound"],true);assert_eq!(r["withinBudget"],true);
+            assert_eq!(r["scope"],"boundary-set-hausdorff");
+            let mut invalid=request;invalid["caps"]=value_codec::json!([Option::<f64>::None,Some(0.3)]);
+            let r=crate::transport::dispatch(invalid).unwrap();
+            assert_eq!(r["continuousBound"],false);
+            assert_eq!(r["reason"],"filled-cap-bound-unproved");
+        }
+        let r=compose_boundary(Some(0.1),Some([0.2,0.3]),false,Some(0.4));
+        assert!(r.continuous_bound && r.within_budget==Some(true) && r.error_upper==Some(0.3));
+        let r=compose_boundary(Some(0.1),Some([0.2,0.3]),false,Some(0.25));
+        assert!(r.continuous_bound && r.within_budget==Some(false));
+        assert_eq!(r.reason,Some("boundary-budget-exceeded"));
+        let r=compose_boundary(Some(0.1),None,false,Some(0.4));
+        assert!(!r.continuous_bound && r.within_budget.is_none() && r.reason==Some("filled-cap-bound-unproved"));
+        let r=compose_boundary(Some(0.1),None,true,Some(0.4));
+        assert!(r.continuous_bound && r.filled_cap_error_upper.is_none());
+        for wall in [None,Some(-1.),Some(f64::NAN),Some(f64::INFINITY)] {
+            let r=compose_boundary(wall,Some([0.,0.]),false,Some(0.4));
+            assert!(!r.continuous_bound && r.reason==Some("wall-bound-unproved"));
+        }
+        for budget in [None,Some(0.),Some(-1.),Some(f64::NAN),Some(f64::INFINITY)] {
+            let r=compose_boundary(Some(0.),Some([0.,0.]),false,budget);
+            assert!(!r.continuous_bound && r.reason==Some("invalid-budget"));
+        }
     }
 }

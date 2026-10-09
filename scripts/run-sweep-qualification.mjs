@@ -10,16 +10,21 @@ for(const file of catalog.browser.solid)assert.ok(existsSync(new URL('examples/r
 for(const target of ['wasm','rush'])for(const file of catalog.suites[target])assert.ok(existsSync(new URL(file,root)),file)
 const target=process.argv[2]??'list'
 const args=process.argv.slice(3)
+const oraclePython=process.env.SWEEP_OCCT_PYTHON??'python3'
 const commands={
  native:[...catalog.suites.native.filters.map(filter=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p',catalog.suites.native.package,'--lib',filter]),...(catalog.suites.native.bridgeTests??[]).map(test=>['cargo','test','--locked','--manifest-path','crates/Cargo.toml','-p','geometry-bridge','--test',test])],
  wasm:[['node_modules/.bin/vitest','run',...catalog.suites.wasm]],
  rush:[['node_modules/.bin/vitest','run',...catalog.suites.rush]],
  'profile-browser':[['node','scripts/check-profile-solid-browser.mjs',...args]],
  browser:[['node','scripts/check-sweep-miter-matrix-browser.mjs',...args]],
- step:[['node','--import','tsx','scripts/export-sweep-step-oracle.mts',...args]],
+ step:[['node','--import','tsx','scripts/export-sweep-step-oracle.mts',...args],
+  [oraclePython,'scripts/reference-sweep-generator-volume.py',args[0]??'docs/qualification/sweep-coverage-2026-10-01/external-step'],
+  [oraclePython,'scripts/reference-rational-boundary-volume.py',args[0]??'docs/qualification/sweep-coverage-2026-10-01/external-step'],
+  [oraclePython,'scripts/verify-sweep-step-occt.py',args[0]??'docs/qualification/sweep-coverage-2026-10-01/external-step']],
  'profile-step':[['node','--import','tsx','scripts/export-profile-solid-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-profile-solid-step.py',args[0]??'/tmp/profile-solid-step']],
  'scalar-step':[['node','--import','tsx','scripts/export-scalar-sweep-step.mts',...args],[process.env.SWEEP_OCCT_PYTHON??'python3','scripts/verify-scalar-sweep-step-occt.py',args[0]??'/tmp/scalar-sweep-step']],
- 'step-smooth':[['node','--import','tsx','scripts/export-smooth-station-step-oracle.mts',...args],['python3','scripts/reference-sweep-generator-volume.py',args[0]??'/tmp/sweep-smooth-station-step']],
+ 'step-smooth':[['node','--import','tsx','scripts/export-smooth-station-step-oracle.mts',...args],[oraclePython,'scripts/reference-sweep-generator-volume.py',args[0]??'/tmp/sweep-smooth-station-step'],
+  [oraclePython,'scripts/verify-sweep-step-occt.py',args[0]??'/tmp/sweep-smooth-station-step']],
 }
 if(target==='list')console.log(JSON.stringify({browser:catalog.browser.solid.length,step:catalog.step.baseline.length,smooth:catalog.step.smooth.length,commands},null,2))
 else {
@@ -28,5 +33,14 @@ else {
   const result=spawnSync(cmd,argv,{cwd:root,stdio:'inherit',env:{...process.env,VITEST_MAX_WORKERS:process.env.VITEST_MAX_WORKERS??'2'}})
   if(result.error)throw result.error
   if(result.status!==0)process.exit(result.status??1)
+ }
+ if(target==='step'){
+  const manifest=JSON.parse(readFileSync(new URL((args[0]??'docs/qualification/sweep-coverage-2026-10-01/external-step')+'/manifest.json',root),'utf8'))
+  assert.equal(manifest.cases.length,catalog.step.baseline.length,'STEP manifest selection count')
+  for(const entry of catalog.step.baseline){
+   const actual=manifest.cases.find(item=>item.file===entry.file)
+   assert.ok(actual,'Missing selected STEP case: '+entry.file)
+   assert.equal(actual.nativeVolume?.solidGeometryCertified,entry.nativeAdmission==='certify','Native admission differs from selected expectation: '+entry.file)
+  }
  }
 }

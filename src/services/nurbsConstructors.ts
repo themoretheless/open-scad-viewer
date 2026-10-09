@@ -1,8 +1,14 @@
+import {streamNativeSweep} from './sweep/transport/streamNative'
+import type {ProgressiveOriginalFrameSmoothness,ProgressiveClosedPathFrameSmoothness,ProgressiveClosedAuthoredFrameSmoothness,ProgressiveClosedGuidedFrameSmoothness,ProgressiveRetainedDecompositionJoins,ProgressiveRetainedDecompositionSmoothness} from './sweep/certificates/progressiveSweepApi'
 import type { RationalReparameterization } from './nurbsFoundation'
 /** Surface construction is implemented by the own Rust kernel. */
 import { type NurbsCurve } from './nurbsCurve'
 import { type NurbsSurface } from './nurbsSurface'
 import { callNurbsRust } from './geometry/nurbs'
+import {inspectAuthoredFrameRegularity,type AuthoredFrameRegularity} from './nurbsAuthoredFrameRegularity'
+import {inspectRetainedPatchRegularity,type RetainedPatchRegularity} from './nurbsRetainedPatchRegularity'
+import {inspectFrenetFrameRegularity,type FrenetFrameRegularity} from './nurbsFrenetFrameRegularity'
+import {inspectFixedNormalFrameRegularity,type FixedNormalFrameRegularity} from './nurbsFixedNormalFrameRegularity'
 /** Rational sphere surface; its poles are intentional parameter singularities. */
 export const sphereNurbsSurface = (center: [number,number,number], radius: number): NurbsSurface => callNurbsRust('surface_sphere',{center,radius})
 /** Circular cylinder side, without caps. */
@@ -132,12 +138,17 @@ export interface ProgressiveSweepOptions {
  maxDeviation:number
  lengthTolerance?:number
  lengthMaxCells?:number
+ rmfTransportSteps?:number
+ errorMaxCells?:number
+ errorMaxProducts?:number
 }
-/** Complete orientation independent of guide tangent; sampled regularity only. */
+/** Complete orientation independent of path tangent; native reports distinguish
+ * certified retained-patch error from sampled transport acceptance. */
 export interface AuthoredProgressiveSweepOptions extends Omit<ProgressiveSweepOptions,'orientation'> {
  orientation:'authored'
  frameAxis:NurbsVectorLaw
  frameNormal:NurbsVectorLaw
+ frameRegularityMaxCells?:number
 }
 export type ProgressiveSurfaceSweepOptions=ProgressiveSweepOptions|AuthoredProgressiveSweepOptions
 /** A spatial rail controls normal direction; this does not force profile contact. */
@@ -153,18 +164,38 @@ export const sweepFrameLawPayload=(options:{orientation?:string;frameAxis?:Nurbs
 /** Positive dimensionless axis scale and local-frame center offsets in mm. */
 export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisScale'|'centerLaw'>)=>callNurbsRust<{axis_scale:NurbsCurve|null;center_law:NurbsCurve|null}>('brep_sweep_law_payload',{kind:'affine',options})
 export interface ProgressiveSweepReport {
+ authoredFrameRegularity?:AuthoredFrameRegularity
+ retainedPatchRegularity?:RetainedPatchRegularity
+ sourceFrameRegularity?:FrenetFrameRegularity|FixedNormalFrameRegularity
+ sourceFrameSmoothness?:ProgressiveOriginalFrameSmoothness
+ closedSourceFrameSmoothnessC1?:ProgressiveClosedPathFrameSmoothness
+ closedSourceFrameSmoothness?:ProgressiveClosedAuthoredFrameSmoothness|ProgressiveClosedPathFrameSmoothness|ProgressiveClosedGuidedFrameSmoothness
+ retainedDecompositionSmoothness?:ProgressiveRetainedDecompositionJoins
+ retainedDecompositionG1Fallback?:ProgressiveRetainedDecompositionSmoothness
  accepted:boolean
  sections:number
  stations:number
+ continuousErrorUpper:number|null
+ /** Maximum of certified profiles; does not certify unresolved profiles. */
+ knownProfileErrorUpper:number|null
+ /** Original stored end contours; excludes decomposition, correction and filled caps. */
+ originalSectionEndpointErrorUpper?:number|null
+ /** Retained end contours including decomposition; excludes correction/filled caps. */
+ endpointContourErrorUpper?:[number,number]|null
+ errorCertificateCells:number
+ decompositionProducts:number
+ errorCertificateReason:string|null
+ continuousErrorScope:'retained-patches-relative-to-original-profile-transport'
  sampledControlDeviation:number
  budget:number
  closedPath:boolean
  lengthResidualUpper:number|null
- continuousBound:false
- roundingCertified:false
+ continuousBound:boolean
+ roundingCertified:boolean
  seamContinuity:'C0'|'open'
  method:'progressive-fourfold-section-refinement'
 }
+/** Attach a separate whole-law Rust premise without changing native admission. */
 export interface ProgressiveSweepResult {patches:NurbsSurface[]|null;report:ProgressiveSweepReport;levels:ProgressiveSweepReport[]}
 /** Simultaneous scale/twist; twist values use degrees, normalized traversal. */
 export const progressiveSweepNurbsPatches=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveSweepResult=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep',profile,path,scale,twist,options})
@@ -195,7 +226,7 @@ export interface ProgressiveMiterOptions {
  retainedDecompositionBudgets?:{maxProducts:number;maxFaces:number}
  capProjectionBudgets?:{maxCells:number;maxExactWork:number}
  circleCorrection?:{quantum:number;tolerance:number;maxWork:number}
- capCorrection?:{quantum:number;tolerance:number;maxWork:number}
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean}
  capWallMaxWalls?:number
  contourAuditBudgets?:{tolerance:number;maxPairs:number;maxCells:number}
  retainedWallMaxInjectivityCells?:number
@@ -465,47 +496,6 @@ export interface NurbsRectangleSection {center:[number,number,number];axisU:[num
 export const circleRectangleTransitionNurbsPatches=(circle:NurbsCircleSection,rectangle:NurbsRectangleSection):NurbsSurface[]=>
  callNurbsRust("surface_circle_rectangle_transition",{circle_center:circle.center,circle_normal:circle.normal,circle_seam:circle.seam,circle_radius:circle.radius,rectangle_center:rectangle.center,rectangle_axis_u:rectangle.axisU,rectangle_axis_v:rectangle.axisV})
 
-export const controlTangentLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], startTangents: [number,number,number][], endTangents: [number,number,number][]): NurbsSurface => callNurbsRust('surface_control_tangent_loft', {curves, parameters, start_tangents:startTangents, end_tangents:endTangents})
-export const guidedLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[], startTangents?: [number,number,number][], endTangents?: [number,number,number][]): NurbsSurface => callNurbsRust('surface_guided_loft', {curves, parameters, guides, guide_parameters:guideParameters, start_tangents:startTangents, end_tangents:endTangents})
+export * from './loft/transport/construction'
 
-export interface AlignedNurbsLoft {
- surface:NurbsSurface
- guides:NurbsCurve[]
- guide_parameters:number[]
- guide_order:number[]
- reversed:boolean[]
- section_error_upper:number[]
- guide_error_upper:number[]
- sections?:NurbsCurve[]
- section_mapping_certificates?:unknown[]
- original_section_certificates?:Array<Record<string,unknown>>
-}
-/** Automatic isolated intersections, guide reversal/sorting and piecewise V mapping. */
-export const autoGuidedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],guides:NurbsCurve[],budget:number,parameterTolerance=1e-8,sectionMappings?:Array<RationalReparameterization|null>):AlignedNurbsLoft=>callNurbsRust('surface_auto_guided_loft',{curves,parameters,guides,budget,parameter_tolerance:parameterTolerance,section_mappings:sectionMappings})
-export interface LoftEndConstraint {
- reference:NurbsSurface
- boundary:'uMin'|'uMax'|'vMin'|'vMax'
- order:1|2
- scale:number
- reverse?:boolean
-}
-export interface MatchedNurbsLoft {
- surface:NurbsSurface
- seams:unknown[]
- section_error_upper:number[]
- guide_error_upper:number[]
-}
-/** Certified scaled boundary jets with whole-curve section/guide retention bounds. */
-export const matchNurbsLoftEnds=(surface:NurbsSurface,curves:NurbsCurve[],parameters:number[],budget:number,start?:LoftEndConstraint,end?:LoftEndConstraint,guides:NurbsCurve[]=[],guideParameters:number[]=[]):MatchedNurbsLoft=>callNurbsRust('surface_loft_match_ends',{surface,curves,parameters,budget,start,end,guides,guide_parameters:guideParameters})
-
-/** Browser scheduling and cancellation only; Rust owns source snapshots and refinement. */
-async function* streamNativeSweep<P,R>(request:Record<string,unknown>,control:ProgressiveSweepStreamOptions):AsyncGenerator<P,R,void>{
- const checkAbort=()=>{control.signal?.throwIfAborted();if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')}
- checkAbort()
- const {stream}=callNurbsRust<{stream:string}>('brep_sweep_stream_start',request)
- try{for(;;){
-  await new Promise<void>(resolve=>setTimeout(resolve,0));checkAbort()
-  const next=callNurbsRust<{done:false;value:P}|{done:true;value:R}>('brep_sweep_stream_next',{stream})
-  checkAbort();if(next.done)return next.value;yield next.value
- }}finally{callNurbsRust('brep_sweep_stream_release',{stream})}
-}
+export * from './sweep/certificates/progressiveSweepApi'

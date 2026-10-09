@@ -61,16 +61,8 @@ export function validSolidDistance(e:ReturnType<typeof solidDistanceExpectation>
   if(!w||r.materialOverlap!==false||d===null||!Array.isArray(w.faces)||w.faces.length!==2||!w.faces.every((f,i)=>integer(f,e.models[i].domains.length-1)))return false
   if(!Array.isArray(w.parameters)||w.parameters.length!==2||!w.parameters.every((uv,i)=>Array.isArray(uv)&&uv.length===2&&uv.every((t,k)=>Number.isFinite(t)&&t>=e.models[i].domains[w.faces[i]][k][0]&&t<=e.models[i].domains[w.faces[i]][k][1])))return false
   if(!Array.isArray(w.points)||w.points.length!==2||!w.points.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))||!Array.isArray(w.pointEnclosures)||w.pointEnclosures.length!==2)return false
-  let uncertainty=0
-  for(let i=0;i<2;i++){
-   const bounds=w.pointEnclosures[i]
-   if(!Array.isArray(bounds)||bounds.length!==3||!bounds.every((x,k)=>interval(x)&&x[0]<=w.points[i][k]&&x[1]>=w.points[i][k]))return false
-   uncertainty+=bounds.reduce((sum,x,k)=>sum+Math.max(w.points[i][k]-x[0],x[1]-w.points[i][k]),0)
-  }
-  const gap=Math.hypot(...w.points[0].map((x,k)=>x-w.points[1][k]))
-  if(!Number.isFinite(gap)||!Number.isFinite(uncertainty))return false
-  uncertainty+=Number.EPSILON*Math.max(1,gap,...w.points.flat().map(Math.abs))*16
-  if(gap<d[0]-uncertainty||gap>d[1]+uncertainty)return false
+  for(let i=0;i<2;i++){const bounds=w.pointEnclosures[i];if(!Array.isArray(bounds)||bounds.length!==3||!bounds.every((x,k)=>interval(x)&&x[0]<=w.points[i][k]&&x[1]>=w.points[i][k]))return false}
+  if(!callGeometryRust<boolean>('cad_client_geometry',{operation:'distanceWitness',points:w.points,bounds:w.pointEnclosures,lo:d[0],hi:d[1],strictUpper:false}))return false
  }else if(r.materialOverlap===false&&d!==null)return false
  if(r.contact!==null){
   const c=r.contact

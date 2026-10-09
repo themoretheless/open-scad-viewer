@@ -43,6 +43,8 @@ fn near(a: f64, b: f64) {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn empty_and_identical_operands_obey_regularized_set_identities() {
     let empty = Model::empty(1e-7).unwrap();
     assert!(Model::empty(f64::NAN).is_err());

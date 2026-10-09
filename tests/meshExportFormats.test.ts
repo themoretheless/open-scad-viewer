@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
 import { exportMeshFormat, MESH_EXPORT_FORMATS } from '../src/services/meshExportFormats';
-import { buildOwnNurbs } from '../src/services/modelGraphNurbsKernel';
-import { MODELGRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/modelGraphNurbs';
+import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel';
+import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs';
 import { OpenScadProject } from '../src/services/openScadProject';
 import { parseOpenScad3mf, parseOpenScadAmf, parseOpenScadStl, parseOpenScadOff } from '../src/services/openScadImport';
-const built = buildOwnNurbs(MODELGRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' });
+const built = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' });
 if (!('mesh' in built) || !built.mesh)
     throw new Error('Missing mesh');
 const mesh = built.mesh;
@@ -29,7 +29,7 @@ it('writes correct OBJ indexing and PLY counts, deterministically', () => {
     expect(exportMeshFormat(mesh, '3mf').data).toEqual(exportMeshFormat(mesh, '3mf').data);
 });
 it.each(MESH_EXPORT_FORMATS)('exposes %s through the own kernel artifact', format => {
-    const out = buildOwnNurbs(MODELGRAPH_NURBS_SURFACE_EXAMPLE, { action: 'export', format });
+    const out = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'export', format });
     expect('artifact' in out && out.artifact?.format).toBe(format);
 });
 it('rejects an open printing mesh but exports it as OBJ', () => {

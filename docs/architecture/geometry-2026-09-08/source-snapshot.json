@@ -231,22 +231,22 @@
       "bytes": 1750
     },
     {
-      "path": "src/services/modelGraphNurbs.ts",
+      "path": "src/services/rushGraphNurbs.ts",
       "sha256": "b6989e9e698e82cdb9333ea0bf1ed220301ee08f4b627d370554e83455449ad5",
       "bytes": 18861
     },
     {
-      "path": "src/services/modelGraphNurbsKernel.ts",
+      "path": "src/services/rushGraphNurbsKernel.ts",
       "sha256": "d395bd7d87af057b2019159a860b9485637ac5d39af6e6e5f4550980bbe4fe05",
       "bytes": 18215
     },
     {
-      "path": "src/services/modelGraphTextNurbs.ts",
+      "path": "src/services/rushFrontendNurbs.ts",
       "sha256": "8e0a3e49defa70b88d7084074403e8479f079d49da60221d6a1df8c03dcf96e3",
       "bytes": 3431
     },
     {
-      "path": "src/services/modelGraphTextScene.ts",
+      "path": "src/services/rushFrontendScene.ts",
       "sha256": "546c8fbe3f3ba90df92d94dbb7af67ae39610701fe633dc32b2635f4f7970cdb",
       "bytes": 2220
     }

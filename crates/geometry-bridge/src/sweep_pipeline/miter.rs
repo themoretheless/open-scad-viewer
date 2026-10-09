@@ -1,4 +1,43 @@
 use super::*;
+fn original_miter_source(v: &Value, request: &Value) -> Result<Value> {
+    let o = &v["options"];
+    let mut source = json!({"loops":v["loops"],"points":request["points"],
+        "scale":request["scale"],"twist":request["twist"],"normal":request["normal"],
+        "closed":request["closed"],"miterLimit":request["miter_limit"],
+        "initialSteps":request["initial_steps"],"maxSteps":request["max_steps"],
+        "maxDeviation":request["max_deviation"]});
+    for (raw, public) in [
+        ("axis_scale", "axisScale"),
+        ("center_law", "centerLaw"),
+        ("frame_axis", "frameAxis"),
+        ("frame_normal", "frameNormal"),
+        ("orientation_guide", "orientationGuide"),
+    ] {
+        if !request[raw].is_null() {
+            source[public] = request[raw].clone();
+        }
+    }
+    for key in ["circleCorrection", "capCorrection"] {
+        if !o[key].is_null() {
+            source[key] = o[key].clone();
+        }
+    }
+    let contour = &o["contourAuditBudgets"];
+    let decomposition = &o["retainedDecompositionBudgets"];
+    let caps = value(
+        &o["volumeBudgets"],
+        "capBudgets",
+        volume_budgets()["capBudgets"].clone(),
+    );
+    source["limits"] = json!({"maxProducts":value(decomposition,"maxProducts",json!(100000)),
+        "maxFaces":value(decomposition,"maxFaces",json!(1024)),"exactWork":1000000,
+        "wallCells":value(o,"retainedWallMaxInjectivityCells",json!(10000)),
+        "domainTolerance":value(contour,"tolerance",json!(0.001)),
+        "domainPairs":value(contour,"maxPairs",json!(1000)),
+        "domainCells":value(contour,"maxCells",json!(10000)),"projectionCells":10000,
+        "capRegions":caps});
+    Ok(source)
+}
 pub fn progressive_miter(v: Value) -> Result<Value> {
     progressive_miter_from(v, None)
 }
@@ -34,10 +73,20 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
         return Err(input("Progressive miter initial steps exceed face budget"));
     }
     request["max_steps"] = json!(maximum);
-    let approximation = match accepted {
-        Some(level) => level,
-        None => nurbs("curve_progressive_miter", request.clone())?,
-    };
+    // The native owner closes the combined wall/correction/cap budget and
+    // retains its complete charged refinement history. A sampled preview is
+    // not sufficient to select the final body.
+    let owned_source = original_miter_source(&v, &request)?;
+    let owned = call("brep_miter_owned_construct", owned_source.clone())?;
+    let levels = owned["levels"].clone();
+    let final_report = levels
+        .as_array()
+        .and_then(|a| a.last())
+        .cloned()
+        .ok_or_else(|| input("Native miter owner has no final refinement report"))?;
+    let approximation =
+        json!({"sections":owned["sourceSections"],"report":final_report,"levels":levels});
+    let _ = accepted; // Stream previews cannot substitute for original-source ownership.
     let report = &approximation["report"];
     if report["frameTransportCertified"] == json!(false) {
         return Err(input(
@@ -65,16 +114,14 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
             "Progressive miter refinement/phase budget not met within the body face budget",
         ));
     }
-    let mut correction =
-        correct(json!({"sections":approximation["sections"],"points":points,"options":o}))?;
-    let retained = if correction.is_null() {
-        approximation["sections"].clone()
-    } else {
-        correction["sections"].clone()
-    };
-    if let Some(fields) = correction.as_object_mut() {
-        fields.remove("sections");
-    }
+    let correction = owned["sectionCorrection"].clone();
+    let retained_sections: Vec<Vec<Vec<Value>>> = field(&owned, "sections")?;
+    let retained = json!(
+        retained_sections
+            .into_iter()
+            .map(|row| row.into_iter().flatten().collect::<Vec<Value>>())
+            .collect::<Vec<_>>()
+    );
     let wall_defaults = json!({"clearance":0.,"distanceTolerance":0.001,"maxInjectivityCells":1000,"maxPairs":1000,"maxPairCells":1000});
     let wall_request = merge(
         merge(
@@ -85,14 +132,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     );
     let wall_audit = nurbs("curve_progressive_miter_wall_audit", wall_request)?;
     let sections = partition(&retained, &sizes)?;
-    let model = call(
-        if closed {
-            "brep_nurbs_periodic_section_loft"
-        } else {
-            "brep_nurbs_rational_section_loft"
-        },
-        json!({"sections":sections}),
-    )?;
+    let model = owned["model"].clone();
     let mut cap_domains = Value::Null;
     if !closed {
         let rows = sections.as_array().unwrap();
@@ -140,9 +180,12 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     )?;
     let budget: f64 = field(o, "maxDeviation")?;
     if !correction.is_null() && (wall_error.is_null() || wall_error.as_f64().unwrap() > budget) {
-        return Err(input(
-            "Corrected progressive miter retained wall error exceeds max_deviation or is unproved",
-        ));
+        return Err(input(format!(
+            "Corrected progressive miter retained wall error exceeds max_deviation or is unproved (upper={wall_error}, budget={budget}, source={}, correction={}, decomposition={})",
+            report["certifiedErrorUpper"],
+            correction["wallDisplacementUpper"],
+            decomposition["wallErrorUpper"]
+        )));
     }
     let caps = cap_faces(&model, closed)?;
     let volume_budgets = value(o, "volumeBudgets", volume_budgets());
@@ -222,7 +265,7 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     }
     let charts = call(
         "brep_sweep_retained_wall_charts_audit",
-        json!({"model":model,"capFaces":caps,"maxCells":value(o,"retainedWallMaxInjectivityCells",json!(1000))}),
+        json!({"model":model,"capFaces":caps,"maxCells":value(o,"retainedWallMaxInjectivityCells",json!(brep_core::sweep_miter_owned::DEFAULT_WALL_CELLS))}),
     )?;
     if !correction.is_null() && !yes(&charts, "allChartsCertified") {
         return Err(input(
@@ -292,6 +335,8 @@ pub(super) fn progressive_miter_from(v: Value, accepted: Option<Value>) -> Resul
     if !correction.is_null() {
         body["sectionCorrection"] = correction;
     }
+    body["sweepMiterReplay"] =
+        json!({"source":owned_source,"matrix":null,"followingPlacements":[]});
     own(body, Some(sections), Some(json!(sharp)), authoring)
 }
 pub fn miter(v: Value) -> Result<Value> {
@@ -408,55 +453,62 @@ pub fn transform(v: Value) -> Result<Value> {
         &source.certificate,
         "Affine source complete boundary bound unproved",
     )?;
-    let placement = call(
-        "brep_nurbs_affine_lattice",
-        json!({"model":source.model,"matrix":v["matrix"],"quantum":o["quantum"],"maxWork":o["maxWork"]}),
+    // Native transport composes both operator-norm amplification and the
+    // outward pole arithmetic bound. Off-lattice coordinates are supported
+    // only when the complete actual boundary remains within the budget.
+    let transported = call(
+        "brep_miter_affine_boundary",
+        json!({
+            "model":source.model,"sourceCertificate":source.certificate,
+            "matrix":v["matrix"],"quantum":o["quantum"],"maxWork":o["maxWork"],
+            "budget":o["maxDeviation"]
+        }),
     )?;
-    if placement["model"].is_null()
-        || placement["operatorNormUpper"].is_null()
-        || placement["arithmeticErrorUpper"].as_f64() != Some(0.)
-    {
+    let placement = transported["placement"].clone();
+    if placement["model"].is_null() {
+        if transported["reason"] == json!("boundary-budget-unproved") {
+            return Err(input(
+                "Affine complete boundary error exceeds max_deviation or is unproved",
+            ));
+        }
         return Err(input(format!(
             "Exact affine placement unproved: {}",
-            placement["reason"]
+            transported["reason"]
         )));
     }
-    let scale = |upper: &Value| -> Result<Value> {
-        if upper.is_null() {
-            Ok(Value::Null)
-        } else {
-            Ok(nurbs(
-                "sweep_error_upper_compose",
-                json!({"kind":"multiply","a":placement["operatorNormUpper"],"b":upper}),
-            )?["errorUpper"]
-                .clone())
-        }
-    };
-    let caps = if let Some(caps) = source.certificate["filledCapErrorUpper"].as_array() {
-        let values = caps.iter().map(scale).collect::<Result<Vec<_>>>()?;
-        if values.iter().any(Value::is_null) {
-            Value::Null
-        } else {
-            json!(values)
-        }
-    } else {
-        Value::Null
-    };
-    let certificate = nurbs(
-        "sweep_boundary_certificate",
-        json!({"wall":scale(&source.certificate["wallErrorUpper"])?,"caps":caps,"closed":source.certificate["closed"],"budget":o["maxDeviation"]}),
-    )?;
+    let certificate = transported["boundaryCertificate"].clone();
     complete(
         &certificate,
         "Affine complete boundary error exceeds max_deviation or is unproved",
     )?;
     let model = &placement["model"];
     let (smoothness, charts, volume) = audit_placed(model, &certificate)?;
-    let body = boundary_fields(
-        json!({"model":model,"placement":placement,"profileSmoothness":smoothness,"retainedWallCharts":charts,"volume":volume,"wallRegularityCertified":charts["allChartsCertified"],"profileRegularityCertified":charts["allChartsCertified"]}),
+    let mut body = boundary_fields(
+        merge(
+            json!({"model":model,"placement":placement,"profileSmoothness":smoothness,"retainedWallCharts":charts,"volume":volume,"wallRegularityCertified":charts["allChartsCertified"],"profileRegularityCertified":charts["allChartsCertified"]}),
+            &source.authoring,
+        ),
         &certificate,
     );
-    own(body, None, None, Value::Null)
+    if source.replay.is_object() {
+        let mut replay = source.replay.clone();
+        let step = json!({"matrix":v["matrix"],"quantum":o["quantum"],"maxWork":o["maxWork"],"budget":o["maxDeviation"]});
+        if replay["matrix"].is_null() {
+            replay = merge(replay, &step);
+        } else {
+            let mut history = replay["followingPlacements"]
+                .as_array()
+                .cloned()
+                .ok_or_else(|| input("Invalid native affine replay history"))?;
+            if history.len() >= 64 {
+                return Err(input("Native affine replay history budget exhausted"));
+            }
+            history.push(step);
+            replay["followingPlacements"] = json!(history);
+        }
+        body["sweepMiterReplay"] = replay;
+    }
+    own(body, None, None, source.authoring)
 }
 pub fn smooth(mut v: Value, reconstruct: bool) -> Result<Value> {
     let source = owner(&v)?;

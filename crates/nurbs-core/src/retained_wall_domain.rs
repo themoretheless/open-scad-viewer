@@ -1,6 +1,8 @@
 //! Exact full rectangular trim and world-boundary identity premise.
 use super::{curve,surface,curve_surface_agreement,Result,input};
+#[cfg(feature="codec")]
 use value_codec::{Value,json,Deserialize};
+#[cfg(feature="codec")]
 fn field<T:for<'a> Deserialize<'a>>(v:&Value,key:&str)->Result<T>{
     value_codec::from_value(v[key].clone()).map_err(|e|input(format!("Invalid {key}: {e}")))
 }
@@ -34,14 +36,15 @@ pub fn covers(s:&surface::Surface,holes:&[usize],uses:&[(&curve::Curve,&curve::C
     }
     Ok((true,work))
 }
+#[cfg(feature="codec")]
 pub fn inspect(v:&Value)->Result<Value>{
-    let holes:Vec<usize>=field(v,"holes")?;
     let surface:surface::Surface=field(v,"surface")?;
-    let values:Vec<Value>=field(v,"coedges")?;
-    let owned=values.iter().map(|u|Ok((field::<curve::Curve>(u,"world")?,field::<curve::Curve>(u,"uv")?,field::<bool>(u,"reversed")?))).collect::<Result<Vec<_>>>()?;
-    let uses=owned.iter().map(|(world,uv,reversed)|(world,uv,*reversed)).collect::<Vec<_>>();
-    let (certified,work)=covers(&surface,&holes,&uses,field(v,"maxWork")?)?;
-    Ok(json!({"domainCertified":certified,"work":work,"globalEmbeddingCertified":false}))
+    let holes:Vec<usize>=field(v,"holes")?;
+    let uses:Vec<Value>=field(v,"coedges")?;
+    let owned=uses.iter().map(|usage|Ok((field::<curve::Curve>(usage,"world")?,field::<curve::Curve>(usage,"uv")?,field::<bool>(usage,"reversed")?))).collect::<Result<Vec<_>>>()?;
+    let coedges=owned.iter().map(|(world,uv,reversed)|crate::retained_wall_domain_certificate::Coedge {world,uv,reversed:*reversed}).collect::<Vec<_>>();
+    let report=crate::retained_wall_domain_certificate::inspect(&surface,&coedges,!holes.is_empty(),field(v,"maxWork")?)?;
+    Ok(json!({"domainCertified":report.domain_certified,"work":report.work,"globalEmbeddingCertified":false}))
 }
 
 #[cfg(test)]

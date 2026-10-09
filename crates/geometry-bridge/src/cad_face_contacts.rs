@@ -3,33 +3,88 @@
 use super::{Result, Value, field};
 use brep_core::face_contacts::Limits;
 use value_codec::json;
-pub fn diagnose_sweep_volume(v:Value)->Result<Value> {
-    let model:brep_core::Model=field(&v,"model")?;
-    let cap=field::<Value>(&v,"capBudgets")?;
-    let r=brep_core::volume_validity::inspect_sweep(&model,field(&v,"toleranceUv")?,
+fn group_output(report: &brep_core::face_contacts::Report) -> Value {
+    json!(
+        report
+            .disjoint_groups
+            .iter()
+            .map(|c| json!({"face":c.face,"range":c.range,
+        "axis":c.axis,"firstBeforeRange":c.first_before_range,
+        "firstBounds":c.first_bounds,"rangeBounds":c.range_bounds}))
+            .collect::<Vec<_>>()
+    )
+}
+/// Constructor snapshots retain proof outcomes and work accounting, while the
+/// diagnostic opcode retains the complete independently checkable hull ranges.
+/// Omitting those repeated witnesses does not bypass any native proof stage.
+pub(super) fn compact_volume_report(mut report: Value) -> Value {
+    if let Some(fields) = report.as_object_mut() {
+        if let Some(groups) = fields.remove("disjointGroups") {
+            fields.insert(
+                "groupCertificateCount".into(),
+                json!(groups.as_array().map_or(0, |a| a.len())),
+            );
+        }
+    }
+    report
+}
+
+pub fn diagnose_sweep_volume(v: Value) -> Result<Value> {
+    diagnose_sweep_volume_with_projections(v, &[])
+}
+pub(super) fn diagnose_sweep_volume_with_projections(
+    v: Value,
+    proposals: &[Option<[[i8; 3]; 2]>],
+) -> Result<Value> {
+    let model: brep_core::Model = field(&v, "model")?;
+    let cap = field::<Value>(&v, "capBudgets")?;
+    let r = brep_core::volume_validity::inspect_sweep_with_projections(
+        &model,
+        field(&v, "toleranceUv")?,
         brep_core::volume_validity::Limits {
-            boundary:brep_core::boundary_embedding::Limits {
-                exact_work:field(&v,"maxExactWork")?,trim_pairs:field(&v,"maxTrimPairs")?,
-                trim_cells:field(&v,"maxTrimCells")?,trim_domain_cells:field(&v,"maxTrimDomainCells")?,
-                spans:field(&v,"maxSpans")?,contacts:Limits {
-                    pairs:field(&v,"maxPairs")?,cells:field(&v,"maxCells")?,
-                    domain_cells:field(&v,"maxDomainCells")?,cells_per_pair:field(&v,"cellsPerPair")?,
-                    domain_cells_per_pair:field(&v,"domainCellsPerPair")?,
+            boundary: brep_core::boundary_embedding::Limits {
+                exact_work: field(&v, "maxExactWork")?,
+                trim_pairs: field(&v, "maxTrimPairs")?,
+                trim_cells: field(&v, "maxTrimCells")?,
+                trim_domain_cells: field(&v, "maxTrimDomainCells")?,
+                spans: field(&v, "maxSpans")?,
+                contacts: Limits {
+                    pairs: field(&v, "maxPairs")?,
+                    cells: field(&v, "maxCells")?,
+                    domain_cells: field(&v, "maxDomainCells")?,
+                    cells_per_pair: field(&v, "cellsPerPair")?,
+                    domain_cells_per_pair: field(&v, "domainCellsPerPair")?,
                 },
             },
-            nesting_pairs:field(&v,"nestingPairs")?,nesting_cells:field(&v,"nestingCells")?,
-            nesting_domain_cells:field(&v,"nestingDomainCells")?,orientation_cells:field(&v,"orientationCells")?,
-            orientation_domain_cells:field(&v,"orientationDomainCells")?,orientation_spans:field(&v,"orientationSpans")?,
-        },field(&v,"maxLinearCells")?,&field::<Vec<usize>>(&v,"capFaces")?,
+            nesting_pairs: field(&v, "nestingPairs")?,
+            nesting_cells: field(&v, "nestingCells")?,
+            nesting_domain_cells: field(&v, "nestingDomainCells")?,
+            orientation_cells: field(&v, "orientationCells")?,
+            orientation_domain_cells: field(&v, "orientationDomainCells")?,
+            orientation_spans: field(&v, "orientationSpans")?,
+        },
+        field(&v, "maxLinearCells")?,
+        &field::<Vec<usize>>(&v, "capFaces")?,
         brep_core::sweep_cap_contacts::Budgets {
-            max_walls:field(&cap,"maxWalls")?,max_exact_work:field(&cap,"maxExactWork")?,
-            max_chart_cells:field(&cap,"maxChartCells")?,max_trim_pairs:field(&cap,"maxTrimPairs")?,
-            max_trim_cells:field(&cap,"maxTrimCells")?,max_trim_domain_cells:field(&cap,"maxTrimDomainCells")?,
-        })?;
-    Ok(json!({"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
+            max_walls: field(&cap, "maxWalls")?,
+            max_exact_work: field(&cap, "maxExactWork")?,
+            max_chart_cells: field(&cap, "maxChartCells")?,
+            max_trim_pairs: field(&cap, "maxTrimPairs")?,
+            max_trim_cells: field(&cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+        },
+        proposals,
+    )?;
+    Ok(
+        json!({"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
         "nextPair":r.boundary.intersections.pairs.next_pair,
+        "individualPairs":r.boundary.intersections.pairs.pairs.len(),
+        "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
+        "groupCells":r.boundary.intersections.pairs.group_cells,
+        "contactCells":r.boundary.intersections.pairs.cells,"contactDomainCells":r.boundary.intersections.pairs.domain_cells,
+        "disjointGroups":group_output(&r.boundary.intersections.pairs),
         "nesting":r.nesting.as_ref().map(|n|json!({"rolesConsistent":n.roles_consistent,
             "parents":n.parents,"totalPairs":n.total_pairs,"visitedPairs":n.pairs.len(),
             "cells":n.cells,"domainCells":n.domain_cells,
@@ -38,32 +93,50 @@ pub fn diagnose_sweep_volume(v:Value)->Result<Value> {
                 "separationLower":p.result.boundary.lower_bound_mm})).collect::<Vec<_>>() })),
         "orientationCells":r.orientation_cells,"orientationDomainCells":r.orientation_domain_cells,
         "orientations":r.orientations.iter().map(|s|json!({"shell":s.shell,"expectedOutward":s.expected_outward,
-            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() }))
+            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() }),
+    )
 }
-pub fn diagnose_sweep_embedding(v:Value)->Result<Value> {
-    let model:brep_core::Model=field(&v,"model")?;
-    let cap=field::<Value>(&v,"capBudgets")?;
-    let r=brep_core::boundary_embedding::inspect_sweep(&model,field(&v,"toleranceUv")?,
+pub fn diagnose_sweep_embedding(v: Value) -> Result<Value> {
+    let model: brep_core::Model = field(&v, "model")?;
+    let cap = field::<Value>(&v, "capBudgets")?;
+    let r = brep_core::boundary_embedding::inspect_sweep(
+        &model,
+        field(&v, "toleranceUv")?,
         brep_core::boundary_embedding::Limits {
-            exact_work:field(&v,"maxExactWork")?,trim_pairs:field(&v,"maxTrimPairs")?,
-            trim_cells:field(&v,"maxTrimCells")?,trim_domain_cells:field(&v,"maxTrimDomainCells")?,
-            spans:field(&v,"maxSpans")?,contacts:Limits {
-                pairs:field(&v,"maxPairs")?,cells:field(&v,"maxCells")?,
-                domain_cells:field(&v,"maxDomainCells")?,cells_per_pair:field(&v,"cellsPerPair")?,
-                domain_cells_per_pair:field(&v,"domainCellsPerPair")?,
+            exact_work: field(&v, "maxExactWork")?,
+            trim_pairs: field(&v, "maxTrimPairs")?,
+            trim_cells: field(&v, "maxTrimCells")?,
+            trim_domain_cells: field(&v, "maxTrimDomainCells")?,
+            spans: field(&v, "maxSpans")?,
+            contacts: Limits {
+                pairs: field(&v, "maxPairs")?,
+                cells: field(&v, "maxCells")?,
+                domain_cells: field(&v, "maxDomainCells")?,
+                cells_per_pair: field(&v, "cellsPerPair")?,
+                domain_cells_per_pair: field(&v, "domainCellsPerPair")?,
             },
-        },field(&v,"maxLinearCells")?,&field::<Vec<usize>>(&v,"capFaces")?,
+        },
+        field(&v, "maxLinearCells")?,
+        &field::<Vec<usize>>(&v, "capFaces")?,
         brep_core::sweep_cap_contacts::Budgets {
-            max_walls:field(&cap,"maxWalls")?,max_exact_work:field(&cap,"maxExactWork")?,
-            max_chart_cells:field(&cap,"maxChartCells")?,max_trim_pairs:field(&cap,"maxTrimPairs")?,
-            max_trim_cells:field(&cap,"maxTrimCells")?,max_trim_domain_cells:field(&cap,"maxTrimDomainCells")?,
-        })?;
-    Ok(json!({"boundaryEmbeddingCertified":r.proven,"solidGeometryCertified":false,
+            max_walls: field(&cap, "maxWalls")?,
+            max_exact_work: field(&cap, "maxExactWork")?,
+            max_chart_cells: field(&cap, "maxChartCells")?,
+            max_trim_pairs: field(&cap, "maxTrimPairs")?,
+            max_trim_cells: field(&cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+        },
+    )?;
+    Ok(
+        json!({"boundaryEmbeddingCertified":r.proven,"solidGeometryCertified":false,
         "exactBoundaryCertified":r.agreement.all_equal && r.agreement.all_joins_exact,
         "trimCertified":r.trim.all_valid,"allFacesInjective":r.intersections.faces.all_faces_injective,
         "linearCells":r.intersections.faces.linear_cells,"spans":r.intersections.faces.spans,
         "allPairsClassified":r.intersections.pairs.all_pairs_classified,
         "totalPairs":r.intersections.pairs.total_pairs,"nextPair":r.intersections.pairs.next_pair,
+        "individualPairs":r.intersections.pairs.pairs.len(),"groupedPairs":r.intersections.pairs.grouped_pairs,
+        "groupCells":r.intersections.pairs.group_cells,"disjointGroups":group_output(&r.intersections.pairs),
+        "contactCells":r.intersections.pairs.cells,"contactDomainCells":r.intersections.pairs.domain_cells,
         "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"reason":p.reason,
             "allowedBoundary":p.boundary.is_some()})).collect::<Vec<_>>(),
         "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f|
@@ -72,10 +145,15 @@ pub fn diagnose_sweep_embedding(v:Value)->Result<Value> {
         "caps":r.cap_contacts.iter().map(|(cap,r)|json!({"face":cap,"capCertified":r.cap_certified,
             "planarControlHullCertified":r.planar_control_hull_certified,
             "allowedBoundaries":r.allowed_boundaries,"unresolvedWalls":r.unresolved_walls,"reason":r.reason}))
-            .collect::<Vec<_>>() }))
+            .collect::<Vec<_>>() }),
+    )
 }
-pub fn diagnose(v: Value) -> Result<Value> { diagnose_inner(v, false) }
-pub fn diagnose_self_intersection(v: Value) -> Result<Value> { diagnose_inner(v, true) }
+pub fn diagnose(v: Value) -> Result<Value> {
+    diagnose_inner(v, false)
+}
+pub fn diagnose_self_intersection(v: Value) -> Result<Value> {
+    diagnose_inner(v, true)
+}
 fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let tolerance_uv: f64 = field(&v, "toleranceUv")?;
@@ -101,9 +179,18 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             let trim_pairs: usize = field(audit, "trimPairs")?;
             let trim_cells: usize = field(audit, "trimCells")?;
             let trim_domain_cells: usize = field(audit, "trimDomainCells")?;
-            let audited = brep_core::boundary_embedding::inspect(&model, tolerance_uv,
-                brep_core::boundary_embedding::Limits { exact_work, trim_pairs, trim_cells,
-                    trim_domain_cells, spans: max_spans, contacts: limits })?;
+            let audited = brep_core::boundary_embedding::inspect(
+                &model,
+                tolerance_uv,
+                brep_core::boundary_embedding::Limits {
+                    exact_work,
+                    trim_pairs,
+                    trim_cells,
+                    trim_domain_cells,
+                    spans: max_spans,
+                    contacts: limits,
+                },
+            )?;
             embedding_evidence = Some(json!({"proven":audited.proven,
                 "exactAgreement":audited.agreement.all_equal,"exactJoins":audited.agreement.all_joins_exact,
                 "exactWork":audited.agreement.work,"trimValid":audited.trim.all_valid,
@@ -112,9 +199,19 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
                 "trimDomainCells":audited.trim.domain_cells,
                 "limits":audit,"sourceModel":model}));
             audited.intersections
-        } else { brep_core::self_intersection::inspect(&model, tolerance_uv, max_spans, limits)? };
-        (result.pairs, Some((result.faces, max_spans, result.absence_proven)))
-    } else { (brep_core::face_contacts::inspect(&model, tolerance_uv, limits)?, None) };
+        } else {
+            brep_core::self_intersection::inspect(&model, tolerance_uv, max_spans, limits)?
+        };
+        (
+            result.pairs,
+            Some((result.faces, max_spans, result.absence_proven)),
+        )
+    } else {
+        (
+            brep_core::face_contacts::inspect(&model, tolerance_uv, limits)?,
+            None,
+        )
+    };
     let mut exported = 0;
     let mut unresolved_boxes = 0;
     let mut contacts = 0;
@@ -129,8 +226,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
+            (witness,r.cells+p.hull_cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure,
@@ -143,7 +240,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         }),"witness":witness,"cells":cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})
     }).collect::<Vec<_>>();
     let mut output = json!({"method":"interval-trimmed-face-contacts","scope":"distinct-face-pairs","solidGeometryStatus":"not-certified",
-        "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len(),"nextPair":report.next_pair,
+        "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len()-report.grouped_pairs,"nextPair":report.next_pair,
+        "groupedPairs":report.grouped_pairs,"groupCells":report.group_cells,"disjointGroups":group_output(&report),
         "allPairsVisited":report.next_pair.is_none(),"allPairsDisjoint":report.all_pairs_disjoint,"allPairsClassified":report.all_pairs_classified,"sharedBoundaryPairCount":shared_boundaries,
         "contactPairCount":contacts,"disjointPairCount":disjoint,"unresolvedPairCount":unresolved_pairs,
         "unresolvedBoxCount":unresolved_boxes,"exportedBoxCount":exported,"boxesTruncated":exported<unresolved_boxes,
@@ -166,7 +264,9 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
                 "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
         })).collect::<Vec<_>>());
     }
-    if let Some(evidence) = embedding_evidence { output["boundaryEmbedding"] = evidence; }
+    if let Some(evidence) = embedding_evidence {
+        output["boundaryEmbedding"] = evidence;
+    }
     Ok(output)
 }
 #[cfg(test)]
@@ -177,75 +277,141 @@ mod tests {
     }
     #[test]
     fn explicit_embedding_audit_closes_canonical_pairs_and_refuses_exhausted_exact_work() {
-        let model=brep_core::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let mut q=request(&model);
-        q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(4096);
-        q["maxPairs"]=json!(400);q["maxCells"]=json!(150000);q["maxDomainCells"]=json!(1500000);
-        q["cellsPerPair"]=json!(1024);q["domainCellsPerPair"]=json!(100000);
-        q["boundaryAudit"]=json!({"exactWork":1000000,"trimPairs":1000,"trimCells":10000,"trimDomainCells":100000});
-        let r=crate::dispatch(q.clone()).unwrap();
-        assert_eq!(r["boundaryEmbedding"]["proven"],json!(true));
-        assert_eq!(r["absenceProven"],json!(true));
-        assert_eq!(r["visitedPairs"],json!(351));
-        assert_eq!(r["boundaryEmbedding"]["sourceModel"],q["model"]);
-        assert_eq!(r["pairs"].as_array().unwrap().iter().filter(|p|p["sharedBoundary"]["joinedProof"]["proven"]==json!(true)).count(),2);
-        q["boundaryAudit"]["exactWork"]=json!(1);
-        let r=crate::dispatch(q).unwrap();
-        assert_eq!(r["boundaryEmbedding"]["proven"],json!(false));
-        assert!(r["pairs"].as_array().unwrap().iter().all(|p|p["sharedBoundary"]["kind"]!=json!("exact-hull")));
+        let model = brep_core::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7)
+            .unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(4096);
+        q["maxPairs"] = json!(400);
+        q["maxCells"] = json!(150000);
+        q["maxDomainCells"] = json!(1500000);
+        q["cellsPerPair"] = json!(1024);
+        q["domainCellsPerPair"] = json!(100000);
+        q["boundaryAudit"] = json!({"exactWork":1000000,"trimPairs":1000,"trimCells":10000,"trimDomainCells":100000});
+        let r = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(r["boundaryEmbedding"]["proven"], json!(true));
+        assert_eq!(r["absenceProven"], json!(true));
+        assert_eq!(r["visitedPairs"], json!(351));
+        assert_eq!(r["boundaryEmbedding"]["sourceModel"], q["model"]);
+        assert_eq!(
+            r["pairs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|p| p["sharedBoundary"]["joinedProof"]["proven"] == json!(true))
+                .count(),
+            2
+        );
+        q["boundaryAudit"]["exactWork"] = json!(1);
+        let r = crate::dispatch(q).unwrap();
+        assert_eq!(r["boundaryEmbedding"]["proven"], json!(false));
+        assert!(
+            r["pairs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|p| p["sharedBoundary"]["kind"] != json!("exact-hull"))
+        );
     }
     #[test]
     fn partial_annular_diagnostics_include_owned_quotient_proofs_without_certifying_pairs() {
-        let model=brep_core::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let before=value_codec::to_value(&model).unwrap();
-        let mut q=request(&model);q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(4096);
-        let report=crate::dispatch(q.clone()).unwrap();
-        assert_eq!(report["absenceProven"],json!(false));
-        assert_eq!(report["allFacesInjective"],json!(true));
-        let faces=report["faces"].as_array().unwrap();
-        assert_eq!(faces.iter().filter(|f|f["result"]["proven"]==json!(true)).count(),25);
-        assert_eq!(faces[5]["result"]["reason"],json!("global-polar-projection-contraction"));
+        let model = brep_core::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7)
+            .unwrap();
+        let before = value_codec::to_value(&model).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(4096);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["absenceProven"], json!(false));
+        assert_eq!(report["allFacesInjective"], json!(true));
+        let faces = report["faces"].as_array().unwrap();
+        assert_eq!(
+            faces
+                .iter()
+                .filter(|f| f["result"]["proven"] == json!(true))
+                .count(),
+            25
+        );
+        assert_eq!(
+            faces[5]["result"]["reason"],
+            json!("global-polar-projection-contraction")
+        );
         assert!(faces[5]["result"]["polarProjection"].is_array());
-        for index in [0,10] {
-            assert_eq!(faces[index]["result"]["reason"],json!("collapsed-boundary-requires-quotient-proof"));
-            assert_eq!(faces[index]["quotientProof"]["proven"],json!(true));
-            assert_eq!(faces[index]["quotientProof"]["cells"],json!(256));
+        for index in [0, 10] {
+            assert_eq!(
+                faces[index]["result"]["reason"],
+                json!("collapsed-boundary-requires-quotient-proof")
+            );
+            assert_eq!(faces[index]["quotientProof"]["proven"], json!(true));
+            assert_eq!(faces[index]["quotientProof"]["cells"], json!(256));
             assert!(faces[index]["quotientProof"]["sourceFrame"].is_array());
         }
-        assert_eq!(value_codec::to_value(&model).unwrap(),before);
-        if let Ok(path)=std::env::var("CAD_QUOTIENT_INJECTIVITY_FIXTURE") {
-            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report})).unwrap()).unwrap();
+        assert_eq!(value_codec::to_value(&model).unwrap(), before);
+        if let Ok(path) = std::env::var("CAD_QUOTIENT_INJECTIVITY_FIXTURE") {
+            std::fs::write(
+                path,
+                value_codec::to_string(&json!({"request":q,"result":report})).unwrap(),
+            )
+            .unwrap();
         }
     }
     #[test]
-    fn sphere_face_proofs_include_projective_basis_and_complete_work_counts(){
-        let model=brep_core::analytic::sphere(3.).unwrap();let before=value_codec::to_value(&model).unwrap();
-        let mut q=request(&model);q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(1000);
-        let report=crate::dispatch(q.clone()).unwrap();
-        assert_eq!(report["allFacesInjective"],json!(true));assert_eq!(report["spans"],json!(968));
-        assert_eq!(report["absenceProven"],json!(false));
-        for f in report["faces"].as_array().unwrap(){assert_eq!(f["result"]["reason"],json!("global-projective-projection-contraction"));assert!(f["result"]["projectiveProjection"].is_array());}
-        assert_eq!(value_codec::to_value(&model).unwrap(),before);
-        if let Ok(path)=std::env::var("CAD_PROJECTIVE_INJECTIVITY_FIXTURE"){
-            let display_mesh=crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":model,"segments":16})).unwrap();
-            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report,"displayMesh":display_mesh})).unwrap()).unwrap();
+    fn sphere_face_proofs_include_projective_basis_and_complete_work_counts() {
+        let model = brep_core::analytic::sphere(3.).unwrap();
+        let before = value_codec::to_value(&model).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(1000);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["allFacesInjective"], json!(true));
+        assert_eq!(report["spans"], json!(968));
+        assert_eq!(report["absenceProven"], json!(false));
+        for f in report["faces"].as_array().unwrap() {
+            assert_eq!(
+                f["result"]["reason"],
+                json!("global-projective-projection-contraction")
+            );
+            assert!(f["result"]["projectiveProjection"].is_array());
+        }
+        assert_eq!(value_codec::to_value(&model).unwrap(), before);
+        if let Ok(path) = std::env::var("CAD_PROJECTIVE_INJECTIVITY_FIXTURE") {
+            let display_mesh =
+                crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":model,"segments":16}))
+                    .unwrap();
+            std::fs::write(
+                path,
+                value_codec::to_string(
+                    &json!({"request":q,"result":report,"displayMesh":display_mesh}),
+                )
+                .unwrap(),
+            )
+            .unwrap();
         }
     }
     #[test]
-    fn cylinder_face_proofs_include_linear_basis_and_complete_work_counts(){
-        let model=brep_core::analytic::cylinder(2.,4.).unwrap();
-        let mut q=request(&model);q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(1000);
-        let report=crate::dispatch(q.clone()).unwrap();
-        assert_eq!(report["allFacesInjective"],json!(true));
-        assert_eq!(report["solidGeometryStatus"],json!("not-certified"));
-        let faces:Vec<Value>=field(&report,"faces").unwrap();
-        for face in &faces[..4]{
-            assert_eq!(face["result"]["reason"],json!("global-linear-projection-contraction"));
-            assert_eq!(face["result"]["projection"],Value::Null);
-            assert!(field::<usize>(&face["result"],"spans").unwrap()>=17);
+    fn cylinder_face_proofs_include_linear_basis_and_complete_work_counts() {
+        let model = brep_core::analytic::cylinder(2., 4.).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(1000);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["allFacesInjective"], json!(true));
+        assert_eq!(report["solidGeometryStatus"], json!("not-certified"));
+        let faces: Vec<Value> = field(&report, "faces").unwrap();
+        for face in &faces[..4] {
+            assert_eq!(
+                face["result"]["reason"],
+                json!("global-linear-projection-contraction")
+            );
+            assert_eq!(face["result"]["projection"], Value::Null);
+            assert!(field::<usize>(&face["result"], "spans").unwrap() >= 17);
         }
-        if let Ok(path)=std::env::var("CAD_LINEAR_INJECTIVITY_FIXTURE"){
-            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report})).unwrap()).unwrap();
+        if let Ok(path) = std::env::var("CAD_LINEAR_INJECTIVITY_FIXTURE") {
+            std::fs::write(
+                path,
+                value_codec::to_string(&json!({"request":q,"result":report})).unwrap(),
+            )
+            .unwrap();
         }
     }
     #[test]
@@ -257,7 +423,10 @@ mod tests {
         let report = crate::dispatch(q.clone()).unwrap();
         assert_eq!(report["absenceProven"], json!(true));
         assert_eq!(report["solidGeometryStatus"], json!("not-certified"));
-        assert_eq!(report["scope"], json!("within-face-and-distinct-face-pairs"));
+        assert_eq!(
+            report["scope"],
+            json!("within-face-and-distinct-face-pairs")
+        );
         assert_eq!(field::<Vec<Value>>(&report, "faces").unwrap().len(), 6);
         q["maxSpans"] = json!(1);
         let report = crate::dispatch(q.clone()).unwrap();

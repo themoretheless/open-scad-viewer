@@ -36,10 +36,10 @@ it('certifies unequal straight spans and distinguishes station G1 from unproved 
 })
 it('carries applicable station G2 through Rush while retaining cap C0 and Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileModelGraphText}=await import('../src/services/modelGraphText')
- const {buildOwnNurbs}=await import('../src/services/modelGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- const graph=compileModelGraphText(readFileSync('examples/rush/progressive-miter-station-g2-hollow.r','utf8'))
+ const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-station-g2-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
 
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({stationG1Certified:true,stationG2Certified:true,stationContinuity:'G2',capContinuity:'C0',solidGeometryCertified:true,continuousBound:true})
@@ -57,15 +57,15 @@ it('includes closed-path closure and keeps sharp closed miter stations unpromote
 })
 it('certifies reconstructed moving frames and hollow Solid while retaining explicit budget refusal',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileModelGraphText}=await import('../src/services/modelGraphText')
- const {buildOwnNurbs}=await import('../src/services/modelGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r','utf8')
   .replace('cap_correction_tolerance:','circle_correction_tolerance:1e-9mm,circle_correction_max_work:100000,cap_correction_tolerance:')
   .replace(/\.brep_tessellate\(\d+\)/,'.brep_smooth_miter_stations(wall_tolerance:1mm,quantum:0.0000000000004547473508864641mm,max_work:1000000,max_deviation:2mm).brep_tessellate(4)')
- const built=buildOwnNurbs(compileModelGraphText(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG2Certified:true,stationG1Certified:true,stationG2Certified:true,solidGeometryCertified:true,continuousBound:true})
- const node=compileModelGraphText(source).document.nodes.find(n=>n.op==='brep_smooth_miter_stations')!
+ const node=compileRushFrontend(source).document.nodes.find(n=>n.op==='brep_smooth_miter_stations')!
  const report=(built.report.construction![node.id] as any)
  expect(report.profileSmoothness.totalExactWork).toBeLessThanOrEqual(report.profileSmoothness.maxWork)
  const {kind,...model}=built.report.definitions[node.id] as any
@@ -77,7 +77,7 @@ it('certifies reconstructed moving frames and hollow Solid while retaining expli
  expect(limited.totalExactWork).toBeLessThanOrEqual(budget)
  expect(limited.station.g2.seams.some(s=>s.reason==='exact-jet-work-unresolved')).toBe(true)
  expect(inspectMiterStationSmoothness(model,[model.faces.length-2,model.faces.length-1])).toMatchObject({stationG1Certified:true,stationG2Certified:true})
- expect(()=>buildOwnNurbs(compileModelGraphText(source.replace('max_deviation:2mm','max_deviation:0.1mm')).document,{action:'build'})).toThrow()
+ expect(()=>buildOwnNurbs(compileRushFrontend(source.replace('max_deviation:2mm','max_deviation:0.1mm')).document,{action:'build'})).toThrow()
 })
 
 it('refuses periodic and malformed pcurves before certifying station joins',()=>{

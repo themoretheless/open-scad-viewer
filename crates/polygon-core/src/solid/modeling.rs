@@ -1,4 +1,7 @@
 //! Native polygon construction. No spline or external CAD backend is used.
+#[cfg(feature = "codec")]
+#[path = "modeling/serialization.rs"]
+mod serialization;
 use crate::solid::tessellation::{self, Options, ParametricSurface, Trim};
 use crate::{BuiltMesh, Mesh, Result, check, cross, dot, norm, sub};
 use planar_geometry::rings::{Rings, area, inside};
@@ -13,39 +16,8 @@ pub struct Profile {
     pub outer: Vec<[f64; 2]>,
     pub holes: Vec<Vec<[f64; 2]>>,
 }
-impl value_codec::Serialize for Profile {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "outer".into(),
-            value_codec::Serialize::to_value(&self.outer),
-        );
-        object.insert(
-            "holes".into(),
-            value_codec::Serialize::to_value(&self.holes),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Profile {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let outer: Vec<[f64; 2]> = value_codec::Deserialize::from_value(
-            object
-                .remove("outer")
-                .ok_or_else(|| value_codec::error("Missing field outer"))?,
-        )?;
-        let holes: Vec<Vec<[f64; 2]>> = if let Some(v) = object.remove("holes") {
-            value_codec::Deserialize::from_value(v)?
-        } else {
-            Default::default()
-        };
-        Ok(Self { outer, holes })
-    }
-}
+
+
 struct Plane {
     min: [f64; 2],
     max: [f64; 2],
@@ -336,6 +308,82 @@ pub fn revolve(
     finish(mesh, full || caps)
 }
 
+/// Revolve normalized rings, retaining holes and disconnected profile regions.
+pub fn revolve_rings(rings: &Rings, angle: f64, segments: usize) -> Result<Mesh> {
+    check(angle.is_finite() && angle != 0. && angle.abs() <= 360.
+        && (1..=512).contains(&segments), "Invalid revolve angle or segments")?;
+    check(rings.iter().flatten().all(|p| p[0] >= 0. && p.iter().all(|v| v.is_finite())),
+        "Revolve requires nonnegative radii")?;
+    check(rings.iter().map(Vec::len).sum::<usize>().saturating_mul(segments).saturating_mul(2) <= 20_000,
+        "Revolve profile/budget exceeded")?;
+    let full = angle.abs() == 360.;
+    check(!full || segments >= 3, "Full revolution requires at least three segments")?;
+    let rows = if full { segments } else { segments + 1 };
+    let mut pieces = Vec::new();
+    for outer in rings.iter().filter(|ring| area(ring) > 0.) {
+        let holes = rings.iter().filter(|ring| area(ring) < 0. && inside(ring[0], &vec![outer.clone()])).cloned().collect();
+        let base = crate::solid::primitives::triangulate(&Profile { outer: outer.clone(), holes })?;
+        let count = base.positions.len() / 3;
+        let mut mesh = crate::solid::primitives::empty();
+        for row in 0..rows {
+            let theta = (angle * row as f64 / segments as f64).to_radians();
+            for point in base.positions.as_chunks::<3>().0 {
+                mesh.positions.extend([point[0] * theta.cos(), point[0] * theta.sin(), point[1]]);
+            }
+        }
+        for ring in base.boundary_loops()? {
+            for row in 0..segments {
+                let next = (row + 1) % rows;
+                for edge in ring.windows(2) {
+                    let a = row * count + edge[0];
+                    let b = row * count + edge[1];
+                    let c = next * count + edge[1];
+                    let d = next * count + edge[0];
+                    mesh.indices.extend([a, c, b, a, d, c]);
+                }
+            }
+        }
+        if !full {
+            for triangle in base.indices.as_chunks::<3>().0 {
+                mesh.indices.extend([triangle[0], triangle[1], triangle[2],
+                    segments * count + triangle[2], segments * count + triangle[1], segments * count + triangle[0]]);
+            }
+        }
+        if angle < 0. {
+            for triangle in mesh.indices.as_chunks_mut::<3>().0 { triangle.swap(1, 2); }
+        }
+        let mut mesh = crate::solid::proximity::weld_exact(&mesh)?;
+        mesh.indices = mesh.indices.as_chunks::<3>().0.iter()
+            .filter(|t| t[0] != t[1] && t[1] != t[2] && t[2] != t[0])
+            .flatten().copied().collect();
+        pieces.push(mesh);
+    }
+    crate::solid::primitives::join(&pieces)
+}
+
+/// Planar Minkowski via the product identity, with the 3D kernel's convexity limits.
+pub fn minkowski_profiles(profiles: &[&Rings]) -> Result<Rings> {
+    if profiles.is_empty() { return Ok(vec![]); }
+    if profiles.len() == 1 { return Ok(profiles[0].clone()); }
+    let mut offset = [0.; 2];
+    let mut product = None;
+    for profile in profiles {
+        let anchor = profile.first().and_then(|ring| ring.first()).copied().unwrap_or([0.; 2]);
+        for axis in 0..2 { offset[axis] += anchor[axis]; }
+        let normalized = profile.iter().map(|ring| ring.iter().map(|point| [point[0]-anchor[0],point[1]-anchor[1]]).collect()).collect();
+        let prism = extrude_rings(&normalized, 1., 0, 0., [1.; 2], false)?;
+        product = Some(match product {
+            None => prism,
+            Some(previous) => crate::solid::primitives::minkowski(&previous, &prism)?,
+        });
+    }
+    let mut rings = mesh_section::project(&product.unwrap().view()).map_err(crate::mesh_error)?;
+    for point in rings.iter_mut().flatten() {
+        for axis in 0..2 { point[axis] += offset[axis]; }
+    }
+    Ok(rings)
+}
+
 /// Linear extrude of closed rings (OpenSCAD-style height / twist / scale).
 pub fn extrude_rings(
     rings: &Rings,
@@ -429,6 +477,28 @@ pub fn extrude_rings(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn revolve_rings_preserves_holes_caps_and_axis_poles() {
+        let rings = vec![
+            vec![[1., 0.], [4., 0.], [4., 3.], [1., 3.]],
+            vec![[2., 1.], [2., 2.], [3., 2.], [3., 1.]],
+        ];
+        for angle in [360_f64, 90., -90.] {
+            let mesh = revolve_rings(&rings, angle, 16).unwrap();
+            let report = mesh.inspect().unwrap();
+            assert!(report.closed);
+            let expected = (45. - 5.) * 16. / 2. * (angle.abs() / 16.).to_radians().sin();
+            assert!((report.signed_volume_mm3 - expected).abs() < 1e-8);
+        }
+        let axis = vec![vec![[0., 0.], [2., 0.], [2., 3.], [0., 3.]]];
+        for angle in [360., 90., -90.] {
+            let report = revolve_rings(&axis, angle, 16).unwrap().inspect().unwrap();
+            assert!(report.closed);
+            assert!(report.signed_volume_mm3 > 0.);
+        }
+        assert!(revolve_rings(&vec![], 360., 16).unwrap().indices.is_empty());
+        assert!(revolve_rings(&rings, 0., 16).is_err());
+    }
     fn square() -> Vec<[f64; 2]> {
         vec![[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]]
     }
@@ -480,5 +550,24 @@ mod tests {
         assert!(full.report.closed);
         assert!((full.report.signed_volume_mm3 - 9. * std::f64::consts::PI).abs() < 0.2);
         assert!(revolve(&p, 90., 8, true).unwrap().report.closed);
+    }
+}
+
+#[cfg(test)]
+mod minkowski_profile_tests {
+    use super::*;
+    #[test]
+    fn planar_product_restores_anchors_and_empty_identity() {
+        let a = vec![vec![[5.,-3.],[7.,-3.],[7.,0.],[5.,0.]]];
+        let b = vec![vec![[-2.,4.],[-1.,4.],[-1.,6.],[-2.,6.]]];
+        let result = minkowski_profiles(&[&a,&b]).unwrap();
+        assert!((result.iter().map(|ring| area(ring)).sum::<f64>() - 15.).abs() < 1e-10);
+        assert_eq!(result.iter().flatten().map(|p| p[0]).fold(f64::INFINITY,f64::min),3.);
+        assert_eq!(result.iter().flatten().map(|p| p[1]).fold(f64::INFINITY,f64::min),1.);
+        assert_eq!(minkowski_profiles(&[&a]).unwrap(),a);
+        assert!(minkowski_profiles(&[]).unwrap().is_empty());
+        assert!(minkowski_profiles(&[&vec![],&b]).unwrap().is_empty());
+        let concave = vec![vec![[0.,0.],[2.,0.],[2.,1.],[1.,1.],[1.,2.],[0.,2.]]];
+        assert!(minkowski_profiles(&[&concave,&b]).is_err());
     }
 }

@@ -27,6 +27,8 @@ export interface SweepEmbeddingAudit {
  linearCells:number
  spans:number
  totalPairs:number
+ individualPairs:number
+ groupedPairs:number
  nextPair:[number,number]|null
  unresolvedFaces:number[]
  pairs:{faces:[number,number];reason:string;allowedBoundary:boolean}[]
@@ -64,7 +66,7 @@ export interface SweepVolumeAudit {
 }
 export const DEFAULT_SWEEP_VOLUME_BUDGETS:SweepVolumeBudgets={
  ...DEFAULT_SWEEP_EMBEDDING_BUDGETS,
- maxLinearCells:20000,maxTrimPairs:10000,maxTrimCells:100000,maxTrimDomainCells:1000000,
+ maxLinearCells:30000,maxTrimPairs:10000,maxTrimCells:100000,maxTrimDomainCells:1000000,
  maxPairs:10000,maxCells:100000,maxDomainCells:1000000,cellsPerPair:1000,domainCellsPerPair:10000,
  nestingPairs:1000,nestingCells:100000,nestingDomainCells:1000000,
  orientationCells:100000,orientationDomainCells:1000000,orientationSpans:100,

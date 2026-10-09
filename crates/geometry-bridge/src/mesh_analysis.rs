@@ -4,8 +4,8 @@
 
 pub struct SolidAnalysis {
     mesh: crate::mesh::RenderMesh,
-    bvh: polygon_core::solid::bvh::MeshBvh,
-    edges: polygon_core::solid::edges::SemanticEdges,
+    bvh: mesh_query::MeshBvh,
+    edges: mesh_topology::edges::SemanticEdges,
 }
 
 /// Analyze the same f32 display buffers the host publishes, while they are
@@ -17,8 +17,8 @@ pub fn analyze_solid(
     leaf_size: usize,
 ) -> crate::Result<SolidAnalysis> {
     let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
-    let bvh = polygon_core::solid::bvh::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
-    let edges = polygon_core::solid::edges::extract_semantic_edges(
+    let bvh = mesh_query::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
+    let edges = mesh_topology::edges::extract_semantic_edges(
         &mesh.vertices,
         &mesh.indices,
         &mesh.merge_from,
@@ -67,7 +67,7 @@ pub fn start_solid_analysis(
         jobs.jobs.insert(
             next,
             Box::pin(async move {
-                let bvh = polygon_core::solid::bvh::build_mesh_bvh_cooperative(
+                let bvh = mesh_query::build_mesh_bvh_cooperative(
                     &mesh.vertices,
                     &mesh.indices,
                     6,
@@ -85,7 +85,7 @@ pub fn start_solid_analysis(
                     }
                 })
                 .await;
-                let edges = polygon_core::solid::edges::extract_semantic_edges_cooperative(
+                let edges = mesh_topology::edges::extract_semantic_edges_cooperative(
                     &mesh.vertices,
                     &mesh.indices,
                     &mesh.merge_from,
@@ -130,6 +130,7 @@ pub fn cancel_solid_analysis(id: u32) {
 }
 
 pub enum AnalysisBuffers {
+    Transparency(crate::transparent_bsp::Buffers),
     SurfaceGroups {
         ids: Vec<u32>,
     },
@@ -156,6 +157,52 @@ pub enum AnalysisBuffers {
     },
     Render(crate::mesh::RenderMesh),
     Solid(SolidAnalysis),
+    /// manifold-core check report: flat u32 edge pairs / index lists plus
+    /// summary counts.
+    ManifoldCheck {
+        boundary_edges: Vec<u32>,
+        non_manifold_edges: Vec<u32>,
+        orientation_edges: Vec<u32>,
+        degenerate_triangles: Vec<u32>,
+        non_manifold_vertices: Vec<u32>,
+        isolated_vertices: Vec<u32>,
+        /// [vertex_count, triangle_count, component_count, flags]
+        /// flags bit 0: strict manifold; bit 1: manifold with boundary.
+        summary: [u32; 4],
+    },
+    /// manifold-core repair output mesh plus stats
+    /// [welded_vertices, removed_degenerates, flipped_triangles, residual_flags,
+    ///  split_vertices, filled_holes, filled_triangles, mode].
+    ManifoldRepair {
+        positions: Vec<f64>,
+        indices: Vec<u32>,
+        stats: [u32; 8],
+    },
+    /// manifold-core metrics: flat per-component records plus summary counts.
+    ManifoldMetrics {
+        /// 6 u32 per component: [triangles, vertices, edges, boundary_edges,
+        /// euler_characteristic (i32 bits), genus + 1 (0 = undefined)].
+        component_stats: Vec<u32>,
+        /// 2 f64 per component: [signed_volume, surface_area].
+        component_floats: Vec<f64>,
+        /// Whole-mesh [signed_volume, surface_area].
+        floats: Vec<f64>,
+        /// [vertex_count, triangle_count, edge_count, euler_characteristic
+        /// (i32 bits), component_count, flags, 0, 0]
+        /// flags bit 0: watertight.
+        summary: [u32; 8],
+    },
+    /// manifold-ops boolean output mesh plus kernel stats.
+    ManifoldBoolean {
+        positions: Vec<f64>,
+        indices: Vec<u32>,
+        /// [tolerance_mm].
+        floats: Vec<f64>,
+        /// [op, operand_a_repaired, operand_b_repaired, fragments, work,
+        ///  input_triangles_a, input_triangles_b, flags]
+        /// flags bit 0: strict manifold output (always set on success).
+        stats: [u32; 8],
+    },
 }
 
 thread_local! {
@@ -197,6 +244,18 @@ pub fn field(handle: usize, slot: u32) -> usize {
             return 0;
         };
         match result {
+            AnalysisBuffers::Transparency(t) => match slot {
+                0 => t.planes.as_ptr() as usize,
+                1 => t.planes.len(),
+                2 => t.links.as_ptr() as usize,
+                3 => t.links.len(),
+                4 => t.owners.as_ptr() as usize,
+                5 => t.owners.len(),
+                6 => t.vertices.as_ptr() as usize,
+                7 => t.vertices.len(),
+                8..=11 => t.summary[(slot - 8) as usize],
+                _ => 0,
+            },
             AnalysisBuffers::SurfaceGroups { ids } => match slot {
                 0 => ids.as_ptr() as usize,
                 1 => ids.len(),
@@ -250,6 +309,72 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 _ => 0,
             },
             AnalysisBuffers::Render(mesh) => render_field(mesh, slot),
+            AnalysisBuffers::ManifoldCheck {
+                boundary_edges,
+                non_manifold_edges,
+                orientation_edges,
+                degenerate_triangles,
+                non_manifold_vertices,
+                isolated_vertices,
+                summary,
+            } => match slot {
+                0 => boundary_edges.as_ptr() as usize,
+                1 => boundary_edges.len(),
+                2 => non_manifold_edges.as_ptr() as usize,
+                3 => non_manifold_edges.len(),
+                4 => orientation_edges.as_ptr() as usize,
+                5 => orientation_edges.len(),
+                6 => degenerate_triangles.as_ptr() as usize,
+                7 => degenerate_triangles.len(),
+                8 => non_manifold_vertices.as_ptr() as usize,
+                9 => non_manifold_vertices.len(),
+                10 => isolated_vertices.as_ptr() as usize,
+                11 => isolated_vertices.len(),
+                12..=15 => summary[slot as usize - 12] as usize,
+                _ => 0,
+            },
+            AnalysisBuffers::ManifoldRepair {
+                positions,
+                indices,
+                stats,
+            } => match slot {
+                0 => positions.as_ptr() as usize,
+                1 => positions.len(),
+                2 => indices.as_ptr() as usize,
+                3 => indices.len(),
+                4..=11 => stats[slot as usize - 4] as usize,
+                _ => 0,
+            },
+            AnalysisBuffers::ManifoldMetrics {
+                component_stats,
+                component_floats,
+                floats,
+                summary,
+            } => match slot {
+                0 => component_stats.as_ptr() as usize,
+                1 => component_stats.len(),
+                2 => component_floats.as_ptr() as usize,
+                3 => component_floats.len(),
+                4 => floats.as_ptr() as usize,
+                5 => floats.len(),
+                6..=13 => summary[slot as usize - 6] as usize,
+                _ => 0,
+            },
+            AnalysisBuffers::ManifoldBoolean {
+                positions,
+                indices,
+                floats,
+                stats,
+            } => match slot {
+                0 => positions.as_ptr() as usize,
+                1 => positions.len(),
+                2 => indices.as_ptr() as usize,
+                3 => indices.len(),
+                4 => floats.as_ptr() as usize,
+                5 => floats.len(),
+                6..=13 => stats[slot as usize - 6] as usize,
+                _ => 0,
+            },
             AnalysisBuffers::Solid(result) => match slot {
                 0..=9 => render_field(&result.mesh, slot),
                 10 => result.bvh.bounds.as_ptr() as usize,
@@ -340,7 +465,7 @@ mod cooperative_tests {
         use std::future::Future;
         let id = sphere();
         let mesh = crate::mesh::render_buffers(id, 0.6).unwrap();
-        let mut bvh = std::pin::pin!(polygon_core::solid::bvh::build_mesh_bvh_cooperative(
+        let mut bvh = std::pin::pin!(mesh_query::build_mesh_bvh_cooperative(
             &mesh.vertices,
             &mesh.indices,
             6,

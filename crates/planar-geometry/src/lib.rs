@@ -18,8 +18,10 @@ pub mod measure;
 pub mod path;
 pub mod path_offset;
 pub mod pathfinder;
+pub mod primitives;
 pub mod render;
 pub mod rings;
+pub mod sampled_corner;
 pub mod scissors;
 pub mod stroke;
 pub mod tessellation;
@@ -43,3 +45,11 @@ pub(crate) fn error(message: impl Into<String>) -> Error {
 pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
     math_core::ensure(condition, INVALID_INPUT, message)
 }
+
+pub mod sketch_shapes;
+
+pub mod sketch_offset;
+
+pub mod sketch_transform;
+
+pub mod sketch_trim;

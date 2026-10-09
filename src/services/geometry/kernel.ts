@@ -46,6 +46,8 @@ export class NurbsCurveError extends GeometryKernelError {
 }
 interface KernelExports extends WebAssembly.Exports {
  memory: WebAssembly.Memory
+ abi_mesh_decode(format:number,ptr:number,len:number):bigint
+ abi_mesh_soup_render(ptr:number,len:number):bigint
  abi_alloc(len:number):number
  abi_free(ptr:number,len:number):void
  abi_request(op:number,ptr:number,len:number):bigint
@@ -60,6 +62,7 @@ interface KernelExports extends WebAssembly.Exports {
  abi_export_append(handle:number,vp:number,vl:number,ip:number,il:number,mp:number,ml:number,fmt:number):bigint
  abi_semantic_edges(vp:number,vl:number,ip:number,il:number,mfp:number,mfl:number,mtp:number,mtl:number,weld:number,creaseDotThreshold:number):bigint
  abi_render_mesh(id:number,creaseCosine:number):bigint
+ abi_transparent_bsp(width:number,vp:number,vl:number,limit:number,operations:number,tolerance:number):bigint
  abi_surface_groups(stride:number,vp:number,vl:number,ip:number,il:number,angleDegrees:number):bigint
  abi_analyze_solid(id:number,normalCosine:number,edgeCosine:number,leaf:number):bigint
  abi_solid_analysis_start(id:number,normalCosine:number,edgeCosine:number,leaf:number):bigint
@@ -67,6 +70,10 @@ interface KernelExports extends WebAssembly.Exports {
  abi_solid_analysis_cancel(job:number):void
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
+ abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
+ abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
+ abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
+ abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number):bigint
 }
 declare const __G1_SHARED_GEOMETRY_MODULE__: boolean
 const sharedModuleRequired = typeof __G1_SHARED_GEOMETRY_MODULE__ !== 'undefined' && __G1_SHARED_GEOMETRY_MODULE__

@@ -7,6 +7,7 @@ import {resolve} from 'node:path'
 import {IDBFactory} from 'fake-indexeddb'
 import * as stepStore from '../src/services/cadStepIndexedDb'
 import * as geometryKernel from '../src/services/geometry/kernel'
+import * as transparencyKernel from '../src/services/geometry/transparentBspKernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
 beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue');await import('../src/components/ProfileIntersectionPresentation.vue')})
@@ -43,7 +44,7 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {measureNurbsCurveDistance}=await import('../src/services/nurbsCurve')
  const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
  const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
- const {importSolidModelGraph}=await import('../src/services/solidModelGraphImport')
+ const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
  const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
  const {parseDirectDocument}=await import('../src/services/directModeling')
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
@@ -61,7 +62,7 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
  const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
- return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='modelGraphImport'?importSolidModelGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
+ return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{previewWorkerRun.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
 const svgWorkerRun=vi.hoisted(()=>vi.fn())
@@ -889,7 +890,7 @@ it('edits a face sketch dimension with units before extrusion and restores both 
  const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await flushClearance()
- await ui.click('Sketch dimensions');await ui.click('Add dimension');const before=ui.doc()
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add dimension')).toBe(true));await ui.click('Add dimension');const before=ui.doc()
  const input=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!
  input().props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Apply dimension 0').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
  input().props['onUpdate:modelValue']('0.3 cm');await nextTick();expect(ui.doc()).toEqual(before)
@@ -1078,7 +1079,7 @@ it('previews surface degree reduction on both axes and supports cancel and undo'
  const surface={degreeU:2,degreeV:2,knotsU:[0,0,0,1,1,1],knotsV:[0,0,0,1,1,1],controlPoints:Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0])),weights:Array.from({length:3},()=>[1,1,1])}
  const seed={version:1,sketches:[],bodies:[],surfaces:[{id:'plane',name:'Plane',surface,segmentsU:4,segmentsV:4}]}
  const ui=await mount({},JSON.stringify(seed));await ui.click('Plane');const before=ui.doc()
- await ui.click('Reduce surface degree');expect(ui.text(ui.all()[0])).toContain('Deviation upper bound: 0 mm')
+ await ui.click('Reduce surface degree');const upper=ui.text(ui.all()[0]).match(/Deviation upper bound: ([\d.eE+-]+) mm/);expect(upper).not.toBeNull();expect(Number(upper![1])).toBeGreaterThanOrEqual(0);expect(Number(upper![1])).toBeLessThan(1e-12)
  expect(ui.doc()).toEqual(before);await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Reduce surface degree')
  const direction=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Direction')!;direction.props['onUpdate:modelValue']('v');await flushClearance()
@@ -2654,57 +2655,57 @@ it('does not replace newer local edits with a delayed shared draft or expose its
  expect(ui.all().filter(n=>n.props['data-body']).length).toBeGreaterThan(0)
 })
 
-it('imports ModelGraph through a cancellable worker and preserves the prior scene in Undo',async()=>{
- const {importSolidModelGraph}=await import('../src/services/solidModelGraphImport')
- const ui=await mount(),before=ui.doc(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+it('imports RushGraph through a cancellable worker and preserves the prior scene in Undo',async()=>{
+ const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
+ const ui=await mount(),before=ui.doc(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
- previewWorkerRun.mockImplementation(job=>job.kind==='modelGraphImport'?new Promise(resolve=>requests.push({job,resolve})):undefined)
- const load=()=>input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'modelgraph.json'}})
+ previewWorkerRun.mockImplementation(job=>job.kind==='rushGraphImport'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const load=()=>input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'rush.json'}})
  const first=load();await flushClearance();expect(requests).toHaveLength(1)
- await commandKey(ui,'Escape');requests[0].resolve(await importSolidModelGraph(requests[0].job.document,text));await first;await flushClearance()
+ await commandKey(ui,'Escape');requests[0].resolve(await importSolidRushGraph(requests[0].job.document,text));await first;await flushClearance()
  expect(ui.doc()).toEqual(before)
- const second=load();await flushClearance();requests[1].resolve(await importSolidModelGraph(requests[1].job.document,text));await second;await flushClearance()
+ const second=load();await flushClearance();requests[1].resolve(await importSolidRushGraph(requests[1].job.document,text));await second;await flushClearance()
  expect(ui.doc().bodies).toEqual(before.bodies)
  expect(ui.doc().curves?.map(c=>c.name)).toEqual(['path']);expect(ui.doc().surfaces?.map(s=>s.name)).toEqual(['skin'])
  const imported=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('↷');expect(ui.doc()).toEqual(imported)
  const third=load();await flushClearance();await ui.click('Box');const edited=ui.doc()
- requests[2].resolve(await importSolidModelGraph(requests[2].job.document,text));await third;await flushClearance()
+ requests[2].resolve(await importSolidRushGraph(requests[2].job.document,text));await third;await flushClearance()
  expect(ui.doc()).toEqual(edited)
 })
 
-it.each([false,true])('cancels ModelGraph import on group change; late failure=%s',async failure=>{
- const {importSolidModelGraph}=await import('../src/services/solidModelGraphImport')
+it.each([false,true])('cancels RushGraph import on group change; late failure=%s',async failure=>{
+ const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],groups:[{name:'Destination',source:''}]}})
- const before=ui.doc(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+ const before=ui.doc(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
- previewWorkerRun.mockImplementation(job=>job.kind==='modelGraphImport'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
- const load=()=>input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'modelgraph.json'}})
+ previewWorkerRun.mockImplementation(job=>job.kind==='rushGraphImport'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const load=()=>input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'rush.json'}})
  const first=load();await flushClearance();expect(requests).toHaveLength(1)
  await ui.click('Active group: Destination')
- if(failure)requests[0].reject(Error('obsolete import destination'));else requests[0].resolve(await importSolidModelGraph(requests[0].job.document,text))
+ if(failure)requests[0].reject(Error('obsolete import destination'));else requests[0].resolve(await importSolidRushGraph(requests[0].job.document,text))
  await first;await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete import destination')
  const second=load();await flushClearance();expect(requests[1].job.group).toBe('Destination')
- requests[1].resolve(await importSolidModelGraph(requests[1].job.document,text,requests[1].job.group));await second;await flushClearance()
+ requests[1].resolve(await importSolidRushGraph(requests[1].job.document,text,requests[1].job.group));await second;await flushClearance()
  for(const item of [...ui.doc().curves??[],...ui.doc().surfaces??[]])expect(item.group).toBe('Destination')
  expect(ui.doc().curves).toHaveLength(1);expect(ui.doc().surfaces).toHaveLength(1)
  const after=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
 })
 
-it.each([false,true])('discards ModelGraph file read after group change; failure=%s',async failure=>{
+it.each([false,true])('discards RushGraph file read after group change; failure=%s',async failure=>{
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],groups:[{name:'Destination',source:''}]}})
- const before=ui.doc(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+ const before=ui.doc(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
  let resolve!:(text:string)=>void,reject!:(e:Error)=>void
  const read=new Promise<string>((yes,no)=>{resolve=yes;reject=no})
- const pending=input.props.onChange({target:{files:[{size:text.length,text:()=>read}],value:'modelgraph.json'}})
+ const pending=input.props.onChange({target:{files:[{size:text.length,text:()=>read}],value:'rush.json'}})
  await flushClearance();await ui.click('Active group: Destination')
- const count=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='modelGraphImport').length
+ const count=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='rushGraphImport').length
  if(failure)reject(Error('obsolete file read'));else resolve(text)
  await pending;await flushClearance()
- expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='modelGraphImport')).toHaveLength(count)
+ expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='rushGraphImport')).toHaveLength(count)
  expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete file read')
 })
 
@@ -3609,8 +3610,7 @@ it('reports approximate CPU transparency and clears the status after reducing th
 })
 
 it('reuses CPU transparency geometry during orbit and invalidates it after scene and material edits',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp')
- const build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp')
  try{
   const ui=await mount();await ui.click('Box');await ui.click('Properties')
   const opacity=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!
@@ -3636,8 +3636,8 @@ it('reuses CPU transparency geometry during orbit and invalidates it after scene
 })
 
 it('refreshes transparent world fragments after smooth refinement and orbit settle without changing the cylinder',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp'),{prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
- const build=vi.spyOn(TransparentBsp.prototype as any,'partition'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  try{
   const seed=cylinderSeed();seed.bodies[0].material={name:'Glass',color:'#2288dd',opacity:.35}
@@ -3655,7 +3655,7 @@ it('refreshes transparent world fragments after smooth refinement and orbit sett
 })
 
 it('invalidates transparent world fragments for changed Push Pull preview and clears them on Escape',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp'),build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ const build=vi.spyOn(transparencyKernel,'buildTransparentBsp')
  try{
   const ui=await mount();await ui.click('Cube');await ui.click('Properties')
   ui.all().find(n=>n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()

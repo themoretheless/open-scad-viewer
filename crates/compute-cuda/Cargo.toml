@@ -3,11 +3,14 @@ name = "compute-cuda"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
-publish.workspace = true
+publish = true
+description = "CUDA tensor executor"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
 
 [dependencies]
-gpu-compute = { path = "../gpu-compute", features = ["cuda"] }
-tensor-core = { path = "../tensor-core" }
+gpu-compute = { workspace = true, features = ["cuda"] }
+tensor-core = { workspace = true }
 
 [dev-dependencies]
-tensor-core = { path = "../tensor-core", features = ["conformance"] }
+tensor-core = { workspace = true, features = ["conformance"] }

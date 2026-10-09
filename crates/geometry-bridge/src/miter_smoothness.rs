@@ -1,6 +1,6 @@
 //! Serialization of native retained-seam qualification.
+use brep_core::miter_seams::{ProfileReport, Smoothness};
 use value_codec::{Value, json};
-use brep_core::miter_seams::{Smoothness, ProfileReport};
 fn seam_set(r: &nurbs_core::sweep_seam_set::Report, order: usize) -> Value {
     let seams: Vec<_> = r.seams.iter().map(|s| json!({"certified":s.certified,"exactIdentity":s.exact_identity,
         "regularityCertified":s.regularity_certified,"work":s.work,"reason":s.reason,

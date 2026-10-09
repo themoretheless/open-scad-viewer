@@ -2,6 +2,7 @@
 //! No regularity, embedding or Solid claim is issued by this construction.
 use super::*;
 use nurbs_core::interval_eval::Interval;
+mod generic;
 pub struct SmoothStationWalls {
     pub sides: Option<Vec<Vec<Surface>>>,
     pub wall_displacement_upper: Option<f64>,
@@ -35,6 +36,44 @@ fn shifted(p: &Gen, t: &Gen, factor: f64) -> Gen {
 }
 
 pub fn smooth_station_walls(
+    sections: &[Vec<Vec<Curve>>],
+    sharp: &[usize],
+    closed: bool,
+    quantum: f64,
+    tolerance: f64,
+    max_work: u64,
+) -> Result<SmoothStationWalls> {
+    let canonical = canonical_station_walls(sections, sharp, closed, quantum, tolerance, max_work)?;
+    if canonical.sides.is_some()
+        || !matches!(
+            canonical.reason,
+            "unsupported-profile"
+                | "unsupported-periodic-profile"
+                | "noncanonical-source-decomposition"
+                | "generator-lattice-range"
+                | "source-generator-identity"
+                | "periodic-source-lattice-range"
+                | "periodic-source-decomposition"
+                | "periodic-source-decomposition-identity"
+                | "face-limit"
+        )
+    {
+        return Ok(canonical);
+    }
+    // A failed specialized proposal does not reset the caller's work budget.
+    let mut general = generic::construct(
+        sections,
+        sharp,
+        closed,
+        quantum,
+        tolerance,
+        max_work - canonical.work,
+    )?;
+    general.work += canonical.work;
+    Ok(general)
+}
+
+fn canonical_station_walls(
     sections: &[Vec<Vec<Curve>>],
     sharp: &[usize],
     closed: bool,
@@ -80,6 +119,106 @@ pub fn smooth_station_walls(
     if closed && (n < 4 || sections.first() != sections.last()) {
         report.reason = "periodic-source-mismatch";
         return Ok(report);
+    }
+    // Canonical periodic quadratic polynomial profiles have four exact
+    // Bezier spans. Convert their representation, not their geometry, before
+    // constructing shared station jets. Actual source extraction must match
+    // every proposed coefficient, and conversion uses the same work budget.
+    if sections.iter().flatten().flatten().any(|c| c.periodic) {
+        let mut canonical = sections.to_vec();
+        for wire in canonical.iter_mut().flatten() {
+            for curve in wire {
+                if !curve.periodic {
+                    continue;
+                }
+                curve.validate()?;
+                if curve.degree != 2
+                    || curve.control_points.len() != 6
+                    || curve.knots != (0..9).map(|i| i as f64).collect::<Vec<_>>()
+                    || curve.weights != vec![1.; 6]
+                    || curve.control_points.iter().any(|p| p.len() != 3)
+                    || curve.control_points[0] != curve.control_points[4]
+                    || curve.control_points[1] != curve.control_points[5]
+                {
+                    report.reason = "unsupported-periodic-profile";
+                    return Ok(report);
+                }
+                for point in &curve.control_points {
+                    for &coordinate in point {
+                        if !charge(&mut report.work, max_work) {
+                            return Ok(report);
+                        }
+                        let integer = coordinate / quantum;
+                        if !integer.is_finite()
+                            || integer.fract() != 0.
+                            || integer.abs() >= 2_f64.powi(48)
+                            || integer * quantum != coordinate
+                        {
+                            report.reason = "periodic-source-lattice-range";
+                            return Ok(report);
+                        }
+                    }
+                }
+                let pieces = retained_bezier_pieces(curve)?;
+                if pieces.len() != 4 {
+                    report.reason = "periodic-source-decomposition";
+                    return Ok(report);
+                }
+                let mut poles = Vec::with_capacity(9);
+                for (q, piece) in pieces.iter().enumerate() {
+                    let midpoint = |a: usize, b: usize| {
+                        (0..3)
+                            .map(|k| {
+                                (curve.control_points[a][k] + curve.control_points[b][k]) * 0.5
+                            })
+                            .collect::<Vec<_>>()
+                    };
+                    let expected = vec![
+                        midpoint(q, q + 1),
+                        curve.control_points[q + 1].clone(),
+                        midpoint(q + 1, q + 2),
+                    ];
+                    for _ in 0..9 {
+                        if !charge(&mut report.work, max_work) {
+                            return Ok(report);
+                        }
+                    }
+                    if piece.degree != 2
+                        || piece.weights != vec![1.; 3]
+                        || piece.control_points != expected
+                    {
+                        report.reason = "periodic-source-decomposition-identity";
+                        return Ok(report);
+                    }
+                    poles.extend(expected.into_iter().take(if q == 3 { 3 } else { 2 }));
+                }
+                *curve = Curve {
+                    degree: 2,
+                    knots: vec![2., 2., 2., 3., 3., 4., 4., 5., 5., 6., 6., 6.],
+                    control_points: poles,
+                    weights: vec![1.; 9],
+                    periodic: false,
+                };
+            }
+        }
+        // Midpoints can lie on the half grid. Refine the proposal grid rather
+        // than rounding an exactly converted profile back onto the old grid.
+        let converted_quantum = quantum * 0.5;
+        if !converted_quantum.is_normal() {
+            report.reason = "periodic-source-lattice-range";
+            return Ok(report);
+        }
+        let converted_work = report.work;
+        let mut candidate = smooth_station_walls(
+            &canonical,
+            sharp,
+            closed,
+            converted_quantum,
+            tolerance,
+            max_work - converted_work,
+        )?;
+        candidate.work += converted_work;
+        return Ok(candidate);
     }
     let mut generators = Vec::<Vec<Gen>>::new();
     for station in sections {

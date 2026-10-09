@@ -165,9 +165,9 @@ without an adapter. Baseline record: output/geometry-stage-baseline.json.
 The browser runs the same SDF grid sampler through WebGPU: geometry-bridge
 gained `sdf_prepare`/`sdf_finish` dispatch ops (pending handles in the session;
 finish reuses `polygonize_with_values`, so snap/validation/marching stay on the
-kernel CPU path), and the modelgraph-text scene builder prefetches eligible
+kernel CPU path), and the rush-frontend scene builder prefetches eligible
 pure-SDF `sdf_tessellate` jobs before the synchronous evaluation
-(`collectSdfJobs` in modelGraphNurbsKernel.ts; `tessellateSdfGpuAware` consumes
+(`collectSdfJobs` in rushGraphNurbsKernel.ts; `tessellateSdfGpuAware` consumes
 primed scores). Async lives in the worker only; any failure falls back to the
 CPU `sdf_tessellate`. A browser probe (`tools/browser-qualification/
 sdf-gpu-probe.ts`, headless Chromium) reproduced the unit-sphere field exactly

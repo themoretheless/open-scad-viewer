@@ -303,15 +303,24 @@ pub fn inspect(patches: &[Surface], seams: &[Seam<'_>], max_seams: usize) -> Res
                 seam.normal_scale,
                 seam.jet_tolerance,
             ) {
-                item.regularity_certified = report["regularityCertified"].as_bool().unwrap_or(false);
-                item.within_jet_budget = report["accepted"].as_bool().unwrap_or(false);
-                item.tangential_smoothness_certified = report["tangentialSmoothnessCertified"].as_bool().unwrap_or(false);
-                item.error_upper = report["errorUpper"].as_f64();
-                item.reason = if item.within_jet_budget { "jets-within-budget" }
-                    else if !item.regularity_certified { "seam-regularity-unproved" }
-                    else if !item.tangential_smoothness_certified { "tangential-smoothness-unproved" }
-                    else { "jet-deviation-exceeds-budget" };
-
+                item.regularity_certified = report.regularity_certified();
+                if let Some(decision) = report.decision {
+                    item.within_jet_budget = decision.accepted;
+                    item.tangential_smoothness_certified = decision.tangential_smoothness_certified;
+                    item.error_upper = Some(decision.error_upper);
+                    item.reason = match decision.reason {
+                        continuity::SurfaceJetDecisionReason::Accepted => "jets-within-budget",
+                        continuity::SurfaceJetDecisionReason::UnprovenRegularity => {
+                            "seam-regularity-unproved"
+                        }
+                        continuity::SurfaceJetDecisionReason::UnprovenTangentialSmoothness => {
+                            "tangential-smoothness-unproved"
+                        }
+                        continuity::SurfaceJetDecisionReason::DeviationExceedsBudget => {
+                            "jet-deviation-exceeds-budget"
+                        }
+                    };
+                }
             }
         }
         evidence.push(item);

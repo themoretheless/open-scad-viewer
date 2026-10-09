@@ -2,6 +2,18 @@
 //! Domain coverage, body ownership and geometric embedding remain independent.
 use crate::{curve::Curve, surface::Surface};
 
+/// Exact original-to-Bezier coefficient identity, including knot insertion.
+/// Rounded homogeneous arithmetic or Euclidean division withholds the result.
+pub fn exact_bezier_controls(c: &Curve, max_control_rows: usize) -> Option<Vec<Curve>> {
+    if max_control_rows == 0 || max_control_rows > 4096 || c.validate().is_err() {
+        return None;
+    }
+    let rows = crate::certificates::audit::curve_span_domains(c).len()
+        .checked_mul(c.degree.checked_add(1)?)?;
+    if rows > max_control_rows { return None; }
+    crate::exact_curve_segments::inspect(c)
+}
+
 pub fn matches(surface: &Surface, start: &Curve, end: &Curve, max_controls: usize) -> bool {
     let p=start.degree;
     let Some(n)=p.checked_add(1) else {return false;};
