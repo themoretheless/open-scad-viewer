@@ -106,6 +106,8 @@ import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
 import { GpuPicker } from './gpuPicker'
 export { GpuPicker } from './gpuPicker'
+import { GpuWboitRenderer } from './gpuWboit'
+export { GpuWboitRenderer } from './gpuWboit'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -358,6 +360,8 @@ export class WebGPURenderer {
   private csgDepthStencil: GPUTexture | null = null
   private csgDepthStencilView: GPUTextureView | null = null
   private gpuPicker: GpuPicker | null = null
+  private wboit: GpuWboitRenderer | null = null
+  private transparencyMode: 'sorted' | 'wboit' = 'sorted'
 
   private meshes: GMesh[] = []
   private readonly nativePicking = new NativePickingCache()
@@ -745,6 +749,24 @@ export class WebGPURenderer {
       sectionOffset: this.sectionOffset,
       sectionEnabled: this.sectionEnabled,
     }, px, py)
+  }
+
+  getTransparencyMode(): 'sorted' | 'wboit' {
+    return this.transparencyMode
+  }
+
+  setTransparencyMode(mode: 'sorted' | 'wboit'): void {
+    if (this.transparencyMode !== mode) {
+      this.transparencyMode = mode
+      this.requestRender()
+    }
+  }
+
+  get wboitRenderer(): GpuWboitRenderer {
+    if (!this.wboit) {
+      this.wboit = new GpuWboitRenderer()
+    }
+    return this.wboit
   }
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
@@ -1986,47 +2008,88 @@ export class WebGPURenderer {
           false, this.extraBindGroupForShader('meshSectionCap'))
       }
 
-      pass.setPipeline(this.meshTransparentPipeline())
-      pass.setBindGroup(0, this.sceneBG)
-      // The mesh surface shader samples the shadow map at group(2).
-      if (this.textures.shadowBG) pass.setBindGroup(2, this.textures.shadowBG)
-      const ghostMeshes = this.geometryGhosts.length
-        ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
-        : NO_GHOST_MESHES
-      ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
-      const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
-      this.transparentDraws.length = 0
-      for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
-      const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
-      if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), this.sceneBG, this.transparentDraws, false, this.textures.shadowBG ?? undefined))) {
-        for (const g of this.transparentDraws) {
-          pass.setBindGroup(1, g.bg)
-          this.setObjectStyleImmediate(pass, g)
-          pass.setVertexBuffer(0, g.vb)
-          pass.setVertexBuffer(1, g.morphSlot!)
-          pass.setIndexBuffer(g.ib, 'uint32')
-          pass.drawIndexed(g.ic)
-        }
-      } else if (customTransparent) {
-        // Mixed materials: per-entity pass with the resolved transparent pipeline
-        // for each shading model (uniform variant; immediates serve 'mesh' only).
-        let activeModel: ShadingModel | null = null
-        for (const g of this.transparentDraws) {
-          if (g.shadingModel !== activeModel) {
-            activeModel = g.shadingModel
-            const shaderId = resolveMeshShaderId(activeModel)
-            pass.setPipeline(activeModel === 'phong'
-              ? this.meshTransparentPipeline()
-              : this.getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }))
-            const extraGroup = this.extraBindGroupForShader(shaderId)
-            if (extraGroup) pass.setBindGroup(2, extraGroup)
+      if (this.transparencyMode === 'wboit') {
+        const ghostMeshes = this.geometryGhosts.length
+          ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+          : NO_GHOST_MESHES
+        this.transparentDraws.length = 0
+        for (let i = 0; i < this.meshes.length; i++) {
+          if (this.isMeshVisible(i) && isTransparentAlpha(this.meshes[i].alpha)) {
+            this.transparentDraws.push(this.meshes[i])
           }
-          pass.setBindGroup(1, g.bg)
-          if (activeModel === 'phong') this.setObjectStyleImmediate(pass, g)
-          pass.setVertexBuffer(0, g.vb)
-          pass.setVertexBuffer(1, g.morphSlot!)
-          pass.setIndexBuffer(g.ib, 'uint32')
-          pass.drawIndexed(g.ic)
+        }
+        for (const g of ghostMeshes) this.transparentDraws.push(g)
+
+        if (this.transparentDraws.length) {
+          const wboit = this.wboitRenderer
+          wboit.ensureTextures(dev, canvas.width, canvas.height)
+          const wboitPass = wboit.beginWboitPass(enc, depthView)
+          wboitPass.setBindGroup(0, this.sceneBG)
+          if (this.textures.shadowBG) wboitPass.setBindGroup(2, this.textures.shadowBG)
+
+          let activeModel: ShadingModel | null = null
+          for (const g of this.transparentDraws) {
+            if (g.shadingModel !== activeModel) {
+              activeModel = g.shadingModel
+              const shaderId = resolveMeshShaderId(activeModel)
+              const pipe = wboit.getWboitPipeline(dev, shaderId, this.pipelines.objectLayout, this.pipelines.vertexLayouts.mesh)
+              wboitPass.setPipeline(pipe)
+              const extraGroup = this.extraBindGroupForShader(shaderId)
+              if (extraGroup) wboitPass.setBindGroup(2, extraGroup)
+            }
+            wboitPass.setBindGroup(1, g.bg)
+            wboitPass.setVertexBuffer(0, g.vb)
+            wboitPass.setVertexBuffer(1, g.morphSlot!)
+            wboitPass.setIndexBuffer(g.ib, 'uint32')
+            wboitPass.drawIndexed(g.ic)
+          }
+          wboitPass.end()
+
+          wboit.composite(dev, enc, ctx.getCurrentTexture().createView(), this.fmt)
+        }
+      } else {
+        pass.setPipeline(this.meshTransparentPipeline())
+        pass.setBindGroup(0, this.sceneBG)
+        // The mesh surface shader samples the shadow map at group(2).
+        if (this.textures.shadowBG) pass.setBindGroup(2, this.textures.shadowBG)
+        const ghostMeshes = this.geometryGhosts.length
+          ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+          : NO_GHOST_MESHES
+        ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
+        const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
+        this.transparentDraws.length = 0
+        for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
+        const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
+        if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), this.sceneBG, this.transparentDraws, false, this.textures.shadowBG ?? undefined))) {
+          for (const g of this.transparentDraws) {
+            pass.setBindGroup(1, g.bg)
+            this.setObjectStyleImmediate(pass, g)
+            pass.setVertexBuffer(0, g.vb)
+            pass.setVertexBuffer(1, g.morphSlot!)
+            pass.setIndexBuffer(g.ib, 'uint32')
+            pass.drawIndexed(g.ic)
+          }
+        } else if (customTransparent) {
+          // Mixed materials: per-entity pass with the resolved transparent pipeline
+          // for each shading model (uniform variant; immediates serve 'mesh' only).
+          let activeModel: ShadingModel | null = null
+          for (const g of this.transparentDraws) {
+            if (g.shadingModel !== activeModel) {
+              activeModel = g.shadingModel
+              const shaderId = resolveMeshShaderId(activeModel)
+              pass.setPipeline(activeModel === 'phong'
+                ? this.meshTransparentPipeline()
+                : this.getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }))
+              const extraGroup = this.extraBindGroupForShader(shaderId)
+              if (extraGroup) pass.setBindGroup(2, extraGroup)
+            }
+            pass.setBindGroup(1, g.bg)
+            if (activeModel === 'phong') this.setObjectStyleImmediate(pass, g)
+            pass.setVertexBuffer(0, g.vb)
+            pass.setVertexBuffer(1, g.morphSlot!)
+            pass.setIndexBuffer(g.ib, 'uint32')
+            pass.drawIndexed(g.ic)
+          }
         }
       }
     }
@@ -3067,6 +3130,8 @@ export class WebGPURenderer {
     this.csgPreviewTree = null
     this.gpuPicker?.destroy()
     this.gpuPicker = null
+    this.wboit?.destroy()
+    this.wboit = null
     this.sceneUB?.destroy()
     this.sceneUB = null
     this.morphDummyVB?.destroy()

@@ -55,6 +55,7 @@ import {
   type BuildCoordinatorState,
   type PublishedGeometryBuild,
 } from './services/buildCoordinator'
+import { parseOpenScadCsgTree } from './services/gpuCsgPreview'
 import {
   buildPaletteDescriptors,
   buildShortcutHelpGroups,
@@ -1427,12 +1428,26 @@ watch(autoRender, enabled => {
   else autoBuildScheduler.cancel()
 })
 
+function tryGpuCsgPreview(sourceText: string) {
+  if (!renderer || renderer.currentStatus.status !== 'ready') return
+  try {
+    const tree = parseOpenScadCsgTree(sourceText)
+    if (tree) {
+      renderer.setCsgPreviewTree(tree)
+    }
+  } catch {
+    // Non-fatal syntax or AST transition during live typing
+  }
+}
+
 function scheduleRender(delay?: number) {
+  tryGpuCsgPreview(code.value)
   autoBuildScheduler.edited(delay === 0)
 }
 
 function beginParameterGesture(event: PointerEvent) {
   if (autoRender.value && event.target instanceof HTMLInputElement && event.target.type === 'range') {
+    tryGpuCsgPreview(code.value)
     autoBuildScheduler.beginGesture()
   }
 }
@@ -1748,6 +1763,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     })
 
     const frameToken = nextPerformanceFrameToken++
+    renderer?.setCsgPreviewTree(null)
     renderer?.setMeshes(displayMeshes, {
       frameToken,
       animate: renderedSource.value !== '' && !sameSourceSnapshot,
@@ -3137,6 +3153,11 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
             <span v-if="evidence.errorUpper !== null"> · {{ lang === 'ru' ? 'оценка' : 'bound' }} ≈ {{ evidence.errorUpper > 0 && evidence.errorUpper < 0.000001 ? evidence.errorUpper.toExponential(3) : formatNumber(evidence.errorUpper, 6) }} mm</span>
             <span v-if="evidence.withinBudget === false"> · {{ lang === 'ru' ? 'превышает допуск' : 'exceeds tolerance' }}</span>
+            <template v-if="evidence.profileG2Certified !== undefined">
+              · {{ lang === 'ru' ? 'G1/G2 сохранённого профиля' : 'Saved profile G1/G2' }}:
+              {{ evidence.profileG1Certified ? '✓' : '?' }} / {{ evidence.profileG2Certified ? '✓' : '?' }} ({{ evidence.profileSeamCount }})
+              · {{ lang === 'ru' ? 'station-швы' : 'station seams' }}: {{ evidence.stationContinuity }}
+            </template>
           </div>
         </div>
         <div v-if="sweepPatchFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">
