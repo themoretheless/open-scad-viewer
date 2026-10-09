@@ -19,8 +19,8 @@ const env={...process.env,STEP_AP242_VALIDATOR:validator,STEP_AP242_VALIDATOR_SH
  STEP_AP242_VALIDATOR_VERSION:manifest.version,STEP_AP242_LOG_DIR:resolve(output,'stepcode-raw-logs')}
 mkdirSync(env.STEP_AP242_LOG_DIR,{recursive:true})
 run('stepcode-ap242-ed4',process.execPath,['scripts/validate-step-ap242.mjs','tests/fixtures/step-v6/self-authored-ap242-assembly.step'],{env})
-run('native-occurrence-graph','cargo',['test','--locked','--manifest-path','crates/Cargo.toml','-p','brep-core','v10_retains_affine_occurrence_graph_and_detects_mutation'])
-run('native-affine-operators','cargo',['test','--locked','--manifest-path','crates/Cargo.toml','-p','brep-core','v6_applies_nonuniform_occurrence_affine_and_refuses_singular'])
+run('native-occurrence-graph','cargo',['test','--locked','--manifest-path','crates/Cargo.toml','-p','cad-step','v10_retains_affine_occurrence_graph_and_detects_mutation'])
+run('native-affine-operators','cargo',['test','--locked','--manifest-path','crates/Cargo.toml','-p','cad-step','v6_applies_nonuniform_occurrence_affine_and_refuses_singular'])
 run('bridge-wasm-build','npm',['run','build:geometry'])
 run('browser-app-build',process.execPath,['node_modules/vite/bin/vite.js','build'])
 run('product-roundtrips','npx',['vitest','run','tests/brepStepV10Product.test.ts'])

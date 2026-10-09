@@ -251,7 +251,7 @@ pub fn restore(v: Value) -> Result<Value> {
         let option = &v["stepExchange"];
         let tolerance: f64 = field(option,"toleranceMm")?;
         let work = &option["limits"];
-        let candidate = brep_core::source_exchange_step::prepare(body,tolerance,
+        let candidate = cad_step::source_exchange_step::prepare(body,tolerance,
             brep_core::source_exchange_endpoints::Limits {
                 root_checks:field(work,"rootChecks")?,
                 mapping_cells:field(work,"mappingCells")?,

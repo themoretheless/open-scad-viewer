@@ -13,8 +13,6 @@ use std::collections::BTreeSet;
 
 pub const CLOSE_TOPOLOGY_CAPABILITY: &str = "close-topology/1";
 pub const TOLERANT_COMPLEX_HEAL_CAPABILITY: &str = "tolerant-complex-heal/1";
-pub const CLOSE_TOPOLOGY_STEP_CAPABILITY: &str = "close-topology-step/1";
-pub const CLOSE_TOPOLOGY_IGES_CAPABILITY: &str = "close-topology-iges/1";
 const MAX_PARTS: usize = 64;
 const MAX_RELATIONS: usize = 4096;
 const MAX_RADIAL_USES: usize = 16;
@@ -290,7 +288,8 @@ fn hex_decode(text: &str) -> Result<Vec<u8>> {
         .collect()
 }
 
-fn encode_complex(
+#[doc(hidden)]
+pub fn encode_complex(
     audited: &AuditedTopologyComplex,
     format: &str,
     mut export: impl FnMut(&Model) -> Result<String>,
@@ -400,7 +399,8 @@ fn parse_role(text: &str) -> Result<BodyRole> {
     }
 }
 
-fn decode_complex(
+#[doc(hidden)]
+pub fn decode_complex(
     text: &str,
     format: &str,
     mut import: impl FnMut(&str) -> Result<Model>,
@@ -520,7 +520,8 @@ fn decode_complex(
     MixedDimensionalBrep::new(parts, shared_faces, radial_rings, vertex_fans, vec![])?.audit()
 }
 
-fn interchange_certificate(
+#[doc(hidden)]
+pub fn interchange_certificate(
     audited: &AuditedTopologyComplex,
     capability: &'static str,
 ) -> ComplexInterchangeCertificate {
@@ -534,47 +535,6 @@ fn interchange_certificate(
         direct_manifold_payloads: true,
         supplemental_incidence_preserved: true,
     }
-}
-
-pub fn export_complex_step(
-    audited: &AuditedTopologyComplex,
-) -> Result<(String, ComplexInterchangeCertificate)> {
-    let text = encode_complex(audited, "STEP", |model| {
-        crate::export_step_v4(model).map(|v| v.0)
-    })?;
-    Ok((
-        text,
-        interchange_certificate(audited, CLOSE_TOPOLOGY_STEP_CAPABILITY),
-    ))
-}
-pub fn import_complex_step(
-    text: &str,
-) -> Result<(AuditedTopologyComplex, ComplexInterchangeCertificate)> {
-    let audited = decode_complex(text, "STEP", |payload| {
-        crate::import_step_v4(payload).map(|v| v.0)
-    })?;
-    let certificate = interchange_certificate(&audited, CLOSE_TOPOLOGY_STEP_CAPABILITY);
-    Ok((audited, certificate))
-}
-pub fn export_complex_iges(
-    audited: &AuditedTopologyComplex,
-) -> Result<(String, ComplexInterchangeCertificate)> {
-    let text = encode_complex(audited, "IGES", |model| {
-        crate::export_iges_v2(model).map(|v| v.0)
-    })?;
-    Ok((
-        text,
-        interchange_certificate(audited, CLOSE_TOPOLOGY_IGES_CAPABILITY),
-    ))
-}
-pub fn import_complex_iges(
-    text: &str,
-) -> Result<(AuditedTopologyComplex, ComplexInterchangeCertificate)> {
-    let audited = decode_complex(text, "IGES", |payload| {
-        crate::import_iges_v2(payload).map(|v| v.0)
-    })?;
-    let certificate = interchange_certificate(&audited, CLOSE_TOPOLOGY_IGES_CAPABILITY);
-    Ok((audited, certificate))
 }
 
 fn face_surface_key(model: &Model, face: usize) -> Result<String> {
@@ -1129,14 +1089,6 @@ mod tests {
         assert_eq!(mixed.certificate().shared_face_count, 1);
         assert_eq!(mixed.boundary_faces().len(), 10);
         assert_eq!(mixed.manifold_decomposition().len(), 2);
-        let (step, _) = export_complex_step(&mixed).unwrap();
-        let (step_back, step_cert) = import_complex_step(&step).unwrap();
-        assert_eq!(step_back.certificate().shared_face_count, 1);
-        assert!(step_cert.supplemental_incidence_preserved);
-        let (iges, _) = export_complex_iges(&mixed).unwrap();
-        let (iges_back, iges_cert) = import_complex_iges(&iges).unwrap();
-        assert_eq!(iges_back.boundary_faces().len(), 10);
-        assert!(iges_cert.direct_manifold_payloads);
         assert_eq!(
             mixed
                 .try_into_globally_audited_solid_set()
@@ -1316,12 +1268,6 @@ mod tests {
                 .unwrap_err()
                 .code,
             "BREP_COMPLEX_RESOURCE_LIMIT"
-        );
-        assert_eq!(
-            import_complex_step("OSV-CLOSE-TOPOLOGY-STEP/1\nBOGUS\nEND")
-                .unwrap_err()
-                .code,
-            "BREP_COMPLEX_INTERCHANGE_REFUSED"
         );
     }
 }

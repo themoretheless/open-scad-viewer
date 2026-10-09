@@ -4,13 +4,13 @@
 //! `step_interchange` / `step-interchange/1`. No MANIFOLD_SOLID_BREP, no holes,
 //! no rational weights ≠ 1, no non-bicubic surfaces.
 
-use crate::analytic_features::FeatureCertificate;
+use brep_core::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
     StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs,
     is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common, step_header,
     surface_from_b_spline_args, validate_linked_step_graph,
 };
-use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{Result, surface::Surface};
 
 pub const NURBS_STEP_BICUBIC_FACE_CAPABILITY: &str = "nurbs-step-bicubic-face/1";
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn refuses_constructor_solid_export() {
-        let solid = crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let solid = brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
         assert_eq!(
             export_nurbs_step(&solid).unwrap_err().code,
             "BREP_NURBS_STEP_REFUSED"

@@ -39,7 +39,7 @@ pub fn prepare(
     model.validate()?;
     // Propose consistently oriented charts. Every proposed lift and shared
     // carrier is freshly checked below; reflected floats grant no authority.
-    let oriented = crate::step_interchange_v3::canonical_face_senses(model)?;
+    let oriented = crate::face_senses::canonical_face_senses(model)?;
     let model = &oriented;
     let mut regions = Vec::new();
     let mut pairs = Vec::new();
@@ -501,29 +501,6 @@ mod tests {
             assert!(r.seam.is_none(),"collapsed endpoint must not acquire a regular G1 certificate");
             assert!(r.uncertain_canonical.is_some());
         }
-    }
-    #[test]
-    fn original_annular_poles_are_preserved_in_step_exchange() {
-        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
-        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
-        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
-        let volume=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
-            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
-        }).unwrap();
-        let body=volume.body.unwrap();
-        let endpoint_limits=||crate::source_exchange_endpoints::Limits {
-            root_checks:100000,mapping_cells:100000,replay_mapping_per_use:10000,
-            exact_work:100_000_000,driver_cells:100000,spans:100000,endpoints:100000,
-        };
-        assert!(crate::source_exchange_step::prepare(&body,1e-7,endpoint_limits(),1).unwrap().is_none());
-        assert!(crate::source_exchange_step::prepare(&body,1e-7,endpoint_limits(),0).is_err());
-        assert!(crate::source_exchange_step::prepare(&body,1e-7,endpoint_limits(),10_000_001).is_err());
-        let candidate=crate::source_exchange_step::prepare(&body,1e-7,endpoint_limits(),100000).unwrap().expect("original poles must export");
-        assert_eq!(candidate.faces,27);
-        assert_eq!(candidate.edges,body.geometry().shell().edges().len()+2);
-        assert!(candidate.endpoint_error_upper<=1e-7);
-        eprintln!("original annular STEP faces={} edges={} vertices={} bound={}",candidate.faces,candidate.edges,candidate.vertices,candidate.endpoint_error_upper);
-        if let Some(path)=std::env::var_os("CAD_ANNULAR_SOURCE_STEP_OUTPUT") {std::fs::write(path,candidate.text).unwrap();}
     }
     #[test]
     fn annular_planar_flux_keeps_budget_and_curved_fallback_guards() {

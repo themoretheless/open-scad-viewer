@@ -1,4 +1,5 @@
-use brep_core::{analytic_features::build_partial_annular_preview, export_step_v9, tube};
+use brep_core::{analytic_features::build_partial_annular_preview, tube};
+use cad_step::export_step_v9;
 
 fn main() {
     let directory = std::env::args().nth(1).expect("output directory");

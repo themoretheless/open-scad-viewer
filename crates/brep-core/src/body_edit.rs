@@ -253,10 +253,19 @@ pub(crate) fn edit_face(
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// The mixed-unit product assembly as imported from STEP v9. Regenerate from the
+    /// repository root with `cargo run --manifest-path crates/Cargo.toml -p cad-step
+    /// --example dump_step_model -- tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step
+    /// > tests/fixtures/cad-step/mixed-unit-product-assembly.model.json`.
+    fn mixed_unit_assembly() -> Model {
+        value_codec::from_str(include_str!(
+            "../../../tests/fixtures/cad-step/mixed-unit-product-assembly.model.json"
+        ))
+        .unwrap()
+    }
     #[test]
     fn preserves_standalone_shells_beside_edited_components() {
-        let text = include_str!("../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step");
-        let (mut model, _, _) = crate::step_interchange_v3::import_step_v9(text).unwrap();
+        let mut model = mixed_unit_assembly();
         let source = model.clone();
         let mut surface = crate::cuboid([500., 0., 0.], [502., 2., 2.]).unwrap();
         surface.0.bodies.clear(); surface.1.bodies.clear();
@@ -368,10 +377,7 @@ mod tests {
     }
     #[test]
     fn mixed_unit_component_push_preserves_other_body_and_identities() {
-        let text = include_str!(
-            "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
-        );
-        let (model, _, _) = crate::step_interchange_v3::import_step_v9(text).unwrap();
+        let model = mixed_unit_assembly();
         let original = value_codec::to_string(&model).unwrap();
         for owner in 0..2 {
             let (part, faces) = extract(&model, owner);

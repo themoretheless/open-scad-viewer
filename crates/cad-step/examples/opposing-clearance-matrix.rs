@@ -55,7 +55,7 @@ fn main() {
                 }
                 assert_eq!(format!("{model:?}"), before);
                 let name = format!("case-{}", specimens.len());
-                let (step, _, _) = brep_core::export_step_v9(&model).unwrap();
+                let (step, _, _) = cad_step::export_step_v9(&model).unwrap();
                 std::fs::write(format!("{directory}/{name}.step"), step).unwrap();
                 specimens.push(json!({"name":name,"parameters":parameters,"direction":direction,"anchors":anchors.into_iter().map(|(face,point)|json!({"face":face,"point":point})).collect::<Vec<_>>(),"cases":cases}));
             }

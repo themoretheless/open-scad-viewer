@@ -84,9 +84,9 @@ fn nonplanar_caps_retain_world_boundaries_and_step_carriers() {
             assert!((p[2] - (z + 0.5 * u * (1. - u))).abs() < 1e-12);
         }
     }
-    let (step, _, _) = brep_core::export_step_v5(&model).unwrap();
+    let (step, _, _) = cad_step::export_step_v5(&model).unwrap();
     assert!(step.contains("B_SPLINE_SURFACE_WITH_KNOTS"));
-    let (restored, _, _) = brep_core::import_step_v5(&step).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     for (index, z) in [(4, 0.), (5, 1.)] {
         let p = restored.faces[index]

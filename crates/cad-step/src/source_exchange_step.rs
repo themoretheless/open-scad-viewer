@@ -1,9 +1,7 @@
 //! Original source carriers with bounded endpoint trims in an AP242 candidate.
 //! Independent reader qualification is required; no Model/editing certificate.
-use crate::{
-    source_exchange_endpoints as endpoints, source_exchange_trims as trims,
-    step_interchange_v3::{Writer, emit_curve_source, emit_surface_source, refs_text},
-};
+use crate::step_interchange_v3::{Writer, emit_curve_source, emit_surface_source, refs_text};
+use brep_core::{source_exchange_endpoints as endpoints, source_exchange_trims as trims};
 use nurbs_core::{Error, Result};
 use std::collections::BTreeMap;
 pub struct Candidate {
@@ -22,7 +20,7 @@ fn trim(w: &mut Writer, curve: usize, t: [f64; 2]) -> usize {
 /// Native authority comes only from a private Body, original recipes and fresh
 /// endpoint/trim gates. Original curves and surfaces are emitted unchanged.
 pub fn prepare(
-    body: &crate::source_volume::Body,
+    body: &brep_core::source_volume::Body,
     tolerance_mm: f64,
     limits: endpoints::Limits,
     max_trim_work: usize,
@@ -108,7 +106,7 @@ pub fn prepare(
             return Err(invalid("Pole vertex ownership differs"));
         }
         let parameters = source.endpoints().each_ref().map(|e| match e {
-            crate::source_boundary_fragment::Endpoint::Parameter(t) => Some(*t),
+            brep_core::source_boundary_fragment::Endpoint::Parameter(t) => Some(*t),
             _ => None,
         });
         let [Some(a), Some(b)] = parameters else {

@@ -71,17 +71,17 @@ const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 /// A recognized canonical ring torus: the exact sixteen-patch solid of
 /// `analytic::torus`, optionally rigidly placed.
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalTorus {
+pub struct CanonicalTorus {
     /// Torus center (the center of the symmetry-plane circle of radius R).
-    pub(crate) center: [f64; 3],
+    pub center: [f64; 3],
     /// Unit symmetry axis; the profile circle rises toward +axis.
-    pub(crate) axis: [f64; 3],
-    pub(crate) major: f64,
-    pub(crate) minor: f64,
+    pub axis: [f64; 3],
+    pub major: f64,
+    pub minor: f64,
     /// Observed structural deviation bound; feeds the outward classification.
     pub(crate) error: f64,
     /// In-plane orthonormal ring frame: x = quadrant-0 direction, y = axis x x.
-    pub(crate) frame: [[f64; 3]; 2],
+    pub frame: [[f64; 3]; 2],
     /// Face index by [profile quadrant][revolution quadrant].
     pub(crate) patches: [[usize; 4]; 4],
 }
@@ -109,7 +109,7 @@ fn profile_controls(major: f64, minor: f64) -> [[[f64; 2]; 3]; 4] {
 /// affine placement is admitted; anything else returns `None`. Only strict
 /// ring tori exist canonically (the constructor refuses horn and spindle
 /// tori), and the recovered radii must keep R - r clearly positive.
-pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
+pub fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1
