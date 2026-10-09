@@ -937,6 +937,26 @@ mod tests {
         let assembled=outer.assemble_shell(1000).unwrap();
         eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
         let expression=assembled.shell.expect(assembled.reason);
+        let (gap,gap_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,1000,10000).unwrap();
+        eprintln!("exact expression clearance complete={} lower={:?} cells={} spans={} pending={}",
+            gap.complete,gap.lower_mm,gap.cells,gap.spans,gap.pending.len());
+        assert_eq!(gap.complete,gap.pending.is_empty());
+        assert_eq!(gap.complete,gap_certificate.is_some());
+        if let Some(proof)=gap_certificate {
+            assert!(std::ptr::eq(proof.shell(),&expression));
+            assert_eq!(proof.faces(),[28,3]);
+            assert_eq!(Some(proof.lower_mm()),gap.lower_mm);
+        }
+        if gap.complete {assert!(gap.lower_mm.unwrap()>=13.5);}
+        if let Ok(path)=std::env::var("BREP_EXPRESSION_GAP_PATH") {
+            std::fs::write(path,value_codec::json!({"faces":gap.faces,"requestedLowerMm":gap.requested_lower_mm,
+                "complete":gap.complete,"lowerMm":gap.lower_mm,"cells":gap.cells,"spans":gap.spans,
+                "pending":gap.pending,"reason":gap.reason}).to_string()).unwrap();
+        }
+        let (refused,refused_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,0,10000).unwrap();
+        assert!(refused_certificate.is_none());
+        assert!(!refused.complete && refused.lower_mm.is_none() && !refused.pending.is_empty());
+        assert!(expression.inspect_face_clearance([28,28],13.5,1000,1000,10000).is_err());
         if let Some(region)=original_region.certificate.as_ref() {
         assert!(expression.qualify_transition_ruled_contact(1,region,1000,0,1000).unwrap().certificate.is_none());
         let ruled=expression.qualify_transition_ruled_contact(1,region,1000,10000000,100000).unwrap();

@@ -6,6 +6,9 @@ pub use geometry::EmbeddedExpressionGeometry;
 #[path = "source_profile_shell_flux.rs"]
 mod flux;
 pub use flux::MaterialFluxReport;
+#[path = "source_profile_shell_gap.rs"]
+mod gap;
+pub use gap::{ExpressionGapReport, ExpressionFaceClearance};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
 pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport,ExpressionVolumeQualification,OrientedExpressionVolume};
