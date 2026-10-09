@@ -3105,3 +3105,10 @@ Added `certify_shell_with_raw_side`: retain the designated full positive control
 ### Verified neighbor-only material separation on residual source pairs
 
 The native annular regression passes in 0.26 s with all six exact positive cases: [0,11], [11,0], [0,15], [15,0], [0,19], [19,0]. Each certificate has no material substitution on the designated raw selected side, a fresh original planar-material certificate on the neighbor, opposite strict signs and matching source controls. Work ranges 9,158 to 14,054 operations. A one-operation budget refuses and invalid raw-side index errors. Exact positive-case coverage is frozen in the regression, rather than accepting a zero-positive result. The complete cumulative expression fixture remains active and predates the updated retained-only material guard; full residual reduction is not yet qualified. Latest completed full residual remains 9.
+
+
+### Retained profile / ruled-wall image protocol prepared
+
+Added a typed image-only protocol for actual retained/original owners with an existing Outer edge. It freshly qualifies full exact positive-profile XY Jordan projection and whole unchanged ruled-wall projection, then checks the natural boundary curve identity with exact homogeneous weight determinants (including reversed control order). Complete unchanged neighbor contours and actual current outer-edge ownership are required. The certificate retains both native proofs and owners; it does not yet classify cross-face contact or grant retained root/pole ownership. All 19 assembled-shell regressions pass. The full fixture now requests the image proof for [0,2] and [2,27] in both owner orders with zero-work/invalid-pair refusals.
+
+The previous cumulative run terminated after 364.04 s at the known obsolete all-material-certificates-absent guard. It produced a fresh permitted neighbor-material proof, but no final cumulative report, so no new final count is claimed. A new full run uses the retained-side-only material guard, cumulative boundary phase and new ruled-image assertions. Latest fully qualified final residual remains 9.

@@ -286,3 +286,62 @@ mod tests {
         assert!(!matches(&a, &b));
     }
 }
+
+/// Full positive-profile projection meets the whole ruled wall projection only
+/// on this natural boundary (and collapsed boundary endpoints). This is an
+/// image statement; retained edge/vertex ownership is qualified separately.
+pub struct ProfileRuledImage<'x, 'b> {
+    owners: [&'x ShellFace; 2],
+    profile: nurbs_core::profile_projected_jordan::Certificate<'x, 'b>,
+    wall: exact_trace::Certificate<'x>,
+    natural: usize,
+}
+impl ProfileRuledImage<'_, '_> {
+    pub fn owners(&self) -> [&ShellFace; 2] { self.owners }
+    pub fn profile(&self) -> &nurbs_core::profile_projected_jordan::Certificate<'_, '_> { &self.profile }
+    pub fn wall(&self) -> &Curve { self.wall.curve() }
+    pub fn natural(&self) -> usize { self.natural }
+}
+pub struct ProfileRuledImageReport<'x, 'b> {
+    pub certificate: Option<ProfileRuledImage<'x, 'b>>,
+    pub exact_work: u64,
+    pub boundary_cells: usize,
+    pub reason: &'static str,
+}
+impl<'x,'o,'i,'f,'a,'s,'p,'b> ExpressionShell<'x,'o,'i,'f,'a,'s,'p,'b> {
+    pub fn qualify_profile_ruled_image(
+        &self, faces: [usize;2], tolerance:f64, max_controls:usize, max_work:u64, max_cells:usize,
+    ) -> Result<ProfileRuledImageReport<'_, 'b>> {
+        if faces[0]==faces[1] || faces.iter().any(|&i|i>=self.faces.len()) || max_controls>1000000 || max_work>100000000 || max_cells>100000 || !tolerance.is_finite() || tolerance<=0. {
+            return Err(Error::new("BREP_PROFILE_CONTACTS","Bound profile ruled image owners and native work"));
+        }
+        let mut out=ProfileRuledImageReport {certificate:None,exact_work:0,boundary_cells:0,reason:"profile-ruled-image-face-kind-unproven"};
+        let (original,side)=match faces.map(|i|self.faces[i].kind()) {
+            [ShellFaceKind::Retained(_),ShellFaceKind::Original(a)] => (a,0),
+            [ShellFaceKind::Original(a),ShellFaceKind::Retained(_)] => (a,1),
+            _ => return Ok(out),
+        };
+        if self.equivalent_original_face(faces[1-side])!=Some(original) {out.reason="profile-ruled-image-original-contour-unproven";return Ok(out);}
+        let Some(rail)=self.pairs.iter().find_map(|p| {
+            if p.uses.iter().all(|a|faces.contains(&a.face)) {
+                if let ShellPairKind::Outer(k)=p.kind {return Some(k/2);}
+            }
+            None
+        }) else {out.reason="profile-ruled-image-current-outer-edge-unproven";return Ok(out);};
+        if max_controls==0 || max_work==0 || max_cells==0 {out.reason="profile-ruled-image-work-limit";return Ok(out);}
+        let root=self.assembly.patch.rails.face.boundary.rooted[rail];
+        let shell=root.restricted.proposal.body.geometry().shell();
+        let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let neighbor=shell.regions().unwrap()[original].loops()[0][0].surface();
+        let Some(wall)=exact_trace::certify(neighbor,[0,1],1-root.axis,max_controls)? else {out.reason="profile-ruled-image-wall-trace-unproven";return Ok(out);};
+        let report=nurbs_core::profile_projected_jordan::certify(profile,[0,1],tolerance,max_work,max_cells)?;
+        out.exact_work=report.exact_work;out.boundary_cells=report.boundary_cells;out.reason=report.reason;
+        let Some(projected)=report.certificate else {return Ok(out);};
+        let natural=match (root.axis,rail) {(0,0)=>0,(0,1)=>2,(1,0)=>3,_=>1};
+        let Some(curve)=projected.boundary().iter().zip(projected.boundary_indices()).find_map(|(c,&i)|(i==natural).then_some(c)) else {out.reason="profile-ruled-image-natural-boundary-unproven";return Ok(out);};
+        if !identical_trace(curve,wall.curve(),&mut out.exact_work,max_work)? {out.reason="profile-ruled-image-boundary-identity-unproven";return Ok(out);}
+        out.certificate=Some(ProfileRuledImage {owners:faces.map(|i|&self.faces[i]),profile:projected,wall,natural});
+        out.reason="profile-ruled-boundary-image-qualified";
+        Ok(out)
+    }
+}

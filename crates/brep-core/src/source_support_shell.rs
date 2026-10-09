@@ -1261,6 +1261,19 @@ mod tests {
                 assert!(expression.qualify_profile_vertex_contact([new.support().faces[1],new.support().faces[0]],10000000).unwrap().certificate.is_some());
             }
         }
+        assert!(expression.qualify_profile_ruled_image([0,0],1e-8,1000,1000000,1000).is_err());
+        assert!(expression.qualify_profile_ruled_image([0,2],1e-8,1000,0,1000).unwrap().certificate.is_none());
+        for ids in [[0,2],[2,27]] {
+            for order in [ids,[ids[1],ids[0]]] {
+                let report=expression.qualify_profile_ruled_image(order,1e-8,1000,10000000,10000).unwrap();
+                eprintln!("retained wall image pair={order:?} qualified={} work={} reason={}",report.certificate.is_some(),report.exact_work,report.reason);
+                let proof=report.certificate.expect(report.reason);
+                for side in 0..2 {assert!(std::ptr::eq(proof.owners()[side],&expression.faces()[order[side]]));}
+                assert_eq!(proof.natural(),2);
+                assert_eq!(proof.profile().axes(),[0,1]);
+                assert!(report.exact_work<=10000000 && report.boundary_cells<=10000);
+            }
+        }
         assert!(expression.qualify_profile_boundary_contact([0,0],1000,100).is_err());
         assert!(expression.qualify_profile_boundary_contact([0,1],0,100).unwrap().certificate.is_none());
         assert!(expression.qualify_profile_boundary_contact([0,1],1000,0).unwrap().certificate.is_none());
