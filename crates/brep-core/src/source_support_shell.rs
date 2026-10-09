@@ -938,6 +938,14 @@ mod tests {
         let assembled=outer.assemble_shell(1000).unwrap();
         eprintln!("expression shell uses={} reason={}",assembled.uses,assembled.reason);
         let expression=assembled.shell.expect(assembled.reason);
+        let outside_segment=expression.inspect_segment_supports([1000.;3],[1.,0.,0.],0.01,1000,1000,10000).unwrap();
+        assert!(outside_segment.boundary_excluded);
+        assert!(outside_segment.candidates.is_empty() && outside_segment.pending.is_empty());
+        assert_eq!(outside_segment.cells,expression.faces().len());
+        let pending_segment=expression.inspect_segment_supports([0.;3],[30.,0.,0.],0.01,1000,0,10000).unwrap();
+        assert!(!pending_segment.boundary_excluded);
+        assert_eq!(pending_segment.pending.len(),expression.faces().len());
+        assert!(expression.inspect_segment_supports([0.;3],[0.;3],0.01,1000,1000,10000).is_err());
         let (gap,gap_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,1000,10000).unwrap();
         eprintln!("exact expression clearance complete={} lower={:?} cells={} spans={} pending={}",
             gap.complete,gap.lower_mm,gap.cells,gap.spans,gap.pending.len());

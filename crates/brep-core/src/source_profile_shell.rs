@@ -9,6 +9,9 @@ pub use flux::MaterialFluxReport;
 #[path = "source_profile_shell_gap.rs"]
 mod gap;
 pub use gap::{ExpressionGapReport, ExpressionFaceClearance};
+#[path = "source_profile_shell_segment.rs"]
+mod segment;
+pub use segment::{ExpressionSegmentReport, ExpressionSegmentCandidate};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
 pub use volume::{ExpressionVolumeLimits, ExpressionVolumeReport,ExpressionVolumeQualification,OrientedExpressionVolume};
