@@ -690,3 +690,7 @@ pub use xy_contact::{TransitionXyBoundsContact, TransitionXyBoundsReport};
 #[path="source_profile_shell_vertex_contact.rs"]
 mod vertex_contact;
 pub use vertex_contact::{ProfileVertexContact,ProfileVertexReport};
+
+#[path="source_profile_shell_coordinate_contact.rs"]
+mod coordinate_contact;
+pub use coordinate_contact::{TransitionCoordinateContact,TransitionCoordinateReport};

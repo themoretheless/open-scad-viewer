@@ -879,7 +879,7 @@ mod tests {
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
         assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),151);
-        let mut kinds=[0usize;15];
+        let mut kinds=[0usize;16];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
                 PairContactProof::Hull(c)=>(8,Some(c.owners())),
@@ -889,6 +889,7 @@ mod tests {
                 PairContactProof::TransitionXyHull(c)=>(12,Some(c.owners())),
                 PairContactProof::TransitionXyBounds(c)=>(13,Some(c.owners())),
                 PairContactProof::ProfileVertex(c)=>(14,Some(c.owners())),
+                PairContactProof::TransitionCoordinate(c)=>(15,Some(c.owners())),
                 PairContactProof::Pending=>(0,None),PairContactProof::Excluded=>(1,None),
                 PairContactProof::Planar(c)=>(2,Some(c.owners())),PairContactProof::Fiber(c)=>(3,Some(c.owners())),
                 PairContactProof::VertexOrInterior(c)=>(4,Some(c.owners())),
@@ -899,7 +900,7 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0,0,0,0,0,0]);
+        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0,0,0,0,0,0,0]);
         let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(151));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
@@ -1140,8 +1141,28 @@ mod tests {
         eprintln!("transition material XY bounds audit pending={} spans={} work={}",resumed.pending_pairs(),resumed.work().1,resumed.work().3);
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_MATERIAL_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
-        let before_transition_refinement=resumed.diagnostics();
         let expanded=ContactAuditLimits{cells:16384,..cumulative};
+        let before_coordinate=resumed.diagnostics();
+        let spent_spans=resumed.work().1;
+        expression.qualify_remaining_transition_coordinates(&mut resumed,ContactAuditLimits{spans:spent_spans,..expanded},256).unwrap();
+        assert_eq!(resumed.diagnostics(),before_coordinate);
+        assert!(expression.qualify_transition_coordinate_contact([4,transition_id],0,1000,100).unwrap().certificate.is_none());
+        assert!(expression.qualify_transition_coordinate_contact([0,0],1,1,1).is_err());
+        expression.qualify_remaining_transition_coordinates(&mut resumed,expanded,256).unwrap();
+        assert!(resumed.pending_pairs()<=before_coordinate["pendingPairs"].as_u64().unwrap() as usize);
+        assert!(resumed.work().0<=expanded.cells && resumed.work().1<=expanded.spans);
+        for (old,new) in before_coordinate["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if let PairContactProof::TransitionCoordinate(c)=new.proof() {
+                for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
+                assert!(!c.cover().is_empty());
+                for (_,b) in c.cover() {assert!(b[1]<c.value() || b[0]>c.value());}
+                assert!(expression.qualify_transition_coordinate_contact([new.support().faces[1],new.support().faces[0]],256,1000,10000).unwrap().certificate.is_some());
+            }
+        }
+        eprintln!("coordinate transition audit pending={} cells={} spans={}",resumed.pending_pairs(),resumed.work().0,resumed.work().1);
+        if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_COORDINATE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+        let before_transition_refinement=resumed.diagnostics();
         expression.resume_transition_contact_audit(&mut resumed,expanded,256).unwrap();
         assert!(resumed.pending_pairs()<=before_transition_refinement["pendingPairs"].as_u64().unwrap() as usize);
         assert!(resumed.work().0<=expanded.cells && resumed.work().1<=expanded.spans && resumed.work().2<=expanded.domain_cells);

@@ -341,6 +341,53 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+    pub fn qualify_remaining_transition_coordinates<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+        cells_per_pair: usize,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        if cells_per_pair > 100000 {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound coordinate pair refinement",
+            ));
+        }
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && matches!(
+                    p.support.faces.map(|i| self.faces[i].kind()),
+                    [ShellFaceKind::Original(_), ShellFaceKind::Transition]
+                        | [ShellFaceKind::Transition, ShellFaceKind::Original(_)]
+                )
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let cells = ((limits.cells - audit.cells) / remaining).min(cells_per_pair);
+            let spans = (limits.spans - audit.spans) / remaining;
+            remaining -= 1;
+            if cells == 0 || spans == 0 {
+                continue;
+            }
+            let report = self.qualify_transition_coordinate_contact(
+                pair.support.faces,
+                cells,
+                limits.controls_per_enclosure,
+                spans,
+            )?;
+            audit.cells += report.cells;
+            audit.spans += report.spans;
+            pair.reason = report.reason;
+            if let Some(c) = report.certificate {
+                pair.proof = PairContactProof::TransitionCoordinate(c);
+            }
+        }
+        Ok(())
+    }
     pub fn qualify_remaining_profile_vertices<'x>(
         &'x self,
         audit: &mut ShellContactAudit<'x>,
