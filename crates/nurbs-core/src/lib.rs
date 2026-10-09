@@ -13,6 +13,7 @@
 #![allow(unused_features)]
 pub mod curve;
 pub(crate) mod bernstein_interpolation;
+pub(crate) mod profile_expression_bernstein;
 pub mod uv_curve_crossings;
 pub mod coons;
 pub mod continuity;

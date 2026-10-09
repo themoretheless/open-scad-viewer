@@ -86,6 +86,47 @@ pub(crate) fn reconstruct(samples: &[I], basis: &[Vec<I>]) -> Result<Vec<I>> {
         .collect()
 }
 
+pub(crate) fn reconstruct_tensor(
+    samples: &[Vec<I>],
+    bases: [&[Vec<I>]; 2],
+    max_work: usize,
+) -> Result<(Option<Vec<Vec<I>>>, usize)> {
+    let n = samples.len();
+    let m = samples.first().map_or(0, Vec::len);
+    check(
+        n > 0
+            && m > 0
+            && n <= 17
+            && m <= 17
+            && samples.iter().all(|r| r.len() == m)
+            && bases[0].len() == n
+            && bases[1].len() == m
+            && bases[0].iter().all(|r| r.len() == n)
+            && bases[1].iter().all(|r| r.len() == m),
+        "Match tensor polynomial nodes and bases",
+    )?;
+    let work = n * m * (n + m);
+    if work > max_work {
+        return Ok((None, 0));
+    }
+    let mut intermediate = vec![vec![I::point(0.); m]; n];
+    for j in 0..m {
+        let column: Vec<_> = samples.iter().map(|row| row[j]).collect();
+        for (i, value) in reconstruct(&column, bases[0])?.into_iter().enumerate() {
+            intermediate[i][j] = value;
+        }
+    }
+    Ok((
+        Some(
+            intermediate
+                .iter()
+                .map(|row| reconstruct(row, bases[1]))
+                .collect::<Result<_>>()?,
+        ),
+        work,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
