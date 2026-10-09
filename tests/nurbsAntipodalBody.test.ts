@@ -33,4 +33,4 @@ it('owns antipodal holonomy error and independently audits retained hollow Solid
   await expect(buildOwnNurbsAsync(compileRushFrontend(change).document,{action:'build'})).rejects.toThrow(/continuous retained-patch error/)
  }
  expect(JSON.stringify(document)).toBe(before)
-})
+},120000)

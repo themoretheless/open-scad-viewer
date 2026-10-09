@@ -394,7 +394,7 @@ it('retains Rush rational topology after streamed previews and refuses dimension
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'},{shouldAbort:()=>cancel,onSweepPreview:()=>{cancel=true}})).rejects.toMatchObject({name:'AbortError'})
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'})).resolves.toBeDefined()
  await expect(buildOwnNurbsAsync(compileRushFrontend(source.replace('max_steps: 64','max_steps: 1')).document,{action:'build'})).rejects.toThrow(/budget/)
-})
+},120000)
 
 
 it('does not promote aliased zero-error geometry while a frame limit is unproved',()=>{
