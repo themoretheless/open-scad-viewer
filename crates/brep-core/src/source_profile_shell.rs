@@ -694,3 +694,7 @@ pub use vertex_contact::{ProfileVertexContact,ProfileVertexReport};
 #[path="source_profile_shell_coordinate_contact.rs"]
 mod coordinate_contact;
 pub use coordinate_contact::{TransitionCoordinateContact,TransitionCoordinateReport};
+
+#[path="source_profile_shell_boundary_contact.rs"]
+mod profile_boundary_contact;
+pub use profile_boundary_contact::{ProfileBoundaryContact,ProfileBoundaryReport};

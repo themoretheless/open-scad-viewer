@@ -1228,6 +1228,19 @@ mod tests {
                 assert!(expression.qualify_profile_vertex_contact([new.support().faces[1],new.support().faces[0]],10000000).unwrap().certificate.is_some());
             }
         }
+        assert!(expression.qualify_profile_boundary_contact([0,0],1000,100).is_err());
+        assert!(expression.qualify_profile_boundary_contact([0,1],0,100).unwrap().certificate.is_none());
+        assert!(expression.qualify_profile_boundary_contact([0,1],1000,0).unwrap().certificate.is_none());
+        for ids in [[0,1],[1,27]] {
+            let report=expression.qualify_profile_boundary_contact(ids,10000000,10000).unwrap();
+            eprintln!("retained boundary pair={ids:?} qualified={} work={} drivers={} reason={}",report.certificate.is_some(),report.exact_work,report.driver_cells,report.reason);
+            let proof=report.certificate.expect(report.reason);
+            for side in 0..2 {assert!(std::ptr::eq(proof.owners()[side],&expression.faces()[ids[side]]));}
+            assert!(!proof.shared().is_empty());
+            assert_eq!(proof.source().fiber().plane(),proof.image().image().plane());
+            assert!(report.exact_work<=10000000 && report.driver_cells<=10000);
+            assert!(expression.qualify_profile_boundary_contact([ids[1],ids[0]],10000000,10000).unwrap().certificate.is_some());
+        }
         eprintln!("profile vertex audit pending={} work={}",resumed.pending_pairs(),resumed.work().3);
         if let Ok(path)=std::env::var("BREP_CONTACT_PROFILE_VERTEX_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
