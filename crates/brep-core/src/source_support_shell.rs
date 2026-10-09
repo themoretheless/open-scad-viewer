@@ -1481,13 +1481,13 @@ mod tests {
             assert!(std::ptr::eq(geometry.contacts(),&resumed));
             let volume_limits=|cells|crate::source_profile_body::ExpressionVolumeLimits {
                 axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,
-                controls_per_enclosure:1000,cells,spans:200000,domain_cells:10000,
+                controls_per_enclosure:1000,cells,spans:200000,domain_cells:100000,domain_cells_per_rectangle:256,
             };
             let refused=geometry.inspect_volume(volume_limits(0)).unwrap();
             assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
-            let volume=geometry.inspect_volume(volume_limits(8192)).unwrap();
+            let volume=geometry.inspect_volume(volume_limits(32768)).unwrap();
             eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} planarFaces={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.planar_faces,volume.reason);
-            assert!(volume.cells<=8192 && volume.spans<=200000 && volume.domain_cells<=10000);
+            assert!(volume.cells<=32768 && volume.spans<=200000 && volume.domain_cells<=100000);
             if let Some([lo,hi])=volume.signed_bounds {assert!(lo.is_finite() && hi.is_finite() && lo<=hi);}
             if volume.complete {let [lo,hi]=volume.signed_bounds.unwrap();assert!(hi-lo<=20.);}
             if let Ok(path)=std::env::var("BREP_EXPRESSION_VOLUME_PATH") {

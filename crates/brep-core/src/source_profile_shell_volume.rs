@@ -13,6 +13,7 @@ pub struct ExpressionVolumeLimits {
     pub cells: usize,
     pub spans: usize,
     pub domain_cells: usize,
+    pub domain_cells_per_rectangle: usize,
 }
 pub struct ExpressionVolumeReport {
     pub signed_bounds: Option<[f64; 2]>,
@@ -56,6 +57,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             || !limits.tolerance_uv.is_finite() || limits.tolerance_uv <= 0.
             || limits.controls_per_enclosure > 1000000
             || limits.cells > 1000000 || limits.spans > 1000000 || limits.domain_cells > 8000000
+            || limits.domain_cells_per_rectangle > 100000
         {
             return Err(Error::new("BREP_EXPRESSION_VOLUME", "Choose finite volume inputs and bounded work"));
         }
@@ -68,7 +70,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             out.cells += 1;
             let report = shell.enclose_material_flux(face, domain, limits.axis, limits.origin,
                 limits.tolerance_uv, limits.controls_per_enclosure,
-                (limits.spans - out.spans).min(100000), (limits.domain_cells - out.domain_cells).min(100000))?;
+                (limits.spans - out.spans).min(100000), (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_rectangle))?;
             out.spans += report.spans; out.domain_cells += report.domain_cells;
             report.bound.map(|b| I::new(b[0], b[1])).transpose()
         };
