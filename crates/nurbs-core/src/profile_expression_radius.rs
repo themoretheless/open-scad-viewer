@@ -56,6 +56,28 @@ impl RailConstrainedBridge<'_,'_,'_,'_,'_> {
             let r=interval_eval::evaluate_interval(radius,rt)?;
             let bound=crate::moving_radius::bound_expression(position,
                 std::array::from_fn(|axis|[c[axis].lo,c[axis].hi]),[r[0].lo.max(0.),r[0].hi])?;
+            // A rigorously enclosed point may refute the law, never admit the
+            // rectangle. Probe the initial center before depth-first coverage
+            // spends all work near a boundary with zero residual.
+            if out.cells==1 && bound.error_upper>tolerance && max_spans-out.spans>=34 {
+                let point=rect.map(|d|[d[0]*0.5+d[1]*0.5;2]);
+                let (p,used)=self.enclose_with_transverse_correction(point[0],point[1],(max_spans-out.spans).min(100000))?;
+                out.spans+=used;
+                if let Some(p)=p {
+                    let ct=mapped(domains[0],point[1])?;let rt=mapped(domains[1],point[1])?;
+                    let used=spans(centers,ct)+spans(radius,rt);
+                    if used<=max_spans-out.spans {
+                        out.spans+=used;
+                        let c=interval_eval::evaluate_interval(centers,ct)?;let r=interval_eval::evaluate_interval(radius,rt)?;
+                        let probe=crate::moving_radius::bound_expression(p,
+                            std::array::from_fn(|axis|[c[axis].lo,c[axis].hi]),[r[0].lo.max(0.),r[0].hi])?;
+                        if probe.error_lower>tolerance {
+                            out.violation=Some(Violation{domain:point,error_bounds:[probe.error_lower,probe.error_upper],squared_residual:probe.squared_residual});
+                            out.pending.push(rect);out.reason="expression-radius-law-mismatch";return Ok(out);
+                        }
+                    }
+                }
+            }
             if bound.error_upper<=tolerance {
                 out.accepted_cells+=1;out.accepted_error_upper=out.accepted_error_upper.max(bound.error_upper);continue;
             }

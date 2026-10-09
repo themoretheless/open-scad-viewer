@@ -449,6 +449,34 @@ mod tests {
     }
 
     #[test]
+    fn annular_corrected_expression_authored_radius() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let proposal=crate::source_profile_body::prepare(&body,
+            &[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]}],
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap().proposal.unwrap();
+        let profile=proposal.profile(0).unwrap();
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            profile.section(0,0.75).unwrap(),profile.section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
+        let bridge=bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+        let authored=crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
+        let mut reversed=authored.surface.clone();reversed.control_points.reverse();reversed.weights.reverse();
+        assert_eq!(profile.source(),&reversed);
+        let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
+        let report=bridge.inspect_radius_on_domains(&centers,&law,[[0.75,0.9];2],1e-4,1000,100000).unwrap();
+        eprintln!("annular exact radius complete={} cells={} spans={} pending={} reason={} violation={:?}",
+            report.complete,report.cells,report.spans,report.pending.len(),report.reason,
+            report.violation.as_ref().map(|v|(v.domain,v.error_bounds)));
+        assert!(report.cells<=1000 && report.spans<=100000);
+        assert_eq!(report.complete,report.pending.is_empty());
+        if report.complete {assert!(report.accepted_error_upper<=1e-4);}
+    }
+
+    #[test]
     fn exact_profile_owned_curved_seam_limits() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
