@@ -61,6 +61,48 @@ pub struct ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     components: usize,
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    /// First derivatives in the same parameters as `enclose_support`.
+    /// These enclose the supporting expression, without a trim classification.
+    pub fn enclose_support_derivatives(
+        &self, face: usize, domain: [[f64; 2]; 2],
+        max_controls: usize, max_spans: usize,
+    ) -> Result<(Option<[[[f64; 2]; 3]; 2]>, usize)> {
+        if max_controls > 1000000 || max_spans > 100000
+            || domain.iter().any(|r| !r.iter().all(|v| v.is_finite()) || r[0] > r[1])
+        {
+            return Err(Error::new("BREP_PROFILE_SHELL", "Bound support derivative parameters and work"));
+        }
+        let kind = self.faces.get(face).ok_or_else(|| Error::new("BREP_PROFILE_SHELL", "Unknown expression face"))?.kind;
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let profile = root.restricted.proposal.profile(root.face).unwrap();
+        match kind {
+            ShellFaceKind::Retained(_) => {
+                let (bounds, spent) = profile.derivative_bounds(domain, max_spans)?;
+                Ok((bounds.map(|b| std::array::from_fn(|axis| std::array::from_fn(|k| b[k][axis]))), spent))
+            }
+            ShellFaceKind::Transition => {
+                let first = profile.section(root.axis, root.parameters[0])?;
+                let last = profile.section(root.axis, root.parameters[1])?;
+                let width = root.parameters[1] - root.parameters[0];
+                let bridge = nurbs_core::normal_alignment::ProfileSectionBridge::new(first, last, [width; 2])?;
+                let (constrained, _) = bridge.constrain_original_rails(max_controls)?;
+                let Some(constrained) = constrained else { return Ok((None, 0)); };
+                constrained.derivatives_with_transverse_correction(domain[0], domain[1], max_spans)
+            }
+            ShellFaceKind::Original(index) => {
+                let source = root.restricted.proposal.body.geometry().shell().faces()[index][0].edges()[0].surface();
+                let mut out = [[[0.; 2]; 3]; 2];
+                let mut spent = 0;
+                for axis in 0..2 {
+                    let (bounds, used) = nurbs_core::normal_alignment::derivative_path_bounds(source, domain, axis, max_spans - spent)?;
+                    spent += used;
+                    let Some(bounds) = bounds else { return Ok((None, spent)); };
+                    out[axis] = bounds.components();
+                }
+                Ok((Some(out), spent))
+            }
+        }
+    }
     pub fn assembly(&self) -> &OuterEdgeAssembly<'_, '_, '_, '_, '_, '_, '_> {
         self.assembly
     }

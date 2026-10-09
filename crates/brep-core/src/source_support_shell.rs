@@ -830,6 +830,16 @@ mod tests {
         assert!(expression.enclose_support(expression.faces().len(),[[0.;2];2],1000,100).is_err());
 
         let retained_ids=[0,1].map(|end|expression.faces().iter().position(|f|f.kind()==ShellFaceKind::Retained(end)).unwrap());
+        let derivative_domain=[[0.2,0.3],[0.2,0.3]];
+        let (direct_profile_derivatives,direct_profile_spans)=profile.derivative_bounds(derivative_domain,10000).unwrap();
+        for id in retained_ids {
+            let (owned,spent)=expression.enclose_support_derivatives(id,derivative_domain,1000,10000).unwrap();
+            assert_eq!(owned,direct_profile_derivatives.map(|b|std::array::from_fn(|axis|std::array::from_fn(|k|b[k][axis]))));
+            assert_eq!(spent,direct_profile_spans);
+        }
+        assert!(expression.enclose_support_derivatives(usize::MAX,derivative_domain,1000,10000).is_err());
+        assert!(expression.enclose_support_derivatives(retained_ids[0],[[f64::NAN;2],[0.,1.]],1000,10000).is_err());
+        assert!(expression.enclose_support_derivatives(retained_ids[0],derivative_domain,1000,100001).is_err());
         let support_pair=expression.inspect_support_pair(retained_ids,[[[0.,0.75],[0.,1.]],[[0.9,1.],[0.,1.]]],32,1000,256).unwrap();
         eprintln!("retained support pair separated={} pending={} cells={} spans={}",support_pair.separated.len(),support_pair.pending.len(),support_pair.cells,support_pair.spans);
         assert!(support_pair.complete_separated());
