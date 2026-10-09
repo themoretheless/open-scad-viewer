@@ -1038,6 +1038,7 @@ mod tests {
         if let Ok(path)=std::env::var("BREP_CONTACT_ALL_REFINED_AUDIT_PATH") {std::fs::write(path,all_diagnostics.to_string()).unwrap();}
 
         let mut resumed=refined;
+        assert!(expression.qualify_embedding(&resumed).is_none());
         let previous=resumed.diagnostics();
         let previous_work=resumed.work();
         assert!(expression.resume_contact_audit(&mut resumed,ContactAuditLimits{cells:0,..audit_limits},32).is_err());
@@ -1431,6 +1432,11 @@ mod tests {
         }
         eprintln!("transition material XY plane audit pending={} work={} spans={}",resumed.pending_pairs(),resumed.work().3,resumed.work().1);
         assert_eq!(resumed.complete_cross_face_contacts(),resumed.pending_pairs()==0);
+        if resumed.complete_cross_face_contacts() {
+            let geometry=expression.qualify_embedding(&resumed).expect("complete owned chart/contact embedding");
+            assert!(std::ptr::eq(geometry.shell(),&expression));
+            assert!(std::ptr::eq(geometry.contacts(),&resumed));
+        }
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
 

@@ -1,5 +1,8 @@
 //! Closed oriented incidence for exact profile/transition expression faces.
 //! Global embedding, volume, radius and wall admission remain separate.
+#[path = "source_profile_shell_geometry.rs"]
+mod geometry;
+pub use geometry::EmbeddedExpressionGeometry;
 use super::*;
 use crate::source_boundary_fragment::Fragment;
 use crate::source_shell_incidence::Address;
