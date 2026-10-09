@@ -9,6 +9,13 @@ pub struct MaterialFluxReport {
     pub domain_cells: usize,
     pub reason: &'static str,
 }
+fn unknown_material_mask(flux: &nurbs_core::surface_flux::Bound, domain: [[f64; 2]; 2]) -> Result<I> {
+    let mut area = I::point(1.);
+    for range in domain {
+        area = area.mul(I::point(range[1]).sub(I::point(range[0]))?)?;
+    }
+    I::new(flux.density[0].min(0.), flux.density[1].max(0.))?.mul(area)
+}
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     pub fn enclose_material_flux(
         &self, face: usize, domain: [[f64; 2]; 2], axis: usize, origin: f64,
@@ -33,9 +40,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             kind => {
                 let original = match kind { ShellFaceKind::Original(i) => i, _ => root.face };
                 let winding = source.regions().unwrap()[original].chart_winding();
-                let area = I::point(domain[0][1]).sub(I::point(domain[0][0]))?
-                    .mul(I::point(domain[1][1]).sub(I::point(domain[1][0]))?)?;
-                integral = I::new(flux.density[0].min(0.), flux.density[1].max(0.))?.mul(area)?;
+                integral = unknown_material_mask(&flux, domain)?;
                 if domain_cells > 0 {
                     let loops = self.faces[face].loops.iter().map(|wire| wire.iter().filter_map(|u| match u {
                         ShellUse::Source(f) => Some(f.clone()), ShellUse::Transition(_) => None,
@@ -57,5 +62,21 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         out.bound = Some([integral.lo, integral.hi]);
         out.reason = "expression-oriented-material-flux-enclosed";
         Ok(out)
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn mask_contains_full_flux_with_identical_outward_area_rounding() {
+        let derivatives = [[[1.,1.],[0.,0.],[0.,0.]],[[0.,0.],[1.,1.],[0.,0.]]];
+        for z in [[2.,3.],[-3.,-2.],[-2.,3.]] {
+            for domain in [[[0.2,0.3],[0.2,0.3]],[[0.9,1.],[0.,1.]],[[0.,2.],[0.,3.]]] {
+                let flux=nurbs_core::surface_flux::bound_expression([[0.,1.],[0.,1.],z],derivatives,domain,2,0.,false).unwrap();
+                let mask=unknown_material_mask(&flux,domain).unwrap();
+                assert!(mask.lo<=flux.integral[0] && flux.integral[1]<=mask.hi);
+                assert!(mask.lo<=0. && mask.hi>=0.);
+            }
+        }
     }
 }

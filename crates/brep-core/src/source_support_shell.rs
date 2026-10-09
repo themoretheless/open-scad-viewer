@@ -831,8 +831,10 @@ mod tests {
 
         let retained_ids=[0,1].map(|end|expression.faces().iter().position(|f|f.kind()==ShellFaceKind::Retained(end)).unwrap());
         let derivative_domain=[[0.2,0.3],[0.2,0.3]];
-        let (direct_profile_derivatives,direct_profile_spans)=profile.derivative_bounds(derivative_domain,10000).unwrap();
         for id in retained_ids {
+            let support=expression.support_domain(id).unwrap();
+            let derivative_domain=support.map(|r|[r[0]*0.75+r[1]*0.25,r[0]*0.5+r[1]*0.5]);
+            let (direct_profile_derivatives,direct_profile_spans)=profile.derivative_bounds(derivative_domain,10000).unwrap();
             let (owned,spent)=expression.enclose_support_derivatives(id,derivative_domain,1000,10000).unwrap();
             assert_eq!(owned,direct_profile_derivatives.map(|b|std::array::from_fn(|axis|std::array::from_fn(|k|b[k][axis]))));
             assert_eq!(spent,direct_profile_spans);
@@ -1464,6 +1466,20 @@ mod tests {
             let geometry=expression.qualify_embedding(&resumed).expect("complete owned chart/contact embedding");
             assert!(std::ptr::eq(geometry.shell(),&expression));
             assert!(std::ptr::eq(geometry.contacts(),&resumed));
+            let volume_limits=|cells|crate::source_profile_body::ExpressionVolumeLimits {
+                axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,
+                controls_per_enclosure:1000,cells,spans:200000,domain_cells:10000,
+            };
+            let refused=geometry.inspect_volume(volume_limits(0)).unwrap();
+            assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
+            let volume=geometry.inspect_volume(volume_limits(512)).unwrap();
+            eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.reason);
+            assert!(volume.cells<=512 && volume.spans<=200000 && volume.domain_cells<=10000);
+            if let Some([lo,hi])=volume.signed_bounds {assert!(lo.is_finite() && hi.is_finite() && lo<=hi);}
+            if volume.complete {let [lo,hi]=volume.signed_bounds.unwrap();assert!(hi-lo<=20.);}
+            if let Ok(path)=std::env::var("BREP_EXPRESSION_VOLUME_PATH") {
+                std::fs::write(path,value_codec::json!({"signedBounds":volume.signed_bounds,"complete":volume.complete,"cells":volume.cells,"spans":volume.spans,"domainCells":volume.domain_cells,"reason":volume.reason,"uncertainFace":volume.uncertain_face,"uncertainDomain":volume.uncertain_domain}).to_string()).unwrap();
+            }
         }
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_PLANE_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
