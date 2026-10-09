@@ -21,6 +21,7 @@ pub struct ExpressionVolumeReport {
     pub spans: usize,
     pub domain_cells: usize,
     pub uncertain_face: Option<usize>,
+    pub planar_faces: usize,
     pub uncertain_domain: Option<[[f64; 2]; 2]>,
     pub reason: &'static str,
 }
@@ -56,7 +57,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         }
         let shell = self.shell();
         let mut out = ExpressionVolumeReport { signed_bounds: None, complete: false, cells: 0, spans: 0,
-            domain_cells: 0, uncertain_face: None, uncertain_domain: None, reason: "expression-volume-initial-work-limit" };
+            domain_cells: 0, planar_faces: 0, uncertain_face: None, uncertain_domain: None, reason: "expression-volume-initial-work-limit" };
         let evaluate = |face, domain, out: &mut ExpressionVolumeReport| -> Result<Option<I>> {
             out.uncertain_face = Some(face); out.uncertain_domain = Some(domain);
             if out.cells == limits.cells || out.spans == limits.spans { return Ok(None); }
@@ -72,9 +73,24 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         let mut queue = BinaryHeap::new();
         for face in 0..shell.faces().len() {
             let domain = shell.support_domain(face)?;
-            let Some(bound) = evaluate(face, domain, &mut out)? else { return Ok(out); };
+            let mut planar = None;
+            if let Some(original) = shell.equivalent_original_face(face) {
+                let root = shell.assembly.patch.rails.face.boundary.rooted[0];
+                let source_geometry = root.restricted.proposal.body.geometry();
+                let report = crate::source_planar_flux::bound(source_geometry, original, limits.axis, limits.origin,
+                    limits.absolute_error / (8. * shell.faces().len() as f64),
+                    (limits.cells - out.cells).min(limits.spans - out.spans))?;
+                out.cells += report.cells; out.spans += report.cells;
+                planar = report.bound;
+            }
+            let fixed = planar.is_some();
+            if fixed { out.planar_faces += 1; }
+            let bound = if let Some(bound) = planar { bound } else {
+                let Some(bound) = evaluate(face, domain, &mut out)? else { return Ok(out); };
+                bound
+            };
             let index = nodes.len(); roots.push(index);
-            queue.push(Priority(index, bound.hi - bound.lo));
+            if !fixed { queue.push(Priority(index, bound.hi - bound.lo)); }
             nodes.push(Node { face, domain, bound, parent: None, children: None });
         }
         loop {
