@@ -364,6 +364,39 @@ mod tests {
 
     }
     #[test]
+    fn annular_profile_boundary_plane_transfer_keeps_exact_source_owner() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let source=shell.regions().unwrap()[0].loops()[0][0].surface();
+        let (profile,_) = nurbs_core::normal_alignment::qualify_weight_profile(source,[5,0],1000).unwrap();
+        let profile=profile.unwrap();
+        for axis in 0..2 { for upper in [false,true] {
+            let report=crate::source_profile_boundary_identity::certify(&profile,axis,upper,100000).unwrap();
+            eprintln!("actual profile boundary axis={axis} upper={upper} reason={} work={}",report.reason,report.exact_work);
+            let proof=report.certificate.expect(report.reason);
+            assert!(std::ptr::eq(proof.profile(),&profile));
+        }}
+        for neighbor in [1,5] {
+            let original=crate::source_pole_planar_contact::certify(&shell,[0,neighbor],10000000,10000).unwrap();
+            eprintln!("actual profile source pole neighbor={neighbor} reason={}",original.reason);
+            if neighbor==5 {
+                // Cap support is not qualified by the boundary/pole protocol.
+                assert!(original.certificate.is_none());
+                continue;
+            }
+            let original=original.certificate.expect(original.reason);
+            assert_eq!(original.fiber().surface(),source);
+            let (axis,upper)=original.fiber().boundary();
+            let report=crate::source_profile_boundary_identity::certify_plane_image(&profile,original.fiber().plane(),axis,upper,10000000).unwrap();
+            let proof=report.certificate.expect(report.reason);
+            assert!(std::ptr::eq(proof.boundary().profile(),&profile));
+            assert_eq!(proof.image().poles(),original.fiber().poles());
+            assert_eq!(proof.image().side(),original.fiber().side());
+            assert!(report.exact_work<=10000000);
+        }
+    }
+
+    #[test]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -878,7 +911,7 @@ mod tests {
         assert!(expression.qualify_transition_section_contact(2,&profile_region,1000).is_err());
         let audit=expression.inspect_contacts_with_profile_region(audit_limits,&profile_region).unwrap();
         assert!(std::ptr::eq(audit.owners(),expression.faces()));
-        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),151);
+        assert_eq!(audit.pairs().len(),406);assert_eq!(audit.pending_pairs(),150);
         let mut kinds=[0usize;16];
         for pair in audit.pairs() {
             let (id,owners)=match pair.proof() {
@@ -900,8 +933,8 @@ mod tests {
             kinds[id]+=1;
             if let Some(owners)=owners {for side in 0..2 {assert!(std::ptr::eq(owners[side],&expression.faces()[pair.support().faces[side]]));}}
         }
-        assert_eq!(kinds,[151,162,12,23,54,1,1,2,0,0,0,0,0,0,0,0]);
-        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(151));
+        assert_eq!(kinds,[150,163,12,23,54,1,1,2,0,0,0,0,0,0,0,0]);
+        let diagnostics=audit.diagnostics();assert_eq!(diagnostics["pendingPairs"].as_u64(),Some(150));
         if let Ok(path)=std::env::var("BREP_CONTACT_AUDIT_PATH") {
             std::fs::write(path,diagnostics.to_string()).expect("write requested contact audit diagnostics");
         }
@@ -909,7 +942,7 @@ mod tests {
         let binary=value_codec::encode_binary(&diagnostics).unwrap();
         assert_eq!(value_codec::decode_binary(&binary).unwrap(),diagnostics);
         let json=value_codec::from_str::<value_codec::Value>(&diagnostics.to_string()).unwrap();
-        assert_eq!(json["pendingPairs"].as_u64(),Some(151));
+        assert_eq!(json["pendingPairs"].as_u64(),Some(150));
         assert_eq!(json["pairs"].as_array().unwrap().len(),406);
         eprintln!("expression audit diagnostics binaryBytes={} jsonBytes={}",binary.len(),diagnostics.to_string().len());
 

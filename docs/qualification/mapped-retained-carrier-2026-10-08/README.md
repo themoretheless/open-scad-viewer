@@ -3064,3 +3064,10 @@ The position enclosure now intersects the previous direct interval with two alge
 ### Natural profile boundary identity prepared
 
 Added a typed native certificate retaining the actual WeightProfile owner and chosen clamped natural boundary. Fresh exact dyadic determinants prove row[i]*column[j] = pivot*source_weight for every boundary control, without flattening products or comparing rounded ratios. Source controls and knots are unchanged, so this proves pointwise curve identity on every trimmed subinterval of that boundary. It does not authorize cross-face contact, corner ownership or Body admission; those require subsequent native gates. Regression passes for both chart axes, rejects a one-ulp weight residual, exhausted work and invalid axis. The tighter Hermite full fixture is still running; latest complete verified contact count remains 11.
+
+
+### Positive profile boundary/pole plane transfer prepared
+
+The new typed PlaneImage combines fresh exact boundary weight identity with a fresh source boundary/pole plane-image certificate. Positive profile factors preserve control-plane signs and collapsed pole world points; the unchanged boundary identity preserves the full remaining plane locus. Cross-face retained ownership is still separate and no pair is reclassified by this preparation. The actual annular profile passes all four natural boundary identities (384 or 768 exact operations), and transfers the source face-0/face-1 plane image with matching poles, side and actual profile owner. Source face-0/face-5 cap contact remains explicitly unqualified. Synthetic regression retains one-ulp, zero budget and all-zero plane refusals; actual annular regression passes in 0.20 s.
+
+The full anchored Hermite run stopped after 202.49 s at the frozen initial count: actual pending 150 versus old expected 151. The exact initial fixture expectation is updated to 150 pending and 163 excluded, preserving all other proof counts, owner and budget gates. A complete requalification is running; the final residual and identity of the newly excluded pair are not yet verified. Latest completed full audit remains the 11-pair report.

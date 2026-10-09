@@ -108,6 +108,66 @@ pub fn certify<'p, 's>(
     Ok(out)
 }
 
+/// The changed positive profile meets this plane only on the unchanged natural
+/// boundary and the same collapsed poles. Cross-face ownership is not implied.
+pub struct PlaneImage<'p, 's> {
+    boundary: Certificate<'p, 's>,
+    image: crate::source_pole_plane_image::Certificate,
+}
+impl<'p, 's> PlaneImage<'p, 's> {
+    pub fn boundary(&self) -> &Certificate<'p, 's> {
+        &self.boundary
+    }
+    pub fn image(&self) -> &crate::source_pole_plane_image::Certificate {
+        &self.image
+    }
+}
+pub struct PlaneImageReport<'p, 's> {
+    pub certificate: Option<PlaneImage<'p, 's>>,
+    pub exact_work: u64,
+    pub reason: &'static str,
+}
+pub fn certify_plane_image<'p, 's>(
+    profile: &'p WeightProfile<'s>,
+    plane: [[f64; 3]; 3],
+    axis: usize,
+    upper: bool,
+    max_work: u64,
+) -> Result<PlaneImageReport<'p, 's>> {
+    let boundary = certify(profile, axis, upper, max_work)?;
+    let mut out = PlaneImageReport {
+        certificate: None,
+        exact_work: boundary.exact_work,
+        reason: boundary.reason,
+    };
+    let Some(boundary) = boundary.certificate else {
+        return Ok(out);
+    };
+    if out.exact_work == max_work {
+        out.reason = "profile-boundary-work-limit";
+        return Ok(out);
+    }
+    let image = crate::source_pole_plane_image::certify(
+        profile.source(),
+        plane,
+        axis,
+        upper,
+        max_work - out.exact_work,
+    )?;
+    out.exact_work += image.exact_work;
+    out.reason = image.reason;
+    let Some(image) = image.certificate else {
+        return Ok(out);
+    };
+    // The source proof classifies exact plane signs of the unchanged control
+    // points. Strict positivity of every factorized weight preserves the zero
+    // locus. Constant pole controls preserve their world points independently
+    // of weight values; the boundary identity preserves the entire other locus.
+    out.certificate = Some(PlaneImage { boundary, image });
+    out.reason = "profile-boundary-pole-plane-image-qualified";
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +202,27 @@ mod tests {
             assert_eq!(stopped.exact_work, 0);
         }
         assert!(certify(&p, 2, false, 100).is_err());
+        let plane = [[0., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+        let report = certify_plane_image(&p, plane, 0, false, 100000).unwrap();
+        let proof = report.certificate.unwrap();
+        assert!(std::ptr::eq(proof.boundary().profile(), &p));
+        assert_eq!(proof.image().surface(), p.source());
+        assert_eq!(proof.image().boundary(), (0, false));
+        assert_eq!(proof.image().plane(), plane);
+        assert!(proof.image().poles().is_empty());
+        assert!(report.exact_work <= 100000);
+        let all_zero_plane = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]];
+        assert!(
+            certify_plane_image(&p, all_zero_plane, 0, false, 100000)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
+        assert!(
+            certify_plane_image(&p, plane, 0, false, 0)
+                .unwrap()
+                .certificate
+                .is_none()
+        );
     }
 }
