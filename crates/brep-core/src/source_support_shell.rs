@@ -1116,6 +1116,29 @@ mod tests {
         eprintln!("transition clipped XY bounds audit pending={} spans={}",resumed.pending_pairs(),resumed.work().1);
         if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_BOUNDS_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
 
+        let before_material=resumed.diagnostics();
+        let prior_pending=resumed.pending_pairs();
+        let spent_work=resumed.work().3;
+        expression.qualify_remaining_transition_xy_material_bounds(&mut resumed,ContactAuditLimits{exact_work:spent_work,..cumulative},&profile_region).unwrap();
+        assert_eq!(resumed.diagnostics(),before_material);
+        assert!(expression.qualify_transition_xy_material_bounds_contact([1,transition_id],&profile_region,100,100000001).is_err());
+        expression.qualify_remaining_transition_xy_material_bounds(&mut resumed,cumulative,&profile_region).unwrap();
+        assert!(resumed.pending_pairs()<=prior_pending && resumed.work().1<=cumulative.spans && resumed.work().3<=cumulative.exact_work);
+        for (old,new) in before_material["pairs"].as_array().unwrap().iter().zip(resumed.pairs()) {
+            if old["proof"].as_str()!=Some("pending") {assert_eq!(old["proof"].as_str(),Some(new.proof().kind()));}
+            if old["proof"].as_str()==Some("pending") {
+                if let PairContactProof::TransitionXyBounds(c)=new.proof() {
+                    assert!(c.material_hull().is_some());
+                    for side in 0..2 {assert!(std::ptr::eq(c.owners()[side],&expression.faces()[new.support().faces[side]]));}
+                    let b=c.bounds();let a=c.axis();assert!(b[0][a][1]<b[1][a][0] || b[1][a][1]<b[0][a][0]);
+                    let reverse=expression.qualify_transition_xy_material_bounds_contact([new.support().faces[1],new.support().faces[0]],&profile_region,1000,10000000).unwrap();
+                    assert!(reverse.certificate.is_some());assert!(reverse.exact_work<=10000000);
+                }
+            }
+        }
+        eprintln!("transition material XY bounds audit pending={} spans={} work={}",resumed.pending_pairs(),resumed.work().1,resumed.work().3);
+        if let Ok(path)=std::env::var("BREP_CONTACT_TRANSITION_XY_MATERIAL_AUDIT_PATH") {std::fs::write(path,resumed.diagnostics().to_string()).unwrap();}
+
         for edge in outer.edges() {
             assert_ne!(edge.reversed()[0],edge.reversed()[1]);
             let restored=crate::source_shared_edge_restore::restore(edge.definition(),crate::source_shared_edge_restore::Limits{mapping_cells_per_use:100,exact_work:100000000,driver_cells:100000}).unwrap();

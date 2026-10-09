@@ -3008,3 +3008,7 @@ Full native fixture passed in 260.29 s. Correct immutable expression ownership r
 Saved `contact-audit-transition-xy-28.json`, SHA256 663542eb33bfdcecce468f93473378b43ba58bcc3c17a6ca27ce6d3471530e87.
 
 Saved `contact-audit-transition-xy-bounds-25.json`, SHA256 7dbe2b9e52c706b0c224e3d2f544aae91f6cc8fcdb01b0313c5d1b1f79004a0e.
+
+### Fresh original planar material bounds prepared
+
+Extracted complete original-face equivalence from the already qualified pair protocol, preserving exact original loops and owned full-arc subdivisions. New optional `qualify_transition_xy_material_bounds_contact` first tries the clipped-profile/raw-control bounds, then freshly qualifies the unchanged original planar material hull after full contour identity. Only the original face receives this substitution; the transition remains bounded by its owned exact clipped-profile image. Certificates retain the native material-hull proof. Span and exact work are shared cumulatively across pending pairs; spent exact work skips all queries and leaves diagnostics unchanged. All 16 assembled-shell regressions pass, including full-partition gap/reversal/changed-curve refusals. The full fixture includes real pointer owners, retained prior proofs, bounded work, native material certificates and reversed owner cases. Native validation writes `/tmp/profile-transition-xy-material-native.log` and `/tmp/profile-transition-xy-material-audit.json`. Latest verified residual is 25; no material-bound reduction is claimed yet. No new WASM/UI admission is packaged.

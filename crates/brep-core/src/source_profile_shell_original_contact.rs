@@ -44,58 +44,61 @@ fn full_partition(
         && parts[1].joins(&parts[2])
 }
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
-    fn equivalent_original_pair(&self, faces: [usize; 2]) -> Option<[usize; 2]> {
-        let owners = faces.map(|i| &self.faces[i]);
-        let [ShellFaceKind::Original(a), ShellFaceKind::Original(b)] = owners.map(|f| f.kind)
-        else {
+    pub(super) fn equivalent_original_face(&self, index: usize) -> Option<usize> {
+        let face = self.faces.get(index)?;
+        let ShellFaceKind::Original(original) = face.kind else {
             return None;
         };
         let root = self.assembly.patch.rails.face.boundary.rooted[0];
         let shell = root.restricted.proposal.body.geometry().shell();
-        for (face, original) in owners.iter().zip([a, b]) {
-            let expected = shell.regions().unwrap()[original].loops();
-            if face.loops.len() != expected.len() {
-                return None;
-            }
-            for (wire_index, (wire, source)) in face.loops.iter().zip(expected).enumerate() {
-                let mut cursor = 0;
-                for (edge, fragment) in source.iter().enumerate() {
-                    let mut replacement = None;
-                    for rail in 0..2 {
-                        let seam = self.assembly.patch.rails.face.boundary.rooted[rail];
-                        let neighbor = 1 - seam.points[0].source_side();
-                        let address = shell.uses()[seam.restricted.edge][neighbor];
-                        if address.face == original
-                            && address.wire == wire_index
-                            && address.edge == edge
-                        {
-                            if replacement.is_some() {
-                                return None;
-                            }
-                            let contour = &self.assembly.patch.rails.rails[rail].neighbor_contour;
-                            let [w, middle] = contour.middle;
-                            let parts = &contour.loops[w][middle - 1..=middle + 1];
-                            if !full_partition(fragment, parts) {
-                                return None;
-                            }
-                            replacement = Some(parts);
-                        }
-                    }
-                    let fragments = replacement.unwrap_or(std::slice::from_ref(fragment));
-                    for expected_fragment in fragments {
-                        if !matches!(wire.get(cursor),Some(ShellUse::Source(actual)) if actual.definition()==expected_fragment.definition())
-                        {
+        let expected = shell.regions().unwrap()[original].loops();
+        if face.loops.len() != expected.len() {
+            return None;
+        }
+        for (wire_index, (wire, source)) in face.loops.iter().zip(expected).enumerate() {
+            let mut cursor = 0;
+            for (edge, fragment) in source.iter().enumerate() {
+                let mut replacement = None;
+                for rail in 0..2 {
+                    let seam = self.assembly.patch.rails.face.boundary.rooted[rail];
+                    let neighbor = 1 - seam.points[0].source_side();
+                    let address = shell.uses()[seam.restricted.edge][neighbor];
+                    if address.face == original
+                        && address.wire == wire_index
+                        && address.edge == edge
+                    {
+                        if replacement.is_some() {
                             return None;
                         }
-                        cursor += 1;
+                        let contour = &self.assembly.patch.rails.rails[rail].neighbor_contour;
+                        let [w, middle] = contour.middle;
+                        let parts = &contour.loops[w][middle - 1..=middle + 1];
+                        if !full_partition(fragment, parts) {
+                            return None;
+                        }
+                        replacement = Some(parts);
                     }
                 }
-                if cursor != wire.len() {
-                    return None;
+                let fragments = replacement.unwrap_or(std::slice::from_ref(fragment));
+                for expected_fragment in fragments {
+                    if !matches!(wire.get(cursor),Some(ShellUse::Source(actual)) if actual.definition()==expected_fragment.definition())
+                    {
+                        return None;
+                    }
+                    cursor += 1;
                 }
             }
+            if cursor != wire.len() {
+                return None;
+            }
         }
-        Some([a, b])
+        Some(original)
+    }
+    fn equivalent_original_pair(&self, faces: [usize; 2]) -> Option<[usize; 2]> {
+        Some([
+            self.equivalent_original_face(faces[0])?,
+            self.equivalent_original_face(faces[1])?,
+        ])
     }
     /// Fresh proof transfers only over identical original geometry and complete
     /// contours, allowing owned full-arc subdivisions. Retained faces refuse.

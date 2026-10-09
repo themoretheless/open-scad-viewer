@@ -106,8 +106,12 @@ pub struct TransitionXyBoundsContact<'x> {
     owners: [&'x ShellFace; 2],
     bounds: [[[f64; 2]; 2]; 2],
     axis: usize,
+    material: Option<crate::source_planar_material_hull::Certificate>,
 }
 impl TransitionXyBoundsContact<'_> {
+    pub fn material_hull(&self) -> Option<&crate::source_planar_material_hull::Certificate> {
+        self.material.as_ref()
+    }
     pub fn owners(&self) -> [&ShellFace; 2] {
         self.owners
     }
@@ -119,6 +123,7 @@ impl TransitionXyBoundsContact<'_> {
     }
 }
 pub struct TransitionXyBoundsReport<'x> {
+    pub exact_work: u64,
     pub certificate: Option<TransitionXyBoundsContact<'x>>,
     pub spans: usize,
     pub reason: &'static str,
@@ -140,9 +145,20 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
         max_spans: usize,
     ) -> Result<TransitionXyBoundsReport<'_>> {
+        self.qualify_transition_xy_material_bounds_contact(faces, region, max_spans, 0)
+    }
+    /// Original material hull substitution requires complete unchanged contours.
+    pub fn qualify_transition_xy_material_bounds_contact(
+        &self,
+        faces: [usize; 2],
+        region: &ProfileProjectedRegion<'_, '_, '_, '_, '_>,
+        max_spans: usize,
+        max_work: u64,
+    ) -> Result<TransitionXyBoundsReport<'_>> {
         if faces[0] == faces[1]
             || faces.iter().any(|&i| i >= self.faces.len())
             || max_spans > 100000
+            || max_work > 100000000
         {
             return Err(Error::new(
                 "BREP_PROFILE_CONTACTS",
@@ -150,6 +166,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             ));
         }
         let mut out = TransitionXyBoundsReport {
+            exact_work: 0,
             certificate: None,
             spans: 0,
             reason: "transition-xy-bounds-owner-unproven",
@@ -223,7 +240,29 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         let mut bounds = [[[0.; 2]; 2]; 2];
         bounds[original_side] = original_bounds;
         bounds[1 - original_side] = [enclosure[0], enclosure[1]];
-        let Some(axis) = separated_axis(bounds) else {
+        let mut material = None;
+        let mut axis = separated_axis(bounds);
+        if axis.is_none() && max_work > 0 {
+            if self.equivalent_original_face(faces[original_side]) != Some(original) {
+                out.reason = "transition-xy-material-contour-identity-unproven";
+                return Ok(out);
+            }
+            let report = crate::source_planar_material_hull::certify(shell, original, max_work)?;
+            out.exact_work = report.exact_work;
+            if let Some(hull) = report.certificate {
+                let mut b = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
+                for point in hull.points() {
+                    for a in 0..2 {
+                        b[a][0] = b[a][0].min(point[a]);
+                        b[a][1] = b[a][1].max(point[a]);
+                    }
+                }
+                bounds[original_side] = b;
+                axis = separated_axis(bounds);
+                material = Some(hull);
+            }
+        }
+        let Some(axis) = axis else {
             out.reason = "transition-xy-bounds-overlap-unproven";
             return Ok(out);
         };
@@ -231,6 +270,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             owners: faces.map(|i| &self.faces[i]),
             bounds,
             axis,
+            material,
         });
         out.reason = "transition-profile-clipped-xy-bounds-qualified";
         Ok(out)
