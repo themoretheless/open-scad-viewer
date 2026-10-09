@@ -676,3 +676,5 @@ pub use ruled_contact::{TransitionRuledContact,TransitionRuledReport};
 #[path = "source_profile_shell_section_contact.rs"]
 mod section_contact;
 pub use section_contact::{TransitionSectionContact, TransitionSectionContactReport};
+
+pub use original_contact::{ProfileHullContact, ProfileHullReport};

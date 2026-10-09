@@ -259,6 +259,39 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+    pub fn qualify_remaining_profile_hulls<'x>(
+        &'x self,
+        audit: &mut ShellContactAudit<'x>,
+        limits: ContactAuditLimits,
+    ) -> Result<()> {
+        self.resume_contact_audit(audit, limits, 0)?;
+        let candidate = |p: &AuditedContactPair<'_>| {
+            matches!(p.proof, PairContactProof::Pending)
+                && matches!(
+                    p.support.faces.map(|i| self.faces[i].kind()),
+                    [ShellFaceKind::Original(_), ShellFaceKind::Retained(_)]
+                        | [ShellFaceKind::Retained(_), ShellFaceKind::Original(_)]
+                )
+        };
+        let mut remaining = audit.pairs.iter().filter(|p| candidate(p)).count();
+        for pair in &mut audit.pairs {
+            if !candidate(pair) {
+                continue;
+            }
+            let work = (limits.exact_work - audit.exact_work) / remaining as u64;
+            remaining -= 1;
+            if work == 0 {
+                continue;
+            }
+            let report = self.qualify_profile_hull_contact(pair.support.faces, work)?;
+            audit.exact_work += report.exact_work;
+            pair.reason = report.reason;
+            if let Some(c) = report.certificate {
+                pair.proof = PairContactProof::ProfileHull(c);
+            }
+        }
+        Ok(())
+    }
     fn resume_contact_audit_impl<'x>(
         &'x self,
         out: &mut ShellContactAudit<'x>,

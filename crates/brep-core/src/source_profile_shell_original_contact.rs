@@ -606,3 +606,83 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         Ok(out)
     }
 }
+
+/// Strict separation of full control hulls also covers every clipped profile
+/// with the same controls and exact positive factorized weights.
+pub struct ProfileHullContact<'x> {
+    owners: [&'x ShellFace; 2],
+    source: crate::source_hull_separation::Certificate,
+}
+impl ProfileHullContact<'_> {
+    pub fn owners(&self) -> [&ShellFace; 2] {
+        self.owners
+    }
+    pub fn source(&self) -> &crate::source_hull_separation::Certificate {
+        &self.source
+    }
+}
+pub struct ProfileHullReport<'x> {
+    pub certificate: Option<ProfileHullContact<'x>>,
+    pub exact_work: u64,
+    pub reason: &'static str,
+}
+impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
+    pub fn qualify_profile_hull_contact(
+        &self,
+        faces: [usize; 2],
+        max_work: u64,
+    ) -> Result<ProfileHullReport<'_>> {
+        if faces[0] == faces[1]
+            || faces.iter().any(|&i| i >= self.faces.len())
+            || max_work > 100000000
+        {
+            return Err(Error::new(
+                "BREP_PROFILE_CONTACTS",
+                "Bound owned profile hull pair work",
+            ));
+        }
+        let mut out = ProfileHullReport {
+            certificate: None,
+            exact_work: 0,
+            reason: "profile-hull-face-kind-unproven",
+        };
+        let root = self.assembly.patch.rails.face.boundary.rooted[0];
+        let ids = match faces.map(|i| self.faces[i].kind()) {
+            [ShellFaceKind::Original(a), ShellFaceKind::Retained(_)] => [a, root.face],
+            [ShellFaceKind::Retained(_), ShellFaceKind::Original(b)] => [root.face, b],
+            _ => return Ok(out),
+        };
+        let profile = root.restricted.proposal.profile(root.face).unwrap();
+        let (row, column, pivot) = profile.factors();
+        if !pivot.is_finite()
+            || pivot <= 0.
+            || row.iter().chain(column).any(|x| !x.is_finite() || *x <= 0.)
+        {
+            out.reason = "profile-hull-positive-weights-unproven";
+            return Ok(out);
+        }
+        if max_work == 0 {
+            out.reason = "profile-hull-work-limit";
+            return Ok(out);
+        }
+        let shell = root.restricted.proposal.body.geometry().shell();
+        let regions = shell.regions().unwrap();
+        if profile.source()!=regions[root.face].loops()[0][0].surface()
+            || faces.iter().zip(ids).any(|(&face,original)|self.faces[face].loops.iter().flatten().any(|u|!matches!(u,ShellUse::Source(f) if f.surface()==regions[original].loops()[0][0].surface()))) {
+            out.reason="profile-hull-source-controls-unproven";return Ok(out);
+        }
+        // Raw full control hulls only: source material trims cannot bound the
+        // modified profile image. Positive target factors require no rounding.
+        let report = crate::source_hull_separation::certify(ids.map(|i| &regions[i]), max_work)?;
+        out.exact_work = report.exact_work;
+        out.reason = report.reason;
+        if let Some(source) = report.certificate {
+            out.certificate = Some(ProfileHullContact {
+                owners: faces.map(|i| &self.faces[i]),
+                source,
+            });
+            out.reason = "profile-full-control-hull-separation-qualified";
+        }
+        Ok(out)
+    }
+}

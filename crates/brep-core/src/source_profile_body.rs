@@ -1567,3 +1567,5 @@ pub use assembled_shell::{TransitionSectionContact,TransitionSectionContactRepor
 pub use assembled_shell::{OriginalHullContact, OriginalHullReport};
 
 pub use assembled_shell::{OriginalPoleContact, OriginalPoleProof, OriginalPoleReport};
+
+pub use assembled_shell::{ProfileHullContact, ProfileHullReport};
