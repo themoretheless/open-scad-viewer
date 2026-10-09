@@ -459,6 +459,37 @@ mod tests {
     }
 
     #[test]
+    fn annular_corrected_expression_coefficient_radius_cell() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let geometry=crate::source_shell_geometry::qualify(shell,geometry_limits()).unwrap().geometry.unwrap();
+        let body=crate::source_volume::qualify(geometry,crate::source_volume::Limits {
+            axis:2,origin:0.,absolute_error:20.,tolerance_uv:1e-8,cells:100000,spans:100000,domain_cells:1000000,
+        }).unwrap().body.unwrap();
+        let proposal=crate::source_profile_body::prepare(&body,
+            &[crate::source_profile_body::FaceSpec{face:0,anchor:[5,0]}],
+            crate::source_profile_body::Limits{controls:1000,fragments:100,position_tolerance:1e-7}).unwrap().proposal.unwrap();
+        let profile=proposal.profile(0).unwrap();
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            profile.section(0,0.75).unwrap(),profile.section(0,0.9).unwrap(),[0.9-0.75;2]).unwrap();
+        let bridge=bridge.constrain_original_rails(1000).unwrap().0.unwrap();
+        let authored=crate::circular_blend::plane_cylinder_transition(20.,6.,0.,1.25,0.,std::f64::consts::FRAC_PI_2/4.).unwrap();
+        let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
+        let report=bridge.inspect_radius_coefficients(&centers,&law,[[0.75,0.9];2],[[0.,1.];2],100000,100000000).unwrap();
+        eprintln!("annular coefficient radius reason={} error={:?} residual={:?} spans={} work={}",
+            report.reason,report.error_upper,report.squared_residual,report.spans,report.coefficient_work);
+        assert!(report.error_upper.is_some(),"{}",report.reason);
+        assert!(report.error_upper.unwrap()<=1e-4,"whole annular radius exceeds requested tolerance");
+        assert!(report.squared_residual.is_some());
+        assert!(report.spans<=100000 && report.coefficient_work<=100000000);
+        if let Ok(path)=std::env::var("BREP_COEFFICIENT_RADIUS_PATH") {
+            std::fs::write(path,value_codec::json!({"domain":[[0.,1.],[0.,1.]],"lawDomains":[[0.75,0.9],[0.75,0.9]],
+                "errorUpper":report.error_upper,"squaredResidual":report.squared_residual,
+                "spans":report.spans,"coefficientWork":report.coefficient_work,"reason":report.reason}).to_string()).unwrap();
+        }
+    }
+
+    #[test]
     fn annular_corrected_expression_authored_radius() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -869,6 +900,25 @@ mod tests {
         assert_eq!(proposal.profile(0).unwrap().source(),&reversed,"radius law must match the actual original parameter orientation");
         let centers=authored.centers.reverse().unwrap();let law=authored.radius_curve().reverse().unwrap();
         let law_domains=[[0.75,0.9];2];
+        for (controls,spans,work) in [(0,100000,100000000),(1000,0,100000000),(1000,100000,0)] {
+            assert!(xy_face.qualify_radius_coefficients(&centers,&law,law_domains,1e-4,
+                controls,spans,work).unwrap().certificate.is_none());
+        }
+        let owned_radius=xy_face.qualify_radius_coefficients(&centers,&law,law_domains,1e-4,
+            1000,100000,100000000).unwrap();
+        let radius_proof=owned_radius.certificate.expect(owned_radius.reason);
+        assert!(std::ptr::eq(radius_proof.face(),&xy_face));
+        assert_eq!(radius_proof.centers(),&centers);assert_eq!(radius_proof.radius(),&law);
+        assert_eq!(radius_proof.law_domains(),law_domains);assert!(radius_proof.error_upper()<=1e-4);
+        let coefficient_bound=owned_radius.bound.unwrap();
+        eprintln!("owned coefficient radius error={} spans={} work={}",radius_proof.error_upper(),
+            coefficient_bound.spans,coefficient_bound.coefficient_work);
+        if let Ok(path)=std::env::var("BREP_OWNED_COEFFICIENT_RADIUS_PATH") {
+            std::fs::write(path,value_codec::json!({"qualified":true,"tolerance":1e-4,"lawDomains":law_domains,
+                "errorUpper":radius_proof.error_upper(),"squaredResidual":coefficient_bound.squared_residual,
+                "spans":coefficient_bound.spans,"coefficientWork":coefficient_bound.coefficient_work,
+                "reason":owned_radius.reason}).to_string()).unwrap();
+        }
         let radius=xy_face.qualify_radius_on_domains(&centers,&law,law_domains,1e-4,1000,1000,100000).unwrap();
         let coverage=radius.coverage.unwrap();
         eprintln!("owned transition authored radius qualified={} reason={} cells={} spans={} pending={} acceptedError={}",

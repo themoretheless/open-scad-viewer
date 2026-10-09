@@ -422,7 +422,37 @@ pub struct TransitionRadiusReport<'f,'a,'s,'p,'b> {
     pub certificate:Option<TransitionRadius<'f,'a,'s,'p,'b>>,
     pub coverage:Option<nurbs_core::profile_expression_radius::Report>,pub reason:&'static str,
 }
+pub struct TransitionCoefficientRadiusReport<'f,'a,'s,'p,'b> {
+    pub certificate:Option<TransitionRadius<'f,'a,'s,'p,'b>>,
+    pub bound:Option<nurbs_core::profile_expression_radius::CoefficientRadiusBound>,
+    pub reason:&'static str,
+}
 impl<'a,'s,'p,'b> TransitionFace<'a,'s,'p,'b> {
+    /// Rebuild the owned whole-face recipe and correlated radius coefficients.
+    /// No caller-provided diagnostic bound can construct the certificate.
+    pub fn qualify_radius_coefficients<'f>(&'f self,centers:&nurbs_core::curve::Curve,
+        radius:&nurbs_core::curve::Curve,law_domains:[[f64;2];2],tolerance:f64,
+        controls:usize,spans:usize,coefficient_work:usize
+    )->Result<TransitionCoefficientRadiusReport<'f,'a,'s,'p,'b>> {
+        if !tolerance.is_finite() || tolerance<=0. {
+            return Err(Error::new("BREP_PROFILE_RADIUS","Choose a positive finite radius tolerance"));
+        }
+        centers.validate()?;radius.validate()?;
+        let root=self.boundary.rooted[0];let profile=root.restricted.proposal.profile(root.face).unwrap();
+        let bridge=nurbs_core::normal_alignment::ProfileSectionBridge::new(
+            profile.section(root.axis,root.parameters[0])?,profile.section(root.axis,root.parameters[1])?,
+            [root.parameters[1]-root.parameters[0];2])?;
+        let (bridge,_)=bridge.constrain_original_rails(controls)?;
+        let Some(bridge)=bridge else {return Ok(TransitionCoefficientRadiusReport{certificate:None,bound:None,
+            reason:"profile-transition-radius-recipe-unproven"});};
+        let bound=bridge.inspect_radius_coefficients(centers,radius,law_domains,
+            [bridge.section(false).range(),[0.,1.]],spans,coefficient_work)?;
+        let certificate=bound.error_upper.filter(|error|error.is_finite() && *error<=tolerance
+            && bound.squared_residual.is_some()).map(|error_upper|TransitionRadius{
+                face:self,centers:centers.clone(),radius:radius.clone(),law_domains,error_upper});
+        let reason=if certificate.is_some() {"profile-transition-radius-coefficients-qualified"} else {bound.reason};
+        Ok(TransitionCoefficientRadiusReport{certificate,bound:Some(bound),reason})
+    }
     pub fn qualify_radius<'f>(&'f self,centers:&nurbs_core::curve::Curve,radius:&nurbs_core::curve::Curve,
         tolerance:f64,controls:usize,cells:usize,spans:usize
     )->Result<TransitionRadiusReport<'f,'a,'s,'p,'b>> {

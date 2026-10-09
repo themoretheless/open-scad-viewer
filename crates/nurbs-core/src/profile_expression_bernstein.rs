@@ -9,7 +9,184 @@ fn single_span(knots: &[f64], degree: usize, count: usize, domain: [f64; 2]) -> 
     (degree..count)
         .find(|&i| knots[i] < knots[i + 1] && knots[i] <= domain[0] && domain[1] <= knots[i + 1])
 }
+fn law_coefficients(
+    curve: &crate::curve::Curve,
+    law: [f64; 2],
+    across: [f64; 2],
+    max_spans: usize,
+    max_work: usize,
+) -> Result<(Option<Vec<Vec<I>>>, usize, usize)> {
+    curve.validate()?;
+    let natural = curve.domain();
+    let d = curve.control_points[0].len();
+    check(
+        d <= 3
+            && law.iter().chain(&across).all(|x| x.is_finite())
+            && law[0] < law[1]
+            && law[0] >= natural[0]
+            && law[1] <= natural[1]
+            && across[0] < across[1]
+            && across[0] >= 0.
+            && across[1] <= 1.,
+        "Choose original law domains",
+    )?;
+    if curve.degree > 16 || max_spans == 0 {
+        return Ok((None, 0, 0));
+    }
+    let Some(span) = single_span(&curve.knots, curve.degree, curve.control_points.len(), law)
+    else {
+        return Ok((None, 0, 0));
+    };
+    let n = curve.degree + 1;
+    let nodes: Vec<_> = (0..n)
+        .map(|i| {
+            if i == 0 {
+                across[0]
+            } else if i + 1 == n {
+                across[1]
+            } else {
+                let t = i as f64 / (n - 1) as f64;
+                across[0] * (1. - t) + across[1] * t
+            }
+        })
+        .collect();
+    if nodes.windows(2).any(|w| w[0] >= w[1]) {
+        return Ok((None, 0, 0));
+    }
+    let (basis, mut work) = bernstein_interpolation::basis_on(&nodes, across, max_work)?;
+    let Some(basis) = basis else {
+        return Ok((None, 0, work));
+    };
+    let reconstruction = (d + 1) * n * n;
+    if reconstruction > max_work - work || n > max_spans {
+        return Ok((None, 0, work));
+    }
+    let mut samples = Vec::new();
+    for &node in &nodes {
+        let parameter = I::point(law[0])
+            .add(I::point(node).mul(I::point(law[1]).sub(I::point(law[0]))?)?)?
+            .intersect(law[0], law[1])?;
+        let raw = crate::curve_distance::restricted_controls(curve, span, parameter)?;
+        let mut h = vec![I::point(0.); d + 1];
+        for k in 0..=d {
+            h[k] = I::new(
+                raw.iter().map(|p| p[k].lo).fold(f64::INFINITY, f64::min),
+                raw.iter()
+                    .map(|p| p[k].hi)
+                    .fold(f64::NEG_INFINITY, f64::max),
+            )?;
+        }
+        for k in 0..d {
+            h[k] = h[k].add(I::point(curve.control_points[span - curve.degree][k]).mul(h[d])?)?;
+        }
+        samples.push(h);
+    }
+    let mut coefficients = vec![vec![I::point(0.); d + 1]; n];
+    for k in 0..=d {
+        let component: Vec<_> = samples.iter().map(|h| h[k]).collect();
+        for (i, value) in bernstein_interpolation::reconstruct(&component, &basis)?
+            .into_iter()
+            .enumerate()
+        {
+            coefficients[i][k] = value;
+        }
+    }
+    work += reconstruction;
+    Ok((Some(coefficients), n, work))
+}
+/// A whole-cell interval bound, not a caller-issued radius certificate.
+pub struct CoefficientRadiusBound {
+    pub squared_residual: Option<[f64; 2]>,
+    pub error_upper: Option<f64>,
+    pub spans: usize,
+    pub coefficient_work: usize,
+    pub reason: &'static str,
+}
 impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
+    pub fn inspect_radius_coefficients(
+        &self,
+        centers: &crate::curve::Curve,
+        radius: &crate::curve::Curve,
+        laws: [[f64; 2]; 2],
+        domain: [[f64; 2]; 2],
+        max_spans: usize,
+        max_work: usize,
+    ) -> Result<CoefficientRadiusBound> {
+        centers.validate()?;
+        radius.validate()?;
+        check(
+            centers.control_points[0].len() == 3
+                && radius.control_points[0].len() == 2
+                && radius.control_points.iter().all(|p| p[0] >= 0.),
+            "Choose center and nonnegative radius laws",
+        )?;
+        let (net, spans, work) = self.homogeneous_coefficients(domain, max_spans, max_work)?;
+        let mut out = CoefficientRadiusBound {
+            squared_residual: None,
+            error_upper: None,
+            spans,
+            coefficient_work: work,
+            reason: "expression-radius-coefficients-unresolved",
+        };
+        let Some(net) = net else {
+            return Ok(out);
+        };
+        let (centers, spent, work) = law_coefficients(
+            centers,
+            laws[0],
+            domain[1],
+            max_spans - out.spans,
+            max_work - out.coefficient_work,
+        )?;
+        out.spans += spent;
+        out.coefficient_work += work;
+        let Some(centers) = centers else {
+            out.reason = "expression-radius-center-coefficients-unresolved";
+            return Ok(out);
+        };
+        let (radius, spent, work) = law_coefficients(
+            radius,
+            laws[1],
+            domain[1],
+            max_spans - out.spans,
+            max_work - out.coefficient_work,
+        )?;
+        out.spans += spent;
+        out.coefficient_work += work;
+        let Some(radius) = radius else {
+            out.reason = "expression-radius-law-coefficients-unresolved";
+            return Ok(out);
+        };
+        let rlo = if radius.iter().all(|h| h[2].lo > 0.) {
+            radius
+                .iter()
+                .map(|h| h[0].div(h[2]).map(|r| r.lo))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .fold(f64::INFINITY, f64::min)
+                .max(0.)
+        } else {
+            0.
+        };
+        let mut used = out.coefficient_work as u64;
+        let bound = crate::moving_radius::bound_coefficient_nets(
+            &net,
+            &centers,
+            &radius,
+            1,
+            rlo,
+            &mut used,
+            max_work as u64,
+            &mut out.reason,
+        )?;
+        out.coefficient_work = used as usize;
+        if let Some((residual, error)) = bound {
+            out.squared_residual = Some(residual);
+            out.error_upper = Some(error);
+            out.reason = "expression-radius-coefficient-bound";
+        }
+        Ok(out)
+    }
     /// Multiply the expression by its factored source denominator before
     /// interpolation. Sections and their across jets have free denominator Wf;
     /// fixed-free source rails and their free jets have across denominator Wa.
@@ -230,6 +407,44 @@ mod tests {
             .unwrap();
         let net = net.unwrap();
         assert!(spans <= 100000 && work <= 1000000);
+        let center_law = crate::curve::Curve {
+            degree: 1,
+            knots: vec![2., 2., 4., 4.],
+            control_points: vec![vec![-0.5, 0., 0.], vec![1.5, 0., 0.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let radius_law = crate::curve::Curve {
+            degree: 1,
+            knots: vec![3., 3., 7., 7.],
+            control_points: vec![vec![1., 0.], vec![1., 0.]],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let whole = corrected
+            .inspect_radius_coefficients(
+                &center_law,
+                &radius_law,
+                [[2.5, 3.5], [3.25, 6.75]],
+                [[0., 1.]; 2],
+                100000,
+                100000000,
+            )
+            .unwrap();
+        assert!(whole.error_upper.unwrap() < 1e-6);
+        assert!(whole.spans <= 100000 && whole.coefficient_work <= 100000000);
+        assert!(corrected
+            .inspect_radius_coefficients(
+                &center_law,
+                &radius_law,
+                [[2.5, 3.5], [3.25, 6.75]],
+                [[0., 1.]; 2],
+                0,
+                100000000
+            )
+            .unwrap()
+            .error_upper
+            .is_none());
         let centers = vec![
             vec![I::point(0.), I::point(0.), I::point(0.), I::point(1.)],
             vec![I::point(1.), I::point(0.), I::point(0.), I::point(1.)],

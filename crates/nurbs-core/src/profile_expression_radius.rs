@@ -7,6 +7,7 @@ use crate::{
     profile_section_bridge::RailConstrainedBridge,
     Result,
 };
+pub use crate::profile_expression_bernstein::CoefficientRadiusBound;
 pub struct Report {
     pub domain: [[f64; 2]; 2],
     pub complete: bool,
