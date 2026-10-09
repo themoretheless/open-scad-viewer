@@ -1485,9 +1485,9 @@ mod tests {
             };
             let refused=geometry.inspect_volume(volume_limits(0)).unwrap();
             assert!(!refused.complete && refused.signed_bounds.is_none() && refused.cells==0);
-            let volume=geometry.inspect_volume(volume_limits(512)).unwrap();
+            let volume=geometry.inspect_volume(volume_limits(8192)).unwrap();
             eprintln!("expression volume bounds={:?} complete={} cells={} spans={} domains={} planarFaces={} reason={}",volume.signed_bounds,volume.complete,volume.cells,volume.spans,volume.domain_cells,volume.planar_faces,volume.reason);
-            assert!(volume.cells<=512 && volume.spans<=200000 && volume.domain_cells<=10000);
+            assert!(volume.cells<=8192 && volume.spans<=200000 && volume.domain_cells<=10000);
             if let Some([lo,hi])=volume.signed_bounds {assert!(lo.is_finite() && hi.is_finite() && lo<=hi);}
             if volume.complete {let [lo,hi]=volume.signed_bounds.unwrap();assert!(hi-lo<=20.);}
             if let Ok(path)=std::env::var("BREP_EXPRESSION_VOLUME_PATH") {

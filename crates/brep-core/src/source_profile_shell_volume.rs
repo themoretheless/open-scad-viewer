@@ -74,16 +74,18 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         for face in 0..shell.faces().len() {
             let domain = shell.support_domain(face)?;
             let mut planar = None;
+            let error_share = limits.absolute_error / (8. * shell.faces().len() as f64);
             if let Some(original) = shell.equivalent_original_face(face) {
                 let root = shell.assembly.patch.rails.face.boundary.rooted[0];
                 let source_geometry = root.restricted.proposal.body.geometry();
+                let remaining_faces = shell.faces().len() - face;
+                let allowance = (limits.cells - out.cells).saturating_sub(remaining_faces) / remaining_faces;
                 let report = crate::source_planar_flux::bound(source_geometry, original, limits.axis, limits.origin,
-                    limits.absolute_error / (8. * shell.faces().len() as f64),
-                    (limits.cells - out.cells).min(limits.spans - out.spans))?;
+                    error_share, allowance.min((limits.spans - out.spans) / remaining_faces))?;
                 out.cells += report.cells; out.spans += report.cells;
                 planar = report.bound;
             }
-            let fixed = planar.is_some();
+            let fixed = planar.is_some_and(|b| I::point(b.hi).sub(I::point(b.lo)).is_ok_and(|w| w.hi <= error_share));
             if fixed { out.planar_faces += 1; }
             let bound = if let Some(bound) = planar { bound } else {
                 let Some(bound) = evaluate(face, domain, &mut out)? else { return Ok(out); };
