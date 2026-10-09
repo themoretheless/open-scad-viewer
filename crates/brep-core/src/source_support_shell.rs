@@ -659,6 +659,9 @@ mod tests {
         let face=admitted.face.expect("complete interior admission for the owned annular transition");
         assert!(std::ptr::eq(face.boundary(),&boundary));
         assert_eq!(face.projection(),projection);
+        assert!(!std::ptr::eq(&face,profile_region.face()));
+        assert!(std::ptr::eq(face.boundary(),profile_region.face().boundary()));
+        assert_ne!(face.projection(),profile_region.face().projection());
         let from_rails=boundary.qualify_face_from_rails(projection,1000,2000,100000).unwrap();
         let rail_face=from_rails.face.expect("fresh rail-policy admission for owned 3D projection");
         assert!(std::ptr::eq(rail_face.boundary(),&boundary));
