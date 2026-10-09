@@ -181,12 +181,16 @@ pub fn apply(v: Value) -> Result<Value> {
     }
     let mut points = mesh
         .positions
-        .as_chunks::<3>().0.iter()
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|p| [p[0], p[1], p[2]])
         .collect::<Vec<_>>();
     let mut faces = mesh
         .indices
-        .as_chunks::<3>().0.iter()
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|f| [f[0], f[1], f[2]])
         .collect::<Vec<_>>();
     let selected = if options.get("triangles").is_some() {

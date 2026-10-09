@@ -144,7 +144,7 @@ const jsChunkBudgets = [
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
   [/^assets\/wasm-brotli-bytes-[^/]+\.js$/, 140_000],
-  [/^assets\/vr-core-bytes-[^/]+\.js$/, 76_000], // Independent VR core: 56,115 raw WASM bytes, base64 packed.
+  [/^assets\/vr-core-bytes-[^/]+\.js$/, 76_000], // Independent VR core, losslessly packed with the bounded DEFLATE bootstrap.
 ]
 const namedJsBudgetThreshold = 100_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
@@ -221,6 +221,7 @@ verifyPackedWasmChunk(
 for (const [name, artifact, compression] of [
   ['photogrammetry-bytes', 'photogrammetry_wasm', 'brotli'],
   ['wasm-brotli-bytes', 'wasm_brotli', 'deflate'],
+  ['vr-core-bytes', 'vr_core', 'deflate'],
 ]) {
   const packed = files.filter(file => new RegExp(`^assets/${name}-[^/]+\\.js$`).test(file.path))
   if (packed.length !== 1) throw new Error(`Expected one shared ${name} runtime`)

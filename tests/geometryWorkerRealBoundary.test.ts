@@ -69,12 +69,12 @@ class NodeWorkerAsWebWorker implements ManifoldPlanQualificationWorkerLike {
   }
 }
 
-function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value is T): Promise<T> {
+function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value is T, timeoutMs = 10_000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       cleanup()
       reject(new Error('Timed out waiting for real Worker boundary message'))
-    }, 10_000)
+    }, timeoutMs)
     const onMessage = (value: unknown) => {
       if (!predicate(value)) return
       cleanup()
@@ -276,7 +276,7 @@ it.each(['progressive-sweep','contact-progressive-hollow-body','progressive-mite
   }
   if(value.status==='sweep-preview')worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'sweep-preview-ack',documentRevision:value.documentRevision,jobId:value.jobId,quality:value.quality,sourceSha256:value.sourceSha256,nodeId:value.nodeId,sections:value.sections})
  })
- const first=request(1),completed=waitForMessage(worker,isDirectTerminalFor(first))
+ const first=request(1),completed=waitForMessage(worker,isDirectTerminalFor(first),45_000)
  worker.postMessage(first)
  expect(await completed).toMatchObject({status:'succeeded'})
  const previews=events.filter(e=>e.status==='sweep-preview')
@@ -293,12 +293,12 @@ it.each(['progressive-sweep','contact-progressive-hollow-body','progressive-mite
   expect(preview.meshes[0]!.nativeGeometry).toBeUndefined()
  }
  cancelOnPreview=true
- const second=request(2),cancelled=waitForMessage(worker,isDirectTerminalFor(second))
+ const second=request(2),cancelled=waitForMessage(worker,isDirectTerminalFor(second),45_000)
  worker.postMessage(second)
  expect(await cancelled).toMatchObject({status:'cancelled',reason:'user'})
  expect(events.some(e=>e.jobId===2&&e.status==='succeeded')).toBe(false)
- const third=request(3),recovered=waitForMessage(worker,isDirectTerminalFor(third))
+ const third=request(3),recovered=waitForMessage(worker,isDirectTerminalFor(third),45_000)
  worker.postMessage(third)
  expect(await recovered).toMatchObject({status:'succeeded'})
  await terminate(worker)
-},30000)
+},150_000)

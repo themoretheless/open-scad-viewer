@@ -169,27 +169,27 @@
     },
     {
       "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-      "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d"
+      "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25"
     },
     {
       "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-      "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d"
+      "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9"
     },
     {
       "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
-      "sha256": "c8495d1cce75e8135108e0f8670a425b8a2e83eb5e5115e541158df745920994"
+      "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d"
     },
     {
       "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
-      "sha256": "ff363974cc1cdfc3580c2fbd2504c520fac42054afd1fc0926eeb7463659c9b6"
+      "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e"
     },
     {
       "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
-      "sha256": "7af54367af550425a275fd0ae559e2e9ecc7e8d93566f6982037c3fb5c06b035"
+      "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7"
     },
     {
       "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
-      "sha256": "415e9b1bfa2124988f3c546b5facf1920bb4c22f5496383d65ec42df70ab7ea9"
+      "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887"
     },
     {
       "path": "docs/qualification/g0-v6-g1-v23-refreeze-review.md",
@@ -237,7 +237,7 @@
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-      "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4"
+      "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9"
     },
     {
       "path": "docs/qualification/semantic-manifold-g1-plan-v11.json",
@@ -300,7 +300,7 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v8.json",
-      "sha256": "0218cbadd2406103c7844f44eaff6d112a778dcd7d966eebd72682b6318e4cf6",
+      "sha256": "8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62",
       "byteLength": 5767
     },
     {
@@ -437,17 +437,17 @@
       },
       {
         "path": "docs/qualification/g0-v3-g1-v19-refreeze-status-v1.json",
-        "sha256": "6879ffedb23dceabe72871e9cdc89f41f50fcf65391df9b9c39fd7f3faf4f92d",
+        "sha256": "1c22fe7e7a5451a067be0b6b99b62a4f2c3be2e8067518b10d06d04c51c68b25",
         "byteLength": 34523
       },
       {
         "path": "docs/qualification/g0-v4-g1-v21-refreeze-status-v1.json",
-        "sha256": "c8495d1cce75e8135108e0f8670a425b8a2e83eb5e5115e541158df745920994",
+        "sha256": "1c1ab4668ea6a47f57d0f3316688e182b1b87ae5c78bccea902ca57f528b586d",
         "byteLength": 35189
       },
       {
         "path": "docs/qualification/g0-v5-g1-v22-refreeze-status-v1.json",
-        "sha256": "ff363974cc1cdfc3580c2fbd2504c520fac42054afd1fc0926eeb7463659c9b6",
+        "sha256": "e3229477708ad67db3f632225ac89a6be5de91f7e2a07aaa8c3c06740a2cf84e",
         "byteLength": 35260
       },
       {
@@ -457,7 +457,7 @@
       },
       {
         "path": "docs/qualification/g0-v6-g1-v23-refreeze-status-v1.json",
-        "sha256": "7af54367af550425a275fd0ae559e2e9ecc7e8d93566f6982037c3fb5c06b035",
+        "sha256": "f3e9033d518d14f3fd317974cfb8bb1b4706ec5dda9661b9e011ff5ee2e593d7",
         "byteLength": 36450
       },
       {
@@ -467,7 +467,7 @@
       },
       {
         "path": "docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json",
-        "sha256": "415e9b1bfa2124988f3c546b5facf1920bb4c22f5496383d65ec42df70ab7ea9",
+        "sha256": "4843096898d7ec49e7f2ecd7a84e87a2364db4aaa26a333e3e2f8be9fb7b7887",
         "byteLength": 37699
       },
       {
@@ -477,12 +477,12 @@
       },
       {
         "path": "docs/qualification/g1-v20-refreeze-status-v1.json",
-        "sha256": "122cc72b8b4c982dc9884f2b298719cd98f2cfe889cc9710b763ae9dcd81a69d",
+        "sha256": "ec3fc7f7a87ceda8f6269cb2271648d9418167227c31887bf2b9614961d705d9",
         "byteLength": 36650
       },
       {
         "path": "docs/qualification/own-rust-cad-v2.json",
-        "sha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+        "sha256": "e26b432bb46aa58b76155702936bf2a716f97f99c9aea7bcbdf5548c1f0c31fe",
         "byteLength": 1874
       },
       {
@@ -502,7 +502,7 @@
       },
       {
         "path": "docs/qualification/semantic-manifold-g1-plan-v10.json",
-        "sha256": "05afbfbeadc1f4eb373cb53dcedd5b9a7ff22efff994fac61d343a465db45cf4",
+        "sha256": "0ee191fbf83e80b95ec940e2f8286e4c5d80ce214941f1c4aba57405cb7f4ec9",
         "byteLength": 77107
       },
       {
@@ -1133,7 +1133,7 @@
       "kind": "g0-artifact",
       "id": "own-rust-cad-v2-evidence",
       "previousSha256": null,
-      "currentSha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395"
+      "currentSha256": "e26b432bb46aa58b76155702936bf2a716f97f99c9aea7bcbdf5548c1f0c31fe"
     },
     {
       "kind": "g0-artifact",

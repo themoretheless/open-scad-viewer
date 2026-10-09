@@ -14,7 +14,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
             json!({"start":start,"end":end,"delta":delta,"deltaX":delta[0],"deltaY":delta[1],"deltaZ":delta[2],"distance":delta[0].hypot(delta[1]).hypot(delta[2])}),
         );
     }
-    let vertices: Vec<f32> = field::<Vec<u32>>(&v, "vertexBits")?.into_iter().map(f32::from_bits).collect();
+    let vertices: Vec<f32> = field::<Vec<u32>>(&v, "vertexBits")?
+        .into_iter()
+        .map(f32::from_bits)
+        .collect();
     let matrix: display::Matrix = field(&v, "transform")?;
     if op == "mesh_display_inspect" {
         let bounds = display::bounds(&vertices, &matrix);

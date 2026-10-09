@@ -1,4 +1,7 @@
 //! Optional bounded JSON request boundary.
+mod sweep_requests;
+mod loft_requests;
+mod certificate_requests;
 use super::*;
 use crate::surface::Surface;
 #[path="retained_body_coverage.rs"]
@@ -382,404 +385,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
     }
 }
 fn dispatch_other(v:Value,op:String)->Result<Value> {
-    if matches!(op.as_str(), "sweep_error_upper_compose") {
-    if op=="sweep_error_upper_compose" {
-        let kind=field::<String>(&v,"kind")?;
-        let a=optional_field::<f64>(&v,"a")?;
-        let b=optional_field::<f64>(&v,"b")?;
-        let upper=match kind.as_str() {
-            "add"=>a.zip(b).and_then(|(a,b)|sweep_support::error_upper::add(a,b)),
-            "multiply"=>a.zip(b).and_then(|(a,b)|sweep_support::error_upper::multiply(a,b)),
-            "sqrt-two"=>a.and_then(sweep_support::error_upper::sqrt_two),
-            _=>return Err(input("Unknown error composition operation")),
-        };
-        return Ok(json!({"errorUpper":upper}));
-    }
-    }
-    if matches!(op.as_str(), "curve_decomposition_audit") {
-    if op == "curve_decomposition_audit" {
-        let r=crate::curve_decomposition_certificate::inspect(&field(&v,"curve")?,field(&v,"span")?,&field(&v,"retained")?,field(&v,"maxProducts")?)?;
-        return Ok(json!({"errorUpper":r.error_upper,"products":r.products,"reason":r.reason,"method":"original-span-bernstein-decomposition","continuousBound":false}));
-    }
-    }
-    if matches!(op.as_str(), "sweep_exact_seam_set_audit" | "sweep_projective_seam_set_audit") {
-    if op == "sweep_projective_seam_set_audit" || op == "sweep_exact_seam_set_audit" {
-        let owned: Vec<Value> = field(&v, "seams")?;
-        let declarations: Vec<_> = owned.iter().map(|s| Ok(sweep_seam_set::Seam {
-            patches: field(s, "patches")?, boundaries: field(s, "boundaries")?,
-            order: field(s, "order")?, normal_scale: field(s, "normalScale")?,
-        })).collect::<Result<_>>()?;
-        let projective = op == "sweep_projective_seam_set_audit";
-        let report = sweep_seam_set::inspect(&field::<Vec<surface::Surface>>(&v, "patches")?, &declarations, field(&v, "maxWork")?, projective)?;
-        let results: Vec<_> = report.seams.iter().zip(&declarations).map(|(r, s)| {
-            let mut value = json!({"certified":r.certified,"exactIdentity":r.exact_identity,
-                "regularityCertified":r.regularity_certified,"work":r.work,"reason":r.reason});
-            if projective {value["method"] = json!("constant-projective-strip-jets"); value["certifiedOrder"] = json!(if r.certified {Some(s.order)} else {None});}
-            value
-        }).collect();
-        let mut value = json!({"exactG1G2Certified":report.certified,"certifiedOrder":report.order,
-            "exactWork":report.work,"unresolvedSeams":report.unresolved,"seams":results});
-        if projective {value["method"] = json!("constant-projective-strip-jets");}
-        return Ok(value);
-    }
-    }
-    if matches!(op.as_str(), "surface_auto_guided_loft_cartesian") {
-    if op == "surface_auto_guided_loft" || op == "surface_auto_guided_loft_cartesian" {
-        let curves = field::<Vec<curve::Curve>>(&v,"curves")?;
-        let mappings = optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?;
-        let mapped = mappings.as_ref().map(|m| loft_reparameterization::prepare_with_budget(&curves,m,
-            field(&v,"budget")?,optional_field(&v,"maxCells")?.unwrap_or(50_000),
-            optional_field(&v,"maxMapEvaluations")?.unwrap_or(200_000))).transpose()?;
-        let sections = mapped.as_ref().map_or(curves.as_slice(), |m| m.curves.as_slice());
-        let parameters=field::<Vec<f64>>(&v,"parameters")?;
-        let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
-        let budget=field::<f64>(&v,"budget")?;
-        let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
-        let mut result=if op=="surface_auto_guided_loft_cartesian" {
-            if let Some(controls)=control_tangents(&v)? {
-                loft_alignment::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&controls,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
-            } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-                loft_alignment::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&targets,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
-            } else {
-                loft_alignment::interpolate_cartesian_with_parameter_tolerance(sections,&parameters,&guides,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
-            }
-        } else {
-            loft_alignment::interpolate_with_parameter_tolerance(sections,&parameters,&guides,budget,parameter_tolerance)?
-        };
-        let original_section_certificates = if let Some(mappings) = mappings.as_ref() {
-            let certificates = loft_reparameterization::certify_final_sections(&result.surface,
-                &curves,&parameters,mappings,budget,
-                optional_field(&v,"maxCells")?.unwrap_or(50_000),
-                optional_field(&v,"maxMapEvaluations")?.unwrap_or(200_000))?;
-            result.section_error_upper = certificates.iter().map(|c| c["errorUpper"].as_f64().unwrap()).collect();
-            certificates
-        } else {Vec::new()};
-        let mut output = json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper});
-        if op=="surface_auto_guided_loft_cartesian" {
-            output["certificate"]=json!({"operation":"cartesian-auto-guided-loft","exact":false,
-                "fittedToExactPromotion":false,"curves":result.curve_certificates,"tangents":result.tangent_certificates});
-        }
-        if !original_section_certificates.is_empty() {
-            output["original_section_certificates"] = Value::Array(original_section_certificates);
-        }
-        if let Some(mapped) = mapped {
-            output["sections"] = value_codec::to_value(mapped.curves).map_err(|e| input(e.to_string()))?;
-            output["section_mapping_certificates"] = Value::Array(mapped.certificates);
-        }
-        return Ok(output);
-    }
-    }
-    if matches!(op.as_str(), "surface_guided_loft_cartesian") {
-    if op == "surface_guided_loft_cartesian" {
-        let originals=field::<Vec<curve::Curve>>(&v,"curves")?;
-        let mappings=optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?;
-        let mapped=mappings.as_ref().map(|m|loft_reparameterization::prepare_with_budget(&originals,m,
-            field(&v,"errorBudget")?,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)).transpose()?;
-        let sections=mapped.as_ref().map_or(originals.as_slice(),|m|m.curves.as_slice());
-        let parameters=field::<Vec<f64>>(&v,"parameters")?;
-        let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
-        let guide_parameters=field::<Vec<f64>>(&v,"guide_parameters")?;
-        let tolerance=field(&v,"errorBudget")?;
-        let max_cells=field(&v,"maxCells")?;
-        let max_map_evaluations=field(&v,"maxMapEvaluations")?;
-        let (surface,curves,tangents)=if let Some(controls)=control_tangents(&v)? {
-            guided_loft::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&guide_parameters,
-                &controls,tolerance,max_cells,max_map_evaluations)?
-        } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-            guided_loft::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&guide_parameters,
-                &targets,tolerance,max_cells,max_map_evaluations)?
-        } else {
-            let (surface,curves)=guided_loft::interpolate_cartesian(sections,&parameters,&guides,&guide_parameters,
-                tolerance,max_cells,max_map_evaluations)?;
-            (surface,curves,Vec::new())
-        };
-        let original_sections=if let Some(mappings)=mappings.as_ref() {
-            loft_reparameterization::certify_final_sections(&surface,&originals,&parameters,mappings,
-                tolerance,max_cells,max_map_evaluations)?
-        } else {Vec::new()};
-        let mut output=json!({"surface":surface,"certificate":{"operation":"cartesian-guided-loft",
-            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}});
-        if let Some(mapped)=mapped {
-            output["sections"]=encode(mapped.curves)?;
-            output["section_mapping_certificates"]=Value::Array(mapped.certificates);
-            output["original_section_certificates"]=Value::Array(original_sections);
-        }
-        return Ok(output);
-    }
-    }
-    if matches!(op.as_str(), "surface_natural_loft_checked") {
-    if op == "surface_natural_loft_checked" {
-        let curves=field::<Vec<curve::Curve>>(&v,"curves")?;
-        let parameters=field::<Vec<f64>>(&v,"parameters")?;
-        let mappings=field::<Vec<Option<Value>>>(&v,"section_mappings")?;
-        let prepared=loft_reparameterization::prepare(&curves,&mappings)?;
-        let surface=natural_loft::interpolate(&prepared.curves,&parameters)?;
-        let certificates=loft_reparameterization::certify_final_sections(&surface,&curves,&parameters,&mappings,1e-6,50_000,200_000)?;
-        return Ok(json!({"surface":surface,"sections":prepared.curves,
-            "section_mapping_certificates":prepared.certificates,"original_section_certificates":certificates,
-            "certificate":{"operation":"mapped-natural-loft","exact":false,"fittedToExactPromotion":false}}));
-    }
-    }
-    if matches!(op.as_str(), "surface_boundary_v_tangent_certify") {
-    if op == "surface_boundary_v_tangent_certify" {
-        return gordon::certify_boundary_v_tangent(&field(&v,"surface")?,
-            &field::<Vec<curve::Curve>>(&v,"targets")?,field(&v,"end")?,
-            field(&v,"tolerance")?,field(&v,"maxCells")?);
-    }
-    }
-    if matches!(op.as_str(), "surface_gordon_cartesian") {
-    if op == "surface_gordon_cartesian" {
-        let u=field::<Vec<curve::Curve>>(&v,"u_curves")?;
-        let guides=field::<Vec<curve::Curve>>(&v,"v_curves")?;
-        let pu=field::<Vec<f64>>(&v,"parameters_u")?;
-        let pv=field::<Vec<f64>>(&v,"parameters_v")?;
-        let tolerance=field::<f64>(&v,"errorBudget")?;
-        let max_cells=field::<usize>(&v,"maxCells")?;
-        let max_map_evaluations=field::<usize>(&v,"maxMapEvaluations")?;
-        let (surface,curves,tangents)=if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-            gordon::patch_cartesian_with_tangents(&u,&guides,&pu,&pv,&targets,tolerance,max_cells,max_map_evaluations)?
-        } else {
-            let (surface,curves)=gordon::patch_cartesian(&u,&guides,&pu,&pv,tolerance,max_cells,max_map_evaluations)?;
-            (surface,curves,Vec::new())
-        };
-        return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-gordon",
-            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}}));
-    }
-    }
+    if matches!(op.as_str(), "sweep_error_upper_compose") { return sweep_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "curve_decomposition_audit") { return certificate_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "sweep_exact_seam_set_audit" | "sweep_projective_seam_set_audit") { return sweep_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "surface_auto_guided_loft" | "surface_auto_guided_loft_cartesian") { return loft_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "surface_guided_loft_cartesian") { return loft_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "surface_natural_loft_checked") { return loft_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "surface_boundary_v_tangent_certify") { return certificate_requests::dispatch(v, op); }
+    if matches!(op.as_str(), "surface_gordon_cartesian") { return loft_requests::dispatch(v, op); }
 
-    if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progressive_sweep" || op == "surface_progressive_sweep_profiles" || op=="surface_progressive_sweep_level" || op=="surface_progressive_sweep_cap_domains" || op=="surface_progressive_sweep_cap_projection" || op=="surface_progressive_sweep_station_seams" || op=="surface_progressive_sweep_profile_join" || op=="surface_progressive_sweep_decomposition_joins" || op=="surface_progressive_sweep_decomposition_smoothness" || op=="surface_progressive_sweep_frame_smoothness" || op=="surface_progressive_sweep_closed_frame_smoothness" || op=="surface_progressive_sweep_closed_path_frame_smoothness" || op=="surface_progressive_sweep_closed_guided_frame_smoothness" {
-        use progressive_sweep::{Options, Orientation, Spacing};
-        let orientation = match field::<String>(&v,"orientation")?.as_str() {
-            "rmf" => Orientation::RotationMinimizing,
-            "fixed" | "authored" => Orientation::Fixed,
-            "fixed_normal" => Orientation::FixedNormal,
-            "frenet" => Orientation::Frenet,"corrected_frenet"=>Orientation::CorrectedFrenet,
-            _ => return Err(input("Unknown sweep orientation")),
-        };
-        let spacing = match field::<String>(&v,"spacing")?.as_str() {
-            "parameter" => Spacing::Parameter,
-            "arc_length" => Spacing::ArcLength {tolerance:field(&v,"length_tolerance")?,max_cells:field(&v,"length_max_cells")?},
-            _ => return Err(input("Unknown sweep station spacing")),
-        };
-        let options = Options {normal:field(&v,"normal")?,orientation,spacing,initial_sections:field(&v,"initial_sections")?,max_sections:field(&v,"max_sections")?,max_deviation:field(&v,"max_deviation")?};
-        let rmf_steps=optional_field::<usize>(&v,"rmf_transport_steps")?;
-        let rmf_cells=optional_field::<usize>(&v,"error_max_cells")?;
-        let rmf_products=optional_field::<usize>(&v,"error_max_products")?;
-        check(rmf_steps.is_some() || (rmf_cells.is_none() && rmf_products.is_none()),
-            "RMF error budgets require rmf_transport_steps")?;
-        let rmf_limits=if let Some(steps)=rmf_steps {
-            check(["surface_progressive_sweep","surface_progressive_sweep_profiles","surface_progressive_sweep_level"].contains(&op.as_str()),
-                "RMF proof options require a sweep construction operation")?;
-            Some([steps,field::<usize>(&v,"error_max_cells")?,field::<usize>(&v,"error_max_products")?])
-        }else{None};
-        let axes=optional_field::<curve::Curve>(&v,"axis_scale")?;
-        let center=optional_field::<curve::Curve>(&v,"center_law")?;
-        let contact=optional_field::<f64>(&v,"contact_parameter")?;
-        let contact_profile=optional_field::<usize>(&v,"contact_profile")?;
-        check(contact.is_some() || contact_profile.is_none(), "Contact profile requires contact parameter")?;
-        check(contact.is_none() || optional_field::<curve::Curve>(&v,"orientation_guide")?.is_some(), "Contact anchor requires orientation guide")?;
-        if op=="surface_progressive_sweep_spatial_rmf_error" {
-            check(optional_field::<curve::Curve>(&v,"orientation_guide")?.is_none()
-                && contact.is_none() && field::<String>(&v,"orientation")?=="rmf",
-                "Spatial RMF error requires unguided RMF")?;
-            let profile=field::<curve::Curve>(&v,"profile")?;
-            let path=field::<curve::Curve>(&v,"path")?;
-            let scale=field::<curve::Curve>(&v,"scale")?;
-            let twist=field::<curve::Curve>(&v,"twist")?;
-            let default_axes=progressive_sweep::constant_vector_law([1.;3])?;
-            let default_center=progressive_sweep::constant_vector_law([0.;3])?;
-            let mut sweep=progressive_sweep::Sweep::new(&profile,&path,&scale,&twist,options)?;
-            if axes.is_some() || center.is_some(){sweep=sweep.with_affine_laws(axes.as_ref().unwrap_or(&default_axes),center.as_ref().unwrap_or(&default_center))?;}
-            let r=sweep.rmf_spatial_patch_error_bound(field(&v,"preview_sections")?,field(&v,"transport_steps")?,field(&v,"maxCells")?,field(&v,"maxProducts")?)?;
-            return Ok(json!({"continuousBound":r.status==progressive_miter::scalar_certificate::Status::Certified,
-                "withinBudget":r.within_budget,"errorUpper":r.error_upper,"cells":r.cells,"products":r.products,
-                "originalSectionEndpointErrorUpper":r.original_section_endpoint_error_upper,"patches":r.patches,"reason":r.reason,
-                "scope":if options.spacing==progressive_sweep::Spacing::Parameter {"retained-patches-relative-to-original-spatial-rmf-parameter-transport"} else {"retained-patches-relative-to-original-spatial-rmf-arc-transport"},
-                "method":"original-bishop-skew-flow-and-retained-section-decomposition",
-                "capJoinsCertified":false,"globalEmbeddingCertified":false,"solidCertified":false}));
-        }
-        if op=="surface_progressive_sweep_level" || op=="surface_progressive_sweep_cap_domains" || op=="surface_progressive_sweep_cap_projection" || op=="surface_progressive_sweep_station_seams" || op=="surface_progressive_sweep_profile_join" || op=="surface_progressive_sweep_decomposition_joins" || op=="surface_progressive_sweep_decomposition_smoothness" || op=="surface_progressive_sweep_frame_smoothness" || op=="surface_progressive_sweep_closed_frame_smoothness" || op=="surface_progressive_sweep_closed_path_frame_smoothness" || op=="surface_progressive_sweep_closed_guided_frame_smoothness" {
-            let profiles=field::<Vec<curve::Curve>>(&v,"profiles")?;
-            let path=field::<curve::Curve>(&v,"path")?;
-            let scale=field::<curve::Curve>(&v,"scale")?;
-            let twist=field::<curve::Curve>(&v,"twist")?;
-            let guide=optional_field::<curve::Curve>(&v,"orientation_guide")?;
-            let authored=field::<String>(&v,"orientation")?=="authored";
-            check(!authored || guide.is_none(), "Orientation guide cannot be combined with authored frames")?;
-            let frame_axis=if authored {Some(field::<curve::Curve>(&v,"frame_axis")?)} else {None};
-            let frame_normal=if authored {Some(field::<curve::Curve>(&v,"frame_normal")?)} else {None};
-            let use_affine=axes.is_some() || center.is_some() || authored || guide.is_some();
-            let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
-            let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
-            let mut sweep=progressive_sweep::MultiSweep::new(&profiles,&path,&scale,&twist,options)?;
-            if let Some(guide)=guide.as_ref() {
-                sweep=if let Some(parameter)=contact {sweep.with_contact_guide(guide,contact_profile.unwrap_or(0),parameter)?} else {sweep.with_orientation_guide(guide)?};
-            }
-            if authored {sweep=sweep.with_frame_laws(frame_axis.as_ref().unwrap(),frame_normal.as_ref().unwrap())?;}
-            if use_affine {sweep=sweep.with_affine_laws(&axes,&center)?;}
-            if let Some([steps,cells,products])=rmf_limits {sweep=sweep.with_spatial_rmf_error_limits(steps,cells,products)?;}
-            if op=="surface_progressive_sweep_cap_projection" {
-                let loops=field::<Vec<usize>>(&v,"loopSizes")?;
-                let caps=field::<[surface::Surface;2]>(&v,"caps")?;
-                let r=sweep.certify_endpoint_cap_projection(&loops,&caps,field(&v,"tolerance")?,field(&v,"maxPairs")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"capProjectionCertified":r.normal_dots.is_some(),
-                    "idealCapDomainsCertified":r.original.domains.ideal_endpoint_domains_certified,
-                    "endpointNormals":r.original.endpoint_normals,"normalDots":r.normal_dots,
-                    "reversesOrientation":r.reverses_orientation,"cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"original-progressive-endpoint-plane-projection",
-                    "continuousBound":false,"retainedCapRegionsCertified":false,"globalEmbeddingCertified":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_cap_domains" {
-                let loops=field::<Vec<usize>>(&v,"loopSizes")?;
-                let r=sweep.certify_ideal_endpoint_domains(&loops,field(&v,"tolerance")?,field(&v,"maxPairs")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"idealCapDomainsCertified":r.ideal_endpoint_domains_certified,
-                    "localDomainCertified":r.source.local_domain_certified,
-                    "sourcePlaneAxis":r.source.source_plane_axis,"endpointFrameAxes":r.endpoint_frame_axes,
-                    "cells":r.cells,"pairs":r.source.pairs,"exactWork":r.source.exact_work,"reason":r.reason,
-                    "method":"original-progressive-endpoint-material-domains",
-                    "continuousBound":false,"retainedCapRegionsCertified":false,"globalEmbeddingCertified":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_closed_guided_frame_smoothness" {
-                let r=sweep.certify_closed_guided_frame_smoothness(field(&v,"order")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"requestedOrder":r.order,
-                    "closedSourceFrameSmoothnessCertified":r.closed_source_frame_smoothness_certified,
-                    "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"exact-original-guided-endpoint-jets-and-joint-frame-cover",
-                    "scope":"closed-original-guided-frame-only",
-                    "pathSeamCertified":false,"retainedSeamsCertified":false,
-                    "profileJoinsCertified":false,"capJoinsCertified":false,
-                    "continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_closed_path_frame_smoothness" {
-                let r=sweep.certify_closed_path_frame_smoothness(field(&v,"order")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"requestedOrder":r.order,
-                    "closedSourceFrameSmoothnessCertified":r.closed_source_frame_smoothness_certified,
-                    "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"exact-original-path-twist-endpoint-jets-and-frame-cover",
-                    "scope":"closed-original-path-frame-only",
-                    "pathSeamCertified":false,"retainedSeamsCertified":false,
-                    "profileJoinsCertified":false,"capJoinsCertified":false,
-                    "continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_closed_frame_smoothness" {
-                let r=sweep.certify_closed_authored_frame_smoothness(field(&v,"order")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"requestedOrder":r.order,
-                    "closedSourceFrameSmoothnessCertified":r.closed_source_frame_smoothness_certified,
-                    "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"exact-original-authored-endpoint-jets-and-frame-cover",
-                    "scope":"closed-original-authored-frame-only",
-                    "pathSeamCertified":false,"retainedSeamsCertified":false,
-                    "profileJoinsCertified":false,"capJoinsCertified":false,
-                    "continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_frame_smoothness" {
-                let r=sweep.certify_original_frame_smoothness(field(&v,"order")?,field(&v,"maxCells")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"requestedOrder":r.order,
-                    "sourceFrameSmoothnessCertified":r.source_frame_smoothness_certified,
-                    "cells":r.cells,"exactWork":r.exact_work,"reason":r.reason,
-                    "method":"original-frame-continuity-and-nondegeneracy-cover",
-                    "scope":"open-original-frame-only",
-                    "retainedSeamsCertified":false,"profileJoinsCertified":false,
-                    "capJoinsCertified":false,"continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_decomposition_smoothness" {
-                let level=sweep.preview_at(field::<usize>(&v,"preview_sections")?)?;
-                let r=level.certify_retained_decomposition_smoothness(field(&v,"transverseScale")?,field(&v,"maxExactWork")?)?;
-                let mut result=encode(r)?;
-                result["profilePatchRanges"]=encode(level.profile_patch_ranges)?;
-                return Ok(result);
-            }
-            if op=="surface_progressive_sweep_decomposition_joins" {
-                let level=sweep.preview_at(field::<usize>(&v,"preview_sections")?)?;
-                let r=level.certify_retained_decomposition_joins(field(&v,"order")?,field(&v,"transverseScale")?,field(&v,"maxExactWork")?)?;
-                let joins=r.joins.iter().map(|(pair,p)|json!({"leftPatch":pair[0],"rightPatch":pair[1],
-                    "certified":p.certified,"exactIdentity":p.exact_identity,
-                    "regularityCertified":p.regularity_certified,"exactWork":p.work,"reason":p.reason})).collect::<Vec<_>>();
-                return Ok(json!({"requestedOrder":r.order,"expectedJoins":r.expected_joins,
-                    "checkedJoins":joins.len(),"coverageComplete":r.coverage_complete,
-                    "decompositionJoinsCertified":r.all_joins_certified,"exactWork":r.exact_work,
-                    "joins":joins,"reason":r.reason,"profilePatchRanges":level.profile_patch_ranges,
-                    "method":"exact-retained-decomposition-strip-jets",
-                    "scope":"within-source-profile-decomposition-only",
-                    "allProfileJoinsCertified":false,"closedProfileSeamsCertified":false,
-                    "sourceFrameSmoothnessCertified":false,"capJoinsCertified":false,
-                    "continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_profile_join" {
-                let level=sweep.preview_at(field::<usize>(&v,"preview_sections")?)?;
-                let left:usize=field(&v,"leftPatch")?;
-                let right:usize=field(&v,"rightPatch")?;
-                let order:usize=field(&v,"order")?;
-                let ranges=level.profile_patch_ranges;
-                let r=progressive_sweep::Level {patches:level.patches,report:level.report}
-                    .certify_retained_profile_join(left,right,order,field(&v,"transverseScale")?,field(&v,"maxExactWork")?)?;
-                return Ok(json!({"requestedOrder":order,"leftPatch":left,"rightPatch":right,
-                    "profilePatchRanges":ranges,"certified":r.certified,
-                    "exactIdentity":r.exact_identity,"regularityCertified":r.regularity_certified,
-                    "exactWork":r.work,"reason":r.reason,
-                    "method":"exact-retained-profile-strip-jets","scope":"explicit-retained-profile-join-only",
-                    "allProfileJoinsCertified":false,"sourceFrameSmoothnessCertified":false,
-                    "capJoinsCertified":false,"continuousBound":false,"solidCertified":false}));
-            }
-            if op=="surface_progressive_sweep_station_seams" {
-                let level=sweep.preview_at(field::<usize>(&v,"preview_sections")?)?;
-                return encode(progressive_sweep::Level {patches:level.patches,report:level.report}
-                    .certify_retained_station_seams(field(&v,"order")?,field(&v,"maxExactWork")?)?);
-            }
-            let mut result=encode(sweep.preview_at(field::<usize>(&v,"preview_sections")?)?)?;
-            if let Some([_,cells,products])=rmf_limits {
-                result["report"]["errorCertificateMaxCells"]=json!(cells);
-                result["report"]["decompositionMaxProducts"]=json!(products);
-            }
-            return Ok(result);
-        }
-        if let Some([steps,cells,products])=rmf_limits {
-            check(optional_field::<curve::Curve>(&v,"orientation_guide")?.is_none()
-                && contact.is_none() && field::<String>(&v,"orientation")?=="rmf",
-                "Spatial RMF proof options require unguided RMF")?;
-            let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?}else{vec![field::<curve::Curve>(&v,"profile")?]};
-            let path=field::<curve::Curve>(&v,"path")?;let scale=field::<curve::Curve>(&v,"scale")?;let twist=field::<curve::Curve>(&v,"twist")?;
-            let default_axes=progressive_sweep::constant_vector_law([1.;3])?;let default_center=progressive_sweep::constant_vector_law([0.;3])?;
-            let mut sweep=progressive_sweep::MultiSweep::new(&profiles,&path,&scale,&twist,options)?;
-            if axes.is_some() || center.is_some(){sweep=sweep.with_affine_laws(axes.as_ref().unwrap_or(&default_axes),center.as_ref().unwrap_or(&default_center))?;}
-            let mut result=encode(progressive_sweep::collect_profiles(sweep.with_spatial_rmf_error_limits(steps,cells,products)?)?)?;
-            result["report"]["errorCertificateMaxCells"]=json!(cells);
-            result["report"]["decompositionMaxProducts"]=json!(products);
-            if let Some(levels)=result["levels"].as_array_mut(){for level in levels {
-                level["errorCertificateMaxCells"]=json!(cells);level["decompositionMaxProducts"]=json!(products);
-            }}
-            return Ok(result);
-        }
-        if let Some(guide)=optional_field::<curve::Curve>(&v,"orientation_guide")? {
-            check(field::<String>(&v,"orientation")?!="authored", "Orientation guide cannot be combined with authored frames")?;
-            let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
-            let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
-            let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?} else {vec![field::<curve::Curve>(&v,"profile")?]};
-            if let Some(parameter)=contact {
-                return encode(progressive_sweep::approximate_contact_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&guide,contact_profile.unwrap_or(0),parameter,&axes,&center,options)?);
-            }
-            return encode(progressive_sweep::approximate_guided_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&guide,&axes,&center,options)?);
-        }
-        if field::<String>(&v,"orientation")? == "authored" {
-            let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
-            let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
-            let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?} else {vec![field::<curve::Curve>(&v,"profile")?]};
-            return encode(progressive_sweep::approximate_authored_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&field::<curve::Curve>(&v,"frame_axis")?,&field::<curve::Curve>(&v,"frame_normal")?,&axes,&center,options)?);
-        }
-        if axes.is_some() || center.is_some() {
-            let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
-            let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
-            let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?} else {vec![field::<curve::Curve>(&v,"profile")?]};
-            return encode(progressive_sweep::approximate_affine_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&axes,&center,options)?);
-        }
-        if op == "surface_progressive_sweep_profiles" {
-            return encode(progressive_sweep::approximate_profiles(&field::<Vec<curve::Curve>>(&v,"profiles")?,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,options)?);
-        }
-        return encode(progressive_sweep::approximate(&field::<curve::Curve>(&v,"profile")?,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,options)?);
-    }
+    if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progressive_sweep" || op == "surface_progressive_sweep_profiles" || op=="surface_progressive_sweep_level" || op=="surface_progressive_sweep_cap_domains" || op=="surface_progressive_sweep_cap_projection" || op=="surface_progressive_sweep_station_seams" || op=="surface_progressive_sweep_profile_join" || op=="surface_progressive_sweep_decomposition_joins" || op=="surface_progressive_sweep_decomposition_smoothness" || op=="surface_progressive_sweep_frame_smoothness" || op=="surface_progressive_sweep_closed_frame_smoothness" || op=="surface_progressive_sweep_closed_path_frame_smoothness" || op=="surface_progressive_sweep_closed_guided_frame_smoothness" { return sweep_requests::dispatch(v, op); }
     if op=="curve_affine" {return encode(affine::curve(&field::<curve::Curve>(&v,"curve")?,&field(&v,"matrix")?)?);}
     if op=="surface_affine" {return encode(affine::surface(&field::<surface::Surface>(&v,"surface")?,&field(&v,"matrix")?)?);}
     if op=="patches_affine" {return encode(affine::patches(&field::<Vec<surface::Surface>>(&v,"patches")?,&field(&v,"matrix")?)?);}
@@ -824,56 +439,17 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
     if op == "curve_elliptic_helix" {return encode(helix::approximate_elliptic(field(&v,"center")?,field(&v,"radius_x")?,field(&v,"radius_y")?,field(&v,"height")?,field(&v,"turns")?,field(&v,"phase_degrees")?,field(&v,"max_deviation")?)?);}
     if op == "curve_conical_helix" {return encode(helix::approximate_conical(field(&v,"center")?,field(&v,"start_radius")?,field(&v,"end_radius")?,field(&v,"height")?,field(&v,"turns")?,field(&v,"phase_degrees")?,field(&v,"max_deviation")?)?);}
     if op == "curve_helix" {return encode(helix::approximate(field(&v,"center")?,field(&v,"radius")?,field(&v,"height")?,field(&v,"turns")?,field(&v,"phase_degrees")?,field(&v,"max_deviation")?)?);}
-    if op == "surface_twist_sweep" {return encode(twist_sweep::sweep(&field(&v,"profile")?,&field(&v,"path")?,field(&v,"origin")?,field(&v,"axis")?,field(&v,"start_degrees")?,field(&v,"sweep_degrees")?)?);}
-    if op == "surface_two_guide_sweep" {return encode(two_guide_sweep::sweep(&field(&v,"profile")?,&field(&v,"guide_a")?,&field(&v,"guide_b")?,field(&v,"width")?,field(&v,"axis_y")?,field(&v,"axis_z")?)?);}
+    if op == "surface_twist_sweep" { return sweep_requests::dispatch(v, op); }
+    if op == "surface_two_guide_sweep" { return sweep_requests::dispatch(v, op); }
     if op == "surface_boundary_fill" {return encode(boundary_fill::fan(&field::<Vec<curve::Curve>>(&v,"boundaries")?,field(&v,"center")?)?);}
     if op == "surface_triangular_patch" {return encode(triangular_patch::patch(&field(&v,"base")?,&field(&v,"side_a")?,&field(&v,"side_b")?)?);}
-    if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
-    if op == "surface_closed_loft" { return encode(natural_loft::closed(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
-    if op == "surface_auto_guided_loft" {
-        let result=loft_alignment::interpolate(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&field::<Vec<curve::Curve>>(&v,"guides")?,field(&v,"budget")?)?;
-        return Ok(json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
-    }
-    if op == "surface_loft_match_ends" {
-        let mut references:[Option<surface::Surface>;2]=[None,None];
-        let mut boundaries=[String::new(),String::new()];
-        let mut orders=[1usize;2];let mut scales=[1.;2];let mut reversed=[false;2];
-        for (i,key) in ["start","end"].iter().enumerate(){
-            if let Some(value)=v.get(*key).filter(|x|!x.is_null()) {
-                references[i]=Some(field(value,"reference")?);boundaries[i]=field(value,"boundary")?;
-                orders[i]=field(value,"order")?;scales[i]=field(value,"scale")?;
-                reversed[i]=optional_field(value,"reverse")?.unwrap_or(false);
-            }
-        }
-        let ends=std::array::from_fn(|i|references[i].as_ref().map(|reference|loft_continuity::EndConstraint{reference,boundary:&boundaries[i],order:orders[i],scale:scales[i],reverse:reversed[i]}));
-        let result=loft_continuity::match_ends(&field(&v,"surface")?,&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&optional_field::<Vec<curve::Curve>>(&v,"guides")?.unwrap_or_default(),&optional_field::<Vec<f64>>(&v,"guide_parameters")?.unwrap_or_default(),ends,field(&v,"budget")?)?;
-        return Ok(json!({"surface":result.surface,"seams":result.seams,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
-    }
-    if op == "surface_guided_loft" {
-        let start = optional_field::<Vec<[f64; 3]>>(&v, "start_tangents")?;
-        let end = optional_field::<Vec<[f64; 3]>>(&v, "end_tangents")?;
-        let tangents = match (start, end) {
-            (None, None) => None,
-            (Some(a), Some(b)) => Some([a,b]),
-            _ => return Err(input("Guided loft requires both endpoint tangent fields")),
-        };
-        return encode(guided_loft::interpolate(
-            &field::<Vec<curve::Curve>>(&v,"curves")?,
-            &field::<Vec<f64>>(&v,"parameters")?,
-            &field::<Vec<curve::Curve>>(&v,"guides")?,
-            &field::<Vec<f64>>(&v,"guide_parameters")?, tangents,
-        )?);
-    }
-    if op == "surface_control_tangent_loft" {
-        return encode(natural_loft::clamped_control_tangents(
-            &field::<Vec<curve::Curve>>(&v, "curves")?,
-            &field::<Vec<f64>>(&v, "parameters")?,
-            &field::<Vec<[f64; 3]>>(&v, "start_tangents")?,
-            &field::<Vec<[f64; 3]>>(&v, "end_tangents")?,
-        )?);
-    }
-    if op == "surface_clamped_loft" { return encode(natural_loft::clamped(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,field(&v,"start_tangent")?,field(&v,"end_tangent")?)?); }
-    if op == "surface_natural_loft" { return encode(natural_loft::interpolate(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "surface_gordon" { return loft_requests::dispatch(v, op); }
+    if op == "surface_closed_loft" { return loft_requests::dispatch(v, op); }
+    if op == "surface_loft_match_ends" { return loft_requests::dispatch(v, op); }
+    if op == "surface_guided_loft" { return loft_requests::dispatch(v, op); }
+    if op == "surface_control_tangent_loft" { return loft_requests::dispatch(v, op); }
+    if op == "surface_clamped_loft" { return loft_requests::dispatch(v, op); }
+    if op == "surface_natural_loft" { return loft_requests::dispatch(v, op); }
     if op == "surface_grid_spline" { return encode(grid_spline::interpolate(&field::<Vec<Vec<[f64;3]>>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?); }
     if op == "surface_hermite_patch" { return encode(hermite_patch::patch(field(&v,"corners")?,field(&v,"tangent_u")?,field(&v,"tangent_v")?,field(&v,"twist")?)?); }
     if op == "curve_closed_spline" { return encode(closed_spline::interpolate(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
@@ -889,93 +465,18 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
     if op=="surface_bilinear" {return encode(patches::bilinear(field(&v,"corners")?)?)}
     if op=="surface_plane" {return encode(patches::plane(field(&v,"origin")?,field(&v,"axisU")?,field(&v,"axisV")?)?)}
     if op=="curve_bezier" {return encode(paths::bezier(field(&v,"points")?,optional_field(&v,"weights")?)?)}
-    if op=="sweep_repair_circle_sections" {
-        let r=crate::circle_sweep_repair::repair(&field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,field(&v,"quantum")?,
-            field(&v,"tolerance")?,v.get("maxWork").and_then(Value::as_f64))?;
-        return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,"work":r.work,"reason":r.reason}));
-    }
+    if op=="sweep_repair_circle_sections" { return sweep_requests::dispatch(v, op); }
     if op=="curve_repair_circle_section" {
         let r=crate::section_circle_repair::repair(&field::<Vec<curve::Curve>>(&v,"curves")?,field(&v,"quantum")?,field(&v,"tolerance")?,field(&v,"maxWork")?)?;
         return Ok(json!({"curves":r.curves,"displacementUpper":r.displacement_upper,"work":r.work,"reason":r.reason}));
     }
-    if op == "sweep_retained_patch_regularity" {
-        let r=progressive_sweep::inspect_retained_regularity(
-            &field::<Vec<surface::Surface>>(&v,"patches")?,field(&v,"maxCells")?,
-        )?;
-        return encode(json!({"surfaceRegularityCertified":r.spanwise_regular,
-            "cells":r.cells,"unresolvedPatches":r.unresolved_patches,
-            "continuousBound":false,"globalEmbeddingCertified":false,"solidCertified":false,
-            "method":"actual-retained-patch-shared-jacobian-regularity"}));
-    }
-    if op == "sweep_frenet_frame_regularity" {
-        let r=progressive_miter::authored_frame_certificate::certify_frenet_cover(
-            &field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"twist")?,field(&v,"maxCells")?,
-        )?;
-        return encode(json!({"regularityCertified":r.status==progressive_miter::scalar_certificate::Status::Certified,
-            "cells":r.cells,"certifiedIntervals":r.certified_intervals,"reason":r.reason,
-            "continuousBound":false,"surfaceRegularityCertified":false,"globalEmbeddingCertified":false,
-            "method":"original-path-adaptive-frenet-frame-regularity"}));
-    }
-    if op == "sweep_fixed_normal_frame_regularity" {
-        let r=progressive_miter::authored_frame_certificate::certify_fixed_normal_cover(
-            &field::<curve::Curve>(&v,"path")?,field(&v,"normal")?,
-            &field::<curve::Curve>(&v,"twist")?,field(&v,"maxCells")?,
-        )?;
-        return encode(json!({
-            "regularityCertified":r.status==progressive_miter::scalar_certificate::Status::Certified,
-            "cells":r.cells,"certifiedIntervals":r.certified_intervals,"reason":r.reason,
-            "continuousBound":false,"surfaceRegularityCertified":false,"globalEmbeddingCertified":false,
-            "method":"original-path-adaptive-fixed-normal-frame-regularity"
-        }));
-    }
-    if op == "sweep_authored_frame_regularity" {
-        let r = progressive_miter::authored_frame_certificate::certify_regularity(
-            &field::<curve::Curve>(&v, "longitudinal")?,
-            &field::<curve::Curve>(&v, "transverse")?,
-            field(&v, "maxCells")?,
-        )?;
-        return encode(json!({
-            "regularityCertified": r.status == progressive_miter::scalar_certificate::Status::Certified,
-            "cells": r.cells,
-            "certifiedIntervals": r.certified_intervals,
-            "reason": r.reason,
-            "continuousBound": false,
-            "method": "original-law-adaptive-authored-frame-regularity"
-        }));
-    }
-    if op=="sweep_correct_miter_sections" {
-        use crate::miter_section_correction::{self,Budget,CapCorrection};
-        let budget=|b:&Value|->Result<Budget> {Ok(Budget {quantum:field(b,"quantum")?,tolerance:field(b,"tolerance")?,max_work:b.get("maxWork").and_then(Value::as_f64)})};
-        let circle=optional_field::<Value>(&v,"circleCorrection")?.as_ref().map(budget).transpose()?;
-        let cap=optional_field::<Value>(&v,"capCorrection")?.as_ref().map(|b|->Result<_> {Ok(CapCorrection {budget:budget(b)?,authored_frame:optional_field::<bool>(b,"authoredFrame")?.unwrap_or(false)})}).transpose()?;
-        let axis=optional_field::<curve::Curve>(&v,"frameAxis")?;
-        let r=miter_section_correction::correct(&field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"closed")?,circle,cap,axis.as_ref())?;
-        return Ok(r.map_or(Value::Null,|r|json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason})));
-    }
-    if op=="sweep_project_miter_caps" {
-        let axis=optional_field::<curve::Curve>(&v,"frameAxis")?;
-        let r=crate::sweep_section_projection::project_miter_caps(&field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,
-            &field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"closed")?,field(&v,"authoredFrame")?,axis.as_ref(),
-            field(&v,"quantum")?,field(&v,"tolerance")?,v.get("maxWork").and_then(Value::as_f64))?;
-        return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}));
-    }
-    if op=="sweep_project_sections" {
-        use crate::sweep_section_projection::{self,Correction,Target};
-        let sections=field::<Vec<Vec<curve::Curve>>>(&v,"sections")?;
-        let corrections=field::<Vec<Value>>(&v,"corrections")?.iter().map(|c| {
-            let target=if let Some(p)=c.get("plane").filter(|v|!v.is_null()) {
-                Target::Plane {axis:field(p,"axis")?,coefficients:field(p,"coefficients")?,offset:field(p,"offset")?}
-            } else {
-                Target::AuthoredAxis {axis:field(c,"frameAxis")?,traversal:field(c,"traversal")?}
-            };
-            Ok(Correction {section:field(c,"section")?,quantum:field(c,"quantum")?,tolerance:field(c,"tolerance")?,target})
-        }).collect::<Result<Vec<_>>>()?;
-        let r=sweep_section_projection::project(&sections,&corrections,v.get("maxWork").and_then(Value::as_f64))?;
-        return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}));
-    }
+    if op == "sweep_retained_patch_regularity" { return sweep_requests::dispatch(v, op); }
+    if op == "sweep_frenet_frame_regularity" { return sweep_requests::dispatch(v, op); }
+    if op == "sweep_fixed_normal_frame_regularity" { return sweep_requests::dispatch(v, op); }
+    if op == "sweep_authored_frame_regularity" { return sweep_requests::dispatch(v, op); }
+    if op=="sweep_correct_miter_sections" { return sweep_requests::dispatch(v, op); }
+    if op=="sweep_project_miter_caps" { return sweep_requests::dispatch(v, op); }
+    if op=="sweep_project_sections" { return sweep_requests::dispatch(v, op); }
     if op=="curve_project_section_authored_axis" {
         let r=crate::section_projection::project_authored_axis(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<curve::Curve>(&v,"frameAxis")?,field(&v,"traversal")?,field(&v,"quantum")?,field(&v,"tolerance")?,field(&v,"maxWork")?)?;
         return Ok(json!({"curves":r.curves,"displacementUpper":r.displacement_upper,"exactPlanar":r.exact_planar,"work":r.work,"reason":r.reason}));
@@ -984,7 +485,7 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
         let r=crate::section_projection::project(&field::<Vec<curve::Curve>>(&v,"curves")?,field(&v,"axis")?,field(&v,"coefficients")?,field(&v,"offset")?,field(&v,"quantum")?,field(&v,"tolerance")?,field(&v,"maxWork")?)?;
         return Ok(json!({"curves":r.curves,"displacementUpper":r.displacement_upper,"exactPlanar":r.exact_planar,"work":r.work,"reason":r.reason}));
     }
-    if op=="curve_miter_sections" {return encode((if optional_field::<bool>(&v,"closed")?.unwrap_or(false) {paths::closed_miter_sections} else {paths::miter_sections})(&field::<Vec<curve::Curve>>(&v,"profiles")?,&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"normal")?,field(&v,"miter_limit")?)?)}
+    if op=="curve_miter_sections" { return sweep_requests::dispatch(v, op); }
     if op=="curve_transition_polyline" {return encode((if optional_field::<bool>(&v,"closed")?.unwrap_or(false) {paths::closed_transition_polyline} else {paths::transition_polyline})(&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"setback")?)?)}
     if op=="curve_round_polyline" {return encode((if optional_field::<bool>(&v,"closed")?.unwrap_or(false) {paths::closed_round_polyline} else {paths::round_polyline})(&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"radius")?)?)}
     if op=="curve_compose" {return encode(paths::compose(&field::<Vec<curve::Curve>>(&v,"curves")?)?)}
@@ -1087,15 +588,8 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             "regionTopologyCertified":false
         }}));
     }
-    if op == "curve_certify_foundation" {
-        return foundation::certify_curve(&field(&v, "curve")?, optional_field(&v, "tolerance")?);
-    }
-    if op == "surface_certify_foundation" {
-        return foundation::certify_surface(
-            &field(&v, "surface")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
+    if op == "curve_certify_foundation" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_certify_foundation" { return certificate_requests::dispatch(v, op); }
     if op == "surface_offset_evaluate" {
         let e = surface_offset::evaluate(
             &field(&v, "surface")?,
@@ -1291,32 +785,10 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             field(&v, "maxDistance")?,
         );
     }
-    if op == "curve_project_certified" {
-        return foundation::project_curve(
-            &field(&v, "curve")?,
-            &field::<Vec<f64>>(&v, "point")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_project_certified" {
-        return foundation::project_surface(
-            &field(&v, "surface")?,
-            field(&v, "point")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_interpolate_certified" {
-        return foundation::interpolate_polyline(
-            field(&v, "points")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_approximate_certified" {
-        return foundation::approximate_curve(
-            &field(&v, "curve")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
+    if op == "curve_project_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_project_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_interpolate_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_approximate_certified" { return certificate_requests::dispatch(v, op); }
     if op == "curve_reparameterize_exact" {
         return foundation::reparameterize_curve(
             &field(&v, "curve")?,
@@ -1324,110 +796,17 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
-    if op == "curve_insert_certified" {
-        return foundation::certify_exact_edit(
-            &field(&v, "curve")?,
-            "insert",
-            field(&v, "u")?,
-            field(&v, "count")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_elevate_certified" {
-        return foundation::certify_exact_edit(
-            &field(&v, "curve")?,
-            "elevate",
-            0.,
-            field(&v, "degree")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_remove_certified" {
-        return foundation::remove_curve_knot(
-            &field(&v, "curve")?,
-            field(&v, "u")?,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_rebuild_certified" {
-        return foundation::rebuild_curve(
-            &field(&v, "curve")?,
-            field(&v, "degree")?,
-            field(&v, "controlCount")?,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_reduce_certified" {
-        return foundation::reduce_curve_degree(
-            &field(&v, "curve")?,
-            field(&v, "degree")?,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_rebuild_certified" {
-        return foundation::rebuild_surface(
-            &field(&v, "surface")?,
-            field(&v, "axis")?,
-            field(&v, "degree")?,
-            field(&v, "controlCount")?,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_remove_certified" || op == "surface_reduce_certified" {
-        return foundation::reduce_surface_axis(
-            &field(&v, "surface")?,
-            field(&v, "axis")?,
-            if op == "surface_remove_certified" {
-                "remove"
-            } else {
-                "reduce"
-            },
-            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
-            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_periodic_edit_certified" {
-        let operation: String = field(&v, "operation")?;
-        return foundation::edit_periodic_curve(
-            &field(&v, "curve")?,
-            &operation,
-            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
-            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_periodic_split_certified" {
-        return foundation::split_periodic_curve(
-            &field(&v, "curve")?,
-            field(&v, "u")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_periodic_edit_certified" {
-        let operation: String = field(&v, "operation")?;
-        return foundation::edit_periodic_surface(
-            &field(&v, "surface")?,
-            field(&v, "axis")?,
-            &operation,
-            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
-            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
-            field(&v, "maxError")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_reparameterization_certify" {
-        return foundation::certify_reparameterization(
-            &v["mapping"],
-            optional_field(&v, "tolerance")?,
-        );
-    }
+    if op == "curve_insert_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_elevate_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_remove_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_rebuild_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_reduce_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_rebuild_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_remove_certified" || op == "surface_reduce_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_periodic_edit_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_periodic_split_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_periodic_edit_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_reparameterization_certify" { return certificate_requests::dispatch(v, op); }
     if op == "curve_reparameterized_evaluate" {
         return foundation::evaluate_reparameterized_curve(
             &field(&v, "curve")?,
@@ -1436,20 +815,8 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
-    if op == "curve_fit_certified" {
-        return foundation::fit_curve_points(
-            field(&v, "points")?,
-            field(&v, "controlCount")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_interpolate_certified" || op == "surface_fit_certified" {
-        return foundation::interpolate_surface_grid(
-            field(&v, "points")?,
-            op == "surface_fit_certified",
-            optional_field(&v, "tolerance")?,
-        );
-    }
+    if op == "curve_fit_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_interpolate_certified" || op == "surface_fit_certified" { return certificate_requests::dispatch(v, op); }
     if op == "curve_materialize_reparameterization_bounded" {
         return foundation::materialize_reparameterized_curve_bounded(
             &field(&v, "curve")?, &v["mapping"], field(&v, "errorBudget")?,
@@ -1463,42 +830,11 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
-    if op == "curve_fit_cloud_certified" {
-        return foundation::fit_curve_cloud_certified(
-            field(&v, "points")?,
-            field(&v, "controlCount")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_fit_cloud_certified" {
-        return foundation::fit_surface_cloud_certified(
-            field(&v, "points")?,
-            field(&v, "controlsU")?,
-            field(&v, "controlsV")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_curve_intersect_certified" {
-        return intersection::intersect_curve_curve(
-            &field(&v, "first")?,
-            &field(&v, "second")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "curve_surface_intersect_certified" {
-        return intersection::intersect_curve_surface(
-            &field(&v, "curve")?,
-            &field(&v, "surface")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
-    if op == "surface_surface_intersect_certified" {
-        return ss_intersection::intersect_surface_surface(
-            &field(&v, "first")?,
-            &field(&v, "second")?,
-            optional_field(&v, "tolerance")?,
-        );
-    }
+    if op == "curve_fit_cloud_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_fit_cloud_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_curve_intersect_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "curve_surface_intersect_certified" { return certificate_requests::dispatch(v, op); }
+    if op == "surface_surface_intersect_certified" { return certificate_requests::dispatch(v, op); }
     if op == "surface_surface_verify_coverage" {
         return ss_intersection::verify_ss_coverage(&v["report"]);
     }
@@ -1601,32 +937,12 @@ fn dispatch_other(v:Value,op:String)->Result<Value> {
             optional_field::<f64>(&v, "maxError")?.unwrap_or(1e-6),
         );
     }
-    if op == "surface_scaled_sweep" {
-        return encode(sweeps::scaled_sweep(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "origin")?)?);
-    }
-    if op == "surface_profile_sweep" {
-        return sweeps::checked_profile_sweep_with_cells(&field(&v, "profile")?, &field(&v, "path")?, &field(&v, "scale")?, field(&v, "normal")?, field(&v, "sections")?, match optional_field::<f64>(&v, "maxDeviation")? {Some(x)=>x,None=>field(&v,"max_deviation")?},optional_field::<usize>(&v,"maxCells")?.unwrap_or(16384));
-    }
-    if op == "surface_framed_sweep" {
-        return encode(framed_sweep::checked_sweep(
-            &field(&v, "profile")?,
-            &field(&v, "path")?,
-            field(&v, "normal")?,
-            field(&v, "sections")?,
-            field(&v, "maxDeviation")?,
-        )?);
-    }
-    if op == "surface_sweep" {
-        return encode(surface::sweep(&field(&v, "profile")?, &field(&v, "path")?)?);
-    }
-    if op == "loft_aligned" {
-        return encode(surface::loft_aligned(&field::<Vec<curve::Curve>>(
-            &v, "curves",
-        )?)?);
-    }
-    if op == "loft" {
-        return encode(surface::loft(&field::<Vec<curve::Curve>>(&v, "curves")?)?);
-    }
+    if op == "surface_scaled_sweep" { return sweep_requests::dispatch(v, op); }
+    if op == "surface_profile_sweep" { return sweep_requests::dispatch(v, op); }
+    if op == "surface_framed_sweep" { return sweep_requests::dispatch(v, op); }
+    if op == "surface_sweep" { return sweep_requests::dispatch(v, op); }
+    if op == "loft_aligned" { return loft_requests::dispatch(v, op); }
+    if op == "loft" { return loft_requests::dispatch(v, op); }
     if op.starts_with("curve_") || op == "extrude" || op == "revolve" {
         let c: curve::Curve = field(&v, "curve")?;
         return match op.as_str() {

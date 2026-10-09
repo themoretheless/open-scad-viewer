@@ -2,14 +2,14 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {FROZEN_ARCHIVES, REFRESH_OUTPUTS} from './refresh-qualification-fingerprints.mjs'
+import {FROZEN_ARCHIVES, REFRESH_OUTPUTS, OWN_RUST_EVIDENCE} from './refresh-qualification-fingerprints.mjs'
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
 
 /** Read-only diagnostics: never refresh bindings or create qualification evidence. */
 export function auditQualificationDrift(root, {
   fingerprintPath = REFRESH_OUTPUTS.fingerprint,
-  evidencePath = 'docs/qualification/own-rust-cad-v37.json',
+  evidencePath = OWN_RUST_EVIDENCE,
   archives = FROZEN_ARCHIVES,
 } = {}) {
   const read = path => {

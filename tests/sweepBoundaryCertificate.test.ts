@@ -97,7 +97,7 @@ it('carries the nonparallel cap budget and explicit chart work through Rush and 
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,payload.geometry)?.solidGeometryCertified).toBe(true)
  const broken=structuredClone(payload.geometry)
  broken.faces[0].surface.controlPoints[1][1][2]+=1e-12
- expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,broken)).toThrow(/exact boundary agreement/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,broken)).toThrow(/snapshot binding/)
  expect(payload.sweepEvidence.volume.solidGeometryCertified).toBe(true) // A stale positive flag cannot admit changed geometry.
  const tight=compileRushFrontend(source.replace('max_deviation: 0.6mm','max_deviation: 0.45mm')).document
  expect(()=>buildOwnNurbs(tight,{action:'build'})).toThrow(/complete boundary error/)

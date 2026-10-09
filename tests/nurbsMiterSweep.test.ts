@@ -46,7 +46,7 @@ it('lowers miter limits and spatial sites through Rush, parser and Solid',async(
   const {parseOpenSCAD}=await import('../src/services/openscadParser')
   const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
   const scene=await parseOpenSCAD(source)
-  expect(()=>sceneMeshesToSolidDocument(scene.meshes)).toThrow(/Miter sweep Solid geometry could not be proved: boundary embedding/)
+  expect(()=>sceneMeshesToSolidDocument(scene.meshes)).toThrow(/Sweep Solid geometry could not be proved: exact boundary agreement/)
 })
 
 it('retains cyclic miter extrusion correspondence and shared rational seam controls',()=>{

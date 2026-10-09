@@ -66,7 +66,7 @@ it('builds retained hollow body through Rush and the real editor entrypoint',asy
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
  expect(node).toMatchObject({loops:expect.any(Array),inputs:expect.any(Array)})
  const built=buildOwnNurbs(graph.document,{action:'build'})
- expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:false,globalEmbeddingCertified:false})
+ expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:true,globalEmbeddingCertified:false})
  const scene=await parseOpenSCAD(source)
  expect(scene.meshes[0]!.indices.length).toBeGreaterThan(0)
  expect(scene.meshes[0]!.faceIdsAuthoritative).toBe(true)
@@ -147,7 +147,7 @@ it('retains authored-frame hollow body caps, rational walls and STEP topology',(
   orientation:'authored',frameAxis:vector([[0,0,1],[0,1,1]]),frameNormal:vector([[1,0,0],[1,0,0]]),
   normal:[1,0,0],initialSections:3,maxSections:129,maxDeviation:.005,
  })
- expect(result.approximation.report).toMatchObject({accepted:true,continuousBound:false})
+ expect(result.approximation.report).toMatchObject({accepted:true,continuousBound:true})
  expect(inspectNurbsBrep(result.model)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
  expect(result.model.faces.filter(f=>f.holes.length===1)).toHaveLength(2)
  const mesh=tessellateNurbsBrep(result.model,4)

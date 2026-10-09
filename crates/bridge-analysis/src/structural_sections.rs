@@ -463,7 +463,7 @@ mod tests {
                 {"a":[50,50],"b":[0,50],"thicknessMm":5},
                 {"a":[0,50],"b":[0,-50],"thicknessMm":5},
                 {"a":[0,-50],"b":[50,-50],"thicknessMm":5}]});
-        let r = crate::dispatch(v.clone()).unwrap();
+        let r = crate::handle(v.clone()).unwrap();
         let close = |a: f64, b: f64| assert!((a - b).abs() <= 1e-9 * b.abs().max(1.), "{a} != {b}");
         close(r["areaMm2"].as_f64().unwrap(), 1000.);
         close(r["shearCenterMm"][0].as_f64().unwrap(), -18.75);
@@ -481,13 +481,13 @@ mod tests {
             {"a":[100,100],"b":[0,100],"thicknessMm":5},
             {"a":[0,100],"b":[0,0],"thicknessMm":5}]);
         assert_eq!(
-            crate::dispatch(bad).unwrap_err().code,
+            crate::handle(bad).unwrap_err().code,
             "SECTION_INVALID_INPUT"
         );
         let mut bad = v;
         bad["warping"] = json!(true);
         assert_eq!(
-            crate::dispatch(bad).unwrap_err().code,
+            crate::handle(bad).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
     }

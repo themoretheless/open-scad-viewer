@@ -245,11 +245,16 @@ pub fn field(handle: usize, slot: u32) -> usize {
         };
         match result {
             AnalysisBuffers::Transparency(t) => match slot {
-                0 => t.planes.as_ptr() as usize, 1 => t.planes.len(),
-                2 => t.links.as_ptr() as usize, 3 => t.links.len(),
-                4 => t.owners.as_ptr() as usize, 5 => t.owners.len(),
-                6 => t.vertices.as_ptr() as usize, 7 => t.vertices.len(),
-                8..=11 => t.summary[(slot-8) as usize], _ => 0,
+                0 => t.planes.as_ptr() as usize,
+                1 => t.planes.len(),
+                2 => t.links.as_ptr() as usize,
+                3 => t.links.len(),
+                4 => t.owners.as_ptr() as usize,
+                5 => t.owners.len(),
+                6 => t.vertices.as_ptr() as usize,
+                7 => t.vertices.len(),
+                8..=11 => t.summary[(slot - 8) as usize],
+                _ => 0,
             },
             AnalysisBuffers::SurfaceGroups { ids } => match slot {
                 0 => ids.as_ptr() as usize,

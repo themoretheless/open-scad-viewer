@@ -70,7 +70,7 @@
     {
       "id": "crates-workspace-manifest",
       "path": "crates/Cargo.toml",
-      "sha256": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
+      "sha256": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
       "byteLength": 2433
     },
     {
@@ -400,25 +400,25 @@
     {
       "id": "own-rust-cad-v17-evidence",
       "path": "docs/qualification/own-rust-cad-v17.json",
-      "sha256": "76ed9a91c3a699852cd143867b5191e7afabfaed4c4a6f8bc6a45b30efc40b3f",
+      "sha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
       "byteLength": 3465
     },
     {
       "id": "own-rust-cad-v18-evidence",
       "path": "docs/qualification/own-rust-cad-v18.json",
-      "sha256": "330d1204cac180d545849ab4a56fa96c6f89d63fa9bfb2f7295472cccd3421a9",
+      "sha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
       "byteLength": 3457
     },
     {
       "id": "own-rust-cad-v19-evidence",
       "path": "docs/qualification/own-rust-cad-v19.json",
-      "sha256": "b417b8633ab5aed4a072a4a6230e0b0c7236abeeefef572838c30bb3e816f178",
+      "sha256": "fef877d39c4f1a4047662073e1ff5297c32c560777a9ef2bc09f4d89875c0283",
       "byteLength": 3503
     },
     {
       "id": "own-rust-cad-v20-evidence",
       "path": "docs/qualification/own-rust-cad-v20.json",
-      "sha256": "081050d844a1d164f5439a490fd36fcce0ea3d292d4c0755067a46e40f359c06",
+      "sha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
       "byteLength": 3179
     }
   ],
@@ -444,5 +444,5 @@
       "note": "Current bytes are newly bound in v28; v27 remains archived. Re-freeze after the Manifold-isolation test list in tests/manifoldPlanBackend.test.ts gained the ModelingFloorGrid and SketchDimensionPanel components added on main; own-Rust kernel, source bundle, notices and lockfiles byte-identical to evidence v19, oracle v3 unchanged, G1 contract unchanged, reset clean-run work."
     }
   ],
-  "previousFingerprintSha256": "e28310b34229cfd7975b5f2d17050e1a26690cc477313dbd75d4eb03ccc71aef"
+  "previousFingerprintSha256": "8a7f733ee3f3bfaa53b960829fcb5edb3c6513cd5aad7ea50e2e924e23842d0b"
 }

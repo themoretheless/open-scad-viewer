@@ -13,6 +13,11 @@ export function projectNurbsSection(curves:NurbsCurve[],plane:{axis:0|1|2;coeffi
  return callNurbsRust('curve_project_section',{curves,...plane,...options})
 }
 
+/** Project against an authored axis using the native bounded correction. */
+export function projectAuthoredNurbsSection(curves:NurbsCurve[],frameAxis:NurbsCurve,traversal:number,options:{quantum:number;tolerance:number;maxWork:number}):NurbsSectionProjection {
+ return callNurbsRust('curve_project_section_authored_axis',{curves,frameAxis,traversal,...options})
+}
+
 export interface SweepSectionCorrection {
  sections:NurbsCurve[][]|null
  wallDisplacementUpper:number|null

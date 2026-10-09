@@ -1,4 +1,3 @@
-import {readFileSync} from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { buildExactSolidsInWorker, type ExactSolidWorkerPort } from '../src/services/solid/exactSolidClient'
@@ -142,7 +141,7 @@ it('retains a Rush authored nonplanar loft in the exact Solid worker without mes
  expect(bodies[0]!.brep!.bodies).toHaveLength(1)
  expect(bodies[0]!.brep!.faces[4]!.surface.degreeU).toBe(2)
  const refused=await runExactSolidRequest({kind:'exact-solid',version:1,source:readFileSync('examples/rush/cartesian-mapped-loft.r','utf8')})
- expect(refused).toMatchObject({ok:false,error:{message:expect.stringContaining('authored NURBS solid')}})
+ expect(refused).toMatchObject({ok:false,error:{message:expect.stringContaining('native B-rep bodies')}})
  const exhausted=await runExactSolidRequest({kind:'exact-solid',version:1,source:source.replace('loft_embedding_limits()','loft_embedding_limits(facePairs: 1)')})
  expect(exhausted.ok).toBe(false)
 },60000)

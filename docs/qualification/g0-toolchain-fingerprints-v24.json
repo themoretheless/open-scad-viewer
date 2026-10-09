@@ -416,5 +416,5 @@
       "note": "Current bytes are newly bound in v24; v23 remains archived. Re-freeze after the committed raster-core shadow-map/matcap/env material arc (d0f08040); own-Rust geometry kernel, notices and lockfiles byte-identical to evidence v15, G1 contract unchanged, reset clean-run work."
     }
   ],
-  "previousFingerprintSha256": "51ddf8ff6dcddf3fea40c895985a74543a38637ffd83709c16447ec72331ba53"
+  "previousFingerprintSha256": "1880dcbbeef6397950a0785390a4f4cc6b3953a31c0a0e3b8c7818bb6204f5e4"
 }

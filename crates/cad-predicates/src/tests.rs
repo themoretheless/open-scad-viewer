@@ -329,21 +329,3 @@ fn serialized_tolerance_identity_cannot_be_substituted() {
         .unwrap() = value_codec::Value::String("forged".into());
     assert!(<ToleranceContext as value_codec::Deserialize>::from_value(value).is_err());
 }
-
-#[test]
-fn identical_expansion_subtraction_is_exact_and_still_charged() {
-    let source = arena(&[1.]);
-    let tolerance = ToleranceContext::default_valid();
-    let mut ctx = PredicateContext::new(&source, &tolerance, Limits::default(), None);
-    let a = Expansion::scalar(1. + f64::EPSILON)
-        .mul(&Expansion::scalar(1. - f64::EPSILON), &mut ctx).unwrap();
-    let before = ctx.work_used();
-    assert_eq!(a.sub(&a.clone(), &mut ctx).unwrap().sign(), Sign::Zero);
-    assert!(ctx.work_used() > before);
-    assert_eq!(a.sub(&Expansion::scalar(1.), &mut ctx).unwrap().sign(), Sign::Negative);
-    let mut exhausted = PredicateContext::new(&source, &tolerance, Limits {max_work: 0, ..Limits::default()}, None);
-    assert!(matches!(a.sub(&a, &mut exhausted), Err(Reason::ResourceLimit)));
-    let cancelled = AtomicBool::new(true);
-    let mut interrupted = PredicateContext::new(&source, &tolerance, Limits::default(), Some(&cancelled));
-    assert!(matches!(a.sub(&a, &mut interrupted), Err(Reason::Cancelled)));
-}

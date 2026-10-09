@@ -18,7 +18,9 @@ pub(super) fn profile_request(v: &Value, profiles: &Value) -> Result<Value> {
         ("errorMaxCells", "error_max_cells"),
         ("errorMaxProducts", "error_max_products"),
     ] {
-        if let Some(value) = o.get(source) { req[target] = value.clone(); }
+        if let Some(value) = o.get(source) {
+            req[target] = value.clone();
+        }
     }
     if let Some(correction) = o.get("capCorrection") {
         for (source, target) in [
@@ -26,7 +28,9 @@ pub(super) fn profile_request(v: &Value, profiles: &Value) -> Result<Value> {
             ("quantum", "cap_correction_quantum"),
             ("maxWork", "cap_correction_max_work"),
         ] {
-            if let Some(value) = correction.get(source) { req[target] = value.clone(); }
+            if let Some(value) = correction.get(source) {
+                req[target] = value.clone();
+            }
         }
     }
     if !o["orientationGuide"].is_null() {
@@ -101,15 +105,24 @@ pub(super) fn bounded_request(v: &Value, miter: bool) -> Result<(Value, Vec<usiz
 pub fn profile_body(v: Value) -> Result<Value> {
     profile_body_from(v, None, None)
 }
-pub(super) fn profile_body_from(v: Value, accepted: Option<Value>, prepared: Option<Value>) -> Result<Value> {
+pub(super) fn profile_body_from(
+    v: Value,
+    accepted: Option<Value>,
+    prepared: Option<Value>,
+) -> Result<Value> {
     let (mut request, _) = if let Some(request) = prepared {
         (request, ())
     } else {
         let (request, _, _) = bounded_request(&v, false)?;
         (request, ())
     };
-    if accepted.as_ref().is_some_and(|level| !yes(&level["report"], "accepted")) {
-        return Err(input("Progressive body sampled refinement exceeds budget"));
+    if accepted
+        .as_ref()
+        .is_some_and(|level| !yes(&level["report"], "accepted"))
+    {
+        return Err(input(
+            "Progressive body continuous retained-patch error or refinement exceeds budget",
+        ));
     }
     request["loops"] = v["loops"].clone();
     // Rebuild from the native constructor-owned retained sections. Re-lofting
@@ -118,11 +131,14 @@ pub(super) fn profile_body_from(v: Value, accepted: Option<Value>, prepared: Opt
     let model = body["model"].clone();
     let closed = yes(&body["approximation"]["report"], "closedPath");
     let caps = cap_faces(&model, closed)?;
-    let volume = call("brep_sweep_volume_audit",
-        merge(json!({"model":model,"capFaces":caps}), &volume_budgets()))?;
+    let volume = call(
+        "brep_sweep_volume_audit",
+        merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
+    )?;
     body["volume"] = volume.clone();
     body["approximation"]["report"]["volume"] = volume.clone();
-    body["approximation"]["report"]["wallRegularityCertified"] = volume["allFacesInjective"].clone();
+    body["approximation"]["report"]["wallRegularityCertified"] =
+        volume["allFacesInjective"].clone();
     body["approximation"]["report"]["seamContinuity"] = json!("C0");
     Ok(body)
 }
@@ -235,8 +251,11 @@ pub fn stream_next(v: Value) -> Result<Value> {
         } else {
             "surface_progressive_sweep_level"
         },
-        req,
+        req.clone(),
     )?;
+    if !state.miter && state.raw {
+        preview = evidence::profile(preview, &req, &state.request["options"])?;
+    }
     state.finish = yes(&preview["report"], "accepted") || state.count >= state.maximum;
     if !state.finish {
         state.count = if state.miter {
@@ -298,9 +317,11 @@ pub(super) fn miter_wall_preview(preview: Value) -> Result<Value> {
 pub fn constructor(v: Value) -> Result<Value> {
     let operation = field::<String>(&v, "operation")?;
     if ["surface_scaled_sweep", "surface_profile_sweep"].contains(&operation.as_str()) {
-        let mut request=json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]});
-        if let Some(cells)=v.get("maxCells") {request["maxCells"]=cells.clone();}
-        return nurbs(&operation,request);
+        let mut request = json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]});
+        if let Some(cells) = v.get("maxCells") {
+            request["maxCells"] = cells.clone();
+        }
+        return nurbs(&operation, request);
     }
     let miter = operation.starts_with("curve_progressive_miter");
     if ![
@@ -350,7 +371,12 @@ pub fn constructor(v: Value) -> Result<Value> {
             request[key] = value.clone();
         }
     }
-    nurbs(&operation, request)
+    let result = nurbs(&operation, request.clone())?;
+    if miter {
+        Ok(result)
+    } else {
+        evidence::profile(result, &request, &v["options"])
+    }
 }
 
 /// Compatibility payload projections still perform every law conversion natively.
@@ -358,6 +384,33 @@ pub fn law_payload(v: Value) -> Result<Value> {
     let options = &v["options"];
     let kind = field::<String>(&v, "kind")?;
     match kind.as_str() {
+        "source" => {
+            let mut request = profile_request(&v, &Value::Null)?;
+            let object = request.as_object_mut().unwrap();
+            for key in [
+                "profiles",
+                "rmf_transport_steps",
+                "error_max_cells",
+                "error_max_products",
+                "cap_correction_tolerance",
+                "cap_correction_quantum",
+                "cap_correction_max_work",
+            ] {
+                object.remove(key);
+            }
+            if options["orientation"] != json!("authored") {
+                object.remove("frame_axis");
+                object.remove("frame_normal");
+            } else if options["frameAxis"].is_null() || options["frameNormal"].is_null() {
+                return Err(input("Authored sweep requires frameAxis and frameNormal"));
+            }
+            for key in ["axis_scale", "center_law"] {
+                if !object.contains_key(key) {
+                    object.insert(key.into(), Value::Null);
+                }
+            }
+            Ok(request)
+        }
         "guide" => {
             let mut result = json!({});
             if let Some(guide) = options.get("orientationGuide") {

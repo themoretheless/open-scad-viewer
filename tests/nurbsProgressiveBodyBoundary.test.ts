@@ -96,11 +96,11 @@ it.each(['arc-length-curved-nonaxial-planar-rmf-body-boundary.r','arc-length-cur
   expect(inspectProgressiveSweepSolidAdmission(forged,retained)).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true})
   const corrupted=structuredClone(retained)
   corrupted.faces[0].surface.controlPoints[0][0][0]+=.01
-  expect(()=>inspectProgressiveSweepSolidAdmission(forged,corrupted)).toThrow(/pcurve\/surface and 3D edge disagree|boundary embedding/)
+  expect(()=>inspectProgressiveSweepSolidAdmission(forged,corrupted)).toThrow(/snapshot binding/)
   const wrongCaps={...built.nativeGeometry,geometryJson:JSON.stringify({geometry:retained,
    sweepBodyBoundaryEvidence:{closedPath:false,globalEmbeddingCertified:true,solidGeometryCertified:true}})}
   expect(inspectProgressiveSweepSolidAdmission(wrongCaps,retained)).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true})
-  expect(()=>inspectProgressiveSweepSolidAdmission(wrongCaps,corrupted)).toThrow(/pcurve\/surface and 3D edge disagree|boundary embedding/)
+  expect(()=>inspectProgressiveSweepSolidAdmission(wrongCaps,corrupted)).toThrow(/snapshot binding/)
  } else {
   expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry,retained))
    .toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true})

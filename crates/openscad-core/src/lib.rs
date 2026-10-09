@@ -243,6 +243,7 @@ pub fn assign_operation_ids(nodes: &mut [Statement], parent: &[String]) {
 }
 
 #[cfg(test)]
+#[path = "tests/eval.rs"]
 mod eval_tests;
 #[cfg(test)]
 mod tests;

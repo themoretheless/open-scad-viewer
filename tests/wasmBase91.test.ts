@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {encodeBase91,encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,alphabet,alphabet92,decodeBase91 as decodeBuildBase91} from '../scripts/wasm-base91.mjs'
+import {encodeBase91,encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118,alphabet,alphabet92,decodeBase91 as decodeBuildBase91} from '../scripts/wasm-base91.mjs'
 import {decodeBase91} from '../src/services/wasmBase91'
-it.each([encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108])('variable pairs preserve all word values, alignments, zeros and quoted literals (%#)',encode=>{
+it.each([encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118])('variable pairs preserve all word values, alignments, zeros and quoted literals (%#)',encode=>{
  const corpus=Uint8Array.from({length:65536*2},(_,i)=>i%2?Math.floor(i/2)>>8:Math.floor(i/2)&255)
  for(const bytes of [corpus,...Array.from({length:258},(_,n)=>new Uint8Array(n)),...Array.from({length:258},(_,n)=>Uint8Array.from({length:n},(_,i)=>(i*137+(i>>3))&255))]){
   const packed=encode(bytes)
@@ -77,6 +77,17 @@ it('refuses base108 control aliases, overflow, truncation and nonzero padding',(
  const packed=encodeVariableBase108(Uint8Array.of(7)),word=263
  const padding=packed.slice(0,12)+digits[word%108]+digits[Math.floor(word/108)]
  for(const bad of ['bAx:ffffffff','bAx:00000001\n!','bAx:00000001\x07!',packed.slice(0,-2),packed+'!!',padding]){
+  expect(()=>decodeBase91(bad)).toThrow()
+  expect(()=>decodeBuildBase91(bad)).toThrow()
+ }
+})
+
+
+it('refuses dense control aliases, nonzero padding and overlong data',()=>{
+ const digits=String.fromCharCode(22,23,24,25,26,28,29,30,31,127)+String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92
+ const packed=encodeVariableBase118(Uint8Array.of(7)),word=263
+ const padding=packed.slice(0,12)+digits[word%120]+digits[Math.floor(word/120)]
+ for(const bad of ['bBx:ffffffff','bBx:00000001\n!','bBx:00000001\x00!',packed.slice(0,-2),packed+'!!',padding]){
   expect(()=>decodeBase91(bad)).toThrow()
   expect(()=>decodeBuildBase91(bad)).toThrow()
  }

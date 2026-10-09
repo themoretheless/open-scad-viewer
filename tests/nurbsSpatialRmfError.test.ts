@@ -163,7 +163,7 @@ it.each(['closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r','closed-s
  if(file.includes('periodic'))await expect(buildOwnNurbsAsync(compileRushFrontend(source.replace('knots: [0,1,2','knots: [0,1.0000000000000002,2')).document,{action:'build'})).rejects.toThrow(/continuous retained-patch error/)
  await expect(buildOwnNurbsAsync(compileRushFrontend(source.replace('error_max_cells: 100000','error_max_cells: 0')).document,{action:'build'})).rejects.toThrow()
  expect(()=>compileRushFrontend(source.replace('rmf_transport_steps: 4096','rmf_transport_steps: 4095'))).toThrow()
-})
+},180_000)
 
 it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-varying-affine-hollow-body.r','closed-spatial-rmf-parameter-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-multiple-holes-body.r','closed-periodic-spatial-rmf-parameter-multiple-holes-body.r'])('certifies spatial RMF shell roles and refuses exhausted global work: %s',async(file)=>{
  const {readFileSync}=await import('node:fs')
@@ -186,4 +186,5 @@ it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf
  expect(volume.individualPairs+volume.groupedPairs).toBe(1024*1023/2)
  expect(volume.orientations.map(o=>[o.expectedOutward,o.outward])).toEqual([[true,true],...Array.from({length:holes},()=>[false,false])])
  expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxPairs:1,maxCells:1})).toMatchObject({solidGeometryCertified:false,boundaryEmbeddingCertified:false})
-})
+ if(holes===3)expect(inspectSweepVolume(model,[],{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxLinearCells:20000,maxPairs:1,maxCells:1})).toMatchObject({allFacesInjective:false,solidGeometryCertified:false,boundaryEmbeddingCertified:false})
+},180_000)

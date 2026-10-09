@@ -44,7 +44,7 @@ it('covers a genuine path knot transition with original value bounds instead of 
   expect(Math.hypot(...got.map((v,k)=>v-ideal[k]!))).toBeLessThanOrEqual(level.report.continuousErrorUpper!)
  }
 })
-it('retains partial profile error for refusal without certifying the unresolved union',()=>{
+it('retains the complete profile error while refusing an insufficient tolerance',()=>{
  const fixed:AuthoredProgressiveSweepOptions={...options,maxDeviation:1e-30,
   frameNormal:{...options.frameNormal,values:[[1,0,0],[1,0,0]]},
   axisScale:undefined,centerLaw:undefined}
@@ -53,7 +53,8 @@ it('retains partial profile error for refusal without certifying the unresolved 
  const simple={...profile,weights:[1,1]}
  const level=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,constant,zero,fixed,9)
  expect(level.report).toMatchObject({accepted:false,sampledControlDeviation:0,
-  continuousBound:false,roundingCertified:false,continuousErrorUpper:null})
+  continuousBound:true,roundingCertified:true})
+ expect(level.report.continuousErrorUpper!).toBeGreaterThanOrEqual(level.report.knownProfileErrorUpper!)
  expect(level.report.knownProfileErrorUpper!).toBeGreaterThan(fixed.maxDeviation)
  expect(level.report.errorCertificateCells).toBeLessThanOrEqual(10000)
 })

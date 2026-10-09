@@ -121,7 +121,7 @@ impl Cover {
     /// Caller charges one shared cell for this attempted group certificate.
     pub fn certify(&self, face: usize, node: usize) -> Option<Certificate> {
         let node = &self.nodes[node];
-        if node.range[0] <= face || node.range[1] - node.range[0] < 2 {
+        if node.range[0] <= face || node.range[1] <= node.range[0] {
             return None;
         }
         let a = self.faces[face]?;
@@ -175,6 +175,10 @@ mod tests {
         assert_eq!(certificate.axis, 0);
         assert_eq!(certificate.range, [3, 6]);
         assert!(certificate.first_before_range);
+        // A singleton range carries the same strict original-hull proof;
+        // it need not consume the separate expensive pair-search quota.
+        let leaf = cover.nodes.iter().position(|n| n.range == [3, 4]).unwrap();
+        assert_eq!(cover.certify(0, leaf).unwrap().range, [3, 4]);
         assert_eq!(format!("{model:?}"), before);
         let mut outside = model.clone();
         let wire = outside.faces[3].outer;

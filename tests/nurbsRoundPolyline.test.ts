@@ -66,6 +66,8 @@ it.each([['round',roundPolylineNurbsCurve],['transition',transitionPolylineNurbs
   expect(()=>constructor([[0,0,0],[10,0,0],[10,10,0],[0,10,0]],5,true)).toThrow(/overlap/)
   let source=readFileSync('examples/rush/closed-corner-progressive-hollow-body.r','utf8')
   if(name==='transition')source=source.replace('round_polyline_curve','transition_polyline_curve').replace('radius: 2mm','setback: 2mm')
+  expect(()=>buildOwnNurbs(compileRushFrontend(source).document,{action:'build'})).toThrow(/refinement.*budget/)
+  source=source.replace('max_deviation: 0.02mm','max_deviation: 1mm')
   const compiled=compileRushFrontend(source)
   const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
   const built=buildOwnNurbs(compiled.document,{action:'build'})

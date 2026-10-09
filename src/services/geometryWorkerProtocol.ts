@@ -1,3 +1,4 @@
+import {isWellFormedUnicode,isNonNegativeSafeInteger,isNonNegativeFiniteNumber} from './workerPayloadPrimitives'
 import {isNativeGeometryArtifact,MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import type { GeometryEvaluationResult, GeometryPhaseTimings, GeometryQuality } from '../core/build'
 import {
@@ -198,17 +199,6 @@ function isDenseExactArray(value: unknown, maximumLength = Number.MAX_SAFE_INTEG
   return true
 }
 
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
-}
-
 function hasExactKeys(
   value: Record<string, unknown>,
   required: readonly string[],
@@ -258,14 +248,6 @@ function optionalKey(
   predicate: (candidate: unknown) => boolean,
 ): boolean {
   return !Object.hasOwn(value, key) || predicate(value[key])
-}
-
-function isNonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0
-}
-
-function isNonNegativeFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
 function isPhaseTimings(value: unknown): value is GeometryPhaseTimings {

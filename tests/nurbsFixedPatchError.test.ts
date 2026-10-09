@@ -24,13 +24,15 @@ it.each(['oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progres
 })
 
 
-it.each(['fixed','fixed_normal','frenet'] as const)('keeps original %s arc-length correspondence explicitly unproved',orientation=>{
+it.each(['fixed','fixed_normal','frenet'] as const)('certifies original %s arc-length bounds independently of tolerance admission',orientation=>{
  const profile=bezierNurbsCurve([[1,0,0],[2,0,0]])
  const path=orientation==='frenet'?bezierNurbsCurve([[0,0,0],[0.5,0,0],[1,1,0]]):bezierNurbsCurve([[0,0,0],[0,0,10]])
  const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}
  const level=previewProgressiveNurbsProfiles([profile],path,law,{...law,values:[0,0]},
   {normal:[1,0,0],orientation,spacing:'arc_length',initialSections:3,maxSections:3,maxDeviation:1},3)
- expect(level.report).toMatchObject({continuousBound:false,roundingCertified:false,continuousErrorUpper:null,errorCertificateReason:'arc-length-correspondence-unproved'})
+ expect(level.report).toMatchObject({continuousBound:true,roundingCertified:true,errorCertificateReason:null})
+ expect(Number.isFinite(level.report.continuousErrorUpper)).toBe(true)
+ expect(level.report.accepted).toBe(level.report.continuousErrorUpper!<=level.report.budget)
 })
 
 it.each(['rmf'] as const)('keeps curved %s transport without a straight-source certificate',orientation=>{
@@ -39,7 +41,7 @@ it.each(['rmf'] as const)('keeps curved %s transport without a straight-source c
  const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}
  const level=previewProgressiveNurbsProfiles([profile],path,law,{...law,values:[0,0]},
   {normal:[1,0,0],orientation,initialSections:3,maxSections:3,maxDeviation:1},3)
- expect(level.report).toMatchObject({continuousBound:false,roundingCertified:false,continuousErrorUpper:null,errorCertificateReason:'rmf-original-frame-correspondence-unproved'})
+ expect(level.report).toMatchObject({continuousBound:false,roundingCertified:false,continuousErrorUpper:null,errorCertificateReason:'source-plane-coefficients-nonzero'})
 })
 
 it.each(['fixed_normal','frenet'] as const)('does not promote partial %s profile certificates to the whole union',orientation=>{
@@ -70,9 +72,10 @@ it('certifies original rational straight RMF affine transport and rejects a curv
  expect(level.report.continuousErrorUpper).toBeLessThanOrEqual(.01)
  const near=bezierNurbsCurve([[0,0,0],[2**-1022,0,5],[0,0,10]])
  const refused=previewProgressiveNurbsProfiles([profile],near,scale,twist,options,129)
- expect(refused.report).toMatchObject({continuousBound:false,continuousErrorUpper:null,errorCertificateReason:'rmf-original-frame-correspondence-unproved'})
+ expect(refused.report).toMatchObject({continuousBound:false,continuousErrorUpper:null,errorCertificateReason:'source-plane-coefficients-nonzero'})
  const arc=previewProgressiveNurbsProfiles([profile],path,scale,twist,{...options,spacing:'arc_length',maxSections:3},3)
- expect(arc.report).toMatchObject({continuousBound:false,continuousErrorUpper:null,errorCertificateReason:'arc-length-correspondence-unproved'})
+ expect(arc.report).toMatchObject({continuousBound:true,roundingCertified:true,errorCertificateReason:null,accepted:false})
+ expect(arc.report.continuousErrorUpper!).toBeGreaterThan(options.maxDeviation)
 })
 
 it.each([0,1,2])('preserves translated rational RMF proof on axis %s in both directions',axis=>{

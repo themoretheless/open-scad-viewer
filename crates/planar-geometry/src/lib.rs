@@ -9,7 +9,6 @@
 //! (no `#![feature]`).
 pub mod attribute_mesh;
 pub mod corners;
-pub mod sampled_corner;
 pub mod curve;
 pub mod curve_boolean;
 pub mod edit;
@@ -19,9 +18,10 @@ pub mod measure;
 pub mod path;
 pub mod path_offset;
 pub mod pathfinder;
-pub mod render;
 pub mod primitives;
+pub mod render;
 pub mod rings;
+pub mod sampled_corner;
 pub mod scissors;
 pub mod stroke;
 pub mod tessellation;

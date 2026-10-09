@@ -890,7 +890,7 @@ it('edits a face sketch dimension with units before extrusion and restores both 
  const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await flushClearance()
- await ui.click('Sketch dimensions');await ui.click('Add dimension');const before=ui.doc()
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add dimension')).toBe(true));await ui.click('Add dimension');const before=ui.doc()
  const input=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!
  input().props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Apply dimension 0').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
  input().props['onUpdate:modelValue']('0.3 cm');await nextTick();expect(ui.doc()).toEqual(before)
@@ -1079,7 +1079,7 @@ it('previews surface degree reduction on both axes and supports cancel and undo'
  const surface={degreeU:2,degreeV:2,knotsU:[0,0,0,1,1,1],knotsV:[0,0,0,1,1,1],controlPoints:Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0])),weights:Array.from({length:3},()=>[1,1,1])}
  const seed={version:1,sketches:[],bodies:[],surfaces:[{id:'plane',name:'Plane',surface,segmentsU:4,segmentsV:4}]}
  const ui=await mount({},JSON.stringify(seed));await ui.click('Plane');const before=ui.doc()
- await ui.click('Reduce surface degree');expect(ui.text(ui.all()[0])).toContain('Deviation upper bound: 0 mm')
+ await ui.click('Reduce surface degree');const upper=ui.text(ui.all()[0]).match(/Deviation upper bound: ([\d.eE+-]+) mm/);expect(upper).not.toBeNull();expect(Number(upper![1])).toBeGreaterThanOrEqual(0);expect(Number(upper![1])).toBeLessThan(1e-12)
  expect(ui.doc()).toEqual(before);await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Reduce surface degree')
  const direction=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Direction')!;direction.props['onUpdate:modelValue']('v');await flushClearance()

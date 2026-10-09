@@ -1,4 +1,4 @@
-use modelgraph_text::compile;
+use rush_frontend::compile;
 #[test]
 fn authored_loft_examples_lower_references_without_a_javascript_host() {
     for source in [

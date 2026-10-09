@@ -165,7 +165,7 @@ describe('OpenSCAD MCP server', () => {
       'openscad_official_export',
       'openscad_official_status',
       'openscad_save_model',
-    ])
+    ].sort())
     const tools = new Map(listed.tools.map(tool => [tool.name, tool]))
     expect(tools.get('openscad_analyze')?.annotations).toMatchObject({
       readOnlyHint: false,

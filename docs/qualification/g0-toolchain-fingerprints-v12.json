@@ -236,5 +236,5 @@
       "note": "Current bytes are newly bound in v12; v11 remains archived. Bind append-only V8 exact analytic shell and offset successors plus rebuilt own-Rust WASM while preserving all prior freezes and resetting G1 clean work."
     }
   ],
-  "previousFingerprintSha256": "3fed4030aad8981a372753a4abb30598f5d72e2d1adf7283dcff20e869c0d357"
+  "previousFingerprintSha256": "5ae685b005bbbeaf3e7c84cf06011f4136e997cf7f6dfab38e439c72ca34ec19"
 }

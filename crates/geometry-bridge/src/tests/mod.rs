@@ -608,7 +608,12 @@ fn exact_analytic_shell_crosses_bridge_with_audited_certificate() {
     assert_eq!(result["certificate"]["complete"], true);
     assert_eq!(result["audit"]["ok"], true);
     assert_eq!(result["namingComplete"], true);
-    assert!(!result["changeSet"]["changes"].as_array().unwrap().is_empty());
+    assert!(
+        !result["changeSet"]["changes"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(before, value_codec::to_string(&model).unwrap());
     assert!(
         dispatch(json!({
@@ -1134,90 +1139,156 @@ fn certified_freeform_mass_crosses_bridge() {
     );
 }
 
-
 #[test]
 fn simple_prism_fillet_bridge_reports_distinct_capability() {
-    let model=brep_core::extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();
-    let edge=model.edges.iter().position(|e| {
-        let [a,b]=e.vertices.map(|v|model.vertices[v].point);
-        a[0]==0. && b[0]==0. && a[1]==0. && b[1]==0. && (a[2]-b[2]).abs()>19.
-    }).unwrap();
+    let model = brep_core::extrude_polygon(
+        &[
+            [0., 0.],
+            [40., 0.],
+            [40., 5.],
+            [5., 5.],
+            [5., 30.],
+            [0., 30.],
+        ],
+        0.,
+        20.,
+    )
+    .unwrap();
+    let edge = model
+        .edges
+        .iter()
+        .position(|e| {
+            let [a, b] = e.vertices.map(|v| model.vertices[v].point);
+            a[0] == 0. && b[0] == 0. && a[1] == 0. && b[1] == 0. && (a[2] - b[2]).abs() > 19.
+        })
+        .unwrap();
     let result=dispatch(json!({"op":"brep_nurbs_exact_simple_prism_fillet","model":encode(model).unwrap(),"edges":[edge],"radius":1.})).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-simple-prism-convex-edge-fillet/1"));
-    assert_eq!(result["certificate"]["complete"],true);
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-simple-prism-convex-edge-fillet/1")
+    );
+    assert_eq!(result["certificate"]["complete"], true);
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
 }
 
 #[test]
 fn annular_fillet_bridge_requires_complete_rim() {
-    let model=brep_core::tube(20.,5.,6.).unwrap();
-    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)|e.curve.degree==2 && e.vertices.iter().all(|v|{
-        let p=model.vertices[*v].point;p[2]>5. && p[0].hypot(p[1])>19.
-    })).map(|(i,_)|i).collect();
-    assert_eq!(edges.len(),4);
-    let encoded=encode(model).unwrap();
+    let model = brep_core::tube(20., 5., 6.).unwrap();
+    let edges: Vec<_> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            e.curve.degree == 2
+                && e.vertices.iter().all(|v| {
+                    let p = model.vertices[*v].point;
+                    p[2] > 5. && p[0].hypot(p[1]) > 19.
+                })
+        })
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(edges.len(), 4);
+    let encoded = encode(model).unwrap();
     let result=dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.})).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-annular-circular-edge-fillet/1"));
-    assert_eq!(result["certificate"]["complete"],true);
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-annular-circular-edge-fillet/1")
+    );
+    assert_eq!(result["certificate"]["complete"], true);
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
     assert!(dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded,"edges":[edges[0]],"radius":1.})).is_err());
 }
 
 #[test]
 fn partial_annular_bridge_is_explicitly_preview_only() {
-    let model=brep_core::tube(20.,5.,6.).unwrap();
-    let body_id=model.1.bodies[0];
-    let encoded=encode(model).unwrap();
+    let model = brep_core::tube(20., 5., 6.).unwrap();
+    let body_id = model.1.bodies[0];
+    let encoded = encode(model).unwrap();
     let result=dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded.clone(),"edge":2,"radius":1.25})).unwrap();
-    assert_eq!(result["qualification"]["status"].as_str(),Some("preview-only"));
-    assert_eq!(result["qualification"]["commitAllowed"],false);
-    assert_eq!(result["qualification"]["boundaryIntersectionProof"].as_str(),Some("unqualified"));
+    assert_eq!(
+        result["qualification"]["status"].as_str(),
+        Some("preview-only")
+    );
+    assert_eq!(result["qualification"]["commitAllowed"], false);
+    assert_eq!(
+        result["qualification"]["boundaryIntersectionProof"].as_str(),
+        Some("unqualified")
+    );
     assert!(result.get("certificate").is_none());
-    let restored:brep_core::Model=field(&result,"model").unwrap();
-    assert_eq!(restored.1.bodies[0],body_id);
-    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
-    let mesh=dispatch(json!({"op":"brep_nurbs_tessellate","model":result["model"].clone(),"segments":12}));
-    assert!(mesh.is_ok(),"preview display tessellation: {:?}",mesh.err());
-    let mesh=mesh.unwrap();
-    assert!(mesh["indices"].as_array().unwrap().len()<=20000*3);
+    let restored: brep_core::Model = field(&result, "model").unwrap();
+    assert_eq!(restored.1.bodies[0], body_id);
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    let mesh = dispatch(
+        json!({"op":"brep_nurbs_tessellate","model":result["model"].clone(),"segments":12}),
+    );
+    assert!(
+        mesh.is_ok(),
+        "preview display tessellation: {:?}",
+        mesh.err()
+    );
+    let mesh = mesh.unwrap();
+    assert!(mesh["indices"].as_array().unwrap().len() <= 20000 * 3);
     assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded.clone(),"edge":999,"radius":1.25})).is_err());
     assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded,"edge":2,"radius":1.25,"commitAllowed":true})).is_err());
 }
 
 #[test]
 fn layered_fillet_bridge_checks_chain_and_cavity() {
-    let outer=brep_core::cuboid([0.,0.,0.],[40.,30.,20.]).unwrap();
-    let cutter=brep_core::cuboid([2.,2.,2.],[38.,28.,22.]).unwrap();
-    let model=brep_core::boolean(&outer,&cutter,"difference").unwrap();
-    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)| e.vertices.iter().all(|v| {
-        let p=model.vertices[*v].point;p[0]==0. && p[1]==0.
-    })).map(|(i,_)|i).collect();
-    assert!(edges.len()>1);
-    let encoded=encode(model).unwrap();
-    let request=json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
-    let result=dispatch(request.clone()).unwrap();
-    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-layered-prism-edge-fillet/1"));
-    assert_eq!(result["audit"]["ok"],true);
-    assert_eq!(result["namingComplete"],true);
-    let mut extra=request.clone();extra["unexpected"]=json!(true);
+    let outer = brep_core::cuboid([0., 0., 0.], [40., 30., 20.]).unwrap();
+    let cutter = brep_core::cuboid([2., 2., 2.], [38., 28., 22.]).unwrap();
+    let model = brep_core::boolean(&outer, &cutter, "difference").unwrap();
+    let edges: Vec<_> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            e.vertices.iter().all(|v| {
+                let p = model.vertices[*v].point;
+                p[0] == 0. && p[1] == 0.
+            })
+        })
+        .map(|(i, _)| i)
+        .collect();
+    assert!(edges.len() > 1);
+    let encoded = encode(model).unwrap();
+    let request = json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
+    let result = dispatch(request.clone()).unwrap();
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("exact-layered-prism-edge-fillet/1")
+    );
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
+    let mut extra = request.clone();
+    extra["unexpected"] = json!(true);
     assert!(dispatch(extra).is_err());
-    for radius in [0.,-1.,8.] {
-        let mut bad=request.clone();bad["radius"]=json!(radius);
+    for radius in [0., -1., 8.] {
+        let mut bad = request.clone();
+        bad["radius"] = json!(radius);
         assert!(dispatch(bad).is_err());
     }
-    let mut partial=request;partial["edges"]=json!([edges[0]]);
+    let mut partial = request;
+    partial["edges"] = json!([edges[0]]);
     assert!(dispatch(partial).is_err());
 }
 
 #[test]
 fn native_section_preserves_legacy_input_error_code() {
-    let error = dispatch(json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.})).unwrap_err();
-    assert_eq!(error.code,"POLYGON_INVALID_INPUT");
-    for code in ["MESH_INVALID_INPUT","MESH_QUERY_INVALID_INPUT","MESH_SECTION_INVALID_INPUT","MESH_IO_INVALID_INPUT"] {
-        let error = crate::legacy_mesh_error(crate::Error::new(code,"the mesh resource budget"));
-        assert_eq!(error.code,"POLYGON_INVALID_INPUT");
-        assert_eq!(error.message,"the polygon resource budget");
+    let error = dispatch(
+        json!({"op":"mesh_section","mesh":{"positions":[0.,0.,0.],"indices":[0,1,2]},"z":0.}),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+    for code in [
+        "MESH_INVALID_INPUT",
+        "MESH_QUERY_INVALID_INPUT",
+        "MESH_SECTION_INVALID_INPUT",
+        "MESH_IO_INVALID_INPUT",
+    ] {
+        let error = crate::legacy_mesh_error(crate::Error::new(code, "the mesh resource budget"));
+        assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+        assert_eq!(error.message, "the polygon resource budget");
     }
 }

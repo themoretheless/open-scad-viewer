@@ -81,7 +81,7 @@ it('excludes all stored hollow-loft wall interiors against each coordinate-plane
  const duplicated=structuredClone(model),duplicateCap=duplicated.faces[capFaces[0]!]!
  duplicated.loops[duplicateCap.outer]!.coedges.push(structuredClone(duplicated.loops[duplicateCap.outer]!.coedges[0]!))
  expect(()=>inspectSweepCapContacts(duplicated,capFaces,16)).toThrow()
- expect(()=>inspectSweepCapContacts(model,capFaces,16,()=>{},{tolerance:1e-9,maxProducts:-1})).toThrow(/budget/)
+ expect(()=>inspectSweepCapContacts(model,capFaces,16,()=>{},{tolerance:1e-9,maxProducts:-1})).toThrow(/maxProducts/)
  const combinedBudgets={maxWalls:16,maxExactWork:1000000,maxChartCells:1000,maxTrimPairs:100000,maxTrimCells:100000,maxTrimDomainCells:1000000}
  const capTinyChange=structuredClone(model),capTiny=capTinyChange.faces[capFaces[0]!]!,tinyUv=capTinyChange.loops[capTiny.outer]!.coedges[0]!.pcurve
  tinyUv.controlPoints[1]![0]-=Number.EPSILON

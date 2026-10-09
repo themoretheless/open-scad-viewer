@@ -121,7 +121,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
     if action == "minkowski_profiles" {
         let ids: Vec<u32> = field(&v, "ids")?;
         let shapes = ids.into_iter().map(get).collect::<Result<Vec<_>>>()?;
-        let profiles = shapes.iter().map(|shape| profile(shape)).collect::<Result<Vec<_>>>()?;
+        let profiles = shapes
+            .iter()
+            .map(|shape| profile(shape))
+            .collect::<Result<Vec<_>>>()?;
         return put(Shape::Profile(modeling::minkowski_profiles(&profiles)?));
     }
     if action == "cube" {

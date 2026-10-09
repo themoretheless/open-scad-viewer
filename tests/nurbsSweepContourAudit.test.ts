@@ -6,13 +6,13 @@ const square=(x:number,y:number,size:number)=>{
  return points.map((p,i)=>({...bezierNurbsCurve([p,points[(i+1)%4]!]),weights:[1,2]}))
 }
 const options={tolerance:1e-6,maxPairs:10000,maxCells:10000}
-it('certifies exact unclamped hollow contours through WASM and refuses rounded extraction',()=>{
+it('certifies exact unclamped hollow contours through WASM and refuses unproved altered weights',()=>{
  const outer={degree:2,knots:Array.from({length:9},(_,i)=>i),controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],weights:Array(6).fill(1),periodic:false}
  const hole={...structuredClone(outer),controlPoints:outer.controlPoints.map(p=>p.map(x=>x*.25))}
  const loops=[[outer],[hole]],before=structuredClone(loops)
  expect(inspectSweepContours(loops,options)).toMatchObject({capDomainCertified:true,capGeometryCertified:false,globalEmbeddingCertified:false,reason:null})
  const rounded=structuredClone(outer);rounded.weights[1]=2
- expect(inspectSweepContours([[rounded]],options)).toMatchObject({capDomainCertified:false,reason:'contour-decomposition-unproved'})
+ expect(inspectSweepContours([[rounded]],options)).toMatchObject({capDomainCertified:false,reason:'contour-simplicity-unproved'})
  expect(loops).toEqual(before)
 })
 it('proves the continuous planar domain without claiming cap geometry or shell containment',()=>{

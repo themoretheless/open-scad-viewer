@@ -4,7 +4,12 @@ use std::collections::BTreeSet;
 use value_codec::{Value, json};
 fn call(op: &str, mut value: Value) -> Result<Value> {
     value["op"] = json!(op);
-    crate::dispatch(value)
+    let report = crate::dispatch(value)?;
+    Ok(if op == "brep_sweep_volume_audit" {
+        crate::cad_face_contacts::compact_volume_report(report)
+    } else {
+        report
+    })
 }
 fn nurbs(op: &str, mut value: Value) -> Result<Value> {
     value["op"] = json!(op);
@@ -19,7 +24,7 @@ fn merge(mut target: Value, source: &Value) -> Value {
     target
 }
 pub fn volume_budgets() -> Value {
-    json!({"toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,"maxSpans":1000,"maxLinearCells":20000,"maxPairs":10000,"maxCells":100000,"maxDomainCells":1000000,"cellsPerPair":1000,"domainCellsPerPair":10000,"capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000},"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,"orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100})
+    json!({"toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,"maxSpans":1000,"maxLinearCells":30000,"maxPairs":10000,"maxCells":100000,"maxDomainCells":1000000,"cellsPerPair":1000,"domainCellsPerPair":10000,"capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000},"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,"orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100})
 }
 pub fn admission(v: Value) -> Result<Value> {
     let document: Value = value_codec::from_str(&field::<String>(&v, "documentJson")?)
@@ -45,10 +50,20 @@ pub fn admission(v: Value) -> Result<Value> {
         id = field(node, "input").map_err(|_| input("Missing sweep transform source."))?;
     };
     let op = node["op"].as_str().unwrap_or("");
-    if !["brep_progressive_sweep", "brep_progressive_miter_sweep", "brep_miter_sweep"].contains(&op) {
+    if ![
+        "brep_progressive_sweep",
+        "brep_progressive_miter_sweep",
+        "brep_miter_sweep",
+        "brep_smooth_miter_stations",
+    ]
+    .contains(&op)
+    {
         return Ok(Value::Null);
     }
     let model: brep_core::Model = field(&v, "model")?;
+    if let Some(report) = replay_admission::inspect(&v)? {
+        return Ok(report);
+    }
     // A failed exact prerequisite cannot be rescued by pair searches. Reject
     // it before spending their budget, while charging the replay below to the
     // remaining exact-boundary work allowance.
@@ -56,16 +71,22 @@ pub fn admission(v: Value) -> Result<Value> {
     let exact_budget: u64 = field(&budgets, "maxExactWork")?;
     let agreement = brep_core::boundary_agreement::verify_exact(&model, exact_budget)?;
     if !agreement.all_equal || !agreement.all_joins_exact {
-        return Err(input("Sweep Solid geometry could not be proved: exact boundary agreement."));
+        return Err(input(
+            "Sweep Solid geometry could not be proved: exact boundary agreement.",
+        ));
     }
     let remaining = exact_budget.saturating_sub(agreement.work);
     if remaining == 0 {
-        return Err(input("Sweep Solid geometry could not be proved: exact boundary work budget."));
+        return Err(input(
+            "Sweep Solid geometry could not be proved: exact boundary work budget.",
+        ));
     }
     budgets["maxExactWork"] = json!(remaining);
     // Profile closure is constructor-derived, not a trusted author-supplied flag.
     // The fresh full-model proof covers every actual face and trimmed domain.
-    let caps = if op == "brep_progressive_sweep" || node["closed"] == json!(true) {
+    let caps = if op == "brep_progressive_sweep" || op == "brep_smooth_miter_stations" {
+        brep_core::sweep_cap_contacts::endpoint_chart_candidates(&model)
+    } else if node["closed"] == json!(true) {
         vec![]
     } else {
         if model.faces.len() < 2 {
@@ -153,56 +174,25 @@ fn cap_correction(
     Ok(result)
 }
 pub fn correct(v: Value) -> Result<Value> {
-    let sections = &v["sections"];
-    let points: Vec<[f64; 3]> = field(&v, "points")?;
     let options = &v["options"];
-    let closed = options["closed"] == json!(true);
-    if options["circleCorrection"].is_null() {
-        return if options["capCorrection"].is_null() {
-            Ok(Value::Null)
-        } else {
-            cap_correction(sections, &points, closed, &options["capCorrection"])
-        };
+    if options["circleCorrection"].is_null() && options["capCorrection"].is_null() {
+        return Ok(Value::Null);
     }
-    let circle = nurbs(
-        "sweep_repair_circle_sections",
-        merge(json!({"sections":sections}), &options["circleCorrection"]),
-    )?;
-    if circle["sections"].is_null() || circle["wallDisplacementUpper"].is_null() {
-        return Err(input(&format!(
-            "Miter circle section correction unproved: {}",
-            circle["reason"]
-        )));
-    }
-    let cap = if options["capCorrection"].is_null() {
+    let axis = if options["frameAxis"].is_null() {
         Value::Null
+    } else if options["frameAxis"].get("controlPoints").is_some() {
+        options["frameAxis"].clone()
     } else {
-        cap_correction(
-            &circle["sections"],
-            &points,
-            closed,
-            &options["capCorrection"],
-        )?
+        law(&options["frameAxis"], false)?
     };
-    let cap_upper = if cap.is_null() {
-        json!(0)
-    } else {
-        cap["wallDisplacementUpper"].clone()
-    };
-    let upper = nurbs(
-        "sweep_error_upper_compose",
-        json!({"kind":"add","a":cap_upper,"b":circle["wallDisplacementUpper"]}),
-    )?["errorUpper"]
-        .clone();
-    if upper.is_null() {
-        return Err(input(
-            "Miter combined section correction displacement unproved",
-        ));
-    }
-    Ok(
-        json!({"sections":if cap.is_null(){&circle["sections"]}else{&cap["sections"]},"wallDisplacementUpper":upper,"exactPlanarSections":if cap.is_null(){json!([])}else{cap["exactPlanarSections"].clone()},"work":field::<u64>(&circle,"work")?+if cap.is_null(){0}else{field::<u64>(&cap,"work")?},"reason":"bounded-circle-section-interpolation"}),
+    nurbs(
+        "sweep_correct_miter_sections",
+        json!({"sections":v["sections"],"points":v["points"],
+            "closed":yes(options,"closed"),"frameAxis":axis,
+            "circleCorrection":options["circleCorrection"],"capCorrection":options["capCorrection"]}),
     )
 }
+
 fn value(v: &Value, key: &str, default: Value) -> Value {
     v.get(key)
         .filter(|x| !x.is_null())
@@ -307,6 +297,7 @@ struct Owner {
     sections: Option<Value>,
     sharp: Option<Value>,
     authoring: Value,
+    replay: Value,
 }
 thread_local! {static OWNERS:std::cell::RefCell<(u64,std::collections::BTreeMap<u64,Owner>)>=std::cell::RefCell::new((0,std::collections::BTreeMap::new()));}
 fn own(
@@ -321,6 +312,7 @@ fn own(
         sections,
         sharp,
         authoring,
+        replay: body["sweepMiterReplay"].clone(),
     };
     let id = OWNERS.with(|store| {
         let mut store = store.borrow_mut();
@@ -362,11 +354,19 @@ fn owner(v: &Value) -> Result<Owner> {
     let owner = OWNERS
         .with(|store| store.borrow().1.get(&id).cloned())
         .ok_or_else(|| input("Sweep requires constructor-owned native evidence"))?;
-    if !equivalent(&owner.model, &v["source"]["model"])
-        || !equivalent(&owner.certificate, &v["source"]["boundaryCertificate"])
-    {
+    if !equivalent(&owner.model, &v["source"]["model"]) {
         return Err(input(
-            "Sweep requires unchanged constructor-owned boundary evidence",
+            "Sweep requires unchanged constructor-owned replay model",
+        ));
+    }
+    if !equivalent(&owner.certificate, &v["source"]["boundaryCertificate"]) {
+        return Err(input(
+            "Sweep requires unchanged constructor-owned replay certificate",
+        ));
+    }
+    if !equivalent(&owner.replay, &v["source"]["sweepMiterReplay"]) {
+        return Err(input(
+            "Sweep requires unchanged constructor-owned replay provenance",
         ));
     }
     Ok(owner)
@@ -380,11 +380,13 @@ pub fn release(v: Value) -> Result<Value> {
     });
     Ok(Value::Null)
 }
+mod evidence;
 mod miter;
 mod profile;
+mod replay_admission;
 pub(super) use miter::*;
 pub(super) use profile::*;
 
 #[cfg(test)]
-#[path="tests/sweep_profile_admission.rs"]
+#[path = "tests/sweep_profile_admission.rs"]
 mod profile_admission_tests;

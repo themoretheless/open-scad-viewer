@@ -41,10 +41,16 @@ it('carries original guided joint-law bounds through WASM and refinement admissi
  expect(result.levels.length).toBeGreaterThan(1)
 })
 
-it('keeps arc-length outside the proved original-parameter guided error scope',()=>{
+it('certifies guided arc-length bounds while refusing insufficient refinement',()=>{
  const level=previewProgressiveNurbsProfiles([profile],path,scale,twist,{...options,spacing:'arc_length'},3)
- expect(level.report).toMatchObject({continuousBound:false,roundingCertified:false,continuousErrorUpper:null,
-  errorCertificateReason:'arc-length-correspondence-unproved'})
+ expect(level.report).toMatchObject({accepted:false,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
+ expect(level.report.continuousErrorUpper!).toBeGreaterThan(options.maxDeviation!)
+ for(const t of [0,.13,.5,.87,1])for(const u of [0,.375,1]){
+  const got=evaluateNurbsSurface(level.patches[0]!,u,t).point
+  const amplitude=((1+3*u)/(1+u))*(1+t)**2+.5*t,angle=Math.atan(t)+.25*t
+  const ideal=[amplitude*Math.cos(angle),amplitude*Math.sin(angle),10*t]
+  expect(Math.hypot(...got.map((v,k)=>v-ideal[k]!))).toBeLessThanOrEqual(level.report.continuousErrorUpper!)
+ }
 })
 
 it('refines contact fitted patches using the original anchor and affine laws',()=>{
@@ -65,7 +71,7 @@ it('refines contact fitted patches using the original anchor and affine laws',()
  }
 })
 
-it('keeps a partial contact profile bound for refusal without certifying the union',()=>{
+it('retains the complete contact bound while refusing an insufficient tolerance',()=>{
  const simple=bezierNurbsCurve([[1,0,0],[2,0,0]])
  const contactOptions:GuidedProgressiveSweepOptions={normal:[1,0,0],
   orientationGuide:bezierNurbsCurve([[2,0,0],[2,0,10]]),contactAnchor:{parameter:1},
@@ -73,7 +79,7 @@ it('keeps a partial contact profile bound for refusal without certifying the uni
  const level=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,
   {...scale,values:[1,1]},{...twist,values:[0,0]},contactOptions,9)
  expect(level.report).toMatchObject({accepted:false,sampledControlDeviation:0,
-  continuousBound:false,roundingCertified:false,continuousErrorUpper:null})
+  continuousBound:true,roundingCertified:true})
  expect(level.report.knownProfileErrorUpper!).toBeGreaterThan(contactOptions.maxDeviation)
  expect(level.report.errorCertificateCells).toBeLessThanOrEqual(10000)
 })
@@ -140,7 +146,8 @@ it.each(['guided','contact'])('propagates accepted closed %s Rust bounds and pre
  const strict=compileRushFrontend(source.replace('max_deviation: 2mm','max_deviation: 0.000000000000000000000000000001mm')).document
  expect(()=>buildOwnNurbs(strict,{action:'build'})).toThrow(/continuous retained-patch error/)
  await expect(buildOwnNurbsAsync(strict,{action:'build'},{onSweepPreview:(_id,preview)=>{
-  expect(preview.report).toMatchObject({closedPath:true,accepted:false,continuousBound:true})
-  expect(preview.report.continuousErrorUpper!).toBeGreaterThan(preview.report.budget)
+  expect(preview.report).toMatchObject({closedPath:true,accepted:false})
+  if(preview.report.continuousBound)expect(preview.report.continuousErrorUpper!).toBeGreaterThan(preview.report.budget)
+  else expect(preview.report.continuousErrorUpper).toBeNull()
  }})).rejects.toThrow(/continuous retained-patch error/)
 })

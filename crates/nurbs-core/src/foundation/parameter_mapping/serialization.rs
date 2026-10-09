@@ -16,7 +16,7 @@ fn decode_mapping_with_support(mapping: &Value, needs_support: bool) -> Result<P
                 .iter()
                 .map(|factor| decode_mapping_with_support(factor, children_need_support))
                 .collect::<Result<Vec<_>>>()?,
-            piece_support: if needs_support {
+            piece_support: if needs_support && mapping["pieces"].is_array() {
                 Some(decode_pieces(mapping)?)
             } else {
                 None
@@ -121,6 +121,10 @@ impl Serialize for MapPieceCertificate {
 impl Serialize for ParameterMapCertificate {
     fn to_value(&self) -> Value {
         let mut result = json!({"version":"nurbs-foundation/3","mapping":self.mapping,"composition":"exact-semantic-evaluation","evidence":super::super::tolerance_evidence(&self.tolerance)});
+        if let Some((domain, range)) = certificate_support(self) {
+            result["domain"] = json!(domain);
+            result["range"] = json!(range);
+        }
         match &self.proof {
             ParameterMapProof::Piecewise(pieces) => {
                 result["classification"] = json!("certified_strictly_monotone");
@@ -136,6 +140,8 @@ impl Serialize for ParameterMapCertificate {
         result
     }
 }
+
+
 impl Serialize for ReparameterizedEvaluation {
     fn to_value(&self) -> Value {
         json!({"version":"nurbs-foundation/3","parameter":self.parameter,"sourceParameter":self.source_parameter,"evaluation":self.evaluation,"certificate":self.certificate})
@@ -174,6 +180,8 @@ mod tests {
         let hybrid = json!({"composition":[leaf.clone()],"pieces":leaf["pieces"].clone(),"label":"composite-support"});
         let mapping = json!({"composition":[hybrid.clone(),leaf],"label":"original-document"});
         let proof = certify_reparameterization(&mapping, None).unwrap();
+        assert_eq!(proof["domain"], json!([0.,1.]));
+        assert_eq!(proof["range"], json!([0.,1.]));
         assert_eq!(proof["mapping"], mapping);
         assert_eq!(proof["factors"][0]["mapping"], hybrid);
         assert_eq!(
@@ -186,5 +194,14 @@ mod tests {
         let mapping = json!({"composition":[identity()],"pieces":"unused-payload"});
         let proof = certify_reparameterization(&mapping, None).unwrap();
         assert_eq!(proof["mapping"], mapping);
+    }
+    #[test]
+    fn composed_support_uses_original_input_and_final_output_domains() {
+        let first = json!({"pieces":[{"domain":[0.,1.],"range":[2.,7.],"controlValues":[2.,7.],"weights":[1.,1.]}]});
+        let last = json!({"pieces":[{"domain":[2.,7.],"range":[-4.,9.],"controlValues":[-4.,9.],"weights":[1.,1.]}]});
+        let mapping = json!({"composition":[{"composition":[first]},last]});
+        let proof = certify_reparameterization(&mapping, None).unwrap();
+        assert_eq!(proof["domain"], json!([0.,1.]));
+        assert_eq!(proof["range"], json!([-4.,9.]));
     }
 }

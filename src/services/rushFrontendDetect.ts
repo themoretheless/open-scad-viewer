@@ -1,6 +1,6 @@
 /** Dependency-light probe; the compiler itself stays behind a lazy import. */
 export const isRush = (source: string) => /^\s*\/\/\s*@rush(?:\/1)?(?=\s|$)/.test(source)
-export const isRushFrontend = (source: string) => isRush(source) || /^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)
+export const isRushFrontend = isRush
 
 /** Rush uses .r; legacy RushGraph Text keeps .mg. */
 export const sourceFileExtension = (source: string) => (isRush(source) ? '.r' : isRushFrontend(source) ? '.mg' : '.scad')

@@ -146,7 +146,7 @@ fn inspect_impl(
                 let Some(index)=pending.pop() else {break;};
                 let node=&cover.nodes[index];
                 if node.range[1]<=a+1 {continue;}
-                if node.range[0]>a && node.children.is_some() {
+                if node.range[0]>a {
                     if out.cells==limits.cells {
                         out.next_pair=Some([a,node.range[0]]);
                         out.all_pairs_disjoint=false;out.all_pairs_classified=false;

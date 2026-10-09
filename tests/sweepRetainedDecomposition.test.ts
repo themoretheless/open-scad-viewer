@@ -227,7 +227,7 @@ it('refuses periodic moving-axis endpoint correction when retained wall regulari
  const {compileRushFrontend}=await import('../src/services/rushFrontend')
  const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-corrected.r','utf8')
- const graph=compileRushFrontend(source.replace('initial_steps: 16', 'retained_wall_max_injectivity_cells: 1000, initial_steps: 16')).document
+ const graph=compileRushFrontend(source.replace('initial_steps: 16', 'retained_wall_max_injectivity_cells: 1, initial_steps: 16')).document
  const before=structuredClone(graph)
  expect(()=>buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})).toThrow('Corrected progressive miter retained wall regularity unproved')
  expect(graph).toEqual(before)
@@ -250,7 +250,7 @@ it('certifies the moving-axis periodic Rush body with explicit authored-plane ca
 })
 
 it.each([
- ['retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 1000','Corrected progressive miter retained wall regularity unproved'],
+ ['retained_wall_max_injectivity_cells: 10000','retained_wall_max_injectivity_cells: 1','Corrected progressive miter retained wall regularity unproved'],
  ['cap_correction_authored_frame: true','cap_correction_authored_frame: false','Miter cap correction unproved: projection-unproved'],
  ['cap_correction_max_work: 1000000','cap_correction_max_work: 0','Miter authored cap correction unproved: work-limit'],
  ['cap_correction_tolerance: 0.000000001mm,','', 'Miter cap correction requires a displacement tolerance'],

@@ -16,7 +16,7 @@ import {
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const fingerprintPath = resolve(
   repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v66.json',
+  'docs/qualification/g0-toolchain-fingerprints-v68.json',
 )
 const fingerprintV1Path = resolve(
   repositoryRoot,
@@ -59,10 +59,10 @@ describe('G0 toolchain fingerprints', () => {
   it('uses the frozen G0.2 schema id', () => {
     const doc = JSON.parse(readFileSync(fingerprintPath, 'utf8')) as FingerprintDoc
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v66')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v68')
     expect(doc).toMatchObject({
-      previousFingerprintId: 'g0-toolchain-fingerprints-v65',
-      previousFingerprintSha256: '351fdeae0f35382c6d93b4b1b0c780a9275517fd9ddd3e474359618912fe14a1',
+      previousFingerprintId: 'g0-toolchain-fingerprints-v66',
+      previousFingerprintSha256: FROZEN_ARCHIVES['docs/qualification/g0-toolchain-fingerprints-v66.json'],
     })
   })
 
@@ -163,7 +163,7 @@ describe('G0/G1 re-freeze generator', () => {
     const first = prepare(root)
     const second = prepare(root)
     expect(first.artifactBytes).toEqual(second.artifactBytes)
-    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v83')
+    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v85')
     expect(first.status).toMatchObject({
       qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
       completedWorkUnits: 0, completedCleanRuns: 0, plannedWorkUnits: 4740,
@@ -172,6 +172,23 @@ describe('G0/G1 re-freeze generator', () => {
     expect(first.status.pendingRows.every(row => row.completedWorkUnits === 0 && row.completedCleanRuns === 0)).toBe(true)
     for (const path of Object.values(REFRESH_OUTPUTS)) expect(existsSync(resolve(root, path))).toBe(false)
     expect(existsSync(resolve(root, 'output/qualification'))).toBe(false)
+  })
+
+  it('records removed bindings by identity without shifting the remaining artifacts', () => {
+    const prepared = prepare(fixture())
+    const previous = JSON.parse(readFileSync(resolve(repositoryRoot,
+      'docs/qualification/g0-toolchain-fingerprints-v66.json'), 'utf8')) as FingerprintDoc
+    const removed = previous.artifacts.filter(item => !existsSync(resolve(repositoryRoot, item.path)))
+    expect(removed.length).toBeGreaterThan(0)
+    for (const item of removed) {
+      expect(prepared.status.changedBindings).toContainEqual({kind:'g0-artifact',id:item.id,
+        previousSha256:item.sha256,currentSha256:null})
+      expect(prepared.fingerprint.artifacts.some(artifact => artifact.id === item.id)).toBe(false)
+    }
+    const previousById = new Map(previous.artifacts.map(item => [item.id, item]))
+    for (const change of prepared.status.changedBindings.filter(item => item.kind === 'g0-artifact')) {
+      expect(change.previousSha256).toBe(previousById.get(change.id)?.sha256 ?? null)
+    }
   })
 
   it('publishes exclusively, preserves every archive, and never carries forward results', () => {
@@ -220,7 +237,7 @@ describe('G0/G1 re-freeze generator', () => {
   it('refuses a zero-counter freeze when the new candidate already has result bookkeeping', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v83/result.json')
+    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v85/result.json')
     mkdirSync(dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, '{"completedWorkUnits":1}\n')
     expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
@@ -239,9 +256,9 @@ describe('G0/G1 re-freeze generator', () => {
       // Version-only retargeting is reversible; prove this fixture is the exact
       // recorded executor, rather than merely assuming the old behavior survived.
       const historical = readFileSync(resolve(root, path), 'utf8')
-        .replaceAll('semantic-manifold-g1-plan-v83', 'semantic-manifold-g1-plan-v24')
-        .replaceAll('semantic-manifold-g1-candidate-run-v83', 'semantic-manifold-g1-candidate-run-v24')
-        .replace('G1 v83 clean-run', 'G1 v24 clean-run')
+        .replaceAll('semantic-manifold-g1-plan-v85', 'semantic-manifold-g1-plan-v24')
+        .replaceAll('semantic-manifold-g1-candidate-run-v85', 'semantic-manifold-g1-candidate-run-v24')
+        .replace('G1 v85 clean-run', 'G1 v24 clean-run')
       expect(sha256(Buffer.from(historical)))
         .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
       writeFileSync(resolve(root, path), historical)

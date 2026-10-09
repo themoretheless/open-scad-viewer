@@ -425,5 +425,5 @@
       "note": "Current bytes are newly bound in v21; v20 remains archived. Re-freeze the committed brep-topology EditScope revalidation, raster-core shader variants and PolygonMesh typed-array refactor; rebind the rebuilt geometry kernel via own-rust-cad-v13; retarget GitHub executors to v38; preserve the finite G1 contract and reset all clean-run work."
     }
   ],
-  "previousFingerprintSha256": "e41fd46de7ad72dc83b1c04752d801bcf255ef101d1484b025f87dd869aa5173"
+  "previousFingerprintSha256": "4ce1d2a7855d22684f59ed6ab1c20537b2f957a4cba1c98509d4b8b14927ea73"
 }

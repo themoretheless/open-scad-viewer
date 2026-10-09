@@ -415,7 +415,7 @@ mod tests {
         v["op"] = json!("truss_diagnose");
         v.as_object_mut().unwrap().remove("forcesN");
         v["restrained"][1] = json!([false, false, false]);
-        let report = crate::dispatch(v).unwrap();
+        let report = crate::handle(v).unwrap();
         assert_eq!(report["stable"], json!(false));
         assert_eq!(report["minNormalizedPivot"], json!(null));
         assert_eq!(report["issues"].as_array().unwrap().len(), 2);
@@ -425,10 +425,10 @@ mod tests {
         assert_eq!(report["issues"][1]["dofName"], json!("z"));
         let mut v = bar();
         v["op"] = json!("truss_diagnose");
-        let stable = crate::dispatch(v.clone()).unwrap_err();
+        let stable = crate::handle(v.clone()).unwrap_err();
         assert_eq!(stable.code, "GEOMETRY_INVALID_INPUT"); // forcesN not allowed here
         v.as_object_mut().unwrap().remove("forcesN");
-        let report = crate::dispatch(v).unwrap();
+        let report = crate::handle(v).unwrap();
         assert_eq!(report["stable"], json!(true));
         assert!(report["minNormalizedPivot"].as_f64().unwrap() > 1e-12);
         assert_eq!(report["issues"], json!([]));
@@ -446,7 +446,7 @@ mod tests {
             "restrained":[[true,true,true],[false,false,true],[true,true,true]],
             "forcesN":[[0,0,0],[0,-100,0],[0,0,0]],
             "modes":2});
-        let r = crate::dispatch(v.clone()).unwrap();
+        let r = crate::handle(v.clone()).unwrap();
         let k_elastic = 2. * 4000. / 11.180_339_887_498_949 * 0.2;
         let k_geo = 2. * (100. * 11.180_339_887_498_949 / 10.) / 11.180_339_887_498_949 * 0.8;
         let lambda = k_elastic / k_geo;
@@ -463,11 +463,11 @@ mod tests {
         for bad in [json!(0), json!(9)] {
             let mut v = v.clone();
             v["modes"] = bad;
-            assert_eq!(crate::dispatch(v).unwrap_err().code, "TRUSS_INVALID_INPUT");
+            assert_eq!(crate::handle(v).unwrap_err().code, "TRUSS_INVALID_INPUT");
         }
         let mut v = v.clone();
         v["reference"] = json!({});
-        assert_eq!(crate::dispatch(v).unwrap_err().code, "GEOMETRY_INVALID_INPUT");
+        assert_eq!(crate::handle(v).unwrap_err().code, "GEOMETRY_INVALID_INPUT");
     }
     #[test]
     fn modal_rod_matches_rod_theory_and_validates_input() {
@@ -481,7 +481,7 @@ mod tests {
             "densitiesTMm3":[8e-9,8e-9,8e-9,8e-9],
             "massModel":"consistent",
             "modes":1});
-        let r = crate::dispatch(v.clone()).unwrap();
+        let r = crate::handle(v.clone()).unwrap();
         let f1 = r["modes"][0]["frequencyHz"].as_f64().unwrap();
         assert!((f1 - 1250.).abs() < 0.02 * 1250., "{f1}");
         let total_mass = r["totalMassT"].as_f64().unwrap();
@@ -490,10 +490,10 @@ mod tests {
             2. * std::f64::consts::PI * f1);
         let mut bad = v.clone();
         bad["massModel"] = json!("smeared");
-        assert_eq!(crate::dispatch(bad).unwrap_err().code, "GEOMETRY_INVALID_INPUT");
+        assert_eq!(crate::handle(bad).unwrap_err().code, "GEOMETRY_INVALID_INPUT");
         let mut bad = v.clone();
         bad["densitiesTMm3"] = json!([8e-9]);
-        assert_eq!(crate::dispatch(bad).unwrap_err().code, "TRUSS_INVALID_INPUT");
+        assert_eq!(crate::handle(bad).unwrap_err().code, "TRUSS_INVALID_INPUT");
     }
 
     #[test]
@@ -512,13 +512,13 @@ mod tests {
         let l0 = (1000f64.powi(2) + 900.).sqrt();
         let l = (1000f64.powi(2) + 400.).sqrt();
         let p = 2. * 200_000. * 100. * (l0 - l) / l0 * (20. / l);
-        let r = crate::dispatch(toggle(p)).unwrap();
+        let r = crate::handle(toggle(p)).unwrap();
         assert_eq!(r["converged"], json!(true));
         assert_eq!(r["loadFactor"], json!(1.));
         let v = r["displacementsMm"][2][1].as_f64().unwrap();
         assert!((v + 10.).abs() < 1e-6, "{v}");
         // Beyond the limit point (≈ 207.7 N) load control stalls.
-        let r = crate::dispatch(toggle(400.)).unwrap();
+        let r = crate::handle(toggle(400.)).unwrap();
         assert_eq!(r["converged"], json!(false));
         let lambda = r["loadFactor"].as_f64().unwrap();
         assert!(lambda > 0.35 && lambda < 0.65, "{lambda}");
@@ -526,13 +526,13 @@ mod tests {
         let mut bad = toggle(100.);
         bad["steps"] = json!(0);
         assert_eq!(
-            crate::dispatch(bad).unwrap_err().code,
+            crate::handle(bad).unwrap_err().code,
             "TRUSS_INVALID_INPUT"
         );
         let mut bad = toggle(100.);
         bad["damping"] = json!(0.1);
         assert_eq!(
-            crate::dispatch(bad).unwrap_err().code,
+            crate::handle(bad).unwrap_err().code,
             "GEOMETRY_INVALID_INPUT"
         );
     }

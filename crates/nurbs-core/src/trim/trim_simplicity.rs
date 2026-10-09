@@ -269,10 +269,14 @@ pub fn inspect(
                 n > 2 && adjacent_separated(&curves[a], &curves[b], join)
             } else if out.cells < max_cells {
                 let budget = ((max_cells - out.cells) / (out.total_pairs - out.pairs.len())).max(1);
-                let r =
-                    curve_distance::prove_separation(&curves[a], &curves[b], tolerance_uv, budget)?;
-                out.cells += r.cells;
-                r.distance_interval_mm[0] > 0.
+                match curve_distance::prove_separation(&curves[a], &curves[b], tolerance_uv, budget) {
+                    Ok(r) => {
+                        out.cells += r.cells;
+                        r.distance_interval_mm[0] > 0.
+                    }
+                    Err(error) if error.code == "NURBS_RESOURCE_LIMIT" => false,
+                    Err(error) => return Err(error),
+                }
             } else {
                 false
             };
@@ -288,6 +292,25 @@ pub fn inspect(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn insufficient_initial_span_pairs_leave_trim_simplicity_unproved() {
+        let corners = [[0.,0.],[2.,0.],[2.,2.],[0.,2.]];
+        let curves = (0..4).map(|i| {
+            let a = corners[i]; let b = corners[(i+1)%4];
+            let steps = if i%2==0 {4} else {1};
+            Curve::from_polyline((0..=steps).map(|j| {
+                let t = j as f64/steps as f64;
+                vec![a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])]
+            }).collect()).unwrap()
+        }).collect::<Vec<_>>();
+        let before = format!("{curves:?}");
+        let short = inspect(&curves,1e-8,100,32).unwrap();
+        assert!(short.injective.iter().all(|v|*v));
+        assert!(!short.proven_simple);
+        assert!(short.cells<=32);
+        assert!(inspect(&curves,1e-8,100,10000).unwrap().proven_simple);
+        assert_eq!(format!("{curves:?}"),before);
+    }
     fn polygon(p: &[[f64; 2]]) -> Vec<Curve> {
         (0..p.len())
             .map(|i| {

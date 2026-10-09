@@ -14,7 +14,7 @@ export function verifyRawWasm(raw, expected, label) {
 export function verifyUniquePackedWasm(assets) {
   const owners = new Map()
   for (const {path, source} of assets) {
-    for (const match of source.matchAll(/(["'`])(b85:[^"'`\\\r\n]+|b(?:91|9v):[^'`\\\r\n]+|b(?:9[2345]|Ax):[^'\\\r\n]+)\1/g)) {
+    for (const match of source.matchAll(/(["'`])(b85:[^"'`\\\r\n]+|b(?:91|9v):[^'`\\\r\n]+|b(?:9[2345]|Ax|Bx):[^'\\\r\n]+)\1/g)) {
       const hash = createHash('sha256').update(match[2]).digest('hex')
       if (owners.has(hash)) throw new Error(`Duplicate packed WASM literal: ${owners.get(hash)} and ${path}`)
       owners.set(hash, path)
@@ -26,11 +26,11 @@ export function verifyUniquePackedWasm(assets) {
 /** Validate the emitted literal without executing generated application code. */
 export function verifyPackedWasmChunk(source, expected, label, compression = 'brotli') {
   if (compression !== 'brotli' && compression !== 'deflate') throw new Error(`${label}: unsupported packing format`)
-  const literals = [...source.matchAll(/(["'`])(b85:[^"'`\\\r\n]+|b(?:91|9v):[^'`\\\r\n]+|b(?:9[2345]|Ax):[^'\\\r\n]+|[A-Za-z0-9+/]{64,}={0,2})\1/g)]
+  const literals = [...source.matchAll(/(["'`])(b85:[^"'`\\\r\n]+|b(?:91|9v):[^'`\\\r\n]+|b(?:9[2345]|Ax|Bx):[^'\\\r\n]+|[A-Za-z0-9+/]{64,}={0,2})\1/g)]
   if (literals.length !== 1) throw new Error(`${label}: expected exactly one packed WASM literal`)
   const literal = literals[0][2]
-  const packed = (literal.startsWith('b91:')||literal.startsWith('b9v:')||literal.startsWith('b92:')||literal.startsWith('b93:')||literal.startsWith('b94:')||literal.startsWith('b95:')||literal.startsWith('bAx:')) ? Buffer.from(decodeBase91(literal)) : literal.startsWith('b85:') ? Buffer.from(decodeBase85(literal)) : Buffer.from(literal, 'base64')
-  if (!literal.startsWith('b85:') && !(literal.startsWith('b91:')||literal.startsWith('b9v:')||literal.startsWith('b92:')||literal.startsWith('b93:')||literal.startsWith('b94:')||literal.startsWith('b95:')||literal.startsWith('bAx:')) && packed.toString('base64') !== literal) throw new Error(`${label}: invalid base64`)
+  const packed = (literal.startsWith('b91:')||literal.startsWith('b9v:')||literal.startsWith('b92:')||literal.startsWith('b93:')||literal.startsWith('b94:')||literal.startsWith('b95:')||literal.startsWith('bAx:')||literal.startsWith('bBx:')) ? Buffer.from(decodeBase91(literal)) : literal.startsWith('b85:') ? Buffer.from(decodeBase85(literal)) : Buffer.from(literal, 'base64')
+  if (!literal.startsWith('b85:') && !(literal.startsWith('b91:')||literal.startsWith('b9v:')||literal.startsWith('b92:')||literal.startsWith('b93:')||literal.startsWith('b94:')||literal.startsWith('b95:')||literal.startsWith('bAx:')||literal.startsWith('bBx:')) && packed.toString('base64') !== literal) throw new Error(`${label}: invalid base64`)
   if (packed.length <= 4 || packed.length - 4 > 4 * 1024 * 1024) throw new Error(`${label}: compressed size limit`)
   const word = packed.readUInt32LE(0), multiple = !!(word & 0x80000000), size = word & 0x7fffffff
   if (size > 16 * 1024 * 1024 || size !== expected.length) throw new Error(`${label}: decoded size mismatch`)

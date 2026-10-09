@@ -49,47 +49,7 @@ export type OwnNurbsRequest = {
         v?: number;
     }>;
 };
-/** An sdf_tessellate job whose input subtree is pure SDF (no mesh inputs). */
-export interface SdfTessellationJob {
-    field: import('./geometry/sdf').SdfField
-    grid: { min: number[]; max: number[]; cells: number[] }
-}
-
-/** Collects sdf_tessellate jobs resolvable without mesh evaluation, so the
- * caller can run their grid sampling on the GPU before the synchronous build. */
-export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
-    type SdfField = import('./geometry/sdf').SdfField
-    const compiled = compileRushGraphNurbs(document)
-    const nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n] as const))
-    const memo = new Map<string, SdfField | null>()
-    const pure = (key: string): SdfField | null => {
-        const hit = memo.get(key)
-        if (hit !== undefined) return hit
-        const n = nodes.get(key) as any
-        const field: SdfField | null = !n ? null
-            : n.op === 'sdf_sphere' ? { kind: 'sphere', center: n.center, radius: n.radius }
-            : n.op === 'sdf_box' ? { kind: 'box', center: n.center, half_size: n.half_size }
-            : n.op === 'sdf_torus' ? { kind: 'torus', center: n.center, major_radius: n.major_radius, minor_radius: n.minor_radius }
-            : n.op === 'sdf_union' || n.op === 'sdf_intersection' || n.op === 'sdf_difference'
-                ? (() => { const a = pure(n.inputs[0]); const b = pure(n.inputs[1]); return a && b
-                    ? { kind: n.op === 'sdf_union' ? 'union' : n.op === 'sdf_intersection' ? 'intersection' : 'difference', a, b } : null })()
-            : n.op === 'sdf_smooth_union'
-                ? (() => { const a = pure(n.inputs[0]); const b = pure(n.inputs[1]); return a && b ? { kind: 'smooth_union', a, b, radius: n.radius } : null })()
-            : n.op === 'sdf_offset' ? (() => { const input = pure(n.input); return input ? { kind: 'offset', input, distance: n.distance } : null })()
-            : n.op === 'sdf_translate' ? (() => { const input = pure(n.input); return input ? { kind: 'translate', input, vector: n.vector } : null })()
-            : null
-        memo.set(key, field)
-        return field
-    }
-    const jobs: SdfTessellationJob[] = []
-    for (const n of compiled.resolved_document.nodes) {
-        if ((n as any).op !== 'sdf_tessellate') continue
-        const node = n as any
-        const field = pure(node.input)
-        if (field) jobs.push({ field, grid: { min: node.min, max: node.max, cells: node.cells } })
-    }
-    return jobs
-}
+export {collectSdfJobs,type SdfTessellationJob} from './rushGraphSdfJobs'
 
 type SweepArguments=Parameters<typeof progressiveSweepNurbsProfiles>
 type SweepResolver=(nodeId:string,args:SweepArguments)=>ReturnType<typeof progressiveSweepNurbsProfiles>
@@ -406,9 +366,9 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     if(!builtSweep.report.accepted||!builtSweep.patches){
                         const report=builtSweep.report;
                         if(n.rmf_transport_steps!==undefined&&!report.continuousBound)throw new Error("Progressive sweep continuous retained-patch error is unproved at the configured RMF work budget");
-                        const error=report.knownProfileErrorUpper!=null&&report.knownProfileErrorUpper>report.budget
-                            ?`continuous retained-patch error ${report.knownProfileErrorUpper}`
-                            :`sampled refinement ${report.sampledControlDeviation}`;
+                        const error=report.continuousBound||report.knownProfileErrorUpper!=null
+                            ?`continuous retained-patch error ${report.continuousErrorUpper??report.knownProfileErrorUpper}`
+                            :`continuous retained-patch error or refinement ${report.sampledControlDeviation}`;
                         throw new Error(`Progressive sweep ${error}mm exceeds ${report.budget}mm at ${report.sections} sections`);
                     }
                     constructionReports[key]={...builtSweep.report,levels:builtSweep.levels,profilePatchRanges:builtSweep.profilePatchRanges};
@@ -453,7 +413,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     const args:MiterArguments=[n.loops.map(wire=>wire.map(needCurve)),n.points,n.scale,n.twist,{...(n.circle_correction_tolerance===undefined?{}:{circleCorrection:{tolerance:n.circle_correction_tolerance,quantum:n.circle_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??1000000}}),retainedWallMaxInjectivityCells:n.retained_wall_max_injectivity_cells,...(n.cap_correction_tolerance===undefined?{}:{capCorrection:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000,authoredFrame:n.cap_correction_authored_frame}}),...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide)}:{}),frameAxis:n.frame_axis,frameNormal:n.frame_normal,axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,closed:n.closed,miterLimit:n.miter_limit,initialSteps:n.initial_steps,maxSteps:n.max_steps,maxDeviation:n.max_deviation}];
                     const body=resolveMiter?resolveMiter(key,args):createProgressiveMiterBrepProfileBody(...args);
                     miterSources.set(key,body);
-                    constructionReports[key]={...body.approximation.report,continuousBound:body.boundaryCertificate.continuousBound,profileSmoothness:body.profileSmoothness,boundaryCertificate:body.boundaryCertificate,wallRegularityCertified:body.retainedWallCharts.allChartsCertified,levels:body.approximation.levels,sectionCorrection:body.sectionCorrection,retainedWallErrorUpper:body.retainedWallErrorUpper,capProjection:body.capProjection,capParallelism:body.capParallelism,retainedCapDecomposition:body.retainedCapDecomposition,retainedDecomposition:body.retainedDecomposition,idealCapDomains:body.idealCapDomains,filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,wallAudit:body.wallAudit,retainedCorrespondence:body.retainedCorrespondence,retainedCaps:body.retainedCaps,retainedWallCharts:body.retainedWallCharts,capDomains:body.capDomains,capContacts:body.capContacts,capPairs:body.capPairs,embedding:body.embedding,volume:body.volume,globalEmbeddingCertified:false};
+                    constructionReports[key]={...body.approximation.report,sweepMiterReplay:body.sweepMiterReplay,continuousBound:body.boundaryCertificate.continuousBound,profileSmoothness:body.profileSmoothness,boundaryCertificate:body.boundaryCertificate,wallRegularityCertified:body.retainedWallCharts.allChartsCertified,levels:body.approximation.levels,sectionCorrection:body.sectionCorrection,retainedWallErrorUpper:body.retainedWallErrorUpper,capProjection:body.capProjection,capParallelism:body.capParallelism,retainedCapDecomposition:body.retainedCapDecomposition,retainedDecomposition:body.retainedDecomposition,idealCapDomains:body.idealCapDomains,filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,wallAudit:body.wallAudit,retainedCorrespondence:body.retainedCorrespondence,retainedCaps:body.retainedCaps,retainedWallCharts:body.retainedWallCharts,capDomains:body.capDomains,capContacts:body.capContacts,capPairs:body.capPairs,embedding:body.embedding,volume:body.volume,globalEmbeddingCertified:false};
                     if(n.circle_correction_tolerance!==undefined||n.cap_correction_tolerance!==undefined||(body.sectionCorrection?.reason==='automatic-bounded-cap-planarity'||body.sectionCorrection?.reason==='bounded-periodic-profile-interpolation'||body.sectionCorrection?.reason==='bounded-rational-periodic-profile-interpolation'))exactMiterPlacements.set(key,{body,quantum:n.circle_correction_quantum??n.cap_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??n.cap_correction_max_work??1000000});
                     result={kind:'brep',data:body.model};break;
                 }
@@ -730,7 +690,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
             wallRegularityCertified:'wallRegularityCertified' in sourceConstruction?sourceConstruction.wallRegularityCertified:false,
             continuousBound:'continuousBound' in sourceConstruction?sourceConstruction.continuousBound:false,
         }:undefined;
-        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
+        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sourceConstruction&&'sweepMiterReplay' in sourceConstruction&&sourceConstruction.sweepMiterReplay?{sweepMiterReplay:sourceConstruction.sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
         return {...base,...(mesh?{mesh}:{}),nativeGeometry};
     }
     return { ...base, ...(request.action === 'build' && root.kind === 'mesh' ? { mesh: root.data } : {}) };

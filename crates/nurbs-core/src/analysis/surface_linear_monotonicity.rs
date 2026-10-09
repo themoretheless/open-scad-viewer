@@ -100,6 +100,17 @@ fn inspect_with_depth(
         out.reason = Some("continuous-rectangle-domain-unproved");
         return Ok(out);
     }
+    // Gale--Nikaido, Math. Ann. 159 (1965), Theorem 4: a C1 map whose
+    // Jacobian is a P-matrix everywhere on a rectangle is globally injective.
+    // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
+    // A C0 knot join is excluded from this alternative. Strong monotonicity
+    // below remains valid for the existing piecewise smooth continuous case.
+    let continuously_differentiable = (0..2).all(|k| {
+        knots[k]
+            .iter()
+            .filter(|v| **v > knots[k][degrees[k]] && **v < knots[k][counts[k]])
+            .all(|v| knots[k].iter().filter(|x| *x == v).count() < degrees[k])
+    });
     let mut pending = Vec::new();
     for u in degrees[0]..counts[0] {
         for v in degrees[1]..counts[1] {
@@ -204,9 +215,11 @@ fn inspect_with_depth(
             }
             let off = uv.add(vu)?.mul(I::point(0.5))?;
             let radius = I::point(off.lo.abs().max(off.hi.abs()));
-            Ok(i8::from(
-                uu.lo > 0. && vv.lo > 0. && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.,
-            ))
+            let diagonal = uu.lo > 0. && vv.lo > 0.;
+            let strong_monotonicity = diagonal && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.;
+            let p_matrix =
+                continuously_differentiable && diagonal && uu.mul(vv)?.sub(uv.mul(vu)?)?.lo > 0.;
+            Ok(i8::from(strong_monotonicity || p_matrix))
         })();
         match result {
             Ok(1) => (),
@@ -294,6 +307,28 @@ pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
         projection[0][k] as i16 * projection[1][(k + 1) % 3] as i16
             != projection[1][k] as i16 * projection[0][(k + 1) % 3] as i16
     });
+    // A cheap dual-map attempt avoids spending the corner-map allowance on
+    // thin spatial charts. Sampling only chooses the map; the whole-domain
+    // interval proof and every attempted cell remain mandatory and charged.
+    let mut preliminary_cells = 0;
+    if let Some(candidate) = midpoint_projection(s)? {
+        if candidate != projection {
+            // A rational ruled station chart often needs more than a handful
+            // of cells for its thin profile direction. Avoid redoing the same
+            // dual-map search after two exhausted preliminary proposals.
+            let ruled_station = s.degree_u > 1
+                && s.degree_v == 1
+                && s.control_points[0].len() == 2
+                && s.weights.iter().all(|row| row.iter().all(|w| *w == row[0]));
+            let allowance = if ruled_station { 512 } else { 16 };
+            let preliminary = inspect_with_depth(s, candidate, max_cells.min(allowance), 14)?;
+            if preliminary.certified || preliminary.cells == max_cells {
+                return Ok(preliminary);
+            }
+            preliminary_cells = preliminary.cells;
+        }
+    }
+    let remaining = max_cells - preliminary_cells;
     let mut first = if !independent {
         Report {
             certified: false,
@@ -302,8 +337,9 @@ pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
             reason: Some("linear-projection-proposal-unproved"),
         }
     } else {
-        inspect(s, projection, max_cells.min(16))?
+        inspect(s, projection, remaining.min(16))?
     };
+    first.cells += preliminary_cells;
     if first.certified || first.cells == max_cells {
         return Ok(first);
     }
@@ -391,7 +427,7 @@ fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
         if !scale.is_finite() || scale <= 0. {
             return Ok(None);
         }
-        candidate[row] = dual[row].map(|x| (16. * x / scale).round() as i8);
+        candidate[row] = dual[row].map(|x| (64. * x / scale).round() as i8);
     }
     let independent = (0..3).any(|k| {
         candidate[0][k] as i16 * candidate[1][(k + 1) % 3] as i16
@@ -401,6 +437,28 @@ fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn fixed_shear_projection_proves_the_whole_rectangle_without_symmetric_jacobian() {
+        let s = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![10., 1., 0.]],
+                vec![vec![1., 0., 0.], vec![11., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let before = s.clone();
+        let report = inspect(&s, [[1, 0, 0], [0, 1, 0]], 1).unwrap();
+        assert!(report.certified, "{report:?}");
+        assert_eq!(report.cells, 1);
+        assert!(!inspect(&s, [[1, 0, 0], [0, 1, 0]], 0).unwrap().certified);
+        assert_eq!(s, before);
+    }
     #[test]
     fn station_split_refuses_variable_station_weights_and_rounded_differences() {
         let mut s = quarter();
@@ -482,7 +540,7 @@ mod tests {
         assert_eq!(rounded, before);
     }
     #[test]
-    fn sheared_periodic_wall_keeps_unproved_injectivity_explicit() {
+    fn sheared_wall_has_a_fixed_p_matrix_and_periodic_domain_still_refuses() {
         let s = Surface {
             degree_u: 2,
             degree_v: 1,
@@ -507,8 +565,11 @@ mod tests {
             periodic_v: false,
         };
         let proof = inspect_candidate(&s, 10000).unwrap();
-        assert!(!proof.certified, "{proof:?}");
-        assert_eq!(proof.reason, Some("subdivision-depth-exhausted"));
+        assert!(proof.certified, "{proof:?}");
+        assert!(proof.cells <= 10000);
+        let mut periodic = s.clone();
+        periodic.periodic_u = true;
+        assert!(inspect_candidate(&periodic, 10000).is_err());
         let transported = inspect(&s, [[0, 17, -1], [-15, -14, 16]], 10000);
         assert!(transported.unwrap().certified);
     }
@@ -523,7 +584,7 @@ mod tests {
             }
         }
         assert!(
-            !inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
+            inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
                 .unwrap()
                 .certified
         );

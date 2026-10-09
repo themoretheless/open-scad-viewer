@@ -20,7 +20,15 @@ fn elevated_rational_line_reduces_with_verified_error() {
     for i in 0..=200 {
         let t = i as f64 / 200.;
         let p = r.curve.evaluate(2. + 5. * t).unwrap().point;
-        assert!((p[0] - 12. * t / (1. + 2. * t)).abs() <= r.certificate.error_upper);
+        let oracle = 12. * t / (1. + 2. * t);
+        // The certificate bounds the real-arithmetic curves. This separate
+        // allowance covers rounding in the parameter transform, evaluator and
+        // independently evaluated rational formula; it is not a fit budget.
+        let evaluation_roundoff = 64. * f64::EPSILON * (1. + p[0].abs() + oracle.abs());
+        assert!((p[0] - oracle).abs() <= r.certificate.error_upper + evaluation_roundoff);
+        assert!((p[0] - oracle).abs() <= 0.1);
+        let original = s.evaluate(2. + 5. * t).unwrap().point;
+        assert!((p[0] - original[0]).abs() <= r.certificate.error_upper + evaluation_roundoff);
         assert!(p[1].abs() <= r.certificate.error_upper);
     }
     assert_eq!(s, line());

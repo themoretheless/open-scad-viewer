@@ -245,9 +245,27 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
                 )),
             }
         };
+    let conditioned = |pa: [f64; 2], pb: [f64; 2], pc: [f64; 2]| {
+        let ab = sub2(pb, pa);
+        let ac = sub2(pc, pa);
+        let ab_len = ab[0].hypot(ab[1]);
+        let ac_len = ac[0].hypot(ac[1]);
+        // Include cancellation in coordinate subtraction. A tiny ear at
+        // UV coordinates near one has larger uncertainty than the same
+        // ear whose coordinates and edges are both near zero.
+        let coordinate_scale = pa
+            .into_iter()
+            .chain(pb)
+            .chain(pc)
+            .map(f64::abs)
+            .fold(0., f64::max);
+        cross2(ab, ac).abs()
+            > 64. * f64::EPSILON * (ab_len * ac_len + coordinate_scale * (ab_len + ac_len))
+    };
     while remaining.len() > 3 {
         let n = remaining.len();
         let mut selected = None;
+        let mut fallback = None;
         for offset in 0..n {
             let i = (cursor + offset) % n;
             *work += 1;
@@ -264,6 +282,10 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
             if orientation(a, b, c, work)? != cad_predicates::Sign::Positive {
                 continue;
             }
+            // Exact positive orientation can still describe a rounding sliver
+            // between samples of one straight authored edge. Keep its vertex
+            // in the boundary and clip a better-conditioned ear instead.
+            let stable = conditioned(pa, pb, pc);
             let min = [pa[0].min(pb[0]).min(pc[0]), pa[1].min(pb[1]).min(pc[1])];
             let max = [pa[0].max(pb[0]).max(pc[0]), pa[1].max(pb[1]).max(pc[1])];
             let mut blocked = false;
@@ -290,11 +312,17 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
                 "Profile triangulation work budget exceeded",
             )?;
             if !blocked {
-                selected = Some((i, [a as u32, b as u32, c as u32]));
-                break;
+                let ear = (i, [a as u32, b as u32, c as u32]);
+                if stable {
+                    selected = Some(ear);
+                    break;
+                }
+                if fallback.is_none() {
+                    fallback = Some(ear);
+                }
             }
         }
-        let (index, triangle) = selected.ok_or_else(|| {
+        let (index, triangle) = selected.or(fallback).ok_or_else(|| {
             crate::error("Profile cannot be triangulated without crossing its boundary")
         })?;
         indices.extend(triangle);
@@ -307,12 +335,113 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
         "Profile has a degenerate final triangle",
     )?;
     indices.extend(remaining.into_iter().map(|i| i as u32));
+    // Recondition rounding slivers by flipping internal diagonals only.
+    // Every replacement retains the original four vertices and boundary
+    // segments; exact orientations prevent crossing or inverted triangles.
+    loop {
+        let mut bad = false;
+        let mut repair = None;
+        for index in (0..indices.len()).step_by(3) {
+            *work = work.saturating_add(1);
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
+            let last = [
+                indices[index] as usize,
+                indices[index + 1] as usize,
+                indices[index + 2] as usize,
+            ];
+            if conditioned(positions[last[0]], positions[last[1]], positions[last[2]]) {
+                continue;
+            }
+            bad = true;
+            for k in 0..3 {
+                let [a, b, c] = [last[k], last[(k + 1) % 3], last[(k + 2) % 3]];
+                for other in (0..indices.len()).step_by(3) {
+                    if other == index {
+                        continue;
+                    }
+                    *work = work.saturating_add(1);
+                    check(
+                        *work <= MAX_WORK,
+                        "Profile triangulation work budget exceeded",
+                    )?;
+                    let t = [
+                        indices[other] as usize,
+                        indices[other + 1] as usize,
+                        indices[other + 2] as usize,
+                    ];
+                    let Some(j) = (0..3).find(|&j| t[j] == b && t[(j + 1) % 3] == a) else {
+                        continue;
+                    };
+                    let d = t[(j + 2) % 3];
+                    if conditioned(positions[c], positions[d], positions[b])
+                        && conditioned(positions[d], positions[c], positions[a])
+                        && orientation(c, d, b, work)? == cad_predicates::Sign::Positive
+                        && orientation(d, c, a, work)? == cad_predicates::Sign::Positive
+                    {
+                        repair = Some((index, other, [c, d, b], [d, c, a]));
+                        break;
+                    }
+                }
+                if repair.is_some() {
+                    break;
+                }
+            }
+            if repair.is_some() {
+                break;
+            }
+        }
+        if !bad {
+            break;
+        }
+        let (index, other, first, second) = repair.ok_or_else(|| {
+            crate::error("Boundary triangles cannot be conditioned without changing their boundary")
+        })?;
+        for k in 0..3 {
+            indices[index + k] = first[k] as u32;
+            indices[other + k] = second[k] as u32;
+        }
+    }
     Ok(indices)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rotated_sampled_straight_edges_keep_every_boundary_segment_without_slivers() {
+        let corners = [[-10., -4.], [10., -4.], [10., 4.], [-10., 4.]];
+        let (sin, cos) = 0.37_f64.sin_cos();
+        let mut boundary = Vec::new();
+        for edge in 0..4 {
+            for step in 0..7 {
+                let t = step as f64 / 7.;
+                let a = corners[edge];
+                let b = corners[(edge + 1) % 4];
+                let x = a[0] + t * (b[0] - a[0]);
+                let y = a[1] + t * (b[1] - a[1]);
+                boundary.push([cos * x - sin * y, sin * x + cos * y]);
+            }
+        }
+        let mesh = triangulate_profile(&boundary, &[]).unwrap();
+        assert_eq!(mesh.positions, boundary);
+        let mut uses = std::collections::BTreeMap::new();
+        for triangle in mesh.indices.as_chunks::<3>().0 {
+            let [a, b, c] = triangle.map(|i| mesh.positions[i as usize]);
+            assert!(cross2(sub2(b, a), sub2(c, a)) > 64. * f64::EPSILON);
+            for k in 0..3 {
+                let a = triangle[k];
+                let b = triangle[(k + 1) % 3];
+                *uses.entry([a.min(b), a.max(b)]).or_insert(0) += 1;
+            }
+        }
+        for a in 0..boundary.len() as u32 {
+            let b = (a + 1) % boundary.len() as u32;
+            assert_eq!(uses[&[a.min(b), a.max(b)]], 1);
+        }
+    }
     #[test]
     fn ear_clipping_stops_at_the_work_budget() {
         let points = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];

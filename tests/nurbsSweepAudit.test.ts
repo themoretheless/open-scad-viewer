@@ -22,7 +22,6 @@ it('qualifies real open corner sweeps and cyclic round seams through the public 
  const planar:[number,number,number][]=[[0,0,0],[10,0,0],[10,10,0],[0,10,0]]
  for(const sites of [spatial,planar])for(const closed of [false,true])for(const order of [1,2] as const){
   const path=order===1?roundPolylineNurbsCurve(sites,2,closed):transitionPolylineNurbsCurve(sites,2,closed)
-  if(path.controlPoints.length>32){expect(()=>sweepNurbsCurve(profile,path)).toThrow();continue}
   const base=sweepNurbsCurve(profile,path),pieces=decomposeNurbsCurve(path)
   const walls=pieces.map(piece=>trimNurbsSurface(base,[0,1,...piece.domain]))
   const joins:SweepSeamDeclaration[]=[]
