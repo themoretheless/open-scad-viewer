@@ -86,6 +86,10 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 out.reason = if total.lo > 0. || total.hi < 0. { "expression-volume-sign-and-error-enclosed" } else { "expression-volume-sign-unresolved" };
                 return Ok(out);
             }
+            if let Some(next) = queue.peek() {
+                out.uncertain_face = Some(nodes[next.0].face);
+                out.uncertain_domain = Some(nodes[next.0].domain);
+            }
             if out.cells.saturating_add(2) > limits.cells || out.spans == limits.spans {
                 out.reason = "expression-volume-work-limit"; return Ok(out);
             }
