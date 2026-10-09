@@ -3100,3 +3100,8 @@ Complete native ownership fixture passed in 246.21 s. Pairs [0,1] and [1,27] qua
 ### Fresh neighbor-only material hull prepared
 
 Added `certify_shell_with_raw_side`: retain the designated full positive control hull and freshly qualify material only on the other original side. Profile hull contact validates complete unchanged neighbor contours, keeps the modified selected side raw, and can now use this fresh neighbor material certificate. Four native hull regressions and 19 assembled-shell regressions pass. The fixture guard now requires the retained side material certificate to be absent while allowing a fresh unchanged-neighbor certificate. A full cumulative run is active; its compiled fixture predates this guard update and may stop at the obsolete all-material-certificates-absent expectation if a new positive material case occurs. It will not be called complete on partial output. Latest fully verified residual remains 9.
+
+
+### Verified neighbor-only material separation on residual source pairs
+
+The native annular regression passes in 0.26 s with all six exact positive cases: [0,11], [11,0], [0,15], [15,0], [0,19], [19,0]. Each certificate has no material substitution on the designated raw selected side, a fresh original planar-material certificate on the neighbor, opposite strict signs and matching source controls. Work ranges 9,158 to 14,054 operations. A one-operation budget refuses and invalid raw-side index errors. Exact positive-case coverage is frozen in the regression, rather than accepting a zero-positive result. The complete cumulative expression fixture remains active and predates the updated retained-only material guard; full residual reduction is not yet qualified. Latest completed full residual remains 9.

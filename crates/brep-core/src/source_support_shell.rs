@@ -364,6 +364,31 @@ mod tests {
 
     }
     #[test]
+    fn annular_raw_profile_hull_uses_only_fresh_neighbor_material() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let shell=prepare(&model,limits()).unwrap().shell.unwrap();
+        let mut qualified=Vec::new();
+        for neighbor in [11,15,19] {
+            for (ids,raw) in [([0,neighbor],0),([neighbor,0],1)] {
+                let report=crate::source_hull_separation::certify_shell_with_raw_side(&shell,ids,raw,10000000).unwrap();
+                eprintln!("raw profile hull pair={ids:?} qualified={} work={} reason={}",report.certificate.is_some(),report.exact_work,report.reason);
+                assert!(report.exact_work<=10000000);
+                if let Some(proof)=report.certificate {
+                    assert!(proof.material_hulls()[raw].is_none());
+                    assert!(proof.material_hulls()[1-raw].is_some());
+                    assert_ne!(proof.sides()[0],proof.sides()[1]);
+                    assert_eq!(proof.regions()[raw].loops()[0][0].surface(),shell.regions().unwrap()[0].loops()[0][0].surface());
+                    qualified.push((neighbor,raw));
+                }
+                assert!(crate::source_hull_separation::certify_shell_with_raw_side(&shell,ids,raw,1).unwrap().certificate.is_none());
+            }
+        }
+        assert_eq!(qualified,vec![(11,0),(11,1),(15,0),(15,1),(19,0),(19,1)]);
+        eprintln!("raw profile hull qualified cases={qualified:?}");
+        assert!(crate::source_hull_separation::certify_shell_with_raw_side(&shell,[0,11],2,100000).is_err());
+    }
+
+    #[test]
     fn annular_profile_boundary_plane_transfer_keeps_exact_source_owner() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
