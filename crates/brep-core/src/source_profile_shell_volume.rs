@@ -44,6 +44,10 @@ fn refine_sum(previous: I, left: I, right: I) -> Result<I> {
     // Retain the tighter old enclosure if child dependency bounds are wider.
     I::new(previous.lo.max(sum.lo), previous.hi.min(sum.hi))
 }
+fn planar_allowance(cells: usize, spans: usize, remaining_faces: usize) -> usize {
+    if remaining_faces == 0 { return 0; }
+    (cells.saturating_sub(remaining_faces) / remaining_faces).min(spans / remaining_faces)
+}
 
 impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
     pub fn inspect_volume(&self, limits: ExpressionVolumeLimits) -> Result<ExpressionVolumeReport> {
@@ -79,9 +83,9 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 let root = shell.assembly.patch.rails.face.boundary.rooted[0];
                 let source_geometry = root.restricted.proposal.body.geometry();
                 let remaining_faces = shell.faces().len() - face;
-                let allowance = (limits.cells - out.cells).saturating_sub(remaining_faces) / remaining_faces;
+                let allowance = planar_allowance(limits.cells - out.cells, limits.spans - out.spans, remaining_faces);
                 let report = crate::source_planar_flux::bound(source_geometry, original, limits.axis, limits.origin,
-                    error_share, allowance.min((limits.spans - out.spans) / remaining_faces))?;
+                    error_share, allowance)?;
                 out.cells += report.cells; out.spans += report.cells;
                 planar = report.bound;
             }
@@ -145,5 +149,22 @@ mod tests {
         let tight = refine_sum(old, I::new(5., 6.).unwrap(), I::new(6., 7.).unwrap()).unwrap();
         assert!(tight.lo <= 11. && tight.hi >= 13. && tight.lo > old.lo && tight.hi < old.hi);
         assert!(refine_sum(old, I::point(-5.), I::point(-5.)).is_err());
+    }
+    #[test]
+    fn greedy_planar_queries_cannot_starve_remaining_initial_face_cells() {
+        // Reproduce the old failure: each planar query consumes its whole
+        // allowance, refuses, then needs one fallback face evaluation.
+        for budget in [29, 30, 512, 8192] {
+            let mut cells = budget; let mut spans = 1000000;
+            for remaining in (1..=29).rev() {
+                let allowance = planar_allowance(cells, spans, remaining);
+                cells -= allowance; spans -= allowance;
+                assert!(cells >= remaining);
+                cells -= 1;
+            }
+        }
+        assert_eq!(planar_allowance(512, 0, 29), 0);
+        assert_eq!(planar_allowance(0, 1000, 29), 0);
+        assert_eq!(planar_allowance(512, 1000, 0), 0);
     }
 }
