@@ -31,7 +31,7 @@ pub struct ProfileBoundaryReport<'x, 'b> {
 // Source contours use traversal-ordered ends. A possible fiber endpoint must
 // touch an entire owned fiber fragment on the same closed contour. Mere shared
 // vertex counts or nearby Cartesian positions are insufficient.
-fn boundary_owned(loci: &[Locus], owned: &[bool]) -> bool {
+pub(super) fn boundary_owned(loci: &[Locus], owned: &[bool]) -> bool {
     if loci.is_empty() || loci.len() != owned.len() {
         return false;
     }

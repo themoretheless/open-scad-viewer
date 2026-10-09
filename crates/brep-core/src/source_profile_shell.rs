@@ -671,7 +671,7 @@ pub use transition_contact::{TransitionPlaneContact, TransitionPlaneReport};
 
 #[path="source_profile_shell_ruled_contact.rs"]
 mod ruled_contact;
-pub use ruled_contact::{TransitionRuledContact,TransitionRuledReport,ProfileRuledImage,ProfileRuledImageReport};
+pub use ruled_contact::{TransitionRuledContact,TransitionRuledReport,ProfileRuledImage,ProfileRuledImageReport,ProfileRuledContact,ProfileRuledContactReport};
 
 #[path = "source_profile_shell_section_contact.rs"]
 mod section_contact;

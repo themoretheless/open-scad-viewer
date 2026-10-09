@@ -345,3 +345,81 @@ impl<'x,'o,'i,'f,'a,'s,'p,'b> ExpressionShell<'x,'o,'i,'f,'a,'s,'p,'b> {
         Ok(out)
     }
 }
+
+pub struct ProfileRuledContact<'x, 'b> {
+    image: ProfileRuledImage<'x, 'b>,
+    boundary: crate::source_profile_boundary_identity::Certificate<'x, 'b>,
+    shared: Vec<[crate::source_shell_incidence::Address;2]>,
+}
+impl ProfileRuledContact<'_, '_> {
+    pub fn image(&self) -> &ProfileRuledImage<'_, '_> { &self.image }
+    pub fn boundary(&self) -> &crate::source_profile_boundary_identity::Certificate<'_, '_> { &self.boundary }
+    pub fn shared(&self) -> &[[crate::source_shell_incidence::Address;2]] { &self.shared }
+}
+pub struct ProfileRuledContactReport<'x, 'b> {
+    pub certificate: Option<ProfileRuledContact<'x, 'b>>,
+    pub exact_work: u64,
+    pub driver_cells: usize,
+    pub boundary_cells: usize,
+    pub reason: &'static str,
+}
+impl<'x,'o,'i,'f,'a,'s,'p,'b> ExpressionShell<'x,'o,'i,'f,'a,'s,'p,'b> {
+    pub fn qualify_profile_ruled_contact(
+        &self, faces:[usize;2], tolerance:f64, max_controls:usize, max_work:u64, max_cells:usize, max_driver:usize,
+    ) -> Result<ProfileRuledContactReport<'_, 'b>> {
+        use crate::{source_fiber_boundary::Locus,source_shell_incidence::Address};
+        if max_driver>100000 {return Err(Error::new("BREP_PROFILE_CONTACTS","Bound profile ruled driver work"));}
+        let report=self.qualify_profile_ruled_image(faces,tolerance,max_controls,max_work,max_cells)?;
+        let mut out=ProfileRuledContactReport {certificate:None,exact_work:report.exact_work,driver_cells:0,boundary_cells:report.boundary_cells,reason:report.reason};
+        let Some(image)=report.certificate else {return Ok(out);};
+        if max_driver==0 || out.exact_work==max_work {out.reason="profile-ruled-contact-work-limit";return Ok(out);}
+        let side=if matches!(self.faces[faces[0]].kind(),ShellFaceKind::Retained(_)) {0} else {1};
+        let shared=self.pairs.iter().filter(|p|p.uses.iter().all(|a|faces.contains(&a.face))).map(|p|p.uses).collect::<Vec<_>>();
+        let (axis,upper)=match image.natural {0=>(1,false),1=>(0,true),2=>(1,true),_=>(0,false)};
+        let profile=image.profile.profile();
+        let report=crate::source_profile_boundary_identity::certify(profile,axis,upper,max_work-out.exact_work)?;
+        out.exact_work+=report.exact_work;out.reason=report.reason;
+        let Some(boundary)=report.certificate else {return Ok(out);};
+        let retained=&self.faces[faces[side]];
+        for (wire,loop_) in retained.loops.iter().enumerate() {
+            let mut loci=Vec::new();let mut owned=Vec::new();
+            for (edge,use_) in loop_.iter().enumerate() {
+                let ShellUse::Source(fragment)=use_ else {out.reason="profile-ruled-contact-source-contour-unproven";return Ok(out);};
+                if out.driver_cells==max_driver {out.reason="profile-ruled-contact-driver-limit";return Ok(out);}
+                let report=crate::source_fiber_boundary::inspect_natural(fragment,profile.source(),(axis,upper),max_driver-out.driver_cells)?;
+                out.driver_cells+=report.driver_cells;loci.push(report.locus);
+                owned.push(shared.iter().flatten().any(|a|*a==Address {face:faces[side],wire,edge}));
+            }
+            if !super::profile_boundary_contact::boundary_owned(&loci,&owned) {
+                out.reason="profile-ruled-contact-retained-fiber-ownership-unproven";return Ok(out);
+            }
+            // Unresolved loops can never acquire authority via graph incidence.
+            debug_assert!(loci.iter().all(|l|*l!=Locus::Unresolved));
+        }
+        let source=profile.source();let domain=self.support_domain(faces[side])?;
+        let counts=[source.control_points.len(),source.control_points[0].len()];
+        let degrees=[source.degree_u,source.degree_v];let knots=[&source.knots_u,&source.knots_v];
+        // A collapsed XY boundary alone does not imply a collapsed world
+        // boundary. Recheck the original full 3D control row/column exactly.
+        for &natural in image.profile.collapsed_boundaries() {
+            let (a,high)=match natural {0=>(1,false),1=>(0,true),2=>(1,true),3=>(0,false),_=>{out.reason="profile-ruled-contact-collapsed-index-unproven";return Ok(out);}};
+            let fixed=if high {counts[a]-1} else {0};
+            let controls=(0..counts[1-a]).map(|free|if a==0 {&source.control_points[fixed][free]} else {&source.control_points[free][fixed]}).collect::<Vec<_>>();
+            if controls.iter().any(|p|*p!=controls[0]) {out.reason="profile-ruled-contact-world-pole-unproven";return Ok(out);}
+            let t=knots[a][if high {counts[a]} else {degrees[a]}];
+            if t<domain[a][0] || t>domain[a][1] {continue;}
+            let point=[controls[0][0],controls[0][1],controls[0][2]];
+            let owns=shared.iter().flatten().filter(|a|a.face==faces[side]).any(|a|match &retained.loops[a.wire][a.edge] {
+                ShellUse::Source(f)=>(0..2).any(|end|crate::source_vertex_contact::corner(f,end)==Some(point)),_=>false,
+            });
+            if !owns {out.reason="profile-ruled-contact-retained-pole-ownership-unproven";return Ok(out);}
+        }
+        // Jordan interior injectivity and the complete wall projection confine
+        // all contacts to the owned natural trace and qualified world poles.
+        // Native boundary identity transfers the shared edge's full 3D source
+        // agreement, including its independently qualified root-ended caps.
+        out.certificate=Some(ProfileRuledContact {image,boundary,shared});
+        out.reason="profile-owned-ruled-boundary-contact-qualified";
+        Ok(out)
+    }
+}

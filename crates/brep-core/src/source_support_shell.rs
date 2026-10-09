@@ -1274,6 +1274,19 @@ mod tests {
                 assert!(report.exact_work<=10000000 && report.boundary_cells<=10000);
             }
         }
+        assert!(expression.qualify_profile_ruled_contact([0,2],1e-8,1000,0,10000,10000).unwrap().certificate.is_none());
+        assert!(expression.qualify_profile_ruled_contact([0,2],1e-8,1000,10000000,10000,0).unwrap().certificate.is_none());
+        for ids in [[0,2],[2,27]] {
+            for order in [ids,[ids[1],ids[0]]] {
+                let report=expression.qualify_profile_ruled_contact(order,1e-8,1000,10000000,10000,10000).unwrap();
+                eprintln!("retained ruled contact pair={order:?} qualified={} work={} drivers={} reason={}",report.certificate.is_some(),report.exact_work,report.driver_cells,report.reason);
+                let proof=report.certificate.expect(report.reason);
+                for side in 0..2 {assert!(std::ptr::eq(proof.image().owners()[side],&expression.faces()[order[side]]));}
+                assert!(std::ptr::eq(proof.boundary().profile(),proof.image().profile().profile()));
+                for addresses in proof.shared() {assert!(expression.pairs().iter().any(|p|p.uses()==*addresses));}
+                assert!(report.exact_work<=10000000 && report.boundary_cells<=10000 && report.driver_cells<=10000);
+            }
+        }
         assert!(expression.qualify_profile_boundary_contact([0,0],1000,100).is_err());
         assert!(expression.qualify_profile_boundary_contact([0,1],0,100).unwrap().certificate.is_none());
         assert!(expression.qualify_profile_boundary_contact([0,1],1000,0).unwrap().certificate.is_none());
