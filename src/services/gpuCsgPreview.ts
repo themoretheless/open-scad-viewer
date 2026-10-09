@@ -6,7 +6,7 @@
  * bottlenecks during interactive preview and parameter editing.
  */
 
-import type { Statement, CallNode, Expr } from './openscadCompiler'
+import { compileOpenSCAD, type Statement, type CallNode, type Expr } from './openscadCompiler'
 
 /* ── CSG Types & Data Structures ──────────────────────── */
 
@@ -585,6 +585,18 @@ export function compileGpuCsgTree(statements: readonly Statement[]): GpuCsgTree 
   }
 
   return { terms }
+}
+
+/**
+ * Parses and compiles OpenSCAD source text into a GpuCsgTree for real-time GPU CSG preview.
+ */
+export function parseOpenScadCsgTree(source: string): GpuCsgTree | null {
+  try {
+    const statements = compileOpenSCAD(source)
+    return compileGpuCsgTree(statements)
+  } catch {
+    return null
+  }
 }
 
 /* ── WebGPU WGSL Shaders ──────────────────────────────── */
