@@ -945,6 +945,12 @@ mod tests {
         let pending_segment=expression.inspect_segment_supports([0.;3],[30.,0.,0.],0.01,1000,0,10000).unwrap();
         assert!(!pending_segment.boundary_excluded);
         assert_eq!(pending_segment.pending.len(),expression.faces().len());
+        let touching_segment=expression.inspect_segment_supports([0.,0.,3.],[30.,0.,0.],0.05,1000,1000,10000).unwrap();
+        assert!(!touching_segment.boundary_excluded);
+        assert!(!touching_segment.candidates.is_empty() || !touching_segment.pending.is_empty());
+        eprintln!("expression segment outside={} outsideCells={} touchingCandidates={} touchingPending={} touchingSpans={}",
+            outside_segment.boundary_excluded,outside_segment.cells,touching_segment.candidates.len(),
+            touching_segment.pending.len(),touching_segment.spans);
         assert!(expression.inspect_segment_supports([0.;3],[0.;3],0.01,1000,1000,10000).is_err());
         let (gap,gap_certificate)=expression.qualify_face_clearance([28,3],13.5,1000,1000,10000).unwrap();
         eprintln!("exact expression clearance complete={} lower={:?} cells={} spans={} pending={}",
