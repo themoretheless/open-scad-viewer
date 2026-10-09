@@ -3059,3 +3059,8 @@ Full native fixture passed in 251.34 s. Fresh positive-profile corner-locus excl
 ### Anchored Hermite enclosure prepared
 
 The position enclosure now intersects the previous direct interval with two algebraically equivalent anchored forms using h00+h01=1. Monotonic h01 on [0,1] gives outward endpoint bounds; no source geometry substitution or sampling authority is used. Four profile-section bridge regressions and 18 assembled-shell regressions pass. Full control-fixture qualification is running; no further contact reduction is claimed.
+
+
+### Natural profile boundary identity prepared
+
+Added a typed native certificate retaining the actual WeightProfile owner and chosen clamped natural boundary. Fresh exact dyadic determinants prove row[i]*column[j] = pivot*source_weight for every boundary control, without flattening products or comparing rounded ratios. Source controls and knots are unchanged, so this proves pointwise curve identity on every trimmed subinterval of that boundary. It does not authorize cross-face contact, corner ownership or Body admission; those require subsequent native gates. Regression passes for both chart axes, rejects a one-ulp weight residual, exhausted work and invalid axis. The tighter Hermite full fixture is still running; latest complete verified contact count remains 11.

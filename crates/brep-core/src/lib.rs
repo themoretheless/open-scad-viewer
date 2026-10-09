@@ -1873,6 +1873,7 @@ pub mod source_face_contacts;
 pub mod source_allowed_contact;
 pub mod source_plane_fiber;
 pub mod source_pole_plane_image;
+pub mod source_profile_boundary_identity;
 pub mod source_pole_paired_contact;
 pub mod source_paired_fiber_contact;
 pub mod source_fiber_boundary;
