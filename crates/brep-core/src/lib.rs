@@ -11,7 +11,7 @@
 #![allow(unused_features)]
 use nurbs_core::{
     Error, Result,
-    curve::Curve,
+    curve::{Curve, line},
     surface::{Surface, SurfaceSampler},
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -1627,15 +1627,6 @@ fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> 
         collapsed,
         "Pole boundary is not identically collapsed in the surface control net",
     )
-}
-fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
-    Curve {
-        degree: 1,
-        knots: vec![0., 0., 1., 1.],
-        control_points: vec![a, b],
-        weights: vec![1., 1.],
-        periodic: false,
-    }
 }
 /// Construct an exact six-face NURBS box with shared edges, not six loose patches.
 pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
