@@ -80,8 +80,6 @@ use brep_core::intersections::{CanonicalCone, recognize_cone};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
 
 
@@ -197,31 +195,6 @@ fn plane_uv(plane: &CanonicalPlane, point: [f64; 3]) -> [f64; 2] {
     ]
 }
 
-/// Rectangle half-planes of the patch domain with per-axis bands.
-fn rect_halfplanes(plane: &CanonicalPlane, band: f64) -> [Halfplane2; 4] {
-    [
-        Halfplane2 {
-            normal: [-1., 0.],
-            offset: 0.,
-            band: band / plane.u_len,
-        },
-        Halfplane2 {
-            normal: [1., 0.],
-            offset: 1.,
-            band: band / plane.u_len,
-        },
-        Halfplane2 {
-            normal: [0., -1.],
-            offset: 0.,
-            band: band / plane.v_len,
-        },
-        Halfplane2 {
-            normal: [0., 1.],
-            offset: 1.,
-            band: band / plane.v_len,
-        },
-    ]
-}
 
 /// Worst residual over `count` curve samples against the cone side equation
 /// (radius linearly interpolated in the axial coordinate) and the plane

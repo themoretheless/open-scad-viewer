@@ -29,7 +29,6 @@ use brep_core::intersections::{CanonicalCylinder, recognize_cylinder};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
 
 
 /// One cylinder face's share of an intersection circle in that face's UV.

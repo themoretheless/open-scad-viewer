@@ -4,9 +4,6 @@ use super::sphere_sphere::{ARC_WEIGHT, RECOGNITION};
 use super::*;
 use crate::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
-const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 
 #[doc(hidden)]
 /// A recognized canonical ring torus: the exact sixteen-patch solid of

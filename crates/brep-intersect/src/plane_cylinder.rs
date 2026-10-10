@@ -58,8 +58,6 @@ use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
 #[derive(Clone, Debug)]
 pub enum PlaneCylinderComponent {

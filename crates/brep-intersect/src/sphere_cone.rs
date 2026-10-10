@@ -53,7 +53,6 @@ use brep_core::intersections::sphere_sphere::{
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
 
 #[derive(Clone, Debug)]
 pub enum SphereConeComponent {

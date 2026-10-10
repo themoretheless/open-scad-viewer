@@ -1,12 +1,9 @@
 //! Exact recognition of the canonical analytic cone (four ruled quadrant sides,
 //! optional planar caps) on a retained model.
-use super::sphere_sphere::{ARC_WEIGHT, RECOGNITION};
+use super::sphere_sphere::RECOGNITION;
 use super::*;
 use crate::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
-const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
@@ -31,21 +28,6 @@ pub struct CanonicalCone {
     pub caps: [Option<usize>; 2],
 }
 
-/// One quadrant's exact cap trim arc: the quarter circle of radius 1/2
-/// centered at [1/2, 1/2] in cap UV, weights cos(pi/4).
-fn cap_quarter_arc(curve: &Curve, quadrant: usize) -> bool {
-    let [x, y] = QUADRANTS[quadrant];
-    let [nx, ny] = QUADRANTS[(quadrant + 1) % 4];
-    curve.degree == 2
-        && curve.knots == [0., 0., 0., 1., 1., 1.]
-        && curve.weights == [1., ARC_WEIGHT, 1.]
-        && curve.control_points
-            == [
-                [0.5 + x / 2., 0.5 + y / 2.].to_vec(),
-                [0.5 + (x + nx) / 2., 0.5 + (y + ny) / 2.].to_vec(),
-                [0.5 + nx / 2., 0.5 + ny / 2.].to_vec(),
-            ]
-}
 
 
 
