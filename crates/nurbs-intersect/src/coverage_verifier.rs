@@ -4,7 +4,7 @@
 //! treat it as an imprint authority. Failure is a typed refusal, never a silent
 //! downgrade to NumericallyResolved.
 
-use crate::intersections::{Coverage, Report, UnresolvedReason};
+use crate::{Coverage, Report, UnresolvedReason};
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result};
 
@@ -73,52 +73,6 @@ pub fn certify_lifted_uv_coverage(
         cell_count,
         winding_labels_deterministic,
         complete: true,
-    })
-}
-
-pub fn verify_lifted_uv_arrangement_coverage(
-    arrangement: &crate::uv_arrangement::LiftedUvArrangement,
-    context: &ToleranceContext,
-) -> Result<CoverageAudit> {
-    if arrangement.context != context.spec_identity()
-        || arrangement.coverage.context != arrangement.context
-    {
-        return Err(refuse("Lifted UV arrangement tolerance context mismatch"));
-    }
-    if !arrangement.coverage.complete
-        || arrangement.coverage.event_vertex_count != arrangement.vertices.len()
-        || arrangement.coverage.halfedge_count != arrangement.halfedges.len()
-        || arrangement.coverage.cell_count != arrangement.cells.len()
-    {
-        return Err(refuse(
-            "Lifted UV coverage counts were mutated or are incomplete",
-        ));
-    }
-    for (id, halfedge) in arrangement.halfedges.iter().enumerate() {
-        if halfedge.origin >= arrangement.vertices.len()
-            || halfedge.destination >= arrangement.vertices.len()
-            || halfedge.twin >= arrangement.halfedges.len()
-            || arrangement.halfedges[halfedge.twin].twin != id
-            || halfedge.next >= arrangement.halfedges.len()
-            || halfedge.cell >= arrangement.cells.len()
-        {
-            return Err(refuse("Lifted UV DCEL incidence is invalid"));
-        }
-    }
-    if !arrangement
-        .cells
-        .iter()
-        .any(|cell| matches!(cell.label, crate::uv_arrangement::WindingLabel::Material(_)))
-    {
-        return Err(refuse(
-            "Lifted UV arrangement has no certified material cell",
-        ));
-    }
-    Ok(CoverageAudit {
-        complete: true,
-        component_count: arrangement.cells.len(),
-        unresolved_count: 0,
-        notes: vec!["lifted_uv_dcel_verified"],
     })
 }
 
@@ -264,7 +218,7 @@ pub fn verify_general_ss_report_coverage(report: &value_codec::Value) -> Result<
 mod tests {
     use super::*;
     use crate::analytic_ss::complete_line_plane;
-    use crate::intersections::{Options, Plane, Unresolved, surface_surface};
+    use crate::{Options, Plane, Unresolved, surface_surface};
     use nurbs_core::surface::Surface;
 
     fn plane_surface(z: f64) -> Surface {

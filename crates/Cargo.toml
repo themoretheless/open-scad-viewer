@@ -1,5 +1,5 @@
 [workspace]
-members = ["vr-core", "value-codec", "math-core", "math-compute", "cad-predicates", "gpu-compute", "compute-core", "tensor-core", "compute-cuda", "compute-mlx", "raster-core", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "cad-step", "nurbs-core", "polygon-core", "gcode-core", "gcode-optimize", "laser-core", "printer-core", "printer-cli", "slicer-core", "mechanics-core", "mechanical-core", "openscad-core", "bridge-codec", "bridge-cam", "bridge-analysis", "bridge-svg", "geometry-bridge", "geometry-wasm", "languages-bridge", "languages-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
+members = ["vr-core", "value-codec", "math-core", "math-compute", "cad-predicates", "gpu-compute", "compute-core", "tensor-core", "compute-cuda", "compute-mlx", "raster-core", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "brep-intersect", "cad-step", "nurbs-core", "nurbs-intersect", "polygon-core", "gcode-core", "gcode-optimize", "laser-core", "printer-core", "printer-cli", "slicer-core", "mechanics-core", "mechanical-core", "openscad-core", "bridge-codec", "bridge-cam", "bridge-analysis", "bridge-svg", "geometry-bridge", "geometry-wasm", "languages-bridge", "languages-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
 resolver = "3"
 exclude = ["vendor/usvg", "vendor/resvg"]
 
@@ -39,6 +39,12 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.brep-core]
+opt-level = 3
+
+[profile.release.package.nurbs-intersect]
+opt-level = 3
+
+[profile.release.package.brep-intersect]
 opt-level = 3
 
 [profile.release.package.planar-geometry]

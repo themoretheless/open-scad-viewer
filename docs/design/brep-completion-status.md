@@ -3054,7 +3054,7 @@ nothing here is yet consumed by the Boolean pipeline.
 ### Analytic sphere/cylinder intersection
 
 Added the second analytic SS cell: `intersect_sphere_cylinder` in
-`crates/brep-core/src/intersections/sphere_cylinder.rs`, bridged as
+`crates/brep-intersect/src/sphere_cylinder.rs`, bridged as
 `brep_intersect_sphere_cylinder` with the typed `intersectSphereCylinder`
 adapter — canonical stereographic spheres (recognizer shared with the
 sphere/sphere cell) against canonical six-face cylinders under rigid

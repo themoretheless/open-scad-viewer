@@ -37,11 +37,11 @@
 //! classification. Resolved contacts are exact rational circles (four
 //! 90-degree arcs, weights cos(pi/4)) with iso-v lifts on all four side
 //! patches of both cones. Nothing here authorizes a topology change.
-use super::plane_cone::{CanonicalCone, recognize_cone};
+use brep_core::intersections::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
-use super::sphere_sphere::{RECOGNITION, circle_curve};
+use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_curve};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 #[derive(Clone, Debug)]
 pub enum ConeConeComponent {
@@ -379,7 +379,7 @@ mod tests {
 
     /// Rotate pi about X then lift along Z: y -> -y, z -> z0 - z (axis flips).
     fn flipped(model: &Model, z0: f64) -> Model {
-        crate::transform::affine(
+        brep_core::transform::affine(
             model,
             [
                 [1., 0., 0., 0.],
@@ -466,8 +466,8 @@ mod tests {
         // Cone1 r 1 -> 3 over z 0..6 (rho = 1 + s/3); cone2 r 4 -> 2 over
         // z 1..5 (rho = 4.5 - s/2). Root: (5/6) s = 3.5 — s* = 4.2 strictly
         // inside both ranges, radius 2.4, v = 0.7 on cone1 and 0.8 on cone2.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [0., 0., 1.]);
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let second = translated(&brep_core::analytic::frustum(4., 2., 4.).unwrap(), [0., 0., 1.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, normal, first_uv, second_uv, sampled) =
@@ -518,8 +518,8 @@ mod tests {
         // Cone1 r 3 -> 1 over z 0..6 (rho = 3 - s/3); cone2 r 4 -> 2 over
         // z 2..4 (rho = 6 - s). The linear root s* = 4.5 lies beyond cone2's
         // top ring: honestly absent, empty and resolved.
-        let first = crate::analytic::frustum(3., 1., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(4., 2., 2.).unwrap(), [0., 0., 2.]);
+        let first = brep_core::analytic::frustum(3., 1., 6.).unwrap();
+        let second = translated(&brep_core::analytic::frustum(4., 2., 2.).unwrap(), [0., 0., 2.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -532,9 +532,9 @@ mod tests {
     fn clearly_separated_axially_resolves_empty() {
         // Cone2 provably above cone1 with a 0.5 gap between the facing ring
         // planes: no shared point is possible in any radius relation.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         let second = translated(
-            &crate::analytic::frustum(1., 2., 3.).unwrap(),
+            &brep_core::analytic::frustum(1., 2., 3.).unwrap(),
             [0., 0., 6.5],
         );
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
@@ -550,9 +550,9 @@ mod tests {
         // Cone1 rho = 1 + s/3 over z 0..6; cone2 r 5/3 -> 11/3 over z 2..8
         // carries the same profile over the overlap z 2..6: coincident_trim,
         // never a surface component.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         let second = translated(
-            &crate::analytic::frustum(5. / 3., 11. / 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(5. / 3., 11. / 3., 6.).unwrap(),
             [0., 0., 2.],
         );
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
@@ -570,8 +570,8 @@ mod tests {
     fn equal_taper_distinct_profiles_resolve_empty() {
         // Same taper 1/3, profiles 1/3 apart over the overlap z 2..6: one
         // side strictly inside the other, no contact, resolved empty.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 2.]);
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let second = translated(&brep_core::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 2.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
@@ -586,8 +586,8 @@ mod tests {
         // shared plane z=6: the coincident ring planes carry a rim/rim
         // tangent boundary contact — tangency_or_multiple_root, never a
         // guessed circle.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(3., 5., 6.).unwrap(), [0., 0., 6.]);
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let second = translated(&brep_core::analytic::frustum(3., 5., 6.).unwrap(), [0., 0., 6.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -597,7 +597,7 @@ mod tests {
         );
         // Different ring radii at the shared plane (rim circle inside the
         // larger cap disk) are still a boundary contact: unresolved.
-        let nested = translated(&crate::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 6.]);
+        let nested = translated(&brep_core::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 6.]);
         let report = intersect_cone_cone(&first, &nested, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(
@@ -612,8 +612,8 @@ mod tests {
         // (rho(3) = 2 for r 1 -> 3 over z 0..6): with the steeper taper 1/2
         // the side root sits on the overlap boundary — a rim contact, never
         // a guessed circle.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(2., 5., 6.).unwrap(), [0., 0., 3.]);
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let second = translated(&brep_core::analytic::frustum(2., 5., 6.).unwrap(), [0., 0., 3.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -628,8 +628,8 @@ mod tests {
         // Two true-apex cones apex-to-apex at the origin (cone2 flipped
         // down, anti-axial): the touching ring planes carry the apex contact
         // — tangency_or_multiple_root, never a point or circle.
-        let first = crate::analytic::frustum(0., 3., 5.).unwrap();
-        let second = flipped(&crate::analytic::frustum(0., 2., 4.).unwrap(), 0.);
+        let first = brep_core::analytic::frustum(0., 3., 5.).unwrap();
+        let second = flipped(&brep_core::analytic::frustum(0., 2., 4.).unwrap(), 0.);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -646,8 +646,8 @@ mod tests {
         // axis -z, own bottom ring (r=2) at z=8, rho = 2 + (8 - s)/3 over
         // s in [2,8]. Root: 2s/3 = 11/3 — s* = 5.5 strictly inside both
         // ranges, radius 17/6, v = 11/12 on cone1 and 5/12 on cone2.
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = flipped(&crate::analytic::frustum(2., 4., 6.).unwrap(), 8.);
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let second = flipped(&brep_core::analytic::frustum(2., 4., 6.).unwrap(), 8.);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, normal, first_uv, second_uv, sampled) =
@@ -681,11 +681,11 @@ mod tests {
 
     #[test]
     fn near_coaxial_bands_stay_unresolved() {
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         // Recognition-scale perpendicular offset: near_coincidence, never
         // forced coaxial.
         let offset = translated(
-            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
             [1e-10, 0., 1.],
         );
         let report = intersect_cone_cone(&first, &offset, Options::default()).unwrap();
@@ -697,7 +697,7 @@ mod tests {
         );
         // Recognition-scale tilt: near_coincidence as well.
         let tilted = rotated_translated(
-            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
             1e-10,
             [0., 0., 1.],
         );
@@ -710,7 +710,7 @@ mod tests {
         // Pure-rounding offsets snap: 1e-14 stays coaxial and resolves the
         // same circle as the exact pair.
         let snapped = translated(
-            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
             [1e-14, 0., 1.],
         );
         let report = intersect_cone_cone(&first, &snapped, Options::default()).unwrap();
@@ -719,15 +719,15 @@ mod tests {
 
     #[test]
     fn off_axis_and_non_parallel_pairs_are_unsupported_regions() {
-        let first = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         // Parallel but 0.5 off the axis: coaxial quartic, out of scope.
         let off = translated(
-            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
             [0.5, 0., 1.],
         );
         // Tilted 0.5 rad: the general quartic, out of scope.
         let tilted = rotated_translated(
-            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
             0.5,
             [0., 0., 1.],
         );
@@ -749,29 +749,29 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         // Equal-radius frusta are cylinders (refused as cone operands), and
         // spheres, tubes, cuboids and tori are not the canonical cone.
         for (a, b) in [
             (
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
-                crate::analytic::cylinder(1., 3.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::cylinder(1., 3.).unwrap(),
             ),
             (
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
             (
-                crate::analytic::tube(2., 1., 3.).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::tube(2., 1., 3.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
         ] {
             let report = intersect_cone_cone(&a, &b, Options::default()).unwrap();
@@ -784,7 +784,7 @@ mod tests {
             );
         }
         // A structurally perturbed cone fails validation as a hard error.
-        let mut perturbed = crate::analytic::frustum(1., 2., 3.).unwrap();
+        let mut perturbed = brep_core::analytic::frustum(1., 2., 3.).unwrap();
         perturbed.faces[0].surface.weights[1][0] = 0.5;
         assert!(intersect_cone_cone(&cone, &perturbed, Options::default()).is_err());
     }
@@ -795,12 +795,12 @@ mod tests {
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
         let first = rotated_translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             angle,
             offset,
         );
         let second = rotated_translated(
-            &translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [0., 0., 1.]),
+            &translated(&brep_core::analytic::frustum(4., 2., 4.).unwrap(), [0., 0., 1.]),
             angle,
             offset,
         );

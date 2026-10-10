@@ -32,7 +32,7 @@ pub struct CertifiedTessellation {
     pub surface_to_mesh_deviation_mm: f64,
     pub mesh_to_surface_deviation_mm: f64,
     pub audit: brep_core::solid_audit::SolidAuditCertificate,
-    pub evidence: brep_core::predicate_evidence::ComposedEvidence,
+    pub evidence: nurbs_intersect::predicate_evidence::ComposedEvidence,
     pub change_set: brep_core::ChangeSet,
     pub naming_complete: bool,
     pub max_triangles: usize,
@@ -671,7 +671,7 @@ pub fn certified_nurbs(
     chord_tolerance_mm: f64,
     max_triangles: usize,
 ) -> Result<CertifiedTessellation> {
-    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    use nurbs_intersect::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
     if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
         || !(12..=20_000).contains(&max_triangles)
     {
@@ -758,7 +758,7 @@ pub fn certified_freeform_nurbs(
     chord_tolerance_mm: f64,
     max_triangles: usize,
 ) -> Result<CertifiedTessellation> {
-    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    use nurbs_intersect::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
     if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
         || !(12..=20_000).contains(&max_triangles)
     {

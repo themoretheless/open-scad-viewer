@@ -72,16 +72,15 @@
 //! parameter map t = s/(1+s), s = sqrt(2) tan(phi/2)/(1 - tan(phi/2)), one
 //! degree-1 line per revolution quadrant patch of the profile row. Nothing
 //! here authorizes a topology change.
-use super::plane_cone::{CanonicalCone, recognize_cone};
-use super::plane_torus::{
-    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
-};
+use brep_core::intersections::{CanonicalCone, recognize_cone};
+use brep_core::intersections::{CanonicalTorus, recognize_torus};
+use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
 use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
-use super::sphere_sphere::ARC_WEIGHT;
-use super::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
+use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
+use brep_core::intersections::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -448,7 +447,7 @@ mod tests {
 
     /// Rotate pi about X then lift along Z: y -> -y, z -> z0 - z (axis flips).
     fn flipped(model: &Model, z0: f64) -> Model {
-        crate::transform::affine(
+        brep_core::transform::affine(
             model,
             [
                 [1., 0., 0., 0.],
@@ -566,9 +565,9 @@ mod tests {
         // is 5 t^2 - 33 t + 54 = 0 with the exact roots t = 3 and t = 3.6 —
         // two side circles (rho=2, z=0) and (rho=2.2, z=0.6), both cap
         // planes at |h|=3 clear of the tube.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let cone = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., -3.],
         );
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
@@ -655,8 +654,8 @@ mod tests {
         // r_top=3 disk, the outer one is beyond it. Sorted by torus-axial
         // height: the side circle (z = -(1 + 3 sqrt(39))/20), then the cap
         // circle (z = -1/2).
-        let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let torus = translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., 6.5]);
+        let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
+        let torus = translated(&brep_core::analytic::torus(3., 1.).unwrap(), [0., 0., 6.5]);
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let root39 = 39_f64.sqrt();
@@ -744,8 +743,8 @@ mod tests {
         // 3.5/sqrt(10) = 1.1068... > 1), and the top cap plane at h_c = -0.5
         // cuts the two circles 3 +- sqrt(0.75), both inside the r_top=4
         // disk. The bottom cap at h_c = -6.5 clears the tube.
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
-        let torus = translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., 6.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+        let torus = translated(&brep_core::analytic::torus(3., 1.).unwrap(), [0., 0., 6.5]);
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let root = 0.75_f64.sqrt();
@@ -796,10 +795,10 @@ mod tests {
         // (r=1) at z=3, rho = 1 + (3 - z)/3 for z in -3..3. Meridian roots
         // t = 3 and 3.6 in the cone's own axial parameter map to the circles
         // (rho=2, z=0) and (rho=2.2, z=-0.6) — sorted z=-0.6 first.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let cone = flipped(
             &translated(
-                &crate::analytic::frustum(1., 3., 6.).unwrap(),
+                &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
                 [0., 0., -3.],
             ),
             0.,
@@ -846,9 +845,9 @@ mod tests {
         // inside the height range) — a double root, never a guessed circle.
         let tangent_z = 6. - 10_f64.sqrt();
         for dz in [0., 2e-15, -2e-15] {
-            let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
+            let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
             let torus = translated(
-                &crate::analytic::torus(3., 1.).unwrap(),
+                &brep_core::analytic::torus(3., 1.).unwrap(),
                 [0., 0., tangent_z + dz],
             );
             let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
@@ -861,9 +860,9 @@ mod tests {
             assert!(!report.permits_topology_change());
         }
         // Just clear of the band on the outside: provable miss, resolved.
-        let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         let clear = translated(
-            &crate::analytic::torus(3., 1.).unwrap(),
+            &brep_core::analytic::torus(3., 1.).unwrap(),
             [0., 0., tangent_z - 1e-9],
         );
         let report = intersect_cone_torus(&cone, &clear, Options::default()).unwrap();
@@ -873,7 +872,7 @@ mod tests {
         );
         // Just across: two small transverse side circles around the foot.
         let across = translated(
-            &crate::analytic::torus(3., 1.).unwrap(),
+            &brep_core::analytic::torus(3., 1.).unwrap(),
             [0., 0., tangent_z + 1e-9],
         );
         let report = intersect_cone_torus(&cone, &across, Options::default()).unwrap();
@@ -887,8 +886,8 @@ mod tests {
         // the t=0 root sits on the bottom ring plane (rim contact), and the
         // bottom rim circle (rho=2, z=0) lies exactly on the torus. The
         // t=0.6 root is a clean transverse side circle and still reports.
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(
@@ -917,8 +916,8 @@ mod tests {
         // the bottom cap plane sits at |h_c| == r — tangent to the tube,
         // never a guessed circle. The side line misses the meridian circle
         // (distance 7/sqrt(10) > 1).
-        let cone = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., 1.]);
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let cone = translated(&brep_core::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., 1.]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -929,7 +928,7 @@ mod tests {
         // Just clear of the band on the outside: the bottom cap plane at
         // h_c = 1 + 1e-9 clears the tube, resolved empty.
         let clear = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., 1. + 1e-9],
         );
         let report = intersect_cone_torus(&clear, &torus, Options::default()).unwrap();
@@ -941,7 +940,7 @@ mod tests {
         // but both circle radii 3 +- sqrt(1 - h_c^2) (about 3 +- 4.5e-5) lie
         // provably outside the r_bottom=1 disk — resolved empty.
         let across = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., 1. - 1e-9],
         );
         let report = intersect_cone_torus(&across, &torus, Options::default()).unwrap();
@@ -953,22 +952,22 @@ mod tests {
 
     #[test]
     fn zero_circle_configurations_resolve_empty() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         // Frustum r 1 -> 3 over z 0..6 with its bottom ring at the torus
         // center plane: the side line misses the meridian circle (distance
         // 6/sqrt(10) > 1), the bottom cap circles (radii 2 and 4) lie
         // outside the r_bottom=1 disk, the top cap clears the tube.
-        let flat = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let flat = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         // Small frustum around the center plane in the torus hole: the side
         // line misses the meridian circle, both bottom cap circle radii lie
         // outside the r_bottom=0.5 disk, the top cap clears the tube.
         let thin = translated(
-            &crate::analytic::frustum(0.5, 1.5, 2.).unwrap(),
+            &brep_core::analytic::frustum(0.5, 1.5, 2.).unwrap(),
             [0., 0., -0.5],
         );
         // Frustum far beyond the tube.
         let far = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., 100.],
         );
         for cone in [&flat, &thin, &far] {
@@ -983,9 +982,9 @@ mod tests {
 
     #[test]
     fn near_coaxial_bands_stay_unresolved_not_forced() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let base = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., -3.],
         );
         // Center-line offset inside the recognition band: near_coincidence.
@@ -999,7 +998,7 @@ mod tests {
         );
         // Recognition-scale tilt of the cone axis: near_coincidence.
         let (sin, cos) = 1e-10_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, 0.],
@@ -1019,14 +1018,14 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let base = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., -3.],
         );
         let off = translated(&base, [0.5, 0., 0.]);
         let (sin, cos) = 0.3_f64.sin_cos();
-        let tilted = crate::transform::affine(
+        let tilted = brep_core::transform::affine(
             &base,
             [
                 [cos, 0., sin, 0.],
@@ -1054,9 +1053,9 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let cone = translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             [0., 0., -3.],
         );
         // Spheres, cuboids, cylinders (an equal-radius frustum is refused as
@@ -1064,28 +1063,28 @@ mod tests {
         // are not the canonical pair.
         for (a, b) in [
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::cylinder(2.2, 8.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::cylinder(2.2, 8.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(2., 1.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::torus(2., 1.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             ),
             (
-                crate::analytic::frustum(1., 3., 6.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::frustum(1., 3., 6.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
         ] {
             let report = intersect_cone_torus(&a, &b, Options::default()).unwrap();
@@ -1126,10 +1125,10 @@ mod tests {
         // about X by 0.5.
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
-        let torus = rotated_translated(&crate::analytic::torus(3., 1.).unwrap(), angle, offset);
+        let torus = rotated_translated(&brep_core::analytic::torus(3., 1.).unwrap(), angle, offset);
         let cone = rotated_translated(
             &translated(
-                &crate::analytic::frustum(1., 3., 6.).unwrap(),
+                &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
                 [0., 0., -3.],
             ),
             angle,

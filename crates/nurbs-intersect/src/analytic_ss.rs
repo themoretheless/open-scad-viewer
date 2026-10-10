@@ -4,7 +4,7 @@
 //! pairs refuse with typed Incomplete/Unsupported. No mesh, seed marching, or
 //! tolerance growth participates.
 
-use crate::intersections::{
+use crate::{
     Contact, Coverage, CurvePlaneComponent, CurvePoint, Options, Plane, Report, UnresolvedReason,
 };
 use nurbs_core::{Error, Result};

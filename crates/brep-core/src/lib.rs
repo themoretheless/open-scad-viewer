@@ -23,7 +23,6 @@ pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod circular_blend;
-pub mod analytic_ss;
 mod boolean_support;
 mod box_sphere_boolean;
 pub mod gear;
@@ -32,7 +31,6 @@ mod sphere_mate;
 pub mod tolerant_boolean;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
 pub mod close_topology;
-pub mod coverage_verifier;
 mod cylinder_sphere_boolean;
 pub mod imprint_pipeline;
 pub mod intersections;
@@ -60,7 +58,6 @@ pub mod shell_nesting;
 pub mod shell_orientation;
 pub mod face_senses;
 pub mod ray_parity;
-pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod profile_imprint;
@@ -77,6 +74,7 @@ pub mod transform;
 mod transform_plane_charts;
 pub mod trim_sew;
 pub mod uv_arrangement;
+pub mod uv_coverage;
 mod uv_regions;
 pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
@@ -103,17 +101,13 @@ pub use close_topology::{
     complex_relation_id,
 };
 pub use nurbs_ss_g6::{
-    BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
-    CertifiedBranchFragment, ContainedGraphBooleanCertificate, CurvedGraphBooleanCertificate,
-    G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, GENERAL_NURBS_BOOLEAN_AUTHORITY,
-    GeneralNurbsBooleanCertificate, GeneralNurbsBooleanNaming, NURBS_BOOLEAN_CAPABILITY,
-    NURBS_BOOLEAN_CAPABILITY_V1, NURBS_BOOLEAN_CAPABILITY_V3, NURBS_BOOLEAN_CAPABILITY_V4,
-    NURBS_BOOLEAN_CAPABILITY_V5, NURBS_BOOLEAN_CAPABILITY_V7, NURBS_BOOLEAN_SS_CAPABILITY,
-    NURBS_BOOLEAN_V1_MATURITY, NurbsBooleanImprintCertificate, RationalBezierDecomposition,
-    RationalBezierPatchSpan, TensorSpanId, TransverseSpanEvidence, author_general_nurbs_boolean,
-    canonical_bezier_graph_solid, canonical_multispan_graph_solid, canonical_rational_graph_solid,
-    certify_multispan_ss, decompose_rational_bezier_spans, join_certified_multispan_fragments,
-    narrow_transverse_bezier_le3, narrow_transverse_bicubic, nurbs_boolean_graph_containment_v4,
+    ContainedGraphBooleanCertificate, CurvedGraphBooleanCertificate,
+    GENERAL_NURBS_BOOLEAN_AUTHORITY, GeneralNurbsBooleanCertificate, GeneralNurbsBooleanNaming,
+    NURBS_BOOLEAN_CAPABILITY, NURBS_BOOLEAN_CAPABILITY_V1, NURBS_BOOLEAN_CAPABILITY_V3,
+    NURBS_BOOLEAN_CAPABILITY_V4, NURBS_BOOLEAN_CAPABILITY_V5, NURBS_BOOLEAN_CAPABILITY_V7,
+    NURBS_BOOLEAN_SS_CAPABILITY, NURBS_BOOLEAN_V1_MATURITY, NurbsBooleanImprintCertificate,
+    author_general_nurbs_boolean, canonical_bezier_graph_solid, canonical_multispan_graph_solid,
+    canonical_rational_graph_solid, nurbs_boolean_graph_containment_v4,
     nurbs_boolean_graph_patch_unequal_v4, nurbs_boolean_graph_patch_v3,
     nurbs_boolean_imprint_solids, nurbs_boolean_rational_graph_patch_v5,
     nurbs_boolean_transverse_bicubic,

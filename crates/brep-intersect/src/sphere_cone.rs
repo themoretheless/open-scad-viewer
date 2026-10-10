@@ -43,15 +43,15 @@
 //! iso-v lines across all four cone side patches, an exact UV circle on a
 //! cap face, and per-patch UV circles/lines on the sphere. Nothing here
 //! authorizes a topology change.
-use super::plane_cone::{CanonicalCone, recognize_cone};
+use brep_core::intersections::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 #[cfg(test)]
-use super::sphere_sphere::ARC_WEIGHT;
-use super::sphere_sphere::{
+use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
+use brep_core::intersections::sphere_sphere::{
     self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve, lift,
 };
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -440,8 +440,8 @@ mod tests {
         // roots q = (-2/3 +- 2/3) * 9/10 = 0 and -1.2 — two exact side
         // circles at z = 3 (radius 2) and z = 1.8 (radius 1.6), the sphere
         // clear of both cap planes and both rims.
-        let sphere = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 3.]);
-        let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 3.]);
+        let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let q = |sign: f64| (-2. / 3. + sign * 2. / 3.) * 0.9;
@@ -503,8 +503,8 @@ mod tests {
         // q = (-13/18 +- 3/2) * 9/10 = 0.7 and -2 — only t = 1.2 survives,
         // radius 2.4. The bottom cap circle would have radius sqrt(6) > 2,
         // outside the disk.
-        let sphere = translated(&crate::analytic::sphere(2.5).unwrap(), [0., 0., 0.5]);
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.5).unwrap(), [0., 0., 0.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, _, _, cone_uv, sampled) = circle_of(&report.components[0]);
@@ -532,8 +532,8 @@ mod tests {
         // top ring plane z=6: circle of radius sqrt(2) in the cap plane,
         // inside the top disk (ring radius 4); the side line stays
         // unreachable (distance 3.64 > 1.5).
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 5.5]);
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 5.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, _, sphere_uv, cone_uv, sampled) =
@@ -583,8 +583,8 @@ mod tests {
         // Sphere r=1.5 centered 0.5 above the bottom ring plane z=0 of
         // frustum r 2 -> 4 over z 0..6: circle of radius sqrt(2) inside the
         // bottom disk (ring radius 2), on the bottom cap face.
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 0.5]);
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 0.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (_, center, radius, _, _, cone_uv, _) = circle_of(&report.components[0]);
@@ -608,14 +608,14 @@ mod tests {
 
     #[test]
     fn zero_circle_configurations_resolve_empty() {
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
         // Small sphere strictly inside the side wall, clear of both caps.
-        let inside = translated(&crate::analytic::sphere(0.5).unwrap(), [0., 0., 3.]);
+        let inside = translated(&brep_core::analytic::sphere(0.5).unwrap(), [0., 0., 3.]);
         // Sphere beyond the top ring plane, no reach back.
-        let beyond = translated(&crate::analytic::sphere(1.).unwrap(), [0., 0., 8.]);
+        let beyond = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 8.]);
         // Large sphere swallowing the whole frustum (side roots beyond the
         // height, cap circles outside the disks).
-        let swallow = translated(&crate::analytic::sphere(20.).unwrap(), [0., 0., 3.]);
+        let swallow = translated(&brep_core::analytic::sphere(20.).unwrap(), [0., 0., 3.]);
         for sphere in [&inside, &beyond, &swallow] {
             let report = intersect_sphere_cone(sphere, &cone, Options::default()).unwrap();
             assert!(
@@ -628,12 +628,12 @@ mod tests {
 
     #[test]
     fn side_tangency_stays_a_tangency_region() {
-        let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
+        let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         // Tangent to the side line: r == rho_c / sqrt(1+m^2) = 6/sqrt(10)
         // for the sphere centered at z=3 — a double root, never a circle.
         let tangent = 6. / 10_f64.sqrt();
         for r in [tangent, tangent + 2e-15, tangent - 2e-15] {
-            let sphere = translated(&crate::analytic::sphere(r).unwrap(), [0., 0., 3.]);
+            let sphere = translated(&brep_core::analytic::sphere(r).unwrap(), [0., 0., 3.]);
             let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -645,7 +645,7 @@ mod tests {
         }
         // Just clear of the band on the outside: provable miss, resolved.
         let clear = translated(
-            &crate::analytic::sphere(tangent - 1e-9).unwrap(),
+            &brep_core::analytic::sphere(tangent - 1e-9).unwrap(),
             [0., 0., 3.],
         );
         let report = intersect_sphere_cone(&clear, &cone, Options::default()).unwrap();
@@ -656,7 +656,7 @@ mod tests {
         // Just across: two small transverse side circles around the foot
         // t = 3 - 0.6 = 2.4.
         let across = translated(
-            &crate::analytic::sphere(tangent + 1e-9).unwrap(),
+            &brep_core::analytic::sphere(tangent + 1e-9).unwrap(),
             [0., 0., 3.],
         );
         let report = intersect_sphere_cone(&across, &cone, Options::default()).unwrap();
@@ -668,8 +668,8 @@ mod tests {
         // Sphere centered on the bottom ring plane with r == r_bottom: the
         // whole bottom rim circle lies on the sphere — a tangent boundary
         // contact, never a guessed circle.
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
-        let sphere = crate::analytic::sphere(2.).unwrap();
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -686,8 +686,8 @@ mod tests {
         // distance sqrt(4+0) == r): the apex root stays a tangency region
         // while the other root — a clean transverse side circle — still
         // reports as a component.
-        let cone = crate::analytic::frustum(0., 3., 5.).unwrap();
-        let sphere = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 2.]);
+        let cone = brep_core::analytic::frustum(0., 3., 5.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 2.]);
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(
@@ -708,16 +708,16 @@ mod tests {
         assert_eq!(cone_uv.len(), 4);
         // Sphere centered at the apex height cutting the side transversally
         // (apex strictly inside the sphere) stays resolved.
-        let clear = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 1e-6]);
+        let clear = translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 1e-6]);
         let report = intersect_sphere_cone(&clear, &cone, Options::default()).unwrap();
         only_circles(&report, 1);
     }
 
     #[test]
     fn cap_plane_touch_stays_a_tangency_region() {
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
         // r=1.5 sphere tangent to the top cap plane z=6 from inside.
-        let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 4.5]);
+        let sphere = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 4.5]);
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -726,22 +726,22 @@ mod tests {
             UnresolvedReason::TangencyOrMultipleRoot
         );
         // Just clear of the band: strictly inside, empty and resolved.
-        let clear = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 - 1e-9]);
+        let clear = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 - 1e-9]);
         let report = intersect_sphere_cone(&clear, &cone, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
             "{report:?}"
         );
         // Just across: a small transverse cap circle.
-        let across = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 + 1e-9]);
+        let across = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 + 1e-9]);
         let report = intersect_sphere_cone(&across, &cone, Options::default()).unwrap();
         only_circles(&report, 1);
     }
 
     #[test]
     fn near_axial_offset_within_the_band_stays_unresolved() {
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
-        let sphere = translated(&crate::analytic::sphere(2.5).unwrap(), [1e-10, 0., 0.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.5).unwrap(), [1e-10, 0., 0.5]);
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -753,8 +753,8 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_pairs_are_unsupported_regions() {
-        let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
-        let sphere = translated(&crate::analytic::sphere(2.5).unwrap(), [0.5, 0., 0.5]);
+        let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.5).unwrap(), [0.5, 0., 0.5]);
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -771,31 +771,31 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let sphere = crate::analytic::sphere(2.).unwrap();
-        let cone = crate::analytic::frustum(1., 2., 3.).unwrap();
+        let sphere = brep_core::analytic::sphere(2.).unwrap();
+        let cone = brep_core::analytic::frustum(1., 2., 3.).unwrap();
         // An equal-radius frustum is a cylinder (refused as a cone operand),
         // and tubes, cuboids and tori are neither canonical operand; swapped
         // operand order is refused by the fixed order.
         for (a, b) in [
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::cylinder(1., 3.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::cylinder(1., 3.).unwrap(),
             ),
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::tube(2., 1., 3.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::tube(2., 1., 3.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::frustum(1., 2., 3.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::frustum(1., 2., 3.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::frustum(1., 2., 3.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::frustum(1., 2., 3.).unwrap(),
             ),
             (
-                crate::analytic::frustum(1., 2., 3.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::frustum(1., 2., 3.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
         ] {
             let report = intersect_sphere_cone(&a, &b, Options::default()).unwrap();
@@ -811,12 +811,12 @@ mod tests {
         // frustum r 1 -> 2 over z 0..3 crosses the side once (the other root
         // is below the bottom ring; the bottom cap circle radius sqrt(1.25)
         // lies outside the unit disk).
-        let s15 = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 1.]);
+        let s15 = translated(&brep_core::analytic::sphere(1.5).unwrap(), [0., 0., 1.]);
         let report = intersect_sphere_cone(&s15, &cone, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert_eq!(report.components.len(), 1);
         // A structurally perturbed cone fails validation as a hard error.
-        let mut perturbed = crate::analytic::frustum(1., 2., 3.).unwrap();
+        let mut perturbed = brep_core::analytic::frustum(1., 2., 3.).unwrap();
         perturbed.faces[0].surface.weights[1][0] = 0.5;
         assert!(intersect_sphere_cone(&sphere, &perturbed, Options::default()).is_err());
     }
@@ -827,12 +827,12 @@ mod tests {
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
         let sphere = rotated_translated(
-            &translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 3.]),
+            &translated(&brep_core::analytic::sphere(2.).unwrap(), [0., 0., 3.]),
             angle,
             offset,
         );
         let cone = rotated_translated(
-            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
             angle,
             offset,
         );

@@ -49,16 +49,15 @@
 //! There is no sphere/torus surface coincidence, so `CoincidentTrim` does
 //! not arise; every degeneracy reported here is an explicit tangency
 //! region. Nothing here authorizes a topology change.
-use super::plane_torus::{
-    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
-};
+use brep_core::intersections::{CanonicalTorus, recognize_torus};
+use super::plane_torus::{TorusPatchCurve, lift_parallel, torus_residual};
 #[cfg(test)]
-use super::sphere_sphere::ARC_WEIGHT;
-use super::sphere_sphere::{
+use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
+use brep_core::intersections::sphere_sphere::{
     self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
 };
 use super::*;
-use crate::Model;
+use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -379,8 +378,8 @@ mod tests {
         // Torus R=3, r=1; sphere r=sqrt(5.2) centered at the torus center:
         // d=3, a=0.8, l=0.6 — the exact circle pair of radius 2.2 at
         // z = +-0.6.
-        let sphere = crate::analytic::sphere(5.2_f64.sqrt()).unwrap();
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let sphere = brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         for (component, z) in report.components.iter().zip([-0.6, 0.6]) {
@@ -450,10 +449,10 @@ mod tests {
         // Torus R=3, r=1; sphere r=sqrt(26) centered at z=-4: d=5, a=0,
         // l=1 — the exact circles of radii 3.8 at z=-0.6 and 2.2 at z=0.6.
         let sphere = translated(
-            &crate::analytic::sphere(26_f64.sqrt()).unwrap(),
+            &brep_core::analytic::sphere(26_f64.sqrt()).unwrap(),
             [0., 0., -4.],
         );
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         for (component, (rho, z)) in report.components.iter().zip([(3.8, -0.6), (2.2, 0.6)]) {
@@ -491,8 +490,8 @@ mod tests {
     fn generic_height_pair_matches_the_meridian_oracle() {
         // Torus R=3, r=1; sphere r=2.2 centered at z=0.5: both roots land
         // strictly inside the meridian circle and revolve into two circles.
-        let sphere = translated(&crate::analytic::sphere(2.2).unwrap(), [0., 0., 0.5]);
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(2.2).unwrap(), [0., 0., 0.5]);
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let mut roots = meridian_roots(3., 1., 0.5, 2.2);
@@ -514,9 +513,9 @@ mod tests {
         // Sphere centered at the torus center with r == R - r_t = 2: the
         // meridian circles touch externally (d = 3 = r_t + r_s), the contact
         // revolves into the inner equator circle — never a guessed circle.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         for r in [2., 2. + 2e-15, 2. - 2e-15] {
-            let sphere = crate::analytic::sphere(r).unwrap();
+            let sphere = brep_core::analytic::sphere(r).unwrap();
             let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -527,14 +526,14 @@ mod tests {
             assert!(!report.permits_topology_change());
         }
         // Just clear of the band on the outside: provable miss, resolved.
-        let clear = crate::analytic::sphere(2. - 1e-9).unwrap();
+        let clear = brep_core::analytic::sphere(2. - 1e-9).unwrap();
         let report = intersect_sphere_torus(&clear, &torus, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
             "{report:?}"
         );
         // Just across: two small transverse circles around the inner equator.
-        let across = crate::analytic::sphere(2. + 1e-9).unwrap();
+        let across = brep_core::analytic::sphere(2. + 1e-9).unwrap();
         let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
         only_circles(&report, 2);
     }
@@ -544,9 +543,9 @@ mod tests {
         // Sphere centered at the torus center with r == R + r_t = 4: the
         // meridian circles touch internally (d = 3 = |r_t - r_s|) at the
         // outer equator — never a guessed circle.
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         for r in [4., 4. + 2e-15, 4. - 2e-15] {
-            let sphere = crate::analytic::sphere(r).unwrap();
+            let sphere = brep_core::analytic::sphere(r).unwrap();
             let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -556,19 +555,19 @@ mod tests {
             );
         }
         // Just larger: the sphere swallows the tube, provably contained.
-        let swallow = crate::analytic::sphere(4. + 1e-9).unwrap();
+        let swallow = brep_core::analytic::sphere(4. + 1e-9).unwrap();
         let report = intersect_sphere_torus(&swallow, &torus, Options::default()).unwrap();
         assert!(
             report.components.is_empty() && report.unresolved.is_empty(),
             "{report:?}"
         );
         // Just smaller: two transverse circles around the outer equator.
-        let across = crate::analytic::sphere(4. - 1e-9).unwrap();
+        let across = brep_core::analytic::sphere(4. - 1e-9).unwrap();
         let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
         only_circles(&report, 2);
         // Off-center external tangency: r_s = hypot(R, h) - r_t at h = 0.5.
         let tangent = 3_f64.hypot(0.5) - 1.;
-        let sphere = translated(&crate::analytic::sphere(tangent).unwrap(), [0., 0., 0.5]);
+        let sphere = translated(&brep_core::analytic::sphere(tangent).unwrap(), [0., 0., 0.5]);
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(
@@ -579,13 +578,13 @@ mod tests {
 
     #[test]
     fn zero_circle_configurations_resolve_empty() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         // Small sphere floating in the hole, clear of the tube.
-        let hole = translated(&crate::analytic::sphere(1.).unwrap(), [0., 0., 0.5]);
+        let hole = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 0.5]);
         // Sphere far along the axis, no reach back.
-        let far = translated(&crate::analytic::sphere(1.).unwrap(), [0., 0., 10.]);
+        let far = translated(&brep_core::analytic::sphere(1.).unwrap(), [0., 0., 10.]);
         // Huge sphere swallowing the whole torus (contained meridian circle).
-        let swallow = crate::analytic::sphere(10.).unwrap();
+        let swallow = brep_core::analytic::sphere(10.).unwrap();
         for sphere in [&hole, &far, &swallow] {
             let report = intersect_sphere_torus(sphere, &torus, Options::default()).unwrap();
             assert!(
@@ -598,9 +597,9 @@ mod tests {
 
     #[test]
     fn near_axial_offset_within_the_band_stays_unresolved() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let sphere = translated(
-            &crate::analytic::sphere(5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
             [1e-10, 0., 0.],
         );
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
@@ -614,9 +613,9 @@ mod tests {
 
     #[test]
     fn clearly_off_axis_pairs_are_unsupported_regions() {
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         let sphere = translated(
-            &crate::analytic::sphere(5.2_f64.sqrt()).unwrap(),
+            &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
             [0.5, 0., 0.],
         );
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
@@ -635,31 +634,31 @@ mod tests {
 
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
-        let sphere = crate::analytic::sphere(5.2_f64.sqrt()).unwrap();
-        let torus = crate::analytic::torus(3., 1.).unwrap();
+        let sphere = brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap();
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
         // Cylinders, tori, cuboids and tori-as-first-operand are neither
         // canonical operand; swapped operand order is refused by the fixed
         // order.
         for (a, b) in [
             (
-                crate::analytic::cylinder(1., 3.).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::cylinder(1., 3.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::sphere(2.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::torus(2., 1.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::torus(2., 1.).unwrap(),
             ),
             (
-                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
-                crate::analytic::torus(3., 1.).unwrap(),
+                brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
             ),
             (
-                crate::analytic::torus(3., 1.).unwrap(),
-                crate::analytic::sphere(2.).unwrap(),
+                brep_core::analytic::torus(3., 1.).unwrap(),
+                brep_core::analytic::sphere(2.).unwrap(),
             ),
         ] {
             let report = intersect_sphere_torus(&a, &b, Options::default()).unwrap();
@@ -695,13 +694,13 @@ mod tests {
         let offset = [0.3, -0.2, 1.1];
         let sphere = rotated_translated(
             &translated(
-                &crate::analytic::sphere(26_f64.sqrt()).unwrap(),
+                &brep_core::analytic::sphere(26_f64.sqrt()).unwrap(),
                 [0., 0., -4.],
             ),
             angle,
             offset,
         );
-        let torus = rotated_translated(&crate::analytic::torus(3., 1.).unwrap(), angle, offset);
+        let torus = rotated_translated(&brep_core::analytic::torus(3., 1.).unwrap(), angle, offset);
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         // Independent binary64 oracle in the placed frame.

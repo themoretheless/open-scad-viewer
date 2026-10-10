@@ -1,0 +1,15 @@
+[package]
+name = "brep-intersect"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+brep-core = { path = "../brep-core" }
+nurbs-intersect = { path = "../nurbs-intersect" }
+nurbs-core = { path = "../nurbs-core" }
+value-codec = { path = "../value-codec" }
+
+[dev-dependencies]
+brep-topology = { path = "../brep-topology" }

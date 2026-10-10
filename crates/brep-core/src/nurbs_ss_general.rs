@@ -3,7 +3,7 @@
 //! Consumes `nurbs-ss/1` reports from `nurbs_core::ss_intersection` and builds
 //! topology-usable BranchGraph-shaped evidence without the graph-patch iso
 //! fixture. Boolean mutation authority stays revoked until the next layer.
-use crate::coverage_verifier::CoverageAudit;
+use nurbs_intersect::coverage_verifier::CoverageAudit;
 use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result};
 use value_codec::Value;
