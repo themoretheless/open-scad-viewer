@@ -17,3 +17,4 @@ docs/qualification/sweep-publication-native-owned-2026-10-04/logs/*.log -diff
 *.toml text eol=lf
 *.lock text eol=lf
 *.py text eol=lf
+docs/qualification/main-integration-20261010/native.log -diff

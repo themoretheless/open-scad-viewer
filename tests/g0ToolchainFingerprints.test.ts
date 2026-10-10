@@ -16,7 +16,7 @@ import {
 const repositoryRoot = resolve(import.meta.dirname, '..')
 const fingerprintPath = resolve(
   repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v76.json',
+  'docs/qualification/g0-toolchain-fingerprints-v79.json',
 )
 const fingerprintV1Path = resolve(
   repositoryRoot,
@@ -59,10 +59,10 @@ describe('G0 toolchain fingerprints', () => {
   it('uses the frozen G0.2 schema id', () => {
     const doc = JSON.parse(readFileSync(fingerprintPath, 'utf8')) as FingerprintDoc
     expect(doc.schema).toBe('open-scad-viewer/g0-toolchain-fingerprints')
-    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v76')
+    expect(doc.fingerprintId).toBe('g0-toolchain-fingerprints-v79')
     expect(doc).toMatchObject({
-      previousFingerprintId: 'g0-toolchain-fingerprints-v75',
-      previousFingerprintSha256: FROZEN_ARCHIVES['docs/qualification/g0-toolchain-fingerprints-v75.json'],
+      previousFingerprintId: 'g0-toolchain-fingerprints-v78',
+      previousFingerprintSha256: FROZEN_ARCHIVES['docs/qualification/g0-toolchain-fingerprints-v78.json'],
     })
   })
 
@@ -163,7 +163,7 @@ describe('G0/G1 re-freeze generator', () => {
     const first = prepare(root)
     const second = prepare(root)
     expect(first.artifactBytes).toEqual(second.artifactBytes)
-    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v93')
+    expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v96')
     expect(first.status).toMatchObject({
       qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
       completedWorkUnits: 0, completedCleanRuns: 0, plannedWorkUnits: 4740,
@@ -202,9 +202,11 @@ describe('G0/G1 re-freeze generator', () => {
     const root = fixture()
     const prepared = prepare(root)
     const candidatePath = resolve(root, 'src/services/openscadSemanticLowerer.ts')
-    writeFileSync(candidatePath, `${readFileSync(candidatePath, 'utf8')}\n`)
+    const originalCandidate = readFileSync(candidatePath)
+    writeFileSync(candidatePath, `${originalCandidate.toString('utf8')}\n`)
     expect(() => publishQualificationRefresh(prepared)).toThrow(/changed during re-freeze/u)
     for (const path of Object.values(REFRESH_OUTPUTS)) expect(existsSync(resolve(root, path))).toBe(false)
+    writeFileSync(candidatePath, originalCandidate)
     const refreshed = prepare(root)
     const existing = resolve(root, REFRESH_OUTPUTS.plan)
     writeFileSync(existing, 'existing destination must survive\n')
@@ -230,7 +232,7 @@ describe('G0/G1 re-freeze generator', () => {
   it('refuses a zero-counter freeze when the new candidate already has result bookkeeping', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v93/result.json')
+    const resultPath = resolve(root, 'output/qualification/semantic-manifold-g1-candidate-run-v96/result.json')
     mkdirSync(dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, '{"completedWorkUnits":1}\n')
     expect(() => prepare(root)).toThrow(/already has execution bookkeeping/u)
@@ -250,9 +252,9 @@ describe('G0/G1 re-freeze generator', () => {
       // Version-only retargeting is reversible; prove this fixture is the exact
       // recorded executor, rather than merely assuming the old behavior survived.
       const historical = readFileSync(resolve(root, path), 'utf8')
-        .replaceAll('semantic-manifold-g1-plan-v93', 'semantic-manifold-g1-plan-v24')
-        .replaceAll('semantic-manifold-g1-candidate-run-v93', 'semantic-manifold-g1-candidate-run-v24')
-        .replace('G1 v93 clean-run', 'G1 v24 clean-run')
+        .replaceAll('semantic-manifold-g1-plan-v96', 'semantic-manifold-g1-plan-v24')
+        .replaceAll('semantic-manifold-g1-candidate-run-v96', 'semantic-manifold-g1-candidate-run-v24')
+        .replace('G1 v96 clean-run', 'G1 v24 clean-run')
       expect(sha256(Buffer.from(historical)))
         .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
       writeFileSync(resolve(root, path), historical)

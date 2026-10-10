@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-11",
+  "qualificationClaim": "none",
+  "wasm": {
+    "sha256": "be3f8c6b1fc43012fe8e63b0cebbb0786e3eccf58710055f4feb0128f2635048",
+    "byteLength": 11954592
+  },
+  "native": {
+    "status": "passed",
+    "passed": 5697,
+    "failed": 0,
+    "ignored": 6,
+    "targetCount": 357
+  },
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 148,
+    "layerViolations": 0,
+    "sizeLimitsIncreased": false
+  },
+  "contracts": {
+    "passed": 162,
+    "failed": 0,
+    "files": 15
+  },
+  "reports": {
+    "native": {
+      "path": "docs/qualification/main-integration-20261010/native.json",
+      "sha256": "07d40cae4673b9a18e63841a003debbc88cf3ba952ec33a36fe78af7a549df2c"
+    },
+    "architecture": {
+      "path": "docs/qualification/main-integration-20261010/architecture.json",
+      "sha256": "56e69e38955636c366f731b3a87ae2c3d18307e6450bf7607cf415b4dfa79abf"
+    },
+    "contracts": {
+      "path": "docs/qualification/main-integration-20261010/contracts.json",
+      "sha256": "69c1f943df739f246e7447d19a5e3da6b1aaec831ed30ab2f81d3157485bfc08"
+    }
+  },
+  "scope": [
+    "Observed local native workspace and current packaged WASM contract checks.",
+    "Earlier independent STEP/browser reports are historical and are not executions of this binary.",
+    "No completed clean semantic work unit, G0/G1 approval or arbitrary global geometry guarantee is inferred."
+  ]
+}

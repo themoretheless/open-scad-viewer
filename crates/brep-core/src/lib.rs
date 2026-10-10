@@ -104,6 +104,7 @@ mod transform_plane_charts;
 pub mod affine_lattice;
 pub mod trim_sew;
 pub mod uv_arrangement;
+pub mod uv_coverage;
 mod uv_regions;
 pub mod volume_validity;
 pub use analytic::{
@@ -234,19 +235,8 @@ impl std::ops::DerefMut for Model {
         &mut self.0
     }
 }
-#[derive(Debug)]
-pub struct Report {
-    pub vertex_count: usize,
-    pub edge_count: usize,
-    pub loop_count: usize,
-    pub face_count: usize,
-    pub shell_count: usize,
-    pub body_count: usize,
-    pub boundary_edge_count: usize,
-    pub topology_valid: bool,
-    pub geometry_agreement: &'static str,
-    pub solid_geometry_status: &'static str,
-}
+mod model_report;
+pub use model_report::Report;
 
 fn invalid(message: impl Into<String>) -> Error {
     Error {
@@ -1545,7 +1535,6 @@ pub fn cuboid(min: [f64; 3], max: [f64; 3]) -> Result<Model> {
 mod tests;
 
 pub mod rack;
-
 pub mod planar_cap;
 pub mod thread;
 
@@ -1678,7 +1667,6 @@ pub mod source_material_segment;
 pub mod source_material_chord;
 
 pub mod source_material_wall;
-
 pub mod source_wall_search;
 
 pub mod source_wall_scan;
