@@ -166,3 +166,16 @@ pub const ALL: [(&str, &str); 46] = [
     ("scale_add4", SCALE_ADD4_WGSL),
     ("zip_mul4", ZIP_MUL4_WGSL),
 ];
+
+pub const MARCHING_CUBES_WGSL: &str = include_str!("../shaders/marching_cubes.wgsl");
+pub const NURBS_TESSELLATE_WGSL: &str = include_str!("../shaders/nurbs_tessellate.wgsl");
+pub const SEMANTIC_EDGES_WGSL: &str = include_str!("../shaders/semantic_edges.wgsl");
+pub const MESH_SLICER_WGSL: &str = include_str!("../shaders/mesh_slicer.wgsl");
+
+/// Hardware-accelerated CAD geometry kernels (Marching Cubes, NURBS Tessellation, Semantic Edges, Slicer).
+pub const CAD_KERNELS: [(&str, &str); 4] = [
+    ("marching_cubes", MARCHING_CUBES_WGSL),
+    ("nurbs_tessellate", NURBS_TESSELLATE_WGSL),
+    ("semantic_edges", SEMANTIC_EDGES_WGSL),
+    ("mesh_slicer", MESH_SLICER_WGSL),
+];

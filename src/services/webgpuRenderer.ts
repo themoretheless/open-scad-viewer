@@ -1862,14 +1862,17 @@ export class WebGPURenderer {
     // Classify draws before encoding: the shadow depth pass runs ahead of the
     // main pass and draws the same opaque set.
     const transitioning = this.geometryGhosts.length > 0 || hasMorph
+    const useWboit = this.transparencyMode === 'wboit'
     this.viewFrustum.update(viewProjection)
-    this.opaqueDraws.length = this.edgeDraws.length = 0
-    this.transparentSort.begin()
+    this.opaqueDraws.length = this.edgeDraws.length = this.transparentDraws.length = 0
+    if (!useWboit) this.transparentSort.begin()
     for (let index = 0; index < this.meshes.length; index++) {
       const mesh = this.meshes[index]
       if (!this.isMeshVisible(index) || (!mesh.morph && !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
-      if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
-      else this.opaqueDraws.push(mesh)
+      if (isTransparentAlpha(mesh.alpha)) {
+        if (useWboit) this.transparentDraws.push(mesh)
+        else this.transparentSort.add(index, mesh.worldBounds.center)
+      } else this.opaqueDraws.push(mesh)
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
       if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
     }
@@ -2008,46 +2011,7 @@ export class WebGPURenderer {
           false, this.extraBindGroupForShader('meshSectionCap'))
       }
 
-      if (this.transparencyMode === 'wboit') {
-        const ghostMeshes = this.geometryGhosts.length
-          ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
-          : NO_GHOST_MESHES
-        this.transparentDraws.length = 0
-        for (let i = 0; i < this.meshes.length; i++) {
-          if (this.isMeshVisible(i) && isTransparentAlpha(this.meshes[i].alpha)) {
-            this.transparentDraws.push(this.meshes[i])
-          }
-        }
-        for (const g of ghostMeshes) this.transparentDraws.push(g)
-
-        if (this.transparentDraws.length) {
-          const wboit = this.wboitRenderer
-          wboit.ensureTextures(dev, canvas.width, canvas.height)
-          const wboitPass = wboit.beginWboitPass(enc, depthView)
-          wboitPass.setBindGroup(0, this.sceneBG)
-          if (this.textures.shadowBG) wboitPass.setBindGroup(2, this.textures.shadowBG)
-
-          let activeModel: ShadingModel | null = null
-          for (const g of this.transparentDraws) {
-            if (g.shadingModel !== activeModel) {
-              activeModel = g.shadingModel
-              const shaderId = resolveMeshShaderId(activeModel)
-              const pipe = wboit.getWboitPipeline(dev, shaderId, this.pipelines.objectLayout, this.pipelines.vertexLayouts.mesh)
-              wboitPass.setPipeline(pipe)
-              const extraGroup = this.extraBindGroupForShader(shaderId)
-              if (extraGroup) wboitPass.setBindGroup(2, extraGroup)
-            }
-            wboitPass.setBindGroup(1, g.bg)
-            wboitPass.setVertexBuffer(0, g.vb)
-            wboitPass.setVertexBuffer(1, g.morphSlot!)
-            wboitPass.setIndexBuffer(g.ib, 'uint32')
-            wboitPass.drawIndexed(g.ic)
-          }
-          wboitPass.end()
-
-          wboit.composite(dev, enc, ctx.getCurrentTexture().createView(), this.fmt)
-        }
-      } else {
+      if (!useWboit) {
         pass.setPipeline(this.meshTransparentPipeline())
         pass.setBindGroup(0, this.sceneBG)
         // The mesh surface shader samples the shadow map at group(2).
@@ -2172,6 +2136,45 @@ export class WebGPURenderer {
     }
 
     pass.end()
+
+    // WBOIT runs after the main opaque render pass ends so the command encoder
+    // never has two concurrent render passes open and depthView has full opaque depth.
+    if (!isCsgActive && useWboit) {
+      for (const ghost of this.geometryGhosts) {
+        for (const gMesh of ghost.meshes) {
+          if (gMesh.alpha > 0) this.transparentDraws.push(gMesh)
+        }
+      }
+      if (this.transparentDraws.length) {
+        sortOpaqueDraws(this.transparentDraws)
+        const wboit = this.wboitRenderer
+        wboit.ensureTextures(dev, canvas.width, canvas.height)
+        const wboitPass = wboit.beginWboitPass(enc, depthView)
+        wboitPass.setBindGroup(0, this.sceneBG)
+        if (this.textures.shadowBG) wboitPass.setBindGroup(2, this.textures.shadowBG)
+
+        let activeModel: ShadingModel | null = null
+        for (const g of this.transparentDraws) {
+          if (g.shadingModel !== activeModel) {
+            activeModel = g.shadingModel
+            const shaderId = resolveMeshShaderId(activeModel)
+            const pipe = wboit.getWboitPipeline(dev, shaderId, this.pipelines.objectLayout, this.pipelines.vertexLayouts.mesh)
+            wboitPass.setPipeline(pipe)
+            const extraGroup = this.extraBindGroupForShader(shaderId)
+            if (extraGroup) wboitPass.setBindGroup(2, extraGroup)
+          }
+          wboitPass.setBindGroup(1, g.bg)
+          wboitPass.setVertexBuffer(0, g.vb)
+          wboitPass.setVertexBuffer(1, g.morphSlot!)
+          wboitPass.setIndexBuffer(g.ib, 'uint32')
+          wboitPass.drawIndexed(g.ic)
+        }
+        wboitPass.end()
+
+        wboit.composite(dev, enc, ctx.getCurrentTexture().createView(), this.fmt)
+      }
+    }
+
     dev.queue.submit([enc.finish()])
     const token = this.pendingFrameToken
     this.pendingFrameToken = null

@@ -1,5 +1,4 @@
 /** Row-major matrix transport and remaining vector helpers. */
-import { callGeometryRust } from './geometry/kernel'
 import { invertMatrixF64 } from './geometry/matrixInverse'
 
 export type Mat4 = Float32Array
@@ -15,6 +14,8 @@ export interface Aabb3 {
   max: Vec3
 }
 
+const SCRATCH_INV_F64 = new Float64Array(16)
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
@@ -29,10 +30,28 @@ export function identity(): Mat4 {
   return m
 }
 
+/**
+ * Row-major 4x4 matrix multiplication with f64 dot-product accumulation and
+ * f32 GPU storage round-trip, matching math_core::viewport::multiply bit-for-bit
+ * without a synchronous WASM call.
+ */
 export function multiply(a: Mat4, b: Mat4): Mat4 {
-  return new Float32Array(callGeometryRust<number[]>('viewport', {
-    action: 'multiply', matrix: Array.from(a), other: Array.from(b),
-  }))
+  for (let i = 0; i < 16; i++) {
+    if (!Number.isFinite(a[i]) || !Number.isFinite(b[i])) {
+      throw new Error('Matrix result exceeds finite GPU storage')
+    }
+  }
+  const out = new Float32Array(16)
+  for (let r = 0; r < 4; r++) {
+    const r4 = r * 4
+    const a0 = a[r4], a1 = a[r4 + 1], a2 = a[r4 + 2], a3 = a[r4 + 3]
+    for (let c = 0; c < 4; c++) {
+      const v = Math.fround(a0 * b[c] + a1 * b[4 + c] + a2 * b[8 + c] + a3 * b[12 + c])
+      if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
+      out[r4 + c] = v
+    }
+  }
+  return out
 }
 
 export function translate(m: Mat4, v: Vec3): Mat4 {
@@ -134,7 +153,14 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
 }
 
 export function transpose(m: Mat4): Mat4 {
-  return new Float32Array(callGeometryRust<number[]>('viewport', { action: 'transpose', matrix: Array.from(m) }))
+  for (let i = 0; i < 16; i++) {
+    if (!Number.isFinite(m[i])) throw new Error('Matrix result exceeds finite GPU storage')
+  }
+  const out = new Float32Array(16)
+  for (let i = 0; i < 16; i++) {
+    out[i] = Math.fround(m[(i % 4) * 4 + ((i / 4) | 0)])
+  }
+  return out
 }
 
 /**
@@ -145,17 +171,15 @@ export function transpose(m: Mat4): Mat4 {
  * per-mesh hot paths.
  */
 export function invert(a: Mat4, out?: Mat4): Mat4 {
-  const values = invertMatrixF64(a)
+  const values = invertMatrixF64(a, SCRATCH_INV_F64)
   if (!values) throw new Error('Singular or unrepresentable matrix inverse')
   // The native boundary stores results as f32 and refuses non-finite storage.
-  const stored = new Array<number>(16)
   for (let i = 0; i < 16; i++) {
     const v = Math.fround(values[i])
     if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
-    stored[i] = v
   }
   const target = out ?? new Float32Array(16)
-  for (let i = 0; i < 16; i++) target[i] = stored[i]
+  for (let i = 0; i < 16; i++) target[i] = Math.fround(values[i])
   return target
 }
 
