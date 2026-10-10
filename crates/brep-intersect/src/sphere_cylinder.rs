@@ -31,9 +31,6 @@ use brep_core::Model;
 
 const TAU: f64 = std::f64::consts::TAU;
 
-fn point_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
 /// One cylinder face's share of an intersection circle in that face's UV.
 #[derive(Clone, Debug)]
@@ -127,7 +124,7 @@ fn circle_component(
     let sphere_uv = lift(sphere, cylinder.axis, center);
     let mut max_sample_residual = 0_f64;
     for i in 0..16 {
-        let point = point_of(&curve.evaluate(i as f64 / 4.)?.point);
+        let point = point3(&curve.evaluate(i as f64 / 4.)?.point);
         let d = sub(point, sphere.center);
         let sphere_residual = (d[0].hypot(d[1]).hypot(d[2]) - sphere.radius).abs();
         let other = match site {

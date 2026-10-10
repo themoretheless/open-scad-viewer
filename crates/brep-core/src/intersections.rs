@@ -4,6 +4,7 @@
 //! the curve/surface engine behind all of them is `nurbs-intersect`.
 use nurbs_core::{Result, curve::Curve};
 use nurbs_intersect::*;
+use nurbs_intersect::vec3::norm;
 
 #[cfg(test)]
 mod test_utils;

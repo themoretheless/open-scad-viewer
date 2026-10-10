@@ -83,13 +83,7 @@ use brep_core::Model;
 const TAU: f64 = std::f64::consts::TAU;
 const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
-fn point3_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
-fn hypot3(v: [f64; 3]) -> f64 {
-    v[0].hypot(v[1]).hypot(v[2])
-}
 
 #[derive(Clone, Debug)]
 pub enum PlaneConeComponent {
@@ -242,11 +236,11 @@ fn side_plane_residuals(
     let mut worst = 0_f64;
     for i in 0..count {
         let t = lo + (hi - lo) * i as f64 / (count - 1) as f64;
-        let p = point3_of(&curve.evaluate(t)?.point);
+        let p = point3(&curve.evaluate(t)?.point);
         let rel = sub(p, cone.bottom);
         let a = dot(rel, cone.axis);
         let perp = sub(rel, cone.axis.map(|x| x * a));
-        let side = (hypot3(perp) - (cone.r_bottom + cone.slope * a)).abs();
+        let side = (norm(perp) - (cone.r_bottom + cone.slope * a)).abs();
         let planar = dot(plane.normal, sub(p, plane.origin)).abs();
         worst = worst.max(side).max(planar);
     }
@@ -781,7 +775,7 @@ pub fn intersect_plane_cone(
         let d0 = dot(plane.normal, sub(plane.origin, apex));
         if d0.abs() <= band {
             let e2 = cross(plane.normal, cone.axis);
-            let e2_len = hypot3(e2);
+            let e2_len = norm(e2);
             if !e2_len.is_finite() || e2_len <= 0. {
                 report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
                 return Ok(report);
@@ -887,7 +881,7 @@ pub fn intersect_plane_cone(
         return Ok(report);
     }
     let e1_raw = sub(cone.axis, plane.normal.map(|x| x * g));
-    let e1_len = hypot3(e1_raw);
+    let e1_len = norm(e1_raw);
     if !e1_len.is_finite() || e1_len <= 0. {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
         return Ok(report);
@@ -1311,9 +1305,6 @@ mod tests {
     use super::*;
 
 
-    fn point_of(jet: &[f64]) -> [f64; 3] {
-        [jet[0], jet[1], jet[2]]
-    }
 
     /// Worst residual of the UV lifts evaluated through their own surfaces
     /// against the cone side and plane equations.
@@ -1329,7 +1320,7 @@ mod tests {
             let rel = sub(p, cone_def.0);
             let a = dot(rel, cone_def.1);
             let perp = sub(rel, cone_def.1.map(|x| x * a));
-            (hypot3(perp) - (cone_def.2 + cone_def.3 * a))
+            (norm(perp) - (cone_def.2 + cone_def.3 * a))
                 .abs()
                 .max(dot(plane_def.0, sub(p, plane_def.1)).abs())
         };
@@ -1455,8 +1446,8 @@ mod tests {
             "{center:?}"
         );
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
-        let start = point_of(&curve.evaluate(0.).unwrap().point);
-        let end = point_of(&curve.evaluate(2.).unwrap().point);
+        let start = point3(&curve.evaluate(0.).unwrap().point);
+        let end = point3(&curve.evaluate(2.).unwrap().point);
         assert!(
             start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12,
             "{start:?}"
@@ -1716,8 +1707,8 @@ mod tests {
             assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
             // Arc endpoints sit exactly on the ring planes: |X| = sqrt(8.75)
             // at z = 0 and sqrt(0.75) at z = 5.
-            let start = point_of(&curve.evaluate(0.).unwrap().point);
-            let end = point_of(&curve.evaluate(1.).unwrap().point);
+            let start = point3(&curve.evaluate(0.).unwrap().point);
+            let end = point3(&curve.evaluate(1.).unwrap().point);
             for p in [start, end] {
                 assert!((p[1] - 0.5).abs() <= 1e-12, "{p:?}");
                 let on_bottom =
@@ -1807,8 +1798,8 @@ mod tests {
         assert!(cone_uv.is_none());
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
         // The curve's phi = 0 / pi endpoints are the oracle vertices.
-        let p0 = point_of(&curve.evaluate(0.).unwrap().point);
-        let p2 = point_of(&curve.evaluate(2.).unwrap().point);
+        let p0 = point3(&curve.evaluate(0.).unwrap().point);
+        let p2 = point3(&curve.evaluate(2.).unwrap().point);
         assert!(
             sub(p0, v2).iter().all(|x| x.abs() <= 1e-12),
             "{p0:?} vs {v2:?}"
@@ -1895,7 +1886,7 @@ mod tests {
         // Both clip endpoints sit exactly on the bottom ring plane z = 0
         // with the ring radius 3.
         for t in [0., 1.] {
-            let p = point_of(&curve.evaluate(t).unwrap().point);
+            let p = point3(&curve.evaluate(t).unwrap().point);
             assert!(p[2].abs() <= 1e-12, "{p:?}");
             assert!((p[0].hypot(p[1]) - 3.).abs() <= 1e-9, "{p:?}");
         }
@@ -1942,7 +1933,7 @@ mod tests {
         for normal in [[0., 0.6, 0.8], [0., 0.96_f64.sqrt(), 0.2]] {
             let e1 = [1., 0., 0.];
             let e2 = cross(normal, e1);
-            let e2 = e2.map(|x| x / hypot3(e2));
+            let e2 = e2.map(|x| x / norm(e2));
             let origin = sub(sub(apex, e1.map(|x| x * 6.)), e2.map(|x| x * 8.));
             let plane = plane_patch(origin, e1.map(|x| x * 12.), e2.map(|x| x * 16.));
             let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();

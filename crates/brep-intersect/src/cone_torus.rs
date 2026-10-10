@@ -113,9 +113,6 @@ enum CircleSite {
     Cap(usize, f64),
 }
 
-fn point_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
 /// Exact circle component at torus-axial height `z` (measured along the
 /// torus's own axis), with UV lifts on both surfaces and a 16-sample
@@ -172,7 +169,7 @@ fn circle_component(
     let torus_uv = lift_parallel(torus, profile, &[(0., TAU)]);
     let mut max_sample_residual = 0_f64;
     for i in 0..16 {
-        let point = point_of(&curve.evaluate(i as f64 / 4.)?.point);
+        let point = point3(&curve.evaluate(i as f64 / 4.)?.point);
         let cone_residual = match site {
             CircleSite::Side => {
                 let rel = sub(point, cone.bottom);
