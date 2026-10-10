@@ -1,11 +1,9 @@
 //! Exact recognition of the canonical analytic cylinder (four ruled quadrant
 //! sides, two planar caps) on a retained model.
-use super::sphere_sphere::{ARC_WEIGHT, RECOGNITION};
+use super::sphere_sphere::RECOGNITION;
 use super::*;
 use crate::Model;
 
-const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
-const TAU: f64 = std::f64::consts::TAU;
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
@@ -27,25 +25,7 @@ pub struct CanonicalCylinder {
     pub caps: [usize; 2],
 }
 
-/// One quadrant's exact cap trim arc: the quarter circle of radius 1/2
-/// centered at [1/2, 1/2] in cap UV, weights cos(pi/4).
-fn cap_quarter_arc(curve: &Curve, quadrant: usize) -> bool {
-    let [x, y] = QUADRANTS[quadrant];
-    let [nx, ny] = QUADRANTS[(quadrant + 1) % 4];
-    curve.degree == 2
-        && curve.knots == [0., 0., 0., 1., 1., 1.]
-        && curve.weights == [1., ARC_WEIGHT, 1.]
-        && curve.control_points
-            == [
-                [0.5 + x / 2., 0.5 + y / 2.].to_vec(),
-                [0.5 + (x + nx) / 2., 0.5 + (y + ny) / 2.].to_vec(),
-                [0.5 + nx / 2., 0.5 + ny / 2.].to_vec(),
-            ]
-}
 
-fn point_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
 #[doc(hidden)]
 /// Recognizes a canonical cylinder solid as built by `analytic::cylinder`,
@@ -81,8 +61,8 @@ pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
     for &index in &sides {
         let surface = &model.faces[index].surface;
         for u in [0., 1.] {
-            let b = point_of(&surface.evaluate(u, 0.)?.point);
-            let t = point_of(&surface.evaluate(u, 1.)?.point);
+            let b = point3(&surface.evaluate(u, 0.)?.point);
+            let t = point3(&surface.evaluate(u, 1.)?.point);
             for k in 0..3 {
                 bottom[k] += b[k] / 8.;
                 top[k] += t[k] / 8.;
@@ -106,7 +86,7 @@ pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
     let mut radius = 0.;
     let mut mid_radii = Vec::with_capacity(4);
     for &index in &sides {
-        let point = point_of(&model.faces[index].surface.evaluate(0.5, 0.5)?.point);
+        let point = point3(&model.faces[index].surface.evaluate(0.5, 0.5)?.point);
         let perp = radial(point, center);
         let r = perp[0].hypot(perp[1]).hypot(perp[2]);
         mid_radii.push(r);
@@ -124,7 +104,7 @@ pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
         error = error.max(deviation);
     }
     // In-plane frame: x from the first side patch's bottom start direction.
-    let start = point_of(&model.faces[sides[0]].surface.evaluate(0., 0.)?.point);
+    let start = point3(&model.faces[sides[0]].surface.evaluate(0., 0.)?.point);
     let x_perp = radial(start, bottom);
     let x_length = x_perp[0].hypot(x_perp[1]).hypot(x_perp[2]);
     if !x_length.is_finite() || x_length <= 0. {
@@ -139,7 +119,7 @@ pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
     let mut ordered = [0usize; 4];
     for &index in &sides {
         let surface = &model.faces[index].surface;
-        let point = point_of(&surface.evaluate(0., 0.)?.point);
+        let point = point3(&surface.evaluate(0., 0.)?.point);
         let perp = radial(point, bottom);
         let angle = dot(perp, y_dir).atan2(dot(perp, x_dir));
         let quadrant = (angle / quarter).round() as i64;
@@ -193,7 +173,7 @@ pub fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylinder>> {
     let mut cap_ids = [0usize; 2];
     for &index in &caps {
         let surface = &model.faces[index].surface;
-        let corner = point_of(&surface.evaluate(0., 0.)?.point);
+        let corner = point3(&surface.evaluate(0., 0.)?.point);
         let axial = dot(sub(corner, bottom), axis);
         let slot = if axial.abs() <= RECOGNITION * height {
             0

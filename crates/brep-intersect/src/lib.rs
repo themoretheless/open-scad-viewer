@@ -5,6 +5,8 @@
 //! Booleans that consume it directly and is re-exported here.
 use nurbs_core::{Result, curve::Curve};
 use nurbs_intersect::*;
+use nurbs_intersect::vec3::norm;
+use std::f64::consts::{FRAC_PI_2 as QUARTER, TAU};
 
 #[cfg(test)]
 mod test_utils;
@@ -12,6 +14,8 @@ mod cone_cone;
 mod cone_torus;
 mod cylinder_cylinder;
 mod cylinder_torus;
+mod plane_bounds;
+use plane_bounds::rect_halfplanes;
 mod plane_cone;
 mod plane_cylinder;
 mod plane_sphere;

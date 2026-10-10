@@ -48,15 +48,4 @@ pub use step_interchange_v3::{
     export_step_v10, import_step_v3, import_step_v4, import_step_v5, import_step_v6,
     import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
-
-/// Degree-1 NURBS segment between two points; the freeform STEP fixtures
-/// build their trim loops from it.
-pub(crate) fn line(a: Vec<f64>, b: Vec<f64>) -> nurbs_core::curve::Curve {
-    nurbs_core::curve::Curve {
-        degree: 1,
-        knots: vec![0., 0., 1., 1.],
-        control_points: vec![a, b],
-        weights: vec![1., 1.],
-        periodic: false,
-    }
-}
+pub(crate) use nurbs_core::curve::line;

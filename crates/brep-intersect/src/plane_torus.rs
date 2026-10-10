@@ -58,15 +58,13 @@
 //! Nothing here authorizes a topology change.
 use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::plane_sphere::{
-    EllipseClip, Halfplane2, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
+    EllipseClip, PlanePatchCurve, clip_ellipse, conic_arcs_2d, conic_sweep,
 };
 use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect, circle_curve};
 use brep_core::intersections::{CanonicalTorus, recognize_torus};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
 type TorusLift<'a> = dyn Fn(&CanonicalTorus, &[(f64, f64)]) -> Vec<TorusPatchCurve> + 'a;
 
@@ -165,31 +163,6 @@ fn circle_residuals(
     Ok(worst)
 }
 
-/// Patch-UV half-planes of the canonical unit-square domain.
-fn rect_halfplanes(plane: &CanonicalPlane, band: f64) -> [Halfplane2; 4] {
-    [
-        Halfplane2 {
-            normal: [-1., 0.],
-            offset: 0.,
-            band: band / plane.u_len,
-        },
-        Halfplane2 {
-            normal: [1., 0.],
-            offset: 1.,
-            band: band / plane.u_len,
-        },
-        Halfplane2 {
-            normal: [0., -1.],
-            offset: 0.,
-            band: band / plane.v_len,
-        },
-        Halfplane2 {
-            normal: [0., 1.],
-            offset: 1.,
-            band: band / plane.v_len,
-        },
-    ]
-}
 
 /// Plane-UV ellipse parameterization of the circle
 /// `p(phi) = center + cos(phi) w1 + sin(phi) w2`.

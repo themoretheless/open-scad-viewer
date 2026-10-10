@@ -32,8 +32,6 @@ use brep_core::intersections::{CanonicalPlane, recognize_plane};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
 /// One plane patch's share of an intersection curve in that patch's UV. The
 /// canonical plane operand has exactly one face, so `patch` is always 0.

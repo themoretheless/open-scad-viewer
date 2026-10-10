@@ -280,34 +280,7 @@ fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
 }
 
 #[doc(hidden)]
-pub fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-#[doc(hidden)]
-pub fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-#[doc(hidden)]
-pub fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-#[doc(hidden)]
-pub fn norm(a: [f64; 3]) -> f64 {
-    a[0].hypot(a[1]).hypot(a[2])
-}
-#[doc(hidden)]
-pub fn normalize(a: [f64; 3]) -> Option<[f64; 3]> {
-    let n = norm(a);
-    if !n.is_finite() || n == 0. {
-        None
-    } else {
-        Some([a[0] / n, a[1] / n, a[2] / n])
-    }
-}
+pub use crate::vec3::{cross, dot, norm, normalize, sub};
 
 /// Recover a supporting plane when all control points are coplanar.
 #[doc(hidden)]

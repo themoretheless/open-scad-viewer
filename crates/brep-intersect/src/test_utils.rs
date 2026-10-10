@@ -2,7 +2,6 @@
 //! affine transforms applied to a retained `Model` through
 //! `brep_core::transform::affine`.
 use brep_core::Model;
-use nurbs_core::curve::Curve;
 
 pub(crate) fn translated(model: &Model, offset: [f64; 3]) -> Model {
     brep_core::transform::affine(
@@ -29,14 +28,4 @@ pub(crate) fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) ->
     )
     .unwrap()
 }
-
-/// Degree-1 segment between two points (3D or UV), as the planar test patch needs it.
-pub(crate) fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
-    Curve {
-        degree: 1,
-        knots: vec![0., 0., 1., 1.],
-        control_points: vec![a, b],
-        weights: vec![1., 1.],
-        periodic: false,
-    }
-}
+pub(crate) use nurbs_core::curve::line;

@@ -1483,6 +1483,7 @@ version = "0.1.0"
 dependencies = [
  "cad-predicates",
  "nurbs-core",
+ "osv-math",
  "value-codec",
 ]
 

@@ -58,8 +58,6 @@ use brep_core::intersections::sphere_sphere::{RECOGNITION, ccw_intersect};
 use super::*;
 use brep_core::Model;
 
-const TAU: f64 = std::f64::consts::TAU;
-const QUARTER: f64 = std::f64::consts::FRAC_PI_2;
 
 #[derive(Clone, Debug)]
 pub enum PlaneCylinderComponent {
@@ -124,9 +122,6 @@ pub enum PlaneCylinderComponent {
     },
 }
 
-fn point3_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
 /// Plane UV coordinates of a 3D point under the rectangular patch frame.
 fn plane_uv(plane: &CanonicalPlane, point: [f64; 3]) -> [f64; 2] {
@@ -175,7 +170,7 @@ fn side_plane_residuals(
     let mut worst = 0_f64;
     for i in 0..count {
         let t = lo + (hi - lo) * i as f64 / (count - 1) as f64;
-        let p = point3_of(&curve.evaluate(t)?.point);
+        let p = point3(&curve.evaluate(t)?.point);
         let rel = sub(p, cylinder.center);
         let a = dot(rel, cylinder.axis);
         let perp = sub(rel, cylinder.axis.map(|x| x * a));
@@ -672,9 +667,6 @@ mod tests {
     use super::*;
 
 
-    fn point_of(jet: &[f64]) -> [f64; 3] {
-        [jet[0], jet[1], jet[2]]
-    }
 
     /// Worst residual of the UV lifts evaluated through their own surfaces
     /// against the cylinder side and plane equations.
@@ -819,8 +811,8 @@ mod tests {
             "{center:?}"
         );
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
-        let start = point_of(&curve.evaluate(0.).unwrap().point);
-        let end = point_of(&curve.evaluate(2.).unwrap().point);
+        let start = point3(&curve.evaluate(0.).unwrap().point);
+        let end = point3(&curve.evaluate(2.).unwrap().point);
         assert!(
             start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12,
             "{start:?}"
@@ -1112,7 +1104,7 @@ mod tests {
             "{normal:?}"
         );
         // phi = 0 is the major-axis endpoint (0, 2, 4 + 2/sqrt(3)).
-        let p0 = point_of(&curve.evaluate(0.).unwrap().point);
+        let p0 = point3(&curve.evaluate(0.).unwrap().point);
         let oracle = [0., 2., 4. + 2. / 3_f64.sqrt()];
         assert!(sub(p0, oracle).iter().all(|x| x.abs() <= 1e-12), "{p0:?}");
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
@@ -1154,8 +1146,8 @@ mod tests {
             assert!(cylinder_uv.is_none());
             assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
             let [lo, hi] = curve.domain();
-            let start = point_of(&curve.evaluate(lo).unwrap().point);
-            let end = point_of(&curve.evaluate(hi).unwrap().point);
+            let start = point3(&curve.evaluate(lo).unwrap().point);
+            let end = point3(&curve.evaluate(hi).unwrap().point);
             for p in [start, end] {
                 // Every trim endpoint lies on a cap plane.
                 assert!(p[2].abs() <= 1e-12 || (p[2] - 8.).abs() <= 1e-12, "{p:?}");
@@ -1334,7 +1326,7 @@ mod tests {
                 .all(|x| x.abs() <= 1e-12),
             "{normal:?}"
         );
-        let p0 = point_of(&curve.evaluate(0.).unwrap().point);
+        let p0 = point3(&curve.evaluate(0.).unwrap().point);
         let oracle = placed([0., 2., 4. + 2. / 3_f64.sqrt()]);
         assert!(sub(p0, oracle).iter().all(|x| x.abs() <= 1e-12), "{p0:?}");
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");

@@ -16,28 +16,8 @@ fn unsupported(message: &str) -> Error {
     Error::new("BREP_ANALYTIC_SS_UNSUPPORTED", message)
 }
 
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-fn mul(a: [f64; 3], s: f64) -> [f64; 3] {
-    [a[0] * s, a[1] * s, a[2] * s]
-}
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-fn norm(a: [f64; 3]) -> f64 {
-    a[0].hypot(a[1]).hypot(a[2])
-}
+use crate::vec3::{add, cross, dot, norm, scale as mul, sub};
+
 fn normalize(a: [f64; 3]) -> Result<[f64; 3]> {
     let n = norm(a);
     if !n.is_finite() || n == 0. {

@@ -436,15 +436,7 @@ mod separation_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
-        Curve {
-            degree: 1,
-            knots: vec![0., 0., 1., 1.],
-            control_points: vec![a, b],
-            weights: vec![1., 1.],
-            periodic: false,
-        }
-    }
+    use crate::curve::line;
     fn verify(a: &Curve, b: &Curve, expected: f64, tolerance: f64, budget: usize) -> CurveDistance {
         let result = distance(a, b, tolerance, budget).unwrap();
         assert!(

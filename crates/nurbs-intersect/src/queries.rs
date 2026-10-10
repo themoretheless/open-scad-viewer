@@ -5236,30 +5236,8 @@ pub fn curve_ruled_surface(
     Ok(report)
 }
 
-#[inline(always)]
 #[doc(hidden)]
-pub fn point3(p: &[f64]) -> [f64; 3] {
-    [p[0], p[1], p[2]]
-}
-#[inline(always)]
-#[doc(hidden)]
-pub fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-#[inline(always)]
-#[doc(hidden)]
-pub fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-#[inline(always)]
-#[doc(hidden)]
-pub fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
+pub use crate::vec3::{cross, dot, point3, sub};
 
 impl value_codec::Serialize for Plane {
     fn to_value(&self) -> value_codec::Value {

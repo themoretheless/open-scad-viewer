@@ -100,9 +100,6 @@ impl OrientedProfile<'_> {
     }
 }
 
-fn point_of(jet_point: &[f64]) -> [f64; 3] {
-    [jet_point[0], jet_point[1], jet_point[2]]
-}
 
 /// Scaled Euclidean norm that never overflows or flushes subnormals.
 fn norm3(v: [f64; 3]) -> f64 {
@@ -154,7 +151,7 @@ fn circle_component(
     let second = profile.cone;
     let mut max_sample_residual = 0_f64;
     for i in 0..16 {
-        let point = point_of(&curve.evaluate(i as f64 / 4.)?.point);
+        let point = point3(&curve.evaluate(i as f64 / 4.)?.point);
         let side_residual = |cone: &CanonicalCone| {
             let rel = sub(point, cone.bottom);
             let a = dot(rel, cone.axis);
@@ -488,7 +485,7 @@ mod tests {
         // Sixteen samples satisfy both implicit side equations.
         let mut worst = 0_f64;
         for i in 0..16 {
-            let p = point_of(&curve.evaluate(i as f64 / 4.).unwrap().point);
+            let p = point3(&curve.evaluate(i as f64 / 4.).unwrap().point);
             worst = worst
                 .max(side_residual_z(p, 1., 1. / 3.))
                 .max((p[0].hypot(p[1]) - (4.5 - p[2] / 2.)).abs())
@@ -660,7 +657,7 @@ mod tests {
         assert!(normal[2] >= 1. - 1e-12, "{normal:?}");
         let mut worst = 0_f64;
         for i in 0..16 {
-            let p = point_of(&curve.evaluate(i as f64 / 4.).unwrap().point);
+            let p = point3(&curve.evaluate(i as f64 / 4.).unwrap().point);
             worst = worst
                 .max(side_residual_z(p, 1., 1. / 3.))
                 .max((p[0].hypot(p[1]) - (2. + (8. - p[2]) / 3.)).abs());
@@ -838,7 +835,7 @@ mod tests {
         let origin2 = placed([0., 0., 1.]);
         let mut worst = 0_f64;
         for i in 0..16 {
-            let p = point_of(&curve.evaluate(i as f64 / 4.).unwrap().point);
+            let p = point3(&curve.evaluate(i as f64 / 4.).unwrap().point);
             worst = worst
                 .max(side(p, origin1, 1., 1. / 3.))
                 .max(side(p, origin2, 4., -0.5));

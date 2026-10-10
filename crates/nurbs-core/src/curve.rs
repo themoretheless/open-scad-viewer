@@ -206,6 +206,17 @@ pub fn validate_basis(p: usize, k: &[f64], n: usize) -> Result<[f64; 2]> {
     }
     Ok(domain)
 }
+/// Exact degree-one segment from `a` to `b` over the unit domain: the one
+/// builder the B-rep constructors, trim loops and STEP fixtures share.
+pub fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
+    Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a, b],
+        weights: vec![1., 1.],
+        periodic: false,
+    }
+}
 impl Curve {
     /// Exact degree-one representation of a 2D or 3D polyline. Repeating the
     /// first point closes it; this does not create periodic spline storage.

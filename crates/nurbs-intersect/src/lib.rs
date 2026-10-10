@@ -8,5 +8,6 @@ pub mod nurbs_ss;
 pub mod predicate_evidence;
 mod queries;
 mod rational_curve;
+pub mod vec3;
 pub use queries::*;
 pub use rational_curve::RationalCurveDefinition;
