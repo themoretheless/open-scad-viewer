@@ -12,6 +12,7 @@ Workspace kernels for CAD, print planning, languages, and photogrammetry. Coordi
 | `planar-geometry` | 2D paths, primitive contours, rings, Pathfinder (**crates.io**) |
 | `brep-topology` | Indexed B-rep incidence only |
 | `nurbs-core` | Rational curves/surfaces |
+| `nurbs-intersect` | Curve/surface intersection queries, evidence and coverage certificates |
 | `brep-core` | CAD B-rep over NURBS |
 | `mesh-topology` | Borrowed mesh view, indexed incidence, inspection, incremental affine area, boundary loops, display edges |
 | `mesh-query` | Triangle/scene BVHs, picking, closest points and sampled distances |

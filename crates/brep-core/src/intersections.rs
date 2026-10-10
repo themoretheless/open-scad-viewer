@@ -21,7 +21,7 @@ mod plane_torus;
 pub(crate) mod recognize;
 mod sphere_cone;
 mod sphere_cylinder;
-pub(crate) mod sphere_sphere;
+pub mod sphere_sphere;
 mod sphere_torus;
 #[cfg(test)]
 mod test_utils;
@@ -40,10 +40,10 @@ pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphe
 pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 
-pub(crate) use plane_cone::{CanonicalCone, recognize_cone};
-pub(crate) use plane_torus::recognize_torus;
-pub(crate) use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
-pub(crate) use sphere_sphere::recognize as recognize_sphere;
+pub use plane_cone::{CanonicalCone, recognize_cone};
+pub use plane_torus::recognize_torus;
+pub use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
+pub use sphere_sphere::recognize as recognize_sphere;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {
@@ -8484,3 +8484,8 @@ mod tests {
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
     }
 }
+
+#[doc(hidden)]
+pub use plane_sphere::{CanonicalPlane, recognize_plane};
+#[doc(hidden)]
+pub use plane_torus::CanonicalTorus;

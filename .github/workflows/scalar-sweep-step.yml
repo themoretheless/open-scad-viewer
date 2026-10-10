@@ -4,6 +4,9 @@ on:
     paths:
       - 'crates/nurbs-core/**'
       - 'crates/brep-core/**'
+      - 'crates/nurbs-intersect/**'
+      - 'crates/brep-intersect/**'
+      - 'crates/cad-step/**'
       - 'crates/geometry-bridge/**'
       - 'scripts/export-scalar-sweep-step.mts'
       - 'scripts/verify-scalar-sweep-step-occt.py'
@@ -13,6 +16,9 @@ on:
     paths:
       - 'crates/nurbs-core/**'
       - 'crates/brep-core/**'
+      - 'crates/nurbs-intersect/**'
+      - 'crates/brep-intersect/**'
+      - 'crates/cad-step/**'
       - 'scripts/*scalar-sweep-step*'
       - '.github/workflows/scalar-sweep-step.yml'
 jobs:

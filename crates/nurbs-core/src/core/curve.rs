@@ -621,3 +621,8 @@ mod hinted_span_tests {
 #[cfg(test)]
 #[path = "tests/curve.rs"]
 mod tests;
+
+/// Exact degree-one line definition shared by analytic recognition clients.
+pub fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
+    Curve { degree: 1, knots: vec![0., 0., 1., 1.], control_points: vec![a, b], weights: vec![1., 1.], periodic: false }
+}

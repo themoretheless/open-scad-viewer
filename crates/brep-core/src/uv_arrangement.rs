@@ -5,7 +5,7 @@
 //! mutation evidence. Periodic/pole rules refuse non-finite or wrap-ambiguous strata.
 
 use crate::Model;
-use crate::coverage_verifier::{UvCoverageCertificate, certify_lifted_uv_coverage};
+use nurbs_intersect::coverage_verifier::{UvCoverageCertificate, certify_lifted_uv_coverage};
 use crate::trim_sew::{
     CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate,
     classify_chart_events, sew_closed_model_edges,
@@ -1413,13 +1413,13 @@ mod tests {
         assert!(arrangement.coverage.complete);
         assert_eq!(arrangement.vertices.len(), 4);
         assert_eq!(arrangement.halfedges.len(), 8);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
             .unwrap();
 
         let mut missed = arrangement.clone();
         missed.halfedges.pop();
         assert!(
-            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&missed, &context)
+            crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&missed, &context)
                 .is_err()
         );
     }
@@ -1464,7 +1464,7 @@ mod tests {
         assert_eq!(arrangement.chart, ChartKind::TensorBezierGraph);
         assert!(arrangement.coverage.complete);
         assert_eq!(arrangement.coverage.primitive_count, 5);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &context)
             .unwrap();
     }
 
@@ -1560,7 +1560,7 @@ mod tests {
         spec.policy = "foreign-uv-context".into();
         let foreign = ToleranceContext::new(spec).unwrap();
         assert!(
-            crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(&arrangement, &foreign)
+            crate::uv_coverage::verify_lifted_uv_arrangement_coverage(&arrangement, &foreign)
                 .is_err()
         );
     }
@@ -1660,7 +1660,7 @@ mod tests {
         assert_eq!(arrangement.branch_count, 2);
         assert_eq!(arrangement.hole_cell_count, 0);
         assert!(arrangement.material_cell_count >= 6);
-        crate::coverage_verifier::verify_lifted_uv_arrangement_coverage(
+        crate::uv_coverage::verify_lifted_uv_arrangement_coverage(
             &arrangement.arrangement,
             &context,
         )

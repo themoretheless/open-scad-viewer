@@ -14,6 +14,9 @@ gpu = ["dep:gpu-compute", "dep:compute-core", "polygon-core/gpu"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda", "polygon-core/cuda"]
 
 [dependencies]
+brep-intersect = { path = "../brep-intersect" }
+cad-step = { path = "../cad-step" }
+nurbs-intersect = { path = "../nurbs-intersect" }
 bridge-codec = { path = "../bridge-codec" }
 bridge-cam = { path = "../bridge-cam" }
 bridge-analysis = { path = "../bridge-analysis" }

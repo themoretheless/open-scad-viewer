@@ -26,6 +26,8 @@ pub mod direct_edit;
 pub mod aag_fillets;
 pub mod aag_features;
 pub mod keypoints;
+#[doc(hidden)]
+pub mod face_senses;
 pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;

@@ -10,6 +10,7 @@ default = ["codec"]
 codec = ["dep:value-codec", "nurbs-core/codec", "brep-topology/codec", "cad-predicates/codec"]
 
 [dependencies]
+nurbs-intersect = { path = "../nurbs-intersect" }
 geometry-ops = { workspace = true }
 value-codec = { workspace = true, optional = true }
 nurbs-core = { workspace = true }

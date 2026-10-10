@@ -23,7 +23,7 @@ use crate::Model;
 
 /// Recognition tolerance relative to radius for the canonical structure
 /// screen (vertex distances, frame orthonormality, control points).
-pub(crate) const RECOGNITION: f64 = 1e-9;
+pub const RECOGNITION: f64 = 1e-9;
 /// Relative scale under which the UV circle degenerates to a UV line (the
 /// section plane contains the patch pole, e.g. a great circle whose plane is
 /// perpendicular to the sphere axis).
@@ -31,7 +31,7 @@ const UV_LINE: f64 = 1e-12;
 const TAU: f64 = std::f64::consts::TAU;
 const LINEAR: [f64; 3] = [0., 0.5, 1.];
 const SQUARE: [f64; 3] = [0., 0., 1.];
-pub(crate) const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
+pub const ARC_WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;
 
 /// One sphere patch's share of the intersection circle in that patch's UV.
 #[derive(Clone, Debug)]
@@ -70,21 +70,21 @@ struct PatchFrame {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct CanonicalSphere {
-    pub(crate) center: [f64; 3],
-    pub(crate) radius: f64,
+pub struct CanonicalSphere {
+    pub center: [f64; 3],
+    pub radius: f64,
     /// Observed structural deviation bound; feeds the outward classification.
-    pub(crate) error: f64,
+    pub error: f64,
     patches: Vec<PatchFrame>,
 }
 
-pub(crate) fn unit_quarter_arc(curve: &Curve) -> bool {
+pub fn unit_quarter_arc(curve: &Curve) -> bool {
     curve.degree == 2
         && curve.knots == [0., 0., 0., 1., 1., 1.]
         && curve.control_points == [[1., 0.].to_vec(), [1., 1.].to_vec(), [0., 1.].to_vec()]
         && (curve.weights == [1., ARC_WEIGHT, 1.] || curve.weights == [1., 1., 2.])
 }
-pub(crate) fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
+pub fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
     curve.degree == 1
         && curve.knots == [0., 0., 1., 1.]
         && curve.control_points == [from.to_vec(), to.to_vec()]
@@ -95,7 +95,7 @@ pub(crate) fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
 /// control point and weight against the exact construction in its recovered
 /// frame, the exact quarter-disk trim pcurves, and a globally consistent
 /// pole/quadrant tiling (each (hemisphere, quadrant) pair exactly once).
-pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
+pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1
@@ -295,21 +295,21 @@ pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
 impl CanonicalSphere {
     /// Snapped exact frame of one patch: (equator basis a, equator basis b,
     /// signed pole). Patch indices are source model face indices.
-    pub(crate) fn frame(&self, patch: usize) -> ([f64; 3], [f64; 3], [f64; 3]) {
+    pub fn frame(&self, patch: usize) -> ([f64; 3], [f64; 3], [f64; 3]) {
         let frame = &self.patches[patch];
         (frame.a, frame.b, frame.pole)
     }
     /// Exact rational UV inversion of a 3D point on one patch; None at or
     /// beyond the patch antipode. Uses the snapped certified frame, so the
     /// residual against the authored surface is bounded by `self.error`.
-    pub(crate) fn invert_uv(&self, patch: usize, point: [f64; 3]) -> Option<[f64; 2]> {
+    pub fn invert_uv(&self, patch: usize, point: [f64; 3]) -> Option<[f64; 2]> {
         let uv = invert_patch(self, &self.patches[patch], point);
         (uv[0].abs() < 1e29 && uv[1].abs() < 1e29).then_some(uv)
     }
 }
 
 /// Exact 3D circle: four 90-degree rational arcs, knots 0..=4, weights cos(pi/4).
-pub(crate) fn circle_curve(center: [f64; 3], radius: f64, e1: [f64; 3], e2: [f64; 3]) -> Curve {
+pub fn circle_curve(center: [f64; 3], radius: f64, e1: [f64; 3], e2: [f64; 3]) -> Curve {
     let point = |x: f64, y: f64| {
         std::array::from_fn::<f64, 3, _>(|k| center[k] + radius * (x * e1[k] + y * e2[k])).to_vec()
     };
@@ -465,7 +465,7 @@ fn clip_line(normal: [f64; 2], offset: f64) -> Option<([f64; 2], [f64; 2])> {
 }
 
 /// Exact rational quadratic arcs covering the swept interval, each <= 90 degrees.
-pub(crate) fn circle_arcs(center: [f64; 2], rho: f64, start: f64, end: f64) -> Vec<Curve> {
+pub fn circle_arcs(center: [f64; 2], rho: f64, start: f64, end: f64) -> Vec<Curve> {
     let pieces = ((end - start) / std::f64::consts::FRAC_PI_2).ceil().max(1.) as usize;
     (0..pieces)
         .map(|i| {
@@ -496,7 +496,7 @@ pub(crate) fn circle_arcs(center: [f64; 2], rho: f64, start: f64, end: f64) -> V
 /// quarter disk: either a UV circle with its swept interval (ccw from
 /// `start` to `end`, `end - start` in (0, TAU]) or a UV line segment.
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum PatchUvSection {
+pub enum PatchUvSection {
     Circle {
         center: [f64; 2],
         radius: f64,
@@ -515,7 +515,7 @@ pub(crate) enum PatchUvSection {
 /// (1+u^2+v^2)` under `n.x = n.m` is `A(u^2+v^2) - 2Bu - 2Cv - D = 0` with
 /// `A = r(n.p) + k`, `B = r(n.a)`, `C = r(n.b)`, `D = r(n.p) - k`,
 /// `k = n.(m - c)`: an exact UV circle, or a UV line when A vanishes.
-pub(crate) fn patch_sections(
+pub fn patch_sections(
     sphere: &CanonicalSphere,
     normal: [f64; 3],
     middle: [f64; 3],
@@ -558,7 +558,7 @@ pub(crate) fn patch_sections(
 /// Lift the section circle into every patch UV of one sphere: the exact
 /// per-patch UV circles (or lines through the UV origin when the plane
 /// contains the patch pole) clipped to the patch quarter-disk.
-pub(crate) fn lift(
+pub fn lift(
     sphere: &CanonicalSphere,
     normal: [f64; 3],
     middle: [f64; 3],
@@ -590,7 +590,7 @@ pub(crate) fn lift(
 /// `[0, TAU)`, `sweep` in `(0, TAU)`. Returns up to two components as
 /// `(unwrapped_start, sweep)` pairs; a full-circle argument returns the
 /// other arc unchanged.
-pub(crate) fn ccw_intersect(a: (f64, f64), b: (f64, f64)) -> Vec<(f64, f64)> {
+pub fn ccw_intersect(a: (f64, f64), b: (f64, f64)) -> Vec<(f64, f64)> {
     if !a.1.is_finite() || a.1 <= 0. || !b.1.is_finite() || b.1 <= 0. {
         return Vec::new();
     }
@@ -632,7 +632,7 @@ fn invert_patch(sphere: &CanonicalSphere, frame: &PatchFrame, point: [f64; 3]) -
 /// angle of the section circle. Interval endpoints and midpoints are mapped
 /// into each patch UV through the exact rational inversion, which fixes both
 /// the sub-span trims and the angular direction without any fitting.
-pub(crate) fn lift_clipped(
+pub fn lift_clipped(
     sphere: &CanonicalSphere,
     normal: [f64; 3],
     middle: [f64; 3],

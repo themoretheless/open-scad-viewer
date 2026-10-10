@@ -290,7 +290,8 @@ fn hex_decode(text: &str) -> Result<Vec<u8>> {
         .collect()
 }
 
-fn encode_complex(
+#[doc(hidden)]
+pub fn encode_complex(
     audited: &AuditedTopologyComplex,
     format: &str,
     mut export: impl FnMut(&Model) -> Result<String>,
@@ -400,7 +401,8 @@ fn parse_role(text: &str) -> Result<BodyRole> {
     }
 }
 
-fn decode_complex(
+#[doc(hidden)]
+pub fn decode_complex(
     text: &str,
     format: &str,
     mut import: impl FnMut(&str) -> Result<Model>,
@@ -520,7 +522,8 @@ fn decode_complex(
     MixedDimensionalBrep::new(parts, shared_faces, radial_rings, vertex_fans, vec![])?.audit()
 }
 
-fn interchange_certificate(
+#[doc(hidden)]
+pub fn interchange_certificate(
     audited: &AuditedTopologyComplex,
     capability: &'static str,
 ) -> ComplexInterchangeCertificate {

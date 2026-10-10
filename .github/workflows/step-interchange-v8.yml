@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'crates/brep-core/**'
+      - 'crates/cad-step/**'
       - 'crates/geometry-bridge/**'
       - 'src/services/cadNurbsStep.ts'
       - 'src/services/cadStepExternalResolver.ts'
@@ -30,7 +31,7 @@ jobs:
       - name: Build and run independent AP242 oracle
         run: node scripts/qualify-step-interchange-v8.mjs
       - name: Verify kernel and bridge certificates
-        run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core -p geometry-bridge v8
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core -p cad-step -p geometry-bridge v8
       - name: Verify product adapters
         run: npm run typecheck && npm run build
       - name: Upload raw validator evidence

@@ -215,9 +215,21 @@ dependencies = [
  "cad-predicates",
  "geometry-ops",
  "nurbs-core",
+ "nurbs-intersect",
  "planar-geometry",
  "rbench",
  "sha2",
+ "value-codec",
+]
+
+[[package]]
+name = "brep-intersect"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "nurbs-intersect",
  "value-codec",
 ]
 
@@ -339,6 +351,17 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 name = "cad-predicates"
 version = "0.1.0"
 dependencies = [
+ "value-codec",
+]
+
+[[package]]
+name = "cad-step"
+version = "0.1.0"
+dependencies = [
+ "brep-core",
+ "brep-topology",
+ "nurbs-core",
+ "sha2",
  "value-codec",
 ]
 
@@ -783,12 +806,14 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "brep-core",
+ "brep-intersect",
  "brep-topology",
  "bridge-analysis",
  "bridge-cam",
  "bridge-codec",
  "bridge-svg",
  "cad-predicates",
+ "cad-step",
  "compute-core",
  "gcode-core",
  "geometry-ops",
@@ -803,6 +828,7 @@ dependencies = [
  "mesh-section",
  "mesh-topology",
  "nurbs-core",
+ "nurbs-intersect",
  "osv-math",
  "planar-geometry",
  "polygon-core",
@@ -1500,6 +1526,16 @@ dependencies = [
  "brep-topology",
  "cad-predicates",
  "geometry-ops",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-intersect"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "nurbs-core",
  "osv-math",
  "value-codec",
 ]

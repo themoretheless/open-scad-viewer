@@ -8,10 +8,11 @@ use cad_predicates::{ToleranceContext, ToleranceSpecIdentity};
 use nurbs_core::{Error, Result, curve::Curve, surface::Axis, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::predicate_evidence::{
+use nurbs_intersect::predicate_evidence::{
     ComposedEvidence, EvidenceClaim, PredicateEvidence, compose_predicate_evidence,
 };
 use crate::{ChangeKind, ChangeProvenance, Model, TopoId, TopoKind, TopologyChange};
+pub use nurbs_intersect::RationalCurveDefinition;
 
 fn refuse(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
@@ -255,34 +256,6 @@ pub struct SewCertificate {
     pub matched: usize,
     pub complete: bool,
     pub displacement_budget_ok: bool,
-}
-
-/// Bit-exact authority for a rational NURBS curve.  This deliberately records
-/// the complete definition, rather than endpoint or sample-point surrogates.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RationalCurveDefinition {
-    pub degree: usize,
-    pub knots: Vec<u64>,
-    pub control_points: Vec<Vec<u64>>,
-    pub weights: Vec<u64>,
-    pub periodic: bool,
-}
-
-impl RationalCurveDefinition {
-    pub fn from_curve(curve: &Curve) -> Result<Self> {
-        curve.validate()?;
-        Ok(Self {
-            degree: curve.degree,
-            knots: curve.knots.iter().map(|v| v.to_bits()).collect(),
-            control_points: curve
-                .control_points
-                .iter()
-                .map(|point| point.iter().map(|v| v.to_bits()).collect())
-                .collect(),
-            weights: curve.weights.iter().map(|v| v.to_bits()).collect(),
-            periodic: curve.periodic,
-        })
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

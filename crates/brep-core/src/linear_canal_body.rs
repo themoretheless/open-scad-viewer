@@ -211,11 +211,10 @@ mod tests {
         let encoded = value_codec::to_value(&model).unwrap();
         let restored: crate::Model = value_codec::from_value(encoded).unwrap();
         assert_eq!(restored, model);
-        let (step, _, _) = crate::export_step_v6(&model).unwrap();
-        let (imported, _, _) = crate::import_step_v6(&step).unwrap();
-        crate::source_body_model::assert_step_identity(&model, &imported);
-        if let Some(path) = std::env::var_os("CAD_SOURCE_MODEL_STEP_OUTPUT") {
-            std::fs::write(path, step).unwrap();
+        // The STEP v6 identity round trip runs in cad-step
+        // (tests/source_body_step.rs) on the fixture this hook writes.
+        if let Some(path) = std::env::var_os("CAD_SOURCE_MODEL_JSON_OUTPUT") {
+            std::fs::write(path, value_codec::to_string(&model).unwrap()).unwrap();
         }
         let exhausted = qualify(&spans, limits(1)).unwrap();
         assert!(exhausted.body().is_none());
