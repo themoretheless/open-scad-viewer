@@ -42,7 +42,6 @@
     "crates/cad-predicates/src/construction3.rs": 1662,
     "crates/cad-step/src/iges_interchange_v2.rs": 1413,
     "crates/cad-step/src/nurbs_step_shared.rs": 1202,
-    "crates/cad-step/src/step_interchange_v3.rs": 6938,
     "crates/cad-step/src/step_interchange.rs": 2208,
     "crates/gcode-core/src/foreign.rs": 867,
     "crates/geometry-bridge/src/brep_attestation.rs": 849,

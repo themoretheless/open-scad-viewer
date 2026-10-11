@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'crates/cad-step/src/step_interchange_v3.rs'
+      - 'crates/cad-step/src/step_interchange_v3/**'
       - 'crates/geometry-bridge/src/**'
       - 'src/services/cadStep*.ts'
       - 'src/services/solidStepExchange.ts'
