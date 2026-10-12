@@ -1,37 +1,5 @@
-//! Optional bounded JSON request boundary.
 use super::*;
-use crate::surface::Surface;
-#[path="retained_body_coverage.rs"]
-mod retained_body_coverage;
-use crate::retained_wall_domain;
-use value_codec::{Deserialize, Serialize, Value, json};
 
-fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
-    value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
-}
-fn encode<T: Serialize>(v: T) -> Result<Value> {
-    value_codec::to_value(v).map_err(|e| numeric_err(e.to_string()))
-}
-fn optional_field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<Option<T>> {
-    match v.get(k) {
-        Some(value) if !value.is_null() => value_codec::from_value(value.clone())
-            .map(Some)
-            .map_err(|e| input(format!("Invalid {k}: {e}"))),
-        _ => Ok(None),
-    }
-}
-fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> {
-    let start = optional_field(v, "start_tangents")?;
-    let end = optional_field(v, "end_tangents")?;
-    let controls = match (start, end) {
-        (None, None) => None,
-        (Some(a), Some(b)) => Some([a, b]),
-        _ => return Err(input("Cartesian loft requires both endpoint tangent fields")),
-    };
-    check(controls.is_none() || v.get("boundary_tangents").is_none_or(Value::is_null),
-        "Specify authored control tangents or normalized boundary fields, not both")?;
-    Ok(controls)
-}
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
     if op == "sweep_repair_circle_sections" || op == "sweep_project_sections" {
@@ -1319,31 +1287,3 @@ pub fn dispatch(v: Value) -> Result<Value> {
         _ => Err(input("Unknown NURBS operation")),
     }
 }
-fn error_value(error: &Error) -> Value {
-    json!({"code": error.code, "message": error.message})
-}
-fn response(result: Result<Value>) -> String {
-    match result {
-        Ok(value) => json!({"ok":true,"value":value}),
-        Err(error) => json!({"ok":false,"error": error_value(&error)}),
-    }
-    .to_string()
-}
-/// Versioned, bounded JSON boundary; no host geometry fallback.
-pub fn execute(request: &str) -> String {
-    if request.len() > 2 * 1024 * 1024 {
-        return response(Err(resource("NURBS request exceeds 2 MiB")));
-    }
-    response(
-        value_codec::from_str(request)
-            .map_err(|e| input(e.to_string()))
-            .and_then(dispatch),
-    )
-}
-
-#[path="transport_sweep.rs"]
-mod transport_sweep;
-use transport_sweep::*;
-#[cfg(test)]
-#[path="surface_offset_transport_tests.rs"]
-mod surface_offset_transport_tests;
