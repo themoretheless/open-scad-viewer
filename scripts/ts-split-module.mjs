@@ -222,7 +222,13 @@ for (const st of statements) {
   if (ts.isImportDeclaration(st) || isExported(st)) continue
   const names = []
   if ((ts.isFunctionDeclaration(st) || ts.isClassDeclaration(st) || ts.isEnumDeclaration(st) || ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st)) && st.name) names.push(st.name.text)
-  if (ts.isVariableStatement(st)) st.declarationList.declarations.forEach(d => ts.isIdentifier(d.name) && names.push(d.name.text))
+  if (ts.isVariableStatement(st)) {
+    const collect = name => {
+      if (ts.isIdentifier(name)) names.push(name.text)
+      else name.elements?.forEach(e => e.name && collect(e.name))
+    }
+    st.declarationList.declarations.forEach(d => collect(d.name))
+  }
   if (names.some(n => neededFromMain.has(n))) exportEdits.push(st.getStart())
 }
 
