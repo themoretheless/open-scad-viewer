@@ -41,7 +41,6 @@
     "crates/nurbs-intersect/src/analytic_ss.rs": 913,
     "crates/nurbs-intersect/src/nurbs_ss.rs": 2526,
     "crates/openscad-core/src/builtins.rs": 1424,
-    "crates/openscad-core/src/eval/evaluator.rs": 3115,
     "crates/openscad-core/src/parser/parser_2.rs": 1085,
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
     "crates/planar-geometry/src/path.rs": 1516,
