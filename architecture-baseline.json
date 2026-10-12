@@ -62,7 +62,6 @@
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
     "crates/photogrammetry-core/src/pipeline.rs": 1028,
     "crates/planar-geometry/src/curve.rs": 887,
-    "crates/planar-geometry/src/edit.rs": 1121,
     "crates/planar-geometry/src/path.rs": 1516,
     "crates/planar-geometry/src/rings.rs": 962,
     "crates/planar-geometry/src/stroke.rs": 961,
