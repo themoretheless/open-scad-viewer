@@ -54,6 +54,7 @@
     "src/features/DirectModeler.vue": 4576,
     "src/features/MeshModeler.vue": 976,
     "src/mcp/createServer.ts": 963,
+    "src/mcp/createServer/createOpenScadMcpServer.ts": 1333,
     "src/mcp/directGeometryProtocol.ts": 754,
     "src/mcp/directGeometrySupervisor.ts": 740,
     "src/mcp/duckdbModelStore.ts": 1875,
@@ -80,7 +81,6 @@
     "src/services/openScadSurface.ts": 716,
     "src/services/semanticProgramCodec.ts": 574,
     "src/services/semanticProgramExecutor.ts": 800,
-    "src/services/semanticProgramValidator.ts": 2374,
     "src/services/webgpuRenderer.ts": 2900,
     "src/services/workspacePersistence.ts": 529
   },
