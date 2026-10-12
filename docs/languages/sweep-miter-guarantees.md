@@ -1,3 +1,11 @@
+## Current local delivery (2026-10-10)
+
+Geometry44f8 is delivered locally with the qualified coupled decoder; language735 is unchanged. Same-byte evidence: station STEP12+3, miter STEP16, headless Metal wide/narrow UI62, public24+65 across two runs and main154 distribution checks. Exact prior guided/inflection BRep models remain unchanged. [Delivery receipt](../qualification/sweep-coverage-2026-10-01/preserved-grid-main-delivery.json). Full declared-mode completion remains open. A further strict closed Frenet arc extension is being qualified in an isolated Rust stage; it is not part of this delivered package.
+
+## Qualification status (2026-10-09)
+
+The delivered package remains geometry838. The newer preserved-grid44f8 candidate has passed the12-case curved station-frame STEP matrix and16-case joint miter-law STEP matrix, including independent volumes/OpenCascade and native contract reconciliation. Public API/Rush frame checks24 and current regressions65 passed. Wide/narrow UI and local delivery remain pending. These finite results do not certify every declared sweep combination; applicable retained profile/station smoothness and complete-boundary admission require the actual native certificates described below.
+
 # Sweep/miter admission and correction
 
 `brep_progressive_miter_sweep` combines authored frames, orientation guides,

@@ -5,7 +5,9 @@ use crate::numerics::interval_vec3::{dot_tight, sub as interval_sub};
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate, scalar_certificate::Status, vector_certificate,
 };
+mod arc_position;
 mod spatial_parameter;
+mod spatial_first;
 mod corrected_regular;
 mod arc_pose;
 pub(super) use arc_pose::SharedArcPose;
@@ -239,6 +241,9 @@ pub struct SectionInterpolationReport {
     pub status: Status,
     pub cells: usize,
     pub error_upper: Option<f64>,
+    /// Original enclosure used only to preserve adaptive station selection.
+    /// The complete continuous certificate remains `error_upper`.
+    pub refinement_error_upper: Option<f64>,
     pub endpoint_displacement_upper: Option<f64>,
     /// Only the two complete sweep endpoint contours; station-wide bound above
     /// stays separate. None uses that conservative station-wide fallback.
@@ -266,6 +271,7 @@ fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usiz
         status: Status::Unresolved,
         cells: 0,
         error_upper: None,
+        refinement_error_upper: None,
         endpoint_displacement_upper: None,
         cap_endpoint_displacement_upper: None,
         reason: Some("mode-not-authored"),
@@ -376,25 +382,47 @@ fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usiz
 // Its chord defect is <= L*h/2, including continuous C0 path corners. Authored
 // relative pose is certified independently in the original station fraction.
 fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
-    let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,
+    let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,refinement_error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
     let path=sweep.path;
     let domain=path.domain();
     // Interior multiplicity > degree permits a jump, invalidating Lipschitz
     // position in cumulative length. No sampled continuity premise is used.
-    // A closed Fixed authored frame has no holonomy correction. The same
+    // A closed Fixed frame has no holonomy correction. The same
     // length-Lipschitz chord bound applies to its last interval; the endpoint
     // loop below charges the copied closing section against the original pose.
-    let unsupported_closed=path_is_closed(path)?
-        && !(sweep.frame_laws.is_some() && sweep.options.orientation==Orientation::Fixed);
-    if path.periodic || unsupported_closed || path.knots.iter().any(|k|
+    let closed=path_is_closed(path)?;
+    let unsupported_closed=closed&&sweep.options.orientation!=Orientation::Fixed;
+    if unsupported_closed || path.knots.iter().any(|k|
         *k>domain[0]&&*k<domain[1]&&path.knots.iter().filter(|x|*x==k).count()>path.degree){return Ok(out);}
     let Spacing::ArcLength {tolerance,max_cells:constructor_budget}=sweep.options.spacing else {return Ok(out);};
     if max_cells==0{return Ok(out);}
+    if path.periodic || (closed&&sweep.frame_laws.is_none()) {
+        // The inverse-length Lipschitz owner needs the actual one-sided
+        // original seam, not merely the periodic flag or copied section.
+        if sweep.options.orientation!=Orientation::Fixed{return Ok(out);}
+        let mut seam=super::endpoint_jets::certify(path,1,max_cells as u64)?;
+        out.cells+=seam.exact_work as usize;
+        // Fixed arc position is length-Lipschitz, not parameter-C1 dependent.
+        // A charged exact original C0/positive tangent-direction seam is also
+        // sufficient when endpoint parameter speeds differ. Keep the cheaper
+        // existing C1 proof and charge a failed proposal before this fallback.
+        // Periodic storage keeps its separate original-basis seam owner.
+        if !seam.certified&&!path.periodic&&out.cells<max_cells {
+            let direction=super::endpoint_jets::certify_direction(path,0,true,false,(max_cells-out.cells) as u64)?;
+            out.cells+=direction.exact_work as usize;
+            seam.certified=direction.certified;
+        }
+        if !seam.certified||out.cells>=max_cells{
+            out.reason=Some(if sweep.frame_laws.is_some(){"periodic-authored-arc-original-seam-unproved"}
+                else if path.periodic{"periodic-fixed-arc-original-seam-unproved"}
+                else{"arc-length-correspondence-unproved"});return Ok(out);
+        }
+    }
     let owned;
     let division=if let Some(shared)=shared_length {shared} else {
-        owned=crate::curve_measure::divide_by_length(path,count-1,tolerance,max_cells.min(constructor_budget))?;
-        out.cells=owned.cells;&owned
+        owned=crate::curve_measure::divide_by_length(path,count-1,tolerance,(max_cells-out.cells).min(constructor_budget))?;
+        out.cells+=owned.cells;&owned
     };
     if !division.within_tolerance || division.points.len()!=count{return Ok(out);}
     let parameters=sweep.parameters(count)?.0;
@@ -410,18 +438,43 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
     }
     let zero=constant_vector_law([0.;3])?;
     let frame_laws=sweep.frame_laws;
+    // Original equal rational poles prove a constant relative Fixed pose.
+    // Own that proof once per invocation; endpoint positions and inverse-
+    // length residuals remain independent, fully charged source queries.
+    let mut constant_relative=frame_laws.is_none();
+    if constant_relative {
+        let mut laws=vec![sweep.scale,sweep.twist];
+        if let Some((axis,center))=sweep.affine_laws {laws.extend([axis,center]);}
+        'laws: for law in laws {for pole in &law.control_points {
+            if out.cells==max_cells {return Ok(out);}
+            out.cells+=1;
+            if pole!=&law.control_points[0] {constant_relative=false;break 'laws;}
+        }}
+    }
+    let constant_values=if constant_relative {
+        let batch=authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,[0.,1.],max_cells-out.cells)?;
+        out.cells+=batch.cells;
+        if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
+        batch.values
+    }else {None};
     let mut endpoints=vec![vec![0.;coordinates.len()];count];
     let mut endpoint_upper=0_f64;
     for station in 0..count{
         let t=station as f64/(count-1) as f64;
         let point=&division.points[station];
-        let batch=if let Some((axis,normal))=frame_laws {
+        let batch=if let Some(values)=&constant_values {Some(values.clone())}
+        else if let Some((axis,normal))=frame_laws {
             let batch=authored_frame_certificate::certify_control_values(&zero,sweep.scale,sweep.twist,
                 axis,normal,sweep.affine_laws,&coordinates,[t,t],max_cells-out.cells)?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             let Some(values)=batch.values else {return Ok(out);};Some(values)
-        }else {None};
+        }else {
+            let batch=authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,[t,t],max_cells-out.cells)?;
+            out.cells+=batch.cells;
+            if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
+            let Some(values)=batch.values else {return Ok(out);};Some(values)
+        };
         for (control,&q) in coordinates.iter().enumerate(){
             let value=if let Some(values)=&batch {
                 authored_frame_certificate::ControlValueReport {status:Status::Certified,cells:0,value:Some(values[control]),reason:None}
@@ -436,22 +489,52 @@ fn original_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_ce
             endpoints[station][control]=upper;endpoint_upper=endpoint_upper.max(upper);
         }
     }
+    // Optional original curvature proof improves the positional chord bound.
+    // Keep the valid Lipschitz bound on incomplete regularity/curvature work;
+    // every attempted cell still consumes this invocation's unchanged budget.
+    let coarse=I::point(division.total.bounds[1]).div(I::point((count-1) as f64))?.div(I::point(2.))?;
+    let curvature=if coarse.hi>sweep.options.max_deviation && max_cells>out.cells {
+        let available=max_cells-out.cells;
+        // A proved constant relative pose needs no later per-station law work.
+        let allowance=if constant_values.is_some(){available}else{available/8};
+        let proof=arc_position::certify(path,allowance.min(1024))?;
+        out.cells+=proof.cells;proof.curvature_upper
+    }else {None};
     let mut error=0_f64;
     for station in 0..count-1{
         let interval=[station as f64/(count-1) as f64,(station+1) as f64/(count-1) as f64];
         let width=I::point(interval[1]).sub(I::point(interval[0]))?;
-        let position=I::point(division.total.bounds[1]).mul(width)?.div(I::point(2.))?;
-        let batch=if let Some((axis,normal))=frame_laws {
+        let arc=I::point(division.total.bounds[1]).mul(width)?;
+        let lipschitz=arc.div(I::point(2.))?;
+        let position=if let Some(curvature)=curvature {
+            let quadratic=I::point(curvature).mul(arc)?.mul(arc)?.div(I::point(8.))?;
+            I::new(0.,lipschitz.hi.min(quadratic.hi))?
+        }else {lipschitz};
+        let batch=if let Some(values)=&constant_values {
+            // Equal original poles make the exact relative derivatives zero;
+            // interval uncertainty of the constant value is not a derivative.
+            Some(authored_frame_certificate::TrajectoriesReport {traversal:interval,status:Status::Certified,cells:0,
+                jets:Some(values.iter().copied().map(|value|authored_frame_certificate::FrameJet {
+                    value,first:[[0.,0.];3],second:[[0.,0.];3]}).collect()),single_span:true,reason:None})
+        }else if let Some((axis,normal))=frame_laws {
             let batch=authored_frame_certificate::certify_control_trajectories(&zero,sweep.scale,sweep.twist,
                 axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             Some(batch)
-        }else {None};
+        }else {
+            let batch=authored_frame_certificate::certify_fixed_relative_trajectories(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+            out.cells+=batch.cells;
+            if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
+            Some(batch)
+        };
         let values=if batch.as_ref().is_some_and(|batch|!batch.single_span) {
-            let (axis,normal)=frame_laws.unwrap();
-            let values=authored_frame_certificate::certify_control_values(&zero,sweep.scale,sweep.twist,
-                axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+            let values=if let Some((axis,normal))=frame_laws {
+                authored_frame_certificate::certify_control_values(&zero,sweep.scale,sweep.twist,
+                    axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
+            }else {
+                authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
+            };
             out.cells+=values.cells;
             if values.status!=Status::Certified {out.reason=values.reason;return Ok(out);}
             values.values
@@ -496,6 +579,9 @@ pub struct PatchErrorReport {
     pub cells: usize,
     pub products: usize,
     pub section_error_upper: Option<f64>,
+    /// Keeps previously accepted adaptive grids unchanged while allowing a
+    /// tighter certificate to admit the caller's final permitted grid.
+    pub refinement_error_upper: Option<f64>,
     /// Stored original-section control displacement; excludes decomposition/caps.
     pub original_section_endpoint_error_upper: Option<f64>,
     /// Both retained end contours, including profile decomposition.
@@ -608,16 +694,40 @@ pub(super) fn rmf_planar_patch_error(sweep:&Sweep<'_>,count:usize,max_cells:usiz
     rmf_planar_patch_error_with_length(sweep,count,max_cells,max_products,None)
 }
 pub(super) fn rmf_planar_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
+    rmf_planar_patch_error_with_pose(sweep,count,max_cells,max_products,shared_length,None)
+}
+fn rmf_planar_patch_error_with_pose(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
     check(max_cells<=100000&&max_products<=1000000,"RMF section/decomposition work exceeds limits")?;
     let line=super::source_line::certify(sweep.path,max_cells)?;
     let mut section=if line.certified {
-        guided_section_interpolation_mode(sweep,count,max_cells-line.cells,OriginalTransport::RmfCollinear)?
+        guided_section_interpolation_mode_with_pose(sweep,count,max_cells-line.cells,OriginalTransport::RmfCollinear,shared_pose)?
     }else if shared_length.is_some()&&sweep.options.orientation==Orientation::RotationMinimizing&&sweep.frame_laws.is_none()
         &&sweep.orientation_guide.is_none()&&sweep.contact_point.is_none()&&sweep.options.spacing!=Spacing::Parameter{
         original_frame_arc_length_section_interpolation(sweep,count,max_cells-line.cells,shared_length,OriginalTransport::RmfPlanar,None)?
     }else{guided_section_interpolation_mode(sweep,count,max_cells-line.cells,OriginalTransport::RmfPlanar)?};
     section.cells+=line.cells;
     patch_error_from_section(sweep,count,max_products,section)
+}
+// Default RMF construction must not stop at a failed seed-aligned plane
+// candidate. Reuse the general original Bishop owner, without altering the
+// retained frames or resetting work already spent by the cheaper candidate.
+pub(super) fn rmf_default_patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
+    shared_length:Option<&crate::curve_measure::DivisionReport>,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,mut shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
+    if sweep.options.spacing==Spacing::Parameter && (shared_rmf.is_some()
+        || path_is_closed(sweep.path)? && original_planar_rmf(sweep.path,sweep.options.normal)) {
+        // The aggregate owner has already paid for this original source.
+        // Reuse its frame/position proof instead of starting a per-profile
+        // candidate that cannot share that expenditure.
+        return rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells,max_products,shared_length,shared_rmf,shared_pose);
+    }
+    let planar=rmf_planar_patch_error_with_pose(sweep,count,max_cells,max_products,shared_length,shared_pose.as_deref_mut())?;
+    if !matches!(planar.reason,Some("source-plane-coefficients-nonzero"|"rmf-original-frame-correspondence-unproved"|"rmf-closed-correction-correspondence-unproved"))
+        || planar.cells>=max_cells || planar.products>max_products {return Ok(planar);}
+    let mut general=rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells-planar.cells,
+        max_products-planar.products,shared_length,shared_rmf,shared_pose)?;
+    general.cells+=planar.cells;
+    general.products+=planar.products;
+    Ok(general)
 }
 pub(super) fn rmf_straight_patch_error(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize)->Result<PatchErrorReport>{
     check(max_products<=1000000,"Patch decomposition work exceeds1000000 products")?;
@@ -699,6 +809,7 @@ fn patch_error_from_section(
         cells: section.cells,
         products: 0,
         section_error_upper: section.error_upper,
+        refinement_error_upper: None,
         original_section_endpoint_error_upper: section.endpoint_displacement_upper,
         retained_endpoint_error_upper: None,
         endpoint_contour_error_upper: None,
@@ -751,6 +862,8 @@ fn patch_error_from_section(
     let retained = patches(&sections)?;
     out.status = Status::Certified;
     out.error_upper = Some(error);
+    out.refinement_error_upper=section.refinement_error_upper
+        .map(|upper|I::point(upper).add(I::point(decomposition)).map(|bound|bound.hi)).transpose()?;
     out.decomposition_error_upper = Some(decomposition);
     out.retained_endpoint_error_upper = section.endpoint_displacement_upper
         .map(|endpoint| I::point(endpoint).add(I::point(decomposition)).map(|bound|bound.hi))
@@ -1297,15 +1410,41 @@ fn fixed_affine_interval(sweep:&Sweep<'_>,count:usize,interval:[f64;2])->bool {
         && sweep.affine_laws.is_none_or(|(axes,center)|constant(axes)&&constant(center))
 }
 
-// Exact normalized-domain identity avoids inferring knot locations from rounded
-// affine parameter conversions. No source law may jump inside the open span.
-fn original_laws_have_no_interior_knots(sweep:&Sweep<'_>,interval:[f64;2])->bool {
+// Prove absence of knots in the OPEN traversal span in each original
+// authored domain. Endpoint limits are independently owned above. Interval
+// comparisons handle separated knots; ambiguous affine maps use exact sums
+// of binary64 products, never rounded normalized knot coordinates.
+fn original_laws_have_no_interior_knots(sweep:&Sweep<'_>,interval:[f64;2],cells:&mut usize,max_cells:usize)->Result<bool> {
     let mut curves=vec![sweep.path,sweep.scale,sweep.twist];
     if let Some((a,b))=sweep.affine_laws {curves.extend([a,b]);}
     if let Some((a,b))=sweep.frame_laws {curves.extend([a,b]);}
     if let Some(guide)=sweep.orientation_guide {curves.push(guide);}
-    curves.into_iter().all(|curve|curve.domain()==[0.,1.] &&
-        !curve.knots.iter().any(|&k|k>interval[0]&&k<interval[1]))
+    for curve in curves {
+        let [a,b]=curve.domain();
+        let mut previous=None;
+        let width=I::point(b).sub(I::point(a))?;
+        let mapped=interval.map(|t|I::point(a).add(width.mul(I::point(t))?)).into_iter().collect::<Result<Vec<_>>>()?;
+        for &k in &curve.knots {
+            if k<=a||k>=b||previous==Some(k){continue;}
+            previous=Some(k);
+            if [a,b]==[0.,1.] {
+                if k>interval[0]&&k<interval[1]{return Ok(false);}
+                continue;
+            }
+            if k<=mapped[0].lo||k>=mapped[1].hi{continue;}
+            if k>mapped[0].hi&&k<mapped[1].lo{return Ok(false);}
+            // k - (a + (b-a)*t), as four exact dyadic products.
+            if max_cells.saturating_sub(*cells)<4{return Ok(false);}
+            *cells+=4;
+            let lower=crate::exact_products::sum_sign(&[(1.,k),(-1.,a),(-b,interval[0]),(a,interval[0])]);
+            if lower!=std::cmp::Ordering::Greater{continue;}
+            if max_cells.saturating_sub(*cells)<4{return Ok(false);}
+            *cells+=4;
+            let upper=crate::exact_products::sum_sign(&[(1.,k),(-1.,a),(-b,interval[1]),(a,interval[1])]);
+            if upper==std::cmp::Ordering::Less{return Ok(false);}
+        }
+    }
+    Ok(true)
 }
 
 pub(super) fn fixed_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize)->Result<SectionInterpolationReport>{
@@ -1594,6 +1733,11 @@ fn corrected_original_arc_and_straight_reference_charge_actual_sections_and_shar
 fn guided_section_interpolation_mode(
     sweep: &Sweep<'_>, count: usize, max_cells: usize, mode:OriginalTransport,
 ) -> Result<SectionInterpolationReport> {
+    guided_section_interpolation_mode_with_pose(sweep,count,max_cells,mode,None)
+}
+fn guided_section_interpolation_mode_with_pose(
+    sweep: &Sweep<'_>, count: usize, max_cells: usize, mode:OriginalTransport,shared_pose:Option<&mut SharedArcPose>,
+) -> Result<SectionInterpolationReport> {
     let contact=mode==OriginalTransport::Contact;
     let corrected=matches!(mode,OriginalTransport::CorrectedStraight|OriginalTransport::CorrectedCollinear|OriginalTransport::CorrectedPlanar);
     let rmf_straight=matches!(mode,OriginalTransport::RmfStraight|OriginalTransport::CorrectedStraight|OriginalTransport::RmfCollinear|OriginalTransport::CorrectedCollinear);
@@ -1615,6 +1759,7 @@ fn guided_section_interpolation_mode(
         status: Status::Unresolved,
         cells: 0,
         error_upper: None,
+        refinement_error_upper: None,
         endpoint_displacement_upper: None,
         cap_endpoint_displacement_upper: None,
         reason: Some("mode-not-guided"),
@@ -1623,8 +1768,7 @@ fn guided_section_interpolation_mode(
     if corrected {
         if sweep.options.orientation!=Orientation::CorrectedFrenet||sweep.frame_laws.is_some()||guide.is_some(){return Ok(out);}
         if sweep.path.periodic||(path_is_closed(sweep.path)?
-            &&!(mode==OriginalTransport::CorrectedPlanar&&sweep.options.spacing!=Spacing::Parameter
-                &&sweep.contact_point.is_none())){
+            &&!(mode==OriginalTransport::CorrectedPlanar&&sweep.contact_point.is_none())){
             out.reason=Some("corrected-closed-frame-correspondence-unproved");return Ok(out);
         }
     }
@@ -1684,7 +1828,10 @@ fn guided_section_interpolation_mode(
     if rmf_planar&&!original_planar_rmf(sweep.path,sweep.options.normal){
         // Closed nonaxial transport still requires a separate holonomy and
         // actual seam identity proof. This premise admits only open sources.
-        if sweep.path.periodic||path_is_closed(sweep.path)?{return Ok(out);}
+        if sweep.path.periodic||path_is_closed(sweep.path)?{
+            out.reason=Some(if corrected {"corrected-closed-frame-correspondence-unproved"}else{"rmf-closed-correction-correspondence-unproved"});
+            return Ok(out);
+        }
         let plane=super::source_plane::certify(sweep.path,sweep.options.normal,(max_cells-out.cells) as u64)?;
         out.cells+=plane.exact_work as usize;
         if !plane.proved{out.reason=plane.reason;return Ok(out);}
@@ -1733,6 +1880,7 @@ fn guided_section_interpolation_mode(
     // too; excluding them needlessly exhausted the shared source allowance.
     let constant_pose=fixed&&constant_law(sweep.scale)&&constant_law(sweep.twist)
         &&sweep.affine_laws.is_none_or(|(a,c)|constant_law(a)&&constant_law(c));
+    let shared_pose=std::cell::RefCell::new(shared_pose);
     let pose_cache=std::cell::RefCell::new(None::<Vec<[[f64;2];3]>>);
     let zero_path=constant_vector_law([0.;3])?;
     let certify_values=|qs:&[[[f64;2];3]], interval, budget| {
@@ -1743,7 +1891,10 @@ fn guided_section_interpolation_mode(
                 if pose.status!=Status::Certified {return Ok(pose);}
                 charge=pose.cells;*pose_cache.borrow_mut()=pose.values;
             }
-            let mut values=authored_frame_certificate::translated_constant_values(reference_path,pose_cache.borrow().as_ref().unwrap(),interval,budget-charge)?;
+            let mut values=if let Some(shared)=shared_pose.borrow_mut().as_deref_mut(){
+                let source=shared.source_values(interval,||vector_certificate::certify_values_traversal(reference_path,interval,budget-charge,false))?;
+                authored_frame_certificate::translated_constant_values_with_source(pose_cache.borrow().as_ref().unwrap(),source)?
+            }else{authored_frame_certificate::translated_constant_values(reference_path,pose_cache.borrow().as_ref().unwrap(),interval,budget-charge)?};
             values.cells+=charge;return Ok(values);
         }
         if fixed {
@@ -1765,7 +1916,10 @@ fn guided_section_interpolation_mode(
     let certify_jets=|qs:&[[[f64;2];3]], interval, budget| {
         if constant_pose {
             if let Some(pose)=pose_cache.borrow().as_ref() {
-                return authored_frame_certificate::translated_constant_jets(reference_path,pose,interval,budget);
+                return if let Some(shared)=shared_pose.borrow_mut().as_deref_mut(){
+                    let source=shared.source_jets(interval,||vector_certificate::certify_traversal(reference_path,interval,budget,false))?;
+                    authored_frame_certificate::translated_constant_jets_with_source(reference_path,pose,interval,source)
+                }else{authored_frame_certificate::translated_constant_jets(reference_path,pose,interval,budget)};
             }
         }
         if fixed {
@@ -1790,7 +1944,10 @@ fn guided_section_interpolation_mode(
     }
     let coordinates = initial.coordinates.unwrap();
     let (sections,closed,_,closed_identity)=sweep.sections_with_frame_identity(count)?;
-    if rmf_planar && closed && !closed_identity {
+    // Only RMF applies a closing holonomy correction. Corrected planar
+    // sections, including the copied seam, are owned by the original value
+    // images and their endpoint displacements below.
+    if mode==OriginalTransport::RmfPlanar && closed && !closed_identity {
         out.reason=Some("rmf-closed-correction-correspondence-unproved");
         return Ok(out);
     }
@@ -1866,6 +2023,8 @@ fn guided_section_interpolation_mode(
             }
             Some(values)
         } else {preferred_values.take()};
+        let open_span=batch.status==Status::Certified
+            && original_laws_have_no_interior_knots(sweep,interval,&mut out.cells,max_cells)?;
         for control in 0..coordinates.len() {
             let jet=authored_frame_certificate::TrajectoryReport {traversal:interval,status:batch.status,cells:0,
                 jet:batch.jets.as_ref().map(|v|v[control].clone()),single_span:batch.single_span,reason:batch.reason};
@@ -1880,7 +2039,7 @@ fn guided_section_interpolation_mode(
                 endpoint_errors[station][control],
                 endpoint_errors[station + 1][control],
             ])?};
-            if original_laws_have_no_interior_knots(sweep,interval) {
+            if open_span {
                 // All original time laws are rational-polynomial on the
                 // open interval; certified regular frame jets enclose Q''.
                 // Original endpoint values already enclose both one-sided
@@ -3006,7 +3165,7 @@ fn first_defect_gate_preserves_original_scale_kink_error() {
         normal:[1.,0.,0.],orientation:Orientation::Fixed,
         spacing:Spacing::Parameter,initial_sections:3,max_sections:3,max_deviation:0.01,
     }).unwrap();
-    assert!(!original_laws_have_no_interior_knots(&sweep,[0.,0.5]));
+    assert!(!original_laws_have_no_interior_knots(&sweep,[0.,0.5],&mut 0,10000).unwrap());
     let report=sweep.fixed_patch_error_bound(3,10000,1000000).unwrap();
     assert_eq!(report.status,Status::Certified);
     let upper=report.error_upper.unwrap();
@@ -3354,11 +3513,47 @@ fn fixed_arc_length_c0_path_uses_original_length_and_initial_tangent_frame(){
 fn fixed_normal_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
     original_frame_arc_length_section_interpolation(sweep,count,max_cells,shared_length,OriginalTransport::FixedNormal,None)
 }
+#[test]
+fn curved_arc_refinement_preserves_adaptive_grid_and_admits_final_grid() {
+    let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,1.,0.]],None).unwrap();
+    let profile=crate::primitives::circle([0.;3],[1.,0.,0.],0.05).unwrap();
+    let saved=(path.clone(),profile.clone());
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,Options {
+        normal:[0.,0.,1.],orientation:Orientation::RotationMinimizing,
+        spacing:Spacing::ArcLength {tolerance:0.0001,max_cells:100000},
+        initial_sections:3,max_sections:17,max_deviation:0.05,
+    }).unwrap();
+    let coarse=sweep.level(9).unwrap();
+    assert!(coarse.report.continuous_bound);
+    assert!(coarse.report.continuous_error_upper.unwrap()<=0.05);
+    assert!(!coarse.report.accepted,"A tighter certificate must not silently replace the adaptive grid");
+    let final_grid=sweep.level(17).unwrap();
+    assert!(final_grid.report.accepted,"{:?}",final_grid.report);
+    assert!(final_grid.report.continuous_error_upper.unwrap()<=0.05);
+    assert_eq!((path,profile),saved);
+}
+fn closed_frenet_position_seam(path:&Curve,max_cells:usize)->Result<super::endpoint_jets::Report> {
+    path.validate()?;
+    let mut out=super::endpoint_jets::Report {certified:false,exact_work:0};
+    if path.periodic {return Ok(out);}
+    let [a,b]=path.domain();
+    for (actual,expected) in path.knots[..path.degree+1].iter().map(|&u|(u,a))
+        .chain(path.knots[path.control_points.len()..].iter().map(|&u|(u,b)))
+        .chain(path.control_points[0].iter().zip(path.control_points.last().unwrap()).map(|(&p,&q)|(p,q))) {
+        if out.exact_work==max_cells as u64 {return Ok(out);}
+        out.exact_work+=1;
+        if actual!=expected {return Ok(out);}
+    }
+    out.certified=true;Ok(out)
+}
+
 fn original_frame_arc_length_section_interpolation(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>)->Result<SectionInterpolationReport>{
     original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,mode,shared_guide,512,None,None)
 }
-fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mut mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>,rmf_steps:usize,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,mut shared_pose:Option<&mut SharedArcPose>)->Result<SectionInterpolationReport>{
-    let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,
+fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'_>,count:usize,max_cells:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,mode:OriginalTransport,shared_guide:Option<&crate::curve_measure::DivisionReport>,rmf_steps:usize,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,mut shared_pose:Option<&mut SharedArcPose>)->Result<SectionInterpolationReport>{
+    let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,refinement_error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
     let phase=if mode==OriginalTransport::Contact {
         let Spacing::ArcLength {max_cells:constructor_budget,..}=sweep.options.spacing else{return Ok(out);};
@@ -3384,6 +3579,12 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
     // spatial sources additionally prove original C2 endpoint identity below.
     // Actual principal-normal sign choices and copied endpoint remain in the
     // retained-versus-original image displacement bound, not assumed exact.
+    // Strict Frenet has no holonomy correction. Prove the original closed
+    // positional/tangent seam independently; copied-section displacement is
+    // still enclosed by the original full frame images below.
+    let closed_frenet=closed&&mode==OriginalTransport::Frenet
+        &&sweep.options.orientation==Orientation::Frenet&&sweep.frame_laws.is_none()
+        &&sweep.orientation_guide.is_none()&&sweep.contact_point.is_none();
     let closed_corrected=closed&&matches!(mode,OriginalTransport::CorrectedPlanar|OriginalTransport::CorrectedRegular)
         &&sweep.options.orientation==Orientation::CorrectedFrenet&&sweep.frame_laws.is_none()
         &&sweep.orientation_guide.is_none()&&sweep.contact_point.is_none();
@@ -3391,13 +3592,42 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
     // C2 seam/C4 interior certificate below as parameter spacing. Arc length
     // remains independently enclosed, including inverse station brackets.
     if (sweep.path.periodic&&!((closed_rmf&&mode==OriginalTransport::RmfSpatial)
-        ||(closed_corrected&&mode==OriginalTransport::CorrectedRegular)))
-        ||(closed&&!closed_guided&&!closed_rmf&&!closed_fixed_normal&&!closed_corrected){
+        ||(closed_corrected&&mode==OriginalTransport::CorrectedRegular)||closed_frenet
+        ||(sweep.path.periodic&&closed_fixed_normal)))
+        ||(closed&&!closed_guided&&!closed_rmf&&!closed_fixed_normal&&!closed_corrected&&!closed_frenet){
         if closed&&mode==OriginalTransport::CorrectedPlanar{out.reason=Some("corrected-closed-frame-correspondence-unproved");}
         return Ok(out);
     }
     let Spacing::ArcLength {tolerance,max_cells:constructor_budget}=sweep.options.spacing else{return Ok(out);};
     if max_cells==0{return Ok(out);}
+    if sweep.path.periodic&&closed_fixed_normal {
+        // Periodicity alone does not prove the original endpoint frame seam.
+        // Charge exact active-basis C1 identity before enclosing inverse length.
+        let seam=super::endpoint_jets::certify(sweep.path,1,(max_cells-out.cells) as u64)?;
+        out.cells+=seam.exact_work as usize;
+        if !seam.certified||out.cells>=max_cells {
+            out.reason=Some("periodic-fixed-normal-arc-original-seam-unproved");return Ok(out);
+        }
+    }
+    if closed_frenet {
+        // Arc position needs original C0, not an unneeded parametric-C1
+        // expansion. Clamped endpoints are their original Cartesian poles;
+        // exact binary equality is sufficient and every comparison is charged.
+        let mut seam=closed_frenet_position_seam(sweep.path,max_cells-out.cells)?;
+        out.cells+=seam.exact_work as usize;
+        if !seam.certified&&out.cells<max_cells {
+            let stronger=super::endpoint_jets::certify(sweep.path,1,(max_cells-out.cells) as u64)?;
+            out.cells+=stronger.exact_work as usize;seam.certified=stronger.certified;
+        }
+        if !seam.certified&&!sweep.path.periodic&&out.cells<max_cells {
+            let direction=super::endpoint_jets::certify_direction(sweep.path,0,true,false,(max_cells-out.cells) as u64)?;
+            out.cells+=direction.exact_work as usize;
+            seam.certified=direction.certified;
+        }
+        if !seam.certified||out.cells>=max_cells {
+            out.reason=Some("closed-frenet-arc-original-seam-unproved");return Ok(out);
+        }
+    }
     // Charge the exact original-coefficient plane premise to the same owner
     // as inverse length and frame bounds. Unproved input never admits RMF.
     if mode==OriginalTransport::CorrectedPlanar&&(sweep.options.orientation!=Orientation::CorrectedFrenet
@@ -3407,7 +3637,10 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
     if matches!(mode,OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar)&&!original_planar_rmf(sweep.path,sweep.options.normal){
         let plane=super::source_plane::certify(sweep.path,sweep.options.normal,max_cells as u64)?;
         out.cells+=plane.exact_work as usize;
-        if !plane.proved{if closed && mode==OriginalTransport::RmfPlanar && plane.reason==Some("source-plane-coefficients-nonzero") {mode=OriginalTransport::RmfSpatial;}else{out.reason=plane.reason;return Ok(out);}}
+        // Explicit planar certificates retain their original plane premise.
+        // The default RMF dispatcher may try its independently charged
+        // spatial owner after this refusal; this owner never changes mode.
+        if !plane.proved{out.reason=plane.reason;return Ok(out);}
         if out.cells==max_cells{out.reason=Some("rmf-original-frame-work-unproved");return Ok(out);}
     }
     if mode==OriginalTransport::CorrectedRegular {
@@ -3498,7 +3731,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         out.reason=Some("retained-section-basis-correspondence-unproved");return Ok(out);
     }
     let domain=sweep.path.domain();let width=I::point(domain[1]).sub(I::point(domain[0]))?;
-    let inverse_speed=if closed_rmf||closed_fixed_normal||matches!(mode,OriginalTransport::RmfSpatial|OriginalTransport::CorrectedPlanar|OriginalTransport::CorrectedRegular|OriginalTransport::Guided|OriginalTransport::Contact) {
+    let inverse_speed=if closed_rmf||closed_fixed_normal||closed_frenet||matches!(mode,OriginalTransport::RmfSpatial|OriginalTransport::CorrectedPlanar|OriginalTransport::CorrectedRegular|OriginalTransport::Guided|OriginalTransport::Contact) {
         let (cells,lower,reason)=if mode==OriginalTransport::CorrectedRegular&&shared_pose.is_some(){let (cells,lower)=shared_pose.as_deref_mut().unwrap().speed(sweep.path,max_cells-out.cells)?;(cells,lower,None)}
             else{let (cover,lower)=crate::curve_regularity::inspect_speed(sweep.path,max_cells-out.cells)?;(cover.cells,lower,cover.reason)};
         out.cells+=cells;
@@ -3522,10 +3755,13 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
     }
     if same_phase {guide_source=source.clone();}
     let mut error=0_f64;let mut endpoint_upper=0_f64;
+    let mut position_curvature:Option<Option<f64>>=None;
+    let mut original_refinement_error=0_f64;
     for i in 0..count-1{
         let station=[i as f64/(count-1) as f64,(i+1) as f64/(count-1) as f64];
         let path_interval=[source[i][0],source[i+1][1]];
         let values=match mode {
+            OriginalTransport::RmfSpatial if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().rmf_values(spatial_transport.as_ref().unwrap(),sweep,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::RmfSpatial=>super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(sweep.path,sweep.options.normal,principal_phase.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(sweep.path,sweep.options.normal,sweep.scale,
@@ -3533,6 +3769,8 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
             OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(sweep.path,sweep.options.normal,sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::CorrectedRegular if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().values(sweep,&qs,path_interval,station,max_cells-out.cells)?,
+            OriginalTransport::Frenet if closed_frenet=>authored_frame_certificate::certify_frenet_relative_values_with_binormal_identity(sweep.path,sweep.scale,
+                sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::Frenet|OriginalTransport::CorrectedRegular=>authored_frame_certificate::certify_frenet_relative_values(sweep.path,sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
@@ -3550,7 +3788,8 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         // separately, then apply the vector linear-interpolation remainder.
         let residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
         let h=I::point(station[1]).sub(I::point(station[0]))?;
-        let coarse_position=I::point(division.total.bounds[1]).mul(h)?.div(I::point(2.))?.add(I::point(residual))?;
+        let mut coarse_position=I::point(division.total.bounds[1]).mul(h)?.div(I::point(2.))?.add(I::point(residual))?;
+        let mut relative_errors=Vec::with_capacity(qs.len());
         let mut coarse_errors=Vec::with_capacity(qs.len());
         for (j,value) in values.iter().enumerate(){
             let mut delta=[I::point(0.);3];
@@ -3559,7 +3798,39 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
                 let b=I::point(sections[i+1].control_points[j][k]).sub(I::new(division.points[i+1].point_bounds[k][0],division.points[i+1].point_bounds[k][1])?)?;
                 delta[k]=I::new(value[k][0],value[k][1])?.sub(I::new(a.lo.min(b.lo),a.hi.max(b.hi))?)?;
             }
-            coarse_errors.push(crate::numerics::interval_vec3::norm(delta)?.add(coarse_position)?.hi);
+            let relative=crate::numerics::interval_vec3::norm(delta)?;
+            relative_errors.push(relative);
+            coarse_errors.push(relative.add(coarse_position)?.hi);
+        }
+        for upper in &coarse_errors {original_refinement_error=original_refinement_error.max(*upper);}
+        // Keep the strongest proved source enclosure even when the source
+        // alone fits: later retained-wall reconstruction must add its own
+        // displacement to this bound under the same caller tolerance.
+        // CorrectedRegular already owns a shared arc-jet/curvature proof
+        // below; avoid duplicating its original-source work across profiles.
+        if mode!=OriginalTransport::CorrectedRegular {
+            if position_curvature.is_none() {
+                // A fixed local ceiling keeps the proof route independent of
+                // the caller's total budget; clipping a fractional allowance
+                // could skip this work on a one-short replay and certify via
+                // a cheaper, weaker fallback instead.
+                let allowance=(max_cells-out.cells).min(1024);
+                let proof=arc_position::certify(sweep.path,allowance)?;
+                out.cells+=proof.cells;
+                if proof.curvature_upper.is_none() && proof.cells==allowance && allowance<1024 {
+                    out.reason=Some("arc-position-curvature-work-exhausted");
+                    return Ok(out);
+                }
+                position_curvature=Some(proof.curvature_upper);
+            }
+            if let Some(Some(curvature))=position_curvature {
+                let arc=I::point(division.total.bounds[1]).mul(h)?;
+                let refined=I::point(curvature).mul(arc)?.mul(arc)?.div(I::point(8.))?.add(I::point(residual))?;
+                coarse_position=I::new(0.,coarse_position.hi.min(refined.hi))?;
+                for (upper,relative) in coarse_errors.iter_mut().zip(relative_errors) {
+                    *upper=relative.add(coarse_position)?.hi;
+                }
+            }
         }
         // A complete image cover already inside the requested tolerance needs
         // no additional derivative work. The decomposition still has its own
@@ -3621,7 +3892,7 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
             out.reason=Some("arc-second-remainder-work-unproved");return Ok(out);
         }
         let residual=division.points[i].residual_upper.max(division.points[i+1].residual_upper);
-        let position=I::point(division.total.bounds[1]).mul(I::point(station[1]).sub(I::point(station[0]))?)?.div(I::point(2.))?.add(I::point(residual))?;
+        let position=coarse_position;
         for (j,value) in values.into_iter().enumerate(){
             let mut delta=[I::point(0.);3];let mut ends=[[I::point(0.);3];2];
             for k in 0..3{
@@ -3659,7 +3930,9 @@ fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'
         }
         out.cap_endpoint_displacement_upper=Some(caps);
     }
-    out.status=Status::Certified;out.error_upper=Some(error);out.endpoint_displacement_upper=Some(endpoint_upper);out.reason=None;Ok(out)
+    out.status=Status::Certified;out.error_upper=Some(error);out.endpoint_displacement_upper=Some(endpoint_upper);
+    out.refinement_error_upper=(mode!=OriginalTransport::CorrectedRegular).then_some(original_refinement_error);
+    out.reason=None;Ok(out)
 }
 
 #[test]
@@ -4349,8 +4622,10 @@ fn closed_corrected_planar_arc_error_charges_original_phase_and_budget(){
  let refused=corrected_patch_error_with_length(&nonaxial,33,10000,1000000,None).unwrap();
  assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());
  let parameter=Sweep::new(&profile,&circle,&scale,&twist,Options{normal:[0.,0.,1.],spacing:Spacing::Parameter,..opts}).unwrap();
- let refused=corrected_patch_error_with_length(&parameter,33,10000,1000000,None).unwrap();
- assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());
+ let proved=corrected_patch_error_with_length(&parameter,33,10000,1000000,None).unwrap();
+ assert_eq!(proved.status,Status::Certified,"{proved:?}");assert!(proved.within_budget);
+ let short=corrected_patch_error_with_length(&parameter,33,proved.cells-1,1000000,None).unwrap();
+ assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none());
 }
 
 #[test]
@@ -4421,7 +4696,10 @@ fn closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles(){
     let sweep=Sweep::new(&profile,&path,&scale,&twist,options).unwrap().with_affine_laws(&axis,&center).unwrap();
     let length=crate::curve_measure::divide_by_length(&path,16,0.01,100000).unwrap();
     assert!(length.within_tolerance);
-    let proof=rmf_planar_patch_error_with_length(&sweep,17,100000,1000000,Some(&length)).unwrap();
+    let planar=sweep.rmf_planar_patch_error_bound(17,100000,1000000).unwrap();
+    assert_eq!(planar.status,Status::Unresolved);
+    assert_eq!(planar.reason,Some("source-plane-coefficients-nonzero"));
+    let proof=rmf_spatial_patch_error_with_length(&sweep,17,512,100000,1000000,Some(&length)).unwrap();
     assert_eq!(proof.status,Status::Certified,"{proof:?}");
     assert!(proof.error_upper.unwrap().is_finite() && proof.within_budget,"{proof:?}");
     eprintln!("closed spatial retained upper={} work={}",proof.error_upper.unwrap(),proof.cells);
@@ -4513,7 +4791,7 @@ fn closed_spatial_rmf_arc_error_owns_source_transport_laws_and_retained_poles(){
     }}}}
     let preview=sweep.preview_at(17).unwrap();
     assert!(preview.report.continuous_bound && preview.report.accepted,"{:?}",preview.report);
-    let short=rmf_planar_patch_error_with_length(&sweep,17,proof.cells-1,1000000,Some(&length)).unwrap();
+    let short=rmf_spatial_patch_error_with_length(&sweep,17,512,proof.cells-1,1000000,Some(&length)).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none());
 }
 
@@ -4521,9 +4799,9 @@ pub(super) fn rmf_spatial_patch_error(sweep:&Sweep<'_>,count:usize,steps:usize,m
     rmf_spatial_patch_error_with_length(sweep,count,steps,max_cells,max_products,None)
 }
 pub(super) fn rmf_spatial_patch_error_with_length(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
-    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,shared_length,None)
+    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,shared_length,None,None)
 }
-pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>)->Result<PatchErrorReport>{
+pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
     check(count>=sweep.options.initial_sections && count<=sweep.options.max_sections
         && steps.is_power_of_two() && (2..=16384).contains(&steps)
         && max_cells<=100000 && max_products<=1000000,"Invalid spatial RMF proof limits")?;
@@ -4532,10 +4810,10 @@ pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usiz
         "Spatial RMF bound requires an unguided source")?;
     if sweep.options.spacing==Spacing::Parameter {
         return patch_error_from_section(sweep,count,max_products,
-            spatial_parameter::section_interpolation(sweep,count,steps,max_cells,shared_rmf)?);
+            spatial_parameter::section_interpolation(sweep,count,steps,max_cells,shared_rmf,shared_pose)?);
     }
     patch_error_from_section(sweep,count,max_products,
-        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,OriginalTransport::RmfSpatial,None,steps,shared_rmf,None)?)
+        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,shared_length,OriginalTransport::RmfSpatial,None,steps,shared_rmf,shared_pose)?)
 }
 
 
@@ -4889,4 +5167,274 @@ fn periodic_corrected_arc_circle_aggregate_reaches_default_continuous_bound(){
  assert!(final_level.accepted&&final_level.continuous_bound,"{:?}",fit.levels);
  eprintln!("periodic arc default final: {:?}",final_level);
  assert!(fit.patches.is_some());
+}
+
+#[test]
+fn periodic_authored_fixed_arc_requires_original_seam_and_complete_work(){
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let profile=crate::primitives::line([0.,0.,0.],[0.01,0.,0.]).unwrap();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let axis=constant_vector_law([0.,0.,1.]).unwrap();let normal=constant_vector_law([1.,0.,0.]).unwrap();
+ let opts=Options{normal:[1.,0.,0.],orientation:Orientation::Fixed,spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:33,max_deviation:1.};
+ let sweep=Sweep::new_authored(&profile,&path,&scale,&twist,&axis,&normal,opts).unwrap();
+ let proof=sweep.authored_patch_error_bound(33,100000,1000000).unwrap();
+ assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.within_budget);assert!(proof.patches.is_some());
+ for budget in [0,proof.cells-1]{let short=sweep.authored_patch_error_bound(33,budget,1000000).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none()&&short.patches.is_none());}
+ let quadratic=|values:Vec<Vec<f64>>|Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:values,weights:vec![1.,2.,1.],periodic:false};
+ let moving=quadratic(vec![vec![1.,0.,0.],vec![1.,0.125,0.],vec![1.,0.,0.]]);
+ let axes=quadratic(vec![vec![1.;3],vec![1.125,0.875,1.],vec![1.;3]]);
+ let center=quadratic(vec![vec![0.;3],vec![0.01,0.02,0.],vec![0.;3]]);
+ let joint=Sweep::new_authored(&profile,&path,&scale,&twist,&axis,&moving,opts).unwrap().with_affine_laws(&axes,&center).unwrap();
+ let joint=joint.authored_patch_error_bound(33,100000,1000000).unwrap();assert_eq!(joint.status,Status::Certified,"{joint:?}");assert!(joint.within_budget&&joint.patches.is_some());
+ let mut broken=path.clone();broken.knots[1]=broken.knots[1].next_up();
+ broken.validate().unwrap();
+ let broken=Sweep::new_authored(&profile,&broken,&scale,&twist,&axis,&normal,opts).unwrap();
+ let refused=broken.authored_patch_error_bound(33,100000,1000000).unwrap();assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none()&&refused.patches.is_none());
+}
+
+#[test]
+fn periodic_authored_arc_circle_aggregate_reaches_default_continuous_bound(){
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let (center,tangent)=sample(&path,path.domain()[0]).unwrap();
+ let circle=crate::primitives::circle(center,tangent,0.01).unwrap();let [a,b]=circle.domain();
+ let profiles=(0..4).map(|i|circle.trim(a+(b-a)*i as f64/4.,a+(b-a)*(i+1) as f64/4.).unwrap()).collect::<Vec<_>>();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let axis=Curve{degree:5,knots:path.knots[1..path.knots.len()-1].to_vec(),control_points:path.control_points.windows(2).map(|p|(0..3).map(|k|8.*(p[1][k]-p[0][k])).collect()).collect(),weights:vec![1.;13],periodic:false};
+ let normal=constant_vector_law([0.,0.,1.]).unwrap();
+ let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{orientation:Orientation::Fixed,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.5}).unwrap().with_frame_laws(&axis,&normal).unwrap();
+ let level=sweep.preview_at(33).unwrap();
+ assert!(level.report.continuous_bound,"{:?}",level.report);
+ eprintln!("periodic authored arc default33: {:?}",level.report);
+ assert!(level.report.error_certificate_cells<=10000);
+ let fit=collect_profiles(sweep).unwrap();let final_level=fit.levels.last().unwrap();
+ assert!(final_level.accepted&&final_level.continuous_bound,"{:?}",fit.levels);
+ eprintln!("periodic authored arc default final: {:?}",final_level);
+ assert!(fit.patches.is_some());
+}
+
+#[test]
+fn periodic_plain_fixed_arc_requires_original_seam_and_complete_work(){
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let profile=crate::primitives::line([0.,0.,0.],[0.01,0.,0.]).unwrap();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let opts=Options{normal:[1.,0.,0.],orientation:Orientation::Fixed,spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:33,max_deviation:1.};
+ let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+ let proof=sweep.fixed_patch_error_bound(33,100000,1000000).unwrap();
+ assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.within_budget&&proof.patches.is_some());
+ for budget in [0,proof.cells-1]{let short=sweep.fixed_patch_error_bound(33,budget,1000000).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none()&&short.patches.is_none());}
+ let quadratic=|values:Vec<Vec<f64>>|Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:values,weights:vec![1.,2.,1.],periodic:false};
+ let axes=quadratic(vec![vec![1.;3],vec![1.125,0.875,1.],vec![1.;3]]);
+ let center=quadratic(vec![vec![0.;3],vec![0.01,0.02,0.],vec![0.;3]]);
+ let joint=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap().with_affine_laws(&axes,&center).unwrap();
+ let joint=joint.fixed_patch_error_bound(33,100000,1000000).unwrap();assert_eq!(joint.status,Status::Certified,"{joint:?}");assert!(joint.within_budget&&joint.patches.is_some());
+ let mut broken=path.clone();broken.knots[1]=broken.knots[1].next_up();broken.validate().unwrap();
+ let broken=Sweep::new(&profile,&broken,&scale,&twist,opts).unwrap();
+ let refused=broken.fixed_patch_error_bound(33,100000,1000000).unwrap();assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none()&&refused.patches.is_none());
+}
+
+#[test]
+fn nonperiodic_plain_fixed_arc_charges_original_closed_seam(){
+ let path=crate::primitives::circle([0.;3],[0.,0.,1.],4.).unwrap();assert!(!path.periodic);
+ let profile=crate::primitives::line([4.,0.,0.],[4.,0.,0.01]).unwrap();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let opts=Options{normal:[0.,0.,1.],orientation:Orientation::Fixed,spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:33,max_deviation:1.};
+ let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+ let proof=sweep.fixed_patch_error_bound(33,10000,1000000).unwrap();assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.within_budget&&proof.patches.is_some());
+ let short=sweep.fixed_patch_error_bound(33,proof.cells-1,1000000).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none()&&short.patches.is_none());
+ let mut broken=path.clone();let pole=broken.control_points.len()-2;broken.control_points[pole][0]=broken.control_points[pole][0].next_up();broken.validate().unwrap();
+ let broken=Sweep::new(&profile,&broken,&scale,&twist,opts).unwrap();let refused=broken.fixed_patch_error_bound(33,10000,1000000).unwrap();assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none()&&refused.patches.is_none());
+}
+
+#[test]
+fn closed_fixed_arc_positive_direction_seam_does_not_require_equal_parameter_speed(){
+ let mut path=crate::primitives::circle([0.;3],[0.,0.,1.],4.).unwrap();
+ let last=path.weights.len()-2;path.weights[last]*=2.;
+ let saved=path.clone();
+ let c1=super::endpoint_jets::certify(&path,1,1000000).unwrap();
+ let g1=super::endpoint_jets::certify_direction(&path,0,true,false,1000000).unwrap();
+ eprintln!("original seam C1: {c1:?}; G1: {g1:?}");
+ assert!(!c1.certified);assert!(g1.certified);
+ let profile=crate::primitives::line([4.,0.,0.],[4.,0.,0.01]).unwrap();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let opts=Options{normal:[0.,0.,1.],orientation:Orientation::Fixed,
+  spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:33,max_deviation:1.};
+ let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+ let proof=sweep.fixed_patch_error_bound(33,10000,1000000).unwrap();
+ assert_eq!(proof.status,Status::Certified,"{proof:?}");
+ assert!(proof.within_budget&&proof.patches.is_some());
+ for budget in [0,proof.cells-1]{
+  let short=sweep.fixed_patch_error_bound(33,budget,1000000).unwrap();
+  assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none()&&short.patches.is_none());
+ }
+ let axes=constant_vector_law([2.,3.,1.]).unwrap();
+ let center=constant_vector_law([0.01,0.02,0.]).unwrap();
+ let joint=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap().with_affine_laws(&axes,&center).unwrap();
+ let joint=joint.fixed_patch_error_bound(33,10000,1000000).unwrap();
+ assert_eq!(joint.status,Status::Certified,"{joint:?}");assert!(joint.within_budget);
+ // Reversal and a one-bit transverse closing tangent are not positive G1.
+ for reversal in [false,true]{
+  let mut wrong=path.clone();let pole=wrong.control_points.len()-2;
+  if reversal {wrong.control_points[pole][1]=-wrong.control_points[pole][1];}
+  else {wrong.control_points[pole][0]=wrong.control_points[pole][0].next_up();}
+  let wrong=Sweep::new(&profile,&wrong,&scale,&twist,opts).unwrap()
+   .fixed_patch_error_bound(33,10000,1000000).unwrap();
+  assert_eq!(wrong.status,Status::Unresolved);assert!(wrong.error_upper.is_none()&&wrong.patches.is_none());
+ }
+ assert_eq!(path,saved);
+}
+
+#[test]
+fn periodic_plain_fixed_arc_circle_aggregate_reaches_default_bound(){
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let (center,tangent)=sample(&path,path.domain()[0]).unwrap();let circle=crate::primitives::circle(center,tangent,0.01).unwrap();let [a,b]=circle.domain();
+ let profiles=(0..4).map(|i|circle.trim(a+(b-a)*i as f64/4.,a+(b-a)*(i+1) as f64/4.).unwrap()).collect::<Vec<_>>();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{orientation:Orientation::Fixed,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:1e-4,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.5}).unwrap();
+ let level=sweep.preview_at(33).unwrap();assert!(level.report.continuous_bound,"{:?}",level.report);assert!(level.report.error_certificate_cells<=10000);
+ let fit=collect_profiles(sweep).unwrap();let final_level=fit.levels.last().unwrap();assert!(final_level.accepted&&final_level.continuous_bound,"{:?}",fit.levels);assert!(fit.patches.is_some());
+}
+
+#[test]
+fn original_open_span_domain_comparison_is_exact_and_charged() {
+    let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+    let path=crate::primitives::line([0.;3],[0.,0.,1.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    for [a,b] in [[7.,9.],[2_f64.powi(29),2_f64.powi(29)+4.],[2.,2.+2_f64.powi(-40)]] {
+        let mid=a+(b-a)*0.5;
+        let scale=Curve {degree:1,knots:vec![a,a,mid,b,b],control_points:vec![vec![1.,0.,0.],vec![2.,0.,0.],vec![1.,0.,0.]],weights:vec![1.;3],periodic:false};
+        let opts=Options {normal:[1.,0.,0.],orientation:Orientation::Fixed,spacing:Spacing::Parameter,initial_sections:3,max_sections:3,max_deviation:1.};
+        let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+        let mut cells=0;
+        assert!(original_laws_have_no_interior_knots(&sweep,[0.5,0.75],&mut cells,10000).unwrap());
+        assert!(cells>0);
+        let mut short=0;
+        assert!(!original_laws_have_no_interior_knots(&sweep,[0.5,0.75],&mut short,cells-1).unwrap());
+        assert!(short<=cells-1);
+        let mut inside=scale.clone();inside.knots[2]=mid.next_up();
+        let sweep=Sweep::new(&profile,&path,&inside,&twist,opts).unwrap();
+        assert!(!original_laws_have_no_interior_knots(&sweep,[0.5,0.75],&mut 0,10000).unwrap());
+        let mut outside=scale.clone();outside.knots[2]=mid.next_down();
+        let sweep=Sweep::new(&profile,&path,&outside,&twist,opts).unwrap();
+        assert!(original_laws_have_no_interior_knots(&sweep,[0.5,0.75],&mut 0,10000).unwrap());
+    }
+}
+
+#[test]
+fn closed_frenet_arc_circle_encloses_independent_turn_and_charges_original_seam() {
+    let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
+    let profile=crate::primitives::line([6.,0.,1.],[6.,0.,2.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=constant_vector_law([0.;3]).unwrap();
+    let saved=(path.clone(),profile.clone(),scale.clone(),twist.clone());
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,Options {
+        normal:[0.,0.,1.],orientation:Orientation::Frenet,
+        spacing:Spacing::ArcLength {tolerance:0.000001,max_cells:100000},
+        initial_sections:33,max_sections:129,max_deviation:2.,
+    }).unwrap();
+    let proof=sweep.frenet_patch_error_bound(33,10000,1000000).unwrap();
+    assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.within_budget);
+    let upper=proof.error_upper.unwrap();let sections=sweep.sections(33).unwrap().0;
+    assert_eq!(sections[0].control_points,sections[32].control_points);
+    // Independent physical arc-length angle, not the native inverse solver.
+    for i in 0..32 {for f in [0.25,0.5,0.75] {for j in 0..2 {
+        let angle=std::f64::consts::TAU*(i as f64+f)/32.;
+        let expected=[6.*angle.cos(),6.*angle.sin(),(j+1) as f64];
+        let delta=std::array::from_fn(|k|(1.-f)*sections[i].control_points[j][k]+f*sections[i+1].control_points[j][k]-expected[k]);
+        assert!(norm(delta)<=upper);
+    }}}
+    let level=sweep.level(33).unwrap();assert!(level.report.continuous_bound&&level.report.accepted,"{:?}",level.report);
+    for work in [0,proof.cells-1] {
+        let refused=sweep.frenet_patch_error_bound(33,work,1000000).unwrap();
+        assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none()&&refused.patches.is_none());
+    }
+    assert_eq!((path,profile,scale,twist),saved);
+}
+
+#[test]
+fn closed_frenet_arc_periodic_spatial_requires_original_basis_seam() {
+    let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+    let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+    let (start,_)=sample(&path,path.domain()[0]).unwrap();
+    let profile=crate::primitives::line([start[0]+0.01,start[1],start[2]],[start[0]+0.02,start[1],start[2]]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let opts=Options{orientation:Orientation::Frenet,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:0.0001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.5};
+    let saved=(path.clone(),profile.clone());
+    let sweep=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+    let proof=sweep.frenet_patch_error_bound(33,10000,1000000).unwrap();
+    assert_eq!(proof.status,Status::Certified,"{proof:?}");assert!(proof.within_budget);
+    assert!(sweep.level(33).unwrap().report.continuous_bound);
+    for work in [0,proof.cells-1] {
+        let refused=sweep.frenet_patch_error_bound(33,work,1000000).unwrap();
+        assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());
+    }
+    let mut broken=path.clone();broken.knots[1]=broken.knots[1].next_up();broken.validate().unwrap();
+    let broken=Sweep::new(&profile,&broken,&scale,&twist,opts).unwrap();
+    let refused=broken.frenet_patch_error_bound(33,10000,1000000).unwrap();
+    assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());
+    assert_eq!((path,profile),saved);
+}
+
+#[test]
+fn closed_frenet_arc_original_position_refuses_a_one_ulp_seam_gap() {
+    let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
+    let saved=path.clone();let seam=closed_frenet_position_seam(&path,10000).unwrap();
+    assert!(seam.certified&&seam.exact_work>0);
+    assert!(!closed_frenet_position_seam(&path,0).unwrap().certified);
+    assert!(!closed_frenet_position_seam(&path,seam.exact_work as usize-1).unwrap().certified);
+    let mut broken=path.clone();broken.control_points.last_mut().unwrap()[0]=5_f64.next_up();broken.validate().unwrap();
+    assert!(path_is_closed(&broken).unwrap(),"The approximate constructor flag must not substitute for exact original closure");
+    assert!(!closed_frenet_position_seam(&broken,10000).unwrap().certified);
+    let profile=crate::primitives::line([6.,0.,1.],[6.,0.,2.]).unwrap();
+    let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+    let sweep=Sweep::new(&profile,&broken,&scale,&twist,Options{orientation:Orientation::Frenet,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:0.000001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:2.}).unwrap();
+    let refused=sweep.frenet_patch_error_bound(33,10000,1000000).unwrap();
+    assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());
+    assert_eq!(refused.reason,Some("closed-frenet-arc-original-seam-unproved"));
+    assert_eq!(path,saved);
+}
+
+
+#[test]
+fn periodic_fixed_normal_arc_owns_original_seam_and_inverse_length() {
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];
+ points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let saved=path.clone();let (origin,_)=sample(&path,path.domain()[0]).unwrap();
+ let profile=crate::primitives::line([origin[0],origin[1],origin[2]+0.01],[origin[0],origin[1],origin[2]+0.02]).unwrap();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let axes=constant_vector_law([1.5,0.75,1.]).unwrap();let center=constant_vector_law([0.005,-0.0025,0.]).unwrap();
+ let opts=Options{orientation:Orientation::FixedNormal,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:0.0001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.2};
+ for joint in [false,true] {
+  let base=Sweep::new(&profile,&path,&scale,&twist,opts).unwrap();
+  let sweep=if joint{base.with_affine_laws(&axes,&center).unwrap()}else{base};
+  let proof=sweep.fixed_normal_patch_error_bound(129,10000,1000000).unwrap();
+  eprintln!("periodic FixedNormal arc: joint={joint},status={:?},cells={},upper={:?},reason={:?}",proof.status,proof.cells,proof.error_upper,proof.reason);
+  assert_eq!(proof.status,Status::Certified,"{:?}",proof.reason);assert!(proof.within_budget);assert!(proof.cells>0&&proof.cells<=10000);
+  for budget in [0,proof.cells-1] {let short=sweep.fixed_normal_patch_error_bound(129,budget,1000000).unwrap();assert_eq!(short.status,Status::Unresolved);assert!(short.error_upper.is_none());}
+ }
+ let mut invalid=path.clone();invalid.knots[1]=invalid.knots[1].next_up();invalid.validate().unwrap();
+ let changed=Sweep::new(&profile,&invalid,&scale,&twist,opts).unwrap();
+ let refused=changed.fixed_normal_patch_error_bound(129,10000,1000000).unwrap();
+ assert_eq!(refused.status,Status::Unresolved);assert!(refused.error_upper.is_none());assert_eq!(refused.reason,Some("periodic-fixed-normal-arc-original-seam-unproved"));
+ assert_eq!(path,saved);
+}
+
+#[test]
+fn periodic_fixed_normal_arc_original_circle_decomposition_reaches_aggregate_bound() {
+ let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+ let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
+ let saved=path.clone();let (origin,tangent)=sample(&path,path.domain()[0]).unwrap();
+ let circle=crate::primitives::circle(origin,tangent,0.01).unwrap();let [a,b]=circle.domain();
+ let profiles=(0..4).map(|i|circle.trim(a+(b-a)*i as f64/4.,a+(b-a)*(i+1) as f64/4.).unwrap()).collect::<Vec<_>>();
+ let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+ let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,Options{orientation:Orientation::FixedNormal,normal:[0.,0.,1.],spacing:Spacing::ArcLength{tolerance:0.0001,max_cells:100000},initial_sections:33,max_sections:129,max_deviation:0.5}).unwrap();
+ let level=sweep.preview_at(33).unwrap();
+ eprintln!("periodic FixedNormal aggregate: continuous={},cells={},upper={:?}",level.report.continuous_bound,level.report.error_certificate_cells,level.report.continuous_error_upper);
+ assert!(level.report.continuous_bound,"{:?}",level.report);assert!(level.report.error_certificate_cells<=10000);
+ let fit=collect_profiles(sweep).unwrap();let final_level=fit.levels.last().unwrap();
+ assert!(final_level.accepted&&final_level.continuous_bound,"{:?}",fit.levels);assert!(fit.patches.is_some());assert_eq!(path,saved);
 }

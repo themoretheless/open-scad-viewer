@@ -22,9 +22,33 @@ pub(super) fn diagnose_sweep_volume_with_projections(
     v: Value,
     proposals: &[Option<[[i8; 3]; 2]>],
 ) -> Result<Value> {
+    diagnose_sweep_volume_impl(v,proposals,false)
+}
+pub fn diagnose_sweep_volume_and_charts(v:Value)->Result<Value> {
+    diagnose_sweep_volume_impl(v,&[],true)
+}
+fn diagnose_sweep_volume_impl(v:Value,proposals:&[Option<[[i8;3];2]>],capture_charts:bool)->Result<Value> {
+    // Reuse only a native completed session, once, with bit-identical complete
+    // request bytes. No transported positive flag is an admission premise.
+    if proposals.is_empty() {
+        let key=volume_request_key(&v)?;
+        if let Some(mut report)=VOLUME_SESSIONS.with(|r|r.borrow_mut().completed.take())
+            .filter(|(previous,_)|*previous==key).map(|(_,report)|report) {
+            if !capture_charts {report.as_object_mut().unwrap().remove("retainedWallCharts");}
+            return Ok(report);
+        }
+    }
     let model: brep_core::Model = field(&v, "model")?;
     let cap = field::<Value>(&v, "capBudgets")?;
-    let r = brep_core::volume_validity::inspect_sweep_with_projections(
+    let inspect=|model:&brep_core::Model,tolerance:f64,limits:brep_core::volume_validity::Limits,cells:usize,
+        caps:&[usize],cap_limits:brep_core::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>]| {
+        if capture_charts {
+            brep_core::volume_validity::inspect_sweep_with_projections_and_charts(model,tolerance,limits,cells,caps,cap_limits,proposals)
+        } else {
+            Ok((brep_core::volume_validity::inspect_sweep_with_projections(model,tolerance,limits,cells,caps,cap_limits,proposals)?,brep_core::sweep_retained_charts::Report {certified:false,cells:0,charts:Vec::new(),unresolved_faces:Vec::new()}))
+        }
+    };
+    let (r,charts) = inspect(
         &model,
         field(&v, "toleranceUv")?,
         brep_core::volume_validity::Limits {
@@ -61,7 +85,10 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         },
         proposals,
     )?;
-    Ok(
+    volume_value(&r,&charts,capture_charts)
+}
+fn volume_value(r:&brep_core::volume_validity::Report,charts:&brep_core::sweep_retained_charts::Report,capture_charts:bool)->Result<Value> {
+    let mut output=
         json!({"boundary":boundary_value(&r.boundary),"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
@@ -79,9 +106,98 @@ pub(super) fn diagnose_sweep_volume_with_projections(
                 "separationLower":p.result.boundary.lower_bound_mm})).collect::<Vec<_>>() })),
         "orientationCells":r.orientation_cells,"orientationDomainCells":r.orientation_domain_cells,
         "orientations":r.orientations.iter().map(|s|json!({"shell":s.shell,"expectedOutward":s.expected_outward,
-            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() }),
-    )
+            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() });
+    if capture_charts {output["retainedWallCharts"]=super::cad_sweep_smoothness::charts_value(&charts);}
+    Ok(output)
 }
+struct VolumeSession {
+    work:brep_core::volume_validity::Inspector,
+    request_key:Vec<u8>,
+}
+#[derive(Default)]
+struct VolumeRegistry {next:u64,live:std::collections::BTreeMap<String,VolumeSession>,completed:Option<(Vec<u8>,Value)>}
+fn volume_request_key(v:&Value)->Result<Vec<u8>> {
+    let mut request=v.clone();
+    request.as_object_mut().ok_or_else(||nurbs_core::Error::new("BREP_VOLUME_SESSION","Expected volume request object"))?.remove("op");
+    value_codec::encode_binary(&request).map_err(|e|nurbs_core::Error::new("BREP_VOLUME_SESSION",e.to_string()))
+}
+thread_local! {static VOLUME_SESSIONS:std::cell::RefCell<VolumeRegistry>=std::cell::RefCell::new(VolumeRegistry::default());}
+pub fn begin_sweep_volume(v:Value)->Result<Value> {
+    VOLUME_SESSIONS.with(|store| {
+        let mut store=store.borrow_mut();
+        if store.live.len()>=4 {return Err(nurbs_core::Error::new("BREP_VOLUME_SESSION","Sweep volume session limit reached"));}
+        let model=std::sync::Arc::new(field::<brep_core::Model>(&v,"model")?);
+        let cap=field::<Value>(&v,"capBudgets")?;
+        let (limits,linear,caps,cap_limits)=(
+        brep_core::volume_validity::Limits {
+            boundary: brep_core::boundary_embedding::Limits {
+                exact_work: field(&v, "maxExactWork")?,
+                trim_pairs: field(&v, "maxTrimPairs")?,
+                trim_cells: field(&v, "maxTrimCells")?,
+                trim_domain_cells: field(&v, "maxTrimDomainCells")?,
+                spans: field(&v, "maxSpans")?,
+                contacts: Limits {
+                    pairs: field(&v, "maxPairs")?,
+                    cells: field(&v, "maxCells")?,
+                    domain_cells: field(&v, "maxDomainCells")?,
+                    cells_per_pair: field(&v, "cellsPerPair")?,
+                    domain_cells_per_pair: field(&v, "domainCellsPerPair")?,
+                },
+            },
+            nesting_pairs: field(&v, "nestingPairs")?,
+            nesting_cells: field(&v, "nestingCells")?,
+            nesting_domain_cells: field(&v, "nestingDomainCells")?,
+            orientation_cells: field(&v, "orientationCells")?,
+            orientation_domain_cells: field(&v, "orientationDomainCells")?,
+            orientation_spans: field(&v, "orientationSpans")?,
+        },
+        field(&v, "maxLinearCells")?,
+        field::<Vec<usize>>(&v, "capFaces")?,
+        brep_core::sweep_cap_contacts::Budgets {
+            max_walls: field(&cap, "maxWalls")?,
+            max_exact_work: field(&cap, "maxExactWork")?,
+            max_chart_cells: field(&cap, "maxChartCells")?,
+            max_trim_pairs: field(&cap, "maxTrimPairs")?,
+            max_trim_cells: field(&cap, "maxTrimCells")?,
+            max_trim_domain_cells: field(&cap, "maxTrimDomainCells")?,
+        },
+        );
+        let work=brep_core::volume_validity::Inspector::new(model.clone(),field(&v,"toleranceUv")?,limits,linear,
+            Some((caps.clone(),cap_limits)),vec![])?;
+        store.next=store.next.checked_add(1).ok_or_else(||nurbs_core::Error::new("BREP_VOLUME_SESSION","Sweep volume session IDs exhausted"))?;
+        let id=store.next.to_string();
+        store.completed=None;
+        let request_key=volume_request_key(&v)?;
+        store.live.insert(id.clone(),VolumeSession {work,request_key});
+        Ok(json!({"session":id,"done":false,"completedSteps":0}))
+    })
+}
+pub fn step_sweep_volume(v:Value)->Result<Value> {
+    let id=field::<String>(&v,"session")?;
+    let units=field::<usize>(&v,"maxUnits")?;
+    // Invalid caller step sizes preserve the session; native errors discard it.
+    if !(1..=64).contains(&units) {return Err(nurbs_core::Error::new("BREP_VOLUME_SESSION","Sweep volume step requires 1..64 units"));}
+    VOLUME_SESSIONS.with(|store| {
+        let mut store=store.borrow_mut();
+        let mut session=store.live.remove(&id).ok_or_else(||nurbs_core::Error::new("BREP_VOLUME_SESSION","Unknown sweep volume session"))?;
+        let advanced=session.work.advance(units)?;
+        let completed=session.work.completed_steps();
+        if !session.work.finished() {
+            store.live.insert(id.clone(),session);
+            return Ok(json!({"session":id,"done":false,"advancedUnits":advanced,"completedSteps":completed}));
+        }
+        let (report,charts)=session.work.finish_with_charts()?;
+        let value=volume_value(&report,&charts,true)?;
+        if report.proven {store.completed=Some((session.request_key,value.clone()));}
+        Ok(json!({"session":id,"done":true,"advancedUnits":advanced,"completedSteps":completed,"report":value}))
+    })
+}
+pub fn drop_sweep_volume(v:Value)->Result<Value> {
+    let id=field::<String>(&v,"session")?;
+    let removed=VOLUME_SESSIONS.with(|store|store.borrow_mut().live.remove(&id).is_some());
+    Ok(json!({"dropped":removed}))
+}
+
 pub fn diagnose_sweep_embedding(v: Value) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let cap = field::<Value>(&v, "capBudgets")?;
@@ -186,8 +302,8 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             exported+=boxes.len(); unresolved_boxes+=count;
             if r.contact.is_some() {contacts+=1;}
             if r.absence_proven {disjoint+=1;} else {unresolved_pairs+=1;}
-            (witness,r.cells+p.hull_cells,r.domain_cells,boxes,count)
-        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells,0,Vec::new(),0)};
+            (witness,r.cells+p.hull_cells+p.boundary_cells,r.domain_cells,boxes,count)
+        } else {if p.boundary.is_some() {shared_boundaries+=1;} else if p.hull_disjoint {disjoint+=1;} else {unresolved_pairs+=1;}(None,p.hull_cells+p.boundary_cells,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
             brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"hullIntersection":c.hull_intersection}),
@@ -222,6 +338,86 @@ mod tests {
     use super::*;
     fn request(model: &brep_core::Model) -> Value {
         json!({"op":"cad_face_contacts","model":model,"toleranceUv":1e-8,"maxPairs":100,"maxCells":10000,"maxDomainCells":100000,"cellsPerPair":16,"domainCellsPerPair":1000,"maxBoxes":2})
+    }
+    fn volume_request(model:&brep_core::Model)->Value {
+        json!({"model":model,"toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,
+            "maxTrimCells":100000,"maxTrimDomainCells":1000000,"maxSpans":1024,"maxLinearCells":100000,
+            "maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,"cellsPerPair":1000,"domainCellsPerPair":10000,
+            "nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+            "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,"capFaces":[],
+            "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,
+                "maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}})
+    }
+    fn complete_owned_volume(request:Value)->Value {
+        let id=field::<String>(&begin_sweep_volume(request).unwrap(),"session").unwrap();
+        loop {let step=step_sweep_volume(json!({"session":id,"maxUnits":64})).unwrap();
+            if field::<bool>(&step,"done").unwrap() {return step["report"].clone();}}
+    }
+    #[test]
+    fn native_completed_volume_reuse_requires_exact_request_and_is_single_use() {
+        let model=brep_core::cuboid([0.;3],[1.;3]).unwrap();let request=volume_request(&model);
+        let expected=complete_owned_volume(request.clone());
+        assert!(VOLUME_SESSIONS.with(|r|r.borrow().completed.is_some()));
+        let actual=diagnose_sweep_volume_and_charts(request.clone()).unwrap();assert_eq!(actual,expected);
+        assert!(VOLUME_SESSIONS.with(|r|r.borrow().completed.is_none()));
+        complete_owned_volume(request.clone());
+        let mut restricted=request.clone();restricted["maxCells"]=json!(1);
+        assert_eq!(diagnose_sweep_volume_and_charts(restricted).unwrap()["solidGeometryCertified"],json!(false));
+        assert!(VOLUME_SESSIONS.with(|r|r.borrow().completed.is_none()));
+        complete_owned_volume(request.clone());
+        let mut gap=model.clone();gap.edges[0].curve.control_points[0][2]+=1e-12;
+        assert_eq!(diagnose_sweep_volume_and_charts(volume_request(&gap)).unwrap()["solidGeometryCertified"],json!(false));
+        assert!(VOLUME_SESSIONS.with(|r|r.borrow().completed.is_none()));
+        complete_owned_volume(request.clone());
+        let id=field::<String>(&begin_sweep_volume(request.clone()).unwrap(),"session").unwrap();
+        assert!(VOLUME_SESSIONS.with(|r|r.borrow().completed.is_none()));
+        drop_sweep_volume(json!({"session":id})).unwrap();
+        let mut positive_zero=request.clone();positive_zero["model"]["vertices"][0]["point"][0]=json!(0.0);
+        let mut negative_zero=positive_zero.clone();negative_zero["model"]["vertices"][0]["point"][0]=json!(-0.0);
+        assert_ne!(volume_request_key(&positive_zero).unwrap(),volume_request_key(&negative_zero).unwrap());
+        let mut changed_caps=request.clone();changed_caps["capFaces"]=json!([0,1]);
+        assert_ne!(volume_request_key(&request).unwrap(),volume_request_key(&changed_caps).unwrap());
+    }
+    #[test]
+    fn owned_volume_session_matches_complete_report_and_never_emits_partial_proof() {
+        let model=brep_core::cuboid([0.;3],[1.;3]).unwrap();
+        for max_cells in [1,200000] {
+            let mut request=volume_request(&model);request["maxCells"]=json!(max_cells);
+            let expected=diagnose_sweep_volume_and_charts(request.clone()).unwrap();
+            for batch in [1,2,64] {
+                let start=begin_sweep_volume(request.clone()).unwrap();
+                let id=field::<String>(&start,"session").unwrap();
+                assert!(start.get("report").is_none());
+                assert!(step_sweep_volume(json!({"session":id,"maxUnits":0})).is_err());
+                let mut previous=0;let mut calls=0;
+                loop {
+                    let step=step_sweep_volume(json!({"session":id,"maxUnits":batch})).unwrap();
+                    let completed=field::<usize>(&step,"completedSteps").unwrap();
+                    assert!(completed>=previous);previous=completed;
+                    calls+=1;assert!(calls<1000);
+                    if field::<bool>(&step,"done").unwrap() {
+                        assert_eq!(step["report"],expected);break;
+                    }
+                    assert!(step.get("report").is_none());
+                    assert!(step.get("solidGeometryCertified").is_none());
+                }
+                assert!(step_sweep_volume(json!({"session":id,"maxUnits":1})).is_err());
+                assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(false));
+            }
+        }
+    }
+    #[test]
+    fn owned_volume_session_drop_limits_and_stale_handles_are_enforced() {
+        let model=brep_core::cuboid([0.;3],[1.;3]).unwrap();let request=volume_request(&model);
+        let mut ids=vec![];
+        for _ in 0..4 {ids.push(field::<String>(&begin_sweep_volume(request.clone()).unwrap(),"session").unwrap());}
+        assert!(begin_sweep_volume(request.clone()).is_err());
+        for id in ids {
+            assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
+            assert!(step_sweep_volume(json!({"session":id,"maxUnits":1})).is_err());
+        }
+        let id=field::<String>(&begin_sweep_volume(request).unwrap(),"session").unwrap();
+        assert_eq!(drop_sweep_volume(json!({"session":id})).unwrap()["dropped"],json!(true));
     }
     #[test]
     fn combined_diagnostics_keep_face_limits_and_volume_scope_explicit() {

@@ -9,8 +9,68 @@ pub(crate) struct SharedArcPose {
     speed_lower: Option<f64>,
     jet_entries: HashMap<[u64;7],Vec<authored_frame_certificate::FrameJet>>,
     curvatures: HashMap<[u64;3],f64>,
+    rmf_frames: HashMap<[u64;4],authored_frame_certificate::ValuesReport>,
+    source_values: HashMap<[u64;2],[[f64;2];3]>,
+    source_jets: HashMap<[u64;2],vector_certificate::Report>,
+    rmf_first_images: HashMap<[u64;2],([super::super::rmf_first_images::Image;4],super::super::rmf_first_images::Image,bool)>,
 }
 impl SharedArcPose {
+    pub(super) fn source_jets(&mut self,interval:[f64;2],query:impl FnOnce()->Result<vector_certificate::Report>)->Result<vector_certificate::Report>{
+        let key=interval.map(f64::to_bits);
+        if let Some(cached)=self.source_jets.get(&key){let mut report=cached.clone();report.cells=0;return Ok(report);}
+        let report=query()?;
+        if report.status==Status::Certified {self.source_jets.insert(key,report.clone());}
+        Ok(report)
+    }
+    pub(super) fn rmf_first_images(&mut self,interval:[f64;2],qs:&[[[f64;2];3]],
+        query:impl FnOnce(&[[[f64;2];3]])->Result<super::super::rmf_first_images::Report>)
+        ->Result<super::super::rmf_first_images::Report>{
+        use crate::numerics::interval_vec3::{add,scale};
+        use super::super::rmf_first_images::{Image,Report};
+        let key=interval.map(f64::to_bits);let mut cells=0;
+        if !self.rmf_first_images.contains_key(&key){
+            let mut basis=vec![[[0.;2];3];4];for k in 0..3 {basis[k+1][k]=[1.;2];}
+            let report=query(&basis)?;cells=report.cells;
+            let Some((pose,source))=report.pose else{return Ok(report);};
+            self.rmf_first_images.insert(key,(pose,source,report.continuous_laws));
+        }
+        let (basis,source,continuous_laws)=&self.rmf_first_images[&key];
+        let mut images=Vec::with_capacity(qs.len());
+        for q in qs {
+            let mut image=Image{value:add(source.value,basis[0].value)?,first:add(source.first,basis[0].first)?};
+            for k in 0..3 {let coefficient=I::new(q[k][0],q[k][1])?;
+                image=Image{value:add(image.value,scale(basis[k+1].value,coefficient)?)?,
+                    first:add(image.first,scale(basis[k+1].first,coefficient)?)?};
+            }
+            images.push(image);
+        }
+        Ok(Report{cells,images:Some(images),continuous_laws:*continuous_laws,pose:Some((*basis,*source))})
+    }
+    pub(super) fn source_values(&mut self,interval:[f64;2],query:impl FnOnce()->Result<vector_certificate::ValuesReport>)
+        ->Result<vector_certificate::ValuesReport>{
+        let key=interval.map(f64::to_bits);
+        if let Some(value)=self.source_values.get(&key){return Ok(vector_certificate::ValuesReport{cells:0,value:Some(*value)});}
+        let report=query()?;
+        if let Some(value)=report.value {self.source_values.insert(key,value);}
+        Ok(report)
+    }
+    pub(super) fn rmf_values(&mut self,transport:&super::super::rmf_transport::OriginalRmfTransportReport,
+        sweep:&Sweep<'_>,qs:&[[[f64;2];3]],source:[f64;2],law:[f64;2],budget:usize)
+        ->Result<authored_frame_certificate::ControlValuesReport>{
+        let key=[source[0].to_bits(),source[1].to_bits(),law[0].to_bits(),law[1].to_bits()];
+        let frame=if let Some(cached)=self.rmf_frames.get(&key){
+            let mut frame=cached.clone();frame.cells=0;frame
+        }else{
+            let frame=super::super::rmf_transport::frame_values(transport,sweep.twist,source,law,budget)?;
+            if frame.status==Status::Certified {self.rmf_frames.insert(key,frame.clone());}
+            frame
+        };
+        if frame.status!=Status::Certified {
+            return Ok(authored_frame_certificate::ControlValuesReport{status:Status::Unresolved,
+                cells:frame.cells,values:None,reason:Some("spatial-rmf-relative-image-unproved")});
+        }
+        authored_frame_certificate::relative_control_values_from_frame(sweep.scale,sweep.affine_laws,qs,law,budget,frame)
+    }
     pub(super) fn regular(
         &mut self,
         path: &Curve,
@@ -131,6 +191,57 @@ impl SharedArcPose {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_rmf_frames_charge_first_query_and_preserve_profile_work() {
+        let path=crate::paths::bezier(vec![vec![0.,0.,0.],vec![0.,0.,1.],vec![0.2,0.3,2.],vec![0.,0.1,3.]],None).unwrap();
+        let profile=crate::primitives::line([0.01,0.,0.],[0.02,0.,0.]).unwrap();
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();
+        let twist=constant_vector_law([0.;3]).unwrap();
+        let sweep=Sweep::new(&profile,&path,&scale,&twist,Options{normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
+            spacing:Spacing::Parameter,initial_sections:17,max_sections:17,max_deviation:1.}).unwrap();
+        let transport=super::super::super::rmf_transport::certify_original_rmf_transport_shared(&path,[1.,0.,0.],512,10000,false).unwrap();
+        assert_eq!(transport.status,Status::Certified);
+        let qs=[[[0.01;2],[0.;2],[0.;2]],[[0.03;2],[0.;2],[0.;2]]];
+        let interval=[0.25,0.3125];
+        let mut cache=SharedArcPose::default();
+        let refused=cache.rmf_values(&transport,&sweep,&qs,interval,interval,0).unwrap();
+        assert_eq!(refused.status,Status::Unresolved);assert!(cache.rmf_frames.is_empty());
+        let direct=super::super::super::rmf_transport::relative_values(&transport,&scale,&twist,None,&qs,interval,interval,10000).unwrap();
+        let first=cache.rmf_values(&transport,&sweep,&qs,interval,interval,10000).unwrap();
+        assert_eq!(first.status,Status::Certified);assert_eq!(first.values,direct.values);assert_eq!(first.cells,direct.cells);
+        let second=cache.rmf_values(&transport,&sweep,&qs,interval,interval,10000).unwrap();
+        assert_eq!(second.values,first.values);assert!(second.cells>0 && second.cells<first.cells);
+        let short=cache.rmf_values(&transport,&sweep,&qs,interval,interval,second.cells-1).unwrap();
+        assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());assert!(short.cells<second.cells);
+        // The joint first owner separates original position from affine pose
+        // coefficients. Reuse must not subtract independent world boxes.
+        let owner=super::super::super::rmf_first_images::Owner::new(&sweep,10000).unwrap().1.unwrap();
+        let mut first_cache=SharedArcPose::default();
+        let refused=first_cache.rmf_first_images(interval,&qs,|basis|owner.query(&transport,basis,interval,0)).unwrap();
+        assert!(refused.images.is_none() && first_cache.rmf_first_images.is_empty());
+        let direct=owner.query(&transport,&qs,interval,10000).unwrap();
+        let first=first_cache.rmf_first_images(interval,&qs,|basis|owner.query(&transport,basis,interval,10000)).unwrap();
+        assert_eq!(first.cells,direct.cells);
+        for (a,b) in first.images.as_ref().unwrap().iter().zip(direct.images.as_ref().unwrap()) {
+            assert_eq!(a.value,b.value);assert_eq!(a.first,b.first);
+        }
+        let repeated=first_cache.rmf_first_images(interval,&qs,|_|panic!("Certified same-invocation pose must not rerun source queries")).unwrap();
+        assert_eq!(repeated.cells,0);
+        for (a,b) in repeated.images.unwrap().iter().zip(first.images.unwrap()) {
+            assert_eq!(a.value,b.value);assert_eq!(a.first,b.first);
+        }
+        let mut source_cache=SharedArcPose::default();
+        let direct=vector_certificate::certify_traversal(&path,interval,10000,false).unwrap();
+        for budget in [0,direct.cells-1] {
+            let short=source_cache.source_jets(interval,||vector_certificate::certify_traversal(&path,interval,budget,false)).unwrap();
+            assert_eq!(short.status,Status::Unresolved);assert!(short.cells<=budget);
+            assert!(source_cache.source_jets.is_empty());
+        }
+        let first=source_cache.source_jets(interval,||vector_certificate::certify_traversal(&path,interval,10000,false)).unwrap();
+        assert_eq!(first.cells,direct.cells);assert_eq!(first.second,direct.second);
+        let repeated=source_cache.source_jets(interval,||panic!("Certified same-source jets must not rerun")).unwrap();
+        assert_eq!(repeated.cells,0);assert_eq!(repeated.value,first.value);assert_eq!(repeated.first,first.first);assert_eq!(repeated.second,first.second);
+    }
     #[test]
     fn shared_pose_encloses_independent_signed_affine_controls_and_charges_first_query() {
         let path = crate::paths::bezier(

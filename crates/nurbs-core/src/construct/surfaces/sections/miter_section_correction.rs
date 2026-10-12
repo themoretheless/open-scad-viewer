@@ -20,7 +20,19 @@ pub fn correct(
     cap: Option<CapCorrection>,
     axis: Option<&Curve>,
 ) -> Result<Option<sweep_section_projection::Report>> {
+    correct_selected(sections, points, closed, circle, cap, axis, None)
+}
+/// Preserve correction order and charge every applied displacement, including
+/// an explicitly selected endpoint mask after circular section repair.
+pub fn correct_selected(
+    sections: &[Vec<Curve>], points: &[[f64;3]], closed: bool,
+    circle: Option<Budget>, cap: Option<CapCorrection>, axis: Option<&Curve>,
+    endpoints: Option<[bool;2]>,
+) -> Result<Option<sweep_section_projection::Report>> {
     let invalid = |message| Error::new("NURBS_INVALID_INPUT", message);
+    if endpoints.is_some() && cap.is_none() {
+        return Err(invalid("Endpoint selection requires explicit cap correction".to_owned()));
+    }
     if circle.is_none() && cap.is_none() {
         return Ok(None);
     }
@@ -42,7 +54,9 @@ pub fn correct(
         .unwrap_or(sections);
     let projected = if let Some(c) = cap {
         let b = c.budget;
-        let r = sweep_section_projection::project_miter_caps(
+        let r = if let Some(mask) = endpoints {
+            sweep_section_projection::project_miter_caps_selected(retained, points, closed, c.authored_frame, axis, b.quantum, b.tolerance, b.max_work, mask)?
+        } else { sweep_section_projection::project_miter_caps(
             retained,
             points,
             closed,
@@ -51,7 +65,7 @@ pub fn correct(
             b.quantum,
             b.tolerance,
             b.max_work,
-        )?;
+        )? };
         if r.sections.is_none() || r.wall_displacement_upper.is_none() {
             return Err(invalid(format!(
                 "Miter {}cap correction unproved: {}",
@@ -168,6 +182,23 @@ mod tests {
         .unwrap();
         assert_eq!(only_caps.reason, "bounded-section-interpolation");
         assert_eq!(only_caps.exact_planar_sections, vec![0, 1]);
+    }
+    #[test]
+    fn selected_caps_follow_circle_repair_and_charge_both_displacements() {
+        let input = sections();
+        let points = [[0.,0.,0.],[0.,0.,10.]];
+        let circle = circle_sweep_repair::repair(&input,2_f64.powi(-40),1e-9,Some(1000000.)).unwrap();
+        let circle_sections = circle.sections.as_ref().unwrap();
+        let cap = sweep_section_projection::project_miter_caps_selected(circle_sections,&points,false,false,None,
+            2_f64.powi(-40),0.02,Some(1000000.),[false,true]).unwrap();
+        let combined = correct_selected(&input,&points,false,Some(budget(1e-9)),
+            Some(CapCorrection {budget:budget(0.02),authored_frame:false}),None,Some([false,true])).unwrap().unwrap();
+        assert_eq!(combined.sections,cap.sections);
+        assert_eq!(combined.sections.as_ref().unwrap()[0],circle_sections[0]);
+        assert_eq!(combined.exact_planar_sections,vec![1]);
+        assert_eq!(combined.work,circle.work+cap.work);
+        assert_eq!(combined.wall_displacement_upper,error_upper::add(circle.wall_displacement_upper.unwrap(),cap.wall_displacement_upper.unwrap()));
+        assert!(correct_selected(&input,&points,false,Some(budget(1e-9)),None,None,Some([false,true])).is_err());
     }
     #[test]
     fn correction_failure_never_leaves_a_candidate_for_admission() {

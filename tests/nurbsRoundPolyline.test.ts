@@ -27,7 +27,7 @@ it('lowers and builds a spatial round path sweep through Rush',()=>{
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   expect(built.mesh).toBeDefined()
   const node=compiled.document.nodes.find(n=>n.op==='progressive_sweep')!
-  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:false})
+  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
   expect(()=>compileRushFrontend(source.replace('radius: 2mm','radius: 2deg'))).toThrow()
 })
 
@@ -54,7 +54,7 @@ it('retains the independent quintic transition shape and validates dimensional R
   expect(compiled.document.nodes.find(n=>n.op==='transition_polyline_curve')).toMatchObject({setback:2})
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   const node=compiled.document.nodes.find(n=>n.op==='progressive_sweep')!
-  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:false})
+  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,continuousBound:true,roundingCertified:true,errorCertificateReason:null})
   expect(()=>compileRushFrontend(source.replace('setback: 2mm','setback: 2deg'))).toThrow()
   expect(()=>transitionPolylineNurbsCurve([[0,0,0],[1,0,0],[1,1,0]],2)).toThrow(/overlap/)
 })

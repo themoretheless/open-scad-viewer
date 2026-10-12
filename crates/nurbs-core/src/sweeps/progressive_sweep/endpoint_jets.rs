@@ -194,6 +194,24 @@ pub(super) fn certify_knots(curve:&Curve,order:usize,max_work:u64)->Result<Repor
 mod tests {
     use super::*;
     #[test]
+    fn original_bezier_tangent_identity_admits_speed_jump_but_not_a_corner() {
+        let path=Curve{degree:2,knots:vec![0.,0.,0.,0.5,0.5,1.,1.,1.],
+            control_points:vec![vec![0.;3],vec![0.5,0.,0.],vec![1.,0.,0.],vec![2.,0.,0.],vec![3.,0.,0.]],
+            weights:vec![1.,2.,1.,3.,1.],periodic:false};
+        assert!(!certify_knots(&path,1,10000).unwrap().certified);
+        let proof=certify_direction(&path,0,false,false,10000).unwrap();
+        assert!(proof.certified);assert!(proof.exact_work>0);
+        assert!(!certify_direction(&path,0,false,false,proof.exact_work-1).unwrap().certified);
+        for point in [vec![0.,0.,0.],vec![1.,0.,0.],vec![2.,f64::from_bits(1),0.]] {
+            let mut invalid=path.clone();invalid.control_points[3]=point;
+            assert!(!certify_direction(&invalid,0,false,false,10000).unwrap().certified);
+        }
+        let circle=crate::primitives::circle([0.;3],[0.,0.,1.],1.).unwrap();
+        assert!(certify_direction(&circle,0,true,false,10000).unwrap().certified);
+        let mut invalid=circle.clone();invalid.control_points[1][2]=f64::from_bits(1);
+        assert!(!certify_direction(&invalid,0,true,false,10000).unwrap().certified);
+    }
+    #[test]
     fn periodic_original_jets_require_exact_active_basis_closure() {
         let ring = [[1.,0.,0.],[0.5,1.,0.5],[-0.5,1.,1.],[-1.,0.,0.],[-0.5,-1.,0.25],[0.5,-1.,-0.5]];
         let mut points = ring.iter().map(|p|p.to_vec()).collect::<Vec<_>>();
@@ -295,20 +313,52 @@ mod tests {
 }
 
 /// Original direction chart jets; speed/nonparallel premises are separate.
+fn piecewise_bezier_tangent(curve:&Curve,endpoints:bool,max_work:u64,spent:&mut u64)->Option<Report>{
+ let mut work=0;
+ let p=curve.degree;let n=curve.control_points.len();
+ if p==0||(n-1)%p!=0{return None;}
+ let spans=(n-1)/p;let [a,b]=curve.domain();
+ if curve.knots.len()!=2*(p+1)+(spans-1)*p{return None;}
+ for (i,&k) in curve.knots.iter().enumerate(){
+  if work==max_work{return Some(Report{certified:false,exact_work:work});}work+=1;*spent=work;
+  if i<=p {if k!=a{return None;}}
+  else if i>=curve.knots.len()-p-1 {if k!=b{return None;}}
+  else {let group=(i-p-1)/p;let first=p+1+group*p;
+   if k!=curve.knots[first]||k<=a||k>=b||group>0&&k<=curve.knots[first-p]{return None;}}
+ }
+ let joins=if endpoints {vec![(n-2,n-1,0,1)]}else{(1..spans).map(|i|(i*p-1,i*p,i*p,i*p+1)).collect()};
+ for (l0,l1,r0,r1) in joins {
+  let [a0,a1,b0,b1]=[l0,l1,r0,r1].map(|i|&curve.control_points[i]);
+  if max_work-work<6{return Some(Report{certified:false,exact_work:work});}work+=6;*spent=work;
+  if a1!=b0{return Some(Report{certified:false,exact_work:work});}
+  let Some(axis)=(0..3).find(|&k|a1[k]!=a0[k])else{return Some(Report{certified:false,exact_work:work});};
+  if a1[axis].partial_cmp(&a0[axis])!=b1[axis].partial_cmp(&b0[axis]){return Some(Report{certified:false,exact_work:work});}
+  for k in 0..3 {
+   if max_work-work<8{return Some(Report{certified:false,exact_work:work});}work+=8;*spent=work;
+   if crate::exact_products::sum_sign(&[(a1[k],b1[axis]),(-a1[k],b0[axis]),(-a0[k],b1[axis]),(a0[k],b0[axis]),
+       (-b1[k],a1[axis]),(b1[k],a0[axis]),(b0[k],a1[axis]),(-b0[k],a0[axis])])!=std::cmp::Ordering::Equal {
+    return Some(Report{certified:false,exact_work:work});
+   }
+  }
+ }
+ Some(Report{certified:true,exact_work:work})
+}
 pub(super) fn certify_direction(curve:&Curve,order:usize,endpoints:bool,arc_length:bool,max_work:u64)->Result<Report>{
- check(matches!(order,1|2)&&max_work<=1000000,"Invalid direction jet limits")?;
+ check(matches!(order,0|1|2)&&max_work<=1000000,"Invalid direction jet limits")?;
  curve.validate()?;
  if curve.periodic{return Ok(Report{certified:false,exact_work:0});}
  check(curve.control_points.iter().all(|p|p.len()==3),"Direction jets require XYZ source")?;
+ let mut spent=0;
+ if order==0 {if let Some(proof)=piecewise_bezier_tangent(curve,endpoints,max_work,&mut spent){return Ok(proof);}}
  use cad_predicates::{AuthoredScalar,BezierIdentity,Limits,PredicateContext,SourceArena,ToleranceContext,rational_bspline_direction_jet_identity};
  let mut values=curve.control_points.iter().zip(&curve.weights).flat_map(|(p,w)|[p[0],p[1],p[2],*w]).collect::<Vec<_>>();
  let start=values.len();values.extend_from_slice(&curve.knots);
  let source=SourceArena::authored("original-direction-frame-jets",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).map_err(|e|crate::input(e.to_string()))?;
  let controls=(0..curve.control_points.len()).map(|i|std::array::from_fn(|j|source.leaf(i*4+j).unwrap())).collect::<Vec<_>>();
  let knots=(0..curve.knots.len()).map(|i|source.leaf(start+i).unwrap()).collect::<Vec<_>>();
- let tol=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tol,Limits{max_work,..Limits::default()},None);
+ let tol=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tol,Limits{max_work:max_work-spent,..Limits::default()},None);
  let proof=rational_bspline_direction_jet_identity(&mut ctx,&controls,&knots,curve.degree,order,endpoints,arc_length).map_err(|e|crate::input(e.to_string()))?;
- Ok(Report{certified:proof.outcome==BezierIdentity::Equal,exact_work:proof.work_used})
+ Ok(Report{certified:proof.outcome==BezierIdentity::Equal,exact_work:spent+proof.work_used})
 }
 
 // Translating the complete original knot basis and homogeneous controls by

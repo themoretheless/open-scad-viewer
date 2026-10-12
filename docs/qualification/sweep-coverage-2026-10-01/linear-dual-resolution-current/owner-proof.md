@@ -1,0 +1,7 @@
+# Finer dual projection proposals
+
+The unchanged geometric proof requires one fixed integer projection with a continuously positive symmetric Jacobian part over the entire actual retained surface rectangle. Midpoint derivatives only propose rows; they never certify a chart. The original candidate sequence and already successful reports are preserved. After a geometric refusal,32/64coefficient-resolution proposals may spend only the remaining original cell budget through the same outward interval proof and existing depth14policy. Integer coefficients remain within the existing64bound.
+
+The original sheared-wall regression already has an independent transported integer map proving its injectivity. The new32proposal certifies it at97cells, while the unchanged old candidate still explicitly refuses. The regression now requires both facts, source immutability, and zero/one-short budget refusal. This is an upgrade from an unproved expectation, not acceptance of sampled geometry.
+
+Target original affine hollow model SHA6d17edafc547fb15ff8d8da36924ccc839422a9c4168168581f1daf32163590f is captured directly from Q Rust reconstruction. Its retained boundary and G2 already pass, but the old global audit leaves12charts unresolved and exhausts1million domain cells. The exact256face/2shell fixture now requires full chart/global admission with unchanged original budgets. This pending positive assertion must pass before qualification; no model/station/tolerance/budget changes are allowed.

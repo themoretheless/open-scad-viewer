@@ -51,7 +51,10 @@ it('retains partial profile error for refusal without certifying the unresolved 
  const constant={...scale,values:[1,1]}
  const zero={...twist,values:[0,0]}
  const simple={...profile,weights:[1,1]}
- const level=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,constant,zero,fixed,9)
+ const complete=previewProgressiveNurbsProfiles(Array.from({length:32},()=>simple),path,constant,zero,fixed,9)
+ expect(complete.report).toMatchObject({accepted:false,continuousBound:true,roundingCertified:true})
+ expect(complete.report.continuousErrorUpper!).toBeGreaterThan(fixed.maxDeviation)
+ const level=previewProgressiveNurbsProfiles(Array.from({length:64},()=>simple),path,constant,zero,fixed,9)
  expect(level.report).toMatchObject({accepted:false,sampledControlDeviation:0,
   continuousBound:false,roundingCertified:false,continuousErrorUpper:null})
  expect(level.report.knownProfileErrorUpper!).toBeGreaterThan(fixed.maxDeviation)

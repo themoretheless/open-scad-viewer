@@ -81,6 +81,8 @@ export interface GeometryBuildProgress extends GeometryJobEnvelope {
 /** Display-only per-node sweep geometry, never an authoritative publication. */
 export interface GeometrySweepPreview extends GeometryJobEnvelope {
  status:'sweep-preview'
+ /** Full error proof owned by Rust; refused previews remain displayable. */
+ continuousBound?:boolean
  phase:'compiling'
  nodeId:string
  sections:number
@@ -759,11 +761,12 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
         return hasExactKeys(value,[
           'protocolVersion','documentRevision','jobId','quality','sourceSha256',
           'status','phase','nodeId','sections','accepted','sampledControlDeviation','budget','meshes',
-        ],['phaseResolved','continuousErrorUpper','knownProfileErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
+        ],['continuousBound','phaseResolved','continuousErrorUpper','knownProfileErrorUpper','frameTransportCertified','certifiedErrorUpper','endpointContourErrorUpper','profileRegularityCertified','wallRegularityCertified']) && value.phase==='compiling'
           && typeof value.nodeId==='string' && value.nodeId.length>0
           && value.nodeId.length<=GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
           && Number.isInteger(value.sections) && (value.sections as number)>=2 && (value.sections as number)<=1025
           && typeof value.accepted==='boolean'
+          && (value.continuousBound===undefined||typeof value.continuousBound==='boolean')
           && isNonNegativeFiniteNumber(value.sampledControlDeviation)
           && isNonNegativeFiniteNumber(value.budget)
           && hasSafeSuccessPayload({...value,warnings:[]})
@@ -776,7 +779,12 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
           && (value.continuousErrorUpper===undefined||isNonNegativeFiniteNumber(value.continuousErrorUpper))
           && (value.knownProfileErrorUpper===undefined||isNonNegativeFiniteNumber(value.knownProfileErrorUpper))
           && (value.knownProfileErrorUpper===undefined||value.continuousErrorUpper===undefined||value.knownProfileErrorUpper===value.continuousErrorUpper)
-          && value.accepted===((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number))))
+          // Rust may preserve its original adaptive grid after proving an
+          // in-budget candidate. A display-only rejected preview must retain
+          // that decision; the continuous certificate alone cannot admit it.
+          && ((value.accepted===false && value.continuousBound===true
+            && value.continuousErrorUpper!==undefined && value.phaseResolved===undefined)
+            || value.accepted===((value.continuousBound??true)&&(value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number)))))
           && (value.meshes as unknown[]).every(mesh=>isMeshData(mesh)&&!('nativeGeometry' in mesh)
             && mesh.faceIdsAuthoritative===false && mesh.provenance.every(run=>run.source===null))
       case 'succeeded':

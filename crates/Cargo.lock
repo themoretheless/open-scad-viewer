@@ -732,6 +732,7 @@ dependencies = [
  "cad-predicates",
  "compute-core",
  "data-url",
+ "flate2",
  "gcode-core",
  "geometry-ops",
  "gif",

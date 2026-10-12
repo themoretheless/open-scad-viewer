@@ -195,6 +195,12 @@ pub fn compile(mut document: J) -> Result<J> {
         ));
     }
     normalize(&mut document, schema(), "", 0)?;
+    for (index,node) in document["nodes"].as_array().unwrap().iter().enumerate() {
+        if s(node,"op")=="brep_miter_sweep" && node.get("max_deviation").is_none()
+            && ["circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"].iter().any(|key|node.get(*key).is_some()) {
+            return Err(err(&format!("/nodes/{index}/max_deviation"),"Direct miter circle correction requires max_deviation"));
+        }
+    }
     let parameters = document["parameters"].as_array().unwrap();
     let params: BTreeMap<_, _> = parameters
         .iter()
@@ -648,6 +654,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_fillet",
             "brep_tessellate",
             "brep_smooth_miter_stations",
+            "brep_smooth_sweep_stations",
             "surface",
             "curve",
             "surface_extrude_patches", "surface_extrude",
@@ -791,6 +798,16 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn direct_miter_circle_graph_keeps_explicit_error_budget() {
+        let curve=json!({"id":"Curve","op":"circle_curve","center":[0,0,0],"normal":[1,0,0],"radius":0.5});
+        let body=json!({"id":"Body","op":"brep_miter_sweep","loops":[["Curve"]],"points":[[0,0,0],[10,0,0],[10,10,0]],"normal":[0,0,1],"max_deviation":0.01,"circle_correction_tolerance":1e-9,"circle_correction_quantum":2_f64.powi(-40),"circle_correction_max_work":1000000});
+        let prepared=compile(document(vec![curve.clone(),body.clone()],"Body")).unwrap();
+        assert_eq!(prepared["document"]["nodes"][1]["max_deviation"],json!(0.01));
+        let mut missing=body;
+        missing.as_object_mut().unwrap().remove("max_deviation");
+        assert!(compile(document(vec![curve,missing],"Body")).unwrap_err().message.contains("max_deviation"));
+    }
     fn sphere() -> J {
         json!({"id":"Shape","op":"sdf_sphere","center":[0,0,0],"radius":10})
     }

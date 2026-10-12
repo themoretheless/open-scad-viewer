@@ -90,14 +90,21 @@ pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
         let vertices=edges.clone().map(|set|set.into_iter().flat_map(|e|
             model.edges[e].vertices).collect::<BTreeSet<_>>());
         let poles=faces.map(|f|model.faces[f].surface.control_points.iter().flatten().collect::<Vec<_>>());
-        if poles.iter().all(|ps|ps.len()<=16) {
+        // Generated/axis proposals keep the same fixed iteration and predicate limits.
+        // Larger supported nets are checked against every original pole.
+        if poles.iter().all(|ps|ps.len()<=64) {
             for &vertex in vertices[0].intersection(&vertices[1]) {
                 let point=model.vertices[vertex].point;
                 if !edges.iter().all(|set|set.iter().any(|&e|edge_ends(model,e)
                     .is_some_and(|ends|(0..2).any(|i|model.edges[e].vertices[i]==vertex&&ends[i]==point)))) { continue; }
                 let mut candidates=vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![0.,1.,0.],vec![0.,0.,1.]];
                 if let Some(anchors)=propose_vertex_plane(point,&poles) {candidates.extend(anchors);}
-                candidates.extend(poles.iter().flat_map(|ps|ps.iter().map(|p|(*p).clone())));
+                // Quintic station walls have eighteen poles. For larger nets
+                // retain only the bounded generated/axis proposals: enumerating
+                // every pole pair would multiply exact predicate work.
+                if poles.iter().all(|ps|ps.len()<=16) {
+                    candidates.extend(poles.iter().flat_map(|ps|ps.iter().map(|p|(*p).clone())));
+                }
                 for a in 0..candidates.len() { for b in a+1..candidates.len() {
                     let sides=poles.each_ref().map(|ps| {
                         let mut side=None;
@@ -143,7 +150,9 @@ pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
             // A rotated corner need not be separated by a world-axis proposal;
             // use bounded candidate generation, then verify all retained
             // source poles with the exact projected orientation predicate.
-            if poles.iter().all(|ps|ps.len()<=16) {
+            // Generated/axis proposals keep the same fixed iteration and predicate limits.
+        // Larger supported nets are checked against every original pole.
+        if poles.iter().all(|ps|ps.len()<=64) {
                 let mut projected=[0.;2];
                 let mut directions=Vec::new();
                 for (face,ps) in poles.iter().enumerate() {for p in ps {
@@ -242,6 +251,40 @@ mod tests {
         let mut changed=model.clone();
         changed.vertices[c.vertex.unwrap()].point[0]=changed.vertices[c.vertex.unwrap()].point[0].next_up();
         assert!(certify(&changed,[0,7]).is_none());
+    }
+    #[test]
+    fn quintic_station_vertex_support_uses_bounded_exact_plane_proposals() {
+        let section=|z:f64,t:f64|vec![[
+            [[0.5,0.],[0.5,0.5],[0.,0.5]],[[0.,0.5],[-0.5,0.5],[-0.5,0.]],
+            [[-0.5,0.],[-0.5,-0.5],[0.,-0.5]],[[0.,-0.5],[0.5,-0.5],[0.5,0.]],
+        ].into_iter().map(|p|nurbs_core::curve::Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:p.into_iter().map(|[x,y]|vec![x-t*y,y+t*x,z]).collect(),
+            weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false}).collect()];
+        for degree in [5,13] {
+        let mut model=crate::rational_section_loft(&[section(0.,0.),section(5.,0.25),section(10.,0.5)]).unwrap();
+        for face in &mut model.faces[..8] {
+            face.surface=nurbs_core::surface_edit::elevate(&face.surface,nurbs_core::surface::Axis::V,degree).unwrap();
+        }
+        // Dyadic nonsingular placement makes all world-axis hulls overlap.
+        let transform=|p:&mut [f64]| {
+            let [x,y,z]=[p[0],p[1],p[2]];
+            p[0]=x+0.125*z;p[1]=y+0.25*z;p[2]=z+0.25*x+0.125*y;
+        };
+        for face in &mut model.faces {for p in face.surface.control_points.iter_mut().flatten(){transform(p);}}
+        for edge in &mut model.edges {for p in &mut edge.curve.control_points {transform(p);}}
+        for vertex in &mut model.vertices {transform(&mut vertex.point);}
+        let original=model.clone();
+        assert_eq!(model.faces[0].surface.control_points.iter().flatten().count(),3*(degree+1));
+        let certificate=certify(&model,[0,7]).expect("actual retained high-degree vertex support");
+        let vertex=certificate.vertex.unwrap();
+        assert!(certificate.edges.is_empty());
+        let mut broken=model.clone();broken.vertices[vertex].point[0]=broken.vertices[vertex].point[0].next_up();
+        assert!(certify(&broken,[0,7]).is_none());
+        let mut overlap=model.clone();
+        overlap.faces[7].surface.control_points[1][2]=model.faces[0].surface.control_points[1][2].clone();
+        assert!(certify(&overlap,[0,7]).is_none());
+        assert_eq!(model,original);
+        }
     }
     #[test]
     fn retained_hollow_sweep_vertex_contacts_require_authored_vertex_ownership() {

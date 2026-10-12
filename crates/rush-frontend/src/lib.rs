@@ -29,6 +29,16 @@ pub fn compile(source: &str) -> Result<Value> {
 #[cfg(test)]
 mod miter_correction_tests {
     #[test]
+    fn direct_circle_correction_requires_and_lowers_original_error_budget() {
+        let source="// @rush/1\nouter = circle_curve(center: [0,0,0],normal: [1,0,0],radius: 0.5mm)\nshow brep_miter_sweep([[outer]], points: [[0,0,0],[10mm,0,0],[10mm,10mm,0]], normal: [0,0,1], max_deviation: 0.01mm, circle_correction_tolerance: 0.000000001mm, circle_correction_quantum: 0.0000000000009094947017729282mm, circle_correction_max_work: 1000000).brep_tessellate(4)";
+        let compiled=super::compile_document(source).unwrap();
+        let node=compiled["nodes"].as_array().unwrap().iter().find(|n|n["op"].as_str()==Some("brep_miter_sweep")).unwrap();
+        assert_eq!(node["max_deviation"]["value"].as_f64(),Some(0.01));
+        assert_eq!(node["max_deviation"]["unit"].as_str(),Some("mm"));
+        assert_eq!(node["circle_correction_max_work"].as_f64(),Some(1000000.));
+        assert!(super::compile_document(&source.replace("max_deviation: 0.01mm, ","")).is_err());
+    }
+    #[test]
     fn authored_cap_plane_mode_lowers_and_requires_boolean() {
         let source=include_str!("../../../examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r");
         let compiled=super::compile_document(source).unwrap();
@@ -86,6 +96,19 @@ mod circle_correction_tests {
 
 #[cfg(test)]
 mod station_reconstruction_tests {
+    #[test]
+    fn lowers_owned_progressive_station_modifier_without_replacing_source_budget() {
+        let document=super::compile_document(include_str!("../../../examples/rush/closed-spatial-rmf-varying-affine-hollow-body-station-g2.r")).unwrap();
+        let nodes=document["nodes"].as_array().unwrap();
+        let node=nodes.iter().find(|n|n["op"].as_str()==Some("brep_smooth_sweep_stations")).unwrap();
+        assert_eq!(node["wall_tolerance"]["value"].as_f64(),Some(0.01));
+        assert_eq!(node["smoothness_max_work"].as_f64(),Some(2000000.));
+        assert!(node.get("max_deviation").is_none());
+        let source=nodes.iter().find(|n|n["id"]==node["input"]).unwrap();
+        assert_eq!(source["op"],"brep_progressive_sweep");
+        assert_eq!(source["max_deviation"]["value"].as_f64(),Some(0.25));
+    }
+
     #[test]
     fn lowers_station_reconstruction_as_a_brep_modifier_with_physical_budgets() {
         let document=super::compile_document(include_str!("../../../examples/rush/progressive-miter-reconstructed-stations.r")).unwrap();

@@ -39,6 +39,8 @@ export interface MiterOwnedSourceRequest {
 }
 export interface MiterOwnedBoundaryReport {
  method:'original-request-owned-miter-boundary'
+ retentionMode?:'direct'|'progressive'
+ capEndpoints?:[boolean,boolean]|null
  model:NurbsBrep
  sections:NurbsCurve[][][]
  sourceSections:NurbsCurve[][]
@@ -54,12 +56,24 @@ export interface MiterOwnedBoundaryReport {
  solidGeometryCertified:false
  globalEmbeddingCertified:false
 }
-export const constructMiterOwnedBoundary=(source:MiterOwnedSourceRequest):MiterOwnedBoundaryReport=>
- callGeometryRust('brep_miter_owned_construct',source)
+/** Direct geometry has no scalar/frame laws or refinement settings. Rust owns
+ * neutral source construction and all wall/cap error derivation. */
+export type DirectMiterOwnedSourceRequest=Pick<MiterOwnedSourceRequest,
+ 'loops'|'points'|'normal'|'closed'|'miterLimit'|'maxDeviation'|'circleCorrection'|'capCorrection'|'limits'> & {direct:true;capEndpoints?:[boolean,boolean]}
+export type MiterOwnedRequest=MiterOwnedSourceRequest|DirectMiterOwnedSourceRequest
+export const constructMiterOwnedBoundary=(source:MiterOwnedRequest):MiterOwnedBoundaryReport=>{
+ const body=callGeometryRust<MiterOwnedBoundaryReport>('brep_miter_owned_construct',source)
+ if('direct' in source){
+  if(body.retentionMode!=='direct')throw new Error('Native direct miter ownership is unavailable in this kernel')
+  if(source.capEndpoints&&(!body.capEndpoints||source.capEndpoints.some((selected,index)=>body.capEndpoints![index]!==selected)))
+   throw new Error('Native direct cap endpoint selection is unavailable in this kernel')
+ }
+ return body
+}
 
 /** Replays original construction in the receiving realm. No serialized model
  * or supplied numerical certificate participates in native boundary admission. */
-export const reconstructMiterOwnedBoundary=(source:MiterOwnedSourceRequest,options:{quantum:number;tolerance:number;maxWork:number;budget:number;requireSolid?:boolean;wallCells?:number;volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets;expectedSourceModel?:NurbsBrep;expectedSourceCertificate?:SweepBoundaryCertificate;expectedSections?:NurbsCurve[][][];expectedSharp?:number[]}):{
+export const reconstructMiterOwnedBoundary=(source:MiterOwnedRequest,options:{quantum:number;tolerance:number;maxWork:number;budget:number;requireSolid?:boolean;wallCells?:number;volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets;expectedSourceModel?:NurbsBrep;expectedSourceCertificate?:SweepBoundaryCertificate;expectedSections?:NurbsCurve[][][];expectedSharp?:number[]}):{
  model:NurbsBrep|null
  candidate:import('./geometry/brep').SmoothStationWallCandidate|null
  boundaryCertificate:SweepBoundaryCertificate|null

@@ -1,0 +1,1 @@
+export const closedFrenetStationSources=['closed-frenet-arc-circle-solid-station-g2.r','closed-frenet-arc-circle-hollow-station-g2.r','closed-frenet-arc-periodic-solid-station-g2.r','closed-frenet-arc-periodic-hollow-station-g2.r']

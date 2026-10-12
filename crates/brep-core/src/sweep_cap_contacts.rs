@@ -192,6 +192,7 @@ pub(crate) fn inspect_with_separation(model: &Model, cap: usize, caps: &[usize],
         .spanwise_regular
         || !nurbs_core::surface_injectivity::certify(&face.surface, 1)?.proven
     {
+        out.reason = Some("cap-chart-regularity-unproved");
         return Ok(out);
     }
     let loops: Vec<_> = std::iter::once(face.outer)
@@ -215,10 +216,11 @@ pub(crate) fn inspect_with_separation(model: &Model, cap: usize, caps: &[usize],
         budget.max_trim_domain_cells,
     )?;
     if domain.valid != Some(true) {
+        out.reason = Some("cap-trim-domain-unproved");
         return Ok(out);
     }
     let cap_uses = uses(model, cap);
-    let exact = |coedge: &crate::Coedge, face: usize, work: &mut u64| -> Result<bool> {
+    let exact_outcome = |coedge: &crate::Coedge, face: usize, work: &mut u64| -> Result<Option<cad_predicates::BezierIdentity>> {
         let proof = nurbs_core::curve_surface_agreement::verify_exact(
             &model.edges[coedge.edge].curve,
             &coedge.pcurve,
@@ -227,10 +229,13 @@ pub(crate) fn inspect_with_separation(model: &Model, cap: usize, caps: &[usize],
             budget.max_exact_work - *work,
         )?;
         let Some(proof) = proof else {
-            return Ok(false);
+            return Ok(None);
         };
         *work += proof.work_used;
-        Ok(proof.outcome == cad_predicates::BezierIdentity::Equal)
+        Ok(Some(proof.outcome))
+    };
+    let exact = |coedge: &crate::Coedge, face: usize, work: &mut u64| -> Result<bool> {
+        Ok(exact_outcome(coedge,face,work)? == Some(cad_predicates::BezierIdentity::Equal))
     };
     let mut incidence = std::collections::BTreeMap::new();
     for f in 0..model.faces.len() {
@@ -248,8 +253,19 @@ pub(crate) fn inspect_with_separation(model: &Model, cap: usize, caps: &[usize],
             || other.len() != 1
             || !walls.contains(&other[0].0)
             || !opposite(model, cap, other[0].0, c.reversed, other[0].1.reversed)
-            || !exact(c, cap, &mut out.exact_work)?
         {
+            out.reason = Some("cap-incidence-unproved");
+            return Ok(out);
+        }
+        let identity=exact_outcome(c,cap,&mut out.exact_work)?;
+        if identity != Some(cad_predicates::BezierIdentity::Equal) {
+            out.reason = Some(if identity == Some(cad_predicates::BezierIdentity::Different) {
+                "cap-coedge-identity-different"
+            } else if out.exact_work >= budget.max_exact_work {
+                "work-limit"
+            } else {
+                "cap-coedge-identity-unproved"
+            });
             return Ok(out);
         }
     }

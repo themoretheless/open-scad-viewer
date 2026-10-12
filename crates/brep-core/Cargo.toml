@@ -49,3 +49,7 @@ required-features = ["codec"]
 [[example]]
 name = "opposite-boundary-fixtures"
 required-features = ["codec"]
+
+[[example]]
+name = "inspect-shared-boundary"
+required-features = ["codec"]

@@ -203,13 +203,8 @@ pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Inte
         ],
     )
 }
-pub(crate) fn surface_net_on(
-    s: &Surface,
-    span: [usize; 2],
-    domain: [[f64; 2]; 2],
-) -> Result<Vec<Vec<[Interval; 4]>>> {
-    let [iu, iv] = span;
-    let (p, q) = (s.degree_u, s.degree_v);
+fn surface_homogeneous_controls(s: &Surface, span: [usize;2]) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
+    let [iu, iv] = span; let (p,q) = (s.degree_u,s.degree_v);
     let mut controls = Vec::new();
     let mut weights = [f64::INFINITY, 0_f64];
     for i in iu - p..=iu {
@@ -228,29 +223,55 @@ pub(crate) fn surface_net_on(
         }
         controls.push(row);
     }
+    Ok((controls, weights))
+}
+/// Exact Bernstein restriction identity with outward interval arithmetic.
+/// Only complete original Bernstein spans qualify; general B-splines keep
+/// the original blossom routine. No surface poles or knots are modified.
+pub(crate) fn surface_net_on_bernstein(s: &Surface, span: [usize;2], domain: [[f64;2];2]) -> Result<Option<Vec<Vec<[Interval;4]>>>> {
+    let [iu,iv]=span; let (p,q)=(s.degree_u,s.degree_v);
+    if !crate::surface_distance::complete_bernstein_span(p,&s.knots_u,iu)
+        || !crate::surface_distance::complete_bernstein_span(q,&s.knots_v,iv) { return Ok(None); }
+    let spans=[[s.knots_u[iu],s.knots_u[iu+1]],[s.knots_v[iv],s.knots_v[iv+1]]];
+    if (0..2).any(|axis| domain[axis].iter().any(|x|!x.is_finite())
+        ||domain[axis][0]<spans[axis][0]||domain[axis][1]>spans[axis][1]||domain[axis][0]>domain[axis][1]) { return Ok(None); }
+    let (controls,weights)=surface_homogeneous_controls(s,span)?;
+    let mut rows=Vec::with_capacity(p+1);
+    for row in controls {
+        let mut restricted=crate::surface_distance::restrict_bernstein_controls(&row,spans[1],domain[1],weights)?;
+        if restricted.len()==1 { restricted.resize(q+1,restricted[0]); }
+        rows.push(restricted);
+    }
+    let mut out=vec![vec![[Interval::point(0.);4];q+1];p+1];
+    for j in 0..=q {
+        let column=rows.iter().map(|row|row[j]).collect::<Vec<_>>();
+        let mut restricted=crate::surface_distance::restrict_bernstein_controls(&column,spans[0],domain[0],weights)?;
+        if restricted.len()==1 { restricted.resize(p+1,restricted[0]); }
+        for (i,h) in restricted.into_iter().enumerate() { out[i][j]=h; }
+    }
+    Ok(Some(out))
+}
+pub(crate) fn surface_net_on(
+    s: &Surface,
+    span: [usize; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<Vec<Vec<[Interval; 4]>>> {
+    let [iu, iv] = span;
+    let (p, q) = (s.degree_u, s.degree_v);
+    let (controls, weights) = surface_homogeneous_controls(s, span)?;
     let mut out = vec![vec![[Interval::point(0.); 4]; q + 1]; p + 1];
+    let u_plans = (0..=p).map(|u| {
+        let us = (0..p).map(|k| domain[0][usize::from(k >= p - u)]).collect::<Vec<_>>();
+        crate::surface_distance::interpolation_plan(p, &s.knots_u, iu, &us)
+    }).collect::<Result<Vec<_>>>()?;
     for v in 0..=q {
-        let vs = (0..q)
-            .map(|k| domain[1][usize::from(k >= q - v)])
-            .collect::<Vec<_>>();
-        let rows = controls
-            .iter()
-            .map(|r| {
-                crate::surface_distance::interpolate(r.clone(), q, &s.knots_v, iv, &vs, weights)
-            })
-            .collect::<Result<Vec<_>>>()?;
-        for u in 0..=p {
-            let us = (0..p)
-                .map(|k| domain[0][usize::from(k >= p - u)])
-                .collect::<Vec<_>>();
-            out[u][v] = crate::surface_distance::interpolate(
-                rows.clone(),
-                p,
-                &s.knots_u,
-                iu,
-                &us,
-                weights,
-            )?;
+        let vs = (0..q).map(|k| domain[1][usize::from(k >= q - v)]).collect::<Vec<_>>();
+        let v_plan = crate::surface_distance::interpolation_plan(q, &s.knots_v, iv, &vs)?;
+        let rows = controls.iter().map(|r| {
+            crate::surface_distance::interpolate_planned(r.clone(), q, &v_plan, weights)
+        }).collect::<Result<Vec<_>>>()?;
+        for (u, plan) in u_plans.iter().enumerate() {
+            out[u][v] = crate::surface_distance::interpolate_planned(rows.clone(), p, plan, weights)?;
         }
     }
     Ok(out)
@@ -464,4 +485,124 @@ pub(crate) fn trace_candidate(p: &Curve, s: &Surface) -> Result<Option<Curve>> {
     };
     c.validate()?;
     Ok(Some(c))
+}
+
+#[cfg(test)]
+mod coefficient_plan_regression {
+    use super::*;
+fn original_surface_net_on(
+    s: &Surface,
+    span: [usize; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<Vec<Vec<[Interval; 4]>>> {
+    let [iu, iv] = span;
+    let (p, q) = (s.degree_u, s.degree_v);
+    let mut controls = Vec::new();
+    let mut weights = [f64::INFINITY, 0_f64];
+    for i in iu - p..=iu {
+        let mut row = Vec::new();
+        for j in iv - q..=iv {
+            let w = Interval::point(s.weights[i][j]);
+            weights[0] = weights[0].min(w.lo);
+            weights[1] = weights[1].max(w.hi);
+            let cp = &s.control_points[i][j];
+            row.push([
+                Interval::point(cp[0]).mul(w)?,
+                Interval::point(cp[1]).mul(w)?,
+                Interval::point(cp[2]).mul(w)?,
+                w,
+            ]);
+        }
+        controls.push(row);
+    }
+    let mut out = vec![vec![[Interval::point(0.); 4]; q + 1]; p + 1];
+    for v in 0..=q {
+        let vs = (0..q)
+            .map(|k| domain[1][usize::from(k >= q - v)])
+            .collect::<Vec<_>>();
+        let rows = controls
+            .iter()
+            .map(|r| {
+                crate::surface_distance::interpolate(r.clone(), q, &s.knots_v, iv, &vs, weights)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        for u in 0..=p {
+            let us = (0..p)
+                .map(|k| domain[0][usize::from(k >= p - u)])
+                .collect::<Vec<_>>();
+            out[u][v] = crate::surface_distance::interpolate(
+                rows.clone(),
+                p,
+                &s.knots_u,
+                iu,
+                &us,
+                weights,
+            )?;
+        }
+    }
+    Ok(out)
+}
+
+    #[test]
+    fn retained_surface_net_coefficient_plans_keep_original_bits() {
+        for p in 0..=8 { for q in 0..=8 {
+            let s = Surface {
+                degree_u:p, degree_v:q,
+                knots_u:(0..2*p+4).map(|i|i as f64 * 0.25 - 2.).collect(),
+                knots_v:(0..2*q+4).map(|i|i as f64 * 0.125 - 1.).collect(),
+                control_points:(0..p+3).map(|i|(0..q+3).map(|j|
+                    vec![i as f64 * 0.125 - 0.5,j as f64 * 0.25 - 1.,(i*j) as f64 * 0.0625]).collect()).collect(),
+                weights:(0..p+3).map(|i|(0..q+3).map(|j|0.5+((i+2*j)%7) as f64*0.125).collect()).collect(),
+                periodic_u:false, periodic_v:false,
+            };
+            for iu in p..p+3 { for iv in q..q+3 {
+                let span=[iu,iv];
+                for fractions in [[0.,1.],[0.125,0.875],[0.5,0.5]] {
+                    let domain=[(&s.knots_u,iu),(&s.knots_v,iv)].map(|(knots,index)| {
+                        fractions.map(|t|knots[index]+(knots[index+1]-knots[index])*t)
+                    });
+                    let expected=original_surface_net_on(&s,span,domain).unwrap();
+                    let actual=surface_net_on(&s,span,domain).unwrap();
+                    let bits=|net:Vec<Vec<[Interval;4]>>|net.into_iter().flatten()
+                        .flat_map(|point|point.map(|x|[x.lo.to_bits(),x.hi.to_bits()])).collect::<Vec<_>>();
+                    assert_eq!(bits(actual),bits(expected),"degrees={p},{q}, span={span:?}, domain={domain:?}");
+                }
+            }}
+        }}
+    }
+}
+
+#[cfg(test)]
+mod bernstein_section_tests {
+    use super::*;
+    #[test]
+    fn restricted_rational_tensor_coefficients_enclose_independent_monomials() {
+        let mut comparisons=0;
+        for (p,q) in [(1,1),(2,13),(13,2),(13,13)] {
+            let mut s=Surface{degree_u:p,degree_v:q,knots_u:[vec![2.;p+1],vec![6.;p+1]].concat(),
+                knots_v:[vec![-2.;q+1],vec![2.;q+1]].concat(),control_points:vec![vec![vec![0.;3];q+1];p+1],
+                weights:vec![vec![1.;q+1];p+1],periodic_u:false,periodic_v:false};
+            s.weights[p][q]=2.;s.control_points[p][q]=vec![0.5,1.,-0.5];s.validate().unwrap();
+            for u in [[0.,1.],[0.25,0.75],[0.,0.5],[0.5,1.],[0.5,0.5],[0.,0.],[1.,1.]] {
+                for v in [[0.,1.],[0.25,0.75],[0.5,0.5],[0.,0.],[1.,1.]] {
+                    let domain=[[2.+4.*u[0],2.+4.*u[1]],[-2.+4.*v[0],-2.+4.*v[1]]];
+                    let net=surface_net_on_bernstein(&s,[p,q],domain).unwrap().unwrap();
+                    assert_eq!(net.len(),p+1);assert!(net.iter().all(|row|row.len()==q+1));
+                    for i in 0..=p {for j in 0..=q {
+                        // Closed-form Bernstein coefficients of u^p v^q.
+                        // All powers/products here are exactly representable dyadics.
+                        let m=u[0].powi((p-i) as i32)*u[1].powi(i as i32)*v[0].powi((q-j) as i32)*v[1].powi(j as i32);
+                        for (k,exact) in [m,2.*m,-m,1.+m].into_iter().enumerate() {
+                            assert!(net[i][j][k].lo<=exact&&exact<=net[i][j][k].hi,"p={p},q={q},i={i},j={j},k={k},domain={domain:?}");comparisons+=1;
+                        }
+                    }}
+                }
+            }
+            if p>0 {s.knots_u[p+1]=4.;assert!(surface_net_on_bernstein(&s,[p,q],[[2.,4.],[-2.,2.]]).unwrap().is_none());}
+        }
+        assert_eq!(comparisons,39760);
+        let invalid=Surface{degree_u:0,degree_v:0,knots_u:vec![0.,1.],knots_v:vec![0.,1.],
+            control_points:vec![vec![vec![0.;3]]],weights:vec![vec![1.]],periodic_u:false,periodic_v:false};
+        assert!(invalid.validate().is_err());
+    }
 }

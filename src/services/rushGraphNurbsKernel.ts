@@ -1,3 +1,4 @@
+import {packNativeGeometrySnapshot} from './nativeGeometrySnapshot'
 import type {ProgressiveBodyBoundaryEvidence} from './geometry/brep'
 import {transformNurbsCurve} from './nurbsCurve';
 import {transformNurbsSurface,transformNurbsSurfacePatches} from './nurbsSurface';
@@ -18,7 +19,7 @@ import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsP
 import type {SubdivisionCage} from './geometry/subdivision';
 import {tessellateSubdivision} from './geometry/subdivision';
 import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './geometry/sdf';
-import {readMiterAffineReplayRouting,reconstructCertifiedMiterStations,transformCertifiedMiterBody,type CertifiedMiterBoundaryOwner,createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,type ProgressiveMiterBrepBody,createMiterBrepProfileBody,type MiterBrepBody,streamProgressiveBrepProfileBody,createNaturalBrepSectionLoft,createCappedBrepLoftSurfaces,createProgressiveBrepProfileBody,transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
+import {reconstructCertifiedProgressiveStationsAsync,reconstructCertifiedProgressiveStations,type ProgressiveBrepBody,createDirectMiterOwnedBody,readMiterAffineReplayRouting,reconstructCertifiedMiterStations,transformCertifiedMiterBody,type CertifiedMiterBoundaryOwner,createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,type ProgressiveMiterBrepBody,createMiterBrepProfileBody,type MiterBrepBody,streamProgressiveBrepProfileBody,createNaturalBrepSectionLoft,createCappedBrepLoftSurfaces,createProgressiveBrepProfileBody,transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler';
@@ -27,6 +28,18 @@ import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, ele
 import {certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
 import { autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves,boundaryFillNurbsSurfaces,triangularNurbsPatch,gordonNurbsSurface,closedLoftNurbsCurves,clampedLoftNurbsCurves,naturalLoftNurbsCurves,loftAlignedNurbsCurves,sweepNurbsCurve,loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve } from './nurbsConstructors';
 import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './geometry/tessellation';
+type SweepCorrections={circleCorrection?:{tolerance:number;quantum:number;maxWork:number};capCorrection?:{tolerance:number;quantum:number;maxWork:number;authoredFrame?:boolean}}
+function readSweepCorrections(node:any,miter=false,authored=false):SweepCorrections {
+ const out:SweepCorrections={}
+ for(const kind of ['circle','cap'] as const){
+  const tolerance=node[`${kind}_correction_tolerance`],quantum=node[`${kind}_correction_quantum`],work=node[`${kind}_correction_max_work`]
+  if(tolerance===undefined){
+   if(quantum!==undefined||work!==undefined||kind==='cap'&&authored&&node.cap_correction_authored_frame===true)
+    throw new Error(`${miter?'Miter '+kind:kind==='circle'?'Profile circle':'Cap'} correction requires a displacement tolerance`)
+  }else out[`${kind}Correction`]={tolerance,quantum:quantum??2**-40,maxWork:work??1000000,...(kind==='cap'&&authored?{authoredFrame:node.cap_correction_authored_frame}:{})}
+ }
+ return out
+}
 type Mesh = ReturnType<typeof tessellateNurbsSurface>;
 type Value = {kind:'profile';data:PolygonProfile} | {kind:'patches';data:NurbsSurfaceSet} | {kind:'subdivision';data:SubdivisionCage} | {kind:'sdf';data:SdfField} | {kind:'brep';data:NurbsBrep} | {
     kind: 'curve';
@@ -104,6 +117,9 @@ class PendingProgressiveBody {
 type MiterArguments=Parameters<typeof createProgressiveMiterBrepProfileBody>
 type MiterResolver=(nodeId:string,args:MiterArguments)=>ProgressiveMiterBrepBody
 class PendingProgressiveMiter {constructor(readonly nodeId:string,readonly args:MiterArguments){}}
+type StationArguments=Parameters<typeof reconstructCertifiedProgressiveStations>
+type StationResolver=(nodeId:string,args:StationArguments)=>ReturnType<typeof reconstructCertifiedProgressiveStations>
+class PendingProgressiveStations {constructor(readonly nodeId:string,readonly args:StationArguments){}}
 export interface OwnNurbsBuildControl {
  shouldAbort?:()=>boolean
  onYield?:()=>void
@@ -114,6 +130,7 @@ export function buildOwnNurbs(document:unknown,request:OwnNurbsRequest){
 }
 /** Keeps graph evaluation synchronous except for bounded progressive sweep levels. */
 export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsRequest,control:OwnNurbsBuildControl={}){
+ const stations=new Map<string,ReturnType<typeof reconstructCertifiedProgressiveStations>>()
  const completed=new Map<string,ReturnType<typeof progressiveSweepNurbsProfiles>>()
  const bodies=new Map<string,ReturnType<typeof createProgressiveBrepProfileBody>>()
  const miters=new Map<string,ProgressiveMiterBrepBody>()
@@ -140,7 +157,9 @@ export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsReques
     const ready=bodies.get(nodeId)
     if(ready)return ready
     throw new PendingProgressiveBody(nodeId,args)
-   },(nodeId,args)=>{const ready=miters.get(nodeId);if(ready)return ready;throw new PendingProgressiveMiter(nodeId,args)})
+   },(nodeId,args)=>{const ready=miters.get(nodeId);if(ready)return ready;throw new PendingProgressiveMiter(nodeId,args)},(nodeId,args)=>{
+    const ready=stations.get(nodeId);if(ready)return ready;throw new PendingProgressiveStations(nodeId,args)
+   })
   }catch(error){
    if(error instanceof PendingProgressiveSweep){
     completed.set(error.nodeId,await consume(error.nodeId,
@@ -150,11 +169,13 @@ export async function buildOwnNurbsAsync(document:unknown,request:OwnNurbsReques
      streamProgressiveBrepProfileBody(...error.args,{shouldAbort:control.shouldAbort})))
    }else if(error instanceof PendingProgressiveMiter){
     miters.set(error.nodeId,await consume(error.nodeId,streamProgressiveMiterBrepProfileBody(...error.args,{shouldAbort:control.shouldAbort})))
+   }else if(error instanceof PendingProgressiveStations){
+    stations.set(error.nodeId,await reconstructCertifiedProgressiveStationsAsync(...error.args,control))
    }else throw error
   }
  }
 }
-function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resolveSweep?:SweepResolver,resolveBody?:BodyResolver,resolveMiter?:MiterResolver) {
+function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resolveSweep?:SweepResolver,resolveBody?:BodyResolver,resolveMiter?:MiterResolver,resolveStations?:StationResolver) {
     if (!['build', 'evaluate', 'export'].includes(request.action) || (request.evaluations?.length ?? 0) > 64)
         throw new Error('Invalid NURBS request or evaluation budget exceeded.');
     const compiled = compileRushGraphNurbs(document), nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n])), cache = new Map<string, Value>();
@@ -167,9 +188,10 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
     const needBrep=(key:string):NurbsBrep=>{const v=get(key);if(v.kind!=='brep')throw new Error('Expected a B-rep body');return v.data;};
     const needSdf=(key:string):SdfField=>{const v=get(key);if(v.kind!=='sdf')throw new Error('Expected SDF field');return v.data;};
     const reconstructionReports:Record<string,unknown>={};
+    const progressiveBodySources=new Map<string,ProgressiveBrepBody>()
     const miterSources=new Map<string,CertifiedMiterBoundaryOwner>()
     const exactMiterPlacements=new Map<string,{body:CertifiedMiterBoundaryOwner;quantum:number;maxWork:number}>()
-    const constructionReports:Record<string,(Omit<ProgressiveMiterBrepBody["approximation"]["report"],"continuousBound"> & {continuousBound:boolean;profileSmoothness:ProgressiveMiterBrepBody["profileSmoothness"];boundaryCertificate:ProgressiveMiterBrepBody["boundaryCertificate"];retainedCapDecomposition:ProgressiveMiterBrepBody["retainedCapDecomposition"];retainedDecomposition:ProgressiveMiterBrepBody["retainedDecomposition"];capParallelism:ProgressiveMiterBrepBody["capParallelism"];levels:ProgressiveMiterBrepBody["approximation"]["levels"];boundaryErrorWithinBudget:ProgressiveMiterBrepBody["boundaryErrorWithinBudget"];boundaryErrorUpper:ProgressiveMiterBrepBody["boundaryErrorUpper"];filledCapErrorUpper:ProgressiveMiterBrepBody["filledCapErrorUpper"];idealCapDomains:ProgressiveMiterBrepBody["idealCapDomains"];capProjection:ProgressiveMiterBrepBody["capProjection"];retainedWallErrorUpper:ProgressiveMiterBrepBody["retainedWallErrorUpper"];sectionCorrection?:ProgressiveMiterBrepBody["sectionCorrection"];wallAudit:ProgressiveMiterBrepBody["wallAudit"];retainedCorrespondence:ProgressiveMiterBrepBody["retainedCorrespondence"];retainedCaps:ProgressiveMiterBrepBody["retainedCaps"];retainedWallCharts:ProgressiveMiterBrepBody["retainedWallCharts"];capDomains:ProgressiveMiterBrepBody["capDomains"];capContacts:ProgressiveMiterBrepBody["capContacts"];capPairs:ProgressiveMiterBrepBody["capPairs"];embedding:ProgressiveMiterBrepBody["embedding"];volume:ProgressiveMiterBrepBody["volume"];globalEmbeddingCertified:false})|ReturnType<typeof reconstructCertifiedMiterStations>|ReturnType<typeof transformCertifiedMiterBody>|MiterBrepBody["report"]|{method:"automatic-loft-alignment"|"loft-end-jets";guideParameters?:number[];guideOrder?:number[];reversed?:boolean[];seams?:unknown[];sectionErrorUpper:number[];guideErrorUpper:number[]}|FramedSweepResult["report"]|NurbsHelixApproximation["report"]|(ProgressiveSweepReport & {levels:ProgressiveSweepReport[];profilePatchRanges:[number,number][]|null;globalEmbeddingCertified?:false;bodyBoundaryEvidence?:ProgressiveBodyBoundaryEvidence})>={};
+    const constructionReports:Record<string,(Omit<ProgressiveMiterBrepBody["approximation"]["report"],"continuousBound"> & {continuousBound:boolean;profileSmoothness:ProgressiveMiterBrepBody["profileSmoothness"];boundaryCertificate:ProgressiveMiterBrepBody["boundaryCertificate"];retainedCapDecomposition:ProgressiveMiterBrepBody["retainedCapDecomposition"];retainedDecomposition:ProgressiveMiterBrepBody["retainedDecomposition"];capParallelism:ProgressiveMiterBrepBody["capParallelism"];levels:ProgressiveMiterBrepBody["approximation"]["levels"];boundaryErrorWithinBudget:ProgressiveMiterBrepBody["boundaryErrorWithinBudget"];boundaryErrorUpper:ProgressiveMiterBrepBody["boundaryErrorUpper"];filledCapErrorUpper:ProgressiveMiterBrepBody["filledCapErrorUpper"];idealCapDomains:ProgressiveMiterBrepBody["idealCapDomains"];capProjection:ProgressiveMiterBrepBody["capProjection"];retainedWallErrorUpper:ProgressiveMiterBrepBody["retainedWallErrorUpper"];sectionCorrection?:ProgressiveMiterBrepBody["sectionCorrection"];wallAudit:ProgressiveMiterBrepBody["wallAudit"];retainedCorrespondence:ProgressiveMiterBrepBody["retainedCorrespondence"];retainedCaps:ProgressiveMiterBrepBody["retainedCaps"];retainedWallCharts:ProgressiveMiterBrepBody["retainedWallCharts"];capDomains:ProgressiveMiterBrepBody["capDomains"];capContacts:ProgressiveMiterBrepBody["capContacts"];capPairs:ProgressiveMiterBrepBody["capPairs"];embedding:ProgressiveMiterBrepBody["embedding"];volume:ProgressiveMiterBrepBody["volume"];globalEmbeddingCertified:false})|ReturnType<typeof reconstructCertifiedProgressiveStations>|ReturnType<typeof reconstructCertifiedMiterStations>|ReturnType<typeof transformCertifiedMiterBody>|ReturnType<typeof createDirectMiterOwnedBody>["report"]|MiterBrepBody["report"]|{method:"automatic-loft-alignment"|"loft-end-jets";guideParameters?:number[];guideOrder?:number[];reversed?:boolean[];seams?:unknown[];sectionErrorUpper:number[];guideErrorUpper:number[]}|FramedSweepResult["report"]|NurbsHelixApproximation["report"]|(ProgressiveSweepReport & {levels:ProgressiveSweepReport[];profilePatchRanges:[number,number][]|null;globalEmbeddingCertified?:false;bodyBoundaryEvidence?:ProgressiveBodyBoundaryEvidence})>={};
     let meshTriangles = 0;
     function get(key: string): Value {
         const cached = cache.get(key);
@@ -406,6 +428,9 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     if(!builtSweep.report.accepted||!builtSweep.patches){
                         const report=builtSweep.report;
                         if(n.rmf_transport_steps!==undefined&&!report.continuousBound)throw new Error("Progressive sweep continuous retained-patch error is unproved at the configured RMF work budget");
+                        if(!report.continuousBound&&report.sampledControlDeviation<=report.budget&&
+                            !(report.knownProfileErrorUpper!=null&&report.knownProfileErrorUpper>report.budget))
+                            throw new Error(`Progressive sweep continuous retained-patch error is unproved (${report.errorCertificateReason??'native certificate unresolved'}); sampled refinement ${report.sampledControlDeviation}mm is within ${report.budget}mm at ${report.sections} sections`);
                         const error=report.knownProfileErrorUpper!=null&&report.knownProfileErrorUpper>report.budget
                             ?`continuous retained-patch error ${report.knownProfileErrorUpper}`
                             :`sampled refinement ${report.sampledControlDeviation}`;
@@ -440,13 +465,21 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     result={kind:'surface',data:built.surface};break;
                 }
                 case 'brep_progressive_miter_sweep': {
-                    if(n.cap_correction_tolerance===undefined&&(n.cap_correction_quantum!==undefined||n.cap_correction_max_work!==undefined||n.cap_correction_authored_frame===true))throw new Error('Miter cap correction requires a displacement tolerance');
-                    if(n.circle_correction_tolerance===undefined&&(n.circle_correction_quantum!==undefined||n.circle_correction_max_work!==undefined))throw new Error('Miter circle correction requires a displacement tolerance');
-                    const args:MiterArguments=[n.loops.map(wire=>wire.map(needCurve)),n.points,n.scale,n.twist,{...(n.circle_correction_tolerance===undefined?{}:{circleCorrection:{tolerance:n.circle_correction_tolerance,quantum:n.circle_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??1000000}}),retainedWallMaxInjectivityCells:n.retained_wall_max_injectivity_cells,...(n.cap_correction_tolerance===undefined?{}:{capCorrection:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000,authoredFrame:n.cap_correction_authored_frame}}),...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide)}:{}),frameAxis:n.frame_axis,frameNormal:n.frame_normal,axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,closed:n.closed,miterLimit:n.miter_limit,initialSteps:n.initial_steps,maxSteps:n.max_steps,maxDeviation:n.max_deviation}];
+                    const corrections=readSweepCorrections(n,true,true);
+                    const args:MiterArguments=[n.loops.map(wire=>wire.map(needCurve)),n.points,n.scale,n.twist,{...corrections,retainedWallMaxInjectivityCells:n.retained_wall_max_injectivity_cells,...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide)}:{}),frameAxis:n.frame_axis,frameNormal:n.frame_normal,axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,closed:n.closed,miterLimit:n.miter_limit,initialSteps:n.initial_steps,maxSteps:n.max_steps,maxDeviation:n.max_deviation}];
                     const body=resolveMiter?resolveMiter(key,args):createProgressiveMiterBrepProfileBody(...args);
                     miterSources.set(key,body);
                     constructionReports[key]={...body.approximation.report,continuousBound:body.boundaryCertificate.continuousBound,profileSmoothness:body.profileSmoothness,boundaryCertificate:body.boundaryCertificate,wallRegularityCertified:body.retainedWallCharts.allChartsCertified,levels:body.approximation.levels,sectionCorrection:body.sectionCorrection,retainedWallErrorUpper:body.retainedWallErrorUpper,capProjection:body.capProjection,capParallelism:body.capParallelism,retainedCapDecomposition:body.retainedCapDecomposition,retainedDecomposition:body.retainedDecomposition,idealCapDomains:body.idealCapDomains,filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,wallAudit:body.wallAudit,retainedCorrespondence:body.retainedCorrespondence,retainedCaps:body.retainedCaps,retainedWallCharts:body.retainedWallCharts,capDomains:body.capDomains,capContacts:body.capContacts,capPairs:body.capPairs,embedding:body.embedding,volume:body.volume,globalEmbeddingCertified:false};
                     if(n.circle_correction_tolerance!==undefined||n.cap_correction_tolerance!==undefined||(body.sectionCorrection?.reason==='automatic-bounded-cap-planarity'||body.sectionCorrection?.reason==='bounded-periodic-profile-interpolation'||body.sectionCorrection?.reason==='bounded-rational-periodic-profile-interpolation'))exactMiterPlacements.set(key,{body,quantum:n.circle_correction_quantum??n.cap_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??n.cap_correction_max_work??1000000});
+                    result={kind:'brep',data:body.model};break;
+                }
+                case 'brep_smooth_sweep_stations': {
+                    needBrep(n.input);
+                    const source=progressiveBodySources.get(n.input);
+                    if(!source)throw new Error('Missing owned progressive station source');
+                    const args:StationArguments=[source,{quantum:n.quantum,wallTolerance:n.wall_tolerance,maxWork:n.max_work,smoothnessMaxWork:n.smoothness_max_work}];
+                    const body=resolveStations?resolveStations(key,args):reconstructCertifiedProgressiveStations(...args);
+                    constructionReports[key]=body;
                     result={kind:'brep',data:body.model};break;
                 }
                 case 'brep_smooth_miter_stations': {
@@ -458,7 +491,20 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     exactMiterPlacements.set(key,{body,quantum:n.quantum,maxWork:n.max_work});
                     result={kind:'brep',data:body.model};break;
                 }
-                case 'brep_miter_sweep': {if(n.cap_correction_tolerance===undefined&&(n.cap_correction_quantum!==undefined||n.cap_correction_max_work!==undefined))throw new Error('Miter cap correction requires a displacement tolerance');const body=createMiterBrepProfileBody(n.loops.map(wire=>wire.map(needCurve)),n.points,n.normal,n.miter_limit,n.closed,n.cap_correction_tolerance===undefined?undefined:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000});constructionReports[key]=body.report;result={kind:'brep',data:body.model};break;}
+                case 'brep_miter_sweep': {
+                    const corrections=readSweepCorrections(n,true);
+                    if(n.max_deviation===undefined&&n.circle_correction_tolerance!==undefined)throw new Error('Direct miter circle correction requires max_deviation');
+                    if(n.max_deviation!==undefined){
+
+                        const body=createDirectMiterOwnedBody({direct:true,loops:n.loops.map(wire=>wire.map(needCurve)),points:n.points,normal:n.normal,closed:n.closed,miterLimit:n.miter_limit,maxDeviation:n.max_deviation,
+                            ...corrections,
+                            });
+                        if(!body.boundaryCertificate.continuousBound||body.boundaryCertificate.withinBudget!==true)throw new Error('Direct miter complete boundary error exceeds max_deviation or is unproved');
+                        miterSources.set(key,body);
+                        exactMiterPlacements.set(key,{body,quantum:n.circle_correction_quantum??n.cap_correction_quantum??2**-40,maxWork:n.circle_correction_max_work??n.cap_correction_max_work??1000000});
+                        constructionReports[key]=body.report;result={kind:'brep',data:body.model};break;
+                    }
+                    const body=createMiterBrepProfileBody(n.loops.map(wire=>wire.map(needCurve)),n.points,n.normal,n.miter_limit,n.closed,corrections.capCorrection);constructionReports[key]=body.report;result={kind:'brep',data:body.model};break;}
                 case 'brep_natural_loft': result={kind:'brep',data:createNaturalBrepSectionLoft(n.sections.map(s=>s.map(r=>r.map(needCurve))),n.parameters)};break;
                 case 'brep_capped_loft': result={kind:'brep',data:createCappedBrepLoftSurfaces(n.start.map(r=>r.map(needCurve)),n.end.map(r=>r.map(needCurve)),n.sides.map(r=>r.map(needSurface)))};break;
                 case 'guided_loft_surface': result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
@@ -537,14 +583,15 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
                     result={kind:'brep',data:extrudeBrepPolygon(profile.data.outer as [number,number][],Math.min(0,n.height),Math.max(0,n.height),profile.data.holes as [number,number][][])};break;
                 }
                 case 'brep_progressive_sweep': {
+                    const corrections=readSweepCorrections(n);
                     if(n.orientation==='authored'&&(!n.frame_axis||!n.frame_normal))throw new Error('Authored progressive body requires frame_axis and frame_normal');
                     if((n.contact_parameter!==undefined&&!n.orientation_guide)||(n.contact_profile!==undefined&&n.contact_parameter===undefined))throw new Error('Contact anchor requires orientation_guide and contact_parameter');
-                    if(n.cap_correction_tolerance===undefined&&(n.cap_correction_quantum!==undefined||n.cap_correction_max_work!==undefined))throw new Error('Cap correction requires a displacement tolerance');
                     const frameOptions=n.orientation==='authored'?{orientation:'authored' as const,frameAxis:n.frame_axis!,frameNormal:n.frame_normal!}:{orientation:n.orientation};
                     const makeBody=(...args:BodyArguments)=>resolveBody?resolveBody(key,args):createProgressiveBrepProfileBody(...args);
-                    const body=makeBody(n.loops.map(wire=>wire.map(needCurve)),needCurve(n.inputs[0]),n.scale,n.twist,{...(n.cap_correction_tolerance===undefined?{}:{capCorrection:{tolerance:n.cap_correction_tolerance,quantum:n.cap_correction_quantum??2**-40,maxWork:n.cap_correction_max_work??1000000}}),...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide),...(n.contact_parameter!==undefined?{contactAnchor:{profileIndex:n.contact_profile??0,parameter:n.contact_parameter}}:{})}:{}),axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,...frameOptions,spacing:n.spacing,initialSections:n.initial_sections,maxSections:n.max_sections,maxDeviation:n.max_deviation,lengthTolerance:n.length_tolerance,lengthMaxCells:n.length_max_cells,rmfTransportSteps:n.rmf_transport_steps,errorMaxCells:n.error_max_cells,errorMaxProducts:n.error_max_products});
+                    const body=makeBody(n.loops.map(wire=>wire.map(needCurve)),needCurve(n.inputs[0]),n.scale,n.twist,{...corrections,...(n.orientation_guide?{orientationGuide:needCurve(n.orientation_guide),...(n.contact_parameter!==undefined?{contactAnchor:{profileIndex:n.contact_profile??0,parameter:n.contact_parameter}}:{})}:{}),axisScale:n.axis_scale,centerLaw:n.center_law,normal:n.normal,...frameOptions,spacing:n.spacing,initialSections:n.initial_sections,maxSections:n.max_sections,maxDeviation:n.max_deviation,lengthTolerance:n.length_tolerance,lengthMaxCells:n.length_max_cells,rmfTransportSteps:n.rmf_transport_steps,errorMaxCells:n.error_max_cells,errorMaxProducts:n.error_max_products});
+                    progressiveBodySources.set(key,body);
                     constructionReports[key]={...body.approximation.report,levels:body.approximation.levels,profilePatchRanges:body.approximation.profilePatchRanges,globalEmbeddingCertified:body.globalEmbeddingCertified,
-                        bodyBoundaryEvidence:{capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,
+                        bodyBoundaryEvidence:{profileCorrectionErrorUpper:body.profileCorrectionErrorUpper,profileSmoothness:body.profileSmoothness,capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,
                             bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts,
                             filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,
                             boundaryContinuousBound:body.boundaryContinuousBound,boundaryErrorScope:body.boundaryErrorScope,
@@ -605,7 +652,7 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
             }
         }
         catch (error) {
-            if(error instanceof PendingProgressiveSweep||error instanceof PendingProgressiveBody||error instanceof PendingProgressiveMiter)throw error;
+            if(error instanceof PendingProgressiveSweep||error instanceof PendingProgressiveBody||error instanceof PendingProgressiveMiter||error instanceof PendingProgressiveStations)throw error;
             throw new Error(`Node ${key}: ${error instanceof Error ? error.message : 'NURBS operation failed.'}`);
         }
         if(result.kind==='sdf')evaluateSdf(result.data,[0,0,0]);
@@ -672,33 +719,16 @@ function buildOwnNurbsResolved(document: unknown, request: OwnNurbsRequest,resol
         const sourceConstruction=constructionReports[sourceNode];
         // Evidence is snapshot-local and belongs only to this exact source
         // node. Derived/edited nodes do not inherit another body's certificate.
-        const sweepEvidence=sourceConstruction && 'volume' in sourceConstruction ? {
-            volume:sourceConstruction.volume,
-            profileSmoothness:'profileSmoothness' in sourceConstruction?sourceConstruction.profileSmoothness:null,
-            boundaryCertificate:'boundaryCertificate' in sourceConstruction?sourceConstruction.boundaryCertificate:null,
-            certifiedErrorUpper:'certifiedErrorUpper' in sourceConstruction?sourceConstruction.certifiedErrorUpper:null,
-            retainedCapDecomposition:'retainedCapDecomposition' in sourceConstruction?sourceConstruction.retainedCapDecomposition:null,
-            retainedDecomposition:'retainedDecomposition' in sourceConstruction?sourceConstruction.retainedDecomposition:null,
-            retainedWallErrorUpper:'retainedWallErrorUpper' in sourceConstruction?sourceConstruction.retainedWallErrorUpper:null,
-            capParallelism:'capParallelism' in sourceConstruction?sourceConstruction.capParallelism:null,
-            capProjection:'capProjection' in sourceConstruction?sourceConstruction.capProjection:null,
-            idealCapDomains:'idealCapDomains' in sourceConstruction?sourceConstruction.idealCapDomains:null,
-            filledCapErrorUpper:'filledCapErrorUpper' in sourceConstruction?sourceConstruction.filledCapErrorUpper:null,
-            boundaryErrorUpper:'boundaryErrorUpper' in sourceConstruction?sourceConstruction.boundaryErrorUpper:null,
-            boundaryErrorWithinBudget:'boundaryErrorWithinBudget' in sourceConstruction?sourceConstruction.boundaryErrorWithinBudget:null,
-            boundaryErrorBudget:'boundaryErrorWithinBudget' in sourceConstruction&&'budget' in sourceConstruction?sourceConstruction.budget:null,
-            sectionCorrection:'sectionCorrection' in sourceConstruction?sourceConstruction.sectionCorrection:null,
-            endpointContourErrorUpper:'endpointContourErrorUpper' in sourceConstruction?sourceConstruction.endpointContourErrorUpper:null,
-            authoredFramesApplied:'authoredFramesApplied' in sourceConstruction?sourceConstruction.authoredFramesApplied:false,
-            orientationGuideApplied:'orientationGuideApplied' in sourceConstruction?sourceConstruction.orientationGuideApplied:false,
-            affineLawsApplied:'affineLawsApplied' in sourceConstruction?sourceConstruction.affineLawsApplied:false,
-            profileRegularityCertified:'profileRegularityCertified' in sourceConstruction?sourceConstruction.profileRegularityCertified:false,
-            wallRegularityCertified:'wallRegularityCertified' in sourceConstruction?sourceConstruction.wallRegularityCertified:false,
-            continuousBound:sourceConstruction.continuousBound,
+        const evidenceSource=sourceConstruction as unknown as Record<string,unknown>|undefined;
+        const sweepEvidence=evidenceSource && 'volume' in evidenceSource ? {
+            ...Object.fromEntries(['profileSmoothness','boundaryCertificate','certifiedErrorUpper','retainedCapDecomposition','retainedDecomposition','retainedWallErrorUpper','capParallelism','capProjection','idealCapDomains','filledCapErrorUpper','boundaryErrorUpper','boundaryErrorWithinBudget','sectionCorrection','endpointContourErrorUpper'].map(key=>[key,key in evidenceSource?evidenceSource[key]:null])),
+            ...Object.fromEntries(['authoredFramesApplied','orientationGuideApplied','affineLawsApplied','profileRegularityCertified','wallRegularityCertified'].map(key=>[key,key in evidenceSource?evidenceSource[key]:false])),
+            volume:evidenceSource.volume,continuousBound:evidenceSource.continuousBound,
+            boundaryErrorBudget:'boundaryErrorWithinBudget' in evidenceSource&&'budget' in evidenceSource?evidenceSource.budget:null,
         }:undefined;
         const replayOwner=exactMiterPlacements.get(sourceNode)?.body
         const sweepMiterReplay=replayOwner?readMiterAffineReplayRouting(replayOwner):null
-        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document);
+        const nativeGeometry=createNativeGeometryArtifact(sourceNode,sourceValue.kind,{geometry:sourceValue.data,boundary,...(sweepMiterReplay?{sweepMiterReplay}:{}),...(sweepEvidence?{sweepEvidence}: {}),...(sourceConstruction&&'stationReconstruction' in sourceConstruction?{sweepStationReconstruction:sourceConstruction.stationReconstruction}:{}),...(sourceValue.kind==='brep'&&sourceConstruction&&'bodyBoundaryEvidence' in sourceConstruction?{sweepBodyBoundaryEvidence:sourceConstruction.bodyBoundaryEvidence}:{}),...(sourceValue.kind==='patches'&&sourceConstruction&&'method' in sourceConstruction&&sourceConstruction.method==='progressive-fourfold-section-refinement'?{sweepPatchEvidence:sourceConstruction}:{})},compiled.document,packNativeGeometrySnapshot);
         return {...base,...(mesh?{mesh}:{}),nativeGeometry};
     }
     return { ...base, ...(request.action === 'build' && root.kind === 'mesh' ? { mesh: root.data } : {}) };

@@ -1,5 +1,6 @@
+import {readNativeGeometryData} from './nativeGeometrySnapshot'
 import {callGeometryRust} from './geometry/kernel'
-import type {NativeGeometryArtifact} from '../core/nativeGeometry'
+import {isNativeGeometryArtifact,type NativeGeometryArtifact} from '../core/nativeGeometry'
 import type {NurbsBrep} from './geometry/brep'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from './nurbsSweepEmbedding'
 /** Recompute material evidence for the exact B-rep being transferred.
@@ -13,22 +14,25 @@ export function inspectProgressiveSweepSolidAdmission(artifact:NativeGeometryArt
  // Affine B-rep transforms preserve face ownership, including endpoint caps.
  // Follow provenance only to choose the audit scope; recompute the certificate
  // on the transformed model rather than inheriting the source's positive flag.
- while(node?.op==='transform'||node?.op==='brep_smooth_miter_stations') {
+ while(node?.op==='transform'||node?.op==='brep_smooth_miter_stations'||node?.op==='brep_smooth_sweep_stations') {
   if(visited.has(node.id))throw new Error('Cyclic sweep transform provenance.')
   visited.add(node.id)
   if(typeof node.input!=='string'||!nodes.has(node.input))throw new Error('Missing sweep transform source.')
   node=nodes.get(node.input)
  }
  if(node?.op!=='brep_progressive_miter_sweep'&&node?.op!=='brep_miter_sweep'&&node?.op!=='brep_progressive_sweep')return null
+ // A tampered receipt supplies no scope or replay premises. Admission still
+ // audits the supplied actual model; positive flags are never substitutes.
+ const snapshot=isNativeGeometryArtifact(artifact)?readNativeGeometryData(artifact):null
  // Constructor closure chooses the native audit scope only. Every selected
  // cap and every other retained face is recomputed on the actual model; no
  // positive snapshot certificate is admitted. Missing scope uses all faces.
  const closed=node.op==='brep_progressive_sweep'
-  ?JSON.parse(artifact.geometryJson)?.sweepBodyBoundaryEvidence?.closedPath
+  ?(snapshot?.sweepStationReconstruction?.closedPath??snapshot?.sweepBodyBoundaryEvidence?.closedPath)
   :node.closed
  const caps=closed===false||node.op!=='brep_progressive_sweep'&&closed!==true
   ?[model.faces.length-2,model.faces.length-1]:[]
- const replay=JSON.parse(artifact.geometryJson)?.sweepMiterReplay
+ const replay=snapshot?.sweepMiterReplay
  const report: SweepVolumeAudit = replay
   ? (()=>{
     const result=callGeometryRust<{volume:SweepVolumeAudit|null;solidGeometryCertified:boolean;resultModelBound:boolean}>('brep_miter_owned_place',{

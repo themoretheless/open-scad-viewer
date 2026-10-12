@@ -195,6 +195,91 @@ fn miter_sections_impl(
 mod tests {
     use super::*;
     #[test]
+    fn direct_and_neutral_progressive_sections_keep_the_same_source_geometry() {
+        use crate::sweeps::progressive_miter::{Options, Sweep};
+        let scalar = |value| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![value, 0., 0.]; 2],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let scale = scalar(1.);
+        let twist = scalar(0.);
+        let profile = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0.5, 0., 0.], vec![0.5, 0.5, 0.], vec![0., 0.5, 0.]],
+            weights: vec![1., std::f64::consts::FRAC_1_SQRT_2, 1.],
+            periodic: false,
+        };
+        let mut cyclic_profile = profile.clone();
+        for pole in &mut cyclic_profile.control_points {
+            *pole = vec![pole[2], pole[0], pole[1]];
+        }
+        for (profile, points, normal, closed) in [
+            (
+                profile.clone(),
+                vec![[0., 0., 0.], [0., 0., 10.]],
+                [1., 0., 0.],
+                false,
+            ),
+            (
+                profile,
+                vec![[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]],
+                [1., 0., 0.],
+                false,
+            ),
+            (
+                cyclic_profile,
+                vec![[0., 0., 0.], [10., 0., 0.], [10., 10., 0.], [0., 10., 0.]],
+                [0., 0., 1.],
+                true,
+            ),
+        ] {
+            let profiles = [profile.clone()];
+            let direct = if closed {
+                closed_miter_sections(&profiles, &points, normal, 2.)
+            } else {
+                miter_sections(&profiles, &points, normal, 2.)
+            }
+            .unwrap();
+            let sweep = Sweep::new(
+                &profiles,
+                &points,
+                &scale,
+                &twist,
+                Options {
+                    normal,
+                    closed,
+                    miter_limit: 2.,
+                    initial_steps: 1,
+                    max_steps: 1,
+                    max_deviation: 0.01,
+                },
+            )
+            .unwrap();
+            let neutral = sweep.sections_at(1).unwrap();
+            assert_eq!(
+                direct, neutral,
+                "Neutral progressive geometry changed the direct miter source"
+            );
+            let proof = sweep.certify_level(1, &direct, 10000, 10000).unwrap();
+            assert_eq!(
+                proof.status,
+                crate::progressive_miter::scalar_certificate::Status::Certified,
+                "{proof:?}"
+            );
+            assert!(proof.error_upper.is_some_and(|upper| upper <= 0.01));
+            let empty = sweep.certify_level(1, &direct, 0, 10000).unwrap();
+            assert_eq!(
+                empty.status,
+                crate::progressive_miter::scalar_certificate::Status::Unresolved
+            );
+            assert!(empty.error_upper.is_none());
+        }
+    }
+    #[test]
     fn cyclic_miter_preserves_seam_bisectors_and_segment_extrusion() {
         let points = [[0., 0., 0.], [10., 0., 0.], [10., 10., 0.], [0., 10., 0.]];
         let profile = crate::primitives::line([0., 0.1, 0.2], [0., 0.3, 0.4]).unwrap();

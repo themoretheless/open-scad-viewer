@@ -13,7 +13,7 @@ export function compactWgslLiterals(source) {
 }
 export function compactWgslPlugin() {
   return {name:'compact-static-wgsl',apply:'build',enforce:'pre',transform(source,id){
-    if (!/\/src\/services\/(shaders\/generated\/sources|solidGpuView)\.ts$/.test(id)) return
+    if (!/\/src\/services\/(shaders\/generated\/sources|solidGpuView|gpuMarchingCubes|gpuWboit|gpuNurbsTessellate|gpuCsgPreview|gpuPicker|gpuSlicer|geometryCompute|gpuSemanticEdges)\.ts$/.test(id)) return
     return {code:compactWgslLiterals(source),map:null}
   }}
 }

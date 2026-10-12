@@ -83,6 +83,15 @@ fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static str> {
         .filter(|&v| v)
         .map(|_| label)
 }
+fn inspect_owned_seams(patches:&[Surface],seams:&[ProjectiveSeam],axis:Axis,max_work:u64)->Result<ProjectiveSeamCollectionReport> {
+    // Sharp stations invalidate the whole-axis claim, but cannot hide later
+    // applicable smooth station joins. Preserve the shared caller work ceiling.
+    Ok(if axis==Axis::Station {
+        continuity::inspect_projective_seam_collection_with_rational_scale_proposals(patches,seams,max_work)?
+    }else{
+        continuity::inspect_projective_seam_collection_until_refused(patches,seams,max_work)?
+    })
+}
 pub fn inspect_axis(
     model: &Model,
     cap_faces: &[usize],
@@ -188,9 +197,7 @@ pub fn inspect_axis(
         .map(|f| f.surface.clone())
         .collect::<Vec<_>>();
     let extraction_complete = unclassified_faces.is_empty() && unpaired_edges.is_empty();
-    let mut g2 = continuity::inspect_projective_seam_collection_until_refused(
-        &patches, &seams, max_work,
-    )?;
+    let mut g2 = inspect_owned_seams(&patches,&seams,axis,max_work)?;
     if !extraction_complete {
         g2.certified = false;
         g2.certified_order = None;
@@ -203,11 +210,7 @@ pub fn inspect_axis(
             seam.order = 1;
         }
         let mut proof =
-            continuity::inspect_projective_seam_collection_until_refused(
-                &patches,
-                &seams,
-                max_work - exact_work,
-            )?;
+            inspect_owned_seams(&patches,&seams,axis,max_work-exact_work)?;
         if !extraction_complete {
             proof.certified = false;
             proof.certified_order = None;
@@ -259,6 +262,25 @@ pub fn inspect_profile(model: &Model, cap_faces: &[usize], max_work: u64) -> Res
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_sharp_first_station_does_not_hide_later_smooth_station_joins() {
+        let shifts=[[0.,0.,0.],[1.,0.,1.],[1.,0.,2.],[1.,0.,4.]];
+        let corners=[[0.,0.],[1.,0.],[1.,1.],[0.,1.],[0.,0.]];
+        let sections=shifts.iter().map(|p|vec![corners.windows(2).map(|v|
+            nurbs_core::primitives::line([v[0][0]+p[0],v[0][1],p[2]],[v[1][0]+p[0],v[1][1],p[2]]).unwrap()
+        ).collect::<Vec<_>>()]).collect::<Vec<_>>();
+        let model=crate::rational_section_loft(&sections).unwrap();let before=model.clone();
+        let caps=[model.faces.len()-2,model.faces.len()-1];
+        let report=inspect_axis(&model,&caps,Axis::Station,2000000).unwrap();
+        assert!(report.extraction_complete);assert!(!report.g2_certified);
+        assert_eq!(report.g2.seams.len(),8);
+        assert_eq!(report.g2.seams.iter().filter(|s|s.certified).count(),4);
+        assert!(report.exact_work<=2000000);assert_eq!(model,before);
+        let denied=inspect_axis(&model,&caps,Axis::Station,0).unwrap();
+        assert!(!denied.g2_certified);assert_eq!(denied.exact_work,0);
+        assert!(denied.g2.seams.iter().all(|s|!s.certified));
+    }
+
     use super::*;
     #[test]
     fn unequal_profile_strip_speeds_prove_only_the_actual_smooth_seam() {

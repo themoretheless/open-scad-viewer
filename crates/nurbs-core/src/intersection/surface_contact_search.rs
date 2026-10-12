@@ -116,21 +116,28 @@ fn search_impl(
     // Unified guard backing the max_cells work limit (item 1065); it fires
     // only if the cell bookkeeping above is ever broken.
     let mut guard = Budget::with_iterations(max_cells)?.guard("surface_contact_search");
+    let mut prepared_a = surface_contact::PreparedSurface::new(a)?;
+    let mut prepared_b = surface_contact::PreparedSurface::new(b)?;
+    let mut control_a = crate::surface_distance::PreparedControlSurface::new(a);
+    let mut control_b = crate::surface_distance::PreparedControlSurface::new(b);
     while cells < max_cells {
         guard.tick()?;
         guard.check()?;
         let Some(cell) = queue.pop_front() else { break };
         cells += 1;
-        let aa = rectangle_bounds(a, cell[0])?;
-        let bb = rectangle_bounds(b, cell[1])?;
-        if (0..3).any(|k| aa[k][1] < bb[k][0] || bb[k][1] < aa[k][0]) {
+        // Reuse the exact outward routine result within this immutable search.
+        // Logical geometry/domain work charges remain unchanged.
+        let aa = prepared_a.bounds(cell[0])?;
+        let bb = prepared_b.bounds(cell[1])?;
+        if (0..3).any(|k| aa[k].hi < bb[k].lo || bb[k].hi < aa[k].lo) {
             continue;
         }
-        if control_hulls
-            && crate::surface_distance::rectangle_control_gap(a, b, cell)?
-                .is_some_and(|gap| gap > 0.)
-        {
-            continue;
+        let mut split_proposal = None;
+        if control_hulls {
+            if let Some((gap, scores)) = crate::surface_distance::rectangle_control_query_prepared(&mut control_a, &mut control_b, cell)? {
+                if gap > 0. { continue; }
+                if scores.iter().any(|x| *x > 0.) { split_proposal = Some(scores); }
+            }
         }
         if classify(cell, &mut domain_cells)? == crate::trim_domain::Location::Outside {
             continue;
@@ -155,7 +162,7 @@ fn search_impl(
         for axis in 0..2 {
             let fixed = cell[0][axis][0] * 0.5 + cell[0][axis][1] * 0.5;
             if let surface_contact::Verdict::Witness(w) =
-                surface_contact::certify(a, b, axis, fixed, probe[0][1 - axis], probe[1])?
+                surface_contact::certify_prepared(&mut prepared_a, &mut prepared_b, axis, fixed, probe[0][1 - axis], probe[1])?
             {
                 if classify([w.first_uv, w.second_uv], &mut domain_cells)?
                     == crate::trim_domain::Location::Inside
@@ -170,8 +177,9 @@ fn search_impl(
             queue.push_front(cell);
             break;
         }
-        // Normalize by original parameter widths so rescaled charts do not
-        // starve one axis. Split both closed halves: their shared boundary is
+        // Sweep control hulls propose the axis most relevant to their current
+        // separating direction. Other searches retain normalized chart widths.
+        // The proposal is not an exclusion. Split both closed halves: their shared boundary is
         // deliberately retained, including possible tangent contacts.
         let axis = (0..4)
             .filter(|&k| {
@@ -183,7 +191,8 @@ fn search_impl(
                 let width = |k: usize| {
                     let d = cell[k / 2][k % 2];
                     let n = initial[k / 2][k % 2];
-                    (d[1] - d[0]) / (n[1] - n[0])
+                    split_proposal.map(|scores| scores[k])
+                        .unwrap_or((d[1] - d[0]) / (n[1] - n[0]))
                 };
                 width(x).total_cmp(&width(y))
             });
@@ -268,6 +277,30 @@ mod tests {
                 }));
             }
         }
+    }
+    #[test]
+    fn projected_split_never_removes_a_tangent_contact_or_its_parameter_diagonal() {
+        let a=plane();let mut b=a.clone();
+        b.degree_u=2;b.knots_u=vec![0.,0.,0.,1.,1.,1.];
+        b.weights=vec![vec![1.;2];3];
+        b.control_points=(0..3).map(|i|(0..2).map(|j|
+            vec![i as f64*0.5,j as f64,[0.25,-0.25,0.25][i]]).collect()).collect();
+        let curve=crate::curve::Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],
+            vec![1.,1.],vec![0.,1.],vec![0.,0.]]).unwrap();
+        let domain=crate::trim_domain::TrimDomain::new(&[vec![curve]],1e-10).unwrap();
+        let before=[a.clone(),b.clone()];
+        for limit in [1,127] {
+            let r=search_trimmed_with_control_hulls(&a,&b,[&domain,&domain],limit,100000).unwrap();
+            assert!(!r.absence_proven);assert!(r.contact.is_none());
+            assert!(r.cells<=limit&&r.domain_cells<=100000);
+            for i in 0..=16 {
+                let point=[0.5,i as f64/16.];
+                assert!(r.unresolved.iter().any(|cell|(0..2).all(|side|
+                    (0..2).all(|k|cell[side][k][0]<=point[k]&&point[k]<=cell[side][k][1]))),
+                    "Proposal lost an actual tangent contact at {point:?}");
+            }
+        }
+        assert_eq!([a,b],before);
     }
     #[test]
     fn overlapping_initial_bounds_need_subdivision_to_prove_separation() {

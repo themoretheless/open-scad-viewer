@@ -1,3 +1,4 @@
+import {compactRuntimeChunks} from './scripts/compact-runtime-chunks.mjs'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
@@ -8,8 +9,8 @@ import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
 // their dependencies, so lazy groups never drag the geometry kernel into the
 // entry preload list.
 export default defineConfig({
-  plugins: [compactWgslPlugin(),vue()],
-  worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
+  plugins: [compactWgslPlugin(),vue(),compactRuntimeChunks()],
+  worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
     if (/src[\\/]services[\\/](wasmPacking|wasmBase91|wasmBrotliPacking)\.ts$/.test(id)) return 'worker-wasm-packing'
     if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
@@ -62,6 +63,10 @@ export default defineConfig({
             { name: 'solid-gpu-view', test: /src[\\/]services[\\/]solidGpuView/ },
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
+            // Keep the generated shader library separate from renderer control code.
+            { name: 'renderer-shaders', test: /src[\\/]services[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
+            // Keep independent GPU preview and transparency passes out of renderer control code.
+            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],

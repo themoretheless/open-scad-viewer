@@ -1,5 +1,7 @@
+import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {correctedRegularBodySources} from './sweep-body-matrix-sources.mjs'
 import {callGeometryRust} from '../src/services/geometry/kernel'
+import {constructMiterOwnedBoundary,type DirectMiterOwnedSourceRequest} from '../src/services/nurbsMiterOwnedBoundary'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 import {mkdirSync,writeFileSync,readFileSync,appendFileSync,renameSync} from 'node:fs'
 import {resolve} from 'node:path'
@@ -21,8 +23,40 @@ import {inspectSweepCoedgeExact} from '../src/services/nurbsSweepAudit'
 import {compileRushFrontend} from '../src/services/rushFrontend'
 import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {miterLawMatrixModes,miterLawMatrixSource,miterLawMatrixName,type MiterLawMatrixMode} from './miter-law-matrix-sources'
+import {miterLawMatrixModes,miterLawMatrixSource,miterLawMatrixSmoothSource,miterLawMatrixName,type MiterLawMatrixMode} from './miter-law-matrix-sources'
+import {stationFrameSources} from './station-frame-matrix-sources.mjs'
 import type {NurbsBrep} from '../src/services/geometry/brep'
+import type {SweepBoundaryCertificate} from '../src/services/sweepBoundaryCertificate'
+// Preserve actual Rust-owned components instead of reducing them to a scalar flag.
+const captureBodyBoundaryEvidence=(body:ReturnType<typeof createProgressiveBrepProfileBody>)=>({
+ profileCorrectionErrorUpper:body.profileCorrectionErrorUpper,profileSmoothness:body.profileSmoothness,
+ capCorrectionErrorUpper:body.capCorrectionErrorUpper,retainedCaps:body.retainedCaps,
+ retainedWalls:body.retainedWalls,capProjection:body.capProjection,
+ bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts,
+ filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,
+ boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,boundaryContinuousBound:body.boundaryContinuousBound,
+ boundaryErrorScope:body.boundaryErrorScope,budget:body.approximation.report.budget,
+ closedPath:body.approximation.report.closedPath,globalEmbeddingCertified:body.globalEmbeddingCertified,
+})
+// Replay the exact legacy request and bind every stored coefficient before
+// attaching its native report. This explicit .01 proof policy is the same one
+// qualified by nurbsDirectMiterOwned; raw legacy inputs had no author tolerance.
+const captureLegacyDirect=(model:NurbsBrep,source:DirectMiterOwnedSourceRequest,matrix?:number[][])=>{
+ const owned=constructMiterOwnedBoundary(source)
+ if(!matrix){
+  deepStrictEqual(owned.model,model,'Native direct owner differs from actual legacy model')
+  return {boundaryCertificate:owned.boundaryCertificate,sourceRequest:source,legacyModelBound:true,
+   proofPolicyScope:'explicit-qualification-policy-not-an-inferred-author-tolerance'}
+ }
+ const placed=callGeometryRust<{placement:{model:NurbsBrep}|null;boundaryCertificate:SweepBoundaryCertificate|null;resultModelBound:boolean}>('brep_miter_owned_place',{
+  source,matrix,quantum:2**-40,maxWork:100000,budget:source.maxDeviation,
+  expectedSourceModel:owned.model,expectedSourceCertificate:owned.boundaryCertificate,expectedResultModel:model,
+ })
+ if(!placed.placement||!placed.boundaryCertificate||!placed.resultModelBound)throw Error('Native legacy affine replay is not bound to the final model and certificate')
+ deepStrictEqual(placed.placement.model,model)
+ return {boundaryCertificate:placed.boundaryCertificate,sourceRequest:source,affineTransform:matrix,legacyModelBound:true,
+  proofPolicyScope:'explicit-qualification-policy-not-an-inferred-author-tolerance'}
+}
 const root=resolve(process.argv[2]??'docs/qualification/sweep-coverage-2026-10-01/external-step')
 mkdirSync(root,{recursive:true})
 const artifactProvenance=sweepStepArtifactProvenance()
@@ -51,6 +85,7 @@ const dyadicRing=(radius:number,z:number)=>[
  [[-radius,0],[-radius,-radius],[0,-radius]],[[0,-radius],[radius,-radius],[radius,0]],
 ].map(poles=>({degree:2,knots:[0,0,0,1,1,1],controlPoints:poles.map(([x,y])=>[x!,y!,z]),weights:[1,Math.SQRT1_2,1],periodic:false}))
 const dyadicSections=[0,10].map(z=>[dyadicRing(.5,z),dyadicRing(.25,z).reverse().map(reverseNurbsCurve)])
+const originalDyadicLoops=structuredClone(dyadicSections[0]!)
 const dyadicOblique=transformNurbsBrep(createRationalBrepSectionLoft(dyadicSections),obliqueTransform)
 for(const rings of dyadicSections)for(const ring of rings)for(const curve of ring)for(const pole of curve.controlPoints)pole[2]=pole[0]!+pole[1]!+pole[2]!
 const dyadicCaps=inspectSweepRetainedCaps(dyadicOblique,[dyadicSections[0]!,dyadicSections[1]!],DEFAULT_SWEEP_VOLUME_BUDGETS.capBudgets)
@@ -127,8 +162,8 @@ const authoredRushFixture=(sourcePath:string,file:string,areaMultiplier:number,r
 }
 // Exact same source requests as the public law matrix; independent reference
 // stages inspect exported retained geometry and never reuse a source volume.
-const miterLawMatrixFixture=(mode:MiterLawMatrixMode)=>{
- const source=miterLawMatrixSource(mode),name=miterLawMatrixName(mode)
+const miterLawMatrixFixture=(mode:MiterLawMatrixMode,profileG2=false)=>{
+ const source=profileG2?miterLawMatrixSmoothSource(mode):miterLawMatrixSource(mode),name=miterLawMatrixName(mode)+(profileG2?'-profile-g2':'')
  writeFileSync(resolve(root,name+'.r'),source)
  const document=compileRushFrontend(source).document
  const node=document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -136,6 +171,7 @@ const miterLawMatrixFixture=(mode:MiterLawMatrixMode)=>{
  if(!built.nativeGeometry)throw Error('Missing native law matrix boundary: '+name)
  const evidence=readSweepViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.boundaryErrorWithinBudget||!evidence.solidGeometryCertified)throw Error('Incomplete law matrix boundary/Solid: '+name)
+ if(profileG2&&(!evidence.profileG1Certified||!evidence.profileG2Certified||evidence.stationContinuity!=='C0'))throw Error('Incomplete retained profile G2/sharp station C0: '+name)
  const construction=built.report.construction![node.id]
  deepStrictEqual([construction.affineLawsApplied,construction.authoredFramesApplied,construction.orientationGuideApplied],[mode.affine,mode.authored,mode.guided])
  const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
@@ -143,11 +179,49 @@ const miterLawMatrixFixture=(mode:MiterLawMatrixMode)=>{
  const reversed=(id:number)=>model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
  return {file:name+'.step',model,faces:model.faces.length,shells:mode.closed?2:1,capHoleFaces:mode.closed?0:2,capFaces,
   requireNativeSolid:true,expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',lawMatrixMode:mode,
+  ...(profileG2?{requestedSmoothness:{profile:'G2',station:'C0'},explicitCircleCorrection:true}:{}),
   sourceFile:name+'.r',sourceSha256:createHash('sha256').update(source).digest('hex'),construction,boundaryEvidence:evidence,
   outwardCapContours:capFaces.map(id=>{const face=model.faces[id]!;return [face.outer,...face.holes].flatMap(wire=>
    (reversed(id)?[...model.loops[wire]!.coedges].reverse():model.loops[wire]!.coedges).map(use=>
     use.reversed!==reversed(id)?reverseNurbsCurve(model.edges[use.edge]!.curve):model.edges[use.edge]!.curve))})}
 }
+// Declared reconstructed station/profile modes must be qualified on their
+// actual higher-degree retained surfaces, not only on the original miter grid.
+const reconstructedModeFixture=(sourceName:string,sharp=false)=>{
+ const sourceFile=`examples/rush/${sourceName}.r`,source=readFileSync(sourceFile,'utf8')
+ const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ if(!built.nativeGeometry)throw Error('Missing reconstructed retained mode: '+sourceName)
+ const artifact=JSON.parse(built.nativeGeometry.geometryJson),model=artifact.geometry as NurbsBrep
+ const evidence=readSweepViewportEvidence(built.nativeGeometry)
+ if(!evidence?.continuousBound||!evidence.boundaryErrorWithinBudget||!evidence.solidGeometryCertified
+  ||evidence.profileG2Certified!==true||evidence.stationG2Certified!==!sharp
+  ||sharp&&evidence.stationG1Certified!==false)
+  throw Error('Reconstructed mode complete boundary/Solid/profile/station contract refused: '+sourceName)
+ const closed=sourceName.startsWith('closed-'),caps=closed?[]:[model.faces.length-2,model.faces.length-1]
+ const reversed=(face:number)=>{
+  const owners=model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===face))
+  if(owners.length!==1)throw Error('Reconstructed mode requires one shell owner per face')
+  return owners[0]!.reversed
+ }
+ return {file:`rush-${sourceName}.step`,model,faces:model.faces.length,shells:model.shells.length,
+  capHoleFaces:caps.filter(id=>model.faces[id]!.holes.length>0).length,capFaces:caps,requireNativeSolid:true,
+  construction:built.report.construction![built.nativeGeometry.nodeId],sourceFile,
+  sourceSha256:createHash('sha256').update(source).digest('hex'),
+  replayRouting:artifact.sweepMiterReplay??null,expectedVolume:0,
+  volumeReferenceMethod:'rational-boundary-gauss-reference',
+  outwardCapContours:caps.map(id=>{const face=model.faces[id]!;return [face.outer,...face.holes].flatMap(wire=>
+   (reversed(id)?[...model.loops[wire]!.coedges].reverse():model.loops[wire]!.coedges).map(use=>
+    use.reversed!==reversed(id)?reverseNurbsCurve(model.edges[use.edge]!.curve):model.edges[use.edge]!.curve))})}
+}
+const reconstructedModeFixtures=()=>[
+ ...['half','one','two'].map(weight=>reconstructedModeFixture(`progressive-miter-reconstructed-conic-${weight}`)),
+ reconstructedModeFixture('progressive-miter-reconstructed-stations'),
+ reconstructedModeFixture('progressive-miter-reconstructed-sharp',true),
+ reconstructedModeFixture('progressive-miter-reconstructed-guide-frame-affine-hollow'),
+ reconstructedModeFixture('progressive-miter-reconstructed-moving-frame-guide-affine-hollow'),
+ // This cyclic source explicitly preserves original sharp corner stations.
+ reconstructedModeFixture('closed-progressive-miter-reconstructed-frame-guide-affine-hollow',true),
+]
 // Each quadratic quarter has signed area 5/6, hence source area 10/3.
 // The hole is a reversed copy scaled by 1/4; the length is 10.
 const unsegmentedRing=(radius:number):NurbsCurve=>({degree:2,knots:[0,0,0,.25,.5,.75,1,1,1],
@@ -254,7 +328,7 @@ const fixedFrameFixture=(orientation:'fixed'|'fixed_normal'|'rmf'='fixed')=>{
  if(body.globalEmbeddingCertified!==false)throw Error('Fixed construction must keep global admission separate')
  return {file:orientation==='rmf'?'rmf-straight-linear-scale-hollow.step':orientation==='fixed'?'fixed-frame-linear-scale-hollow.step':'fixed-normal-linear-scale-hollow.step',model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:2,
   expectedVolume:Math.PI*560/3,volumeReferenceMethod:'canonical-generator-polynomial-integral',
-  requireNativeSolid:false,construction:report}
+  requireNativeSolid:false,construction:{...report,bodyBoundaryEvidence:captureBodyBoundaryEvidence(body)}}
 }
 
 const obliqueRmfHollowFixture=(corrected=false,initialSections=2)=>{
@@ -271,7 +345,7 @@ const obliqueRmfHollowFixture=(corrected=false,initialSections=2)=>{
  if(corrected&&(!body.boundaryContinuousBound||!body.boundaryErrorWithinBudget))throw Error('Corrected oblique RMF full boundary proof required')
  return {file:corrected?(initialSections===2?'rmf-oblique-linear-scale-hollow-corrected.step':`rmf-oblique-linear-scale-hollow-corrected-${initialSections}-stations.step`):'rmf-oblique-linear-scale-hollow.step',model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:2,
   expectedVolume:Math.PI*(.1**2-.05**2)*5*7/3,
-  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:corrected,construction:{...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
+  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:corrected,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
   wallFaceReversed:body.model.faces.slice(0,-2).map((_,id)=>body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed),
   outwardCapContours:body.model.faces.slice(-2).map((face,j)=>{
    const id=body.model.faces.length-2+j
@@ -299,7 +373,7 @@ const closedPlanarRmfBodyFixture=()=>{
  return {file:'rmf-closed-planar-full-turn-rectangular.step',model:body.model,
   faces:body.model.faces.length,shells:1,capHoleFaces:0,capFaces:[],
   expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:true,
-  construction:{...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
   wallSurfaces:body.model.faces.map(f=>f.surface),
   wallFaceReversed:body.model.faces.map((_,id)=>{
    const uses=body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))
@@ -325,7 +399,7 @@ const frenetHollowFixture=(orientation:'frenet'|'rmf'='frenet',rectangular=false
  return {file:corrected?`${orientation}-quadratic-hollow-corrected.step`:rectangular?'rmf-planar-quadratic-rectangular.step':orientation==='rmf'?'rmf-planar-quadratic-hollow.step':'frenet-quadratic-hollow.step',model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:rectangular?0:2,
   capFaces:[body.model.faces.length-2,body.model.faces.length-1],
   expectedVolume:Math.PI*(.1**2-.05**2)*(.5*Math.sqrt(5)+.25*Math.asinh(2)),
-  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:rectangular||corrected,construction:{...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
+  volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:rectangular||corrected,construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),...report,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound},
   wallFaceReversed:body.model.faces.slice(0,-2).map((_,id)=>body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed),
   outwardCapContours:body.model.faces.slice(-2).map((face,j)=>{
    const id=body.model.faces.length-2+j
@@ -375,7 +449,7 @@ const certifiedRectangularBodyFixture=(mode:'plain'|'affine'|'authored'|'guide'|
    (reversed(body.model.faces.length-2+j)?[...body.model.loops[wire]!.coedges].reverse():body.model.loops[wire]!.coedges).map(use=>
     use.reversed!==reversed(body.model.faces.length-2+j)?reverseNurbsCurve(body.model.edges[use.edge]!.curve):body.model.edges[use.edge]!.curve)))}:{}),
   ...(!curved?{analyticPrism:{outer:[2,2],hole:[1,1],height:10,axisScale:mode==='plain'?[1,1]:[2,3]}}:{}),
-  construction:{approximation:body.approximation.report,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,capCorrectionErrorUpper:body.capCorrectionErrorUpper,
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),approximation:body.approximation.report,retainedCaps:body.retainedCaps,retainedWalls:body.retainedWalls,capProjection:body.capProjection,capCorrectionErrorUpper:body.capCorrectionErrorUpper,
    filledCapErrorUpper:body.filledCapErrorUpper,boundaryErrorUpper:body.boundaryErrorUpper,boundaryContinuousBound:body.boundaryContinuousBound,
    boundaryErrorWithinBudget:body.boundaryErrorWithinBudget,globalEmbeddingCertified:body.globalEmbeddingCertified}}
 }
@@ -394,7 +468,7 @@ const multispanAuthoredBodyFixture=()=>{
   faces:body.model.faces.length,shells:1,capHoleFaces:0,capFaces:[body.model.faces.length-2,body.model.faces.length-1],
   expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:true,
   sourceFrameAxis:axis,sourceFrameNormal:normal,
-  construction:{approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
    boundaryErrorUpper:body.boundaryErrorUpper,globalEmbeddingCertified:body.globalEmbeddingCertified},
   outwardCapContours:body.model.faces.slice(-2).map((face,j)=>[face.outer,...face.holes].flatMap(wire=>
    (reversed(body.model.faces.length-2+j)?[...body.model.loops[wire]!.coedges].reverse():body.model.loops[wire]!.coedges).map(use=>
@@ -411,7 +485,7 @@ const closedAuthoredTubeFixture=(spacing:'parameter'|'arc_length'='parameter')=>
  return {file:spacing==='arc_length'?'closed-original-arc-length-authored-tube.step':'closed-original-rational-authored-tube.step',model:body.model,faces:body.model.faces.length,
   shells:1,capHoleFaces:0,capFaces:[],expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
   requireNativeSolid:true,outwardCapContours:[],sourceFrameAxis:axis,sourceFrameNormal:normal,
-  construction:{approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
    boundaryErrorUpper:body.boundaryErrorUpper,globalEmbeddingCertified:body.globalEmbeddingCertified}}
 }
 const closedGuidedTubeFixture=(spacing:'parameter'|'arc_length'='parameter')=>{
@@ -423,7 +497,7 @@ const closedGuidedTubeFixture=(spacing:'parameter'|'arc_length'='parameter')=>{
  return {file:spacing==='arc_length'?'closed-original-arc-length-guided-tube.step':'closed-original-rational-guided-tube.step',model:body.model,faces:body.model.faces.length,
   shells:1,capHoleFaces:0,capFaces:[],expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
   requireNativeSolid:true,outwardCapContours:[],sourceOrientationGuide:rail,
-  construction:{approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
    boundaryErrorUpper:body.boundaryErrorUpper,globalEmbeddingCertified:body.globalEmbeddingCertified}}
 }
 const closedArcRmfTubeFixture=(conic=false,orientation:'rmf'|'fixed_normal'|'corrected_frenet'='rmf',nonaxial=false)=>{
@@ -438,27 +512,30 @@ const closedArcRmfTubeFixture=(conic=false,orientation:'rmf'|'fixed_normal'|'cor
  return {file:`closed-original-${nonaxial?'nonaxial-':''}arc-length-${orientation==='rmf'?'rmf':orientation==='fixed_normal'?'fixed-normal':'corrected-planar'}-${conic?'conic':'circle'}-tube.step`,model:body.model,faces:body.model.faces.length,
   shells:1,capHoleFaces:0,capFaces:[],expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
   requireNativeSolid:true,outwardCapContours:[],
-  construction:{approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
+  construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),approximation:body.approximation.report,boundaryContinuousBound:body.boundaryContinuousBound,
    boundaryErrorUpper:body.boundaryErrorUpper,globalEmbeddingCertified:body.globalEmbeddingCertified}}
 }
-const closedSpatialRmfTubeFixture=(hollow=false,varying=false,periodic=false,parameter=false,multipleHoles=false,rationalNonuniform=false,antipodal=false)=>{
+const closedSpatialRmfTubeFixture=(hollow=false,varying=false,periodic=false,parameter=false,multipleHoles=false,rationalNonuniform=false,antipodal=false,profileG2=false)=>{
  const original=periodic?(varying?'examples/rush/closed-periodic-spatial-rmf-varying-affine-hollow-body.r':'examples/rush/closed-periodic-spatial-rmf-affine-body-certified.r'):varying?'examples/rush/closed-spatial-rmf-varying-affine-hollow-body.r':`examples/rush/closed-spatial-rmf-affine-${hollow?'hollow-':''}body-certified.r`
- const sourceFile=antipodal?'examples/rush/closed-antipodal-spatial-rmf-affine-hollow-body.r':rationalNonuniform?'examples/rush/closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r':multipleHoles?`examples/rush/closed-periodic-spatial-rmf-${parameter?'parameter-':''}multiple-holes-body.r`:parameter?original.replace('spatial-rmf-','spatial-rmf-parameter-'):original
+ let sourceFile=antipodal?'examples/rush/closed-antipodal-spatial-rmf-affine-hollow-body.r':rationalNonuniform?'examples/rush/closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r':multipleHoles?`examples/rush/closed-periodic-spatial-rmf-${parameter?'parameter-':''}multiple-holes-body.r`:parameter?original.replace('spatial-rmf-','spatial-rmf-parameter-'):original
+ if(profileG2)sourceFile=sourceFile.replace(/\.r$/,'-profile-g2.r')
  const source=readFileSync(sourceFile,'utf8')
  const graph=compileRushFrontend(source).document
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
  if(!('nativeGeometry' in built))throw Error('Closed spatial RMF retained body missing')
  const evidence=readSweepBodyBoundaryViewportEvidence(built.nativeGeometry)
  if(!evidence?.continuousBound||!evidence.withinBudget)throw Error('Closed spatial RMF boundary error unproved')
+ if(profileG2&&(!evidence.profileG2Certified||!evidence.profileG1Certified||evidence.stationContinuity!=='C0'))throw Error('Actual corrected spatial profile G2 and station C0 required')
  const model=JSON.parse(built.nativeGeometry.geometryJson).geometry as NurbsBrep
  if(multipleHoles){
   deepStrictEqual(model.bodies[0]!.innerShells,[1,2,3])
   deepStrictEqual(model.shells.length,4)
  }
- return {file:`closed-original-spatial-rmf-holonomy-${antipodal?'antipodal-':''}${rationalNonuniform?'rational-nonuniform-':''}${parameter?'parameter-':''}${periodic?'periodic-':''}${varying?'varying-':''}affine-${multipleHoles?'three-holes-':hollow?'hollow-':''}tube.step`,model,faces:model.faces.length,
+ return {file:`closed-original-spatial-rmf-holonomy-${antipodal?'antipodal-':''}${rationalNonuniform?'rational-nonuniform-':''}${parameter?'parameter-':''}${periodic?'periodic-':''}${varying?'varying-':''}affine-${multipleHoles?'three-holes-':hollow?'hollow-':''}tube${profileG2?'-profile-g2':''}.step`,model,faces:model.faces.length,
   ...(hollow?{volumeBudgets:{maxSpans:1024,maxLinearCells:100000,maxPairs:20000,maxCells:200000}}:{}),
   shells:multipleHoles?4:hollow?2:1,capHoleFaces:0,capFaces:[],expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
   requireNativeSolid:true,outwardCapContours:[],sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),
+  ...(profileG2?{requestedSmoothness:{profile:'G2',station:'C0'},explicitCircleCorrection:true}:{}),
   construction:built.report.construction,boundaryError:evidence}
 }
 const correctedFrenetBodyFixture=(sourceFile:string,capHoleFaces=2)=>{
@@ -534,7 +611,8 @@ const closedContactBodyFixture=(arc=false,rationalPhase=false)=>{
   sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),boundaryEvidence:evidence,
   construction:built.report.construction![built.nativeGeometry.nodeId]}
 }
-const closedCorrectedRegularFixtures=(includeArc=true)=>[
+const closedOriginalBodyFixtures=(includeArc=true,includePeriodicAuthored=false)=>[
+ ...(includePeriodicAuthored?['arc-length-periodic-authored-spatial-body-boundary.r']:[]),
  'arc-length-periodic-corrected-frenet-nonplanar-body-boundary.r','periodic-corrected-frenet-nonplanar-body-boundary.r',
  'closed-corrected-frenet-nonplanar-body-boundary.r',
  'closed-corrected-frenet-nonplanar-affine-body-boundary.r',
@@ -554,14 +632,80 @@ const closedCorrectedRegularFixtures=(includeArc=true)=>[
   expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference'}
 })
 const correctedRegularFixtures=()=>correctedRegularBodySources.map(source=>correctedFrenetBodyFixture(source,source.includes('hollow')?2:0))
-const fixtures=process.argv.includes('--closed-corrected-parameter-only')?closedCorrectedRegularFixtures(false)
- :process.argv.includes('--closed-corrected-regular-only')?closedCorrectedRegularFixtures()
+const directSpatialHolonomyFixture=(corrected=false)=>{
+ const loops=[[circleNurbsCurve([0,0,0],[1,0,0],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,0],[1,0,0],.2))]]
+ const source={direct:true as const,loops,points:[[0,0,0],[10,0,0],[13,9,4e-12],[-2,11,1e-12],[1,5,-2e-12]] as [number,number,number][],normal:[0,0,1] as [number,number,number],closed:true,miterLimit:4,maxDeviation:.01}
+ const request=corrected?{...source,circleCorrection:{quantum:2**-40,tolerance:1e-9,maxWork:1000000}}:source
+ const body=constructMiterOwnedBoundary(request)
+ if(body.levels[0]!.holonomyCorrectionRadians!==0||!body.boundaryCertificate.continuousBound)throw Error('Original uncorrected direct source bound required')
+ const profileSmoothness=inspectMiterProfileSmoothness(body.model,[])
+ if(corrected&&!profileSmoothness.profile.exactG1G2Certified)throw Error('Explicit circle correction must prove retained profile G2')
+ return {file:corrected?'closed-spatial-direct-circle-small-holonomy-hollow.step':'closed-spatial-direct-small-holonomy-hollow.step',model:body.model,
+  faces:body.model.faces.length,shells:body.model.shells.length,capHoleFaces:0,capFaces:[],
+  requireNativeSolid:true,expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',outwardCapContours:[],
+  construction:{boundaryCertificate:body.boundaryCertificate,sourceRequest:request,levels:body.levels,sectionCorrection:body.sectionCorrection,profileSmoothness}}
+}
+const progressiveStationFixture=(file:string)=>{
+ const sourceFile=`examples/rush/${file}`,source=readFileSync(sourceFile,'utf8')
+ const graph=compileRushFrontend(source).document
+ const built=buildOwnNurbs(graph,{action:'build',display:{segments:2,subdivisionLevels:0}})
+ if(!built.nativeGeometry)throw Error('Missing owned progressive station geometry')
+ const data=readNativeGeometryData(built.nativeGeometry),model=data.geometry as NurbsBrep
+ const boundaryEvidence=readSweepViewportEvidence(built.nativeGeometry)
+ if(!boundaryEvidence?.continuousBound||!boundaryEvidence.boundaryErrorWithinBudget||!boundaryEvidence.profileG2Certified||!boundaryEvidence.stationG2Certified)throw Error('Actual complete progressive station G2/bound required')
+ const construction=built.report.construction![built.nativeGeometry.nodeId]
+ const closed=data.sweepStationReconstruction.closedPath===true
+ const capFaces=closed?[]:[model.faces.length-2,model.faces.length-1]
+ const reversed=new Map(model.shells.flatMap(shell=>shell.faces.map(use=>[use.face,use.reversed] as const)))
+ return {file:file.replace(/\.r$/,'.step'),model,faces:model.faces.length,shells:model.shells.length,
+  capHoleFaces:capFaces.filter(id=>model.faces[id]!.holes.length>0).length,capFaces,outwardCapContours:capFaces.map(id=>{
+   const face=model.faces[id]!
+   return [face.outer,...face.holes].flatMap(wire=>
+    (reversed.get(id)?[...model.loops[wire]!.coedges].reverse():model.loops[wire]!.coedges).map(use=>
+     use.reversed!==reversed.get(id)?reverseNurbsCurve(model.edges[use.edge]!.curve):model.edges[use.edge]!.curve))
+  }),requireNativeSolid:true,volumeBudgets:DEFAULT_SWEEP_VOLUME_BUDGETS,
+  expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',
+  sourceFile,sourceSha256:createHash('sha256').update(source).digest('hex'),construction,boundaryEvidence}
+}
+const legacyOwnedFixtures=()=>[
+ {file:'open-straight-hollow-miter.step',model:straight.model,faces:10,shells:1,capHoleFaces:2,
+  construction:{...straight.report,...captureLegacyDirect(straight.model,{direct:true,loops,points:[[0,0,0],[0,0,10]],normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01})},expectedVolume:Math.PI*(.5**2-.2**2)*10},
+ {file:'progressive-scale-twist-hollow-miter.step',model:progressive.model,faces:progressive.model.faces.length,shells:1,capHoleFaces:2,expectedVolume:progressiveVolume,admission:progressive.approximation.report,construction:{boundaryCertificate:progressive.boundaryCertificate}},
+ {file:'open-spatial-hollow-miter.step',model:body.model,faces:26,shells:1,capHoleFaces:2,construction:captureLegacyDirect(body.model,{direct:true,loops,points,normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01}),expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
+ {file:'open-spatial-bounded-correction.step',model:correctedSpatial,faces:26,shells:1,capHoleFaces:2,
+  construction:captureLegacyDirect(correctedSpatial,{...{direct:true,loops,points,normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01},capCorrection:{quantum:2**-40,tolerance:1e-9,maxWork:1000000},capEndpoints:[false,true]}),correction:{...correction,sections:undefined},correctionCorrespondence,retainedWallCorrectionUpper:correction.wallDisplacementUpper,
+  expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
+ {file:'open-spatial-constructor-correction.step',model:constructorCorrected.model,faces:26,shells:1,capHoleFaces:2,
+  construction:{...constructorCorrected.report,...captureLegacyDirect(constructorCorrected.model,{...{direct:true,loops,points,normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01},capCorrection:{quantum:2**-40,tolerance:1e-9,maxWork:1000000}})},expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
+ {file:'closed-planar-hollow-miter.step',model:closed.model,faces:32,shells:2,capHoleFaces:0,construction:{...closed.report,...captureLegacyDirect(closed.model,{direct:true,loops:closedLoops,points:[[0,0,0],[10,0,0],[10,10,0],[0,10,0]],normal:[0,0,1],closed:true,miterLimit:2,maxDeviation:.01})},expectedVolume:Math.PI*(.5**2-.2**2)*40},
+ {file:'affine-oblique-hollow-miter.step',model:oblique,faces:10,shells:1,capHoleFaces:2,
+  construction:captureLegacyDirect(oblique,{direct:true,loops,points:[[0,0,0],[0,0,10]],normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01},obliqueTransform),affineTransform:obliqueTransform,retainedCaps:obliqueCaps,expectedVolume:Math.PI*(.5**2-.2**2)*10},
+ {file:'affine-oblique-dyadic-hollow.step',model:dyadicOblique,faces:10,shells:1,capHoleFaces:2,
+  construction:captureLegacyDirect(dyadicOblique,{direct:true,loops:originalDyadicLoops,points:[[0,0,0],[0,0,10]],normal:[1,0,0],closed:false,miterLimit:2,maxDeviation:.01},obliqueTransform),affineTransform:obliqueTransform,retainedCaps:dyadicCaps,expectedVolume:Math.PI*(.5**2-.25**2)*10},
+ {file:'rush-authored-affine-hollow-miter.step',model:affineRushModel,faces:affineRushModel.faces.length,shells:1,capHoleFaces:2,
+  requireNativeSolid:true,
+  sourceSha256:createHash('sha256').update(affineRushSource).digest('hex'),construction:affineRushConstruction,
+  expectedVolume:Math.PI*(.5**2-.2**2)*10*1.5},
+]
+const fixtures=process.argv.includes('--legacy-owned-only')?legacyOwnedFixtures()
+ :process.argv.includes('--station-frame-g2-only')?stationFrameSources.map(progressiveStationFixture)
+ :process.argv.includes('--progressive-station-g2-only')?['straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r'].map(progressiveStationFixture)
+ :process.argv.includes('--spatial-profile-g2-only')?[
+ closedSpatialRmfTubeFixture(false,false,false,false,false,false,false,true),closedSpatialRmfTubeFixture(true,false,false,false,false,false,false,true),closedSpatialRmfTubeFixture(true,true,false,false,false,false,false,true),
+ closedSpatialRmfTubeFixture(false,false,true,false,false,false,false,true),closedSpatialRmfTubeFixture(true,true,true,false,false,false,false,true),closedSpatialRmfTubeFixture(true,true,false,true,false,false,false,true),closedSpatialRmfTubeFixture(true,true,true,true,false,false,false,true),
+ closedSpatialRmfTubeFixture(true,true,true,false,true,false,false,true),closedSpatialRmfTubeFixture(true,true,true,true,true,false,false,true),closedSpatialRmfTubeFixture(true,false,false,false,false,true,false,true),closedSpatialRmfTubeFixture(true,false,false,false,false,false,true,true)]
+ :process.argv.includes('--law-profile-g2-only')?miterLawMatrixModes.map(mode=>miterLawMatrixFixture(mode,true))
+ :process.argv.includes('--direct-circle-spatial-holonomy-only')?[directSpatialHolonomyFixture(true)]
+ :process.argv.includes('--direct-spatial-holonomy-only')?[directSpatialHolonomyFixture()]
+ :process.argv.includes('--reconstructed-only')?reconstructedModeFixtures()
+ :process.argv.includes('--closed-corrected-parameter-only')?closedOriginalBodyFixtures(false)
+ :process.argv.includes('--closed-corrected-regular-only')?closedOriginalBodyFixtures()
  :process.argv.includes('--corrected-regular-only')?correctedRegularFixtures()
  :process.argv.includes('--rational-phase-contact-only')?[closedContactBodyFixture(true,true)]
  :process.argv.includes('--closed-contact-only')?[closedContactBodyFixture(),closedContactBodyFixture(true)]
  :process.argv.includes('--sharp-profile-station-only')?[sharpProfileStationG2Fixture()]
  :process.argv.includes('--antipodal-only')?[closedSpatialRmfTubeFixture(true,false,false,false,false,false,true)]:[
- ...closedCorrectedRegularFixtures(),...correctedRegularFixtures(),sharpProfileStationG2Fixture(),closedContactBodyFixture(),closedContactBodyFixture(true),closedContactBodyFixture(true,true),
+ ...closedOriginalBodyFixtures(true,true),...correctedRegularFixtures(),sharpProfileStationG2Fixture(),closedContactBodyFixture(),closedContactBodyFixture(true),closedContactBodyFixture(true,true),
  ...['corrected-frenet-affine-zero-curvature-hollow-body-boundary.r','arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r','corrected-frenet-affine-inflection-hollow-body-boundary.r','arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r','corrected-frenet-rational-straight-affine-hollow-body-boundary.r','arc-length-corrected-frenet-rational-straight-affine-hollow-body-boundary.r','rmf-rational-straight-affine-hollow-body-boundary.r','arc-length-rmf-rational-straight-affine-hollow-body-boundary.r','corrected-frenet-straight-affine-hollow-body-boundary.r','corrected-frenet-inflection-hollow-body-boundary.r','arc-length-corrected-frenet-inflection-hollow-body-boundary.r'].map(source=>correctedFrenetBodyFixture(source)),
  closedAuthoredTubeFixture('arc_length'),
  closedAuthoredTubeFixture(),
@@ -579,7 +723,7 @@ const fixtures=process.argv.includes('--closed-corrected-parameter-only')?closed
   const reversed=(id:number)=>body.model.shells.flatMap(shell=>shell.faces.filter(use=>use.face===id))[0]!.reversed
   return {file:`progressive-certified-${mode}-unsegmented-rational.step`,model:body.model,faces:body.model.faces.length,shells:1,capHoleFaces:0,
    capFaces:[body.model.faces.length-2,body.model.faces.length-1],expectedVolume:0,volumeReferenceMethod:'rational-boundary-gauss-reference',requireNativeSolid:true,
-   construction:{boundaryErrorUpper:body.boundaryErrorUpper,bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts},
+   construction:{bodyBoundaryEvidence:captureBodyBoundaryEvidence(body),boundaryErrorUpper:body.boundaryErrorUpper,bodyDecompositionErrorUpper:body.bodyDecompositionErrorUpper,bodyDecompositionProducts:body.bodyDecompositionProducts},
    wallFaceReversed:body.model.faces.slice(0,-2).map((_,id)=>reversed(id)),
    outwardCapContours:body.model.faces.slice(-2).map((face,j)=>[face.outer,...face.holes].flatMap(wire=>
     (reversed(body.model.faces.length-2+j)?[...body.model.loops[wire]!.coedges].reverse():body.model.loops[wire]!.coedges).map(use=>
@@ -622,6 +766,7 @@ const fixtures=process.argv.includes('--closed-corrected-parameter-only')?closed
  {...correctedFrenetBodyFixture('open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r'),
   volumeBudgets:{maxSpans:1024,maxLinearCells:100000,maxPairs:20000,maxCells:200000}},
  ...miterLawMatrixModes.map(mode=>miterLawMatrixFixture(mode)),
+ ...reconstructedModeFixtures(),
  closedArcRmfTubeFixture(false,'rmf',true),
  closedArcRmfTubeFixture(true,'rmf',true),
  fixedFrameFixture(),
@@ -795,27 +940,10 @@ const fixtures=process.argv.includes('--closed-corrected-parameter-only')?closed
  {file:'rush-g1-profile-frame-guide-affine.step',model:g1Model as NurbsBrep,faces:g1Model.faces.length,shells:1,capHoleFaces:0,capFaces:[g1Model.faces.length-2,g1Model.faces.length-1],requireNativeSolid:true,construction:g1Construction,sourceSha256:createHash('sha256').update(g1Source).digest('hex'),expectedVolume:512/7},
  {file:'closed-frame-guide-affine-hollow-miter.step',model:closedJoint.model,faces:closedJoint.model.faces.length,shells:2,capHoleFaces:0,requireNativeSolid:true,construction:closedJoint.approximation.report,boundaryCertificate:closedJoint.boundaryCertificate,expectedVolume:closedJointVolume},
  {file:'closed-authored-affine-hollow-miter.step',model:closedAffine.model,faces:32,shells:2,capHoleFaces:0,
-  requireNativeSolid:true,admission:closedAffine.approximation.report,
+  requireNativeSolid:true,admission:closedAffine.approximation.report,construction:{boundaryCertificate:closedAffine.boundaryCertificate},
   retainedCorrespondence:closedAffine.retainedCorrespondence,
   expectedVolume:Math.PI*(.5**2-.2**2)*40*2},
- {file:'open-straight-hollow-miter.step',model:straight.model,faces:10,shells:1,capHoleFaces:2,
-  construction:straight.report,expectedVolume:Math.PI*(.5**2-.2**2)*10},
- {file:'progressive-scale-twist-hollow-miter.step',model:progressive.model,faces:progressive.model.faces.length,shells:1,capHoleFaces:2,expectedVolume:progressiveVolume,admission:progressive.approximation.report},
- {file:'open-spatial-hollow-miter.step',model:body.model,faces:26,shells:1,capHoleFaces:2,expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
- {file:'open-spatial-bounded-correction.step',model:correctedSpatial,faces:26,shells:1,capHoleFaces:2,
-  correction:{...correction,sections:undefined},correctionCorrespondence,retainedWallCorrectionUpper:correction.wallDisplacementUpper,
-  expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
- {file:'open-spatial-constructor-correction.step',model:constructorCorrected.model,faces:26,shells:1,capHoleFaces:2,
-  construction:constructorCorrected.report,expectedVolume:Math.PI*(.5**2-.2**2)*(20+Math.hypot(10,5))},
- {file:'closed-planar-hollow-miter.step',model:closed.model,faces:32,shells:2,capHoleFaces:0,construction:closed.report,expectedVolume:Math.PI*(.5**2-.2**2)*40},
- {file:'affine-oblique-hollow-miter.step',model:oblique,faces:10,shells:1,capHoleFaces:2,
-  affineTransform:obliqueTransform,retainedCaps:obliqueCaps,expectedVolume:Math.PI*(.5**2-.2**2)*10},
- {file:'affine-oblique-dyadic-hollow.step',model:dyadicOblique,faces:10,shells:1,capHoleFaces:2,
-  affineTransform:obliqueTransform,retainedCaps:dyadicCaps,expectedVolume:Math.PI*(.5**2-.25**2)*10},
- {file:'rush-authored-affine-hollow-miter.step',model:affineRushModel,faces:affineRushModel.faces.length,shells:1,capHoleFaces:2,
-  requireNativeSolid:true,
-  sourceSha256:createHash('sha256').update(affineRushSource).digest('hex'),construction:affineRushConstruction,
-  expectedVolume:Math.PI*(.5**2-.2**2)*10*1.5},
+ ...legacyOwnedFixtures(),
 ]
 const cases=fixtures.map(({model,...fixture})=>{
  const auditBudgets={

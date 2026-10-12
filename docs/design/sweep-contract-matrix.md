@@ -1,3 +1,87 @@
+## Bernstein surface-jet extension (2026-10-10)
+
+Optimized AB packed Rush completed49/52: all three miter files passed, while three original periodic FixedNormal cases timed out at unchanged120000ms. AB default/trial packing exceeded the unchanged3840000byte budget. A private four-digit base118 transport now qualifies the second-pass AB package at3838704bytes with32 codec/decoder tests; its earlier Solid deadline failures remain. Own AB convergence experiments were superseded with logs/input snapshots preserved; no main WASM delivery.
+
+Profiling the unchanged original hollow model identifies general blossom restriction in normalized surface jets during initial face-injectivity checks. A separate one-Rust-file extension against frozen AB now reuses its complete-Bernstein outward restriction for normalized/stable/cached jets. Independent118800 exact original tensor derivative checks through order3 and bit-identical incomplete-B-spline fallback pass. Full NURBS1392/1392 and two exact complete original global reports with independent complete32640-pair covers passed. All8 alternating benchmark reports match; median native CPU decreased about9–10% on the two original models under uncontrolled host workload. This does not qualify UI deadlines. Broader BRep/bridge and explicit native Binaryen116 geometry-only convergence are running. Standard pinned Rust raw WASM compiled and passes all8 original Frenet/FixedNormal ABI cases and independently complete pair covers8/8. New AD one-pass native116 optimized WASM ec8e802abef902e35c58c7bc657509f9a4d0c9df8425bbaa6ab69b6da5424abc with qualified quad transport passes actual typecheck/Vite/distribution155 and32 codec/decoder tests. Its geometry asset3839196bytes fits unchanged3840000 with804bytes remaining. The52 FixedNormal/miter Rush/viewport/Solid tests are running; actual headless UI and fresh207STEP remain pending. A separate UI stage now verifies all2902 native source files, four strict UI validators and the isolated browser runtime loader; this is preflight only. Geometry, station grids, tolerances and work ceilings remain unchanged. [Jet proof and scope](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/bernstein-surface-jets-proof.md). Main native T and public44f8 remain unchanged; the full goal remains open.
+
+## Bernstein Jacobian qualification in progress (2026-10-10)
+
+AA cross-search memo completed NURBS1391/1391 and two exact complete global reports; no controlled speed gain is established, so it remains unintegrated. Profiling still shows general blossom computation on Jacobian cache misses.
+
+A separate frozen-T candidate reuses the existing outward Bernstein restriction for Jacobian coefficients only when the original knot span is complete. General blossom, retained geometry, source grids, tolerances and work budgets remain intact.39760 independent exact-dyadic rational tensor coefficient checks passed for valid surface degrees through13x13, including nonunit and collapsed domains; invalid degree0 remains refused. Full NURBS1390/1390 passed. Two complete original native global reports and all8 alternating reports match frozen T exactly; independent complete pair covers pass. Standard SIMD raw Rust-WASM passes8/8 original Frenet/FixedNormal cases and8/8 independently complete pair covers. BRep/bridge remain running. The optimized11634468-byte artifact is frozen as SHA256ff837e184ba52a712a786fcaeb210cd9ad037fba0dd91821a2e2f9d908faa774; default embedded source3841842bytes still needs package-size qualification. Pack-only trials preserve exact decoded WASM identity; final emitted size, Rust decoder startup, public/Rush/Solid, UI and fresh207 STEP remain unqualified. [Proof obligations](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/bernstein-contact-jacobian-proof.md). No new WASM or UI completion claim.
+
+## Current runtime and package gate (2026-10-10)
+
+Opt2 native whole-report parity2/2 and alternating8/8 passed (~34–35% median CPU reduction). Raw ABI8/8 and independent complete pair covers8/8 passed, but raw Rush50/52 failed the two original hollow120s limits (152611/124387ms); emitted JS3946167bytes exceeds unchanged3840000. Opt2 is not eligible for delivery. [Terminal opt2 result](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/nurbs-opt2-packaged-build-result.json).
+
+A separate inherited-size-profile Rust candidate memoizes only successful original contact intervals across searches. Exact complete source bits/span/domain authorize reuse; a hash alone never does. Storage is bounded to512sources/131072source words/4096words per source/32bounds and32Jacobians per source, thread-local, with safe overflow clearing. Focused9/9 passed, including1536 exact original-oracle comparisons, source changes, forced hash collisions and eviction. Full NURBS and complete original global/performance qualification are running; candidate is not integrated or delivered. [Focused receipt](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/cross-search-contact-cache-focused-receipt.json).
+
+## Current main native T integration (2026-10-10)
+
+Main Rust now matches all2902 files of the frozen T native source manifest. Seven audited differences were integrated with a private backup: periodic FixedNormal arc-length source bounds, finer exact dual-map proposal fallback, immutable contact patch reuse and two original-model regressions plus their fixture. The stronger361/2889 assertion remains intact. Qualification of this exact native source: NURBS1389, bridge408(1ignored), BRep870(3ignored); pinned opt2 rawABI8/8 and independent complete pair covers8/8. Native source integration does not publish the private compiler profile or WASM; main public44f8 remains unchanged. [Integration receipt and backup](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/native-main-integration.json).
+
+## Compiler-profile delivery checkpoint (2026-10-10)
+
+X changes only the nurbs-core release optimization level to3 on frozen T geometry. Exact whole-global reports and all8 alternating native benchmark reports match; median CPU is about33% lower on the two original models. Standard SIMD raw ABI8/8 and raw Rust-WASM Rush/miter52/52 passed, including the original periodic FixedNormal arc-length solid/hollow cases. This suite does not prove the30-second product deadline.
+
+The optimized X artifact is12312679bytes (SHA25608c69a84379e4f0bcdd35804f7544744022ba17dc31b24e14b3d946b64c83ebf). Typechecking and Vite emission succeeded, but verify-dist rejected the geometry chunk:3974805bytes exceeds the unchanged3840000-byte budget. X is not eligible for delivery; main public44f8 remains unchanged. An isolated opt-level2 native experiment is running. Fresh207-case STEP and full UI/global guarantee qualification remain open. [Terminal package result](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/nurbs-opt3-packaged-build-result.json).
+
+## Current T qualification and performance work (2026-10-10)
+
+T pinned native suites completed: NURBS1389, bridge408 including separately run original four-body regression (1ignored), BRep870 (3ignored). Standard SIMD raw8/8 and packed inherited90/newsolid2 passed; two new hollow public tests exceeded unchanged120s. New FixedNormal original STEP4/4 passed independent rational volumes, OCCT and strict source-bound full-boundary/global-pair/retained-G2 reconciliation. [Four-case contract receipt](../qualification/sweep-coverage-2026-10-01/external-step-periodic-fixed-normal-current/finite-contracts.json). This finite subset does not replace the full declared matrix or UI qualification.
+
+Transport timing of the original plain hollow locates103s in volume/charts and221s in subsequent fresh Solid volume audit, versus5.8s station reconstruction, under concurrent workload. T frozen package976077d remains private; main public44f8 is unchanged. A separate Rust projection-cache V passed960exact-bit comparisons, NURBS1389, two complete global report equalities and complete32640-pair covers; alternating performance measurement is still running. Search-owned v-interpolation cache W separately passed4374exact-net comparisons (degrees0..8, multispan/restricted/collapsed domains); its full NURBS and release global qualification are pending. Neither optimization is integrated. [Current evidence and pending scope](../qualification/sweep-coverage-2026-10-01/contract-contact-cache-current/checkpoint.json).
+
+## Current main native R integration (2026-10-10)
+
+Main Rust now matches qualified R immutable original-span cache after a2901-file audit, retaining the stronger root361/2889 pair test. R NURBS1386, BRep870(3ignored), bridge406(1ignored), raw WASM four-body full-report parity and complete original global ABBA passed. [Exact integration receipt and backup](../qualification/sweep-coverage-2026-10-01/stable-span-cache-current/native-main-integration.json). Median native CPU74.056294→62.6292575s on the original full model under concurrent builds. Main public/generated WASM remains44f8; R optimizer/packer40846 is live, no new UI/delivery claim.
+
+Q periodic FixedNormal original four-body matrix proved source bounds and retained profile/station G2, but its old global path passed only3/4. Private S now proves the unchanged captured affine-hollow model:256charts and32640complete face pairs,contactCells116251/domainCells444066; complete pair cover independently verified. Private T combines Q/S/R and an immutable control-patch cache:main-pinned nightly2026-09-16 full core1389passed including960exact-bit cache comparisons. Auxiliary scalar raw7911b67 passes all4 old Frenet ABI reports but is not the standardSIMD artifact. Combined four-body and optimized global performance qualification are running. Q/S/T remain unintegrated and WASM-undelivered; R UI still fails the original hollow30-second deadline. Full declared-mode guarantees remain open.
+
+## Current private R/Q checkpoint (2026-10-10)
+
+R immutable original-span reuse passed NURBS1386, bridge406,441first-Jacobian bit comparisons and30multispan/source-isolation queries. Complete original256face/2shell global ABBA P/R/R/P reports and canonical hashes match exactly. Process CPU medians74.056294sP and62.6292575sR (~15.4% reduction), with concurrent builds; no universal performance or UI deadline claim. [Exact paired receipt](../qualification/sweep-coverage-2026-10-01/stable-span-cache-current/full-global-paired-benchmark.json). R BRep/raw-WASM ABI and packing remain live; main RustP and public44f8 remain unchanged.
+
+Q periodic FixedNormal source C1 seam and identical-source arc division ownership passed plain/affine and original-source/budget refusal controls, four-quarter-circle aggregate6848/10000cells with upper0.3565548373010501 within original0.5, full NURBS1387 and bridge406. New solid/hollow plain/affine retained G2/fresh-global test is running, not credited yet. This distinct extension is private; the authored Fixed-frame periodic arc fixture was already delivered. [Aggregate source-bound receipt](../qualification/sweep-coverage-2026-10-01/periodic-fixed-normal-current/aggregate-checkpoint.json).
+
+## Current first-Jacobian native integration (2026-10-10)
+
+Main Rust now includes P first-order interval jets for linear injectivity. NURBS1385, BRep870 (3 ignored), bridge406 (1 ignored), public API90 and155 distribution artifact checks passed on the exact private source/package. The original whole-model global ABBA reports remain bit-identical; measured median CPU improvement is approximately5% for that model only. Higher-order consumers retain their original routines. [Native integration receipt](../qualification/sweep-coverage-2026-10-01/closed-frenet-first-jets-current/native-main-integration.json). Main WASM remains44f8; private4c3 UI qualification is running and no delivery is asserted.
+
+Periodic authored Fixed-frame arc-length was already qualified and delivered (see its historical artifact-bound receipt below). The new private periodic FixedNormal arc-length extension is distinct: its positive baseline failed before the owner change; exact original active-basis C1 seam work is now charged before inverse-length enclosure. Green regression is still compiling, so this extension is not integrated or qualified. All-declared E/R/I/J and retained G1/G2 completeness remain open.
+
+## Current native and delivery status (2026-10-10)
+
+Main native runtime contains qualified blend-factor candidate N: 1384 NURBS, 870 BRep (3 ignored), 406 bridge (1 ignored), including all four original closed-Frenet bodies. Two Rust runtime files were integrated after a 2901-file source audit; root retains stricter original-pair 361/2889 assertions. [Hash-bound integration receipt](../qualification/sweep-coverage-2026-10-01/closed-frenet-blend-factor-current/native-main-integration.json). Main public/generated geometry remains44f8.
+
+N original full hollow-model global ABBA reports are exactly equal across all four runs. Median process CPU falls from105.1168265s to66.205944s. This is one 256-face original model, not universal speed or a UI deadline proof. Private optimized c533 WASM passed the four-body raw ABI; types/Vite and155 distribution checks pass. Public90 API tests passed. Closed-Frenet UI passed the first wide circle-solid22checks, but original circle-hollow again exceeded the unchanged30second deadline; the eight-case matrix remains incomplete. No N WASM main delivery yet. Previous K5bd hollow UI exceeded the unchanged30second deadline.
+
+K203 STEP export and both independent reference stages completed. Final inventory203/46, complete boundaries199certified/4explicitunproved/0unclassified,198face-pair covers and refusal controls passed. OpenCascade203/203 and full global/finite reconciliation now pass:198globalcertified/5correctlyrefused,199completeboundaries/4explicitunproved/0unclassified,203scopedseamaudits and46strictnewcompanionrequirements. [Final exact K receipt](../qualification/sweep-coverage-2026-10-01/external-step-bernstein-complete-current/reconciliation-receipt.json). These K results are not relabelled as qualification of N kernel bytes. No private candidate or finite matrix is a universal E/R/I/J proof. [Current pipeline](../qualification/sweep-coverage-2026-10-01/frame-arc-g2-pipeline.json).
+
+## Current full STEP reconciliation, delivered44f8
+
+The delivered44f8 artifact passed independent OpenCascade157/157, strict global152certified/5correctlyunproved, all157 scoped seam audits and19 explicitly declared retained-smoothness contracts. Original-source complete boundary ownership153certified/4explicitunproved/0unclassified, with8 missing/promoted-premise refusals. [Exact artifact-bound receipt](../qualification/sweep-coverage-2026-10-01/external-step-preserved-grid-complete-current/reconciliation-receipt.json). Delivered44f8 full body UI124/124 completed with2852assertions and496native observations on headless Apple Metal at1440/600; [exact UI receipt](../qualification/sweep-coverage-2026-10-01/ui-preserved-grid-protocol-body-full-current/complete-receipt.json). This receipt binds its frozen application source; current GPU application edits are not covered by it. The next closed-Frenet arc extension remains private: all four native circle/periodic solid/hollow bodies passed complete-bound, retained G2 and fresh global admission; full NURBS1376 and bridge406 passed. Full BRep, independent new WASM packaging/ABI and downstream qualification remain pending. Historical rows below are not universal current qualification; unrestricted all-declared-input coverage remains unproved.
+
+## Current local delivery (2026-10-10)
+
+Geometry44f8 is delivered locally with the qualified coupled decoder; language735 is unchanged. Same-byte evidence: station STEP12+3, miter STEP16, headless Metal wide/narrow UI62, public24+65 across two runs and main154 distribution checks. Exact prior guided/inflection BRep models remain unchanged. [Delivery receipt](../qualification/sweep-coverage-2026-10-01/preserved-grid-main-delivery.json). Full declared-mode completion remains open. A further strict closed Frenet arc extension is being qualified in an isolated Rust stage; it is not part of this delivered package.
+
+## Preserved-grid candidate qualification (2026-10-09, not yet delivered)
+
+Current staged geometry `44f8ce912ce08e7058f08fbb1f331804fb12e2590b502360acabe04bc4466df6` preserves the original adaptive station grids while tightening the final-grid continuous enclosure. New curved hollow fixtures cover RMF, Fixed, fixed_normal, Frenet, corrected Frenet and authored frames with parameter/arc-length spacing, original17stations and0.05mm whole-boundary allowance. API/Rush24/24 and independent STEP/reference/OCCT/reconciliation12/12 passed, including actual retained profile/stationG2, both holed caps and fresh global admission. Exact retained models for the older guided and inflection examples match main838 completely (34/258faces).
+
+Current miter open/closed affine/authored/guide combinations passed16/16 independent STEP/reference/OCCT and finite contract audits, with profileG2 and explicit sharp stationC0. Native full BRep870passed/3ignored, bridge404passed/1ignored across two runs, NURBS runtime1371 plus separate policy1; packaged public regressions65/65 and dist154 passed. Headless Metal wide/narrow UI is still running. Main838 below remains the delivered version; no claim of full declared-mode E/R/I/J or all applicable retained G1/G2 is made. Exact source-bound receipts: [current audit](../qualification/sweep-coverage-2026-10-01/remaining-contract-audit-2026-10-09.md), [pipeline](../qualification/sweep-coverage-2026-10-01/frame-arc-g2-pipeline.json).
+
+## Paired-native candidate delivered locally (2026-10-09)
+
+Geometry83801cf5d76e6b486c95573888edc552959fc7704940e23d2c329b775e7f1ce1 (11606794bytes), language735 unchanged, is now delivered in main public/generated/production artifacts. Copy verification matched every delivered file to the qualified staging package; previous package is backed up. Receipt: paired-native-main-delivery.json. Main distribution recheck passed154 checks under unchanged footprint budgets, total22689857bytes.
+
+Original periodic authored Fixed-frame arc-length source now passes complete continuousBound0.36912530529462084mm within original0.5mm, actual retained profile/stationG2, fresh all-face/all-pair global admission, source replay, zero-work and source-mutation refusal. Native geometry/correction/proofs remain Rust-owned; TS only carries the combined native volume/chart result. The shared immutable face-proof reuse preserves logical work charges. No source stations, tolerances, work ceilings or product deadline were raised.
+
+Current same-byte finite qualification: public35/35; station STEP/reference/OCCT3/3 plus original-source/bound/actualG2/global reconciliation; miter STEP/reference/OCCT16/16 plus16 complete scoped seam/global audits; headless Metal station UI6/6 (22 checks each), miter UI32/32 (21 checks each), widths1440/600, actual native cancellation, source replacement and restoration. Latest full native NURBS1370passed, BRep869passed/3ignored, bridge401passed/1ignored.
+
+This closes the named periodic authored arc-length fixture and current miter package delivery. Full declared-mode E/R/I/J and applicable retained G1/G2 coverage remain open. Four raw complete-bound refusals remain: rmf-oblique-linear-scale-hollow, frenet-quadratic-hollow, rmf-planar-quadratic-hollow, open-spatial-hollow-miter. Earlier157-case and124-case receipts retain their original750 package identity; they are not relabelled as this new artifact's qualification. Full-library completion is not asserted.
+
 # Sweep: контракты и критерии завершения
 
 Эта матрица уточняет полный объём из `sweep-coverage-2026-10-01.md`. Она не
@@ -12,6 +96,8 @@
 `cedcdcf` полная публичная матрица148/148 завершена; новая STEP135 и body UI98
 проверяются отдельно. Ни исторические STEP/UI, ни источник кадра не заменяют
 сертификаты действительных сохранённых поверхностей.
+
+Текущая конечная проверка: main750/735, STEP157/157, UI124/124; полный capture владельцев153 доказано/4 явно не доказано/0 пропущено. Новые adaptive-degree station-кандидаты ещё только в Rust-исходниках и не включены в квалифицированный WASM. Полное пространство контрактов ниже остаётся открытым.
 
 ## Независимые гарантии
 
@@ -78,6 +164,14 @@ Twist: радианы native, градусы Rush/TS. Размерные sites/c
 open/closed cases, одиночного профиля и ordered outer/inner loops. Матрица
 пространства сценариев не считается полной до квалификации каждой применимой
 комбинации. Неприменимый режим должен быть явно отказан, а не молча заменён.
+
+## Current staged750 checkpoint (2026-10-09)
+
+The historical rows below preserve the full eight-gate requirements. Current native package750 has no source drift against2897 frozen native files; final application overlay has no drift against487 production source files. Source parity is not a delivery receipt. Main remains efc/b5.
+
+New owned straight/open and spatial/closed varying-affine hollow station reconstruction: unchanged original budgets, complete continuous wall/cap union, actual retained profile/station G2 and fresh global Solid audits qualified by independent STEP/reference/OpenCascade2/2 and final headless Metal UI4/4 (22 checks each, wide/narrow, real native-running cancellation). Reproduce receipt reconciliation with `scripts/verify-progressive-station-contracts.mjs`; it checks exact seam identities/regularity, work ceilings, complete face-pair enumeration, source hashes, filled-cap union and oracle binding. Rust lossless transport fits the original4MiB artifact ceiling without changing original JSON or geometry.
+
+All16 explicit joint-law/profileG2 fixtures pass current STEP/reference/OpenCascade and finite scoped ownership reconciliation. Current32-case joint-law UI, full default STEP export, and full287 selected public replay on the final scope fix are executing. These are required current-package checks; previous-package receipts are preserved separately. The remaining all-mode E/R/I/J combination audit and main delivery remain open. Passing these finite matrices will not alone establish universal coverage.
 
 ## Восемь итоговых ворот
 
@@ -358,6 +452,8 @@ Native conditional complete-boundary affine transport is published as `15fab1e36
 ### Original-request-owned miter boundary construction (2026-10-05)
 
 `brep-core::sweep_miter_owned::construct` builds the retained model and its boundary certificate directly from original loop/path/law requests. Its private `BoundaryBody` owns the resulting sections, reports, sharp stations, model and boundary bound; no public constructor accepts a model or numerical certificate. `complete_boundary` requires both union completeness and tolerance satisfaction, without admitting material validity. Native affine placement derives its premises from that private body. The source-only bridge rejects injected model, sections, boundaryCertificate and sourceCertificate fields, and explicitly reports false Solid/global embedding certification. The bridge returns serialized values, not a resident body handle or authenticated transferable certificate.
+
+The native direct variant `construct_direct(DirectRequest, Limits)` retains direct miter sections and loft geometry, with only explicitly requested cap correction. It performs no implicit lattice repair, cap-planarity repair or refinement. `Sweep::preview_retained_at` proves actual retained-section error against the original authored source, including differences in direct/progressive frame rounding, using the existing whole-level and regularity budgets. Original cap domains, projection, parallelism, retained filled regions and decomposition remain required for a complete open boundary. A positive wall bound never fills a missing cap proof; unproved boundary evidence does not admit Solid. Bridge `direct:true` synthesizes neutral laws in Rust and rejects supplied progression/law/frame/guide/circle fields rather than dropping them. This new source path is not included in the qualified main1671 artifact until a new package is published and tested.
 
 All level diagnostics now use the same native `Report` serializer as the progressive curve transport: frame transport, phase, error and regularity reasons/cells, unresolved patches, law application, budget and closed holonomy remain available. Sharp closed miter stations stay explicit C0. Level `continuousBound:false`/`roundingCertified:false` are preserved independently of the complete boundary union report. Cap material-domain and projection exact-work budgets are independent, with omitted `domainExactWork`/`projectionExactWork` retaining the earlier `exactWork` default. Exhausting either cap phase withholds the union bound without changing the proved wall bound.
 
@@ -1487,3 +1583,36 @@ only successful same-invocation covers. Four circle quarters reach unchanged
 0.05/10,000 defaults at65 sections (0.04318575/7,560). This native result and
 202/202 progressive tests do not qualify the new WASM/public/Solid route yet,
 nor prove general RMF holonomy, authored/guide combinations or retained G1/G2.
+
+
+### 2026-10-08: periodic authored Fixed transport with inverse arc length
+
+The original authored inverse-length error owner now accepts a periodic source only with an exact one-sided original Cartesian C1 endpoint certificate. Periodic storage validation, a numerical closed-path flag and a copied retained section are insufficient premises. Interior knot multiplicity still cannot exceed degree. The seam predicate's exact work is charged against the same section-owner budget before length division; exhausting it leaves no bound or retained patches.
+
+For normalized arc station interval of width h, the original position chord defect is bounded by L*h/2 using the enclosed original total length. Authored orientation, scale, twist, affine axes and center laws are certified independently in normalized station fraction. No equality between authored station-frame parameter and inverse arc source parameter is assumed. Original division points, inverse residual bounds and exact constructor parameter correspondence determine each actual retained endpoint discrepancy, including the copied last section. Profile decomposition remains part of the final retained-patch bound; caps and global Solid admission remain separate owners.
+
+A same-invocation MultiSweep may share the original division once for closed Fixed authored requests without guides/contact, with identical original path pointer and spacing. Each profile still pays its seam, coordinates, frame/pose and decomposition work. This is source-length reuse, not reuse of a per-profile error estimate or an exemption from the aggregate work ceiling.
+
+Verified native evidence: ordinary and rational moving-frame/affine laws; zero and one-short budgets; one-ULP exterior-knot mutation accepted by structural periodic validation but refused by exact seam proof; four circle quadrants admitted inside the unchanged 10000-cell aggregate ceiling. Full current NURBS1326 and retained-sweep BREP41 passed. A periodic derivative-axis Rush body fixture and strict fresh-Solid public gate are prepared. New frozen WASM optimization is running; no public/global/STEP/UI qualification of this extension or main-artifact delivery is claimed yet. Original-frame C1/C2 certificates do not certify retained G1/G2; sharp retained miter seams remain explicitly C0 where the actual surface audits so classify them.
+
+
+### 2026-10-09: periodic authored arc delivered, qualification scope
+
+Eligible original periodic Fixed authored arc transport has been qualified on aaf48c0d through native, exact WASM, Rush body, retained mesh and fresh global Solid. Main production distribution passed unchanged budgets, exact source/public/dist fingerprints,10public tests and2wide/narrow headlessMetal UI cases with46checks and real-native cancellation. Rust owns the geometry and certificates; bDx packing changes only the exact text transport of identical WASM bytes.
+
+Current retained/loader public65tests passed, including applicable rational stationG2, represented multispanG2, unequal speeds, closed authored frames and actual miter profile seams. All16open/closed joint miter-law combinations passed32wide/narrow UI cases on the frozen same native artifact. Source-frame smoothness still does not imply retained G1/G2, and sharp miter/caps keep explicitC0.
+
+New149STEP export and both independent references completed; OCCT/global/finite checks and full124body UI still active. Stable broad public run retains an original120s arc timeout. These are the current open qualification gates, alongside final declared E/R/I/J combination audit; no full-library or unrestricted all-input proof claim. Details and preserved failures remain in completion-traceability-2026-10-07.md.
+
+
+### 2026-10-09: ordinary closed Fixed arc-length owner (native only)
+
+Ordinary Fixed sources now use the original inverse-length Lipschitz owner for closed and periodic paths, with exact original C1 seam work and copied retained endpoint displacement included. Periodic flags, numerical closure and sampled frame values cannot replace this seam proof. The aggregate shares only same-request original length work; independent per-profile certificates remain charged. Native regressions and full nurbs-core1329/1329 pass. New WASM/public qualification is pending; main still delivers aaf. This expands surface E only: all-mode global embedding and actual retained G1/G2 require independent certificates.
+
+## Progressive body owned station reconstruction (2026-10-09, packaged qualification pending)
+
+`brep_smooth_sweep_stations(wall_tolerance, quantum, max_work, smoothness_max_work)` is an explicit modifier of a privately owned original `brep_progressive_sweep` request. It accepts no replacement `max_deviation`. Native replay binds the original actual model before reconstructing; retained source sections, original cap domains and certificates cannot be supplied by the caller. A valid one-ULP source vertex change is rejected. Reconstruction preserves original caps, charges outward wall displacement against the original complete source bound, and reports retained profile/station jets on the actual candidate.
+
+TS stores and transports the original serialized request; every geometric operation and certificate is Rust-owned. New candidate charts and volume audits use the actual candidate; old ruled-wall owner flags are not copied. Viewport reads the candidate boundary and seam receipts. Solid traverses the modifier only to select open/closed scope and reruns native actual-model admission. Missing work or bound proofs cause explicit refusal. Transform/reconstruction chains without owned original-source routing remain unsupported.
+
+Native strict closed spatial varying-affine arc-length RMF hollow station-G2 fixture passed fresh global admission over all 523776 face pairs. This is finite fixture qualification, not all-mode certification. Bridge valid-model binding regression and Rush lowering passed; typecheck passed. New frozen WASM and public end-to-end tests are still pending.

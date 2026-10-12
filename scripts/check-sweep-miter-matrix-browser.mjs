@@ -1,4 +1,7 @@
+import {closedFrenetStationSources} from './closed-frenet-station-sources.mjs'
 import {closedCorrectedRegularBodySources,correctedRegularBodySources,sweepBodyBoundarySources} from './sweep-body-matrix-sources.mjs'
+import {spatialRmfProfileG2BodySources} from './spatial-rmf-profile-g2-sources.mjs'
+import {stationFrameSources} from './station-frame-matrix-sources.mjs'
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
@@ -14,12 +17,24 @@ const widthFilter=Number(process.argv.find(a=>a.startsWith('--width='))?.slice(8
 const startAt=process.argv.find(a=>a.startsWith('--start-at='))?.slice('--start-at='.length)
 const nativeRunningCancel=process.argv.includes('--native-running-cancel')
 const nativeCancel=process.argv.includes('--native-cancel')||nativeRunningCancel
+const closedFrenetStationMatrixMode=process.argv.includes('--closed-frenet-station-matrix')
+const periodicFixedNormalStationMatrixMode=process.argv.includes('--periodic-fixed-normal-station-matrix')
+const periodicFixedNormalStationSources=["periodic-fixed-normal-arc-plain-solid-station-g2.r", "periodic-fixed-normal-arc-plain-hollow-station-g2.r", "periodic-fixed-normal-arc-affine-solid-station-g2.r", "periodic-fixed-normal-arc-affine-hollow-station-g2.r"]
+const stationFrameMatrixMode=process.argv.includes('--station-frame-matrix')
+const progressiveStationMatrixMode=process.argv.includes('--progressive-station-matrix')||stationFrameMatrixMode||closedFrenetStationMatrixMode||periodicFixedNormalStationMatrixMode
 const surfaceMode=process.argv.includes('--surface')
-const bodyBoundaryMode=process.argv.includes('--body-boundary')
+const profileG2BodyMatrixMode=process.argv.includes('--profile-g2-body-matrix')
+const bodyBoundaryMode=process.argv.includes('--body-boundary')||profileG2BodyMatrixMode
+const boundedFixedRefusalMode=process.argv.includes('--bounded-fixed-refusal')
+assert.ok(!boundedFixedRefusalMode||bodyBoundaryMode,'Bounded Fixed refusal requires body-boundary mode')
 const sourceDirectory=path.resolve(process.argv.find(a=>a.startsWith('--source-directory='))?.slice('--source-directory='.length)??'examples/rush')
-const lawMatrixMode=process.argv.includes('--law-matrix')
+const profileG2LawMatrixMode=process.argv.includes('--profile-g2-law-matrix')
+const lawMatrixMode=process.argv.includes('--law-matrix')||profileG2LawMatrixMode
+const reconstructedMatrixMode=process.argv.includes('--reconstructed-matrix')
+assert.ok(!reconstructedMatrixMode||!lawMatrixMode&&!surfaceMode&&!bodyBoundaryMode,'Reconstructed matrix requires miter mode')
 assert.ok(!lawMatrixMode||!surfaceMode&&!bodyBoundaryMode,'Law matrix requires miter mode')
 assert.ok(!(surfaceMode&&bodyBoundaryMode),'Select one UI matrix mode')
+assert.ok(!progressiveStationMatrixMode||!surfaceMode&&!bodyBoundaryMode&&!lawMatrixMode&&!reconstructedMatrixMode,'Progressive station matrix requires its own mode')
 // Visible windows require an explicit invocation; inherited environment must
 // never turn a background qualification run into a focus-stealing browser.
 const headed=process.argv.includes('--headed')
@@ -27,8 +42,9 @@ const gpuBackend=process.argv.find(a=>a.startsWith('--gpu-backend='))?.slice('--
 assert.ok(['auto','metal','swiftshader'].includes(gpuBackend),'Unknown requested GPU backend')
 const evidenceOnly=process.argv.includes('--evidence-only')
 assert.ok(!evidenceOnly||surfaceMode&&!headed,'Evidence-only requires a headless surface run')
-const sources=(bodyBoundaryMode?[...sweepBodyBoundarySources]:surfaceMode?['closed-antipodal-spatial-rmf-progressive-sweep.r','closed-spatial-rmf-affine-certified.r','closed-conic-direction-frame-c1-progressive-sweep.r','closed-arc-length-guided-frame-c2-progressive-sweep.r','closed-arc-length-guided-source-bound-progressive-sweep.r','closed-planar-guided-frame-c2-progressive-sweep.r','closed-planar-path-frame-c2-progressive-sweep.r','corrected-frenet-sweep.r','corrected-frenet-antiparallel-progressive-sweep.r','authored-closed-cartesian-c2-progressive-sweep.r','authored-closed-nonclamped-c2-progressive-sweep.r','mixed-knots-curved-frenet-progressive-sweep.r','authored-closed-piecewise-c2-progressive-sweep.r','decomposed-profile-g1-progressive-sweep.r','decomposed-profile-g2-progressive-sweep.r','closed-authored-arc-length-progressive-sweep.r','closed-authored-source-bound-progressive-sweep.r','authored-closed-projective-c2-progressive-sweep.r','authored-closed-multispan-c2-progressive-sweep.r','authored-closed-c2-progressive-sweep.r','nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-planar-rmf-progressive-sweep.r','arc-length-curved-contact-progressive-sweep.r','arc-length-curved-guided-progressive-sweep.r','arc-length-curved-frenet-progressive-sweep.r','arc-length-curved-fixed-normal-progressive-sweep.r','arc-length-curved-fixed-progressive-sweep.r','arc-length-curved-authored-progressive-sweep.r','arc-length-authored-progressive-sweep.r','arc-length-guided-progressive-sweep.r','arc-length-progressive-sweep.r','arc-length-affine-progressive-sweep.r','planar-rmf-progressive-sweep.r','oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','authored-progressive-sweep.r','fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','guided-progressive-sweep.r','contact-progressive-sweep.r','closed-guided-progressive-sweep.r','closed-contact-progressive-sweep.r','closed-fixed-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','closed-fixed-normal-full-turn-progressive-sweep.r','closed-planar-rmf-full-turn-progressive-sweep.r','closed-frenet-progressive-sweep.r']:[
+const sources=(progressiveStationMatrixMode?['straight-progressive-body-station-g2.r','closed-spatial-rmf-varying-affine-hollow-body-station-g2.r','arc-length-periodic-authored-station-g2.r']:bodyBoundaryMode?(profileG2BodyMatrixMode?[...spatialRmfProfileG2BodySources]:[...sweepBodyBoundarySources]):surfaceMode?['closed-g1-arc-length-fixed-progressive-sweep.r','closed-antipodal-spatial-rmf-progressive-sweep.r','closed-spatial-rmf-affine-certified.r','closed-conic-direction-frame-c1-progressive-sweep.r','closed-arc-length-guided-frame-c2-progressive-sweep.r','closed-arc-length-guided-source-bound-progressive-sweep.r','closed-planar-guided-frame-c2-progressive-sweep.r','closed-planar-path-frame-c2-progressive-sweep.r','corrected-frenet-sweep.r','corrected-frenet-antiparallel-progressive-sweep.r','authored-closed-cartesian-c2-progressive-sweep.r','authored-closed-nonclamped-c2-progressive-sweep.r','mixed-knots-curved-frenet-progressive-sweep.r','authored-closed-piecewise-c2-progressive-sweep.r','decomposed-profile-g1-progressive-sweep.r','decomposed-profile-g2-progressive-sweep.r','closed-authored-arc-length-progressive-sweep.r','closed-authored-source-bound-progressive-sweep.r','authored-closed-projective-c2-progressive-sweep.r','authored-closed-multispan-c2-progressive-sweep.r','authored-closed-c2-progressive-sweep.r','nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-nonaxial-planar-rmf-progressive-sweep.r','arc-length-curved-planar-rmf-progressive-sweep.r','arc-length-curved-contact-progressive-sweep.r','arc-length-curved-guided-progressive-sweep.r','arc-length-curved-frenet-progressive-sweep.r','arc-length-curved-fixed-normal-progressive-sweep.r','arc-length-curved-fixed-progressive-sweep.r','arc-length-curved-authored-progressive-sweep.r','arc-length-authored-progressive-sweep.r','arc-length-guided-progressive-sweep.r','arc-length-progressive-sweep.r','arc-length-affine-progressive-sweep.r','planar-rmf-progressive-sweep.r','oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','authored-progressive-sweep.r','fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','guided-progressive-sweep.r','contact-progressive-sweep.r','closed-guided-progressive-sweep.r','closed-contact-progressive-sweep.r','closed-fixed-progressive-sweep.r','closed-arc-length-fixed-progressive-sweep.r','periodic-arc-length-fixed-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','closed-fixed-normal-full-turn-progressive-sweep.r','closed-planar-rmf-full-turn-progressive-sweep.r','closed-frenet-progressive-sweep.r']:[
  'sharp-profile-nonuniform-station-g2-miter.r',
+ 'direct-miter-circle-owned-boundary.r',
  'miter-moving-affine-full-boundary-refined.r',
  'closed-rational-frame-guide-affine-hollow-placed.r',
  'progressive-miter-reconstructed-rational-profile.r',
@@ -45,14 +61,23 @@ const sources=(bodyBoundaryMode?[...sweepBodyBoundarySources]:surfaceMode?['clos
  'miter-hollow-body.r','miter-hollow-corrected.r','closed-miter-hollow-body.r',
  'progressive-miter-certified-hollow.r','progressive-miter-circle-corrected-hollow.r','progressive-miter-spatial-circle-corrected-hollow.r','progressive-miter-affine-circle-corrected-hollow.r','progressive-miter-oblique-circle-corrected-hollow.r','miter-rational-curved-guide-frame-affine-hollow.r','progressive-miter-station-g2-hollow.r','nonuniform-station-g2-hollow-miter.r','progressive-miter-reconstructed-stations.r','progressive-miter-reconstructed-sharp.r','closed-miter-frame-guide-affine-hollow.r','miter-g1-profile-frame-guide-affine.r',
 ])
-const selectedSources=(lawMatrixMode?(await readdir(sourceDirectory)).filter(file=>/^miter-laws-(open|closed)-[a-z-]+\.r$/.test(file)).sort():sources).filter(file=>!filter||file===filter)
+const reconstructedSources=[
+ 'progressive-miter-reconstructed-conic-half.r','progressive-miter-reconstructed-conic-one.r','progressive-miter-reconstructed-conic-two.r',
+ 'progressive-miter-reconstructed-stations.r','progressive-miter-reconstructed-sharp.r',
+ 'progressive-miter-reconstructed-guide-frame-affine-hollow.r','progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r',
+ 'closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r',
+]
+for(const file of reconstructedSources)assert.equal(sources.filter(source=>source===file).length,surfaceMode||bodyBoundaryMode||progressiveStationMatrixMode?0:1,'Reconstructed source must occur exactly once in the miter inventory')
+const lawSourcePattern=profileG2LawMatrixMode?/^miter-laws-(open|closed)-[a-z-]+-profile-g2\.r$/:/^miter-laws-(open|closed)-[a-z-]+\.r$/
+const selectedSources=(periodicFixedNormalStationMatrixMode?periodicFixedNormalStationSources:closedFrenetStationMatrixMode?closedFrenetStationSources:stationFrameMatrixMode?stationFrameSources:boundedFixedRefusalMode?['closed-arc-length-fixed-folded-body-boundary.r']:reconstructedMatrixMode?reconstructedSources:lawMatrixMode?(await readdir(sourceDirectory)).filter(file=>lawSourcePattern.test(file)).sort():sources).filter(file=>!filter||file===filter)
 if(lawMatrixMode&&!filter){
  const expected=[false,true].flatMap(closed=>Array.from({length:8},(_,bits)=>{
   const laws=[bits&1?'affine':null,bits&2?'authored':null,bits&4?'guide':null].filter(Boolean).join('-')||'plain'
-  return `miter-laws-${closed?'closed':'open'}-${laws}.r`
+  return `miter-laws-${closed?'closed':'open'}-${laws}${profileG2LawMatrixMode?'-profile-g2':''}.r`
  })).sort()
  assert.deepEqual(selectedSources,expected,'Complete law matrix requires each open/closed affine/authored/guide combination exactly once')
 }
+if(profileG2BodyMatrixMode&&!filter)assert.deepEqual(selectedSources,[...spatialRmfProfileG2BodySources],'Complete corrected spatial body inventory requires all eleven original companions')
 sources.splice(0,sources.length,...selectedSources)
 assert.ok(sources.length,'Unknown mode filter')
 const viewports=[{width:1440,height:1000},{width:600,height:1000}].filter(v=>!widthFilter||v.width===widthFilter)
@@ -74,7 +99,7 @@ const workerFiles=(await readdir(path.join(dist,'assets'))).filter(name=>/^geome
 assert.ok(workerFiles.length,'Built geometry worker asset must exist')
 for(const file of workerFiles)assert.ok((await readFile(path.join(dist,'assets',file),'utf8')).includes(wasmSha),'Geometry worker must embed the current WASM fingerprint')
 const report={schema:'sweep-miter-ui-matrix/1' ,recordedAt:new Date().toISOString(),
- scope:(bodyBoundaryMode?'Finite constructor-owned progressive body boundary UI scenarios; ':surfaceMode?'Finite progressive surface UI scenarios; ':'Finite retained-miter UI scenarios; ')+' held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.',
+ scope:(progressiveStationMatrixMode?'Finite owned progressive station reconstruction UI scenarios; ':bodyBoundaryMode?'Finite constructor-owned progressive body boundary UI scenarios; ':surfaceMode?'Finite progressive surface UI scenarios; ':'Finite retained-miter UI scenarios; ')+' held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.',
  nativeCancelProbe:nativeCancel,nativeRunningCancelProbe:nativeRunningCancel,
  geometryWasmSha256:wasmSha,
  artifactProvenance:{sha256:wasmSha,byteLength:wasm.length,sourcePublicDistVerified:true,geometryWorkerFiles:workerFiles},
@@ -210,6 +235,11 @@ try {
     assert.ok(presentedUpper>0&&presentedUpper<=bodyBudget,'A positive upper estimate must fit the original source budget')
     entry.assertions.push({case:'nonzero-small-bound-presentation',status:'passed'})
     entry.assertions.push({case:'constructor-owned-complete-body-boundary-presentation',status:'passed'})
+    if(profileG2BodyMatrixMode){
+     assert.match(await evidence.innerText(),/G1\/G2 сохранённого профиля:\s*✓\s*\/\s*✓/)
+     assert.match(await evidence.innerText(),/station-швы:\s*C0/)
+     entry.assertions.push({case:'actual-retained-profile-G2-station-C0',status:'passed'})
+    }
     const strict=source.replace(/max_deviation:\s*[0-9.]+mm/,'max_deviation: 0.000000000000000000000000000001mm')
     assert.notEqual(strict,source)
     await load(strict);await build()
@@ -232,6 +262,16 @@ try {
     assert.match(await patchEvidence.innerText(),/Область: сохранённые поверхности/)
     assert.match(await patchEvidence.innerText(),/Регулярность поверхностей:\s*(доказана|не доказана)/)
     entry.assertions.push({case:'separate-retained-surface-regularity-presentation',status:'passed'})
+    if(file==='closed-g1-arc-length-fixed-progressive-sweep.r'){
+     const reversed=source.replace('[4,-4,0],[4,0,0]','[4,4,0],[4,0,0]')
+     assert.notEqual(reversed,source)
+     await load(reversed);await build()
+     const refusal=page.locator('.message.error');await refusal.waitFor()
+     assert.match(await refusal.innerText(),/original.*error|sampled refinement|continuous retained-patch error/i)
+     assert.equal(await patchEvidence.count(),0,'Non-positive closing tangent must clear final error proof')
+     await load(source);await build();await assertBuilt();await patchEvidence.waitFor({state:'visible'})
+     entry.assertions.push({case:'closed-fixed-positive-direction-seam-refusal-and-restoration',status:'passed'})
+    }
     if(file==='decomposed-profile-g1-progressive-sweep.r'){
      assert.match(await patchEvidence.innerText(),/G2 между частями одного профиля:\s*не доказана/)
      assert.match(await patchEvidence.innerText(),/G1 между частями одного профиля:\s*доказана/)
@@ -384,11 +424,11 @@ try {
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\//.test(text)&&/Стыки вдоль пути:\s*G2/.test(text)), 'Rational profile G1 and station G2 must reach viewport presentation')
     entry.assertions.push({case:'rational-profile-G1-and-station-G2',status:'passed'})
    }
-   if(file.startsWith('progressive-miter-reconstructed-conic-')||file==='closed-miter-frame-guide-affine-hollow.r'||file==='closed-miter-frame-guide-affine-hollow-corrected.r'||file==='closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r'||file==='progressive-miter-circle-corrected-hollow.r'||file==='progressive-miter-spatial-circle-corrected-hollow.r'||file==='progressive-miter-affine-circle-corrected-hollow.r'||file==='progressive-miter-oblique-circle-corrected-hollow.r'||file==='miter-rational-curved-guide-frame-affine-hollow.r'){
+   if(progressiveStationMatrixMode||profileG2LawMatrixMode||file==='direct-miter-circle-owned-boundary.r'||file.startsWith('progressive-miter-reconstructed-conic-')||file==='closed-miter-frame-guide-affine-hollow.r'||file==='closed-miter-frame-guide-affine-hollow-corrected.r'||file==='closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r'||file==='progressive-miter-circle-corrected-hollow.r'||file==='progressive-miter-spatial-circle-corrected-hollow.r'||file==='progressive-miter-affine-circle-corrected-hollow.r'||file==='progressive-miter-oblique-circle-corrected-hollow.r'||file==='miter-rational-curved-guide-frame-affine-hollow.r'){
     assert.ok(entry.viewportEvidence.some(text=>/G1 \/ G2 стыков профиля:\s*✓\s*\/\s*✓/.test(text)), 'Every profile seam in this mode must certify G2')
     entry.assertions.push({case:'profile-G2',status:'passed'})
    }
-   if(file.startsWith('progressive-miter-reconstructed-conic-')||file==='progressive-miter-station-g2-hollow.r'||file==='nonuniform-station-g2-hollow-miter.r'||file==='progressive-miter-reconstructed-stations.r'||file==='progressive-miter-reconstructed-guide-frame-affine-hollow.r'||file==='progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r'){
+   if(progressiveStationMatrixMode||file.startsWith('progressive-miter-reconstructed-conic-')||file==='progressive-miter-station-g2-hollow.r'||file==='nonuniform-station-g2-hollow-miter.r'||file==='progressive-miter-reconstructed-stations.r'||file==='progressive-miter-reconstructed-guide-frame-affine-hollow.r'||file==='progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r'){
     assert.ok(entry.viewportEvidence.some(text=>/Стыки вдоль пути:\s*G2/.test(text)), 'Actual station G2 must reach viewport')
     entry.assertions.push({case:'station-G2',status:'passed'})
    }
@@ -450,7 +490,7 @@ try {
      // These authored fixtures finish tiny-budget requests too quickly.
      // Their independently qualified 65-station requests retain the valid
      // error budget and produce certified 256/258-face Solids.
-     const busySource=bodyBoundaryMode
+     const busySource=progressiveStationMatrixMode?source+'\n// Observe the original progressive station geometry in a new revision.\n':bodyBoundaryMode
       ?file==='periodic-corrected-frenet-nonplanar-body-boundary.r'
        // The proved periodic grid fits the original aggregate work ceiling.
        ?source.replace(/initial_sections:\s*5\b/, 'initial_sections: 33')
@@ -507,7 +547,11 @@ try {
     entry.assertions.push({case:buildAction==='cancel'?'native-build-cancel-restoration':'native-build-source-change-restoration',status:'passed'})
     }
     for(const action of ['cancel','source-change']){
-     const exactSource=bodyBoundaryMode&&(file.includes('rational-straight')||file==='corrected-frenet-straight-affine-hollow-body-boundary.r')
+     const exactSource=bodyBoundaryMode&&['arc-length-curved-frenet-body-boundary.r','arc-length-curved-fixed-normal-body-boundary.r','arc-length-curved-fixed-body-boundary.r'].includes(file)
+      // Keep the original maximum of 17; make the real cancellation workload
+      // start there so its warm native Solid request remains observable.
+      ?source.replace('initial_sections: 3,max_sections: 17','initial_sections: 17,max_sections: 17')
+      :bodyBoundaryMode&&(file.includes('rational-straight')||file==='corrected-frenet-straight-affine-hollow-body-boundary.r')
       ?source.replace(/initial_sections: 3,max_sections: (3|129)/,file==='corrected-frenet-straight-affine-hollow-body-boundary.r'?'initial_sections: 33,max_sections: 33':'initial_sections: 65,max_sections: 65')
       :source
      if(exactSource!==source){await load(exactSource);await build();await assertBuilt()}
@@ -519,7 +563,14 @@ try {
       const nativeStack=await (nativeRunningCancel?exactProbe.observeRunningGeometry():exactProbe.pauseGeometryRequest())
       const cancelStartedAt=Date.now()
       const observationToCancelInitiationMs=nativeRunningCancel?cancelStartedAt-nativeStack.observedAtEpochMs:null
-      if(action==='cancel')await page.getByRole('button',{name:'Отмена',exact:true}).click()
+      if(action==='cancel'&&nativeRunningCancel)await page.evaluate(()=>{
+       // Avoid locator actionability frames after the authenticated CPU sample.
+       // The real UI handler must still terminate the active Worker afterwards.
+       const button=[...document.querySelectorAll('.editor-toolbar button')].find(b=>b.textContent.trim()==='Отмена')
+       if(!button||button.disabled)throw Error('Native Solid already completed before cancellation')
+       button.click()
+      })
+      else if(action==='cancel')await page.getByRole('button',{name:'Отмена',exact:true}).click()
       else await editor.fill(source+'\n// Supersede an active Rust exact-solid request.\n')
       await exactProbe.assertDestroyed()
       const workerDestroyedAfterMs=Date.now()-cancelStartedAt
@@ -568,7 +619,7 @@ try {
    entry.assertions.push({case:'source-change',status:'passed',fault:'held worker dispatch'})
    await page.evaluate(()=>window.sweepHoldExact=false)
    await load(source);await toSolid()
-   if(surfaceMode||file==='miter-hollow-body.r'){
+   if(surfaceMode||file==='miter-hollow-body.r'||boundedFixedRefusalMode){
     await waitSolidFinished()
     const error=page.locator('.message.error');await error.waitFor()
     assert.match(await error.innerText(),surfaceMode?/Solid source requires native B-rep bodies/i:/Solid geometry.*boundary embedding/i)
@@ -637,7 +688,9 @@ try {
      const preserved=await download('boundary-budget-refused');assert.equal(preserved.bodies.length,1);assert.deepEqual(preserved.bodies[0].brep,document.bodies[0].brep)
      entry.assertions.push({case:'full-boundary-budget-solid-refusal',status:'passed'})
     }
-   const invalid=file.includes('rational-straight')
+   const invalid=progressiveStationMatrixMode
+    ?source.replace(/^path\s*=.*$/m,'path = line_curve(start: [0,0,0],end: [0,0,0])')
+    :file.includes('rational-straight')
     ?source.replace(/^path\s*=\s*nurbs_curve\(.*$/m,'path = bezier_curve(points: [[0,0,0],[0,0,0],[0,0,0]])')
     :correctedRegularBodySources.includes(file)||file==='corrected-frenet-affine-zero-curvature-hollow-body-boundary.r'||file==='arc-length-corrected-frenet-affine-zero-curvature-hollow-body-boundary.r'||file==='corrected-frenet-affine-inflection-hollow-body-boundary.r'||file==='arc-length-corrected-frenet-affine-inflection-hollow-body-boundary.r'||file==='corrected-frenet-inflection-hollow-body-boundary.r'||file==='arc-length-corrected-frenet-inflection-hollow-body-boundary.r'||file==='arc-length-curved-nonaxial-planar-rmf-body-boundary.r'||file==='arc-length-curved-authored-body-boundary.r'||file==='arc-length-curved-fixed-body-boundary.r'||file==='arc-length-curved-fixed-normal-body-boundary.r'||file==='arc-length-curved-frenet-body-boundary.r'||(file==='arc-length-curved-guided-body-boundary.r'||file==='arc-length-curved-contact-body-boundary.r'||file==='arc-length-curved-planar-rmf-body-boundary.r')
     ?source.replace(/^path\s*=\s*bezier_curve\(points:.*$/m,'path = bezier_curve(points: [[0,0,0],[0,0,0],[0,0,0]])')
@@ -657,7 +710,9 @@ try {
    assert.equal(refused.bodies.length,1)
    assert.deepEqual(refused.bodies[0].brep,document.bodies[0].brep)
    entry.assertions.push({case:'invalid-path-solid-refusal',status:'passed',retainedBodyPreserved:true})
-   const resourceLimited=bodyBoundaryMode
+   const resourceLimited=progressiveStationMatrixMode
+    ?source.replace(/(brep_smooth_sweep_stations\([^)]*?\bmax_work:\s*)\d+/,(_,prefix)=>`${prefix}0`)
+    :bodyBoundaryMode
     ?source.replace(/max_deviation:\s*[0-9.]+mm/,'max_deviation: 0.000000000000000000000000000001mm')
     :source.includes('cap_correction_max_work:')
     ?source.replace(/cap_correction_max_work:\s*\d+/,'cap_correction_max_work: 1')

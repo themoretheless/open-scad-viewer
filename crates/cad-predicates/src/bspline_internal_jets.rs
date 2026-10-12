@@ -533,6 +533,17 @@ fn direction_equal(
     let Some(axis) = (0..3).find(|&k| l[1][k].n.sign() != Sign::Zero) else {
         return Err(Reason::MissingProof);
     };
+    if order==0 {
+        // Position and positively proportional velocity establish a continuous
+        // unit tangent even when the original parameter speed jumps.
+        if l[1][axis].n.sign()!=r[1][axis].n.sign(){return Ok(false);}
+        for k in 0..3 {
+            if !l[0][k].equal(&r[0][k],ctx)? || !l[1][k].mul(&r[1][axis],ctx)?.equal(&r[1][k].mul(&l[1][axis],ctx)?,ctx)? {
+                return Ok(false);
+            }
+        }
+        return Ok(true);
+    }
     let sign = match l[1][axis].n.sign() {
         Sign::Positive => 1.,
         Sign::Negative => -1.,
@@ -607,6 +618,7 @@ fn direction_equal(
 }
 
 /// Exact C1/C2 of a nonzero unit-direction field at original internal knots
+/// (orders 1/2), or C0 position with continuous unit tangent (order 0).
 /// or the active endpoints. Arc-length chart jets use positive speed ratios.
 /// This does not prove whole-domain regularity, position continuity, surface
 /// smoothness or closed transport holonomy; those remain caller premises.
@@ -620,7 +632,7 @@ pub fn rational_bspline_direction_jet_identity(
     arc_length: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     if !(1..=32).contains(&degree)
-        || !(1..=2).contains(&order)
+        || !(0..=2).contains(&order)
         || controls.len() < degree + 1
         || knots.len() != controls.len() + degree + 1
     {
@@ -759,6 +771,22 @@ mod direction_tests {
             &mut ctx, &controls, &knots, degree, order, endpoints, arc,
         )
         .unwrap()
+    }
+    #[test]
+    fn tangent_identity_owns_position_speed_jumps_and_exact_refusals() {
+        let p=[[0.,0.,0.,1.],[1.,0.,0.,1.],[4.,0.,0.,1.]];
+        let knots=[2.,2.,3.,5.,5.];
+        let proof=audit(&p,&knots,1,0,false,false,1000000);
+        assert_eq!(proof.outcome,BezierIdentity::Equal);
+        assert!(matches!(audit(&p,&knots,1,0,false,false,proof.work_used-1).outcome,BezierIdentity::Indeterminate(_)));
+        assert_ne!(audit(&p,&knots,1,0,true,false,1000000).outcome,BezierIdentity::Equal);
+        for endpoint in [[0.,0.,0.,1.],[1.,0.,0.,1.],[4.,f64::from_bits(1),0.,1.]] {
+            let mut wrong=p;wrong[2]=endpoint;
+            assert_ne!(audit(&wrong,&knots,1,0,false,false,1000000).outcome,BezierIdentity::Equal);
+        }
+        // A repeated knot can break position even with parallel velocities.
+        let disconnected=[[0.,0.,0.,1.],[1.,0.,0.,1.],[2.,0.,0.,1.],[3.,0.,0.,1.]];
+        assert_ne!(audit(&disconnected,&[0.,0.,0.5,0.5,1.,1.],1,0,false,false,1000000).outcome,BezierIdentity::Equal);
     }
     #[test]
     fn direction_jets_keep_speed_changes_separate_and_refuse_reversal_and_partial_work() {

@@ -18086,6 +18086,77 @@
                 "type": "string",
                 "const": "brep_miter_sweep"
               },
+              "max_deviation": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "circle_correction_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "circle_correction_quantum": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "circle_correction_max_work": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
               "closed": {
                 "default": false,
                 "type": "boolean"
@@ -18351,6 +18422,55 @@
               "op": {
                 "type": "string",
                 "const": "brep_progressive_sweep"
+              },
+              "circle_correction_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "circle_correction_quantum": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "circle_correction_max_work": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
               },
               "rmf_transport_steps": {
                 "type": "number",
@@ -23478,6 +23598,89 @@
               },
               "op": {
                 "type": "string",
+                "const": "brep_smooth_sweep_stations"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "wall_tolerance": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "quantum": {
+                "default": 9.094947017729282e-13,
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "param": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      }
+                    },
+                    "required": [
+                      "param"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "max_work": {
+                "default": 1000000,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "smoothness_max_work": {
+                "default": 2000000,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "wall_tolerance",
+              "quantum",
+              "max_work"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
                 "const": "brep_smooth_miter_stations"
               },
               "input": {
@@ -25788,7 +25991,7 @@
               "relative_tolerance": {
                 "type": "number",
                 "minimum": 1e-12,
-                "maximum": 0.00001
+                "maximum": 1e-05
               }
             },
             "required": [

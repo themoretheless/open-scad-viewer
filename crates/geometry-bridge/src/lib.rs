@@ -24,6 +24,7 @@ pub mod brep_graph;
 pub mod brep_graph_runner;
 pub mod brep_identity;
 mod brep_json_size;
+mod native_snapshot;
 pub mod brep_production;
 pub mod brep_profile;
 pub mod brep_provenance;
@@ -588,6 +589,8 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "native_geometry_snapshot_pack" => native_snapshot::pack(v),
+        "native_geometry_snapshot_unpack" => native_snapshot::unpack(v),
         "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
         "truss_diagnose" => truss::diagnose(v),
         "truss_buckling" => truss::buckling(v),
@@ -1208,6 +1211,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "brep_miter_profile_smoothness_audit" => cad_sweep_smoothness::diagnose(v, true),
         "brep_miter_station_smoothness_audit" => cad_sweep_smoothness::diagnose(v, false),
         "brep_sweep_volume_audit" => cad_face_contacts::diagnose_sweep_volume(v),
+        "brep_sweep_volume_charts_audit" => cad_face_contacts::diagnose_sweep_volume_and_charts(v),
+        "brep_sweep_volume_begin" => cad_face_contacts::begin_sweep_volume(v),
+        "brep_sweep_volume_step" => cad_face_contacts::step_sweep_volume(v),
+        "brep_sweep_volume_drop" => cad_face_contacts::drop_sweep_volume(v),
         "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(
             &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
             &field::<Vec<f64>>(&v, "parameters")?,
@@ -1245,7 +1252,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         >(
             &v, "sections",
         )?)?),
-        "brep_nurbs_progressive_profile_body" => {
+        "brep_nurbs_progressive_profile_body" | "brep_nurbs_progressive_profile_body_reconstruct_stations" => {
             use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
             let orientation = match field::<String>(&v, "orientation")?.as_str() {
                 "rmf" => Orientation::RotationMinimizing,
@@ -1343,6 +1350,15 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     quantum: quantum.unwrap_or(2_f64.powi(-40)),
                     max_work: max_work.unwrap_or(1000000),
                 });
+            let circle_tolerance=optional_field::<f64>(&v,"circle_correction_tolerance")?;
+            let circle_quantum=optional_field::<f64>(&v,"circle_correction_quantum")?;
+            let circle_work=optional_field::<u64>(&v,"circle_correction_max_work")?;
+            if circle_tolerance.is_none() && (circle_quantum.is_some() || circle_work.is_some()) {
+                return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED","Profile circle correction requires a displacement tolerance"));
+            }
+            let profile_correction=circle_tolerance.map(|tolerance|brep_core::analytic::EndpointCapCorrection {
+                tolerance,quantum:circle_quantum.unwrap_or(2_f64.powi(-40)),max_work:circle_work.unwrap_or(1000000),
+            });
             let rmf_steps = optional_field::<usize>(&v, "rmf_transport_steps")?;
             let rmf_cells = optional_field::<usize>(&v, "error_max_cells")?;
             let rmf_products = optional_field::<usize>(&v, "error_max_products")?;
@@ -1360,7 +1376,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     ));
                 }
             };
-            let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(
+            let result = brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
                 &loops,
                 &path,
                 &scale,
@@ -1372,8 +1388,38 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))),
                 options,
                 correction,
+                profile_correction,
                 rmf_policy,
             )?;
+            // Replay the complete original constructor, never caller-authored sections,
+            // retained geometry or a scalar certificate. The base receipt stays separate.
+            let station_reconstruction=if v["op"].as_str()==Some("brep_nurbs_progressive_profile_body_reconstruct_stations") {
+                if let Some(expected)=optional_field::<brep_core::Model>(&v,"expected_source_model")? {
+                    if expected!=result.model {
+                        return Err(input("Station reconstruction source model differs from native original constructor"));
+                    }
+                }
+                let report=result.reconstruct_stations(
+                    field(&v,"station_quantum")?,field(&v,"station_tolerance")?,field(&v,"station_max_work")?,
+                )?;
+                let closed=result.approximation.levels.last().unwrap().closed_path;
+                let actual_smoothness=if let Some(model)=report.reconstruction.as_ref().and_then(|r|r.model.as_ref()) {
+                    let caps=if closed {Vec::new()}else{vec![model.faces.len()-2,model.faces.len()-1]};
+                    Some(cad_sweep_smoothness::diagnose(json!({"model":model,"capFaces":caps,
+                        "maxWork":field::<u64>(&v,"smoothness_max_work")?}),true)?)
+                }else{None};
+                Some(json!({"reason":report.reason,"source":"original-progressive-profile-request",
+                    "globalEmbeddingCertified":false,"profileSmoothness":actual_smoothness,
+                    "reconstruction":report.reconstruction.map(|r|json!({"model":r.model,
+                        "wallDisplacementUpper":r.candidate.wall_displacement_upper,
+                        "work":r.candidate.work,"reason":r.candidate.reason})),
+                    "boundaryCertificate":report.boundary.map(|b|json!({
+                        "method":"retained-sweep-boundary-union","scope":"boundary-set-hausdorff",
+                        "continuousBound":b.continuous_bound,"withinBudget":b.within_budget,
+                        "errorUpper":b.error_upper,"wallErrorUpper":b.wall_error_upper,
+                        "filledCapErrorUpper":b.filled_cap_error_upper,"reason":b.reason,
+                        "closed":closed,"budget":options.max_deviation}))}))
+            }else{None};
             let retained_caps=result.retained_caps.as_ref().map(|r|json!({"exact":r.exact,
                 "capErrorUpper":if r.exact {Some(0.)}else{None},"exactWork":r.exact_work,"inspectedEdges":r.inspected_edges,"reason":r.reason,
                 "scope":"constructor-owned-retained-endpoint-regions","continuousBound":false,"globalEmbeddingCertified":false}));
@@ -1388,6 +1434,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 json!({"model":result.model,"approximation":result.approximation,"retainedCaps":retained_caps,
                 "capProjection":cap_projection,"filledCapErrorUpper":result.filled_cap_error_upper,
                 "capCorrectionErrorUpper":result.cap_correction_error_upper,
+                "profileCorrectionErrorUpper":result.profile_correction_error_upper,
                 "bodyDecompositionErrorUpper":result.body_decomposition_error_upper,
                 "bodyDecompositionProducts":result.body_decomposition_products,
                 "retainedWalls":{"certified":result.retained_walls.certified,"faceCoverageCertified":result.retained_walls.face_coverage_certified,
@@ -1407,6 +1454,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                     }
                 }
             }
+            if let Some(report)=station_reconstruction {output["stationReconstruction"]=report;}
             Ok(output)
         }
         "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(&field::<Vec<Vec<[f64; 3]>>>(

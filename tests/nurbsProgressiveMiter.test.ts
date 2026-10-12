@@ -385,7 +385,15 @@ it('retains Rush rational topology after streamed previews and refuses dimension
  expect(previews.every(p=>p.patches.length>0&&p.profilePatchRanges.length===2)).toBe(true)
  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,phaseResolved:true,globalEmbeddingCertified:false,capDomains:null,capContacts:null,capPairs:null,embedding:null,volume:{solidGeometryCertified:expect.any(Boolean),orientations:expect.any(Array)},wallAudit:{globalEmbeddingCertified:false,declaredBoundariesC0:true}})
  const scene=await parseOpenSCAD(source)
- expect(()=>sceneMeshesToSolidDocument(scene.meshes)).toThrow(/Progressive sweep Solid geometry could not be proved: boundary embedding/)
+ expect(scene.meshes.length).toBeGreaterThan(0)
+ const solid=sceneMeshesToSolidDocument(scene.meshes)
+ expect(solid.bodies).toHaveLength(1)
+ const model=solid.bodies[0]!.brep!
+ expect(inspectNurbsBrep(model)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
+ const artifact=scene.meshes[0]!.nativeGeometry
+ if(!artifact)throw Error('Missing original progressive miter geometry')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ expect(inspectProgressiveSweepSolidAdmission(artifact,model)).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true})
  let cancel=false
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'},{shouldAbort:()=>cancel,onSweepPreview:()=>{cancel=true}})).rejects.toMatchObject({name:'AbortError'})
  await expect(buildOwnNurbsAsync(compiled.document,{action:'build'})).resolves.toBeDefined()

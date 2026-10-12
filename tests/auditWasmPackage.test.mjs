@@ -53,3 +53,12 @@ test('rejects modules with external imports', () => {
   const wasm = Buffer.from([0,97,115,109,1,0,0,0,1,4,1,96,0,0,2,7,1,1,109,1,102,0,0])
   assert.throws(() => auditWasmPackage(wasm), /must not import/)
 })
+
+test('tracks dense packed literals and rejects duplicate copies',()=>{
+ for(const tag of ['bBx:','bCx:','bDx:','bEx:','bHx:','bIx:']){
+ const literal=tag+'00000001'+String.fromCharCode(22,23)
+ const assets=[{path:'dense.js',source:`export default '${literal}';`}]
+ assert.equal(verifyUniquePackedWasm(assets),1)
+ assert.throws(()=>verifyUniquePackedWasm([...assets,{path:'copy.js',source:`const bytes='${literal}';`}]),/Duplicate packed WASM/)
+ }
+})

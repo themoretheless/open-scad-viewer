@@ -1,7 +1,8 @@
-//! Bounded quintic candidates with shared binary-lattice station jets.
+//! Bounded adaptive-degree candidates with shared binary-lattice station jets.
 //! No regularity, embedding or Solid claim is issued by this construction.
 use super::*;
 use nurbs_core::interval_eval::Interval;
+mod error_bound;
 mod generic;
 pub struct SmoothStationWalls {
     pub sides: Option<Vec<Vec<Surface>>>,
@@ -43,7 +44,25 @@ pub fn smooth_station_walls(
     tolerance: f64,
     max_work: u64,
 ) -> Result<SmoothStationWalls> {
-    let canonical = canonical_station_walls(sections, sharp, closed, quantum, tolerance, max_work)?;
+    let mut canonical = canonical_station_walls(sections, sharp, closed, quantum, tolerance, max_work)?;
+    // An exact affine conic can have half-grid generators even when its
+    // original poles lie on the caller grid. Try bounded finer proposal grids
+    // before independent pole rounding; every source coefficient must still
+    // match exactly and failed attempts consume the same shared allowance.
+    let mut proposal_quantum = quantum;
+    for _ in 0..4 {
+        if canonical.sides.is_some()
+            || !matches!(canonical.reason, "generator-lattice-range" | "source-generator-identity")
+            || canonical.work >= max_work
+        {
+            break;
+        }
+        proposal_quantum *= 0.5;
+        if !proposal_quantum.is_normal() {break;}
+        let spent = canonical.work;
+        canonical = canonical_station_walls(sections, sharp, closed, proposal_quantum, tolerance, max_work-spent)?;
+        canonical.work += spent;
+    }
     if canonical.sides.is_some()
         || !matches!(
             canonical.reason,
@@ -266,6 +285,7 @@ fn canonical_station_walls(
             }
             let mut g = [[0.; 3]; 3];
             for k in 0..3 {
+                if !charge(&mut report.work, max_work) {return Ok(report);}
                 let p0 = c.control_points[0][k] / quantum;
                 let p4 = c.control_points[4][k] / quantum;
                 g[0][k] = (p0 + p4) * 0.5;
@@ -303,89 +323,129 @@ fn canonical_station_walls(
                 && (i == 0 || i == n - 1)
                 && (sharp.contains(&0) || sharp.contains(&(n - 1))))
     };
-    let mut sides = vec![Vec::new(); loops];
-    let mut upper = 0_f64;
-    for layer in 0..n - 1 {
-        for l in 0..loops {
-            let a = &generators[layer][l];
-            let b = &generators[layer + 1][l];
-            let ta = if (!closed && layer == 0) || is_sharp(layer) {
-                tangent(a, b, 5.)
-            } else {
-                let prev = if layer == 0 { n - 2 } else { layer - 1 };
-                tangent(&generators[prev][l], b, 10.)
-            };
-            let tb = if (!closed && layer + 1 == n - 1) || is_sharp(layer + 1) {
-                tangent(a, b, 5.)
-            } else {
-                let next = if layer + 1 == n - 1 { 1 } else { layer + 2 };
-                tangent(a, &generators[next][l], 10.)
-            };
-            let controls = [
-                *a,
-                shifted(a, &ta, 1.),
-                shifted(a, &ta, 2.),
-                shifted(b, &tb, -2.),
-                shifted(b, &tb, -1.),
-                *b,
-            ];
-            let mut poles = vec![vec![vec![0.; 3]; 6]; 9];
-            for (j, g) in controls.iter().enumerate() {
-                for (i, (u, v)) in SIGNS.iter().copied().enumerate() {
-                    let mut squared = Interval::point(0.);
-                    for k in 0..3 {
-                        if !charge(&mut report.work, max_work) {
-                            return Ok(report);
+    // Keep the existing quintic whenever it meets the original tolerance.
+    // The higher-degree candidate localizes endpoint jet changes without adding
+    // source stations or faces. Every attempt shares the caller's work budget.
+    for degree in [5usize, 13, 25] {
+        report.wall_displacement_upper = None;
+        report.reason = "work-limit";
+        let mut sides = vec![Vec::new(); loops];
+        let mut upper = 0_f64;
+        for layer in 0..n - 1 {
+            for l in 0..loops {
+                let a = &generators[layer][l];
+                let b = &generators[layer + 1][l];
+                let ta = if (!closed && layer == 0) || is_sharp(layer) {
+                    tangent(a, b, degree as f64)
+                } else {
+                    let prev = if layer == 0 { n - 2 } else { layer - 1 };
+                    tangent(&generators[prev][l], b, (2 * degree) as f64)
+                };
+                let tb = if (!closed && layer + 1 == n - 1) || is_sharp(layer + 1) {
+                    tangent(a, b, degree as f64)
+                } else {
+                    let next = if layer + 1 == n - 1 { 1 } else { layer + 2 };
+                    tangent(a, &generators[next][l], (2 * degree) as f64)
+                };
+                let controls: Vec<Gen> = (0..=degree)
+                    .map(|j| match j {
+                        0 => *a,
+                        1 => shifted(a, &ta, 1.),
+                        2 => shifted(a, &ta, 2.),
+                        j if j == degree - 2 => shifted(b, &tb, -2.),
+                        j if j == degree - 1 => shifted(b, &tb, -1.),
+                        j if j == degree => *b,
+                        _ => std::array::from_fn(|i| {
+                            std::array::from_fn(|k| {
+                                (a[i][k] + (b[i][k] - a[i][k]) * (j as f64 / degree as f64)).round()
+                            })
+                        }),
+                    })
+                    .collect();
+                let mut poles = vec![vec![vec![0.; 3]; degree + 1]; 9];
+                for (j, g) in controls.iter().enumerate() {
+                    for (i, (u, v)) in SIGNS.iter().copied().enumerate() {
+                        let mut squared = Interval::point(0.);
+                        for k in 0..3 {
+                            if !charge(&mut report.work, max_work) {
+                                return Ok(report);
+                            }
+                            let integer = g[0][k] + u * g[1][k] + v * g[2][k];
+                            let point = integer * quantum;
+                            if !point.is_finite()
+                                || integer.abs() >= 2_f64.powi(51)
+                                || point / quantum != integer
+                            {
+                                report.reason = "control-lattice-range";
+                                return Ok(report);
+                            }
+                            poles[i][j][k] = point;
+                            let t =
+                                Interval::point(j as f64).div(Interval::point(degree as f64))?;
+                            let original =
+                                Interval::point(sections[layer][l][0].control_points[i][k])
+                                    .mul(Interval::point(1.).sub(t)?)?
+                                    .add(
+                                        Interval::point(
+                                            sections[layer + 1][l][0].control_points[i][k],
+                                        )
+                                        .mul(t)?,
+                                    )?;
+                            let delta = Interval::point(point).sub(original)?;
+                            let radius = delta.lo.abs().max(delta.hi.abs());
+                            squared = squared
+                                .add(Interval::point(radius).mul(Interval::point(radius))?)?;
                         }
-                        let integer = g[0][k] + u * g[1][k] + v * g[2][k];
-                        let point = integer * quantum;
-                        if !point.is_finite()
-                            || integer.abs() >= 2_f64.powi(51)
-                            || point / quantum != integer
-                        {
-                            report.reason = "control-lattice-range";
-                            return Ok(report);
-                        }
-                        poles[i][j][k] = point;
-                        let t = Interval::point(j as f64).div(Interval::point(5.))?;
-                        let original = Interval::point(sections[layer][l][0].control_points[i][k])
-                            .mul(Interval::point(1.).sub(t)?)?
-                            .add(
-                                Interval::point(sections[layer + 1][l][0].control_points[i][k])
-                                    .mul(t)?,
-                            )?;
-                        let delta = Interval::point(point).sub(original)?;
-                        let radius = delta.lo.abs().max(delta.hi.abs());
-                        squared =
-                            squared.add(Interval::point(radius).mul(Interval::point(radius))?)?;
+                        upper = upper.max(squared.hi.max(0.).sqrt().next_up());
                     }
-                    upper = upper.max(squared.hi.max(0.).sqrt().next_up());
+                }
+                for q in 0..4 {
+                    sides[l].push(Surface {
+                        degree_u: 2,
+                        degree_v: degree,
+                        knots_u: vec![0., 0., 0., 1., 1., 1.],
+                        knots_v: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
+                        control_points: poles[2 * q..2 * q + 3].to_vec(),
+                        weights: sections[layer][l][0].weights[2 * q..2 * q + 3]
+                            .iter()
+                            .map(|w| vec![*w; degree + 1])
+                            .collect(),
+                        periodic_u: false,
+                        periodic_v: false,
+                    });
                 }
             }
-            for q in 0..4 {
-                sides[l].push(Surface {
-                    degree_u: 2,
-                    degree_v: 5,
-                    knots_u: vec![0., 0., 0., 1., 1., 1.],
-                    knots_v: vec![0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1.],
-                    control_points: poles[2 * q..2 * q + 3].to_vec(),
-                    weights: sections[layer][l][0].weights[2 * q..2 * q + 3]
-                        .iter()
-                        .map(|w| vec![*w; 6])
-                        .collect(),
-                    periodic_u: false,
-                    periodic_v: false,
-                });
-            }
         }
-    }
-    report.wall_displacement_upper = Some(upper);
-    if upper > tolerance {
-        report.reason = "displacement-budget";
+        // This outward norm enclosure has a positive rounding floor at zero.
+        // Preserve the original complete refusal without spending extra work.
+        if tolerance == 0. && upper > 0. {
+            report.wall_displacement_upper = Some(upper);
+            report.reason = "displacement-budget";
+            return Ok(report);
+        }
+        if upper > tolerance {
+            let Some(tighter) =
+                error_bound::tighten(&sides, tolerance, &mut report.work, max_work)?
+            else {
+                report.wall_displacement_upper = None;
+                report.reason = "work-limit";
+                return Ok(report);
+            };
+            upper = tighter;
+        }
+        report.wall_displacement_upper = Some(upper);
+        if upper > tolerance {
+            report.reason = "displacement-budget";
+            continue;
+        }
+        report.sides = Some(sides);
+        report.reason = if degree == 5 {
+            "bounded-shared-quintic-station-jets"
+        } else {
+            "bounded-shared-higher-degree-station-jets"
+        };
         return Ok(report);
     }
-    report.sides = Some(sides);
-    report.reason = "bounded-shared-quintic-station-jets";
     Ok(report)
 }
 
@@ -411,6 +471,73 @@ mod tests {
                 .collect(),
             periodic: false,
         }]]
+    }
+    #[test]
+    fn higher_degree_preserves_source_caps_and_certifies_actual_station_jets() {
+        let sections = vec![section(0., 0.), section(1., 5.), section(0., 10.)];
+        let before = sections.clone();
+        let source = crate::rational_section_loft(&sections).unwrap();
+        let source_before = source.clone();
+        let result = crate::sweep_station_reconstruction::reconstruct(
+            &source,
+            &sections,
+            &[],
+            false,
+            2_f64.powi(-20),
+            0.2,
+            10000,
+        )
+        .unwrap();
+        let model = result
+            .model
+            .as_ref()
+            .expect("Original tolerance needs localized jets");
+        assert!(result.candidate.wall_displacement_upper.unwrap() <= 0.2);
+        assert!(model.faces[..8].iter().all(|f| f.surface.degree_v == 13));
+        for (old, new) in source.faces[..8].iter().zip(&model.faces[..8]) {
+            let at = |surface: &Surface, u: f64, v: f64| {
+                let a = surface.knots_u[surface.degree_u];
+                let b = surface.knots_u[surface.control_points.len()];
+                let c = surface.knots_v[surface.degree_v];
+                let d = surface.knots_v[surface.control_points[0].len()];
+                surface
+                    .evaluate(a + (b - a) * u, c + (d - c) * v)
+                    .unwrap()
+                    .point
+            };
+            for u in [0., 0.25, 0.5, 0.75, 1.] {
+                for v in [0., 0.125, 0.25, 0.5, 0.75, 0.875, 1.] {
+                    let a = at(&old.surface, u, v);
+                    let b = at(&new.surface, u, v);
+                    let distance = a
+                        .iter()
+                        .zip(b)
+                        .map(|(a, b)| (a - b).powi(2))
+                        .sum::<f64>()
+                        .sqrt();
+                    assert!(distance <= result.candidate.wall_displacement_upper.unwrap());
+                }
+            }
+        }
+        crate::sweep_station_reconstruction::preserve_caps(&source, model, false).unwrap();
+        let jets = crate::sweep_smoothness::inspect_profile(model, &[8, 9], 2_000_000).unwrap();
+        assert!(jets.station.g2_certified);
+        assert!(jets.station.extraction_complete);
+        let work = result.candidate.work;
+        let short = crate::sweep_station_reconstruction::reconstruct(
+            &source,
+            &sections,
+            &[],
+            false,
+            2_f64.powi(-20),
+            0.2,
+            work - 1,
+        )
+        .unwrap();
+        assert!(short.model.is_none());
+        assert_eq!(short.candidate.work, work - 1);
+        assert_eq!(source, source_before);
+        assert_eq!(sections, before);
     }
     #[test]
     fn shared_quintic_jets_and_atomic_limits() {

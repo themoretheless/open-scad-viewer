@@ -19,6 +19,29 @@ pub struct ExactStripJetReport {
 mod tests {
     use super::*;
     #[test]
+    fn shared_weight_quintic_station_jets_keep_exact_budget_and_refuse_curvature_changes(){
+        let patch=|z:f64|Surface {
+            degree_u:2,degree_v:5,
+            knots_u:vec![0.,0.,0.,1.,1.,1.],
+            knots_v:vec![0.,0.,0.,0.,0.,0.,1.,1.,1.,1.,1.,1.],
+            control_points:(0..3).map(|i|(0..6).map(|j|vec![i as f64,0.,z+j as f64]).collect()).collect(),
+            weights:[1.,std::f64::consts::FRAC_1_SQRT_2,1.].into_iter().map(|w|vec![w;6]).collect(),
+            periodic_u:false,periodic_v:false,
+        };
+        let a=patch(0.);let b=patch(5.);let original=b.clone();
+        let inspect=|b:&Surface,order,work|inspect_surface_projective_strip_jets(&a,b,"vMax","vMin",order,1.,work).unwrap();
+        let proof=inspect(&b,2,1000000);
+        assert!(proof.certified && proof.exact_identity && proof.regularity_certified,"{proof:?}");
+        assert!(!inspect(&b,2,proof.work-1).certified);
+        assert!(!inspect(&b,2,0).certified);
+        let mut changed=b.clone();changed.control_points[1][2][1]=f64::EPSILON;
+        assert!(inspect(&changed,1,1000000).certified);
+        assert!(!inspect(&changed,2,1000000).certified);
+        let mut scaled=b.clone();for row in &mut scaled.weights{for w in row{*w*=2.;}}
+        assert!(inspect(&scaled,2,1000000).certified,"General projective fallback must remain available");
+        assert_eq!(b,original);
+    }
+    #[test]
     fn nonuniform_along_bezier_chain_requires_geometric_not_equal_speed_jets() {
         let surface = |y:f64| Surface {
             degree_u:2,degree_v:1,
@@ -333,6 +356,25 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
             if !certified{out.reason="projective-along-chain-jets-unproved";return Ok(out);}
         }
     }
+    let shared_cross_weights=projective && aa.1==ba.1 && (0..aa.1).all(|i| {
+        let (au,av)=r.index(a,i,0);
+        let (bu,bv)=e.index(b,i,0);
+        let weight=a.weights[au][av];
+        weight==b.weights[bu][bv]
+            && (0..r.cross(a).1).all(|j|{let (u,v)=r.index(a,i,j);a.weights[u][v]==weight})
+            && (0..e.cross(b).1).all(|j|{let (u,v)=e.index(b,i,j);b.weights[u][v]==weight})
+    });
+    let unit_scale=scale==1. && scalar.as_ref().is_none_or(|s|match s {
+        AuthoredScalar::Binary64Bits(bits)=>*bits==1_f64.to_bits(),
+        AuthoredScalar::RationalConstant {numerator,denominator}=>*numerator==1 && *denominator==1,
+    });
+    let conic_weight_proposal=projective && unit_scale && r.cross(a).0==2 && e.cross(b).0==2
+        && r.cross(a).1==3 && e.cross(b).1==3 && (0..aa.1).all(|i| {
+            let (u,v)=r.index(a,0,1);let mid=a.weights[u][v];
+            [(a,r),(b,e)].into_iter().all(|(s,boundary)|(0..3).all(|j|{
+                let (u,v)=boundary.index(s,i,j);s.weights[u][v]==if j==1 {mid}else{1.}
+            }))
+        });
     let mut values = Vec::new();
     let mut strips = Vec::new();
     for (s, edge) in [(a, r), (b, e)] {
@@ -354,6 +396,27 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
     values.push(scale);
     let knots_start=values.len();
     if common_linear {values.extend_from_slice(aa.2);}
+    // Exact power-of-two coordinate normalization is only an internal proof
+    // proposal. Every scaled coordinate must be an exactly reversible integer;
+    // the retained surfaces and their independent regularity audit stay intact.
+    let normalized_strips=if shared_cross_weights || conic_weight_proposal {
+    let coordinates=strips.iter().flatten().flatten().flat_map(|&start|values[start..start+3].iter().copied()).collect::<Vec<_>>();
+    let shift=coordinates.iter().filter(|&&x|x!=0.).map(|x|{
+        let bits=x.to_bits();let exponent=((bits>>52)&2047) as i32;
+        let fraction=bits&((1_u64<<52)-1);
+        let significand=if exponent==0 {fraction}else{fraction|(1_u64<<52)};
+        let least=if exponent==0 {-1074}else{exponent-1023-52}+significand.trailing_zeros() as i32;
+        (-least).max(0)
+    }).max().unwrap_or(0);
+    let proposed=if shift<=52 {2_f64.powi(shift)}else{1.};
+    let factor=if coordinates.iter().all(|&x| {
+        let y=x*proposed;y.is_finite()&&y.abs()<2_f64.powi(52)&&y.fract()==0.&&y/proposed==x
+    }) {proposed}else{1.};
+    strips.iter().map(|strip|strip.iter().map(|row|row.iter().map(|&start|{
+        let p=[values[start]*factor,values[start+1]*factor,values[start+2]*factor,1.];
+        let index=values.len();values.extend(p);index
+    }).collect::<Vec<_>>()).collect::<Vec<_>>()).collect::<Vec<_>>()
+    }else{Vec::new()};
     let mut authored = values.into_iter().map(|v| AuthoredScalar::Binary64Bits(v.to_bits())).collect::<Vec<_>>();
     if let Some(scalar)=scalar {authored[scale_index]=scalar;}
     let source = SourceArena::authored(
@@ -409,15 +472,43 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
                 Limits {max_work:max_work-out.work,..Limits::default()},None);
         }
     }
+    // Shared constant cross weights make homogeneous jet equality a sufficient
+    // projective proof. Reconstructed station walls commonly have this form;
+    // avoid expanding the more general quotient identities unless necessary.
+    // This is an exact predicate, not a floating tolerance or source-frame claim.
+    let fast=if shared_cross_weights || conic_weight_proposal {
+        // The original common positive along-seam denominator has zero normal
+        // derivatives. Equal Euclidean coefficient jets imply equal numerator
+        // jets after multiplication by each shared along weight. Cancel those
+        // weights only in this sufficient predicate; inspect regularity on the
+        // original surfaces, and retain the original projective fallback.
+        // The quadratic conic sufficient equations are independent of the
+        // common positive middle weight. Unit weights propose those equations;
+        // only the guarded original [1,w,1] family can reuse their proof.
+        let predicate=if conic_weight_proposal {cad_predicates::rational_canonical_conic_strip_jet_identity}
+            else{rational_bezier_strip_jet_identity};
+        Some(predicate(&mut ctx,&refs(&normalized_strips[0]),&refs(&normalized_strips[1]),
+            source.leaf(scale_index).unwrap(),order).map_err(|e|crate::input(e.to_string()))?)
+    }else{None};
+    let decision=if let Some(decision)=fast.filter(|d|d.outcome==BezierIdentity::Equal) {
+        decision
+    }else{
+    // Failed sufficient proofs consume the same caller-owned budget.
+    if shared_cross_weights || conic_weight_proposal {
+        out.work+=ctx.work_used();
+        ctx=PredicateContext::new(&source,&tolerance,
+            Limits {max_work:max_work-out.work,..Limits::default()},None);
+    }
     let predicate=if projective {cad_predicates::rational_projective_strip_jet_identity}else{rational_bezier_strip_jet_identity};
-    let decision = predicate(
+    predicate(
         &mut ctx,
         &refs(&strips[0]),
         &refs(&strips[1]),
         source.leaf(scale_index).unwrap(),
         order,
     )
-    .map_err(|e| crate::input(e.to_string()))?;
+    .map_err(|e| crate::input(e.to_string()))?
+    };
     out.work += decision.work_used;
     out.exact_identity = decision.outcome == BezierIdentity::Equal;
     out.reason = match decision.outcome {

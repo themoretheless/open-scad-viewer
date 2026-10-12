@@ -1,0 +1,297 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-10T03:47:38.597Z",
+  "scope": "Finite owned progressive station reconstruction UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Running probes require authenticated native CPU samples at the profile tail without Debugger suspension, then actual Worker destruction. Measured UI cancellation includes scheduling and is not cooperative kernel polling latency.",
+  "nativeCancelProbe": true,
+  "nativeRunningCancelProbe": true,
+  "geometryWasmSha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+  "artifactProvenance": {
+    "sha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+    "byteLength": 11615695,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-6abWrPMA.js"
+    ]
+  },
+  "appSourceSha256": "42d7a717eb1417c7442ad55c6a489eb9c35f84fb1f44b458dfc65ca79beefb4f",
+  "distIndexSha256": "999cce3a9e6189f3db8604346bc0cd8707d8323d739d73fa5dce80287aa60eb7",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-frenet-arc-circle-solid-station-g2.r",
+      "sourceSha256": "f8d68f44db566e97564c086edeabdf33eb0c44a607791c4f756f75d42249141e",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "profile-G2",
+          "status": "passed"
+        },
+        {
+          "case": "station-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-cancellation",
+          "status": "passed",
+          "sourceSha256": "265d6e9a83392c0bdf705fca14033d9238e0dfc8d5a1134f95f40ad4b28f25c2",
+          "nativeStack": {
+            "geometryWasmSha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+            "abiRequestFunctionIndex": 98,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 29.511,
+            "lastSampleToProfileEndMs": 0.534,
+            "profileReceivedAtEpochMs": 1791604074690,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791604074690,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1091,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-build-source-change",
+          "status": "passed",
+          "sourceSha256": "265d6e9a83392c0bdf705fca14033d9238e0dfc8d5a1134f95f40ad4b28f25c2",
+          "nativeStack": {
+            "geometryWasmSha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+            "abiRequestFunctionIndex": 98,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 17,
+            "nativeSampleCount": 17,
+            "profileDurationMs": 28.901,
+            "lastSampleToProfileEndMs": 0.094,
+            "profileReceivedAtEpochMs": 1791604087087,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791604087087,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 1123,
+          "scope": "Authenticated running native CPU tail; unpaused Worker termination, UI scheduling included"
+        },
+        {
+          "case": "native-build-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-cancel",
+          "status": "passed",
+          "sourceSha256": "f8d68f44db566e97564c086edeabdf33eb0c44a607791c4f756f75d42249141e",
+          "nativeStack": {
+            "geometryWasmSha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+            "abiRequestFunctionIndex": 98,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 15,
+            "nativeSampleCount": 14,
+            "profileDurationMs": 23.387,
+            "lastSampleToProfileEndMs": 0.483,
+            "profileReceivedAtEpochMs": 1791604099181,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791604099181,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 1,
+          "workerDestroyedAfterMs": 1124,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-cancel-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "native-solid-source-change",
+          "status": "passed",
+          "sourceSha256": "f8d68f44db566e97564c086edeabdf33eb0c44a607791c4f756f75d42249141e",
+          "nativeStack": {
+            "geometryWasmSha256": "f4c49a9403ed4aeecc402b6e2df0d9436b645b024202a064baca4e73ac8975bc",
+            "abiRequestFunctionIndex": 98,
+            "observation": "CPU sampling of executing geometry abi_request; no Debugger pause",
+            "sampleCount": 16,
+            "nativeSampleCount": 16,
+            "profileDurationMs": 25.363,
+            "lastSampleToProfileEndMs": 0.104,
+            "profileReceivedAtEpochMs": 1791604110261,
+            "profileProcessingMs": 0,
+            "observedAtEpochMs": 1791604110261,
+            "debuggerPaused": false
+          },
+          "observationToCancelInitiationMs": 0,
+          "terminateCalledAfterMs": 5,
+          "workerDestroyedAfterMs": 1131,
+          "scope": "Authenticated running native CPU tail; unpaused termination prevents stale Solid"
+        },
+        {
+          "case": "native-solid-source-change-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (128) · Стыки вдоль пути: G2  · Оценка ошибки границы: ≈0.0605305 mm  / 2.00000 mm  · в допуске"
+      ],
+      "previewWorkspacePersistence": {
+        "error": null
+      },
+      "solid": {
+        "faces": 128,
+        "shells": 1,
+        "geometrySha256": "6136e1e390e429f531f3b91fbe79b279b18d2508dae2b711f34f3e16ab86d817",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_3: Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Node rf5c60c1f8e5f9ad2_3: Node rf5c60c1f8e5f9ad2_2: Native station reconstruction unproved: work-limit"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-frenet-arc-circle-hollow-station-g2.r",
+      "sourceSha256": "05572e0dbcd02ad66a17d4e7bb9c738b5d0234c1fde5aca7a1f26ec6a45c4c98",
+      "assertions": [],
+      "pageErrors": [],
+      "status": "failed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "error": "closed-frenet-arc-circle-hollow-station-g2.r: Сборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.\n\n1 !== 0\n",
+      "bodyText": "sweep-matrix.r\nSolid\nMesh\nПоиск действий\nCtrl K\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n4\n5\n6\n▾\n7\n8\n9\n10\n11\n12\n13\n14\n// @rush/1\n// Exact original raw-WASM ABI request; no change to stations, tolerance or work budgets.\nprofile0 = nurbs_curve(degree: 2,knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],control_points: [[5.01mm,0mm,0mm],[5.01mm,0mm,-0.01mm],[5mm,0mm,-0.01mm],[4.99mm,0mm,-0.01mm],[4.99mm,0mm,0mm],[4.99mm,0mm,0.01mm],[5mm,0mm,0.01mm],[5.01mm,0mm,0.01mm],[5.01mm,0mm,0mm]],weights: [1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1],periodic: false)\nprofile1 = nurbs_curve(degree: 2,knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],control_points: [[5.005mm,0mm,0mm],[5.005mm,0mm,0.005mm],[5mm,0mm,0.005mm],[4.995mm,0mm,0.005mm],[4.995mm,0mm,0mm],[4.995mm,0mm,-0.005mm],[5mm,0mm,-0.005mm],[5.005mm,0mm,-0.005mm],[5.005mm,0mm,0mm]],weights: [1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1],periodic: false)\npath = nurbs_curve(degree: 2,knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],control_points: [[5mm,0mm,0mm],[5mm,5mm,0mm],[0mm,5mm,0mm],[-5mm,5mm,0mm],[-5mm,0mm,0mm],[-5mm,-5mm,0mm],[0mm,-5mm,0mm],[5mm,-5mm,0mm],[5mm,0mm,0mm]],weights: [1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1,0.7071067811865476,1],periodic: false)\nshow brep_progressive_sweep([[profile0],[profile1]],path,\n orientation: \"frenet\",spacing: \"arc_length\",normal: [0,0,1],\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 33,max_sections: 129,max_deviation: 2mm,\n length_tolerance: 0.0001mm,length_max_cells: 100000,\n circle_correction_quantum: 9.094947017729282e-13mm,circle_correction_tolerance: 1e-9mm,circle_correction_max_work: 1000000\n).brep_smooth_sweep_stations(wall_tolerance: 0.01mm,quantum: 9.094947017729282e-13mm,max_work: 1000000,smoothness_max_work: 2000000).brep_tessellate(2)\n\n\nСборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.\nОбъекты 0\nТреугольники 0\nОшибка сборки · 63 182 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n0\n⌄\nМЕШИ\n0\n\nМешей пока нет\n\nEnter выбрать · / фокус · . изолировать · H видимость\nWebGPU · интерактивный\nManifold\n↶\n↷\nМышь\nИнструменты\nСоздать\nВыбрано: 0\n?\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nImage Trace\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms · draw 14.7 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "selection": {
+    "startAt": null,
+    "fullInventory": [
+      "1440:closed-frenet-arc-circle-solid-station-g2.r",
+      "1440:closed-frenet-arc-circle-hollow-station-g2.r",
+      "1440:closed-frenet-arc-periodic-solid-station-g2.r",
+      "1440:closed-frenet-arc-periodic-hollow-station-g2.r",
+      "600:closed-frenet-arc-circle-solid-station-g2.r",
+      "600:closed-frenet-arc-circle-hollow-station-g2.r",
+      "600:closed-frenet-arc-periodic-solid-station-g2.r",
+      "600:closed-frenet-arc-periodic-hollow-station-g2.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:closed-frenet-arc-circle-solid-station-g2.r",
+      "1440:closed-frenet-arc-circle-hollow-station-g2.r",
+      "1440:closed-frenet-arc-periodic-solid-station-g2.r",
+      "1440:closed-frenet-arc-periodic-hollow-station-g2.r",
+      "600:closed-frenet-arc-circle-solid-station-g2.r",
+      "600:closed-frenet-arc-circle-hollow-station-g2.r",
+      "600:closed-frenet-arc-periodic-solid-station-g2.r",
+      "600:closed-frenet-arc-periodic-hollow-station-g2.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "42d7a717eb1417c7442ad55c6a489eb9c35f84fb1f44b458dfc65ca79beefb4f",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "f83281051ff974d0f1ed7ee1dac6daee9274de3e45573c1d1c762aa8b59b00b7",
+    "src/services/nurbsMiterOwnedBoundary.ts": "6751b0bf71441815ed2f893e42295b0bdf950e0d5d14fdf0ee0d45285399200a",
+    "crates/brep-core/src/sweep_miter_owned.rs": "77fe10b62e79b2c371ab5e5ffcded080949c2866acd9cdf7f27e2f7004e569fc",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "a92f5884256a85c126677e5ed264f5f8962cafd7c411b44a904fa95a42868e84",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "212805f8606bbe48a80063dc6a6154368bf3d9e3ee31c67d6ab46e8725de10ac",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/endpoint_jets.rs": "135d591c132d388d3e75bef488a672d528181b8db07334575419c91d61c85a18",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "2eaa23fd84d404d7c1348be405c87bedeb389d57db2bba6c2a8f9ec08fd81067",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "127e57178853ce20dab0cdb5820ee129d1decd74acb3290a80da9931ec04fbd8",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "9e7e3e7917ba6d165338158ef6993681cc7ef77e1e0d66fed3230a735e9c83e2",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "8d589872e9c3ca56b797fdde258b6a84b4842cba6c21b58d01854c9907c8077a",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "a8827767784866f05525f71669889eafb3fd6f3d85e7d7805226189f5812a9f4",
+    "src/generated/geometry-kernels/bytes.ts": "680f42a826f22403114333e547828c1b84d70390c73ddf5aae353bc3db8a083f",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "717504437e35be44b689c284897c95d2b37b56868ffdf09fba258bbd652156ea",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580",
+    "scripts/sweep-body-matrix-sources.mjs": "688eaa2b85572246b58d53382d1977361b4405500262f5aee3fe01b9ec9c770c",
+    "crates/geometry-bridge/src/brep.rs": "4d6612521c7d63245da9ccd198cd19b9c77699a4df45d8cd373bbaab72e1907a",
+    "crates/brep-core/src/face_contact_groups.rs": "0c44f471a5938e51cdb0d07a3bb462df3d2dde82b99dab9ebc5af558927bf978",
+    "crates/brep-core/src/face_contacts.rs": "b805130bc31a013ea81dc7e3229dcaac3539ac2a14fa2d9af30b50c275fb74a9",
+    "crates/brep-core/src/boundary_embedding.rs": "dfb8c67fb949b0010ffee35cd1d5b95bee8950621d7e703ac80ca356d00652e0",
+    "crates/brep-core/src/sweep_cap_contacts.rs": "b914d79e75a5ff57758556cf86c145c134db78eaf1b97ce3d9d15143027ee861",
+    "crates/brep-core/src/shell_nesting.rs": "78a446067366beb6fb811c55291ad8678f583e7f7f37deb23c7d08b02931309d",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "02fb99b4ca0b71fb6f5cf441afd6ea89a7a00db0cef1fd630a83308cac9e3156",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/corrected_regular.rs": "1adb7bb87042cbcfbdb8f9e80e4047a7f697ea7e85f0021775fe8463a4115db6",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_pose.rs": "99074d8cb2dc68963f5dc3c0936843c342ca89bcc64af3d78f03bb4166bd967c",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/profile_domain.rs": "e4d3a0770ef8408b98f1495122a16cf1323ea3595267996bd3e5662b007666a3",
+    "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/frenet_path_values.rs": "5d1ecba191affcac4e31e890ca1c676dfde407b16ca40dc946447fe5b92a68c1"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

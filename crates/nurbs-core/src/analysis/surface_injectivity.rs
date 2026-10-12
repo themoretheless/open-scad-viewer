@@ -3,6 +3,8 @@
 //! the entire convex parameter rectangle, F(x)=F(y) implies x=y. Every knot
 //! rectangle contributes to the same Jacobian hull; local success is not enough.
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
+mod shared_boundary;
+pub use shared_boundary::certify_shared_natural_boundary;
 #[derive(Clone, Debug)]
 pub struct Report {
     pub proven: bool,
@@ -41,7 +43,10 @@ pub(crate) fn section_jacobian(
     domain: [[f64; 2]; 2],
 ) -> Result<[[I; 2]; 3]> {
     let (p, q) = (s.degree_u, s.degree_v);
-    let mut net = crate::curve_surface_composition::surface_net_on(s, span, domain)?;
+    let mut net = match crate::curve_surface_composition::surface_net_on_bernstein(s, span, domain)? {
+        Some(net) => net,
+        None => crate::curve_surface_composition::surface_net_on(s, span, domain)?,
+    };
     // Translation does not change derivatives. Reducing the numerator's
     // magnitude improves the rational quotient bound without changing geometry.
     let origin = &s.control_points[span[0] - p][span[1] - q];
@@ -52,6 +57,15 @@ pub(crate) fn section_jacobian(
             }
         }
     }
+    jacobian_from_net(&net, [p, q], domain)
+}
+
+pub(crate) fn jacobian_from_net(
+    net: &[Vec<[I; 4]>],
+    degrees: [usize; 2],
+    domain: [[f64; 2]; 2],
+) -> Result<[[I; 2]; 3]> {
+    let [p, q] = degrees;
     let values: [I; 4] = std::array::from_fn(|k| hull(net.iter().flatten().map(|h| h[k])));
     let denominator = values[3].mul(values[3])?;
     let mut result = [[I::point(0.); 2]; 3];

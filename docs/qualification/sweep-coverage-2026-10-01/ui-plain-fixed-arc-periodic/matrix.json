@@ -1,0 +1,226 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-08T21:46:28.459Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "nativeRunningCancelProbe": false,
+  "geometryWasmSha256": "9a4abeb606cc03b412ad83725bd2e782248c355982ee347dac51430ef1e6e65f",
+  "artifactProvenance": {
+    "sha256": "9a4abeb606cc03b412ad83725bd2e782248c355982ee347dac51430ef1e6e65f",
+    "byteLength": 11438389,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-ewv5Zfq_.js"
+    ]
+  },
+  "appSourceSha256": "f0e9267721e02448e4db46040e1354d365ca49fdd233cb1eb452e7c5c914fc8a",
+  "distIndexSha256": "bfd1aa3cf2f17937780fe537e598adfff09ad8446dcb3c5ac79c26dc37411a97",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "periodic-arc-length-fixed-progressive-sweep.r",
+      "sourceSha256": "55c793828447184eda05fdcc61db7232c3224865a52c0072b572668405b0fc55",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "periodic-arc-length-fixed-progressive-sweep.r",
+      "sourceSha256": "55c793828447184eda05fdcc61db7232c3224865a52c0072b572668405b0fc55",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "viewportEvidence": [],
+      "previewWorkspacePersistence": {
+        "error": null
+      }
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "selection": {
+    "startAt": null,
+    "fullInventory": [
+      "1440:periodic-arc-length-fixed-progressive-sweep.r",
+      "600:periodic-arc-length-fixed-progressive-sweep.r"
+    ],
+    "plannedCaseKeys": [
+      "1440:periodic-arc-length-fixed-progressive-sweep.r",
+      "600:periodic-arc-length-fixed-progressive-sweep.r"
+    ]
+  },
+  "sourceHashes": {
+    "src/App.vue": "f0e9267721e02448e4db46040e1354d365ca49fdd233cb1eb452e7c5c914fc8a",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "c611944f6bdca94fa4626c15e7d813decdd438d1fa9bc761b97a0a50edae0f9f",
+    "src/services/nurbsMiterOwnedBoundary.ts": "c323be51de8360daf985ddf0a041d0337cde31d5113b3f29f86cd429c5f0c477",
+    "crates/brep-core/src/sweep_miter_owned.rs": "ba36ded3e1b3b65629ea24e1b2c661b8d3bada9f925b23c4f42875afb237720d",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "bc251d1ff833f05b6f29b421e42e6d3debe0d6e12e8af9166c6f67e19d4e38e2",
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "212805f8606bbe48a80063dc6a6154368bf3d9e3ee31c67d6ab46e8725de10ac",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/endpoint_jets.rs": "d925cebe359e5d4cfc27f71b3a6744c0149448f85241983663e95fe478751d68",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "77f1676c31f681321df00969d0239894a553b78bd15da1b3ed96f0c477da227b",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "9651011b0ed60e6d51c6a161b1ed4775c173fd4364aaf6a3ac92e4aec3aeb07c",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "9516c463ece2f5d7fd692b0ed094926e6b6a4d4f821dbd96ee23a38bc76b5505",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "ef9223c0b183452eeee2529d74766b93d18fe5e555ff49c6af911539fb0906d0",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "a8827767784866f05525f71669889eafb3fd6f3d85e7d7805226189f5812a9f4",
+    "src/generated/geometry-kernels/bytes.ts": "da4c47b5618cc22b336d34eee97b32a18d72a0908978d735f514626f66d1e5ec",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "3e46e799b47a98f54f2ac2619edf7b1bfa35476f1ee6145814ec34d49b6ade8c",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580",
+    "scripts/sweep-body-matrix-sources.mjs": "688eaa2b85572246b58d53382d1977361b4405500262f5aee3fe01b9ec9c770c",
+    "crates/geometry-bridge/src/brep.rs": "4d6612521c7d63245da9ccd198cd19b9c77699a4df45d8cd373bbaab72e1907a",
+    "crates/brep-core/src/face_contact_groups.rs": "0c44f471a5938e51cdb0d07a3bb462df3d2dde82b99dab9ebc5af558927bf978",
+    "crates/brep-core/src/face_contacts.rs": "933a9fc7f0a4e0f7d74a8684da652510279d39daa4caca7d23f1faa75c75f3e3",
+    "crates/brep-core/src/boundary_embedding.rs": "dfb8c67fb949b0010ffee35cd1d5b95bee8950621d7e703ac80ca356d00652e0",
+    "crates/brep-core/src/sweep_cap_contacts.rs": "7cc427ec37b091b70641758a2abe19c82286c973a9d1a0226d3c5ad270ff633d",
+    "crates/brep-core/src/shell_nesting.rs": "78a446067366beb6fb811c55291ad8678f583e7f7f37deb23c7d08b02931309d",
+    "crates/geometry-bridge/src/cad_face_contacts.rs": "c580a0e56b1e495559eff46a2645cc70a3b4fb287cb258dda60cf851cb7f608a",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/corrected_regular.rs": "1adb7bb87042cbcfbdb8f9e80e4047a7f697ea7e85f0021775fe8463a4115db6",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_pose.rs": "4543a48e7b773c6b425db4b179c7cde4e3ba3ae2791dff9d4b5a3053643f70a4",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/profile_domain.rs": "e4d3a0770ef8408b98f1495122a16cf1323ea3595267996bd3e5662b007666a3",
+    "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/frenet_path_values.rs": "1ff0ccb270528a4073307da8d59ec0ccf485894ebe2042f90087ad481442a362"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

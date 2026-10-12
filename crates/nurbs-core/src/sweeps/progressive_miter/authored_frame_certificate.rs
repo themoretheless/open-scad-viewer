@@ -12,9 +12,10 @@ mod frenet_path_values;
 pub use frenet_path_values::{certify_frenet_cover,certify_frenet_path_values,certify_frenet_control_values,certify_frenet_planar_control_trajectories,certify_frenet_path,certify_frenet_control_trajectories};
 pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_values,certify_fixed_normal_control_values,certify_fixed_normal_control_trajectories,certify_fixed_normal_cover};
 pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
-pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
+pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory,certify_fixed_relative_values,certify_fixed_relative_trajectories};
 pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
 pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use trajectory::{translated_constant_values_with_source,translated_constant_jets_with_source};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
 mod guided_path_values;
@@ -577,6 +578,35 @@ fn certify_frame_cover(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn relative_prepared_zero_preserves_affine_images_and_remaining_work() {
+        let frame = || ValuesReport {
+            status: Status::Certified, cells: 0,
+            longitudinal: Some([[0.,0.],[0.,0.],[1.,1.]]),
+            transverse: Some([[1.,1.],[0.,0.],[0.,0.]]),
+            binormal: Some([[0.,0.],[1.,1.],[0.,0.]]),
+        };
+        let scale = law(vec![vec![1.,0.,0.],vec![2.,0.,0.]], [2.,5.]);
+        let axes = law(vec![vec![1.,2.,3.],vec![2.,3.,4.]], [7.,9.]);
+        let center = law(vec![vec![-1.,0.,1.],vec![0.,1.,2.]], [3.,8.]);
+        let qs = [[[1.,1.],[-2.,-2.],[0.5,0.5]], [[-1.,2.],[0.,1.],[-3.,0.]]];
+        let zero = crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        for affine in [None, Some((&axes,&center))] {
+            let fresh = relative_control_values_from_frame(&scale,affine,&qs,[0.2,0.8],100,frame()).unwrap();
+            let reference = trajectory::control_values_with_fit(&zero,&scale,affine,&qs,[0.2,0.8],100,frame(),None).unwrap();
+            assert_eq!(fresh.status,Status::Certified);
+            assert_eq!(reference.status,Status::Certified);
+            assert!(fresh.cells > 0 && fresh.cells < reference.cells);
+            for (a,b) in fresh.values.as_ref().unwrap().iter().zip(reference.values.as_ref().unwrap()) {
+                for k in 0..3 { assert!(b[k][0] <= a[k][0] && a[k][1] <= b[k][1]); }
+            }
+            for budget in [0,fresh.cells-1] {
+                let refused = relative_control_values_from_frame(&scale,affine,&qs,[0.2,0.8],budget,frame()).unwrap();
+                assert_eq!(refused.status,Status::Unresolved);
+                assert!(refused.cells <= budget && refused.values.is_none());
+            }
+        }
+    }
     fn law(points: Vec<Vec<f64>>, domain: [f64; 2]) -> Curve {
         Curve {
             degree: 1,
@@ -899,6 +929,7 @@ mod tests {
 }
 
 pub(crate) use frenet_path_values::certify_frenet_relative_values;
+pub(crate) use frenet_path_values::certify_frenet_relative_values_with_binormal_identity;
 
 pub(crate) use guided_path_values::{certify_path_guide_relative_values,certify_contact_relative_values};
 
@@ -910,7 +941,10 @@ pub(crate) fn relative_control_values_from_frame(
  station:[f64;2], max_cells:usize, frame:ValuesReport,
 )->Result<ControlValuesReport>{
  let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
- trajectory::control_values_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
+ // This freshly constructed source is identically zero. Its exact value is
+ // available by construction; do not reprove three scalar zero restrictions
+ // on every relative-frame query.
+ trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,station,max_cells,frame,None,Some([[0.;2];3]))
 }
 
 pub(crate) use frenet_path_values::certify_c4_frenet_arc_relative_trajectories;

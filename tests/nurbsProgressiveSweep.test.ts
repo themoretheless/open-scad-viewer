@@ -400,7 +400,12 @@ it('retains corrected Frenet closure and continues a C1 straight-to-curved knot 
  const opts={normal:[0,0,1] as [number,number,number],orientation:'corrected_frenet' as const,
   initialSections:5,maxSections:257,maxDeviation:.01}
  const result=progressiveSweepNurbsProfiles([profile],guide,law(1,1),law(0,360),opts)
- expect(result.report).toMatchObject({accepted:true,closedPath:true,seamContinuity:'C0',continuousBound:false})
+ expect(result.report).toMatchObject({accepted:true,closedPath:true,seamContinuity:'C0',continuousBound:true})
+ expect(result.report.continuousErrorUpper).toBeGreaterThan(0)
+ expect(result.report.continuousErrorUpper).toBeLessThanOrEqual(opts.maxDeviation)
+ const coarse=progressiveSweepNurbsProfiles([profile],guide,law(1,1),law(0,360),{...opts,maxSections:5})
+ expect(coarse.report.accepted).toBe(false)
+ expect(coarse.patches).toBeNull()
  for(const u of [0,.13,.5,.87,1]){
   const start=point(result.patches!,u,0),end=point(result.patches!,u,1)
   expect(Math.hypot(...start.map((x,i)=>x-end[i]!))).toBeLessThan(1e-12)

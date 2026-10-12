@@ -298,7 +298,10 @@ pub(crate) fn certify_opposite(
         if let Some(others) = by_edge.get(&ca.edge) {
             for cb in others {
                 if monotone_coordinate::separates(
-                    &a.surface, &b.surface, &ca.pcurve, &cb.pcurve,
+                    &a.surface,
+                    &b.surface,
+                    &ca.pcurve,
+                    &cb.pcurve,
                     &model.edges[ca.edge].curve,
                 ) || separates_surfaces(
                     &a.surface,
@@ -306,7 +309,13 @@ pub(crate) fn certify_opposite(
                     &ca.pcurve,
                     &cb.pcurve,
                     &model.edges[ca.edge].curve,
-                )? {
+                )? || separates_curved_natural_boundaries(
+                    &a.surface,
+                    &b.surface,
+                    &ca.pcurve,
+                    &cb.pcurve,
+                    &model.edges[ca.edge].curve,
+                ) {
                     return Ok(Some(OppositeSidesCertificate {
                         edge: ca.edge,
                         faces,
@@ -316,6 +325,105 @@ pub(crate) fn certify_opposite(
         }
     }
     Ok(None)
+}
+
+fn curved_natural_boundary_report(
+    a: &Surface,
+    b: &Surface,
+    pa: &Curve,
+    pb: &Curve,
+    edge: &Curve,
+    max_cells: usize,
+) -> Option<nurbs_core::analysis::surface_injectivity::Report> {
+    let (Some(ba), Some(bb)) = (boundary(a, pa, edge), boundary(b, pb, edge)) else {
+        return None;
+    };
+    // Pure control-net permutation preserves the original rational image.
+    // It permits the same proof for station (V) and profile (U) boundaries,
+    // including a pair whose natural axes differ; no fitting is performed.
+    let transposed_a;
+    let transposed_b;
+    let a = if ba.0 == 1 {
+        let Ok(s) = nurbs_core::surface_edit::transpose(a) else {
+            return None;
+        };
+        transposed_a = s;
+        &transposed_a
+    } else {
+        a
+    };
+    let b = if bb.0 == 1 {
+        let Ok(s) = nurbs_core::surface_edit::transpose(b) else {
+            return None;
+        };
+        transposed_b = s;
+        &transposed_b
+    } else {
+        b
+    };
+    nurbs_core::analysis::surface_injectivity::certify_shared_natural_boundary(
+        a,
+        b,
+        [ba.1 != 0, bb.1 != 0],
+        max_cells,
+    )
+    .ok()
+}
+
+fn separates_curved_natural_boundaries(
+    a: &Surface,
+    b: &Surface,
+    pa: &Curve,
+    pb: &Curve,
+    edge: &Curve,
+) -> bool {
+    curved_natural_boundary_report(a, b, pa, pb, edge, 6).is_some_and(|r| r.proven)
+}
+
+/// Additional full-domain subdivisions consume the caller's existing pair cells.
+/// Called only after the fixed-cost rules fail, never with supplied certificates.
+pub(crate) fn certify_opposite_with_budget(
+    model: &Model,
+    faces: [usize; 2],
+    max_cells: usize,
+) -> (Option<OppositeSidesCertificate>, usize) {
+    let mut used = 0;
+    let a = &model.faces[faces[0]];
+    let b = &model.faces[faces[1]];
+    let uses = |face: &crate::Face| {
+        std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .flat_map(|l| model.loops[l].coedges.iter())
+            .collect::<Vec<_>>()
+    };
+    let others = uses(b);
+    for ca in uses(a) {
+        for cb in others.iter().filter(|c| c.edge == ca.edge) {
+            if max_cells.saturating_sub(used) < 6 {
+                return (None, used);
+            }
+            if let Some(report) = curved_natural_boundary_report(
+                &a.surface,
+                &b.surface,
+                &ca.pcurve,
+                &cb.pcurve,
+                &model.edges[ca.edge].curve,
+                max_cells - used,
+            ) {
+                used += report.spans;
+                if report.proven {
+                    return (
+                        Some(OppositeSidesCertificate {
+                            edge: ca.edge,
+                            faces,
+                        }),
+                        used,
+                    );
+                }
+            }
+        }
+    }
+    (None, used)
 }
 
 /// Sufficient certificate for two curved surfaces on opposite sides of the
@@ -354,48 +462,70 @@ pub fn separates_surfaces(
     };
     // Candidate planes for a straight edge still require exact edge incidence
     // and opposite strict signs for every off-boundary control point below.
-    let mut candidates=vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![0.,1.,0.],vec![0.,0.,1.]];
-    let controls=[a,b].map(|s|s.control_points.iter().flatten().collect::<Vec<_>>());
-    if controls.iter().all(|ps|ps.len()<=16) {
-        for x in &controls[0] { for y in &controls[1] {
-            let p=(0..3).map(|k|0.5*x[k]+0.5*y[k]).collect::<Vec<_>>();
-            if p.iter().all(|x|x.is_finite()) {candidates.push(p);}
-        }}
-    }
-    // Rounded midpoints propose planes only; every incidence and strict side
-    // below is decided exactly on original retained coefficients.
-    for p2 in points.iter().copied().chain(candidates.iter().map(|p|p.as_slice())) {
-        if ![[0,1],[0,2],[1,2]].iter().any(|&axes|matches!(
-            orient(&[p0,p1,p2],Some(axes)),Some(Sign::Positive|Sign::Negative))) {continue;}
-    if !points
-        .iter()
-        .all(|p| orient(&[p0, p1, p2, p], None) == Some(Sign::Zero))
-    {
-        continue;
-    }
-    let strict_side = |surface: &Surface, bound: (usize, usize)| -> Option<Sign> {
-        let mut side = None;
-        for (u, row) in surface.control_points.iter().enumerate() {
-            for (v, p) in row.iter().enumerate() {
-                let sign = orient(&[p0, p1, p2, p], None)?;
-                if [u, v][bound.0] == bound.1 {
-                    if sign != Sign::Zero {
-                        return None;
-                    }
-                } else {
-                    if sign == Sign::Zero || side.is_some_and(|s| s != sign) {
-                        return None;
-                    }
-                    side = Some(sign);
+    let mut candidates = vec![
+        vec![0., 0., 0.],
+        vec![1., 0., 0.],
+        vec![0., 1., 0.],
+        vec![0., 0., 1.],
+    ];
+    let controls = [a, b].map(|s| s.control_points.iter().flatten().collect::<Vec<_>>());
+    if controls.iter().all(|ps| ps.len() <= 16) {
+        for x in &controls[0] {
+            for y in &controls[1] {
+                let p = (0..3).map(|k| 0.5 * x[k] + 0.5 * y[k]).collect::<Vec<_>>();
+                if p.iter().all(|x| x.is_finite()) {
+                    candidates.push(p);
                 }
             }
         }
-        side
-    };
-    if matches!(
-        (strict_side(a, ba), strict_side(b, bb)),
-        (Some(Sign::Positive), Some(Sign::Negative)) | (Some(Sign::Negative), Some(Sign::Positive))
-    ) { return Ok(true); }
+    }
+    // Rounded midpoints propose planes only; every incidence and strict side
+    // below is decided exactly on original retained coefficients.
+    for p2 in points
+        .iter()
+        .copied()
+        .chain(candidates.iter().map(|p| p.as_slice()))
+    {
+        if ![[0, 1], [0, 2], [1, 2]].iter().any(|&axes| {
+            matches!(
+                orient(&[p0, p1, p2], Some(axes)),
+                Some(Sign::Positive | Sign::Negative)
+            )
+        }) {
+            continue;
+        }
+        if !points
+            .iter()
+            .all(|p| orient(&[p0, p1, p2, p], None) == Some(Sign::Zero))
+        {
+            continue;
+        }
+        let strict_side = |surface: &Surface, bound: (usize, usize)| -> Option<Sign> {
+            let mut side = None;
+            for (u, row) in surface.control_points.iter().enumerate() {
+                for (v, p) in row.iter().enumerate() {
+                    let sign = orient(&[p0, p1, p2, p], None)?;
+                    if [u, v][bound.0] == bound.1 {
+                        if sign != Sign::Zero {
+                            return None;
+                        }
+                    } else {
+                        if sign == Sign::Zero || side.is_some_and(|s| s != sign) {
+                            return None;
+                        }
+                        side = Some(sign);
+                    }
+                }
+            }
+            side
+        };
+        if matches!(
+            (strict_side(a, ba), strict_side(b, bb)),
+            (Some(Sign::Positive), Some(Sign::Negative))
+                | (Some(Sign::Negative), Some(Sign::Positive))
+        ) {
+            return Ok(true);
+        }
     }
     Ok(false)
 }
@@ -403,6 +533,96 @@ pub fn separates_surfaces(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nonplanar_joint_chart_requires_exact_owned_world_boundary() {
+        let edge = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: vec![
+                vec![0., 0., 0.],
+                vec![0.01, 0.01, 0.3],
+                vec![0.02, -0.01, 0.7],
+                vec![0.05, 0., 1.],
+            ],
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let make = |positive: bool| {
+            let shifted = edge
+                .control_points
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    vec![
+                        p[0] + if positive { 0.2 } else { -0.2 },
+                        p[1] + if positive {
+                            0.01 * i as f64
+                        } else {
+                            -0.01 * i as f64
+                        },
+                        p[2] + if positive {
+                            0.01 * i as f64
+                        } else {
+                            -0.01 * i as f64
+                        },
+                    ]
+                })
+                .collect();
+            Surface {
+                degree_u: 1,
+                degree_v: 3,
+                knots_u: vec![0., 0., 1., 1.],
+                knots_v: edge.knots.clone(),
+                control_points: if positive {
+                    vec![edge.control_points.clone(), shifted]
+                } else {
+                    vec![shifted, edge.control_points.clone()]
+                },
+                weights: vec![vec![1.; 4]; 2],
+                periodic_u: false,
+                periodic_v: false,
+            }
+        };
+        let a = make(false);
+        let b = make(true);
+        let pa = Curve::from_polyline(vec![vec![1., 0.], vec![1., 1.]]).unwrap();
+        let pb = Curve::from_polyline(vec![vec![0., 0.], vec![0., 1.]]).unwrap();
+        assert!(!monotone_coordinate::separates(&a, &b, &pa, &pb, &edge));
+        assert!(!separates_surfaces(&a, &b, &pa, &pb, &edge).unwrap());
+        assert!(separates_curved_natural_boundaries(&a, &b, &pa, &pb, &edge));
+        let mut wrong = edge.clone();
+        wrong.control_points[1][0] += f64::EPSILON;
+        assert!(!separates_curved_natural_boundaries(
+            &a, &b, &pa, &pb, &wrong
+        ));
+        let partial = Curve::from_polyline(vec![vec![0., 0.], vec![0., 0.5]]).unwrap();
+        assert!(!separates_curved_natural_boundaries(
+            &a, &b, &pa, &partial, &edge
+        ));
+        let transpose_pcurve = |p: &Curve| {
+            let mut result = p.clone();
+            for point in &mut result.control_points {
+                point.swap(0, 1);
+            }
+            result
+        };
+        let ta = nurbs_core::surface_edit::transpose(&a).unwrap();
+        let tb = nurbs_core::surface_edit::transpose(&b).unwrap();
+        assert!(separates_curved_natural_boundaries(
+            &ta,
+            &tb,
+            &transpose_pcurve(&pa),
+            &transpose_pcurve(&pb),
+            &edge
+        ));
+        assert!(separates_curved_natural_boundaries(
+            &ta,
+            &b,
+            &transpose_pcurve(&pa),
+            &pb,
+            &edge
+        ));
+    }
     #[test]
     fn cube_only_certifies_adjacent_pairs() {
         let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
@@ -505,22 +725,35 @@ mod tests {
     }
     #[test]
     fn straight_shared_edge_requires_exact_opposite_strict_sides() {
-        let edge=Curve::from_polyline(vec![vec![1.,0.,0.],vec![1.,0.,2.]]).unwrap();
-        let uv=Curve::from_polyline(vec![vec![0.,0.],vec![0.,1.]]).unwrap();
-        let make=|side:f64|Surface{degree_u:1,degree_v:1,
-            knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![edge.control_points.clone(),vec![vec![2.,side,0.],vec![2.,side,2.]]],
-            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
-        let a=make(1.);let b=make(-1.);
-        assert!(separates_surfaces(&a,&b,&uv,&uv,&edge).unwrap());
-        assert!(!separates_surfaces(&a,&a,&uv,&uv,&edge).unwrap());
-        let mut changed=b.clone();changed.control_points[1][1][1]=0.;
-        assert!(separates_surfaces(&a,&changed,&uv,&uv,&edge).unwrap());
+        let edge = Curve::from_polyline(vec![vec![1., 0., 0.], vec![1., 0., 2.]]).unwrap();
+        let uv = Curve::from_polyline(vec![vec![0., 0.], vec![0., 1.]]).unwrap();
+        let make = |side: f64| Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                edge.control_points.clone(),
+                vec![vec![2., side, 0.], vec![2., side, 2.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let a = make(1.);
+        let b = make(-1.);
+        assert!(separates_surfaces(&a, &b, &uv, &uv, &edge).unwrap());
+        assert!(!separates_surfaces(&a, &a, &uv, &uv, &edge).unwrap());
+        let mut changed = b.clone();
+        changed.control_points[1][1][1] = 0.;
+        assert!(separates_surfaces(&a, &changed, &uv, &uv, &edge).unwrap());
         // An off-boundary pole on the shared line defeats every strict plane.
-        let mut bad=b.clone();bad.control_points[1][1]=edge.control_points[1].clone();
-        assert!(!separates_surfaces(&a,&bad,&uv,&uv,&edge).unwrap());
-        let mut shifted=b;shifted.control_points[0][0][1]=f64::EPSILON;
-        assert!(!separates_surfaces(&a,&shifted,&uv,&uv,&edge).unwrap());
+        let mut bad = b.clone();
+        bad.control_points[1][1] = edge.control_points[1].clone();
+        assert!(!separates_surfaces(&a, &bad, &uv, &uv, &edge).unwrap());
+        let mut shifted = b;
+        shifted.control_points[0][0][1] = f64::EPSILON;
+        assert!(!separates_surfaces(&a, &shifted, &uv, &uv, &edge).unwrap());
     }
     #[test]
     fn curved_faces_with_rational_curved_shared_edge_are_separated() {

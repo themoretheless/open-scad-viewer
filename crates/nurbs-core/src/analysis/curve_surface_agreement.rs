@@ -198,7 +198,7 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
         && knots[..=degree].iter().all(|x|*x==knots[degree])
         && knots[n..].iter().all(|x|*x==knots[n]);
     if c.periodic || p.periodic || s.periodic_u || s.periodic_v
-        || c.degree>32 || p.degree>8 || s.degree_u>8 || s.degree_v>8
+        || c.degree>32 || p.degree>8
         || !bezier(&c.knots,c.degree,c.control_points.len())
         || !bezier(&p.knots,p.degree,p.control_points.len())
         || !bezier(&s.knots_u,s.degree_u,s.control_points.len())
@@ -247,6 +247,9 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
                 .map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid tensor boundary identity request"));
         }
     }
+    // Full tensor boundaries above degree 8 are covered by the exact authored
+    // curve identity above. General surface composition keeps its original limit.
+    if s.degree_u>8 || s.degree_v>8 {return Ok(None);}
     cad_predicates::rational_bezier_composition_identity(&mut ctx,&cc,&pp,&ss,dd)
         .map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid composition identity request"))
 }
@@ -291,6 +294,34 @@ mod tests {
         assert_eq!(verify_exact(&c,&interior,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
         let mut partial=p;partial.control_points[0][0]=2.5;
         assert_eq!(verify_exact(&c,&partial,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+    }
+    #[test]
+    fn high_degree_tensor_edges_keep_exact_identity_and_composition_limits() {
+        use cad_predicates::BezierIdentity;
+        for degree in [9,13,25] {
+            let surface=Surface {degree_u:1,degree_v:degree,knots_u:vec![2.,2.,5.,5.],
+                knots_v:[vec![-7.;degree+1],vec![11.;degree+1]].concat(),
+                control_points:(0..2).map(|i|(0..=degree).map(|j|vec![1.+i as f64,j as f64,(j*j+3*i) as f64]).collect()).collect(),
+                weights:(0..2).map(|i|(0..=degree).map(|j|(1+i+j%3) as f64).collect()).collect(),periodic_u:false,periodic_v:false};
+            for side in 0..2 {for backward in [false,true] {for reversed in [false,true] {
+                let mut c=Curve {degree,knots:[vec![3.;degree+1],vec![8.;degree+1]].concat(),
+                    control_points:surface.control_points[side].clone(),weights:surface.weights[side].clone(),periodic:false};
+                if backward!=reversed {c.control_points.reverse();c.weights.reverse();}
+                let fixed=if side==0 {2.} else {5.};
+                let endpoints=if backward {[11.,-7.]} else {[-7.,11.]};
+                let p=Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:endpoints.iter().map(|&v|vec![fixed,v]).collect(),weights:vec![2.;2],periodic:false};
+                let decision=verify_exact(&c,&p,&surface,reversed,1000000).unwrap().unwrap();
+                assert_eq!(decision.outcome,BezierIdentity::Equal);
+                assert_eq!(verify_exact(&c,&p,&surface,reversed,decision.work_used).unwrap().unwrap().outcome,BezierIdentity::Equal);
+                assert!(matches!(verify_exact(&c,&p,&surface,reversed,decision.work_used-1).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
+                let mut changed=c.clone();changed.control_points[0][0]=changed.control_points[0][0].next_up();
+                assert_eq!(verify_exact(&changed,&p,&surface,reversed,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+                let mut nonlinear=p.clone();nonlinear.weights[1]=3.;
+                assert!(verify_exact(&c,&nonlinear,&surface,reversed,1000000).unwrap().is_none());
+                let mut interior=p.clone();for point in &mut interior.control_points {point[0]=3.;}
+                assert!(verify_exact(&c,&interior,&surface,reversed,1000000).unwrap().is_none());
+            }}}
+        }
     }
     #[test]
     fn affine_chart_identity_uses_exact_poles_and_bounded_work() {

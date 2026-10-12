@@ -38,7 +38,13 @@ it.each(['parameter','arc_length'])('certifies closed rational nonuniform RMF th
  expect(proof.errorUpper).toBeLessThan(2)
  expect(proof.patches!.length).toBeGreaterThan(0)
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,maxCells:0})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
- const broken=structuredClone(path);broken.weights[1]=1.2500000000000002
+ // The continuous source enclosure also handles a one-ULP rational perturbation.
+ const perturbed=structuredClone(path);perturbed.weights[1]=1.2500000000000002
+ const perturbedProof=callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:perturbed})
+ expect(perturbedProof).toMatchObject({continuousBound:true,withinBudget:true})
+ expect(perturbedProof.errorUpper).toBeGreaterThan(0)
+ expect(perturbedProof.errorUpper).toBeLessThan(args.max_deviation)
+ const broken=structuredClone(path);broken.controlPoints[1]=[...broken.controlPoints[0]!]
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  expect(JSON.stringify(args)).toBe(before)
 })
@@ -61,7 +67,10 @@ it.each(['parameter','arc_length'])('encloses antipodal closed RMF holonomy with
  expect(bound.errorUpper).toBeGreaterThan(1e-6)
  expect(bound.errorUpper).toBeLessThan(1)
  const strict=callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,max_deviation:1e-6})
- expect(strict).toMatchObject({continuousBound:true,withinBudget:false,errorUpper:bound.errorUpper,solidCertified:false})
+ // A stricter budget can trigger a tighter adaptive enclosure. It must still refuse.
+ expect(strict).toMatchObject({continuousBound:true,withinBudget:false,solidCertified:false})
+ expect(strict.errorUpper).toBeGreaterThan(1e-6)
+ expect(strict.errorUpper).toBeLessThan(1)
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,maxCells:0})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})
  const broken=structuredClone(path);broken.controlPoints[1]![0]=1.0000000000000002
  expect(callNurbsRust<Proof>('surface_progressive_sweep_spatial_rmf_error',{...args,path:broken})).toMatchObject({continuousBound:false,errorUpper:null,patches:null})

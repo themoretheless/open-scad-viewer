@@ -1,10 +1,10 @@
-import {constructProgressiveMiterOwnedBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport} from '../nurbsMiterOwnedBoundary'
+import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest} from '../nurbsMiterOwnedBoundary'
 import {inspectMiterProfileSmoothness,type MiterProfileSmoothness} from '../miterProfileSmoothness'
 import {type SweepBoundaryCertificate} from '../sweepBoundaryCertificate'
 import {planMiterBody,ownedMiterSharpStations,previewMiterWalls} from '../miterBodyLayout'
 import {correctMiterSweepSections,type SweepSectionCorrection} from '../nurbsSectionProjection'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCaps,inspectSweepRetainedCapDecomposition,type SweepRetainedCaps,type SweepRetainedCorrespondence} from '../sweepRetainedCorrespondence'
-import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../nurbsSweepEmbedding'
+import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../nurbsSweepEmbedding'
 import type {DirectSketch} from '../directModeling'
 import {callGeometryRust} from './kernel'
 import type {NurbsCurve} from '../nurbsCurve'
@@ -406,11 +406,38 @@ const correctMiterCaps=(sections:NurbsCurve[][],points:[number,number,number][],
 export interface ProgressiveMiterBrepBody {profileSmoothness:MiterProfileSmoothness;boundaryCertificate:SweepBoundaryCertificate;retainedCapDecomposition:import('../sweepRetainedCorrespondence').SweepRetainedCapDecomposition|null;retainedDecomposition:import('../sweepRetainedCorrespondence').SweepRetainedDecomposition|null;capParallelism:import('../nurbsConstructors').ProgressiveMiterCapParallelism|null;boundaryErrorWithinBudget:boolean|null;boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null;idealCapDomains:import('../nurbsConstructors').ProgressiveMiterIdealCapDomains|null;capProjection:import('../nurbsConstructors').ProgressiveMiterCapProjection|null;retainedWallErrorUpper:number|null;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;model:NurbsBrep;approximation:ProgressiveMiterResult;wallAudit:import('../nurbsSweepAudit').SweepWallAudit;retainedCorrespondence:SweepRetainedCorrespondence;retainedCaps:SweepRetainedCaps|null;retainedWallCharts:SweepRetainedChartEvidence;capDomains:[SweepContourAudit,SweepContourAudit]|null;capContacts:SweepCapContactEvidence[]|null;capPairs:SweepCapPairEvidence|null;embedding:SweepEmbeddingAudit|null;volume:SweepVolumeAudit;globalEmbeddingCertified:false}
 // Route original requests and station metadata by object identity. Rust replays
 // and compares actual geometry/certificates before deriving modifier bounds.
+const sweepCapFaces=(model:NurbsBrep,closed:boolean)=>closed?[]:[model.faces.length-2,model.faces.length-1]
+/** Copy native receipt fields without recomputing or promoting any proof. */
+const boundaryReceiptFields=(certificate:SweepBoundaryCertificate)=>({
+ continuousBound:certificate.continuousBound,boundaryErrorUpper:certificate.errorUpper,
+ boundaryErrorWithinBudget:certificate.withinBudget,budget:certificate.budget,
+ filledCapErrorUpper:certificate.filledCapErrorUpper,retainedWallErrorUpper:certificate.wallErrorUpper,
+})
+const chartReceiptFields=(charts:SweepRetainedChartEvidence)=>({wallRegularityCertified:charts.allChartsCertified,profileRegularityCertified:charts.allChartsCertified})
 export interface CertifiedMiterBoundaryOwner {model:NurbsBrep;boundaryCertificate:SweepBoundaryCertificate}
 const miterOriginalRequests=new WeakMap<CertifiedMiterBoundaryOwner,string>()
 const miterAffineHistory=new WeakMap<CertifiedMiterBoundaryOwner,string>()
 const miterReconstructionReplay=new WeakMap<CertifiedMiterBoundaryOwner,string>()
 const miterProofOwners=new WeakMap<CertifiedMiterBoundaryOwner,{sections?:string;sharp?:number[];authoring?:{authoredFramesApplied:boolean;orientationGuideApplied:boolean;affineLawsApplied:boolean}}>()
+/** Explicit original direct request; all geometry and certificate audits are native. */
+export function createDirectMiterOwnedBody(source:DirectMiterOwnedSourceRequest) {
+ const owned=constructMiterOwnedBoundary(source),model=owned.model
+ const capFaces=sweepCapFaces(model,source.closed)
+ const profileSmoothness=inspectMiterProfileSmoothness(model,capFaces)
+ const profileRegularity=inspectSweepProfileRegularity(source.loops.flat(),10000)
+ const volume=inspectSweepVolume(model,capFaces,DEFAULT_SWEEP_VOLUME_BUDGETS)
+ const certificate=owned.boundaryCertificate
+ const report={method:certificate.method,retentionMode:owned.retentionMode,
+  boundaryCertificate:certificate,...boundaryReceiptFields(certificate),
+  profileSmoothness,profileRegularity,profileRegularityCertified:profileRegularity.spanwiseRegular,
+  retainedWallCharts:owned.retainedWallCharts,wallRegularityCertified:owned.retainedWallCharts.allChartsCertified,
+  sectionCorrection:owned.sectionCorrection,volume,globalEmbeddingCertified:false as const,
+  closedPath:source.closed,levels:owned.levels}
+ const body={...owned,profileSmoothness,volume,report}
+ miterOriginalRequests.set(body,JSON.stringify(source))
+ miterProofOwners.set(body,{sections:JSON.stringify(owned.sections),sharp:owned.sharpStationIndices})
+ return body
+}
 /** Replayable inputs only; no positive geometry certificate is transported. */
 export function readMiterAffineReplayRouting(owner:CertifiedMiterBoundaryOwner) {
  const original=miterOriginalRequests.get(owner),encoded=miterAffineHistory.get(owner)
@@ -463,11 +490,11 @@ export function transformCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,m
  if(result.reason==='boundary-budget-unproved')throw new Error('Affine complete boundary error exceeds max_deviation or is unproved')
  if(!placement?.model||!boundaryCertificate)throw new Error(`Affine placement unproved: ${result.reason}`)
  const closed=boundaryCertificate.closed
- const model=placement.model,capFaces=closed?[]:[model.faces.length-2,model.faces.length-1]
+ const model=placement.model,capFaces=sweepCapFaces(model,closed)
  const profileSmoothness=inspectMiterProfileSmoothness(model,capFaces)
  const {retainedWallCharts,volume}=result
  if(!retainedWallCharts||!volume)throw new Error('Native affine material report missing')
- const transformed={model,placement,boundaryCertificate,profileSmoothness,retainedWallCharts,volume,continuousBound:boundaryCertificate.continuousBound,boundaryErrorUpper:boundaryCertificate.errorUpper,boundaryErrorWithinBudget:boundaryCertificate.withinBudget,budget:boundaryCertificate.budget,filledCapErrorUpper:boundaryCertificate.filledCapErrorUpper,retainedWallErrorUpper:boundaryCertificate.wallErrorUpper,wallRegularityCertified:retainedWallCharts.allChartsCertified,profileRegularityCertified:retainedWallCharts.allChartsCertified}
+ const transformed={model,placement,boundaryCertificate,profileSmoothness,retainedWallCharts,volume,...boundaryReceiptFields(boundaryCertificate),...chartReceiptFields(retainedWallCharts)}
  miterProofOwners.set(transformed,{})
  miterOriginalRequests.set(transformed,original)
  miterAffineHistory.set(transformed,JSON.stringify(steps))
@@ -489,15 +516,12 @@ export function smoothCertifiedMiterBody(source:CertifiedMiterBoundaryOwner,sect
  const {model,candidate,boundaryCertificate}=reconstruction
  if(reconstruction.reason==='boundary-budget-unproved')throw new Error('Smoothed complete boundary error exceeds max_deviation or is unproved')
  if(!model||!candidate?.sides||candidate.wallDisplacementUpper===null||!boundaryCertificate)throw new Error(`Station smoothing candidate unproved: ${reconstruction.reason}`)
- const capFaces=boundaryCertificate.closed?[]:[model.faces.length-2,model.faces.length-1]
+ const capFaces=sweepCapFaces(model,boundaryCertificate.closed)
  const profileSmoothness=inspectMiterProfileSmoothness(model,capFaces)
  const {retainedWallCharts,volume}=reconstruction
  if(!retainedWallCharts||!volume)throw new Error('Native reconstruction material report missing')
  const smoothed={...owner.authoring,method:'bounded-miter-station-reconstruction' as const,model,candidate,sharpStationIndices:[...sharp],boundaryCertificate,profileSmoothness,retainedWallCharts,volume,
-  continuousBound:boundaryCertificate.continuousBound,boundaryErrorUpper:boundaryCertificate.errorUpper,
-  boundaryErrorWithinBudget:boundaryCertificate.withinBudget,filledCapErrorUpper:boundaryCertificate.filledCapErrorUpper,
-  retainedWallErrorUpper:boundaryCertificate.wallErrorUpper,budget:boundaryCertificate.budget,
-  wallRegularityCertified:retainedWallCharts.allChartsCertified,profileRegularityCertified:retainedWallCharts.allChartsCertified,globalEmbeddingCertified:false as const}
+  ...boundaryReceiptFields(boundaryCertificate),...chartReceiptFields(retainedWallCharts),globalEmbeddingCertified:false as const}
  miterProofOwners.set(smoothed,{})
  miterOriginalRequests.set(smoothed,original)
  miterReconstructionReplay.set(smoothed,JSON.stringify({quantum:options.quantum,tolerance:options.wallTolerance,maxWork:options.maxWork,budget:options.maxDeviation}))
@@ -545,7 +569,7 @@ const completeOwnedMiterBody=(
  const boundaryCertificate=owned.boundaryCertificate
  const {errorUpper:boundaryErrorUpper,withinBudget:boundaryErrorWithinBudget,filledCapErrorUpper,wallErrorUpper:retainedWallErrorUpper}=boundaryCertificate
  const retainedWallCharts=owned.retainedWallCharts
- const capFaces=owned.closed?[]:[model.faces.length-2,model.faces.length-1]
+ const capFaces=sweepCapFaces(model,owned.closed)
  const capPairs=owned.closed?null:inspectSweepCapPairs(model,capFaces,options.capPairAuditBudgets??{clearance:0,distanceTolerance:.001,maxInjectivityCells:1000,maxPairs:1000,maxPairCells:1000},checkAbort)
  checkAbort()
  const capContacts=owned.closed?null:inspectSweepCapContacts(model,capFaces,options.capWallMaxWalls??1024,checkAbort)
@@ -577,22 +601,24 @@ export const createMiterBrepProfileBody=(loops:NurbsCurve[][],points:[number,num
  const model=closed?createPeriodicBrepSectionLoft(nested):createRationalBrepSectionLoft(nested)
  const retainedCorrespondence=sectionCorrection?inspectSweepRetainedCorrespondence(model,nested,closed):undefined
  if(sectionCorrection&&!retainedCorrespondence?.exact)throw new Error('Corrected miter retained wall correspondence unproved')
- const volume=inspectSweepVolume(model,closed?[]:[model.faces.length-2,model.faces.length-1],DEFAULT_SWEEP_VOLUME_BUDGETS)
+ const volume=inspectSweepVolume(model,sweepCapFaces(model,closed),DEFAULT_SWEEP_VOLUME_BUDGETS)
  const profileRegularity=inspectSweepProfileRegularity(loops.flat(),10000)
  // A positive projected symmetric Jacobian has rank two everywhere on each
  // actual retained chart, and therefore proves wall regularity independently
  // of cap contacts, material orientation and authored approximation error.
- const retainedWallCharts=inspectSweepRetainedWallCharts(model,closed?[]:[model.faces.length-2,model.faces.length-1],DEFAULT_SWEEP_VOLUME_BUDGETS.maxLinearCells)
- return {model,report:{profileSmoothness:inspectMiterProfileSmoothness(model,closed?[]:[model.faces.length-2,model.faces.length-1]),method:'polyline-miter-sections',sections:sections.length,closedPath:closed,globalEmbeddingCertified:false,roundingCertified:false,continuousBound:false,profileRegularityCertified:profileRegularity.spanwiseRegular,profileRegularity,wallRegularityCertified:retainedWallCharts.allChartsCertified,retainedWallCharts,volume,...(sectionCorrection?{sectionCorrection,retainedCorrespondence}:{})}}
+ const retainedWallCharts=inspectSweepRetainedWallCharts(model,sweepCapFaces(model,closed),DEFAULT_SWEEP_VOLUME_BUDGETS.maxLinearCells)
+ return {model,report:{profileSmoothness:inspectMiterProfileSmoothness(model,sweepCapFaces(model,closed)),method:'polyline-miter-sections',sections:sections.length,closedPath:closed,globalEmbeddingCertified:false,roundingCertified:false,continuousBound:false,profileRegularityCertified:profileRegularity.spanwiseRegular,profileRegularity,wallRegularityCertified:retainedWallCharts.allChartsCertified,retainedWallCharts,volume,...(sectionCorrection?{sectionCorrection,retainedCorrespondence}:{})}}
 }
 export const createRationalBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep=>callGeometryRust('brep_nurbs_rational_section_loft',{sections})
 import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../nurbsConstructors'
-export type ProgressiveBrepSweepOptions=ProgressiveGuidedSurfaceSweepOptions & {capCorrection?:{quantum:number;tolerance:number;maxWork:number}}
+export type ProgressiveBrepSweepOptions=ProgressiveGuidedSurfaceSweepOptions & {capCorrection?:{quantum:number;tolerance:number;maxWork:number};circleCorrection?:{quantum:number;tolerance:number;maxWork:number}}
 export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
  bodyDecompositionErrorUpper?:number|null;bodyDecompositionProducts?:number
  capProjection?:{idealCapDomainsCertified:boolean;normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null;
   cells:number;exactWork:number;reason:string|null;scope:'constructor-owned-endpoint-plane-projection'}|null
  capCorrectionErrorUpper?:number|null
+ profileCorrectionErrorUpper?:number|null
+ profileSmoothness?:MiterProfileSmoothness
  filledCapErrorUpper?:[number,number]|null;boundaryContinuousBound?:boolean;boundaryErrorUpper?:number|null
  boundaryErrorWithinBudget?:boolean|null
  boundaryErrorScope?:'constructor-owned-retained-wall-and-cap-union'
@@ -600,12 +626,46 @@ export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveM
  retainedCaps?:{exact:boolean;capErrorUpper:0|null;exactWork:number;inspectedEdges:number;reason:string;
   scope:'constructor-owned-retained-endpoint-regions';continuousBound:false;globalEmbeddingCertified:false}|null}
 export type ProgressiveBodyBoundaryEvidence=Omit<ProgressiveBrepBody,'model'|'approximation'> & {budget:number;closedPath:boolean}
+const progressiveBodyRequests=new WeakMap<ProgressiveBrepBody,string>()
+/** Replay the owned original request in Rust; audit the actual reconstructed surfaces. */
+function prepareCertifiedProgressiveStations(source:ProgressiveBrepBody,options:{quantum:number;wallTolerance:number;maxWork:number;smoothnessMaxWork:number}) {
+ const encoded=progressiveBodyRequests.get(source)
+ if(!encoded)throw new Error('Missing owned progressive station source')
+ const result=callGeometryRust<{stationReconstruction:{reason:string;source:string;globalEmbeddingCertified:false;profileSmoothness:MiterProfileSmoothness|null;reconstruction:{model:NurbsBrep|null;wallDisplacementUpper:number|null;work:number;reason:string}|null;boundaryCertificate:SweepBoundaryCertificate|null}}>('brep_nurbs_progressive_profile_body_reconstruct_stations',{
+  ...JSON.parse(encoded),expected_source_model:source.model,station_quantum:options.quantum,station_tolerance:options.wallTolerance,station_max_work:options.maxWork,smoothness_max_work:options.smoothnessMaxWork,
+ })
+ const native=result.stationReconstruction,model=native.reconstruction?.model,certificate=native.boundaryCertificate
+ if(!model||!certificate||!native.profileSmoothness)throw new Error('Native station reconstruction unproved: '+native.reason)
+ if(!certificate.continuousBound||certificate.withinBudget!==true)throw new Error('Station boundary unproved or over original budget')
+ return {model,method:certificate.method,boundaryCertificate:certificate,...boundaryReceiptFields(certificate),
+  profileSmoothness:native.profileSmoothness,globalEmbeddingCertified:false as const,
+  stationReconstruction:{source:native.source,closedPath:certificate.closed,work:native.reconstruction!.work,wallDisplacementUpper:native.reconstruction!.wallDisplacementUpper},
+ }
+}
+export function reconstructCertifiedProgressiveStations(...args:Parameters<typeof prepareCertifiedProgressiveStations>) {
+ const prepared=prepareCertifiedProgressiveStations(...args)
+ const {retainedWallCharts,...volume}=inspectSweepVolumeAndCharts(prepared.model,sweepCapFaces(prepared.model,prepared.boundaryCertificate.closed),DEFAULT_SWEEP_VOLUME_BUDGETS)
+ return {...prepared,retainedWallCharts,...chartReceiptFields(retainedWallCharts),volume}
+}
+export async function reconstructCertifiedProgressiveStationsAsync(source:ProgressiveBrepBody,
+ options:Parameters<typeof prepareCertifiedProgressiveStations>[1],control:{shouldAbort?:()=>boolean;onYield?:()=>void}={}) {
+ const prepared=prepareCertifiedProgressiveStations(source,options)
+ const {retainedWallCharts,...volume}=await inspectSweepVolumeAndChartsAsync(prepared.model,sweepCapFaces(prepared.model,prepared.boundaryCertificate.closed),DEFAULT_SWEEP_VOLUME_BUDGETS,control)
+ return {...prepared,retainedWallCharts,...chartReceiptFields(retainedWallCharts),volume}
+}
 /** Open-path caps or closed-path periodic shells, constrained by the shared B-rep face budget. Twist values are degrees. */
-export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveBrepSweepOptions):ProgressiveBrepBody=>
- callGeometryRust('brep_nurbs_progressive_profile_body',{loops,path,...(options.capCorrection?{cap_correction_quantum:options.capCorrection.quantum,cap_correction_tolerance:options.capCorrection.tolerance,cap_correction_max_work:options.capCorrection.maxWork}:{}),...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
+export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveBrepSweepOptions):ProgressiveBrepBody=>{
+ const request={loops,path,...(options.circleCorrection?{circle_correction_quantum:options.circleCorrection.quantum,circle_correction_tolerance:options.circleCorrection.tolerance,circle_correction_max_work:options.circleCorrection.maxWork}:{}),...(options.capCorrection?{cap_correction_quantum:options.capCorrection.quantum,cap_correction_tolerance:options.capCorrection.tolerance,cap_correction_max_work:options.capCorrection.maxWork}:{}),...sweepAffineLawPayload(options),...sweepFrameLawPayload(options),...sweepGuidePayload(options),
   scale:{degree:scale.degree,knots:scale.knots,controlPoints:scale.values.map(r=>[r,0,0]),weights:scale.weights,periodic:false},
   twist:{degree:twist.degree,knots:twist.knots,controlPoints:twist.values.map(a=>[a*Math.PI/180,0,0]),weights:twist.weights,periodic:false},
-  ...(options.rmfTransportSteps===undefined?{}:{rmf_transport_steps:options.rmfTransportSteps}),...(options.errorMaxCells===undefined?{}:{error_max_cells:options.errorMaxCells}),...(options.errorMaxProducts===undefined?{}:{error_max_products:options.errorMaxProducts}),normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000})
+  ...(options.rmfTransportSteps===undefined?{}:{rmf_transport_steps:options.rmfTransportSteps}),...(options.errorMaxCells===undefined?{}:{error_max_cells:options.errorMaxCells}),...(options.errorMaxProducts===undefined?{}:{error_max_products:options.errorMaxProducts}),normal:options.normal,orientation:options.orientation??'rmf',spacing:options.spacing??'parameter',initial_sections:options.initialSections??5,max_sections:options.maxSections??257,max_deviation:options.maxDeviation,length_tolerance:options.lengthTolerance??0.001,length_max_cells:options.lengthMaxCells??100000}
+ const encoded=JSON.stringify(request)
+ const result=callGeometryRust<ProgressiveBrepBody>('brep_nurbs_progressive_profile_body',JSON.parse(encoded))
+ progressiveBodyRequests.set(result,encoded)
+ if(options.circleCorrection&&(typeof result.profileCorrectionErrorUpper!=='number'||!Number.isFinite(result.profileCorrectionErrorUpper)||result.profileCorrectionErrorUpper<0))throw new Error('Native progressive profile circle correction is unavailable or unproved')
+ if(options.circleCorrection)result.profileSmoothness=inspectMiterProfileSmoothness(result.model,result.approximation.report.closedPath?[]:[result.model.faces.length-2,result.model.faces.length-1])
+ return result
+}
 
 import {sweepAffineLawPayload,sweepFrameLawPayload,sweepGuidePayload} from '../nurbsConstructors'
 

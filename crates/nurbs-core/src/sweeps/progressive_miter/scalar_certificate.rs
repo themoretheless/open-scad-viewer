@@ -146,11 +146,15 @@ pub fn certify(c: &Curve, domain: [f64; 2], max_cells: usize) -> Result<Report> 
 }
 /// Value-only enclosure, including exact endpoints; avoids forming jets on
 /// vanishingly narrow intervals. Exhaustion discards the whole accumulated hull.
-pub fn value_traversal(
+pub fn value_traversal(c:&Curve,traversal:[f64;2],max_cells:usize)->Result<Option<[f64;2]>> {
+    Ok(value_traversal_with_work(c,traversal,max_cells)?.1)
+}
+/// Actual original-span restriction work, including failed partial queries.
+pub(crate) fn value_traversal_with_work(
     c: &Curve,
     traversal: [f64; 2],
     max_cells: usize,
-) -> Result<Option<[f64; 2]>> {
+) -> Result<(usize,Option<[f64; 2]>)> {
     c.validate()?;
     check(
         max_cells <= 100000
@@ -162,6 +166,7 @@ pub fn value_traversal(
         "Invalid scalar value certificate input",
     )?;
     let [a, b] = c.domain();
+    let mut cells = 0;
     let result = (|| -> Result<Option<[f64; 2]>> {
         let t = Interval::point(a)
             .add(
@@ -172,7 +177,6 @@ pub fn value_traversal(
             .intersect(a, b)?;
         let mut lo = f64::INFINITY;
         let mut hi = f64::NEG_INFINITY;
-        let mut cells = 0;
         for span in c.degree..c.control_points.len() {
             if c.knots[span] >= c.knots[span + 1] {
                 continue;
@@ -199,8 +203,8 @@ pub fn value_traversal(
         Ok(Some([lo, hi]))
     })();
     match result {
-        Ok(value) => Ok(value),
-        Err(_) => Ok(None),
+        Ok(value) => Ok((cells,value)),
+        Err(_) => Ok((cells,None)),
     }
 }
 /// Certifies a law over normalized traversal without ordinary rounded

@@ -1,3 +1,4 @@
+import {readNativeGeometryData} from './nativeGeometrySnapshot'
 import type { MeshData } from '../core/mesh'
 import {isNativeGeometryArtifact} from '../core/nativeGeometry'
 import {inspectProgressiveSweepSolidAdmission} from './sweepSolidAdmission'
@@ -46,7 +47,7 @@ export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string):
   const polygon = meshDataToPolygon(mesh)
   if (mesh.nativeGeometry?.kind === 'brep') {
     if (!isNativeGeometryArtifact(mesh.nativeGeometry)) throw new Error('Invalid native B-rep snapshot.')
-    const data = JSON.parse(mesh.nativeGeometry.geometryJson) as {geometry?: NurbsBrep}
+    const data = readNativeGeometryData(mesh.nativeGeometry) as {geometry?: NurbsBrep}
     if (!data || !data.geometry) throw new Error('Missing native B-rep geometry.')
     const model = data.geometry
     inspectNurbsBrep(model)

@@ -78,7 +78,7 @@ it('proves retained oblique caps from exact original planarity and refuses warpe
  const warped=structuredClone(model)
  warped.faces[5]!.surface.controlPoints[1]![1]![2]+=8*Number.EPSILON
  expect(inspectNativeSweepCapContacts(warped,5,[4,5],budgets.capBudgets).planarControlHullCertified).toBe(false)
- expect(inspectSweepRetainedCaps(warped,placed,budgets.capBudgets)).toMatchObject({exact:false,capErrorUpper:null,reason:'cap-region-unproved'})
+ expect(inspectSweepRetainedCaps(warped,placed,budgets.capBudgets)).toMatchObject({exact:false,capErrorUpper:null,reason:'cap-coedge-identity-different'})
  expect({model,placed}).toEqual(before)
 })
 it('proves retained scale/twist hollow volume within shared budgets',()=>{

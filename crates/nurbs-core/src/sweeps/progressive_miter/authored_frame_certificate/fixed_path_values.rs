@@ -51,6 +51,14 @@ pub(crate) fn certify_fixed_path_control_values_with_frame_path(
 
 /// Relative pose in the original initial-tangent frame. Translation is owned
 /// separately by the source arc-length certificate, not by a proxy path.
+pub(crate) fn certify_fixed_relative_values(
+    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
+    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
+)->Result<ControlValuesReport>{
+    let frame=certify_fixed_path_values(path,normal,twist,traversal,max_cells)?;
+    let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
+    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,traversal,max_cells,frame,None)
+}
 pub(crate) fn certify_fixed_relative_value(
     path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
     q:[[f64;2];3],traversal:[f64;2],max_cells:usize,
@@ -67,6 +75,15 @@ pub(crate) fn certify_fixed_relative_trajectory(
     let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_trajectory_with_fit(&zero,scale,affine,q,traversal,max_cells,frame,None)
+}
+
+pub(crate) fn certify_fixed_relative_trajectories(
+    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
+    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
+)->Result<TrajectoriesReport>{
+    let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
+    let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
+    super::trajectory::control_trajectories_with_fit(&zero,scale,affine,qs,traversal,max_cells,frame,None)
 }
 
 /// Original fixed basis is constant in traversal. Its uncertainty comes from

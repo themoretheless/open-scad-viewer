@@ -1,7 +1,10 @@
+import {readSweepManifest} from './sweep-manifest-reader.mjs'
 import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {dirname,resolve} from 'node:path'
+import {checkCompleteFacePairCover} from './sweep-face-pair-cover.mjs'
+import {bindStepOracle} from './sweep-step-oracle-binding.mjs'
 
 // Independent reconciliation of native global certificates with OCCT results.
 // Finite fixture coverage never promotes an unresolved body or a general theorem.
@@ -9,10 +12,10 @@ const [manifestPath,oraclePath,outputPath]=process.argv.slice(2)
 assert.ok(manifestPath&&oraclePath&&outputPath,'Usage: manifest.json occt.json output.json')
 const manifestBytes=readFileSync(manifestPath)
 const manifestSha256=createHash('sha256').update(manifestBytes).digest('hex')
-const manifest=JSON.parse(manifestBytes.toString('utf8'))
+const manifest=readSweepManifest(manifestPath,manifestBytes)
 const oracle=JSON.parse(readFileSync(oraclePath,'utf8'))
 assert.equal(oracle.passed,true)
-assert.equal(oracle.manifestSha256,manifestSha256,'OCCT report belongs to another manifest')
+const oracleBinding=await bindStepOracle(manifest,manifestSha256,oracle)
 const artifact=manifest.artifactProvenance
 assert.equal(artifact?.schema,'sweep-step-artifact/1','Missing captured WASM provenance')
 assert.match(artifact.geometryWasmSha256,/^[a-f0-9]{64}$/)
@@ -112,6 +115,7 @@ for(const item of manifest.cases){
   assert.equal(imported.native_external_material_agreement,true)
   {
    const boundary=item.nativeBoundary;assert.ok(boundary,`${item.file}: missing complete native boundary report`)
+   checkCompleteFacePairCover(boundary,item.faces)
    for(const key of ['boundaryEmbeddingCertified','exactBoundaryCertified','trimCertified','allFacesInjective','allPairsClassified'])assert.equal(boundary[key],true,`${item.file}: boundary ${key}`)
    assert.deepEqual(boundary.unresolvedFaces,[])
    assert.equal(boundary.caps.length,item.capFaces.length,'Incomplete cap certificate coverage')
@@ -122,6 +126,6 @@ for(const item of manifest.cases){
  cases.push({file:item.file,stepSha256:hash,status:companionFile?'correctly-refused-exact-cap-gap':refused?'correctly-unproved':'certified',shells:item.shells,capHoleFaces:item.capHoleFaces,wallRegularityCertified:item.nativeRetainedWallCharts?.allChartsCertified??null,profileRegularityCertified:item.construction?.profileRegularityCertified??null,parents:native.nesting?.parents??null,orientations:native.orientations})
 }
 assert.ok([...expectedRefusals].every(file=>seen.has(file)),'Missing deliberate refusal')
-const report={schema:controlPlaneOnly?'sweep-global-control-plane/1':'sweep-global-matrix/1',manifestSha256,artifactProvenance:artifact,oracleSha256:createHash('sha256').update(readFileSync(oraclePath)).digest('hex'),controlPlaneOnly,scope:controlPlaneOnly?'Synthetic refused control-plane evidence only; not a complete geometric qualification.':'Declared finite STEP fixtures; native global certificates reconciled with independent OCCT topology/material evidence. Unresolved cases remain refused; no universal or whole-boundary smoothness claim.',passed:true,certified:cases.filter(c=>c.status==='certified').length,refused:cases.filter(c=>c.status!=='certified').length,cases}
+const report={schema:controlPlaneOnly?'sweep-global-control-plane/1':'sweep-global-matrix/1',manifestSha256,artifactProvenance:artifact,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),oracleSha256:createHash('sha256').update(readFileSync(oraclePath)).digest('hex'),pairCoverVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-face-pair-cover.mjs',import.meta.url))).digest('hex'),controlPlaneOnly,scope:controlPlaneOnly?'Synthetic refused control-plane evidence only; not a complete geometric qualification.':'Declared finite STEP fixtures; native global certificates reconciled with independent OCCT topology/material evidence. Unresolved cases remain refused; no universal or whole-boundary smoothness claim.',passed:true,certified:cases.filter(c=>c.status==='certified').length,refused:cases.filter(c=>c.status!=='certified').length,cases}
 writeFileSync(outputPath,JSON.stringify(report,null,2)+'\n')
 console.log(`${report.certified} certified, ${report.refused} correctly unproved`)

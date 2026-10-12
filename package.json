@@ -85,6 +85,7 @@
     "binaryen": "116.0.0",
     "fake-indexeddb": "^6.2.5",
     "iwer": "2.5.0",
+    "terser": "5.51.2",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
     "vitest": "^4.1.11",

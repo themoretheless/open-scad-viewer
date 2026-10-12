@@ -14,8 +14,10 @@ export interface NativeGeometryArtifact {
   readonly documentRevision:string
 }
 const kinds=['profile','patches','subdivision','sdf','brep','curve','surface','mesh']
-export function createNativeGeometryArtifact(nodeId:string,kind:NativeGeometryArtifact['kind'],data:unknown,document:unknown):NativeGeometryArtifact {
-  const geometryJson=JSON.stringify(data),documentJson=JSON.stringify(document)
+export function createNativeGeometryArtifact(nodeId:string,kind:NativeGeometryArtifact['kind'],data:unknown,document:unknown,pack?:(json:string)=>unknown):NativeGeometryArtifact {
+  let geometryJson=JSON.stringify(data)
+  const documentJson=JSON.stringify(document)
+  if(geometryJson.length+documentJson.length>MAX_NATIVE_GEOMETRY_CHARACTERS&&pack)geometryJson=JSON.stringify(pack(geometryJson))
   const artifact={version:1 as const,nodeId,kind,revision:sha256Hex(kind+'\n'+geometryJson),geometryJson,documentJson,documentRevision:sha256Hex(documentJson)}
   if(!isNativeGeometryArtifact(artifact))throw new Error('Native geometry snapshot exceeds its bounded transport contract')
   return Object.freeze(artifact)

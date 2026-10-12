@@ -36,3 +36,29 @@ fn actual_hollow_caps_keep_each_hole_owned_by_its_endpoint(){
     let mut swapped=endpoints.clone();swapped[1].swap(0,1);
     assert!(!sweep_retained_caps::inspect(&model,&swapped,budgets(),1024).unwrap().exact);
 }
+
+#[test]
+fn cap_contact_diagnostic_distinguishes_exact_identity_from_invalid_topology(){
+    use brep_core::sweep_cap_contacts;
+    let endpoints=[rings(0.),rings(10.)];
+    let model=rational_section_loft(&endpoints).unwrap();
+    let caps=[model.faces.len()-2,model.faces.len()-1];
+    let good=sweep_cap_contacts::inspect(&model,caps[0],&caps,budgets()).unwrap();
+    assert!(good.cap_certified);
+    let mut changed=model.clone();
+    for row in &mut changed.faces[caps[1]].surface.control_points {
+        for point in row {point[2]=f64::from_bits(point[2].to_bits()+1);}
+    }
+    let denied=sweep_cap_contacts::inspect(&changed,caps[1],&caps,budgets()).unwrap();
+    assert!(!denied.cap_certified);
+    assert_eq!(denied.reason,Some("cap-coedge-identity-different"));
+    let retained=sweep_retained_caps::inspect(&changed,&endpoints,budgets(),1024).unwrap();
+    assert!(!retained.exact);
+    assert_eq!(retained.reason,"cap-coedge-identity-different");
+    let mut changed=model.clone();
+    let use_=changed.shells.iter_mut().flat_map(|shell|shell.faces.iter_mut())
+        .find(|use_|use_.face==caps[0]).unwrap();
+    use_.reversed=!use_.reversed;
+    let denied=sweep_cap_contacts::inspect(&changed,caps[0],&caps,budgets()).unwrap_err();
+    assert_eq!(denied.code,"BREP_INVALID_TOPOLOGY");
+}

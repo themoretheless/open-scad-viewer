@@ -6,6 +6,14 @@ use crate::distance_bounds::{Interval, box_distance};
 use crate::{Result, check, resource, surface::Surface};
 #[cfg(feature = "codec")]
 mod serialization;
+mod bezier_restriction;
+pub(crate) fn complete_bernstein_span(degree: usize, knots: &[f64], span: usize) -> bool {
+    bezier_restriction::is_complete_span(degree, knots, span)
+}
+pub(crate) fn restrict_bernstein_controls(controls: &[[Interval;4]], span: [f64;2], domain: [f64;2], weights: [f64;2]) -> Result<Vec<[Interval;4]>> {
+    bezier_restriction::restrict(controls, span, domain, weights)
+}
+
 
 fn midpoint(a: f64, b: f64) -> f64 {
     a * 0.5 + b * 0.5
@@ -45,6 +53,50 @@ pub(crate) fn interpolate(
             }
             d[j][3] = d[j][3].intersect(weights[0], weights[1])?;
         }
+    }
+    Ok(d[degree])
+}
+// One immutable knot/parameter sequence gives identical de Boor coefficients
+// for every homogeneous row. Reuse only these coefficients; preserve every
+// original control arithmetic operation, intersection and traversal order.
+pub(crate) fn interpolation_plan(degree: usize, knots: &[f64], span: usize, parameters: &[f64])
+    -> Result<Vec<(usize, Interval, Interval)>> {
+    let mut plan = Vec::new();
+    for r in 1..=degree {
+        for j in (r..=degree).rev() {
+            let i = span - degree + j;
+            let denominator = Interval::point(knots[i + degree - r + 1])
+                .sub(Interval::point(knots[i]))?;
+            let alpha = Interval::point(parameters[r - 1]).sub(Interval::point(knots[i]))?
+                .div(denominator)?.intersect(0., 1.)?;
+            let beta = Interval::point(1.).sub(alpha)?.intersect(0., 1.)?;
+            plan.push((j, alpha, beta));
+        }
+    }
+    Ok(plan)
+}
+fn mul_blend_factor(a: Interval, b: Interval) -> Result<Interval> {
+    if b.lo >= 0. {
+        let (lo, hi) = if a.lo >= 0. {(a.lo*b.lo,a.hi*b.hi)}
+            else if a.hi <= 0. {(a.lo*b.hi,a.hi*b.lo)}
+            else {(a.lo*b.hi,a.hi*b.hi)};
+        // Keep original signed-zero and overflow/error behavior on the fallback.
+        if lo != 0. && hi != 0. && lo.is_finite() && hi.is_finite() {
+            return Interval::new(lo.next_down(),hi.next_up());
+        }
+    }
+    a.mul(b)
+}
+pub(crate) fn interpolate_planned(mut d: Vec<[Interval; 4]>, degree: usize,
+    plan: &[(usize, Interval, Interval)], weights: [f64; 2]) -> Result<[Interval; 4]> {
+    for &(j, alpha, beta) in plan {
+        for axis in 0..4 {
+            let a = d[j - 1][axis];
+            let b = d[j][axis];
+            d[j][axis] = mul_blend_factor(a,beta)?.add(mul_blend_factor(b,alpha)?)?
+                .intersect(a.lo.min(b.lo), a.hi.max(b.hi))?;
+        }
+        d[j][3] = d[j][3].intersect(weights[0], weights[1])?;
     }
     Ok(d[degree])
 }
@@ -90,6 +142,29 @@ fn restricted_controls(
         }
         controls.push(row);
     }
+    // A complete clamped original Bernstein span can be restricted with two
+    // convex subdivisions instead of separately evaluating every blossom.
+    // This changes interval computation only; original surface controls stay intact.
+    if bezier_restriction::is_complete_span(s.degree_u, &s.knots_u, iu)
+        && bezier_restriction::is_complete_span(s.degree_v, &s.knots_v, iv) {
+        let rows = controls.iter().map(|row| bezier_restriction::restrict(row,
+            [s.knots_v[iv], s.knots_v[iv+1]], domain[1], weights))
+            .collect::<Result<Vec<_>>>()?;
+        let mut restricted = Vec::new();
+        for j in 0..rows[0].len() {
+            let column = rows.iter().map(|row| row[j]).collect::<Vec<_>>();
+            for h in bezier_restriction::restrict(&column,
+                [s.knots_u[iu], s.knots_u[iu+1]], domain[0], weights)? {
+                let mut control = Vec::new();
+                for k in 0..3 {
+                    control.push(h[k].div(h[3])?.add(Interval::point(origin[k]))?
+                        .intersect(hull[k][0], hull[k][1])?);
+                }
+                restricted.push(control);
+            }
+        }
+        return Ok(restricted);
+    }
     // Blossom values at lo^(p-k), hi^k are the restricted Bernstein
     // coefficients of this original span. Keep their homogeneous arithmetic
     // interval-valued; convex hulls of the positive rational coefficients then
@@ -108,14 +183,17 @@ fn restricted_controls(
     };
     let us = parameters(s.degree_u, domain[0]);
     let vs = parameters(s.degree_v, domain[1]);
+    let u_plans = us.iter().map(|u| interpolation_plan(s.degree_u, &s.knots_u, iu, u))
+        .collect::<Result<Vec<_>>>()?;
     let mut restricted = Vec::new();
     for v in vs {
+        let v_plan = interpolation_plan(s.degree_v, &s.knots_v, iv, &v)?;
         let rows = controls
             .iter()
-            .map(|row| interpolate(row.clone(), s.degree_v, &s.knots_v, iv, &v, weights))
+            .map(|row| interpolate_planned(row.clone(), s.degree_v, &v_plan, weights))
             .collect::<Result<Vec<_>>>()?;
-        for u in &us {
-            let h = interpolate(rows.clone(), s.degree_u, &s.knots_u, iu, u, weights)?;
+        for u_plan in &u_plans {
+            let h = interpolate_planned(rows.clone(), s.degree_u, u_plan, weights)?;
             let mut control = Vec::new();
             for k in 0..3 {
                 let value = h[k]
@@ -491,11 +569,45 @@ pub fn rectangle_bounds(s: &Surface, domain: [[f64; 2]; 2]) -> Result<Vec<[f64; 
 
 /// Whole-cell oblique gap from outward rational control enclosures. A single
 /// original knot cell per rectangle bounds work; other cases remain unproved.
-pub(crate) fn rectangle_control_gap(
+pub(crate) fn rectangle_control_gap(a: &Surface, b: &Surface, domains: [[[f64; 2]; 2]; 2]) -> Result<Option<f64>> {
+    Ok(rectangle_control_query(a, b, domains)?.map(|(gap, _)| gap))
+}
+// A midpoint projection only proposes a subdivision direction. It never
+// certifies separation, rejects a contact, or removes any parameter cell.
+fn projected_split_proposal(a: &Patch, b: &Patch, surfaces: [&Surface; 2]) -> [f64; 4] {
+    let mut n = std::array::from_fn::<_, 3, _>(|k|
+        midpoint(a.bounds[k].lo, a.bounds[k].hi) - midpoint(b.bounds[k].lo, b.bounds[k].hi));
+    let scale = n.iter().map(|x| x.abs()).fold(0., f64::max);
+    if !scale.is_finite() || scale == 0. { return [0.; 4]; }
+    for x in &mut n { *x /= scale; }
+    let mut scores = [0.; 4];
+    for (side, patch) in [a, b].into_iter().enumerate() {
+        let degree = [surfaces[side].degree_u, surfaces[side].degree_v];
+        let count = std::array::from_fn::<_, 2, _>(|k|
+            if patch.domain[k][0] == patch.domain[k][1] { 1 } else { degree[k] + 1 });
+        if count[0] * count[1] != patch.controls.len() { return [0.; 4]; }
+        let projection = |i: usize| (0..3).map(|k|
+            midpoint(patch.controls[i][k].lo, patch.controls[i][k].hi) * n[k]).sum::<f64>();
+        for axis in 0..2 {
+            let mut score = 0_f64;
+            for v in 0..count[1] { for u in 0..count[0] {
+                let next = if axis == 0 && u + 1 < count[0] { Some(v * count[0] + u + 1) }
+                    else if axis == 1 && v + 1 < count[1] { Some((v + 1) * count[0] + u) }
+                    else { None };
+                if let Some(j) = next {
+                    score = score.max((projection(v * count[0] + u) - projection(j)).abs());
+                }
+            }}
+            scores[2 * side + axis] = score * degree[axis] as f64;
+        }
+    }
+    if scores.iter().any(|x| !x.is_finite()) { [0.; 4] } else { scores }
+}
+pub(crate) fn rectangle_control_query(
     a: &Surface,
     b: &Surface,
     domains: [[[f64; 2]; 2]; 2],
-) -> Result<Option<f64>> {
+) -> Result<Option<(f64, [f64; 4])>> {
     let span = |s: &Surface, d: [[f64; 2]; 2]| -> Option<[usize; 2]> {
         let u = (s.degree_u..s.control_points.len()).find(|&i| {
             s.knots_u[i] < s.knots_u[i + 1]
@@ -516,7 +628,7 @@ pub(crate) fn rectangle_control_gap(
     let pb = Patch::new(b, sb, domains[1])?;
     let lower = patch_lower(&pa, &pb)?;
     if lower > 0. {
-        return Ok(Some(lower));
+        return Ok(Some((lower, [0.; 4])));
     }
     // Fixed integer normals include inverse directions of simple shears.
     // Each interval dot encloses every actual rational control pole; no
@@ -546,17 +658,163 @@ pub(crate) fn rectangle_control_gap(
                     let norm = (n.iter().map(|v| (*v as f64).powi(2)).sum::<f64>())
                         .sqrt()
                         .next_up();
-                    return Ok(Some((gap / norm).next_down().max(0.)));
+                    return Ok(Some(((gap / norm).next_down().max(0.), [0.; 4])));
                 }
             }
         }
     }
-    Ok(Some(0.))
+    Ok(Some((0., projected_split_proposal(&pa, &pb, [a, b]))))
+}
+
+/// Search-local cache tied to one immutable surface. Work charges are unchanged.
+/// Both entry count and retained control count are bounded.
+pub(crate) struct PreparedControlSurface<'a> {
+    source: &'a Surface,
+    entries: std::collections::VecDeque<([u64; 4], Patch)>,
+    controls: usize,
+}
+impl<'a> PreparedControlSurface<'a> {
+    pub(crate) fn new(source: &'a Surface) -> Self {
+        Self { source, entries: Default::default(), controls: 0 }
+    }
+    fn patch(&mut self, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<&Patch> {
+        let key = [domain[0][0].to_bits(), domain[0][1].to_bits(), domain[1][0].to_bits(), domain[1][1].to_bits()];
+        if let Some(i) = self.entries.iter().position(|(k, _)| *k == key) {
+            let entry = self.entries.remove(i).unwrap();
+            self.entries.push_back(entry);
+        } else {
+            let patch = Patch::new(self.source, span, domain)?;
+            let count = patch.controls.len();
+            while !self.entries.is_empty() && (self.entries.len() >= 32 || self.controls.saturating_add(count) > 2048) {
+                let (_, old) = self.entries.pop_front().unwrap();
+                self.controls -= old.controls.len();
+            }
+            self.controls += count;
+            self.entries.push_back((key, patch));
+        }
+        Ok(&self.entries.back().unwrap().1)
+    }
+}
+
+pub(crate) fn rectangle_control_query_prepared(
+    cached_a: &mut PreparedControlSurface<'_>,
+    cached_b: &mut PreparedControlSurface<'_>,
+    domains: [[[f64; 2]; 2]; 2],
+) -> Result<Option<(f64, [f64; 4])>> {
+    let a = cached_a.source;
+    let b = cached_b.source;
+    let span = |s: &Surface, d: [[f64; 2]; 2]| -> Option<[usize; 2]> {
+        let u = (s.degree_u..s.control_points.len()).find(|&i| {
+            s.knots_u[i] < s.knots_u[i + 1]
+                && d[0][0] >= s.knots_u[i]
+                && d[0][1] <= s.knots_u[i + 1]
+        })?;
+        let v = (s.degree_v..s.control_points[0].len()).find(|&i| {
+            s.knots_v[i] < s.knots_v[i + 1]
+                && d[1][0] >= s.knots_v[i]
+                && d[1][1] <= s.knots_v[i + 1]
+        })?;
+        Some([u, v])
+    };
+    let (Some(sa), Some(sb)) = (span(a, domains[0]), span(b, domains[1])) else {
+        return Ok(None);
+    };
+    let pa = cached_a.patch(sa, domains[0])?;
+    let pb = cached_b.patch(sb, domains[1])?;
+    let lower = patch_lower(&pa, &pb)?;
+    if lower > 0. {
+        return Ok(Some((lower, [0.; 4])));
+    }
+    // Fixed integer normals include inverse directions of simple shears.
+    // Each interval dot encloses every actual rational control pole; no
+    // rounded separating plane or control midpoint is a positive premise.
+    for x in 0..=1 {
+        for y in -1..=1 {
+            for z in -1..=1 {
+                if x == 0 && (y < 0 || y == 0 && z <= 0) {
+                    continue;
+                }
+                let n = [x, y, z];
+                let project = |p: &Patch| -> Result<Interval> {
+                    let mut lo = f64::INFINITY;
+                    let mut hi = f64::NEG_INFINITY;
+                    for c in &p.controls {
+                        let mut value = Interval::point(0.);
+                        for k in 0..3 {
+                            value = value.add(c[k].mul(Interval::point(n[k] as f64))?)?;
+                        }
+                        lo = lo.min(value.lo);
+                        hi = hi.max(value.hi);
+                    }
+                    Interval::new(lo, hi)
+                };
+                let gap = box_distance(&[project(&pa)?], &[project(&pb)?])?.0;
+                if gap > 0. {
+                    let norm = (n.iter().map(|v| (*v as f64).powi(2)).sum::<f64>())
+                        .sqrt()
+                        .next_up();
+                    return Ok(Some(((gap / norm).next_down().max(0.), [0.; 4])));
+                }
+            }
+        }
+    }
+    Ok(Some((0., projected_split_proposal(&pa, &pb, [a, b]))))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn immutable_control_patch_cache_matches_original_query_bits_after_eviction() {
+        let mut a = plane(0.);
+        a.weights = vec![vec![1., 0.75], vec![1.5, 2.]];
+        let before = a.clone();
+        for z in [0., 0.0001, 3.] {
+            let mut b = plane(z);
+            for row in &mut b.control_points { for p in row { p[0] += p[1] * 0.7; p[2] += p[0] * 0.1; } }
+            let mut ca = PreparedControlSurface::new(&a);
+            let mut cb = PreparedControlSurface::new(&b);
+            let bits = |x: Option<(f64,[f64;4])>| x.map(|(g,s)|(g.to_bits(),s.map(f64::to_bits)));
+            for i in (0..80).chain((0..80).rev()) {
+                let lo = i as f64 / 160.;
+                let da = [[lo, lo+0.5], [0.,1.]];
+                let db = [[0.,1.], [0.,1.]];
+                assert_eq!(bits(rectangle_control_query(&a,&b,[da,db]).unwrap()),bits(rectangle_control_query_prepared(&mut ca,&mut cb,[da,db]).unwrap()));
+                assert!(ca.entries.len()<=32 && cb.entries.len()<=32);
+                assert!(ca.controls<=2048 && cb.controls<=2048);
+                assert_eq!(bits(rectangle_control_query(&b,&a,[db,da]).unwrap()),bits(rectangle_control_query_prepared(&mut cb,&mut ca,[db,da]).unwrap()));
+            }
+        }
+        assert_eq!(a.control_points,before.control_points);
+        assert_eq!(a.weights,before.weights);
+        assert_eq!(a.knots_u,before.knots_u);
+        assert_eq!(a.knots_v,before.knots_v);
+    }
+
+    #[test]
+    fn prepared_deboor_coefficients_keep_original_interval_bits() {
+        for degree in 0..=8 {
+            let knots = [vec![0.; degree+1], vec![1.; degree+1]].concat();
+            for lo in [0., 0.125, 0.5, 1.] { for hi in [lo, 1.] {
+                for split in 0..=degree {
+                    let parameters = (0..degree).map(|i| if i<split {lo} else {hi}).collect::<Vec<_>>();
+                    let controls = (0..=degree).map(|i| {
+                        let x = i as f64 * 0.125 - 0.5;
+                        [Interval::new(x.next_down(), x.next_up()).unwrap(),
+                            Interval::point(-x), Interval::point(x*2.), Interval::point(1.)]
+                    }).collect::<Vec<_>>();
+                    let expected = interpolate(controls.clone(), degree, &knots, degree, &parameters, [1.,1.]).unwrap();
+                    let plan = interpolation_plan(degree, &knots, degree, &parameters).unwrap();
+                    let actual = interpolate_planned(controls, degree, &plan, [1.,1.]).unwrap();
+                    assert_eq!(actual.map(|x| [x.lo.to_bits(),x.hi.to_bits()]),
+                        expected.map(|x| [x.lo.to_bits(),x.hi.to_bits()]));
+                    assert_eq!(plan.len(), degree*(degree+1)/2);
+                }
+            }}
+        }
+    }
+
     #[test]
     fn outward_oblique_control_gap_proves_shear_and_refuses_touch_and_crossing() {
         let wall = |offset: f64| Surface {
@@ -832,4 +1090,28 @@ pub fn nearest_point(
         reason: report.reason,
         cells: report.cells,
     })
+}
+
+#[cfg(test)]
+mod blend_factor_regression {
+use super::*;
+    #[test]
+    fn nonnegative_factor_matches_original_interval_bits() {
+        let bits=|x:Interval|[x.lo.to_bits(),x.hi.to_bits()];
+        let values=[-f64::MAX,-1e200,-1.,-f64::MIN_POSITIVE,-f64::from_bits(1),-0.,0.,f64::from_bits(1),f64::MIN_POSITIVE,1.,1e200,f64::MAX];
+        for &lo in &values {for &hi in &values {if lo>hi {continue}
+            for factor in [[0.,0.],[0.,1.],[0.125,0.875],[1.,1.],[f64::from_bits(1),f64::MIN_POSITIVE]] {
+                let a=Interval{lo,hi};let b=Interval{lo:factor[0],hi:factor[1]};
+                assert_eq!(a.mul(b).map(bits),mul_blend_factor(a,b).map(bits));
+            }
+        }}
+        let mut seed=0x784abc3712d051f3_u64;
+        for _ in 0..1000000 {
+            let mut next=||{seed^=seed<<13;seed^=seed>>7;seed^=seed<<17;f64::from_bits(seed)};
+            let x=next();let y=next();let z=next().abs();let w=next().abs();
+            if ![x,y,z,w].iter().all(|v|v.is_finite()){continue}
+            let a=Interval{lo:x.min(y),hi:x.max(y)};let b=Interval{lo:z.min(w),hi:z.max(w)};
+            assert_eq!(a.mul(b).map(bits),mul_blend_factor(a,b).map(bits));
+        }
+    }
 }

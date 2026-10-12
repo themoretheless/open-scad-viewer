@@ -273,6 +273,19 @@ mod tests {
             .collect::<Vec<_>>();
         let original = sections.clone();
         let source = crate::rational_section_loft(&sections).unwrap();
+        let localized = reconstruct(&source, &sections, &[], false, 2_f64.powi(-20), 0.1, 100000).unwrap();
+        assert_eq!(localized.candidate.reason, "bounded-general-higher-degree-station-jets");
+        assert!(localized.candidate.wall_displacement_upper.unwrap() <= 0.1);
+        let localized_model = localized.model.as_ref().unwrap();
+        preserve_caps(&source, localized_model, false).unwrap();
+        let localized_caps = [localized_model.faces.len()-2, localized_model.faces.len()-1];
+        let localized_report = crate::sweep_smoothness::inspect_profile(localized_model, &localized_caps, 2_000_000).unwrap();
+        assert!(localized_report.station.g2_certified);
+        assert!(!localized_report.profile.g1_certified, "Polygon corners must remain C0");
+        assert!(localized_model.faces[..localized_model.faces.len()-2].iter().all(|f| f.surface.degree_v == 13));
+        let short_localized = reconstruct(&source, &sections, &[], false, 2_f64.powi(-20), 0.1, localized.candidate.work-1).unwrap();
+        assert!(short_localized.model.is_none());
+        assert_eq!(short_localized.candidate.work, localized.candidate.work-1);
         let result = reconstruct(&source, &sections, &[], false, 0.125, 1., 100000).unwrap();
         assert_eq!(
             result.candidate.reason,
@@ -375,6 +388,28 @@ mod tests {
         )
         .unwrap();
         assert!(short.model.is_none());
+    }
+
+    #[test]
+    fn half_grid_conic_generators_preserve_transverse_jets_and_shared_work() {
+        let mut sections=sections();
+        for point in sections.iter_mut().flatten().flatten().flat_map(|curve|curve.control_points.iter_mut()) {
+            point[0]+=0.0625;
+        }
+        let source=crate::rational_section_loft(&sections).unwrap();
+        let saved=source.clone();
+        let accepted=reconstruct(&source,&sections,&[],false,0.125,10.,10000).unwrap();
+        let model=accepted.model.as_ref().expect("Exact half-grid generator candidate");
+        let caps=[model.faces.len()-2,model.faces.len()-1];
+        let smooth=crate::sweep_smoothness::inspect_profile(model,&caps,2000000).unwrap();
+        assert!(smooth.profile.g2_certified && smooth.station.g2_certified);
+        assert_eq!(source,saved);
+        preserve_caps(&source,model,false).unwrap();
+        let work=accepted.candidate.work;
+        assert!(work>0 && work<=10000);
+        let short=reconstruct(&source,&sections,&[],false,0.125,10.,work-1).unwrap();
+        assert!(short.model.is_none());
+        assert!(short.candidate.work<=work-1);
     }
 
     #[test]

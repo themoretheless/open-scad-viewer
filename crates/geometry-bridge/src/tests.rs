@@ -1261,6 +1261,31 @@ fn native_section_preserves_legacy_input_error_code() {
 }
 
 #[test]
+fn raw_hollow_endpoint_caps_keep_the_exact_refusal_cause() {
+    use nurbs_core::primitives::{circle,line};
+    for orientation in ["oblique-rmf","frenet","rmf"] {
+        let oblique=orientation=="oblique-rmf";
+        let axis=if oblique {[3.,4.,0.]} else {[1.,0.,0.]};
+        let path=if oblique {line([0.;3],axis).unwrap()} else {
+            nurbs_core::paths::bezier(vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,1.,0.]],None).unwrap()
+        };
+        let request=json!({"op":"brep_nurbs_progressive_profile_body",
+            "loops":[[circle([0.;3],axis,0.1).unwrap()],[circle([0.;3],axis,0.05).unwrap().reverse().unwrap()]],
+            "path":path,"scale":if oblique {line([1.,0.,0.],[2.,0.,0.]).unwrap()} else {nurbs_core::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap()},
+            "twist":nurbs_core::progressive_sweep::constant_vector_law([0.;3]).unwrap(),
+            "normal":[0.,0.,1.],"orientation":if oblique {"rmf"} else {orientation},"spacing":"parameter",
+            "initial_sections":if oblique {2} else {3},"max_sections":if oblique {2} else {129},"max_deviation":0.01});
+        let original=request.clone();
+        let report=dispatch(request.clone()).unwrap();
+        assert_eq!(request,original);
+        assert_eq!(report["retainedWalls"]["certified"],true);
+        assert_eq!(report["boundaryContinuousBound"],false);
+        assert_eq!(report["retainedCaps"]["reason"],"cap-coedge-identity-different","{orientation}: {}",report["retainedCaps"]);
+        assert!(report["filledCapErrorUpper"].is_null());
+    }
+}
+
+#[test]
 fn corrected_oblique_circle_caps_transport_complete_and_component_scopes() {
     use nurbs_core::primitives::{circle, line};
     let outer = circle([0.; 3], [3., 4., 0.], 0.1).unwrap();
@@ -1423,4 +1448,326 @@ fn nonplanar_corrected_regular_arc_body_owns_filled_caps() {
     assert_eq!(result["filledCapErrorUpper"].as_array().unwrap().len(), 2);
     assert!(result["boundaryErrorUpper"].as_f64().unwrap() <= 0.05);
     assert_eq!(result["globalEmbeddingCertified"], false);
+}
+
+#[test]
+fn progressive_profile_circle_correction_transports_native_bound_and_refusals() {
+    let profile=nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap();
+    let path=nurbs_core::primitives::line([0.;3],[0.,0.,2.]).unwrap();
+    let scale=nurbs_core::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
+    let twist=nurbs_core::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+    let request=json!({"op":"brep_nurbs_progressive_profile_body","loops":[[profile]],"path":path,"scale":scale,"twist":twist,
+        "normal":[1.,0.,0.],"orientation":"fixed","spacing":"parameter","initial_sections":3,"max_sections":3,"max_deviation":0.01,
+        "circle_correction_tolerance":1e-9,"circle_correction_quantum":2_f64.powi(-40),"circle_correction_max_work":1000000,
+        "cap_correction_tolerance":1e-9});
+    let saved=request.clone();let result=dispatch(request.clone()).unwrap();assert_eq!(request,saved);
+    assert_eq!(result["boundaryContinuousBound"],true);assert_eq!(result["boundaryErrorWithinBudget"],true);
+    let displacement=result["profileCorrectionErrorUpper"].as_f64().unwrap();assert!(displacement>0. && displacement<=1e-9);
+    assert!(result["filledCapErrorUpper"].as_array().unwrap().iter().all(|e|e.as_f64().unwrap()>=displacement));
+    assert_eq!(result["globalEmbeddingCertified"],false);
+    let mut exhausted=request.clone();exhausted["circle_correction_max_work"]=json!(0);
+    assert!(dispatch(exhausted).err().unwrap().message.contains("profile circle correction refused"));
+    let mut missing=request;missing.as_object_mut().unwrap().remove("circle_correction_tolerance");
+    assert!(dispatch(missing).err().unwrap().message.contains("requires a displacement tolerance"));
+}
+
+#[test]
+fn progressive_station_reconstruction_replays_source_and_audits_retained_jets(){
+    use nurbs_core::{primitives::{circle,line},progressive_sweep::constant_vector_law};
+    let request=json!({"op":"brep_nurbs_progressive_profile_body_reconstruct_stations",
+        "loops":[[circle([0.;3],[0.,0.,1.],0.5).unwrap()]],
+        "path":line([0.;3],[0.,0.,10.]).unwrap(),
+        "scale":constant_vector_law([1.,0.,0.]).unwrap(),"twist":constant_vector_law([0.;3]).unwrap(),
+        "normal":[1.,0.,0.],"orientation":"rmf","spacing":"parameter",
+        "initial_sections":3,"max_sections":3,"max_deviation":0.01,
+        "circle_correction_tolerance":1e-9,"circle_correction_quantum":0.125,"circle_correction_max_work":1000000,
+        "station_quantum":0.125,"station_tolerance":1e-9,"station_max_work":1000000,"smoothness_max_work":2000000});
+    let result=dispatch(request.clone()).unwrap();
+    let r=&result["stationReconstruction"];
+    assert_eq!(r["source"],"original-progressive-profile-request");
+    assert_eq!(r["boundaryCertificate"]["continuousBound"],true);
+    assert_eq!(r["boundaryCertificate"]["withinBudget"],true);
+    assert_eq!(r["boundaryCertificate"]["budget"],0.01);
+    assert_eq!(r["profileSmoothness"]["profile"]["exactG1G2Certified"],true);
+    assert_eq!(r["profileSmoothness"]["station"]["stationG2Certified"],true);
+    assert_eq!(r["globalEmbeddingCertified"],false);
+    let model:brep_core::Model=field(&r["reconstruction"],"model").unwrap();
+    let original:brep_core::Model=field(&result,"model").unwrap();
+    brep_core::sweep_station_reconstruction::preserve_caps(&original,&model,false).unwrap();
+    let mut bound=request.clone();bound["expected_source_model"]=result["model"].clone();
+    assert_eq!(dispatch(bound.clone()).unwrap(),result);
+    let coordinate=bound["expected_source_model"]["vertices"][0]["point"][0].as_f64().unwrap();
+    bound["expected_source_model"]["vertices"][0]["point"][0]=json!(f64::from_bits(coordinate.to_bits()+1));
+    let error=dispatch(bound).unwrap_err();
+    assert!(error.to_string().contains("differs from native original constructor"));
+    let mut forged=request.clone();forged["boundaryErrorUpper"]=json!(0.);
+    forged["sections"]=json!([]);forged["model"]=json!({"invalid":true});
+    assert_eq!(dispatch(forged).unwrap(),result);
+    let mut exhausted=request.clone();exhausted["station_max_work"]=json!(0);
+    let denied=dispatch(exhausted).unwrap();
+    assert!(denied["stationReconstruction"]["reconstruction"].is_null());
+    assert!(denied["stationReconstruction"]["profileSmoothness"].is_null());
+    let mut missing=request;missing.as_object_mut().unwrap().remove("station_tolerance");
+    assert!(dispatch(missing).is_err());
+}
+
+#[test]
+fn curved_frame_station_reconstruction_preserves_transverse_profile_g2() {
+    let law=|x|nurbs_core::progressive_sweep::constant_vector_law(x).unwrap();
+    for orientation in ["rmf","fixed_normal","frenet","corrected_frenet"] {
+    for spacing in ["parameter","arc_length"] {
+    let request=json!({"op":"brep_nurbs_progressive_profile_body_reconstruct_stations",
+        "loops":[[nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.05).unwrap()],
+            [nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.025).unwrap().reverse().unwrap()]],
+        "path":nurbs_core::paths::bezier(vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,1.,0.]],None).unwrap(),
+        "scale":law([1.,0.,0.]),"twist":law([0.;3]),"normal":[0.,0.,1.],"orientation":orientation,"spacing":spacing,"length_tolerance":0.0001,"length_max_cells":100000,
+        "initial_sections":17,"max_sections":17,"max_deviation":0.05,
+        "circle_correction_quantum":2_f64.powi(-40),"circle_correction_tolerance":1e-9,"circle_correction_max_work":1000000,
+        "cap_correction_quantum":2_f64.powi(-40),"cap_correction_tolerance":1e-9,"cap_correction_max_work":1000000,
+        "station_quantum":2_f64.powi(-40),"station_tolerance":0.01,"station_max_work":1000000,"smoothness_max_work":2000000});
+    let original=request.clone();
+    let result=dispatch(request.clone()).unwrap();
+    assert_eq!(request,original);
+    let r=&result["stationReconstruction"];
+    assert_eq!(r["boundaryCertificate"]["withinBudget"],true,"{orientation}/{spacing}: {}",r["boundaryCertificate"]);
+    assert_eq!(r["profileSmoothness"]["station"]["stationG2Certified"],true);
+    assert_eq!(r["profileSmoothness"]["profile"]["exactG1G2Certified"],true,"{}",r["profileSmoothness"]);
+    let source:brep_core::Model=field(&result,"model").unwrap();
+    let retained:brep_core::Model=field(&r["reconstruction"],"model").unwrap();
+    brep_core::sweep_station_reconstruction::preserve_caps(&source,&retained,false).unwrap();
+    let caps=[retained.faces.len()-2,retained.faces.len()-1];
+    let global=dispatch(json!({"op":"brep_sweep_volume_audit","model":retained,"capFaces":caps,
+        "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+        "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+        "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+        "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+        "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}
+    })).unwrap();
+    assert_eq!(global["solidGeometryCertified"],true,"{orientation}: {global}");
+    assert_eq!(global["allFacesInjective"],true);
+    assert_eq!(global["allPairsClassified"],true);
+    }
+    }
+}
+
+#[test]
+fn periodic_authored_arc_station_candidate_keeps_original_budgets() {
+    let mut request: Value = value_codec::from_str(include_str!("fixtures/periodic-authored-station-request.json")).unwrap();
+    request["loops"] = json!([[nurbs_core::primitives::circle(
+        [-1.336111111111111,3.1694444444444443,-0.3388888888888889],
+        [-20.133333333333333,-7.866666666666666,-4.266666666666667],0.01).unwrap()]]);
+    request["scale"]=json!(nurbs_core::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap());
+    request["twist"]=json!(nurbs_core::progressive_sweep::constant_vector_law([0.;3]).unwrap());
+    let original=request.clone();
+    let result=dispatch(request.clone()).unwrap();
+    assert_eq!(request,original);
+    let r=&result["stationReconstruction"];
+    assert!(r["reconstruction"].is_object(),"{r}");
+    assert_eq!(r["boundaryCertificate"]["continuousBound"],true,"{r}");
+    assert_eq!(r["boundaryCertificate"]["withinBudget"],true);
+    assert_eq!(r["boundaryCertificate"]["budget"],0.5);
+    assert_eq!(r["profileSmoothness"]["station"]["stationG2Certified"],true,"{}",r["profileSmoothness"]);
+    let model: brep_core::Model=field(&r["reconstruction"],"model").unwrap();
+    assert!(model.faces.iter().all(|f| [5,13,25].contains(&f.surface.degree_v)));
+    assert_eq!(r["profileSmoothness"]["profile"]["exactG1G2Certified"],true,"{}",r["profileSmoothness"]);
+    let agreement=brep_core::boundary_agreement::verify_exact(&model,1000000).unwrap();
+    assert!(agreement.all_equal && agreement.all_joins_exact,"work={} unresolved={:?}",agreement.work,
+        agreement.uses.iter().filter(|u|!u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)).map(|u|(u.face,u.coedge)).collect::<Vec<_>>());
+    assert_eq!(agreement.uses.len(),model.faces.len()*4);
+    let mut changed=model.clone();
+    changed.faces[0].surface.control_points[0][3][0]=changed.faces[0].surface.control_points[0][3][0].next_up();
+    assert!(!brep_core::boundary_agreement::verify_exact(&changed,1000000).unwrap().all_equal);
+    let global=dispatch(json!({"op":"brep_sweep_volume_charts_audit","model":model,"capFaces":[],
+        "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+        "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+        "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+        "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+        "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}
+    })).unwrap();
+    assert_eq!(global["solidGeometryCertified"],true,"{global}");
+    assert_eq!(global["allFacesInjective"],true);
+    assert_eq!(global["allPairsClassified"],true);
+    let charts=dispatch(json!({"op":"brep_sweep_retained_charts_audit","model":model,"capFaces":[],"maxCells":100000})).unwrap();
+    assert_eq!(global["retainedWallCharts"],charts,"Same actual chart proofs and original logical work must be preserved");
+    assert_eq!(global["retainedWallCharts"]["allChartsCertified"],true);
+    assert_eq!(global["retainedWallCharts"]["charts"].as_array().unwrap().len(),model.faces.len());
+    request["expected_source_model"]=result["model"].clone();
+    assert_eq!(dispatch(request).unwrap(),result);
+}
+
+#[test]
+fn fresh_volume_chart_rpc_preserves_separate_reports_and_refuses_supplied_proofs() {
+    let model=brep_core::cuboid([0.;3],[1.;3]).unwrap();
+    let request=json!({"op":"brep_sweep_volume_audit","model":model,"capFaces":[4,5],
+        "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+        "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+        "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+        "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+        "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}});
+    let original=request.clone();
+    let separate=dispatch(request.clone()).unwrap();
+    let charts=dispatch(json!({"op":"brep_sweep_retained_charts_audit","model":model,"capFaces":[4,5],"maxCells":100000})).unwrap();
+    let mut paired=request.clone();paired["op"]=json!("brep_sweep_volume_charts_audit");
+    paired["retainedWallCharts"]=json!({"allChartsCertified":false,"cells":0});
+    let combined=dispatch(paired.clone()).unwrap();
+    assert_eq!(combined["retainedWallCharts"],charts);
+    assert_eq!(combined["retainedWallCharts"]["charts"].as_array().unwrap().len(),4);
+    let mut volume=combined;volume.as_object_mut().unwrap().remove("retainedWallCharts");
+    assert_eq!(volume,separate);assert_eq!(request,original);
+    let mut zero=paired.clone();zero["maxLinearCells"]=json!(0);
+    zero["retainedWallCharts"]=json!({"allChartsCertified":true,"cells":0});
+    let zero_result=dispatch(zero).unwrap();
+    assert_eq!(zero_result["retainedWallCharts"]["allChartsCertified"],false);
+    assert_eq!(zero_result["retainedWallCharts"]["cells"],0);
+    paired["capFaces"]=json!([4,4]);assert!(dispatch(paired).is_err());
+}
+
+#[test]
+fn closed_frenet_arc_station_bodies_keep_original_bounds_and_fresh_global_solid() {
+    let law=|x|nurbs_core::progressive_sweep::constant_vector_law(x).unwrap();
+    for periodic in [false,true] {for hollow in [false,true] {
+        let path=if periodic {
+            let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+            Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true}
+        } else {nurbs_core::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap()};
+        let (center,tangent)=if periodic {([-1.336111111111111,3.1694444444444443,-0.3388888888888889],[-20.133333333333333,-7.866666666666666,-4.266666666666667])}
+            else {([5.,0.,0.],[0.,1.,0.])};
+        let mut loops=vec![vec![nurbs_core::primitives::circle(center,tangent,0.01).unwrap()]];
+        if hollow {loops.push(vec![nurbs_core::primitives::circle(center,tangent,0.005).unwrap().reverse().unwrap()]);}
+        let budget=if periodic {0.5}else{2.};
+        let request=json!({"op":"brep_nurbs_progressive_profile_body_reconstruct_stations","loops":loops,
+            "path":path,"scale":law([1.,0.,0.]),"twist":law([0.;3]),"normal":[0.,0.,1.],"orientation":"frenet","spacing":"arc_length",
+            "length_tolerance":0.0001,"length_max_cells":100000,"initial_sections":33,"max_sections":129,"max_deviation":budget,
+            "circle_correction_quantum":2_f64.powi(-40),"circle_correction_tolerance":1e-9,"circle_correction_max_work":1000000,
+            "station_quantum":2_f64.powi(-40),"station_tolerance":0.01,"station_max_work":1000000,"smoothness_max_work":2000000});
+        let original=request.clone();let result=dispatch(request.clone()).unwrap();assert_eq!(request,original);
+        let r=&result["stationReconstruction"];
+        assert_eq!(r["boundaryCertificate"]["continuousBound"],true,"periodic={periodic}, hollow={hollow}: {r}");
+        assert_eq!(r["boundaryCertificate"]["withinBudget"],true,"periodic={periodic}, hollow={hollow}: {}",r["boundaryCertificate"]);
+        assert_eq!(r["boundaryCertificate"]["budget"],budget);
+        assert_eq!(r["profileSmoothness"]["profile"]["exactG1G2Certified"],true,"{}",r["profileSmoothness"]);
+        assert_eq!(r["profileSmoothness"]["station"]["stationG2Certified"],true,"{}",r["profileSmoothness"]);
+        let model:brep_core::Model=field(&r["reconstruction"],"model").unwrap();
+        assert_eq!(model.shells.len(),if hollow {2}else{1});
+        let agreement=brep_core::boundary_agreement::verify_exact(&model,1000000).unwrap();
+        assert!(agreement.all_equal&&agreement.all_joins_exact,"work={}, unresolved={:?}",agreement.work,agreement.uses.iter().filter(|u|!u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)).map(|u|(u.face,u.coedge)).collect::<Vec<_>>());
+        let global=dispatch(json!({"op":"brep_sweep_volume_charts_audit","model":model,"capFaces":[],
+            "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+            "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+            "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+            "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+            "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}})).unwrap();
+        assert_eq!(global["solidGeometryCertified"],true,"periodic={periodic}, hollow={hollow}: {global}");
+        assert_eq!(global["allFacesInjective"],true);assert_eq!(global["allPairsClassified"],true);
+        assert_eq!(global["retainedWallCharts"]["allChartsCertified"],true);
+        assert_eq!(global["retainedWallCharts"]["charts"].as_array().unwrap().len(),model.faces.len());
+        eprintln!("closed Frenet retained body: periodic={periodic}, hollow={hollow}, faces={}, bound={}",model.faces.len(),r["boundaryCertificate"]["errorUpper"]);
+    }}
+}
+
+#[test]
+fn closed_frenet_hollow_first_independent_pair_keeps_original_contact_limits() {
+    let law=|x|nurbs_core::progressive_sweep::constant_vector_law(x).unwrap();
+    let request=json!({"op":"brep_nurbs_progressive_profile_body_reconstruct_stations",
+        "loops":[[nurbs_core::primitives::circle([5.,0.,0.],[0.,1.,0.],0.01).unwrap()],
+            [nurbs_core::primitives::circle([5.,0.,0.],[0.,1.,0.],0.005).unwrap().reverse().unwrap()]],
+        "path":nurbs_core::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap(),
+        "scale":law([1.,0.,0.]),"twist":law([0.;3]),"normal":[0.,0.,1.],"orientation":"frenet","spacing":"arc_length",
+        "length_tolerance":0.0001,"length_max_cells":100000,"initial_sections":33,"max_sections":129,"max_deviation":2.,
+        "circle_correction_quantum":2_f64.powi(-40),"circle_correction_tolerance":1e-9,"circle_correction_max_work":1000000,
+        "station_quantum":2_f64.powi(-40),"station_tolerance":0.01,"station_max_work":1000000,"smoothness_max_work":2000000});
+    let original=request.clone();let result=dispatch(request.clone()).unwrap();assert_eq!(request,original);
+    let retained=&result["stationReconstruction"];
+    assert_eq!(retained["boundaryCertificate"]["withinBudget"],true);
+    assert_eq!(retained["profileSmoothness"]["profile"]["exactG1G2Certified"],true);
+    assert_eq!(retained["profileSmoothness"]["station"]["stationG2Certified"],true);
+    let model:brep_core::Model=field(&retained["reconstruction"],"model").unwrap();
+    assert_eq!(model.faces.len(),256);assert_eq!(model.shells.len(),2);
+    if let Ok(path)=std::env::var("SWEEP_MODEL_DUMP") {
+        std::fs::write(path,value_codec::to_string(&model).unwrap()).unwrap();
+    }
+    let domains=[0,7].map(|index|{
+        let face=&model.faces[index];
+        let loops=std::iter::once(face.outer).chain(face.holes.iter().copied())
+            .map(|wire|model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>()).collect::<Vec<_>>();
+        nurbs_core::trim_domain::TrimDomain::new(&loops,1e-8).unwrap()
+    });
+    let report=nurbs_core::surface_contact_search::search_trimmed_with_control_hulls(
+        &model.faces[0].surface,&model.faces[7].surface,[&domains[0],&domains[1]],1000,10000).unwrap();
+    assert_eq!(report.cells, 361);
+    assert_eq!(report.domain_cells, 2889);
+    eprintln!("original hollow pair[0,7]: cells={}, domain_cells={}, unresolved={}, witness={}",
+        report.cells,report.domain_cells,report.unresolved.len(),report.contact.is_some());
+    assert!(report.absence_proven,"Original independent outer/inner pair must be covered at unchanged limits");
+    assert!(report.contact.is_none());
+}
+
+// Prepared for isolated Q after its current full bridge process is terminal.
+// Original periodic source, circles, tolerances and full global budgets retained.
+#[test]
+fn periodic_fixed_normal_arc_station_bodies_keep_original_bounds_and_fresh_global_solid() {
+    let law=|x|nurbs_core::progressive_sweep::constant_vector_law(x).unwrap();
+    for joint in [false,true] {for periodic in [true] {for hollow in [false,true] {
+        let path=if periodic {
+            let mut points=vec![vec![4.,0.,0.],vec![3.,3.,1.],vec![0.,4.,0.],vec![-3.,3.,-1.],vec![-4.,0.,0.],vec![-3.,-3.,1.],vec![0.,-4.,0.],vec![3.,-3.,-1.]];points.extend_from_within(..6);
+            Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true}
+        } else {nurbs_core::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap()};
+        let (center,tangent)=if periodic {([-1.336111111111111,3.1694444444444443,-0.3388888888888889],[-20.133333333333333,-7.866666666666666,-4.266666666666667])}
+            else {([5.,0.,0.],[0.,1.,0.])};
+        let mut loops=vec![vec![nurbs_core::primitives::circle(center,tangent,0.01).unwrap()]];
+        if hollow {loops.push(vec![nurbs_core::primitives::circle(center,tangent,0.005).unwrap().reverse().unwrap()]);}
+        let budget=if periodic {0.5}else{2.};
+        let mut request=json!({"op":"brep_nurbs_progressive_profile_body_reconstruct_stations","loops":loops,
+            "path":path,"scale":law([1.,0.,0.]),"twist":law([0.;3]),"normal":[0.,0.,1.],"orientation":"fixed_normal","spacing":"arc_length",
+            "length_tolerance":0.0001,"length_max_cells":100000,"initial_sections":33,"max_sections":129,"max_deviation":budget,
+            "circle_correction_quantum":2_f64.powi(-40),"circle_correction_tolerance":1e-9,"circle_correction_max_work":1000000,
+            "station_quantum":2_f64.powi(-40),"station_tolerance":0.01,"station_max_work":1000000,"smoothness_max_work":2000000});
+        if joint {
+            request["axis_scale"]=json!(law([1.5,0.75,1.]));
+            request["center_law"]=json!(law([0.005,-0.0025,0.]));
+        }
+        let original=request.clone();let result=dispatch(request.clone()).unwrap();assert_eq!(request,original);
+        let r=&result["stationReconstruction"];
+        assert_eq!(r["boundaryCertificate"]["continuousBound"],true,"periodic={periodic}, hollow={hollow}: {r}");
+        assert_eq!(r["boundaryCertificate"]["withinBudget"],true,"periodic={periodic}, hollow={hollow}: {}",r["boundaryCertificate"]);
+        assert_eq!(r["boundaryCertificate"]["budget"],budget);
+        assert_eq!(r["profileSmoothness"]["profile"]["exactG1G2Certified"],true,"{}",r["profileSmoothness"]);
+        assert_eq!(r["profileSmoothness"]["station"]["stationG2Certified"],true,"{}",r["profileSmoothness"]);
+        let model:brep_core::Model=field(&r["reconstruction"],"model").unwrap();
+        assert_eq!(model.shells.len(),if hollow {2}else{1});
+        let agreement=brep_core::boundary_agreement::verify_exact(&model,1000000).unwrap();
+        assert!(agreement.all_equal&&agreement.all_joins_exact,"work={}, unresolved={:?}",agreement.work,agreement.uses.iter().filter(|u|!u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)).map(|u|(u.face,u.coedge)).collect::<Vec<_>>());
+        let global=dispatch(json!({"op":"brep_sweep_volume_charts_audit","model":model,"capFaces":[],
+            "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+            "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+            "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+            "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+            "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}})).unwrap();
+        assert_eq!(global["solidGeometryCertified"],true,"periodic={periodic}, hollow={hollow}: {global}");
+        assert_eq!(global["allFacesInjective"],true);assert_eq!(global["allPairsClassified"],true);
+        assert_eq!(global["retainedWallCharts"]["allChartsCertified"],true);
+        assert_eq!(global["retainedWallCharts"]["charts"].as_array().unwrap().len(),model.faces.len());
+        eprintln!("periodic FixedNormal retained body: joint={joint}, periodic={periodic}, hollow={hollow}, faces={}, bound={}",model.faces.len(),r["boundaryCertificate"]["errorUpper"]);
+    }}}
+}
+
+#[test]
+fn original_periodic_fixed_normal_affine_hollow_requires_complete_global_cover() {
+    let model:brep_core::Model=value_codec::from_str(include_str!("fixtures/periodic-fixed-normal-affine-hollow-model.json")).unwrap();
+    assert_eq!(model.faces.len(),256);assert_eq!(model.shells.len(),2);
+    let result=dispatch(json!({"op":"brep_sweep_volume_charts_audit","model":model,"capFaces":[],
+        "toleranceUv":1e-8,"maxExactWork":1000000,"maxTrimPairs":10000,"maxTrimCells":100000,"maxTrimDomainCells":1000000,
+        "maxSpans":1024,"maxLinearCells":100000,"maxPairs":20000,"maxCells":200000,"maxDomainCells":1000000,
+        "cellsPerPair":1000,"domainCellsPerPair":10000,"nestingPairs":1000,"nestingCells":100000,"nestingDomainCells":1000000,
+        "orientationCells":100000,"orientationDomainCells":1000000,"orientationSpans":100,
+        "capBudgets":{"maxWalls":1024,"maxExactWork":1000000,"maxChartCells":1000,"maxTrimPairs":100000,"maxTrimCells":100000,"maxTrimDomainCells":1000000}})).unwrap();
+    if let Ok(path)=std::env::var("SWEEP_DUAL_GLOBAL_DUMP") {
+        std::fs::write(path,value_codec::to_string(&result).unwrap()).unwrap();
+    }
+    eprintln!("original affine hollow: charts={}, unresolved={}, pairs={}, cells={}, domainCells={}",
+        result["retainedWallCharts"]["allChartsCertified"],result["retainedWallCharts"]["unresolvedFaces"],
+        result["allPairsClassified"],result["contactCells"],result["contactDomainCells"]);
+    assert_eq!(result["retainedWallCharts"]["allChartsCertified"],true,"{}",result["retainedWallCharts"]["unresolvedFaces"]);
+    assert_eq!(result["allFacesInjective"],true);assert_eq!(result["allPairsClassified"],true);
+    assert_eq!(result["solidGeometryCertified"],true);
 }

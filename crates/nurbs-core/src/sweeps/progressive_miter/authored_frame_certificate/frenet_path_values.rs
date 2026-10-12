@@ -60,12 +60,17 @@ pub fn certify_frenet_path_values(
 fn frenet_values_at(
     path:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
 )->Result<ValuesReport>{
+    frenet_values_at_with_binormal_identity(path,twist,traversal,law_traversal,max_cells,false)
+}
+fn frenet_values_at_with_binormal_identity(
+    path:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,exact_binormal:bool,
+)->Result<ValuesReport>{
     let mut out=ValuesReport{status:Status::Unresolved,cells:0,longitudinal:None,transverse:None,binormal:None};
     let mut pending=vec![traversal];
     let mut hull:Option<[[[f64;2];3];3]>=None;
     while let Some(interval)=pending.pop(){
         if out.cells>=max_cells{return Ok(out);}
-        let cell=frenet_values_cell(path,twist,interval,law_traversal,max_cells-out.cells)?;
+        let cell=frenet_values_cell(path,twist,interval,law_traversal,max_cells-out.cells,exact_binormal)?;
         out.cells+=cell.cells;
         if cell.status==Status::Certified {
             let axes=[cell.longitudinal.unwrap(),cell.transverse.unwrap(),cell.binormal.unwrap()];
@@ -83,7 +88,7 @@ fn frenet_values_at(
 }
 
 fn frenet_values_cell(
-    path:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
+    path:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,exact_binormal:bool,
 )->Result<ValuesReport>{
     super::super::validate_law(twist,false)?;
     let p=vector_certificate::certify_traversal(path,traversal,max_cells,false)?;
@@ -107,11 +112,17 @@ fn frenet_values_cell(
     out.cells+=charge;
     let Some(theta)=theta else {return Ok(out);};
     let trig=super::super::trigonometric_certificate::certify(theta)?;
-    let n=add(mul(n,I::new(trig.cos[0],trig.cos[1])?)?,mul(b.v,I::new(trig.sin[0],trig.sin[1])?)?)?;
+    let original_normal=n;
+    let cosine=I::new(trig.cos[0],trig.cos[1])?;let sine=I::new(trig.sin[0],trig.sin[1])?;
+    let n=add(mul(n,cosine)?,mul(b.v,sine)?)?;
+    // Original normalized Frenet axes are pointwise orthonormal. Thus the
+    // twisted binormal is B*cos(theta)-N*sin(theta), exactly; recomputing
+    // T cross N' loses this correlation between interval copies of T.
+    let binormal=if exact_binormal {sub(mul(b.v,cosine)?,mul(original_normal,sine)?)?}else{cross(t.v,n)?};
     out.status=Status::Certified;
     out.longitudinal=Some(t.v.map(|x|[x.lo,x.hi]));
     out.transverse=Some(n.map(|x|[x.lo,x.hi]));
-    out.binormal=Some(cross(t.v,n)?.map(|x|[x.lo,x.hi]));
+    out.binormal=Some(binormal.map(|x|[x.lo,x.hi]));
     Ok(out)
 }
 
@@ -125,6 +136,17 @@ pub(crate) fn certify_frenet_relative_values(
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     // Relative translation is the constructor-owned literal zero curve.
     // Its exact value is known; no original-source query is needed here.
+    super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
+}
+
+/// Tighter original Frenet image using its proved orthonormal binormal
+/// identity. Separate entry point preserves existing adaptive enclosures.
+pub(crate) fn certify_frenet_relative_values_with_binormal_identity(
+    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
+    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
+)->Result<ControlValuesReport>{
+    let frame=frenet_values_at_with_binormal_identity(path,twist,path_traversal,law_traversal,max_cells,true)?;
+    let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
 }
 
@@ -379,7 +401,7 @@ fn periodic_original_frenet_values_cover_full_turn_without_partial_axes(){
  points.extend_from_within(..6);
  let path=Curve{degree:6,knots:(0..=20).map(|i|(i as f64-6.)/8.).collect(),control_points:points,weights:vec![1.;14],periodic:true};
  let saved=path.clone();let twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
- let broad=frenet_values_cell(&path,&twist,[0.,1.],[0.,1.],10000).unwrap();
+ let broad=frenet_values_cell(&path,&twist,[0.,1.],[0.,1.],10000,false).unwrap();
  assert_eq!(broad.status,Status::Unresolved);
  let whole=certify_frenet_path_values(&path,&twist,[0.,1.],10000).unwrap();
  assert_eq!(whole.status,Status::Certified,"{whole:?}");assert!(whole.cells>broad.cells);

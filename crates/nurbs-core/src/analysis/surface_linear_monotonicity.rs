@@ -79,6 +79,9 @@ fn inspect_with_depth(
     let projected_surface = exact_projected_surface(s, projection);
     let working = projected_surface.as_ref().unwrap_or(s);
     let station_split = exact_station_split(working);
+    let mut working_span = jets::FirstStableSpanCache::new(working);
+    let mut split_spans = station_split.as_ref().map(|(relative, position)|
+        (jets::FirstStableSpanCache::new(relative), jets::FirstStableSpanCache::new(position)));
     let mut out = Report {
         certified: false,
         cells: 0,
@@ -129,17 +132,17 @@ fn inspect_with_depth(
             // Differentiate the original homogeneous span before restricting
             // its value image. Query-cell differences amplify interval widths
             // on small translated rational walls and waste the shared budget.
-            let derivatives = if let Some((relative, position)) = &station_split {
-                let r = jets::calculate_partial_stable(relative, span, domain, [None; 2])?;
-                let p = jets::calculate_partial_stable(position, span, domain, [None; 2])?;
-                let mut dv = r[0][1];
+            let derivatives = if let Some((relative, position)) = &mut split_spans {
+                let r = relative.calculate(span, domain)?;
+                let p = position.calculate(span, domain)?;
+                let mut dv = r[2];
                 for k in 0..3 {
-                    dv[k] = dv[k].add(p[0][1][k])?;
+                    dv[k] = dv[k].add(p[2][k])?;
                 }
-                [r[1][0], dv]
+                [r[1], dv]
             } else {
-                let j = jets::calculate_partial_stable(working, span, domain, [None; 2])?;
-                [j[1][0], j[0][1]]
+                let j = working_span.calculate(span, domain)?;
+                [j[1], j[2]]
             };
             let mut projected = [[I::point(0.); 2]; 2];
             for row in 0..2 {
@@ -168,14 +171,14 @@ fn inspect_with_depth(
             // independent outward enclosures of the same Jacobian. Neither
             // dominates for every retained chart. Intersect them rather than
             // losing the tighter enclosure on corrected miter walls.
-            let restricted = jets::calculate(working, span, domain, None)?;
+            let restricted = jets::calculate_first(working, span, domain)?;
             for row in 0..2 {
                 for axis in 0..2 {
                     let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
                     let derivative = if axis == 0 {
-                        restricted[1][0]
+                        restricted[1]
                     } else {
-                        restricted[0][1]
+                        restricted[2]
                     };
                     let other = if projected_surface.is_some() {
                         derivative[row].div(width)?
@@ -260,6 +263,21 @@ pub fn inspect_candidate_with_hint(
     Ok(fallback)
 }
 pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
+    // Preserve every already successful original proposal and its work/report.
+    // A finer integer dual map is only a proposal after the original cover
+    // failed; acceptance still proves the same full-domain outward inequality.
+    let mut report = inspect_candidate_basic(s, max_cells)?;
+    for resolution in [32., 64.] {
+        if report.certified || report.cells == max_cells { break; }
+        let Some(projection) = midpoint_projection_at_resolution(s, resolution)? else { break; };
+        if projection == report.projection { continue; }
+        let mut next = inspect_with_depth(s, projection, max_cells - report.cells, 14)?;
+        next.cells += report.cells;
+        report = next;
+    }
+    Ok(report)
+}
+fn inspect_candidate_basic(s: &Surface, max_cells: usize) -> Result<Report> {
     s.validate()?;
     check(
         max_cells <= 100000 && s.control_points.iter().flatten().all(|p| p.len() == 3),
@@ -370,6 +388,9 @@ pub fn inspect_candidate(s: &Surface, max_cells: usize) -> Result<Report> {
     Ok(third)
 }
 fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
+    midpoint_projection_at_resolution(s, 16.)
+}
+fn midpoint_projection_at_resolution(s: &Surface, resolution: f64) -> Result<Option<[[i8; 3]; 2]>> {
     // Midpoint tangents propose dual directions. Every actual acceptance still
     // requires one fixed integer map's whole-domain outward interval proof.
     let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];
@@ -391,7 +412,7 @@ fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
         if !scale.is_finite() || scale <= 0. {
             return Ok(None);
         }
-        candidate[row] = dual[row].map(|x| (16. * x / scale).round() as i8);
+        candidate[row] = dual[row].map(|x| (resolution * x / scale).round() as i8);
     }
     let independent = (0..3).any(|k| {
         candidate[0][k] as i16 * candidate[1][(k + 1) % 3] as i16
@@ -482,7 +503,7 @@ mod tests {
         assert_eq!(rounded, before);
     }
     #[test]
-    fn sheared_periodic_wall_keeps_unproved_injectivity_explicit() {
+    fn finer_dual_certifies_original_sheared_wall_without_crediting_a_proposal() {
         let s = Surface {
             degree_u: 2,
             degree_v: 1,
@@ -506,9 +527,16 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
+        let saved=s.clone();
+        let original=inspect_candidate_basic(&s,10000).unwrap();
+        assert!(!original.certified);
+        assert_eq!(original.reason,Some("subdivision-depth-exhausted"));
         let proof = inspect_candidate(&s, 10000).unwrap();
-        assert!(!proof.certified, "{proof:?}");
-        assert_eq!(proof.reason, Some("subdivision-depth-exhausted"));
+        assert!(proof.certified&&proof.cells>original.cells&&proof.cells<10000,"{proof:?}");
+        for budget in [0,proof.cells-1] {
+            assert!(!inspect_candidate(&s,budget).unwrap().certified);
+        }
+        assert_eq!(s,saved);
         let transported = inspect(&s, [[0, 17, -1], [-15, -14, 16]], 10000);
         assert!(transported.unwrap().certified);
     }

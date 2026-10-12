@@ -702,11 +702,56 @@ pub struct ProgressiveBodyEvidence {
     pub cap_projection:Option<nurbs_core::progressive_sweep::EndpointCapProjectionReport>,
     pub filled_cap_error_upper:Option<[f64;2]>,
     pub cap_correction_error_upper:Option<f64>,
+    pub profile_correction_error_upper:Option<f64>,
     pub retained_walls:crate::sweep_retained_walls::Report,
     pub boundary_error_upper:Option<f64>,
     pub boundary_error_within_budget:Option<bool>,
     pub body_decomposition_error_upper:Option<f64>,
     pub body_decomposition_products:usize,
+    // Constructor-owned premises cannot be replaced by public receipt fields.
+    station_sections:Vec<Vec<Vec<Curve>>>,
+    station_boundary:nurbs_core::sweeps::filled_cap_error::BoundaryCertificate,
+    station_closed:bool,
+    station_budget:f64,
+}
+
+impl ProgressiveBodyEvidence {
+    /// Explicit retained-wall reconstruction, bounded against the original sweep.
+    /// This does not certify actual jets, regularity, embedding or Solid admission.
+    /// Mutating the public model cannot transfer the private source certificate.
+    pub fn reconstruct_stations(
+        &self,
+        quantum:f64,
+        tolerance:f64,
+        max_work:u64,
+    )->Result<crate::sweep_miter_owned::StationBoundary>{
+        use nurbs_core::{numerics::error_upper,sweeps::filled_cap_error};
+        let source=&self.station_boundary;
+        let mut out=crate::sweep_miter_owned::StationBoundary {
+            reconstruction:None,boundary:None,reason:"source-bound-unproved",
+        };
+        if !source.continuous_bound || source.within_budget!=Some(true) {return Ok(out);}
+        let mut reconstruction=crate::sweep_station_reconstruction::reconstruct(
+            &self.model,&self.station_sections,&[],self.station_closed,
+            quantum,tolerance,max_work,
+        )?;
+        let Some(displacement)=reconstruction.candidate.wall_displacement_upper else {
+            out.reason=reconstruction.candidate.reason;
+            return Ok(out);
+        };
+        if reconstruction.model.is_none(){out.reason=reconstruction.candidate.reason;return Ok(out);}
+        let wall=source.wall_error_upper.and_then(|upper|error_upper::add(upper,displacement));
+        let boundary=filled_cap_error::compose_boundary(
+            wall,source.filled_cap_error_upper,self.station_closed,Some(self.station_budget),
+        );
+        if !boundary.continuous_bound || boundary.within_budget!=Some(true) {
+            reconstruction.model=None;
+            out.reason="boundary-budget-unproved";
+        }else{out.reason="owned-progressive-station-complete-boundary";}
+        out.reconstruction=Some(reconstruction);
+        out.boundary=Some(boundary);
+        Ok(out)
+    }
 }
 
 /// Reproduce the constructor's retained sections and certify their complete
@@ -765,6 +810,30 @@ mod body_partition_tests {
         assert!(retained_section_partition(&changed,36).unwrap().1.is_none());
         let mut source=sections.clone();source[1][0][0].control_points[1][2]+=0.125;
         assert_ne!(retained_section_partition(&source,36).unwrap().0,retained);
+    }
+    #[test]
+    fn explicit_profile_circle_correction_composes_open_filled_caps_and_refuses_exhausted_work(){
+        use nurbs_core::{primitives::{circle,line},progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let loops=vec![vec![circle([0.;3],[0.,0.,1.],0.5).unwrap()],vec![circle([0.;3],[0.,0.,-1.],0.2).unwrap()]];
+        let original=loops.clone();
+        let path=line([0.;3],[0.,0.,2.]).unwrap();
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let options=Options {normal:[1.,0.,0.],orientation:Orientation::Fixed,spacing:Spacing::Parameter,initial_sections:3,max_sections:3,max_deviation:0.01};
+        let correction=EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000};
+        let make=|cap,profile|progressive_profile_body_with_rmf_policy_and_corrections(&loops,&path,&scale,&twist,None,None,None,options,cap,profile,None);
+        let result=make(Some(correction),Some(correction)).unwrap();
+        assert_eq!(loops,original);
+        assert!(result.profile_correction_error_upper.unwrap()>0.);
+        assert!(result.cap_correction_error_upper.is_some());
+        assert!(result.retained_caps.as_ref().unwrap().exact);
+        assert!(result.retained_walls.certified);
+        assert_eq!(result.boundary_error_within_budget,Some(true));
+        assert!(result.filled_cap_error_upper.unwrap().iter().all(|&e|e>=result.profile_correction_error_upper.unwrap()));
+        let caps=[result.model.faces.len()-2,result.model.faces.len()-1];
+        let actual=crate::sweep_smoothness::inspect_profile(&result.model,&caps,1000000).unwrap();
+        assert!(actual.profile.g1_certified && actual.profile.g2_certified);
+        let refused=make(None,Some(EndpointCapCorrection {max_work:0,..correction})).err().expect("Exhausted repair must refuse");
+        assert!(refused.message.contains("profile circle correction refused"));
     }
     #[test]
     fn rational_line_arc_length_body_composes_actual_walls_and_filled_caps(){
@@ -1141,6 +1210,18 @@ pub fn progressive_profile_body_with_rmf_policy(
     guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
     correction:Option<EndpointCapCorrection>,rmf_policy:Option<(usize,usize,usize)>,
 )->Result<ProgressiveBodyEvidence>{
+    progressive_profile_body_with_rmf_policy_and_corrections(loops,path,scale,twist,affine,frames,guidance,options,correction,None,rmf_policy)
+}
+
+/// Explicit same-basis circle repair applies only to these retained ruled walls.
+/// Its displacement is charged against the original source, including filled caps.
+pub fn progressive_profile_body_with_rmf_policy_and_corrections(
+    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
+    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
+    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
+    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
+    rmf_policy:Option<(usize,usize,usize)>,
+)->Result<ProgressiveBodyEvidence>{
     use nurbs_core::progressive_sweep::{Sweep, approximate_profiles};
     if rmf_policy.is_some() && (frames.is_some() || guidance.is_some()) {
         return Err(err("Spatial RMF policy excludes authored frames and guides"));
@@ -1219,6 +1300,10 @@ pub fn progressive_profile_body_with_rmf_policy(
             return Err(err(&format!("Progressive body continuous retained-patch error is unproved or exceeds budget: {}",
                 report.error_certificate_reason.unwrap_or("configured RMF error budget"))));
         }
+        if report.sampled_control_deviation <= options.max_deviation {
+            return Err(err(&format!("Progressive body continuous retained-patch error is unproved or exceeds budget: {}",
+                report.error_certificate_reason.unwrap_or("configured continuous error budget"))));
+        }
         return Err(err("Progressive body misses sampled refinement budget"));
     }
     let transported = if let Some((guide, anchor)) = guidance {
@@ -1268,6 +1353,18 @@ pub fn progressive_profile_body_with_rmf_policy(
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
+    let profile_correction_error_upper=if let Some(budget)=profile_correction {
+        // Flatten only for the native shared-budget repair; preserve loop ownership.
+        let flat=sections.iter().map(|station|station.iter().flatten().cloned().collect::<Vec<_>>()).collect::<Vec<_>>();
+        let repaired=nurbs_core::circle_sweep_repair::repair(&flat,budget.quantum,budget.tolerance,Some(budget.max_work as f64))?;
+        let upper=repaired.wall_displacement_upper.ok_or_else(||err(&format!("Progressive profile circle correction refused: {}",repaired.reason)))?;
+        let corrected=repaired.sections.ok_or_else(||err("Progressive profile circle correction has no geometry"))?;
+        for (station,curves) in sections.iter_mut().zip(corrected) {
+            let mut at=0;
+            for ring in station {for curve in ring {*curve=curves[at].clone();at+=1;}}
+        }
+        Some(upper)
+    }else{None};
     let cap_correction_error_upper=if let Some(correction)=correction {
         if report.closed_path{return Err(err("Closed progressive body has no caps to correct"));}
         let mut work=0_u64;let mut displacement=0_f64;
@@ -1292,6 +1389,11 @@ pub fn progressive_profile_body_with_rmf_policy(
         }
         Some(displacement)
     }else{None};
+    let correction_error_upper=match (profile_correction_error_upper,cap_correction_error_upper) {
+        (Some(a),Some(b))=>Some(nurbs_core::numerics::error_upper::add(a,b).ok_or_else(||err("Progressive correction error overflow"))?),
+        (Some(a),None)|(None,Some(a))=>Some(a),
+        (None,None)=>None,
+    };
     let model = if report.closed_path {
         periodic_section_loft(&sections)?
     } else {
@@ -1320,22 +1422,61 @@ pub fn progressive_profile_body_with_rmf_policy(
             ideal_domains_certified:projection.original.domains.ideal_endpoint_domains_certified,
             retained_regions_exact:retained_caps.as_ref().is_some_and(|r|r.exact),
             projection_normal_dots:projection.normal_dots,endpoint_error:report.endpoint_contour_error_upper,
-            correction:Some(cap_correction_error_upper.unwrap_or(0.)),decomposition:body_decomposition_error_upper.map(|e|[e;2]),parallel_planes:[false;2],
+            correction:Some(correction_error_upper.unwrap_or(0.)),decomposition:body_decomposition_error_upper.map(|e|[e;2]),parallel_planes:[false;2],
         }));
     let retained_walls=crate::sweep_retained_walls::inspect(&model,&retained_sections,report.closed_path,1024,1000000)?;
     // Preview may itself have been decomposed; keeping its full error and adding
     // constructor extraction is conservative even when both include that term.
     let original_wall_error=if retained_walls.certified {report.continuous_error_upper.zip(body_decomposition_error_upper)
         .and_then(|(a,b)|nurbs_core::numerics::error_upper::add(a,b))}else{None};
-    let wall_error=if let Some(correction)=cap_correction_error_upper {original_wall_error.and_then(|e|nurbs_core::numerics::error_upper::add(e,correction))}else{original_wall_error};
+    let wall_error=if let Some(correction)=correction_error_upper {original_wall_error.and_then(|e|nurbs_core::numerics::error_upper::add(e,correction))}else{original_wall_error};
     let boundary_error_upper=nurbs_core::sweeps::filled_cap_error::boundary(wall_error,filled_cap_error_upper,report.closed_path);
     let boundary_error_within_budget=boundary_error_upper.map(|upper|upper<=options.max_deviation);
-    Ok(ProgressiveBodyEvidence {model,approximation,retained_caps,cap_projection,filled_cap_error_upper,cap_correction_error_upper,retained_walls,boundary_error_upper,boundary_error_within_budget,body_decomposition_error_upper,body_decomposition_products})
+    let station_boundary=nurbs_core::sweeps::filled_cap_error::compose_boundary(
+        wall_error,filled_cap_error_upper,report.closed_path,Some(options.max_deviation),
+    );
+    let station_closed=report.closed_path;
+    Ok(ProgressiveBodyEvidence {model,approximation,retained_caps,cap_projection,filled_cap_error_upper,cap_correction_error_upper,profile_correction_error_upper,retained_walls,boundary_error_upper,boundary_error_within_budget,body_decomposition_error_upper,body_decomposition_products,
+        station_sections:sections,station_boundary,station_closed,station_budget:options.max_deviation})
 }
 
 #[cfg(test)]
 mod retained_tests {
     use super::*;
+    #[test]
+    fn progressive_station_reconstruction_owns_original_bound_and_preserves_caps(){
+        use nurbs_core::{primitives::{circle,line},progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let loops=vec![vec![circle([0.;3],[0.,0.,1.],0.5).unwrap()]];
+        let path=line([0.;3],[0.,0.,10.]).unwrap();
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();
+        let twist=constant_vector_law([0.;3]).unwrap();
+        let mut body=progressive_profile_body_with_rmf_policy_and_corrections(
+            &loops,&path,&scale,&twist,None,None,None,
+            Options {normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
+                spacing:Spacing::Parameter,initial_sections:3,max_sections:3,max_deviation:0.01},
+            None,Some(EndpointCapCorrection {quantum:0.125,tolerance:1e-9,max_work:1000000}),None,
+        ).unwrap();
+        let original=body.model.clone();
+        let original_bound=body.boundary_error_upper.unwrap();
+        // Public receipt mutation cannot manufacture a smaller source bound.
+        body.boundary_error_upper=Some(0.);
+        body.filled_cap_error_upper=Some([0.;2]);
+        let report=body.reconstruct_stations(0.125,1e-9,1000000).unwrap();
+        assert_eq!(report.reason,"owned-progressive-station-complete-boundary");
+        let boundary=report.boundary.unwrap();
+        assert!(boundary.continuous_bound && boundary.within_budget==Some(true));
+        assert!(boundary.error_upper.unwrap()>=original_bound);
+        let reconstruction=report.reconstruction.unwrap();
+        let model=reconstruction.model.unwrap();
+        crate::sweep_station_reconstruction::preserve_caps(&original,&model,false).unwrap();
+        let caps=[model.faces.len()-2,model.faces.len()-1];
+        let actual=crate::sweep_smoothness::inspect_profile(&model,&caps,2000000).unwrap();
+        assert!(actual.profile.g2_certified && actual.station.g2_certified);
+        assert_eq!(body.model,original);
+        assert!(body.reconstruct_stations(0.125,1e-9,0).unwrap().reconstruction.is_none());
+        body.model.faces[0].surface.control_points[0][0][0]+=0.125;
+        assert!(body.reconstruct_stations(0.125,1e-9,1000000).is_err());
+    }
     #[test]
     fn periodic_hollow_sections_decompose_without_bypassing_join_or_orientation_checks() {
         let outer = Curve { degree: 2, knots: (0..9).map(|i| i as f64).collect(),

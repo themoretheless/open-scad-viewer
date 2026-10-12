@@ -46,6 +46,7 @@ src/generated/vr-core/
 
 # Generated qualification evidence stays local; retain summaries and source fixtures.
 docs/qualification/**/*.json
+docs/qualification/**/*.writing
 docs/qualification/**/*.step
 docs/qualification/**/*.png
 docs/qualification/**/*.jpg

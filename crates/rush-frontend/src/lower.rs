@@ -876,12 +876,20 @@ impl Compiler {
                         _=>return Err(crate::error("cap_correction_authored_frame expects true or false")),
                     };
                 }
-                for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
+                for key in ["initial_steps","max_steps","retained_wall_max_injectivity_cells"] {if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}}
             }
             {
-                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
+                if name=="brep_miter_sweep" {
+                    for key in ["max_deviation"] {
+                        if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
+                    }
+                }
+                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
                 }
+            }
+            if name=="brep_miter_sweep" && node.get("max_deviation").is_none() && ["circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"].iter().any(|key|node.get(*key).is_some()) {
+                return Err(crate::error("Direct miter circle correction requires max_deviation"));
             }
             if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("miter_limit")) {node["miter_limit"]=raw(args.remove(at).1)?;}
             if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("closed")) {
@@ -905,7 +913,7 @@ impl Compiler {
         if name=="brep_progressive_sweep" || name=="progressive_sweep" || name=="profile_sweep" || name=="framed_sweep" || name=="scaled_sweep" || name=="two_guide_sweep" || name=="twist_sweep" {
             let mut node=json!({"op":name});
             if name=="brep_progressive_sweep" {
-                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work"] {
+                for key in ["cap_correction_tolerance","cap_correction_quantum","cap_correction_max_work","circle_correction_tolerance","circle_correction_quantum","circle_correction_max_work"] {
                     if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)){node[key]=raw(args.remove(at).1)?;}
                 }
             }
@@ -1155,6 +1163,7 @@ impl Compiler {
             "sdf_translate",
             "brep_tessellate",
             "brep_smooth_miter_stations",
+            "brep_smooth_sweep_stations",
             "brep_extrude",
             "brep_revolve",
             "brep_chamfer",
@@ -2299,6 +2308,7 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_chamfer" => &["edges", "size"],
         "brep_fillet" => &["edges", "radius", "segments"],
         "brep_tessellate" => &["segments"],
+        "brep_smooth_sweep_stations" => &["wall_tolerance","quantum","max_work","smoothness_max_work"],
         "brep_smooth_miter_stations" => &["wall_tolerance","quantum","max_work","max_deviation"],
         "nurbs_surface" => &[
             "degree_u",

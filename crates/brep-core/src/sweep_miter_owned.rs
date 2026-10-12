@@ -25,6 +25,20 @@ pub struct Request<'a> {
     pub circle: Option<Budget>,
     pub caps: Option<CapCorrection>,
 }
+/// Original direct-miter input. The retained geometry is never silently
+/// repaired or refined to obtain a certificate. Explicit circle/cap correction is
+/// charged and audited against the original, uncorrected source sections.
+pub struct DirectRequest<'a> {
+    pub loops: &'a [Vec<Curve>],
+    pub points: &'a [[f64; 3]],
+    pub normal: [f64; 3],
+    pub closed: bool,
+    pub miter_limit: f64,
+    pub max_deviation: f64,
+    pub circle: Option<Budget>,
+    pub caps: Option<CapCorrection>,
+    pub cap_endpoints: Option<[bool; 2]>,
+}
 #[derive(Clone, Copy)]
 pub struct Limits {
     pub max_products: usize,
@@ -426,7 +440,7 @@ pub fn construct(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody>
             caps:request.caps.as_ref().map(|cap|->Result<CapCorrection>{Ok(CapCorrection {budget:remaining(cap.budget)?,authored_frame:cap.authored_frame})}).transpose()?,
         };
         let attempt_limits=Limits {projection_exact_work:limits.projection_exact_work.saturating_sub(spent),..*limits};
-        match construct_attempt(&attempt,&attempt_limits)? {
+        match construct_attempt(&attempt,&attempt_limits,false,None)? {
             ConstructionAttempt::Complete(mut body)=>{
                 previous.append(&mut body.levels);
                 body.levels=previous;
@@ -446,7 +460,48 @@ pub fn construct(request: &Request<'_>, limits: &Limits) -> Result<BoundaryBody>
     }
 }
 
-fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<ConstructionAttempt> {
+pub fn construct_direct(request: &DirectRequest<'_>, limits: &Limits) -> Result<BoundaryBody> {
+    let scalar = |value| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![value, 0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let scale = scalar(1.);
+    let twist = scalar(0.);
+    let original = Request {
+        loops: request.loops,
+        points: request.points,
+        scale: &scale,
+        twist: &twist,
+        options: progressive_miter::Options {
+            normal: request.normal,
+            closed: request.closed,
+            miter_limit: request.miter_limit,
+            initial_steps: 1,
+            max_steps: 1,
+            max_deviation: request.max_deviation,
+        },
+        affine: None,
+        frames: None,
+        guide: None,
+        circle: request.circle,
+        caps: request.caps.as_ref().map(|cap| CapCorrection {
+            budget: cap.budget,
+            authored_frame: cap.authored_frame,
+        }),
+    };
+    if request.cap_endpoints.is_some() && request.caps.is_none() {
+        return Err(invalid("Direct endpoint selection requires explicit cap correction"));
+    }
+    match construct_attempt(&original, limits, true, request.cap_endpoints)? {
+        ConstructionAttempt::Complete(body) => Ok(body),
+        ConstructionAttempt::Refine { reason, .. } => Err(invalid(reason)),
+    }
+}
+
+fn construct_attempt(request: &Request<'_>, limits: &Limits, direct: bool, cap_endpoints: Option<[bool; 2]>) -> Result<ConstructionAttempt> {
     let plan = sweep_miter_layout::plan(
         request.loops,
         request.points.len(),
@@ -458,7 +513,8 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
     let rings = request.loops.iter().map(Vec::len).collect::<Vec<_>>();
     let mut options = request.options;
     options.max_steps = plan.max_steps;
-    let mut sweep = Sweep::new(
+    let constructor = if direct { Sweep::new_direct } else { Sweep::new };
+    let mut sweep = constructor(
         &profiles,
         request.points,
         request.scale,
@@ -476,7 +532,34 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
     }
     let mut levels = Vec::new();
     let mut accepted = None;
-    for level in sweep.by_ref() {
+    let direct_level = if direct {
+        use nurbs_core::construct::curves::paths::{closed_miter_sections, miter_sections};
+        let sections = if options.closed {
+            closed_miter_sections(
+                &profiles,
+                request.points,
+                options.normal,
+                options.miter_limit,
+            )
+        } else {
+            miter_sections(
+                &profiles,
+                request.points,
+                options.normal,
+                options.miter_limit,
+            )
+        }?;
+        Some(sweep.preview_retained_at(1, sections))
+    } else {
+        None
+    };
+    let candidates: Box<dyn Iterator<Item = nurbs_core::Result<progressive_miter::Level>> + '_> =
+        if let Some(level) = direct_level {
+            Box::new(std::iter::once(level))
+        } else {
+            Box::new(sweep.by_ref())
+        };
+    for level in candidates {
         let level = level?;
         if level.report.accepted {
             accepted = Some(level.sections);
@@ -514,7 +597,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
     })?;
     // Explicit caps share their caller-owned correction/work allowance with
     // periodic profile preservation. Circle repair retains its existing order.
-    let explicit_profile = if !options.closed && request.circle.is_none() {
+    let explicit_profile = if !direct && !options.closed && request.circle.is_none() {
         if let Some(cap) = request.caps.as_ref().filter(|c| c.budget.tolerance > 0.) {
             if let Some(work) = cap
                 .budget
@@ -542,7 +625,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
     let correction_source = explicit_profile
         .as_ref()
         .map_or(original.as_slice(), |(s, _, _)| s.as_slice());
-    let mut correction = miter_section_correction::correct(
+    let mut correction = miter_section_correction::correct_selected(
         correction_source,
         request.points,
         options.closed,
@@ -555,6 +638,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
             authored_frame: c.authored_frame,
         }),
         request.frames.map(|(axis, _)| axis),
+        cap_endpoints,
     )?;
     if explicit_profile.is_some() {
         let repair = correction
@@ -572,7 +656,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
         repair.wall_displacement_upper = Some(upper);
         repair.work += profile_work;
     }
-    if options.closed && request.circle.is_none() && request.caps.is_none() {
+    if !direct && options.closed && request.circle.is_none() && request.caps.is_none() {
         if let Some((sections, displacement, work)) = periodic_profile_lattice(
             &original,
             2_f64.powi(-40),
@@ -588,7 +672,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
             });
         }
     }
-    if request.circle.is_none() && request.caps.is_none() && correction.is_none() {
+    if !direct && request.circle.is_none() && request.caps.is_none() && correction.is_none() {
         if let Some((sections, displacement, work)) = rational_periodic_lattice(
             &original,
             2_f64.powi(-40),
@@ -614,7 +698,7 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
     } else {
         crate::rational_section_loft(&sections)?
     };
-    if !options.closed && request.caps.is_none() {
+    if !direct && !options.closed && request.caps.is_none() {
         let (needed, work) = nonplanar_caps(&model, limits.cap_regions.max_exact_work);
         if needed {
             let profile = periodic_profile_lattice(
@@ -812,6 +896,219 @@ fn construct_attempt(request: &Request<'_>, limits: &Limits) -> Result<Construct
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn direct_explicit_circle_repair_preserves_original_bound_and_saved_profile_g2() {
+        let outer = nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.2).unwrap().reverse().unwrap();
+        let loops = vec![vec![outer],vec![hole]];
+        let points = [[0.,0.,0.],[10.,0.,0.],[13.,9.,4e-12],[-2.,11.,1e-12],[1.,5.,-2e-12]];
+        let mut request = DirectRequest {loops:&loops,points:&points,normal:[0.,0.,1.],closed:true,
+            miter_limit:4.,max_deviation:0.01,circle:None,caps:None,cap_endpoints:None};
+        let raw = construct_direct(&request,&limits()).unwrap();
+        request.circle=Some(Budget {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)});
+        let corrected = construct_direct(&request,&limits()).unwrap();
+        assert_eq!(raw.source_sections(),corrected.source_sections());
+        assert!(corrected.correction().unwrap().wall_displacement_upper.unwrap()>0.);
+        assert!(corrected.complete_boundary().is_some());
+        let smooth=crate::sweep_smoothness::inspect_profile(corrected.model(),&[],2_000_000).unwrap();
+        assert!(smooth.profile.g2_certified,"Saved corrected profile G2 unproved");
+        request.circle.as_mut().unwrap().max_work=Some(0.);
+        assert!(construct_direct(&request,&limits()).is_err());
+    }
+    #[test]
+    fn direct_owner_keeps_legacy_hollow_geometry_and_requires_filled_caps() {
+        use nurbs_core::construct::curves::paths::{closed_miter_sections, miter_sections};
+        for closed in [false, true] {
+            let axis = if closed { [1., 0., 0.] } else { [0., 0., 1.] };
+            let outer = nurbs_core::primitives::circle([0.; 3], axis, 0.5).unwrap();
+            let mut hole = nurbs_core::primitives::circle([0.; 3], axis, 0.2).unwrap();
+            hole.control_points.reverse();
+            hole.weights.reverse();
+            let lo = hole.knots[0];
+            let hi = *hole.knots.last().unwrap();
+            hole.knots = hole.knots.iter().rev().map(|u| lo + hi - u).collect();
+            let loops = vec![vec![outer], vec![hole]];
+            let before = loops.clone();
+            let points = if closed {
+                vec![[0., 0., 0.], [10., 0., 0.], [10., 10., 0.], [0., 10., 0.]]
+            } else {
+                vec![[0., 0., 0.], [0., 0., 10.]]
+            };
+            let request = DirectRequest {
+                loops: &loops,
+                points: &points,
+                normal: if closed { [0., 0., 1.] } else { [1., 0., 0.] },
+                closed,
+                miter_limit: 2.,
+                max_deviation: 0.01,
+                circle: None,
+                caps: None,
+                cap_endpoints: None,
+            };
+            let profiles = loops.iter().flatten().cloned().collect::<Vec<_>>();
+            let direct = if closed {
+                closed_miter_sections(&profiles, &points, request.normal, 2.)
+            } else {
+                miter_sections(&profiles, &points, request.normal, 2.)
+            }
+            .unwrap();
+            let sections = sweep_miter_layout::partition(&direct, &[1, 1]).unwrap();
+            let legacy = if closed {
+                crate::periodic_section_loft(&sections)
+            } else {
+                crate::rational_section_loft(&sections)
+            }
+            .unwrap();
+            let body = construct_direct(&request, &limits()).unwrap();
+            assert_eq!(
+                body.model().0,
+                legacy.0,
+                "Direct owner changed retained geometry"
+            );
+            assert_eq!(body.source_sections(), direct);
+            assert!(body.correction().is_none());
+            assert!(
+                body.complete_boundary().is_some(),
+                "closed={closed}, wall={:?}, caps={:?}, within={:?}",
+                body.boundary().wall_error_upper,
+                body.boundary().filled_cap_error_upper,
+                body.boundary().within_budget
+            );
+            assert_eq!(body.boundary().filled_cap_error_upper.is_some(), !closed);
+            assert_eq!(loops, before);
+            if !closed {
+                let mut denied = limits();
+                denied.domain_exact_work = 1;
+                let unproved = construct_direct(&request, &denied).unwrap();
+                assert_eq!(unproved.model().0, legacy.0);
+                assert!(unproved.boundary().wall_error_upper.is_some());
+                assert!(unproved.complete_boundary().is_none());
+            }
+        }
+    }
+    #[test]
+    fn direct_spatial_owner_does_not_hide_nonplanar_caps_with_automatic_repair() {
+        let outer = nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap();
+        let hole = nurbs_core::primitives::circle([0.; 3], [0., 0., -1.], 0.2).unwrap();
+        let loops = vec![vec![outer], vec![hole]];
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let request = DirectRequest {
+            loops: &loops,
+            points: &points,
+            normal: [1., 0., 0.],
+            closed: false,
+            miter_limit: 2.,
+            max_deviation: 0.01,
+            circle:None,caps: None,
+            cap_endpoints: None,
+        };
+        let direct = nurbs_core::construct::curves::paths::miter_sections(
+            &loops.iter().flatten().cloned().collect::<Vec<_>>(),
+            &points,
+            request.normal,
+            2.,
+        )
+        .unwrap();
+        let sections = sweep_miter_layout::partition(&direct, &[1, 1]).unwrap();
+        let legacy = crate::rational_section_loft(&sections).unwrap();
+        let body = construct_direct(&request, &limits()).unwrap();
+        assert_eq!(body.model().0, legacy.0);
+        assert_eq!(body.source_sections(), direct);
+        assert!(body.correction().is_none());
+        assert!(body.boundary().wall_error_upper.is_some());
+        assert!(
+            body.complete_boundary().is_none(),
+            "Raw spatial cap gaps were accepted"
+        );
+    }
+    #[test]
+    fn direct_spatial_explicit_caps_keep_legacy_correction_and_complete_bound() {
+        let loops = vec![
+            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()],
+        ];
+        let points = [[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]];
+        let correction = || CapCorrection {budget:Budget {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)},authored_frame:false};
+        let direct = nurbs_core::construct::curves::paths::miter_sections(
+            &loops.iter().flatten().cloned().collect::<Vec<_>>(),&points,[1.,0.,0.],2.).unwrap();
+        let legacy_correction = miter_section_correction::correct(&direct,&points,false,None,Some(correction()),None).unwrap().unwrap();
+        let sections = sweep_miter_layout::partition(legacy_correction.sections.as_ref().unwrap(), &[1,1]).unwrap();
+        let legacy = crate::rational_section_loft(&sections).unwrap();
+        let request = DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],closed:false,miter_limit:2.,max_deviation:0.01,circle:None,caps:Some(correction()),cap_endpoints:None};
+        let body = construct_direct(&request,&limits()).unwrap();
+        assert_eq!(body.model().0,legacy.0);
+        assert_eq!(body.source_sections(),direct);
+        assert_eq!(body.correction().unwrap().wall_displacement_upper,legacy_correction.wall_displacement_upper);
+        assert!(body.complete_boundary().is_some(),"Explicit corrected cap bound still unproved");
+        assert!(body.boundary().filled_cap_error_upper.is_some());
+        let mut denied=request;
+        denied.caps.as_mut().unwrap().budget.max_work=Some(0.);
+        assert!(construct_direct(&denied,&limits()).is_err());
+    }
+    #[test]
+    fn direct_owned_affine_preserves_raw_legacy_models_and_bounds_filled_caps() {
+        let quarters = |r:f64| {
+            [ [[r,0.],[r,r],[0.,r]], [[0.,r],[-r,r],[-r,0.]],
+              [[-r,0.],[-r,-r],[0.,-r]], [[0.,-r],[r,-r],[r,0.]] ]
+                .map(|p|Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                    control_points:p.map(|[x,y]|vec![x,y,0.]).to_vec(),
+                    weights:vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.],periodic:false}).to_vec()
+        };
+        let mut hole = quarters(0.25);
+        hole.reverse();
+        for c in &mut hole {c.control_points.reverse();c.weights.reverse();}
+        let examples = [
+            vec![vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
+                vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()]],
+            vec![quarters(0.5),hole],
+        ];
+        let matrix=[[1.,0.,0.,0.],[0.,1.,0.,0.],[1.,1.,1.,0.],[0.,0.,0.,1.]];
+        for loops in examples {
+            let points=[[0.,0.,0.],[0.,0.,10.]];
+            let source=construct_direct(&DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],
+                closed:false,miter_limit:2.,max_deviation:0.01,circle:None,caps:None,cap_endpoints:None},&limits()).unwrap();
+            assert!(source.complete_boundary().is_some());
+            let expected=crate::transform::affine(source.model(),matrix).unwrap();
+            let placed=source.place(matrix,2_f64.powi(-40),100000,Some(0.01)).unwrap();
+            let boundary=placed.boundary.unwrap();
+            assert!(boundary.continuous_bound);
+            assert_eq!(boundary.within_budget,Some(true));
+            assert!(boundary.filled_cap_error_upper.is_some());
+            assert_eq!(placed.placement.unwrap().model.unwrap().0,expected.0,
+                "Affine certificate changed the raw legacy geometry");
+            assert!(source.place(matrix,2_f64.powi(-40),0,Some(0.01)).unwrap().boundary.is_none());
+            let denied=source.place(matrix,2_f64.powi(-40),100000,Some(0.)).unwrap();
+            assert!(denied.placement.unwrap().model.is_none());
+        }
+    }
+    #[test]
+    fn selected_end_cap_owns_the_original_external_correction_without_touching_start() {
+        use nurbs_core::sweep_section_projection::{Correction,Target};
+        let loops=vec![vec![nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap()],
+            vec![nurbs_core::primitives::circle([0.;3],[0.,0.,-1.],0.2).unwrap()]];
+        let points=[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]];
+        let direct=nurbs_core::construct::curves::paths::miter_sections(
+            &loops.iter().flatten().cloned().collect::<Vec<_>>(),&points,[1.,0.,0.],2.).unwrap();
+        let legacy=nurbs_core::sweep_section_projection::project(&direct,
+            &[Correction {section:direct.len()-1,quantum:2_f64.powi(-40),tolerance:1e-9,
+                target:Target::Plane {axis:1,coefficients:[0.,-0.5],offset:17.5}}],Some(1000000.)).unwrap();
+        let sections=sweep_miter_layout::partition(legacy.sections.as_ref().unwrap(),&[1,1]).unwrap();
+        let expected=crate::rational_section_loft(&sections).unwrap();
+        let mut request=DirectRequest {loops:&loops,points:&points,normal:[1.,0.,0.],closed:false,
+            miter_limit:2.,max_deviation:0.01,circle:None,caps:Some(CapCorrection {budget:Budget {
+                quantum:2_f64.powi(-40),tolerance:1e-9,max_work:Some(1000000.)},authored_frame:false}),
+            cap_endpoints:Some([false,true])};
+        let body=construct_direct(&request,&limits()).unwrap();
+        assert_eq!(body.model().0,expected.0);
+        assert_eq!(body.sections()[0],sweep_miter_layout::partition(&direct,&[1,1]).unwrap()[0]);
+        assert_eq!(body.correction().unwrap().work,legacy.work);
+        assert!(body.complete_boundary().is_some(),"Selected end cap complete bound unproved");
+        request.caps.as_mut().unwrap().budget.max_work=Some((legacy.work-1) as f64);
+        assert!(construct_direct(&request,&limits()).is_err());
+        request.caps.as_mut().unwrap().budget.max_work=Some(1000000.);
+        request.cap_endpoints=Some([false,false]);
+        assert!(construct_direct(&request,&limits()).is_err());
+    }
     #[test]
     fn rational_lattice_preserves_basis_and_charges_bounded_atomic_displacement() {
         let c = |z: f64| Curve {

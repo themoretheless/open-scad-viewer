@@ -1,4 +1,4 @@
-//! Compatible retained Bezier profiles with exact shared quintic station jets.
+//! Compatible retained Bezier profiles with exact shared adaptive-degree station jets.
 //! This only constructs a bounded candidate; regularity/material stay separate.
 use super::*;
 use cad_predicates::{
@@ -20,12 +20,21 @@ fn shared_jets(left: &Surface, right: &Surface, work: &mut u64, max_work: u64) -
         return false;
     }
     for (a, b) in left.control_points.iter().zip(&right.control_points) {
-        if a[5] != b[0] {
+        let last = a.len() - 1;
+        if a[last] != b[0] {
             return false;
         }
         for k in 0..3 {
             let values = [
-                a[3][k], a[4][k], a[5][k], b[0][k], b[1][k], b[2][k], 0., 1., -1.,
+                a[last - 2][k],
+                a[last - 1][k],
+                a[last][k],
+                b[0][k],
+                b[1][k],
+                b[2][k],
+                0.,
+                1.,
+                -1.,
             ]
             .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
             .to_vec();
@@ -146,131 +155,171 @@ pub(super) fn construct(
         sharp.contains(&i)
             || closed && (i == 0 || i == n - 1) && (sharp.contains(&0) || sharp.contains(&(n - 1)))
     };
-    let mut sides = vec![Vec::new(); loops];
-    let mut upper = 0_f64;
-    for layer in 0..n - 1 {
-        for l in 0..loops {
-            for q in 0..prepared[0][l].len() {
-                let a = &prepared[layer][l][q];
-                let b = &prepared[layer + 1][l][q];
-                let mut poles = vec![vec![vec![0.; 3]; 6]; a.control_points.len()];
-                for i in 0..a.control_points.len() {
-                    for k in 0..3 {
-                        if !charge(&mut out.work, max_work) {
-                            return Ok(out);
-                        }
-                        let tangent = |before: usize, after: usize, den: f64| {
-                            let units = ((prepared[after][l][q].control_points[i][k]
-                                - prepared[before][l][q].control_points[i][k])
-                                / den
-                                / quantum)
-                                .round();
-                            (units.is_finite() && units.abs() < 2_f64.powi(48))
-                                .then_some(units * quantum)
-                        };
-                        let ta = if (!closed && layer == 0) || is_sharp(layer) {
-                            tangent(layer, layer + 1, 5.)
-                        } else {
-                            tangent(if layer == 0 { n - 2 } else { layer - 1 }, layer + 1, 10.)
-                        };
-                        let tb = if (!closed && layer + 1 == n - 1) || is_sharp(layer + 1) {
-                            tangent(layer, layer + 1, 5.)
-                        } else {
-                            tangent(layer, if layer + 1 == n - 1 { 1 } else { layer + 2 }, 10.)
-                        };
-                        let (Some(ta), Some(tb)) = (ta, tb) else {
-                            out.reason = "station-tangent-range";
-                            return Ok(out);
-                        };
-                        let p = a.control_points[i][k];
-                        let r = b.control_points[i][k];
-                        for (j, value) in [p, p + ta, p + 2. * ta, r - 2. * tb, r - tb, r]
-                            .into_iter()
-                            .enumerate()
-                        {
-                            if !value.is_finite() {
-                                out.reason = "control-lattice-range";
-                                return Ok(out);
-                            }
-                            poles[i][j][k] = value;
-                        }
-                    }
-                }
-                for i in 0..poles.len() {
-                    for j in 0..6 {
-                        let mut squared = Interval::point(0.);
+    for degree in [5usize, 13, 25] {
+        out.wall_displacement_upper = None;
+        out.reason = "work-limit";
+        let mut sides = vec![Vec::new(); loops];
+        let mut upper = 0_f64;
+        for layer in 0..n - 1 {
+            for l in 0..loops {
+                for q in 0..prepared[0][l].len() {
+                    let a = &prepared[layer][l][q];
+                    let b = &prepared[layer + 1][l][q];
+                    let mut poles = vec![vec![vec![0.; 3]; degree + 1]; a.control_points.len()];
+                    for i in 0..a.control_points.len() {
                         for k in 0..3 {
                             if !charge(&mut out.work, max_work) {
                                 return Ok(out);
                             }
-                            let t = Interval::point(j as f64).div(Interval::point(5.))?;
-                            let original = Interval::point(a.control_points[i][k])
-                                .mul(Interval::point(1.).sub(t)?)?
-                                .add(Interval::point(b.control_points[i][k]).mul(t)?)?;
-                            let delta = Interval::point(poles[i][j][k]).sub(original)?;
-                            let radius = delta.lo.abs().max(delta.hi.abs());
-                            squared = squared
-                                .add(Interval::point(radius).mul(Interval::point(radius))?)?;
+                            let tangent = |before: usize, after: usize, den: f64| {
+                                let units = ((prepared[after][l][q].control_points[i][k]
+                                    - prepared[before][l][q].control_points[i][k])
+                                    / den
+                                    / quantum)
+                                    .round();
+                                (units.is_finite() && units.abs() < 2_f64.powi(48))
+                                    .then_some(units * quantum)
+                            };
+                            let ta = if (!closed && layer == 0) || is_sharp(layer) {
+                                tangent(layer, layer + 1, degree as f64)
+                            } else {
+                                tangent(
+                                    if layer == 0 { n - 2 } else { layer - 1 },
+                                    layer + 1,
+                                    (2 * degree) as f64,
+                                )
+                            };
+                            let tb = if (!closed && layer + 1 == n - 1) || is_sharp(layer + 1) {
+                                tangent(layer, layer + 1, degree as f64)
+                            } else {
+                                tangent(
+                                    layer,
+                                    if layer + 1 == n - 1 { 1 } else { layer + 2 },
+                                    (2 * degree) as f64,
+                                )
+                            };
+                            let (Some(ta), Some(tb)) = (ta, tb) else {
+                                out.reason = "station-tangent-range";
+                                return Ok(out);
+                            };
+                            let p = a.control_points[i][k];
+                            let r = b.control_points[i][k];
+                            for j in 0..=degree {
+                                let value = match j {
+                                    0 => p,
+                                    1 => p + ta,
+                                    2 => p + 2. * ta,
+                                    j if j == degree - 2 => r - 2. * tb,
+                                    j if j == degree - 1 => r - tb,
+                                    j if j == degree => r,
+                                    _ => p + (r - p) * (j as f64 / degree as f64),
+                                };
+                                if !value.is_finite() {
+                                    out.reason = "control-lattice-range";
+                                    return Ok(out);
+                                }
+                                poles[i][j][k] = value;
+                            }
                         }
-                        upper = upper.max(squared.hi.max(0.).sqrt().next_up());
+                    }
+                    for i in 0..poles.len() {
+                        for j in 0..=degree {
+                            let mut squared = Interval::point(0.);
+                            for k in 0..3 {
+                                if !charge(&mut out.work, max_work) {
+                                    return Ok(out);
+                                }
+                                let t = Interval::point(j as f64)
+                                    .div(Interval::point(degree as f64))?;
+                                let original = Interval::point(a.control_points[i][k])
+                                    .mul(Interval::point(1.).sub(t)?)?
+                                    .add(Interval::point(b.control_points[i][k]).mul(t)?)?;
+                                let delta = Interval::point(poles[i][j][k]).sub(original)?;
+                                let radius = delta.lo.abs().max(delta.hi.abs());
+                                squared = squared
+                                    .add(Interval::point(radius).mul(Interval::point(radius))?)?;
+                            }
+                            upper = upper.max(squared.hi.max(0.).sqrt().next_up());
+                        }
+                    }
+                    let surface = Surface {
+                        degree_u: a.degree,
+                        degree_v: degree,
+                        knots_u: a.knots.clone(),
+                        knots_v: [vec![0.; degree + 1], vec![1.; degree + 1]].concat(),
+                        control_points: poles,
+                        weights: a.weights.iter().map(|&w| vec![w; degree + 1]).collect(),
+                        periodic_u: false,
+                        periodic_v: false,
+                    };
+                    if surface.validate().is_err() {
+                        out.reason = "control-lattice-range";
+                        return Ok(out);
+                    }
+                    sides[l].push(surface);
+                }
+            }
+        }
+        // This outward norm enclosure has a positive rounding floor at zero.
+        // Preserve the original complete refusal without spending extra work.
+        if tolerance == 0. && upper > 0. {
+            out.wall_displacement_upper = Some(upper);
+            out.reason = "displacement-budget";
+            return Ok(out);
+        }
+        if upper > tolerance {
+            let Some(tighter) = error_bound::tighten(&sides, tolerance, &mut out.work, max_work)?
+            else {
+                out.wall_displacement_upper = None;
+                out.reason = "work-limit";
+                return Ok(out);
+            };
+            upper = tighter;
+        }
+        out.wall_displacement_upper = Some(upper);
+        if !upper.is_finite() || upper > tolerance {
+            out.reason = "displacement-budget";
+            continue;
+        }
+        for l in 0..loops {
+            let spans = prepared[0][l].len();
+            for station in 1..n - 1 {
+                if is_sharp(station) {
+                    continue;
+                }
+                for q in 0..spans {
+                    if !shared_jets(
+                        &sides[l][(station - 1) * spans + q],
+                        &sides[l][station * spans + q],
+                        &mut out.work,
+                        max_work,
+                    ) {
+                        out.reason = "shared-station-jets-unproved";
+                        return Ok(out);
                     }
                 }
-                let surface = Surface {
-                    degree_u: a.degree,
-                    degree_v: 5,
-                    knots_u: a.knots.clone(),
-                    knots_v: vec![0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1.],
-                    control_points: poles,
-                    weights: a.weights.iter().map(|&w| vec![w; 6]).collect(),
-                    periodic_u: false,
-                    periodic_v: false,
-                };
-                if surface.validate().is_err() {
-                    out.reason = "control-lattice-range";
-                    return Ok(out);
+            }
+            if closed && !is_sharp(0) {
+                for q in 0..spans {
+                    if !shared_jets(
+                        &sides[l][(n - 2) * spans + q],
+                        &sides[l][q],
+                        &mut out.work,
+                        max_work,
+                    ) {
+                        out.reason = "shared-station-jets-unproved";
+                        return Ok(out);
+                    }
                 }
-                sides[l].push(surface);
             }
         }
-    }
-    out.wall_displacement_upper = Some(upper);
-    if !upper.is_finite() || upper > tolerance {
-        out.reason = "displacement-budget";
+        out.sides = Some(sides);
+        out.reason = if degree == 5 {
+            "bounded-general-quintic-station-jets"
+        } else {
+            "bounded-general-higher-degree-station-jets"
+        };
         return Ok(out);
     }
-    for l in 0..loops {
-        let spans = prepared[0][l].len();
-        for station in 1..n - 1 {
-            if is_sharp(station) {
-                continue;
-            }
-            for q in 0..spans {
-                if !shared_jets(
-                    &sides[l][(station - 1) * spans + q],
-                    &sides[l][station * spans + q],
-                    &mut out.work,
-                    max_work,
-                ) {
-                    out.reason = "shared-station-jets-unproved";
-                    return Ok(out);
-                }
-            }
-        }
-        if closed && !is_sharp(0) {
-            for q in 0..spans {
-                if !shared_jets(
-                    &sides[l][(n - 2) * spans + q],
-                    &sides[l][q],
-                    &mut out.work,
-                    max_work,
-                ) {
-                    out.reason = "shared-station-jets-unproved";
-                    return Ok(out);
-                }
-            }
-        }
-    }
-    out.sides = Some(sides);
-    out.reason = "bounded-general-quintic-station-jets";
     Ok(out)
 }
