@@ -48,7 +48,6 @@
     "src/components/FunctionReference.vue": 402,
     "src/components/InspectPanel.vue": 590,
     "src/components/SceneOutliner.vue": 745,
-    "src/core/geometryExecution.ts": 626,
     "src/core/openScad2021Contract.ts": 543,
     "src/core/semanticProgram.ts": 603,
     "src/features/DirectModeler.vue": 4576,
