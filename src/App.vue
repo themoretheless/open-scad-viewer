@@ -18,6 +18,8 @@ import ExampleGallery from './components/ExampleGallery.vue'
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
+import { APP_STRINGS as L, type Language } from './i18n/appStrings'
+import { useAppearance } from './composables/useAppearance'
 import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
@@ -84,7 +86,6 @@ import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } fro
 import {
   setStorageFailureHandler,
   storageGet,
-  storageGetEnum,
   storageGetJSON,
   storageSet,
   storageSetJSON,
@@ -106,15 +107,7 @@ import {
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
 import { encodeWorkspaceShare } from './services/workspaceShare'
 import { WebGPURenderer } from './services/webgpuRenderer'
-import { customizeTokens, normalizeHex } from './services/themeCustomization'
-import {
-  assertThemeCatalog,
-  resolveTheme,
-  themeCanvasColor,
-  THEME_CATALOG,
-  THEME_SELECTIONS,
-  type ThemeSelection,
-} from './services/themePreferences'
+import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
 import type {
   DisplayMode,
   DistanceMeasurement,
@@ -127,8 +120,6 @@ import type {
 } from './services/rendererContracts'
 import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
 
-type Language = 'ru' | 'en'
-
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
 
@@ -139,152 +130,17 @@ const props = defineProps<{
   workspacePersistence: BrowserWorkspacePersistence
 }>()
 
-const L: Record<Language, Record<string, string>> = {
-  ru: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Настройки', customBase: 'Основной цвет', customAccent: 'Акцентный цвет', customReset: 'Сбросить цвета',
-    render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
-    basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
-    open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
-    exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
-    convertFile: 'Конвертировать…', convertFileHelp: 'Конвертировать файл STL / OBJ / PLY / OFF / AMF / 3MF в выбранный формат', converted: 'Файл конвертирован', exportFormat: 'Формат экспорта',
-    noParameters: 'Добавьте верхнеуровневые переменные; диапазон слайдера: // [min:step:max]',
-    openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
-    meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
-    hint: 'Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
-    noGpu: 'WebGPU недоступен: редактор, сборка и экспорт работают, интерактивная 3D-сцена отключена.',
-    backendWebGpu: 'WebGPU · интерактивный', backendHeadless: 'CPU · без 3D', transparencySorted: 'прозрачность по объектам',
-    initializingViewport: 'Запускаем WebGPU…', retryRenderer: 'Повторить запуск 3D',
-    find: 'Найти', replace: 'Заменить', replaceAll: 'Заменить все', matchCase: 'Учитывать регистр',
-    previousMatch: 'Предыдущее совпадение', nextMatch: 'Следующее совпадение', closeSearch: 'Закрыть поиск',
-    noMatches: 'Нет совпадений', tooManyMatches: 'Слишком много совпадений — уточните запрос',
-    theme: 'Тема', systemTheme: 'Как в системе', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
-    language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
-    fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
-    grid: 'Сетка', gridStep: 'Шаг сетки', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
-    left: 'Слева', right: 'Справа', top: 'Сверху', bottom: 'Снизу',
-    compiling: 'Собираем геометрию…', stale: 'Показан предыдущий результат', ready: 'Готово',
-    failed: 'Ошибка сборки',
-    preview: 'Быстрый preview', full: 'Точная сборка', exported: 'Геометрия экспортирована',
-    copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
-    opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
-    workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
-    workerRestarted: 'Сборка не отвечала 30 секунд — повторяем попытку',
-    cancelBuild: 'Отменить сборку', buildCancelled: 'Сборка отменена',
-    buildTimeout: 'Сборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.',
-    storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
-    format: 'Форматировать', saveBrowser: 'Сохранить в браузере', saveBrowserHelp: 'Сохранить текущий код в IndexedDB, заменив сохранённый черновик', savedBrowser: 'Сохранено в IndexedDB', failedBrowser: 'Не удалось сохранить в IndexedDB', unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
-    storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
-    gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
-    gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
-    commands: 'Команды', commandHelp: 'Поиск действий', shortcuts: 'Горячие клавиши', display: 'Отображение',
-    shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
-    shadingPhong: 'Затенение: Phong', shadingPbr: 'Затенение: PBR', shadingMatcap: 'Затенение: Matcap',
-    shadingToon: 'Затенение: Toon', shadingUnlit: 'Затенение: Unlit',
-    renderThemeDefault: 'Тема рендера: стандартная', renderThemeDarkContrast: 'Тема рендера: тёмный контраст', renderThemeLight: 'Тема рендера: светлая',
-    selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
-    unisolate: 'Показать всё', deselect: 'Снять выбор',
-    scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
-    selectionMode: 'Режим выбора', sidebar: 'Боковая панель', closeSidebar: 'Закрыть боковую панель', measure: 'Измерить расстояние',
-    cancelMeasure: 'Отменить измерение', flipSection: 'Перевернуть сечение', hideSelected: 'Скрыть выбранное', cycleSelectionMode: 'Следующий режим выбора',
-    section: 'Плоскость сканирования', scanPlane: 'Срез', hidden: 'Скрыт',
-    sourceStale: 'Сначала дождитесь сборки текущего исходника',
-    needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
-    needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
-    buildInProgress: 'Дождитесь завершения текущей сборки',
-    depthCandidate: 'цель в глубине',
-    export: 'Экспорт', exportTitle: 'Экспорт модели', download: 'Скачать', cancel: 'Отмена', more: 'Ещё', close: 'Закрыть',
-    svg: 'SVG ↔ 3D', photo: '3D по фотографиям', perf: 'Замеры сборки', modelTools: 'Инструменты моделирования',
-    generators: 'Генераторы', codeToSolid: 'Перенести сцену в Solid', codeToMesh: 'Перенести сцену в Mesh', fileMenu: 'Файл', forPrinting: 'печать', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Черновик сохранён в браузере', exportScope: 'Экспортируется вся сцена одним телом', renderShortcut: 'Рендер',
+const {
+  lang, themeSelection, customAccent, customBase, effectiveTokens, isDark,
+  setCustomColor, effectiveCanvasColor, resetCustomColors,
+  toggleLang, toggleTheme, applyPreferences, attachSystemTheme, detachSystemTheme,
+} = useAppearance({
+  onApplied(canvasColor) {
+    renderer?.setBackgroundColor(canvasColor)
+    // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
+    renderer?.setTheme(renderThemeId.value)
   },
-  en: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Settings', customBase: 'Base color', customAccent: 'Accent color', customReset: 'Reset colors',
-    render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
-    basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
-    open: 'Open', save: 'Save', share: 'Share',
-    exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
-    convertFile: 'Convert…', convertFileHelp: 'Convert an STL / OBJ / PLY / OFF / AMF / 3MF file to the selected export format', converted: 'File converted', exportFormat: 'Export format',
-    noParameters: 'Add top-level variables; slider metadata: // [min:step:max]',
-    openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
-    meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
-    hint: 'Click: select · repeat click: cycle deeper · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
-    noGpu: 'WebGPU is unavailable: editing, builds, and export still work; the interactive 3D viewport is disabled.',
-    backendWebGpu: 'WebGPU · interactive', backendHeadless: 'CPU · no 3D', transparencySorted: 'object-sorted transparency',
-    initializingViewport: 'Starting WebGPU…', retryRenderer: 'Retry 3D viewport',
-    find: 'Find', replace: 'Replace', replaceAll: 'Replace all', matchCase: 'Match case',
-    previousMatch: 'Previous match', nextMatch: 'Next match', closeSearch: 'Close search',
-    noMatches: 'No matches', tooManyMatches: 'Too many matches — refine the query',
-    theme: 'Theme', systemTheme: 'System', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
-    language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
-    fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
-    grid: 'Grid', gridStep: 'Grid step', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
-    left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom',
-    compiling: 'Building geometry…', stale: 'Showing the previous result', ready: 'Ready',
-    failed: 'Build failed',
-    preview: 'Fast preview', full: 'Full build', exported: 'Geometry exported',
-    copied: 'Link copied', copyFailed: 'Link added to the address bar',
-    opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
-    workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
-    workerRestarted: 'Build was unresponsive for 30 seconds — retrying',
-    cancelBuild: 'Cancel build', buildCancelled: 'Build cancelled',
-    buildTimeout: 'Build was unresponsive for another 30 seconds. Edit the model or build again.',
-    storageFailed: 'Could not save data: browser storage is unavailable or full',
-    format: 'Format', saveBrowser: 'Save in browser', saveBrowserHelp: 'Save current code to IndexedDB, replacing the saved draft', savedBrowser: 'Saved to IndexedDB', failedBrowser: 'Could not save to IndexedDB', unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
-    storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
-    gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
-    gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
-    commands: 'Commands', commandHelp: 'Search actions', shortcuts: 'Keyboard shortcuts', display: 'Display',
-    shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
-    shadingPhong: 'Shading: Phong', shadingPbr: 'Shading: PBR', shadingMatcap: 'Shading: Matcap',
-    shadingToon: 'Shading: Toon', shadingUnlit: 'Shading: Unlit',
-    renderThemeDefault: 'Render theme: Default', renderThemeDarkContrast: 'Render theme: Dark Contrast', renderThemeLight: 'Render theme: Light',
-    selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
-    unisolate: 'Show all', deselect: 'Deselect',
-    scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
-    selectionMode: 'Selection mode', sidebar: 'Sidebar', closeSidebar: 'Close sidebar', measure: 'Measure distance',
-    cancelMeasure: 'Cancel measurement', flipSection: 'Flip section', hideSelected: 'Hide selected', cycleSelectionMode: 'Next selection mode',
-    section: 'Scanning plane', scanPlane: 'Section', hidden: 'Hidden',
-    sourceStale: 'Wait for the current source to finish building first',
-    needsModel: 'Build a model first', needsSelection: 'Select an object first',
-    needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
-    buildInProgress: 'Wait for the current build to finish',
-    depthCandidate: 'depth target',
-    export: 'Export', exportTitle: 'Export model', download: 'Download', cancel: 'Cancel', more: 'More', close: 'Close',
-    svg: 'SVG ↔ 3D', photo: '3D from photos', perf: 'Build measurements', modelTools: 'Modeling tools',
-    generators: 'Generators', codeToSolid: 'Bring scene into Solid', codeToMesh: 'Bring scene into Mesh', fileMenu: 'File', forPrinting: 'printing', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Draft saved in browser', exportScope: 'The whole scene is exported as one body', renderShortcut: 'Render',
-  },
-}
-
-const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
-const legacyThemeRaw = storageGet('scad-theme')
-const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
-const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
-const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
-const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-const systemPrefersDark = ref(themeMediaQuery.matches)
-const customAccent = ref<string | null>(normalizeHex(storageGet('scad-accent-v1')))
-const customBase = ref<string | null>(normalizeHex(storageGet('scad-base-v1')))
-const effectiveTokens = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).tokens)
-function setCustomColor(kind: 'accent' | 'base', event: Event) {
-  const value = normalizeHex((event.target as HTMLInputElement).value)
-  if (kind === 'accent') customAccent.value = value
-  else customBase.value = value
-  applyPreferences()
-}
-function effectiveCanvasColor() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  return themeCanvasColor({ ...theme, tokens })
-}
-function resetCustomColors() {
-  customAccent.value = null
-  customBase.value = null
-  applyPreferences()
-}
-const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
+})
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
 const code = ref(props.initialWorkspace.source)
 const autoRender = ref(storageGet('scad-auto') !== 'false')
@@ -1101,8 +957,7 @@ onMounted(async () => {
     topbarResizeObserver.observe(topbarRef.value)
   }
   setStorageFailureHandler(reportStorageFailure)
-  themeMediaQuery.addEventListener('change', handleSystemThemeChange)
-  applyPreferences()
+  attachSystemTheme()
   updateBeforeUnloadGuard()
   window.addEventListener('pagehide', flushWorkspacePersistence)
   window.addEventListener('pointerup', endParameterGesture)
@@ -1236,7 +1091,7 @@ onUnmounted(() => {
   buildCoordinator?.dispose()
   buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
-  themeMediaQuery.removeEventListener('change', handleSystemThemeChange)
+  detachSystemTheme()
   window.removeEventListener('pagehide', flushWorkspacePersistence)
   window.removeEventListener('pointerup', endParameterGesture)
   window.removeEventListener('pointercancel', endParameterGesture)
@@ -1833,43 +1688,6 @@ function handleWorkerError(caught?: unknown) {
   previousBuildCounters = { ...buildCounters.value }
   buildCoordinator = null
   error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
-}
-
-function toggleLang() {
-  lang.value = lang.value === 'ru' ? 'en' : 'ru'
-  storageSet('scad-lang', lang.value)
-  document.documentElement.lang = lang.value
-}
-
-function toggleTheme() {
-  themeSelection.value = isDark.value ? 'light' : 'dark'
-  applyPreferences()
-}
-
-function handleSystemThemeChange(event: MediaQueryListEvent) {
-  systemPrefersDark.value = event.matches
-  if (themeSelection.value === 'system') applyPreferences()
-}
-
-function applyPreferences() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  document.documentElement.dataset.theme = theme.scheme
-  document.documentElement.dataset.themePreset = themeSelection.value
-  document.documentElement.lang = lang.value
-  document.documentElement.style.colorScheme = theme.scheme
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  for (const [token, value] of Object.entries(tokens)) {
-    document.documentElement.style.setProperty(token, value)
-  }
-  renderer?.setBackgroundColor(effectiveCanvasColor())
-  if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
-  else storageSet('scad-accent-v1', '')
-  if (customBase.value) storageSet('scad-base-v1', customBase.value)
-  else storageSet('scad-base-v1', '')
-  // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
-  renderer?.setTheme(renderThemeId.value)
-  storageSet('scad-theme-v1', themeSelection.value)
-  storageSet('scad-theme', theme.scheme)
 }
 
 async function loadEditorDocument(example: string, nextFileName: string) {
