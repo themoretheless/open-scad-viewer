@@ -34,7 +34,6 @@
     "crates/brep-intersect/src/torus_torus.rs": 940,
     "crates/brep-topology/src/lib.rs": 1468,
     "crates/bridge-svg/src/svg.rs": 2467,
-    "crates/cad-step/src/iges_interchange_v2.rs": 1413,
     "crates/cad-step/src/nurbs_step_shared.rs": 1202,
     "crates/cad-step/src/step_interchange.rs": 2208,
     "crates/gcode-core/src/foreign.rs": 867,
