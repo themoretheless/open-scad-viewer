@@ -30,7 +30,8 @@ KEYWORDS = {'as', 'break', 'const', 'continue', 'crate', 'else', 'enum', 'extern
             'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof',
             'unsized', 'virtual', 'yield', 'try', 'gen', 'test', 'tests', 'core', 'std', 'alloc'}
 ITEM = re.compile(r'^(?:pub(?:\([^)]*\))? )?(?:(?:const|unsafe|async|extern "C"|default) )*'
-                  r'(fn|struct|enum|union|trait|impl|mod|const|static|type|macro_rules!|include!)\b')
+                  r'(?:(fn|struct|enum|union|trait|impl|mod|const|static|type)\b|(macro_rules!|include!))')
+USE_START = re.compile(r'^(?:pub(?:\([^)]*\))? )?use ')
 
 
 def depths(src):
@@ -113,6 +114,7 @@ def name_for(chunk, used):
 def child_text(lines):
     text = '\n'.join(lines)
     text = re.sub(r'(include_(?:str|bytes)!\(\s*")', r'\1../', text)
+    text = re.sub(r'(?<![:\w])super::', 'super::super::', text)
     text = text.replace('pub(super)', 'pub(in super::super)')
     return text
 
@@ -131,10 +133,27 @@ def split(path, target):
     bounds = [s for s, _ in starts if s >= first_big] + [len(lines)]
     segs = [lines[bounds[i]:bounds[i + 1]] for i in range(len(bounds) - 1)]
     tests, body, decls = [], [], []
+    offset = first_big
     for seg in segs:
+        base_line = offset; offset += len(seg)
+        # Hoist top-level `use` statements into mod.rs: they scope the whole module.
+        kept, hoisted, k = [], [], 0
+        while k < len(seg):
+            if dep[base_line + k] == 0 and USE_START.match(seg[k]):
+                j = k
+                while not seg[j].rstrip().endswith(';'): j += 1
+                hoisted += seg[k:j + 1]; k = j + 1; continue
+            kept.append(seg[k]); k += 1
+        if hoisted: decls.append(hoisted)
+        seg = kept
         code = [l for l in seg if l.strip() and not l.startswith(('#[', '//'))]
-        if len(code) == 1 and (re.match(r'^(?:pub(?:\([^)]*\))? )?mod \w+;$', code[0])
-                               or re.match(r'^include!\(\s*"[^"]+"\s*\);$', code[0])):
+        if not code:
+            if any(l.strip() for l in seg): decls.append(seg)
+            continue
+        first_code = re.sub(r'^(#\[[^\]]*\]\s*)+', '', code[0])
+        if (len(code) == 1 and (re.match(r'^(?:pub(?:\([^)]*\))? )?mod \w+;$', first_code)
+                                or re.match(r'^include!\(\s*"[^"]+"\s*\);$', first_code))) \
+                or code[0].startswith('macro_rules!'):
             decls.append(seg); continue
         head = [l for l in seg if l.strip()]
         is_test = (len(head) >= 2 and head[0].strip() == '#[cfg(test)]' and re.match(r'^mod \w+ \{$', head[1])
@@ -256,9 +275,27 @@ def widen_method(stem, method):
     return hit
 
 
+def regen_globs(stem, names):
+    mod = os.path.join(stem, 'mod.rs')
+    lines = open(mod).read().split('\n')
+    for n in names:
+        text = open(os.path.join(stem, n + '.rs')).read()
+        if re.search(r'^pub (?!\(|use )', text, re.M) or re.search(r'^pub (?:const |unsafe |async )*(?:fn|struct|enum|trait|type|const|static|union|mod) ', text, re.M):
+            vis = 'pub '
+        elif re.search(r'^pub\(crate\) ', text, re.M):
+            vis = 'pub(crate) '
+        else:
+            vis = ''
+        for i, l in enumerate(lines):
+            if re.match(rf'^(?:pub(?:\(crate\))? )?use {n}::\*;$', l):
+                lines[i] = f'{vis}use {n}::*;'
+    open(mod, 'w').write('\n'.join(lines))
+
+
 def repair(crate, stem, names, limit=40):
     mod = os.path.join(stem, 'mod.rs')
     for _ in range(limit):
+        regen_globs(stem, names)
         msgs = cargo(crate)
         errors = [m for m in msgs if m[0] == 'error']
         warns = [m for m in msgs if m[0] == 'warning' and os.path.abspath(os.path.join(CRATES, m[2])).startswith(os.path.abspath(stem))]
@@ -279,16 +316,6 @@ def repair(crate, stem, names, limit=40):
             m = re.search(r'(?:method|associated function) `(\w+)` is private', text)
             if m:
                 progress |= widen_method(stem, m.group(1)); continue
-            m = re.search(r"glob import doesn't reexport anything", text)
-            if m and fname.endswith('mod.rs'):
-                s = open(mod).read().split('\n')
-                if 0 < line <= len(s) and s[line - 1].startswith('pub use '):
-                    s[line - 1] = 'pub(crate) ' + s[line - 1][len('pub '):]
-                    open(mod, 'w').write('\n'.join(s)); progress = True
-                elif 0 < line <= len(s) and s[line - 1].startswith('pub(crate) use '):
-                    s[line - 1] = s[line - 1][len('pub(crate) '):]
-                    open(mod, 'w').write('\n'.join(s)); progress = True
-                continue
         if not errors and not progress:
             return [m for m in msgs if m[0] in ('error', 'warning') and os.path.abspath(os.path.join(CRATES, m[2])).startswith(os.path.abspath(stem))]
         if not progress:
