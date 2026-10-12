@@ -85,6 +85,8 @@ import {isSolidNurbsRefit,type refitSolidNurbs} from '../services/solidCurveRedu
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
+import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, triangleNormals, COARSE_DISPLAY, canvasOf, primitiveKinds, PRIMITIVE_ICONS, DEFAULT_GROUP_SOURCE } from './directModeler/helpers'
+import type { Pane } from './directModeler/helpers'
 const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
 const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
 const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
@@ -169,7 +171,6 @@ const canAddDraftPoint=computed(()=>draftPointValid.value.every(Boolean)&&draftP
 function addExactDraftPoint(){if(tool.value!=='polyline'||!canAddDraftPoint.value)return;draft.value=[...draft.value,[...draftPoint.value]];draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 function undoDraftPoint(){draft.value=draft.value.slice(0,-1);draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
-type Pane = '2d' | '3d'
 const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
 const split = ref(34)
 const views = ref<Record<Pane, number>>({ '2d': 160, '3d': 160 })
@@ -177,7 +178,6 @@ const centers = ref<Record<Pane, Point2>>({ '2d': [0, 0], '3d': [0, 0] })
 const savedInputMode = storageGet('scad-input-mode')
 const inputMode = ref<'mouse' | 'touch'>(savedInputMode === 'touch' || (savedInputMode !== 'mouse' && typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ? 'touch' : 'mouse')
 const touchNavigate = ref(false)
-const touchPointers = new Map<number, { x: number; y: number; pane: Pane; svg: SVGSVGElement }>()
 let multiTouch = false
 function resetInputGesture() {
   cancelGesture()
@@ -244,7 +244,6 @@ function touchEnd(e: PointerEvent) {
   }
 }
 function cancelInputGesture() { resetInputGesture() }
-const panes: Pane[] = ['2d', '3d']
 const savedSketchPane = storageGet('scad-solid-sketch-pane')
 const sketchPaneOpen = ref(savedSketchPane === null ? document.value.bodies.length === 0 : savedSketchPane === 'true')
 function toggleSketchPane(open = !sketchPaneOpen.value) {
@@ -319,33 +318,6 @@ const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
-/**
- * Elements offset directly while a body drag is in flight.
- *
- * The 3D view renders one SVG polygon per triangle, and this scene has thousands. Both
- * re-deriving the projection and re-rendering the list through Vue cost tens of
- * milliseconds per pointer move. An orthographic projection is affine, so translating a
- * body in the world is a constant screen offset: the drag sets that offset straight on
- * the dragged body's existing elements, leaving the reactive scene untouched until the
- * pointer is released.
- */
-/**
- * Elements that must travel with dragged bodies: their hit polygons (when rendered) and
- * the SVG overlays drawn for the selection, such as vertex handles, feature edges and
- * the gizmo. Overlays are keyed by whitespace-separated body ids, so a gizmo shared by a
- * multi-selection matches any of its bodies. Without this the GPU surface moved while
- * the handles stayed behind, which reads as lag.
- */
-function collectDragNodes(svg: SVGSVGElement | undefined, ids: readonly string[]): SVGElement[] {
-  if (typeof svg?.querySelectorAll !== 'function') return []
-  const seen = new Set<SVGElement>()
-  for (const id of ids) {
-    const escaped = id.replace(/["\\]/g, '\\$&')
-    for (const node of svg.querySelectorAll<SVGElement>(`[data-body="${escaped}"], [data-body-overlay~="${escaped}"]`)) seen.add(node)
-  }
-  return [...seen]
-}
-
 let dragNodes: SVGElement[] = []
 /**
  * Frame rate of the viewport, sampled over half-second windows.
@@ -389,10 +361,6 @@ const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex
 const workplaneOutline=ref<Point2[][]>([])
 const workplaneBodyId=ref(''), choosingSketchFace=ref(false)
 const faceDrawing = computed(()=>!!workplaneBodyId.value && tool.value!=='select' && tool.value!=='trim')
-function profileBooleanOperation(id:string|null):'union'|'difference'|'intersection'|null {
- return id==='profile-union'?'union':id==='profile-difference'?'difference':id==='profile-intersection'?'intersection':null
-}
-function isProfileCommand(id:string|null){return id==='profile-prepare'||!!profileBooleanOperation(id)}
 function setProfileTarget(id:string){
  const index=surfaceInputs.value.indexOf(id)
  if(index>0){const ids=[...surfaceInputs.value];[ids[0],ids[index]]=[ids[index],ids[0]];surfaceInputs.value=ids}
@@ -403,11 +371,6 @@ const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<
 const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
-function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
- if(!['ArrowUp','ArrowDown','Home','End'].includes(e.key))return null
- e.preventDefault();e.stopPropagation()
- return e.key==='Home'?min:e.key==='End'?last:Math.max(min,Math.min(last,current+(e.key==='ArrowDown'?1:-1)))
-}
 function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
 function edgeSelectionKey(e:KeyboardEvent){
  const indices=[-1,...featureEdges.value.map(edge=>edge.i)]
@@ -1864,7 +1827,6 @@ function closeFileMenu(e:KeyboardEvent) {
  menu.querySelector('summary')?.focus()
 }
 function downloadProject(){if(!restoringDraft.value)download(serializeDirectDocument(document.value),'solid-model.json')}
-function download(text: string, name: string) { const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); const a = window.document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
 async function importFile(event: Event) {
  const input=event.target as HTMLInputElement,file=input.files?.[0]
  if(!file)return
@@ -2227,11 +2189,6 @@ function fit(pane: Pane, selectedOnly=false) {
   centers.value[pane] = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2]
   views.value[pane] = Math.max(.1, Math.max(max[0] - min[0], max[1] - min[1]) * 1.6)
 }
-function resizeSplit(e: PointerEvent) {
-  if (e.button !== 0) return
-  const target = e.currentTarget as HTMLElement
-  target.setPointerCapture(e.pointerId)
-}
 function moveSplit(e: PointerEvent) {
   if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) return
   const rect = splitArea.value!.getBoundingClientRect()
@@ -2308,16 +2265,6 @@ if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
 const smoothDisplay = ref(true)
 // Exact geometry keys survive history clones and include retained B-rep changes.
 const displayCache = new SolidDisplayCache()
-function triangleNormals(mesh: PolygonMesh) {
-  const count = mesh.indices.length / 3, normals: number[][] = []
-  for (let t = 0; t < count; t++) {
-    const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]; return mesh.positions.slice(i * 3, i * 3 + 3) })
-    const u = b.map((v, k) => v - a[k]), w = c.map((v, k) => v - a[k])
-    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], len = Math.hypot(...n) || 1
-    normals.push(n.map(v => v / len))
-  }
-  return normals
-}
 const displayWorker = createSolidPreviewWorker()
 const displayQueue = new SolidDisplayQueue(displayWorker, displayCache)
 const displayVersion = ref(0)
@@ -2342,7 +2289,6 @@ function shadeFromNormal(n: number[],projectPoint?:(p:number[])=>[number,number,
   const light = projectPoint?projectPoint(n):projectDirectPoint([n[0], n[1], n[2]], camera.value)
   return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
 }
-const COARSE_DISPLAY: Pick<DisplayMesh, 'map'> = { map: null }
 // WebGPU layer under the 3D SVG: draws dense, per-pixel shaded surfaces with the same camera; the SVG then only
 // keeps transparent working-mesh polygons for picking plus gizmos and previews.
 const gpuActive = ref(false)
@@ -2695,7 +2641,6 @@ function dragHeight(e: PointerEvent) {
   e.preventDefault(); const svg = (e.target as SVGElement).ownerSVGElement!
   heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; svg.setPointerCapture(e.pointerId)
 }
-function canvasOf(e: PointerEvent): SVGSVGElement { const target = e.target as SVGElement; return (target instanceof SVGSVGElement ? target : target.ownerSVGElement)! }
 function snapProjection(svg: SVGSVGElement, pane: Pane): (p: Vec3) => Point2 {
   const matrix = svg.getScreenCTM()
   const scale = Math.min(svg.clientWidth || 600, svg.clientHeight || 600) / views.value[pane]
@@ -3232,7 +3177,6 @@ function keydown(e: KeyboardEvent) {
 }
 
 if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
-const primitiveKinds = ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'] as const
 const roundGeometry=ref<'exact'|'faceted'>('exact')
 const primitiveSize = ref(20),primitiveTopRadius=ref(5),primitiveInnerRadius=ref(7)
 // 24x24 stroke icons for the pane tool bars; labels stay in the tooltip and aria-label.
@@ -3256,19 +3200,6 @@ const TOOL_ICONS = {
   grid: 'M3 9h18M3 15h18M9 3v18M15 3v18M3 3h18v18H3z',
   download: 'M12 3v12M6 9l6 6 6-6M4 19h16',
 } as const
-// 24x24 stroke icons for the primitive bar; labels stay in the tooltip and aria-label.
-const PRIMITIVE_ICONS: Record<typeof primitiveKinds[number] | 'curve' | 'surface', string> = {
-  box: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
-  wedge: 'M4 17V9l16 8zM4 9l8-4 12 12-4 0M12 5v12',
-  cylinder: 'M12 3c-4.4 0-8 1.3-8 3s3.6 3 8 3 8-1.3 8-3-3.6-3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6',
-  frustum: 'M9 4h6l5 14c0 1.7-3.6 3-8 3s-8-1.3-8-3zM9 4c0 1 1.3 1.5 3 1.5S15 5 15 4',
-  tube: 'M12 3c-4.4 0-8 1.3-8 3s3.6 3 8 3 8-1.3 8-3-3.6-3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M12 4.5c-2 0-3.5.7-3.5 1.5s1.5 1.5 3.5 1.5 3.5-.7 3.5-1.5-1.5-1.5-3.5-1.5',
-  cone: 'M12 3l8 15c0 1.7-3.6 3-8 3s-8-1.3-8-3zM4 18c0-1.7 3.6-3 8-3s8 1.3 8 3',
-  sphere: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c-3 2.5-3 15.5 0 18M12 3c3 2.5 3 15.5 0 18',
-  torus: 'M12 6c-5.5 0-10 2.7-10 6s4.5 6 10 6 10-2.7 10-6-4.5-6-10-6zM12 10c-2.2 0-4 .9-4 2s1.8 2 4 2 4-.9 4-2-1.8-2-4-2',
-  curve: 'M3 18c4-12 8 12 12 0s3-6 6-6M3 18h.01M21 12h.01',
-  surface: 'M3 8c3-3 6 3 9 0s6-3 9 0v9c-3 3-6-3-9 0s-6 3-9 0zM3 12.5c3-3 6 3 9 0s6-3 9 0',
-}
 function primitiveLabel(kind: typeof primitiveKinds[number]) { return ({box:label('Куб','Box'),wedge:label('Клин','Wedge'),cylinder:label('Цилиндр','Cylinder'),cone:label('Конус','Cone'),sphere:label('Сфера','Sphere'),frustum:label('Усечённый конус','Frustum'),tube:label('Труба','Tube'),torus:label('Тор','Torus')})[kind] }
 const primitiveWorker=createSolidPreviewWorker(),primitivePending=ref(false)
 let primitiveGeneration=0
@@ -3421,8 +3352,6 @@ function removeGroup(name: string) {
     sync()
   })
 }
-
-const DEFAULT_GROUP_SOURCE = 'cube([20, 20, 20], center = true);\n'
 
 /** The source lives in the host's left panel; this only chooses what to open there. */
 function openGroupDialog(name: string | null) {
