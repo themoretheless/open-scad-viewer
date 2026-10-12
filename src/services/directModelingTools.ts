@@ -65,13 +65,19 @@ export function circularDirectCopies(sketch: DirectSketch, count: number, center
     return { ...transformSketch(sketch,[0,0],a*180/Math.PI,1,center), id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0,100) }
   })
 }
-export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera,project?:(p:number[])=>[number,number,number]): number {
-  const i0 = mesh.indices[triangle * 3], i1 = mesh.indices[triangle * 3 + 1], i2 = mesh.indices[triangle * 3 + 2]
-  const p0 = [mesh.positions[i0 * 3], mesh.positions[i0 * 3 + 1], mesh.positions[i0 * 3 + 2]]
-  const p1 = [mesh.positions[i1 * 3], mesh.positions[i1 * 3 + 1], mesh.positions[i1 * 3 + 2]]
-  const p2 = [mesh.positions[i2 * 3], mesh.positions[i2 * 3 + 1], mesh.positions[i2 * 3 + 2]]
-  const a = p1.map((v, i) => v - p0[i]), b = p2.map((v, i) => v - p0[i])
-  const n = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]], length = Math.hypot(...n) || 1
-  const normal=n.map(v=>v/length),light = project?project(normal):projectDirectPoint(normal, camera)
+const SCRATCH_NORMAL: [number, number, number] = [0, 0, 0]
+export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera, project?: (p: number[]) => [number, number, number]): number {
+  const base = triangle * 3
+  const i0 = mesh.indices[base] * 3, i1 = mesh.indices[base + 1] * 3, i2 = mesh.indices[base + 2] * 3
+  const pos = mesh.positions
+  const p0x = pos[i0], p0y = pos[i0 + 1], p0z = pos[i0 + 2]
+  const ax = pos[i1] - p0x, ay = pos[i1 + 1] - p0y, az = pos[i1 + 2] - p0z
+  const bx = pos[i2] - p0x, by = pos[i2 + 1] - p0y, bz = pos[i2 + 2] - p0z
+  const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx
+  const length = Math.hypot(nx, ny, nz) || 1
+  SCRATCH_NORMAL[0] = nx / length
+  SCRATCH_NORMAL[1] = ny / length
+  SCRATCH_NORMAL[2] = nz / length
+  const light = project ? project(SCRATCH_NORMAL) : projectDirectPoint(SCRATCH_NORMAL, camera)
   return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
 }

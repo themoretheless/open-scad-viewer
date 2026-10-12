@@ -7,7 +7,14 @@
 import { invertMatrixF64 } from './matrixInverse'
 import type { Mat4, Ray3, Vec3 } from '../math3d'
 
-function finite(values: ArrayLike<number>): boolean { return Array.from(values).every(Number.isFinite) }
+const SCRATCH_INV = new Float64Array(16)
+
+function finite(values: ArrayLike<number>): boolean {
+  for (let i = 0; i < values.length; i++) {
+    if (!Number.isFinite(values[i])) return false
+  }
+  return true
+}
 
 function homogeneous(m: ArrayLike<number>, p: readonly number[]): number[] {
   const q = new Array<number>(4)
@@ -27,10 +34,12 @@ function unproject(inverse: ArrayLike<number>, x: number, y: number): Ray3 | nul
   const origin = point(inverse, [x, y, 0])
   const far = point(inverse, [x, y, 1])
   if (!origin || !far) return null
-  const d = [far[0] - origin[0], far[1] - origin[1], far[2] - origin[2]]
-  const length = Math.hypot(Math.hypot(d[0], d[1]), d[2])
+  const d0 = far[0] - origin[0]
+  const d1 = far[1] - origin[1]
+  const d2 = far[2] - origin[2]
+  const length = Math.hypot(Math.hypot(d0, d1), d2)
   if (!Number.isFinite(length) || length === 0) return null
-  return { origin, direction: d.map(v => v / length) as Vec3 }
+  return { origin, direction: [d0 / length, d1 / length, d2 / length] }
 }
 
 /** Rect is CSS left/top/width/height; client coordinates are in the same space. */
@@ -39,7 +48,7 @@ export function clientRayInKernel(matrix: Mat4, rect: [number, number, number, n
   if (rect[2] <= 0 || rect[3] <= 0) return null
   const x = (client[0] - rect[0]) / rect[2] * 2 - 1
   const y = 1 - (client[1] - rect[1]) / rect[3] * 2
-  const inverse = invertMatrixF64(matrix)
+  const inverse = invertMatrixF64(matrix, SCRATCH_INV)
   if (!inverse) return null
   return unproject(inverse, x, y)
 }
