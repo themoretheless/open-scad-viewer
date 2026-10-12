@@ -1,3 +1,4 @@
+import { isWellFormedUnicode as wellFormed } from '../core/unicode'
 export const MAX_PROJECT_FILES = 128
 export const MAX_PROJECT_SOURCE_BYTES = 1_048_576
 export const MAX_VIRTUAL_PATH_LENGTH = 256
@@ -12,17 +13,6 @@ function validateSegment(segment: string) {
   if (!segment || segment === '.') return false
   if (segment === '..') throw new Error('Virtual paths may not traverse above their project root')
   if (segment.length > MAX_VIRTUAL_SEGMENT_LENGTH || /[\u0000-\u001f\u007f]/.test(segment)) throw new Error('Virtual path segment is invalid')
-  return true
-}
-
-function wellFormed(value: string) {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
   return true
 }
 

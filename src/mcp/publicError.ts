@@ -33,6 +33,7 @@ import {
   OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
   OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
 } from './officialOpenScadRuntimeProtocol'
+import { truncateWellFormed } from '../core/unicode'
 
 export { PUBLIC_ERROR_CODES, type PublicErrorCode } from './errorContract'
 
@@ -56,14 +57,6 @@ export class ModelNotFoundError extends Error {
       : `Model ${modelId} revision ${revision} was not found`)
     this.name = 'ModelNotFoundError'
   }
-}
-
-function truncateWellFormed(value: string, maxLength: number): string {
-  if (value.length <= maxLength) return value
-  let end = maxLength
-  const last = value.charCodeAt(end - 1)
-  if (last >= 0xD800 && last <= 0xDBFF) end--
-  return value.slice(0, end)
 }
 
 function parseErrorMessage(error: OpenSCADParseError): string {

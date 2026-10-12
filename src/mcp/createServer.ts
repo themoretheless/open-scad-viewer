@@ -141,6 +141,7 @@ import {
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
 } from './officialOpenScadRuntimePatch'
+import { truncateWellFormed } from '../core/unicode'
 
 export interface CreateOpenScadMcpServerOptions {
   store: ModelStore
@@ -1045,14 +1046,6 @@ function selectorSchema<T extends z.ZodRawShape>(extra: T) {
 
 function sha256(data: string | Uint8Array): string {
   return createHash('sha256').update(data).digest('hex')
-}
-
-function truncateWellFormed(value: string, maxLength: number): string {
-  if (value.length <= maxLength) return value
-  let end = maxLength
-  const last = value.charCodeAt(end - 1)
-  if (last >= 0xD800 && last <= 0xDBFF) end--
-  return value.slice(0, end)
 }
 
 function modelUri(id: string): string {

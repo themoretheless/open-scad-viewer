@@ -27,6 +27,8 @@ import {
   isGeometryEvaluationResultPayload,
 } from '../services/geometryWorkerProtocol'
 import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
+import { isWellFormedUnicode as wellFormed } from '../core/unicode'
+import { truncateWellFormed } from '../core/unicode'
 
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
@@ -237,25 +239,6 @@ function nullablePositiveInteger(value: unknown): value is number | null {
 
 function nullableNonNegativeInteger(value: unknown): value is number | null {
   return value === null || (Number.isSafeInteger(value) && (value as number) >= 0)
-}
-
-function wellFormed(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
-}
-
-function truncateWellFormed(value: string, maximum: number): string {
-  if (value.length <= maximum) return value
-  let end = maximum
-  const last = value.charCodeAt(end - 1)
-  if (last >= 0xd800 && last <= 0xdbff) end--
-  return value.slice(0, end)
 }
 
 function compactMessage(value: string): string {

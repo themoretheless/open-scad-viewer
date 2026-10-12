@@ -3,6 +3,8 @@ import {
   type GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
 import type { PublicErrorCode } from './errorContract'
+export { isWellFormedUnicode } from '../core/unicode'
+import { isWellFormedUnicode } from '../core/unicode'
 
 export const MAX_MODEL_SOURCE_LENGTH = MAX_GEOMETRY_SOURCE_CHARACTERS
 export const MAX_MODEL_NAME_LENGTH = 255
@@ -235,13 +237,3 @@ export function validateModelSource(source: string): void {
   }
 }
 
-export function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xD800 && unit <= 0xDBFF) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xDC00 && next <= 0xDFFF)) return false
-    } else if (unit >= 0xDC00 && unit <= 0xDFFF) return false
-  }
-  return true
-}

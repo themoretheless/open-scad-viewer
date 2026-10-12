@@ -14,6 +14,7 @@ import {
   type ExpressionArgument,
   type FunctionValue,
 } from './openscadCompiler'
+import { isWellFormedUnicode } from '../core/unicode'
 
 export const OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES = Object.freeze([
   'abs', 'sign', 'rands', 'min', 'max', 'sin', 'cos', 'asin', 'acos', 'tan', 'atan', 'atan2',
@@ -706,17 +707,6 @@ function characterString(
 const chr: BuiltinHandler = (args, context) => (
   registerString(context, 'chr', args.map(value => characterString(value, context)).join(''))
 )
-
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
-}
 
 const ord: BuiltinHandler = (args, context) => {
   if (args.length === 0) return undefined

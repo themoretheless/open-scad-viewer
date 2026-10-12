@@ -5,6 +5,7 @@ import {
   parseGeometrySourceRoutingHeader,
   type GeometryLanguageContract,
 } from './geometryRouting'
+import { isWellFormedUnicode } from './unicode'
 
 export {
   GEOMETRY_LANGUAGE_CONTRACTS,
@@ -56,17 +57,6 @@ export function geometryEngineClassForLanguageContract(
 export type GeometryBuildPurpose = 'preview' | 'full' | 'analysis' | 'export'
 export type GeometryRepresentation = 'mesh' | 'brep'
 export type GeometryExecutionEvidence = 'planned' | 'runtime' | 'legacy-backfill'
-
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xD800 && unit <= 0xDBFF) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xDC00 && next <= 0xDFFF)) return false
-    } else if (unit >= 0xDC00 && unit <= 0xDFFF) return false
-  }
-  return true
-}
 
 /**
  * Immutable provenance attached to every geometry result and persisted build.

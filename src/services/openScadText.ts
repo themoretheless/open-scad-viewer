@@ -5,6 +5,7 @@ import {
 } from './openScadProject'
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
+import { isWellFormedUnicode } from '../core/unicode'
 
 export const OPENSCAD_TEXT_MAX_FONTS = 32
 export const OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION = 32
@@ -677,17 +678,6 @@ function codePointCount(text: string): number {
     if (count > OPENSCAD_TEXT_MAX_CODE_POINTS) return count
   }
   return count
-}
-
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
 }
 
 function normalizeDirection(value: string): OpenScadTextDirection | undefined {
