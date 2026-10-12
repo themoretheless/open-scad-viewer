@@ -6,6 +6,7 @@ import {
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
 import { isWellFormedUnicode } from '../core/unicode'
+import { u32 } from '../core/bytes'
 
 export const OPENSCAD_TEXT_MAX_FONTS = 32
 export const OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION = 32
@@ -288,13 +289,6 @@ async function loadHarfBuzz(): Promise<HarfBuzzApi> {
 
 function u16(bytes: Uint8Array, offset: number): number {
   return bytes[offset] * 0x100 + bytes[offset + 1]
-}
-
-function u32(bytes: Uint8Array, offset: number): number {
-  return ((bytes[offset] * 0x1000000)
-    + (bytes[offset + 1] << 16)
-    + (bytes[offset + 2] << 8)
-    + bytes[offset + 3]) >>> 0
 }
 
 function asciiTag(bytes: Uint8Array, offset: number): string {

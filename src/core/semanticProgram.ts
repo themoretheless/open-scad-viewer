@@ -1,5 +1,6 @@
 import type { GeometryLanguageContract } from './geometryExecution'
 import { sha256Hex } from './sha256'
+import { utf8Compare } from './utf8Order'
 
 export const SEMANTIC_PROGRAM_CONTRACT = 'semantic-program-contract-v1' as const
 export const SEMANTIC_PROGRAM_IDENTITY = 'semantic-program-core-v1' as const
@@ -501,16 +502,6 @@ const CAPABILITY_BY_KIND: Readonly<Record<SemanticNode['kind'], string>> = Objec
   projection: 'operation.projection',
   offset: 'operation.offset',
 })
-
-function utf8Compare(left: string, right: string): number {
-  const leftBytes = new TextEncoder().encode(left)
-  const rightBytes = new TextEncoder().encode(right)
-  const shared = Math.min(leftBytes.length, rightBytes.length)
-  for (let index = 0; index < shared; index++) {
-    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] - rightBytes[index]
-  }
-  return leftBytes.length - rightBytes.length
-}
 
 export function deriveSemanticCapabilityClosure(
   core: Pick<SemanticProgramCoreV1, 'language' | 'nodes' | 'result' | 'operations' | 'occurrences' | 'declaredCapabilities' | 'diagnosticTemplates'>,

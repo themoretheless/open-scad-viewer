@@ -7,6 +7,7 @@ import { sha256Hex } from '../core/sha256'
 import { isGeometryEvaluationResultPayload } from '../services/geometryWorkerProtocol'
 import { isWellFormedUnicode as wellFormed } from '../core/unicode'
 import { truncateWellFormed } from '../core/unicode'
+import { record, ownData, exactDataKeys, nonNegativeSafeInteger } from '../core/plainData'
 
 export const MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION = 1 as const
 
@@ -121,31 +122,6 @@ const IDENTITY_KEYS = Object.freeze(Object.keys(MCP_MANIFOLD_PLAN_QUALIFICATION_
 const ERROR_KEYS = Object.freeze(['name', 'message', 'code', 'line', 'column', 'start', 'end'])
 const MAX_ERROR_MESSAGE_CHARACTERS = 250_512
 
-function record(value: unknown): Record<string, unknown> | null {
-  if (value === null || Array.isArray(value) || typeof value !== 'object') return null
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-    ? value as Record<string, unknown>
-    : null
-}
-
-function exactDataKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const descriptors = Object.getOwnPropertyDescriptors(value)
-  const actual = Reflect.ownKeys(descriptors)
-  return actual.length === keys.length
-    && actual.every(key => typeof key === 'string' && keys.includes(key))
-    && keys.every(key => {
-      const descriptor = descriptors[key]
-      return descriptor !== undefined
-        && descriptor.enumerable
-        && Object.hasOwn(descriptor, 'value')
-    })
-}
-
-function nonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0
-}
-
 function isIdentity(value: unknown): value is McpManifoldPlanQualificationIdentity {
   const candidate = record(value)
   if (candidate === null || !exactDataKeys(candidate, IDENTITY_KEYS)) return false
@@ -181,13 +157,6 @@ function isFailure(value: unknown, sourceLength: number): value is McpManifoldPl
   const end = candidate.end as number | null
   return (start === null) === (end === null)
     && (start === null || (end! >= start && end! <= sourceLength))
-}
-
-function ownData(value: object, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key)
-  return descriptor !== undefined && Object.hasOwn(descriptor, 'value')
-    ? descriptor.value
-    : undefined
 }
 
 /**

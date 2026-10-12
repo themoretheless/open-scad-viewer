@@ -29,6 +29,7 @@ import {
 import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
 import { isWellFormedUnicode as wellFormed } from '../core/unicode'
 import { truncateWellFormed } from '../core/unicode'
+import { record, ownData, exactDataKeys, positiveSafeInteger } from '../core/plainData'
 
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
@@ -190,33 +191,6 @@ const MAX_ERROR_MESSAGE_CHARACTERS = 4_096
 const MAX_CAPABILITIES_TEXT_CHARACTERS = 64 * 1024
 const MAX_CAPABILITIES_DATA_NODES = 2_048
 
-function record(value: unknown): Record<string, unknown> | null {
-  if (value === null || Array.isArray(value) || typeof value !== 'object') return null
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-    ? value as Record<string, unknown>
-    : null
-}
-
-function exactDataKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const descriptors = Object.getOwnPropertyDescriptors(value)
-  const actual = Reflect.ownKeys(descriptors)
-  return actual.length === keys.length
-    && actual.every(key => typeof key === 'string' && keys.includes(key))
-    && keys.every(key => {
-      const descriptor = descriptors[key]
-      return descriptor !== undefined && descriptor.enumerable
-        && Object.hasOwn(descriptor, 'value')
-    })
-}
-
-function ownData(value: object, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key)
-  return descriptor !== undefined && Object.hasOwn(descriptor, 'value')
-    ? descriptor.value
-    : undefined
-}
-
 function denseDataArray(value: unknown, maximum: number): value is unknown[] {
   if (!Array.isArray(value) || value.length > maximum) return false
   const keys = Reflect.ownKeys(value)
@@ -227,10 +201,6 @@ function denseDataArray(value: unknown, maximum: number): value is unknown[] {
       || !Object.hasOwn(descriptor, 'value')) return false
   }
   return true
-}
-
-function positiveSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) > 0
 }
 
 function nullablePositiveInteger(value: unknown): value is number | null {

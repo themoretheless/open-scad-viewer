@@ -5,6 +5,7 @@ import {
   resolveOpenScadProjectPath,
   type OpenScadProjectFile,
 } from './openScadProject'
+import { u32 } from '../core/bytes'
 
 export const OPENSCAD_SURFACE_MAX_DIMENSION = 4_096
 export const OPENSCAD_SURFACE_MAX_PIXELS = 250_000
@@ -229,13 +230,6 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
   }
   enforceDimensions(rows.length, columns)
   return heightMap(rows.length, columns, Float64Array.from(rows.flat()), 'dat')
-}
-
-function u32(bytes: Uint8Array, offset: number): number {
-  return ((bytes[offset] * 0x1000000)
-    + (bytes[offset + 1] << 16)
-    + (bytes[offset + 2] << 8)
-    + bytes[offset + 3]) >>> 0
 }
 
 const CRC_TABLE = (() => {

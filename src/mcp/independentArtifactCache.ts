@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { dataSha256 } from './artifactHash'
 
 export const MAX_INDEPENDENT_ARTIFACT_CACHE_ENTRIES = 8
 export const MAX_INDEPENDENT_ARTIFACT_CACHE_BYTES = 24 * 1024 * 1024
@@ -31,10 +31,6 @@ interface CachedArtifact extends IndependentArtifactSummary {
 
 export function independentArtifactMimeType(format: IndependentArtifactFormat): string {
   return format === 'stl' ? 'model/stl' : 'model/obj'
-}
-
-function dataSha256(data: Uint8Array): string {
-  return createHash('sha256').update(data).digest('hex')
 }
 
 function isWellFormedUnicode(value: string): boolean {

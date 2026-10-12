@@ -34,6 +34,7 @@ import { sha256Hex } from '../core/sha256'
 import { parseGeometrySourceRoutingHeader } from '../core/geometryRouting'
 import { isSemanticProgramCodecOwnedGraph } from './semanticProgramCodec'
 import { deepFreeze } from '../core/objects'
+import { utf8Compare } from '../core/utf8Order'
 
 export class SemanticProgramValidationError extends TypeError {
   constructor(
@@ -129,16 +130,6 @@ function assertSchemaVersion(value: unknown, path: string): void {
     fail('E_SEMANTIC_RELOWER_REQUIRED', path, 'semantic programs before 1.2 require exact-source re-lowering')
   }
   if (value.major !== 1 || value.minor !== 2) fail('E_SEMANTIC_VERSION', path, 'only schema version 1.2 is supported')
-}
-
-function utf8Compare(left: string, right: string): number {
-  const leftBytes = new TextEncoder().encode(left)
-  const rightBytes = new TextEncoder().encode(right)
-  const shared = Math.min(leftBytes.length, rightBytes.length)
-  for (let index = 0; index < shared; index++) {
-    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] - rightBytes[index]
-  }
-  return leftBytes.length - rightBytes.length
 }
 
 function validateSortedStrings(value: unknown, path: string, maximum: number, idPattern: RegExp): readonly string[] {
