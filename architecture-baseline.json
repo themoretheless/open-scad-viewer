@@ -24,7 +24,6 @@
     "crates/brep-core/src/tolerant_boolean.rs": 1640,
     "crates/brep-core/src/trim_sew.rs": 2632,
     "crates/brep-core/src/trimmed_face_recipe.rs": 1133,
-    "crates/brep-core/src/uv_arrangement.rs": 1772,
     "crates/brep-intersect/src/cone_cone.rs": 852,
     "crates/brep-intersect/src/cone_torus.rs": 1195,
     "crates/brep-intersect/src/cylinder_cylinder.rs": 887,
