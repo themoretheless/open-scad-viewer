@@ -4,7 +4,6 @@
     "crates/brep-core/src/analytic.rs": 869,
     "crates/brep-core/src/box_sphere_boolean.rs": 813,
     "crates/brep-core/src/circular_blend.rs": 1964,
-    "crates/brep-core/src/close_topology.rs": 1273,
     "crates/brep-core/src/gear.rs": 839,
     "crates/brep-core/src/imprint_pipeline.rs": 1659,
     "crates/brep-core/src/intersections/sphere_sphere.rs": 1227,
