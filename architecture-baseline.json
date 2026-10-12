@@ -75,7 +75,6 @@
     "crates/nurbs-intersect/src/nurbs_ss.rs": 2526,
     "crates/openscad-core/src/builtins.rs": 1424,
     "crates/openscad-core/src/eval_tests.rs": 978,
-    "crates/openscad-core/src/eval.rs": 3433,
     "crates/openscad-core/src/parser.rs": 1137,
     "crates/openscad-core/src/value.rs": 1102,
     "crates/photogrammetry-core/src/bundle.rs": 1835,
