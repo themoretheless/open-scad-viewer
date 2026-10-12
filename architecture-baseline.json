@@ -71,7 +71,6 @@
     "src/services/meshEditing.ts": 511,
     "src/services/modelGraphNurbsKernel.ts": 723,
     "src/services/nurbsConstructors.ts": 511,
-    "src/services/openScadBuiltinFunctions.ts": 1033,
     "src/services/openscadCompiler.ts": 911,
     "src/services/openscadParser.ts": 3582,
     "src/services/openscadSemanticLowerer.ts": 3050,
