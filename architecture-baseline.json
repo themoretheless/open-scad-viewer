@@ -11,7 +11,6 @@
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/nurbs_ss_g6.rs": 2562,
     "crates/brep-core/src/offset_edge_supports.rs": 1103,
-    "crates/brep-core/src/planar_trim.rs": 1707,
     "crates/brep-core/src/prism.rs": 830,
     "crates/brep-core/src/shared_boundary.rs": 884,
     "crates/brep-core/src/source_contour_proposal.rs": 1379,
