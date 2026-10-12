@@ -30,7 +30,6 @@
     "crates/geometry-bridge/src/lib.rs": 2000,
     "crates/geometry-bridge/src/mesh_shell.rs": 1056,
     "crates/geometry-bridge/src/tests.rs": 1212,
-    "crates/geometry-ops/src/sculpt.rs": 882,
     "crates/mechanical-core/src/lib.rs": 991,
     "crates/modelgraph-runtime/src/emit/emitter.rs": 1083,
     "crates/modelgraph-runtime/src/eval.rs": 1417,
