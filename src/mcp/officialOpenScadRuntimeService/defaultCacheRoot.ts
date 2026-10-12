@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { lstat, readFile, realpath, stat } from 'node:fs/promises'
 
 export function defaultCacheRoot(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), '../..', '.open-scad-runtime')
+  return resolve(dirname(fileURLToPath(import.meta.url)), '../../..', '.open-scad-runtime')
 }
 
 export function defaultRunnerPath(): string {

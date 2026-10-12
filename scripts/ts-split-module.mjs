@@ -97,7 +97,9 @@ for (let index = 0; index < statements.length; index++) {
     if (!ts.isFunctionDeclaration(next) || next.name?.text !== s.name.text) throw new Error(`broken overload ${s.name.text}`)
     if (next.body) break
   }
-  if (!assignsModuleState(statements.slice(index, end + 1))) units.push({ name: s.name.text, first: index, last: end, exported: isExported(s) })
+  // Paths derived from dirname(import.meta.url) cannot be rebased mechanically; keep such functions in place.
+  const usesModuleDir = statements.slice(index, end + 1).some(n => /dirname\([^)]*import\.meta\.url/.test(n.getText(source)))
+  if (!usesModuleDir && !assignsModuleState(statements.slice(index, end + 1))) units.push({ name: s.name.text, first: index, last: end, exported: isExported(s) })
   index = end
 }
 const unitText = u => text.slice(statements[u.first].getFullStart(), statements[u.last].getEnd()).replace(/^\n+/, '')
