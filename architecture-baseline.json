@@ -72,7 +72,6 @@
     "src/services/nurbsConstructors.ts": 511,
     "src/services/openScadBuiltinFunctions.ts": 1033,
     "src/services/openscadCompiler.ts": 1109,
-    "src/services/openScadImport.ts": 3168,
     "src/services/openscadParser.ts": 3582,
     "src/services/openscadSemanticLowerer.ts": 3050,
     "src/services/openScadStableExpressionEval.ts": 582,
