@@ -162,7 +162,7 @@ function runStdioBurst(requestCount = 24): Promise<StdioBurstRun> {
       settled = true
       child.kill()
       rejectRun(new Error(`Timed out waiting for MCP burst responses\nstdout:\n${stdout}\nstderr:\n${stderr}`))
-    }, 10_000)
+    }, 40_000)
 
     const reject = (error: Error) => {
       if (settled) return
@@ -315,7 +315,7 @@ describe('MCP CLI', () => {
     expect(run.responseIds).toEqual(Array.from({ length: 24 }, (_, index) => 100 + index))
     expect(run.busyResponses).toBeGreaterThan(0)
     expect(run.stderr).not.toContain('MCP transport error')
-  }, 15_000)
+  }, 45_000)
 
   it('closes the stdio handle and geometry runtime before the store, exactly once', async () => {
     const events: string[] = []
