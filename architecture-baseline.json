@@ -65,7 +65,6 @@
     "crates/openscad-core/src/value.rs": 1102,
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
     "crates/photogrammetry-core/src/pipeline.rs": 1028,
-    "crates/planar-geometry/src/curve_boolean.rs": 1241,
     "crates/planar-geometry/src/curve.rs": 887,
     "crates/planar-geometry/src/edit.rs": 1121,
     "crates/planar-geometry/src/path.rs": 1516,
