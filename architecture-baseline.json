@@ -22,7 +22,6 @@
     "crates/brep-intersect/src/plane_cone.rs": 2048,
     "crates/brep-intersect/src/plane_cylinder.rs": 1343,
     "crates/brep-intersect/src/plane_sphere.rs": 956,
-    "crates/brep-intersect/src/plane_torus.rs": 1104,
     "crates/brep-intersect/src/sphere_cone.rs": 892,
     "crates/brep-intersect/src/sphere_cylinder.rs": 829,
     "crates/brep-intersect/src/torus_torus.rs": 940,
