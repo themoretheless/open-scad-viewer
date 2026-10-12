@@ -34,7 +34,6 @@
     "crates/openscad-core/src/eval/evaluator/evaluator/evaluator.rs": 3115,
     "crates/openscad-core/src/parser/parser_2/parser.rs": 1085,
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
-    "crates/planar-geometry/src/path.rs": 1516,
     "crates/planar-geometry/src/rings.rs": 962,
     "crates/planar-geometry/src/stroke.rs": 961,
     "crates/polygon-core/src/solid/boolean.rs": 1505,
