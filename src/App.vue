@@ -10,7 +10,7 @@ import {readSweepViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
@@ -70,7 +70,7 @@ import {
 import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
-import { nextRovingIndex } from './services/rovingFocus'
+import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
@@ -81,6 +81,7 @@ import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } fro
 import {
   setStorageFailureHandler,
   storageGet,
+  storageGetJSON,
   storageSet,
   storageSetJSON,
 } from './services/safeStorage'
@@ -113,8 +114,6 @@ import type {
   StandardView,
 } from './services/rendererContracts'
 import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
-import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, STORAGE_NOTICE_THROTTLE_MS, buildSources, downloadBlob, replaceSharedRecoveryHash, hexToRgb, lineAndColumn, readCommandMru, sanitizeFileName } from './appHelpers'
-import type { DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
@@ -148,6 +147,7 @@ const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
 const blocks = computed(() => editorBlocks(code.value))
 const foldedLines = ref(new Set<number>())
+const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const editorRows = computed(() => {
   const lines = code.value.split('\n')
@@ -213,6 +213,11 @@ async function editFoldedLine(line: number) {
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => editorRows.value.length)
+// Virtualized gutter: only the visible window of rows (± overscan) is rendered.
+// Row heights must match the CSS: .gutter-row is 1.58em at 12.5px, .guide-row is 1.58em at .82rem.
+const GUTTER_OVERSCAN_ROWS = 12
+const GUTTER_CONTENT_PADDING_PX = 14
+const gutterRowPx = 1.58 * 12.5
 const guideRowPx = ref(1.58 * 0.82 * 16)
 const gutterScrollTop = ref(0)
 const gutterViewportHeight = ref(600)
@@ -584,9 +589,11 @@ const sectionOffset = computed(() => sceneState.value.section.offset)
 const sectionFlip = computed(() => sceneState.value.section.flip)
 const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
+type DockTab = 'scene' | 'inspect' | 'parameters' | 'svg' | 'photo' | 'perf'
 const dockTab = ref<DockTab>('scene')
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
+const MAIN_COMMAND_PREFIX = 'main:'
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const base = paletteCommands.value.filter(isPaletteCommandEnabled)
   // The source tools only make sense while the editor drawer is showing.
@@ -605,6 +612,26 @@ const {
 })
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
+
+const dockTabs: readonly DockTab[] = ['scene', 'inspect', 'parameters', 'svg', 'photo', 'perf']
+const DOCK_ICONS: Record<DockTab, string> = {
+  scene: 'M4 6h16M4 12h16M4 18h16',
+  inspect: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
+  parameters: 'M4 8h10M18 8h2M4 16h4M12 16h8M16 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  svg: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
+  photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  perf: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+}
+// Panels moved into the dock are <details> components; open them when their tab shows.
+function revealDockDetails(el: Element | ComponentPublicInstance | null) {
+  if (!(el instanceof HTMLElement)) return
+  for (const details of el.querySelectorAll<HTMLDetailsElement>(':scope > details')) {
+    if (!details.open) details.open = true
+  }
+}
+const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
+  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
+}
 const exportDialogOpen = ref(false)
 const exportDialogRef = ref<HTMLElement | null>(null)
 function openExportDialog() {
@@ -622,6 +649,14 @@ const persistenceLabel = computed(() => workspaceConflict.value
   ? t('storageConflict')
   : workspacePersistenceStatus.value === 'saving' ? t('savingDraft')
     : workspacePersistenceStatus.value === 'error' ? t('unsavedDraft') : t('savedDraftStatus'))
+function closeMenus() {
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>('.app details.menu[open]')) menu.open = false
+}
+function closeMenusOutside(event: Event) {
+  const target = event.target as Element | null
+  if (target?.closest('details.menu')) return
+  closeMenus()
+}
 function handleDockTabKeydown(event: KeyboardEvent) {
   const key = DOCK_KEY_MAP[event.key]
   if (!key) return
@@ -867,6 +902,9 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
+/** Rate limit for the storage-write-failure notice. */
+const STORAGE_NOTICE_THROTTLE_MS = 10_000
+
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
 let lastStorageNotice = 0
@@ -892,6 +930,7 @@ let topbarResizeObserver: ResizeObserver | null = null
 let layoutResizeObserver: ResizeObserver | null = null
 let editorResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
+const buildSources = new Map<number, string>()
 
 const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
@@ -1741,6 +1780,15 @@ function saveSource() {
   showNotice(t('saved'))
 }
 
+function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
 async function exportAdditionalMesh() {
   if (!canExport.value) return
@@ -1878,6 +1926,12 @@ async function shareSource() {
   }
 }
 
+function replaceSharedRecoveryHash(source: string) {
+  const url = new URL(window.location.href)
+  url.hash = `code=${encodeWorkspaceShare(source)}`
+  history.replaceState(null, '', url)
+}
+
 function fitView() { renderer?.fitView() }
 function resetView() {
   viewportController.resetView()
@@ -1925,6 +1979,11 @@ function setDisplayMode(mode: DisplayMode) {
   renderer?.setDisplayMode(mode)
 }
 function changeDisplayMode() { renderer?.setDisplayMode(displayMode.value) }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const value = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#ffffff'
+  return [1, 3, 5].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16) / 255) as [number, number, number]
+}
 function setShadingModel(model: ShadingModel) {
   shadingModel.value = model
   renderer?.setDefaultShadingModel(model)
@@ -2213,6 +2272,12 @@ function closeScanPanel() {
   void nextTick(() => scanToggleRef.value?.focus())
 }
 
+function lineAndColumn(source: string, offset: number) {
+  const before = source.slice(0, clamp(offset, 0, source.length))
+  const line = before.split('\n').length
+  return { line, column: before.length - before.lastIndexOf('\n') }
+}
+
 function executeCommand(id: string) {
   if (id.startsWith(MAIN_COMMAND_PREFIX)) { paletteOpen.value = false; mainToolsRef.value?.execute(id.slice(MAIN_COMMAND_PREFIX.length)); return }
   const target = paletteCommands.value.find(candidate => candidate.id === id)
@@ -2381,6 +2446,12 @@ function showNotice(message: string) {
   if (noticeTimeout) clearTimeout(noticeTimeout)
   noticeTimeout = setTimeout(() => { notice.value = '' }, 2200)
 }
+
+function readCommandMru(): string[] {
+  const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
+  return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
+}
+function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 
