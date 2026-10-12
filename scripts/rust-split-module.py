@@ -332,7 +332,7 @@ def norm_lines(text):
         l = l.strip()
         l = l.replace('pub(in super::super) ', '').replace('pub(super) ', '').replace('pub(crate) ', '')
         l = l.replace('super::super::', 'super::')
-        l = re.sub(r'(include_(?:str|bytes)!\(\s*")(?:\.\./)+', r'\1', l)
+        l = re.sub(r'(include(?:_str|_bytes)?!\(\s*"|#\[path\s*=\s*")(?:\.\./)+', r'\1', l)
         if not l or l in ('use super::*;', '#[cfg(test)]', '}') or re.match(r'^(pub )?(use|mod) \w+(::\*)?;$', l) \
                 or re.match(r'^mod \w+ \{$', l):
             continue
