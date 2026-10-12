@@ -46,7 +46,6 @@
     "crates/modelgraph-text/src/parser.rs": 1438,
     "crates/nurbs-core/src/foundation.rs": 3449,
     "crates/nurbs-core/src/intersection.rs": 1769,
-    "crates/nurbs-core/src/surface_quotient_injectivity.rs": 1128,
     "crates/nurbs-core/src/surface.rs": 812,
     "crates/nurbs-core/src/sweeps/progressive_miter/frame_certificate.rs": 1000,
     "crates/nurbs-core/src/sweeps/progressive_sweep.rs": 1152,
