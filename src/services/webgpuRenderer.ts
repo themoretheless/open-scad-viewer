@@ -108,6 +108,11 @@ import { GpuPicker } from './gpuPicker'
 export { GpuPicker } from './gpuPicker'
 import { GpuWboitRenderer } from './gpuWboit'
 export { GpuWboitRenderer } from './gpuWboit'
+import { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
+export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
+import { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
+export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
+export { GeometryWorkerPool, detectHardwareConcurrency } from './geometryWorkerPool'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -361,6 +366,7 @@ export class WebGPURenderer {
   private csgDepthStencilView: GPUTextureView | null = null
   private gpuPicker: GpuPicker | null = null
   private wboit: GpuWboitRenderer | null = null
+  private gpuBufferArena: GpuBufferArena | null = null
   private transparencyMode: 'sorted' | 'wboit' = 'sorted'
 
   private meshes: GMesh[] = []
@@ -767,6 +773,36 @@ export class WebGPURenderer {
       this.wboit = new GpuWboitRenderer()
     }
     return this.wboit
+  }
+
+  getBufferArena(): GpuBufferArena | null {
+    if (!this.dev || this.dead || this.lost) return null
+    if (!this.gpuBufferArena) {
+      this.gpuBufferArena = new GpuBufferArena(this.dev)
+    }
+    return this.gpuBufferArena
+  }
+
+  async sliceSceneMeshesGpu(options: {
+    planeNormal: [number, number, number]
+    firstPlaneOffset: number
+    layerThickness: number
+    numLayers: number
+  }): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
+    const results: Array<{ meshIndex: number; slice: SlicerResult }> = []
+    for (let i = 0; i < this.meshes.length; i++) {
+      const m = this.meshes[i]
+      if (!m.visible) continue
+      const slice = await runGpuMeshSlicer(m.vertices, m.indices, {
+        strideFloats: 6,
+        planeNormal: options.planeNormal,
+        firstLayerDistance: options.firstPlaneOffset,
+        layerStep: options.layerThickness,
+        numLayers: options.numLayers,
+      })
+      results.push({ meshIndex: i, slice })
+    }
+    return results
   }
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
@@ -3135,6 +3171,8 @@ export class WebGPURenderer {
     this.gpuPicker = null
     this.wboit?.destroy()
     this.wboit = null
+    this.gpuBufferArena?.destroy()
+    this.gpuBufferArena = null
     this.sceneUB?.destroy()
     this.sceneUB = null
     this.morphDummyVB?.destroy()
