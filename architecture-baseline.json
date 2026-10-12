@@ -61,7 +61,6 @@
     "src/mcp/officialOpenScadRuntimeService.ts": 624,
     "src/mcp/publicError.ts": 550,
     "src/services/buildCoordinator.ts": 911,
-    "src/services/commandRegistry.ts": 646,
     "src/services/geometry/brepCapability.ts": 540,
     "src/services/geometryBuildEngine.ts": 594,
     "src/services/mainSolidProtocol/mainSolidResult.ts": 501,
