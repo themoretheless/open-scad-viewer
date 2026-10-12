@@ -3,7 +3,6 @@
     "crates/brep-core/src/analytic.rs": 869,
     "crates/brep-core/src/box_sphere_boolean.rs": 813,
     "crates/brep-core/src/circular_blend.rs": 1964,
-    "crates/brep-core/src/gear.rs": 839,
     "crates/brep-core/src/imprint_pipeline.rs": 1659,
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/nurbs_ss_g6.rs": 2562,
