@@ -99,7 +99,7 @@ impl<'a> Emitter<'a> {
     }
     // Traversal carries distinct lexical, geometric and assembly contexts.
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn emit(
+    pub(in super::super) fn emit(
         &mut self,
         key: &str,
         nodes: &Rc<Nodes<'a>>,
@@ -219,7 +219,7 @@ impl<'a> Emitter<'a> {
                 }
                 self.lines.push(format!("inner_radius={};outer_radius={};center_hole_diameter={};gap={};spinner_height={};helix_angle={};",number(r),number(outer),number(bore),number(gap),number(height),number(helix)));
                 self.lines
-                    .push(include_str!("../planetary_spinner.scad").into());
+                    .push(include_str!("../../planetary_spinner.scad").into());
                 self.mechanical_reports.push(json!({"node_id":key,"kind":"planetary_spinner","sun_teeth":32,"planet_teeth":4,"ring_teeth":40,"planet_count":18,"gap_mm":gap,"profile":"fixed sampled prototype","printability":"unknown"}));
             }
             "gear" | "thread" | "planetary_gears" => {
