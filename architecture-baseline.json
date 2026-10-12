@@ -15,7 +15,6 @@
     "crates/brep-core/src/stepped_prism.rs": 806,
     "crates/brep-core/src/tolerant_boolean.rs": 1640,
     "crates/brep-core/src/trim_sew.rs": 2632,
-    "crates/brep-intersect/src/cone_cone.rs": 852,
     "crates/brep-intersect/src/plane_cone.rs": 2048,
     "crates/brep-intersect/src/plane_cylinder.rs": 1343,
     "crates/brep-intersect/src/sphere_cylinder.rs": 829,
