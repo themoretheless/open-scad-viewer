@@ -54,7 +54,6 @@
     "crates/geometry-bridge/src/tests.rs": 1212,
     "crates/geometry-ops/src/sculpt.rs": 882,
     "crates/mechanical-core/src/lib.rs": 991,
-    "crates/modelgraph-runtime/src/emit.rs": 1838,
     "crates/modelgraph-runtime/src/eval.rs": 1417,
     "crates/modelgraph-runtime/src/nurbs.rs": 1154,
     "crates/modelgraph-runtime/src/schema.rs": 1427,
