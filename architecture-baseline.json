@@ -21,7 +21,6 @@
     "crates/brep-intersect/src/plane_cylinder.rs": 1343,
     "crates/brep-intersect/src/sphere_cone.rs": 892,
     "crates/brep-intersect/src/sphere_cylinder.rs": 829,
-    "crates/brep-intersect/src/torus_torus.rs": 940,
     "crates/brep-topology/src/lib.rs": 1468,
     "crates/bridge-svg/src/svg.rs": 2467,
     "crates/cad-step/src/nurbs_step_shared.rs": 1202,
