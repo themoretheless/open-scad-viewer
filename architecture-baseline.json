@@ -51,7 +51,6 @@
     "crates/openscad-core/src/eval/evaluator.rs": 3115,
     "crates/openscad-core/src/parser/parser_2.rs": 1085,
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
-    "crates/planar-geometry/src/curve.rs": 887,
     "crates/planar-geometry/src/path.rs": 1516,
     "crates/planar-geometry/src/rings.rs": 962,
     "crates/planar-geometry/src/stroke.rs": 961,
