@@ -78,7 +78,6 @@
     "src/services/openScadStablePrimitiveSemantics.ts": 645,
     "src/services/openScadSurface.ts": 716,
     "src/services/semanticProgramCodec.ts": 574,
-    "src/services/semanticProgramExecutor.ts": 800,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
     "src/services/webgpuRenderer.ts": 2900,
     "src/services/workspacePersistence.ts": 529
