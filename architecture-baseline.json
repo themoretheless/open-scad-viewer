@@ -64,7 +64,7 @@
     "src/services/geometry/brepCapability.ts": 540,
     "src/services/geometryBuildEngine.ts": 594,
     "src/services/mainSolidProtocol/mainSolidResult.ts": 501,
-    "src/services/manifoldPlanBackend.ts": 640,
+    "src/services/manifoldPlanBackend.ts": 551,
     "src/services/meshEditing.ts": 511,
     "src/services/modelGraphNurbsKernel/buildOwnNurbsResolved.ts": 589,
     "src/services/nurbsConstructors.ts": 511,
