@@ -43,7 +43,7 @@
     "scripts/refresh-qualification-fingerprints-v45-v62.mjs": 533,
     "scripts/run-browser-qualification.mjs": 1374,
     "scripts/run-manifold-g1-memory-qualification.mjs": 1046,
-    "src/App.vue": 3273,
+    "src/App.vue": 3174,
     "src/components/CommandPalette.vue": 416,
     "src/components/FunctionReference.vue": 402,
     "src/components/InspectPanel.vue": 590,

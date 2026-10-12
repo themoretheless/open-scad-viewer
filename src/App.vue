@@ -20,6 +20,7 @@ import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEd
 import type { DirectDocument } from './services/directModeling'
 import { APP_STRINGS as L, type Language } from './i18n/appStrings'
 import { useAppearance } from './composables/useAppearance'
+import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
@@ -70,12 +71,6 @@ import { isPaletteCommandEnabled, type PaletteCommand } from './services/command
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
 import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
-import {
-  findLiteralMatches,
-  replaceAllLiteral,
-  replaceExpectedMatch,
-  wrappedMatchIndex,
-} from './services/textSearch'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
@@ -607,22 +602,13 @@ const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
 const dockOpen = ref(true)
-const findOpen = ref(false)
-const replaceOpen = ref(false)
-const findQuery = ref('')
-const findReplacement = ref('')
-const findCaseSensitive = ref(false)
-const activeFindIndex = ref(-1)
-const findResult = computed(() => findLiteralMatches(code.value, findQuery.value, {
-  caseSensitive: findCaseSensitive.value,
-}))
-const findStatus = computed(() => {
-  if (findResult.value.truncated) return t('tooManyMatches')
-  const count = findResult.value.matches.length
-  return count ? `${Math.max(0, activeFindIndex.value) + 1}/${count}` : t('noMatches')
-})
-watch([findQuery, findCaseSensitive, code], () => {
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+const {
+  findOpen, replaceOpen, findQuery, findReplacement, findCaseSensitive, activeFindIndex, findResult, findStatus,
+  openEditorFind, closeEditorFind, navigateFind, handleFindKeydown,
+  replaceCurrentFindMatch, replaceAllFindMatches,
+} = useEditorFind({
+  code, editor: editorRef, input: findInputRef,
+  translate: key => t(key), notify: message => showNotice(message), onEdited: () => handleEditorInput(),
 })
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
@@ -2190,91 +2176,6 @@ function handleEditorInput() {
   // The v-model update precedes this handler, so this also clears stale
   // geometry immediately instead of waiting for the next Worker response.
   syncSourceHighlightFromEditor()
-}
-
-function openEditorFind(withReplace = false) {
-  const editor = editorRef.value
-  if (!findOpen.value && editor && editor.selectionStart !== editor.selectionEnd) {
-    findQuery.value = editor.value.slice(editor.selectionStart, editor.selectionEnd)
-  }
-  findOpen.value = true
-  replaceOpen.value = withReplace
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  // The command palette restores its opener after closing. A second render
-  // turn makes the explicit Find target win that documented focus handoff.
-  void nextTick(() => nextTick(() => {
-    findInputRef.value?.focus()
-    findInputRef.value?.select()
-    revealFindMatch()
-  }))
-}
-
-function closeEditorFind() {
-  findOpen.value = false
-  replaceOpen.value = false
-  void nextTick(() => editorRef.value?.focus())
-}
-
-function revealFindMatch() {
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!match || !editorRef.value) return
-  editorRef.value.setSelectionRange(match.start, match.end)
-}
-
-function navigateFind(direction: 1 | -1) {
-  activeFindIndex.value = wrappedMatchIndex(
-    activeFindIndex.value,
-    findResult.value.matches.length,
-    direction,
-  )
-  revealFindMatch()
-}
-
-function handleFindKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    closeEditorFind()
-  } else if (event.key === 'Enter') {
-    event.preventDefault()
-    navigateFind(event.shiftKey ? -1 : 1)
-  }
-}
-
-function replaceCurrentFindMatch() {
-  const editor = editorRef.value
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!editor || !match) return
-  if (replaceExpectedMatch(code.value, match, findReplacement.value) === null) {
-    activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-    revealFindMatch()
-    return
-  }
-  editor.setRangeText(findReplacement.value, match.start, match.end, 'select')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length
-    ? Math.min(activeFindIndex.value, findResult.value.matches.length - 1)
-    : -1
-  revealFindMatch()
-}
-
-function replaceAllFindMatches() {
-  const editor = editorRef.value
-  if (!editor) return
-  const result = replaceAllLiteral(code.value, findQuery.value, findReplacement.value, {
-    caseSensitive: findCaseSensitive.value,
-  })
-  if (result.status === 'too-many' || result.status === 'too-large') {
-    showNotice(t('tooManyMatches'))
-    return
-  }
-  if (result.status !== 'replaced') return
-  editor.setRangeText(result.source, 0, editor.value.length, 'preserve')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  revealFindMatch()
 }
 
 function revealCurrentDiagnostic() {
