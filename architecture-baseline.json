@@ -48,7 +48,7 @@
     "src/components/FunctionReference.vue": 402,
     "src/components/InspectPanel.vue": 590,
     "src/components/SceneOutliner.vue": 745,
-    "src/core/openScad2021Contract.ts": 543,
+    "src/core/openScad2021Contract.ts": 506,
     "src/features/DirectModeler.vue": 4576,
     "src/features/MeshModeler.vue": 976,
     "src/mcp/createServer.ts": 963,
