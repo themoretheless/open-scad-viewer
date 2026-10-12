@@ -81,7 +81,7 @@
     "src/services/semanticProgramCodec.ts": 574,
     "src/services/semanticProgramExecutor.ts": 800,
     "src/services/semanticProgramValidator.ts": 2374,
-    "src/services/webgpuRenderer.ts": 2955,
+    "src/services/webgpuRenderer.ts": 2900,
     "src/services/workspacePersistence.ts": 529
   },
   "layers": []
