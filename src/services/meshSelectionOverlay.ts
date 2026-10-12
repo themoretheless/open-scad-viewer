@@ -45,6 +45,8 @@ const EMPTY_SOURCE_OVERLAY: SourceOverlayGeometry = {
 /** Hard ceiling for transient source-highlight geometry, independent of callers. */
 export const MAX_SOURCE_OVERLAY_TRIANGLES = 20_000
 
+const SCRATCH_TRI_PTS = new Float64Array(9)
+
 function triangleVertexIndices(indices: Uint32Array, triangleIndex: number): [number, number, number] | null {
   const offset = triangleIndex * 3
   if (!Number.isInteger(triangleIndex) || triangleIndex < 0 || offset + 2 >= indices.length) return null
@@ -58,6 +60,40 @@ function worldVertex(vertices: Float32Array, transform: Mat4, vertexIndex: numbe
   if (!point.every(Number.isFinite)) return null
   const world = transformPoint(transform, point)
   return world.every(Number.isFinite) ? world : null
+}
+
+function writeWorldVertex(
+  vertices: Float32Array,
+  transform: Mat4,
+  vertexIndex: number,
+  out: Float64Array,
+  outOffset: number,
+): boolean {
+  const offset = vertexIndex * 6
+  if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || offset + 2 >= vertices.length) return false
+  const x = vertices[offset]
+  const y = vertices[offset + 1]
+  const z = vertices[offset + 2]
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return false
+  const w = transform[12] * x + transform[13] * y + transform[14] * z + transform[15]
+  const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
+  const wx = (transform[0] * x + transform[1] * y + transform[2] * z + transform[3]) * iw
+  const wy = (transform[4] * x + transform[5] * y + transform[6] * z + transform[7]) * iw
+  const wz = (transform[8] * x + transform[9] * y + transform[10] * z + transform[11]) * iw
+  if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) return false
+  out[outOffset] = wx
+  out[outOffset + 1] = wy
+  out[outOffset + 2] = wz
+  return true
+}
+
+function recordEdge(edges: Map<number | string, EdgeUse>, from: number, to: number): void {
+  const low = from < to ? from : to
+  const high = from < to ? to : from
+  const key = high < 67108864 ? low * 67108864 + high : `${low}:${high}`
+  const existing = edges.get(key)
+  if (existing) existing.count++
+  else edges.set(key, { from, to, count: 1 })
 }
 
 /**
@@ -145,41 +181,53 @@ export function buildFaceOverlayGeometry(
 
   const trianglePositions = new Float32Array(faceTriangles.length * 9)
   let writtenPositions = 0
-  const edges = new Map<string, EdgeUse>()
-  for (const triangle of faceTriangles) {
-    const vertexIndices = triangleVertexIndices(indices, triangle)
-    if (!vertexIndices) continue
-    const points = vertexIndices.map(vertex => worldVertex(vertices, transform, vertex))
-    if (points.some(point => point === null)) continue
-    for (const point of points as Vec3[]) {
-      trianglePositions[writtenPositions++] = point[0]
-      trianglePositions[writtenPositions++] = point[1]
-      trianglePositions[writtenPositions++] = point[2]
+  const edges = new Map<number | string, EdgeUse>()
+  for (let idx = 0; idx < faceTriangles.length; idx++) {
+    const triangle = faceTriangles[idx]
+    const triOffset = triangle * 3
+    if (!Number.isInteger(triangle) || triangle < 0 || triOffset + 2 >= indices.length) continue
+    const i0 = indices[triOffset]
+    const i1 = indices[triOffset + 1]
+    const i2 = indices[triOffset + 2]
+    if (
+      !writeWorldVertex(vertices, transform, i0, SCRATCH_TRI_PTS, 0) ||
+      !writeWorldVertex(vertices, transform, i1, SCRATCH_TRI_PTS, 3) ||
+      !writeWorldVertex(vertices, transform, i2, SCRATCH_TRI_PTS, 6)
+    ) {
+      continue
+    }
+    for (let k = 0; k < 9; k++) {
+      trianglePositions[writtenPositions++] = SCRATCH_TRI_PTS[k]
     }
 
-    for (let edge = 0; edge < 3; edge++) {
-      const from = vertexIndices[edge]
-      const to = vertexIndices[(edge + 1) % 3]
-      const low = Math.min(from, to)
-      const high = Math.max(from, to)
-      const key = `${low}:${high}`
-      const existing = edges.get(key)
-      if (existing) existing.count++
-      else edges.set(key, { from, to, count: 1 })
-    }
+    recordEdge(edges, i0, i1)
+    recordEdge(edges, i1, i2)
+    recordEdge(edges, i2, i0)
   }
 
-  const boundaryPositions: number[] = []
+  let boundaryCapacity = 0
+  for (const edge of edges.values()) {
+    if (edge.count === 1) boundaryCapacity += 6
+  }
+  const boundaryPositions = new Float32Array(boundaryCapacity)
+  let boundaryOffset = 0
   for (const edge of edges.values()) {
     if (edge.count !== 1) continue
-    const from = worldVertex(vertices, transform, edge.from)
-    const to = worldVertex(vertices, transform, edge.to)
-    if (from && to) boundaryPositions.push(...from, ...to)
+    if (
+      !writeWorldVertex(vertices, transform, edge.from, SCRATCH_TRI_PTS, 0) ||
+      !writeWorldVertex(vertices, transform, edge.to, SCRATCH_TRI_PTS, 3)
+    ) {
+      continue
+    }
+    for (let k = 0; k < 6; k++) {
+      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]
+    }
+    boundaryOffset += 6
   }
 
   return {
     triangles: writtenPositions === trianglePositions.length ? trianglePositions : trianglePositions.slice(0, writtenPositions),
-    boundaryLines: new Float32Array(boundaryPositions),
+    boundaryLines: boundaryOffset === boundaryPositions.length ? boundaryPositions : boundaryPositions.slice(0, boundaryOffset),
   }
 }
 
@@ -233,7 +281,7 @@ export function buildSourceOverlayGeometry(
 
   const allocationTriangles = Math.min(triangleLimit, matchingTriangles)
   const trianglePositions = new Float32Array(allocationTriangles * 9)
-  const edges = new Map<string, EdgeUse>()
+  const edges = new Map<number | string, EdgeUse>()
   let writtenTriangles = 0
 
   outer: for (const run of provenance) {
@@ -243,29 +291,28 @@ export function buildSourceOverlayGeometry(
     const [start, end] = bounds
     for (let triangle = start; triangle < end; triangle++) {
       if (writtenTriangles >= allocationTriangles) break outer
-      const vertexIndices = triangleVertexIndices(indices, triangle)
-      if (!vertexIndices) continue
-      const points = vertexIndices.map(vertex => worldVertex(vertices, transform, vertex))
-      if (points.some(point => point === null)) continue
+      const triOffset = triangle * 3
+      if (!Number.isInteger(triangle) || triangle < 0 || triOffset + 2 >= indices.length) continue
+      const i0 = indices[triOffset]
+      const i1 = indices[triOffset + 1]
+      const i2 = indices[triOffset + 2]
+      if (
+        !writeWorldVertex(vertices, transform, i0, SCRATCH_TRI_PTS, 0) ||
+        !writeWorldVertex(vertices, transform, i1, SCRATCH_TRI_PTS, 3) ||
+        !writeWorldVertex(vertices, transform, i2, SCRATCH_TRI_PTS, 6)
+      ) {
+        continue
+      }
 
-      let target = writtenTriangles * 9
-      for (const point of points as Vec3[]) {
-        trianglePositions[target++] = point[0]
-        trianglePositions[target++] = point[1]
-        trianglePositions[target++] = point[2]
+      const target = writtenTriangles * 9
+      for (let k = 0; k < 9; k++) {
+        trianglePositions[target + k] = SCRATCH_TRI_PTS[k]
       }
       writtenTriangles++
 
-      for (let edge = 0; edge < 3; edge++) {
-        const from = vertexIndices[edge]
-        const to = vertexIndices[(edge + 1) % 3]
-        const low = Math.min(from, to)
-        const high = Math.max(from, to)
-        const key = `${low}:${high}`
-        const existing = edges.get(key)
-        if (existing) existing.count++
-        else edges.set(key, { from, to, count: 1 })
-      }
+      recordEdge(edges, i0, i1)
+      recordEdge(edges, i1, i2)
+      recordEdge(edges, i2, i0)
     }
   }
 
@@ -277,11 +324,15 @@ export function buildSourceOverlayGeometry(
   let boundaryOffset = 0
   for (const edge of edges.values()) {
     if (edge.count !== 1) continue
-    const from = worldVertex(vertices, transform, edge.from)
-    const to = worldVertex(vertices, transform, edge.to)
-    if (!from || !to) continue
-    boundaryPositions.set(from, boundaryOffset)
-    boundaryPositions.set(to, boundaryOffset + 3)
+    if (
+      !writeWorldVertex(vertices, transform, edge.from, SCRATCH_TRI_PTS, 0) ||
+      !writeWorldVertex(vertices, transform, edge.to, SCRATCH_TRI_PTS, 3)
+    ) {
+      continue
+    }
+    for (let k = 0; k < 6; k++) {
+      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]
+    }
     boundaryOffset += 6
   }
 

@@ -1,9 +1,44 @@
+function addAdjacent(adjacent: Map<number, number[]>, v: number, edgeIndex: number): void {
+  const list = adjacent.get(v)
+  if (list) list.push(edgeIndex)
+  else adjacent.set(v, [edgeIndex])
+}
+
+function extendEndpoint(
+  adjacent: Map<number, number[]>,
+  selected: Set<number>,
+  pending: number[],
+  v: number,
+): void {
+  const list = adjacent.get(v)
+  if (!list || list.length !== 2) return
+  for (let k = 0; k < 2; k++) {
+    const idx = list[k]
+    if (!selected.has(idx)) {
+      selected.add(idx)
+      pending.push(idx)
+    }
+  }
+}
+
 /** Extend through unbranched topological vertices; never guess a turn at a junction. */
-export function connectedEdgeChain(edges:readonly {a:number;b:number}[],seeds:readonly number[]):number[] {
- const selected=new Set(seeds.filter(i=>Number.isInteger(i)&&i>=0&&i<edges.length))
- const adjacent=new Map<number,number[]>()
- edges.forEach((e,i)=>{for(const v of [e.a,e.b]){const list=adjacent.get(v)??[];list.push(i);adjacent.set(v,list)}})
- const pending=[...selected]
- while(pending.length){const edge=edges[pending.pop()!];for(const v of [edge.a,edge.b]){const list=adjacent.get(v)!;if(list.length!==2)continue;for(const i of list)if(!selected.has(i)){selected.add(i);pending.push(i)}}}
- return [...selected].sort((a,b)=>a-b)
+export function connectedEdgeChain(edges: readonly { a: number; b: number }[], seeds: readonly number[]): number[] {
+  const selected = new Set<number>()
+  for (let i = 0; i < seeds.length; i++) {
+    const s = seeds[i]
+    if (Number.isInteger(s) && s >= 0 && s < edges.length) selected.add(s)
+  }
+  const adjacent = new Map<number, number[]>()
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i]
+    addAdjacent(adjacent, e.a, i)
+    addAdjacent(adjacent, e.b, i)
+  }
+  const pending = [...selected]
+  while (pending.length) {
+    const edge = edges[pending.pop()!]
+    extendEndpoint(adjacent, selected, pending, edge.a)
+    extendEndpoint(adjacent, selected, pending, edge.b)
+  }
+  return [...selected].sort((a, b) => a - b)
 }
