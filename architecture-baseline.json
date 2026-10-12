@@ -59,7 +59,6 @@
     "crates/openscad-core/src/builtins.rs": 1424,
     "crates/openscad-core/src/eval_tests.rs": 978,
     "crates/openscad-core/src/eval/evaluator.rs": 3115,
-    "crates/openscad-core/src/parser.rs": 1137,
     "crates/openscad-core/src/value.rs": 1102,
     "crates/photogrammetry-core/src/dense/estimation.rs": 2435,
     "crates/photogrammetry-core/src/pipeline.rs": 1028,

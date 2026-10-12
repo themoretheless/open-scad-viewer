@@ -1,23 +1,4 @@
-//! Recursive-descent parser: a faithful port of the `Parser` class in
-//! `src/services/openscadCompiler.ts` for both language profiles, including
-//! node-count/depth limits and exact diagnostic messages and positions.
-use crate::ast::*;
-use crate::lexer::{TT, Token};
-use crate::{
-    LanguageProfile, MAX_AST_NODES, MAX_EXPRESSION_DEPTH, MAX_STATEMENT_DEPTH, ParseError,
-};
-
-type PResult<T> = Result<T, ParseError>;
-
-pub struct Parser<'a> {
-    tokens: &'a [Token],
-    pos: usize,
-    nodes: usize,
-    expression_depth: usize,
-    statement_depth: usize,
-    last_token_end: usize,
-    profile: LanguageProfile,
-}
+use super::*;
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token], profile: LanguageProfile) -> Self {
@@ -1100,38 +1081,5 @@ impl<'a> Parser<'a> {
             }
         }
         false
-    }
-}
-
-/// `Record<string, V>` semantics: last write wins, first insertion order kept.
-fn record_insert<V>(vec: &mut Vec<(String, V)>, key: String, value: V) {
-    if let Some(entry) = vec.iter_mut().find(|(k, _)| *k == key) {
-        entry.1 = value;
-    } else {
-        vec.push((key, value));
-    }
-}
-
-fn expr_position(expr: &Expr) -> usize {
-    match expr {
-        Expr::Literal { p, .. }
-        | Expr::Identifier { p, .. }
-        | Expr::Vector { p, .. }
-        | Expr::Range { p, .. }
-        | Expr::Unary { p, .. }
-        | Expr::Binary { p, .. }
-        | Expr::Ternary { p, .. }
-        | Expr::Function { p, .. }
-        | Expr::Call { p, .. }
-        | Expr::Index { p, .. }
-        | Expr::Member { p, .. }
-        | Expr::Let { p, .. }
-        | Expr::Assert { p, .. }
-        | Expr::Echo { p, .. }
-        | Expr::LcFor { p, .. }
-        | Expr::LcForC { p, .. }
-        | Expr::LcIf { p, .. }
-        | Expr::LcLet { p, .. }
-        | Expr::LcEach { p, .. } => *p,
     }
 }
