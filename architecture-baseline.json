@@ -64,6 +64,7 @@
     "src/services/modelGraphNurbsKernel/buildOwnNurbsResolved.ts": 589,
     "src/services/openscadCompiler.ts": 911,
     "src/services/openscadSemanticLowerer.ts": 691,
+    "src/services/openscadSemanticLowerer/evalNode.ts": 551,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
     "src/services/webgpuRenderer.ts": 2900
   },
