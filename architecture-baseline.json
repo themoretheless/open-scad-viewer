@@ -53,7 +53,7 @@
     "src/core/semanticProgram.ts": 603,
     "src/features/DirectModeler.vue": 4576,
     "src/features/MeshModeler.vue": 976,
-    "src/mcp/createServer.ts": 2885,
+    "src/mcp/createServer.ts": 963,
     "src/mcp/directGeometryProtocol.ts": 754,
     "src/mcp/directGeometrySupervisor.ts": 740,
     "src/mcp/duckdbModelStore.ts": 1875,
