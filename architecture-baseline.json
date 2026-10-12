@@ -5,7 +5,6 @@
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/prism.rs": 830,
     "crates/brep-core/src/shared_boundary.rs": 884,
-    "crates/brep-core/src/sphere_mate.rs": 1231,
     "crates/brep-core/src/stepped_prism.rs": 806,
     "crates/brep-intersect/src/plane_cylinder.rs": 1343,
     "crates/brep-topology/src/lib.rs": 1468,
