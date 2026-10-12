@@ -30,20 +30,21 @@ KEYWORDS = {'as', 'break', 'const', 'continue', 'crate', 'else', 'enum', 'extern
             'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof',
             'unsized', 'virtual', 'yield', 'try', 'gen', 'test', 'tests', 'core', 'std', 'alloc'}
 ITEM = re.compile(r'^(?:pub(?:\([^)]*\))? )?(?:(?:const|unsafe|async|extern "C"|default) )*'
-                  r'(fn|struct|enum|union|trait|impl|mod|const|static|type|macro_rules!)\b')
+                  r'(fn|struct|enum|union|trait|impl|mod|const|static|type|macro_rules!|include!)\b')
 
 
 def depths(src):
     """Brace depth at the start of every line, skipping strings, chars and comments."""
-    out, depth, i, n, line_start = [], 0, 0, len(src), True
+    out, depth, i, n = [], 0, 0, len(src)
     block = 0
     out.append(0)
+    inside = [False]
     while i < n:
         c = src[i]
         if block:
             if src.startswith('*/', i): block -= 1; i += 2; continue
             if src.startswith('/*', i): block += 1; i += 2; continue
-            if c == '\n': out.append(depth)
+            if c == '\n': out.append(depth); inside.append(True)
             i += 1; continue
         if src.startswith('//', i):
             j = src.find('\n', i)
@@ -55,14 +56,14 @@ def depths(src):
             end = '"' + m.group(1)
             j = src.find(end, i + m.end())
             seg = src[i:j + len(end)]
-            for _ in range(seg.count('\n')): out.append(depth)
+            for _ in range(seg.count('\n')): out.append(depth); inside.append(True)
             i = j + len(end); continue
         if c == '"' or (c == 'b' and src.startswith('b"', i)):
             j = i + (2 if c == 'b' else 1)
             while j < n and src[j] != '"':
                 j += 2 if src[j] == '\\' else 1
             seg = src[i:j + 1]
-            for _ in range(seg.count('\n')): out.append(depth)
+            for _ in range(seg.count('\n')): out.append(depth); inside.append(True)
             i = j + 1; continue
         if c == "'":
             m = re.match(r"'(\\(?:u\{[0-9a-fA-F]+\}|x[0-9a-fA-F]{2}|.)|[^\\'])'", src[i:i + 12])
@@ -70,9 +71,9 @@ def depths(src):
             i += 1; continue
         if c == '{': depth += 1
         elif c == '}': depth -= 1
-        elif c == '\n': out.append(depth)
+        elif c == '\n': out.append(depth); inside.append(False)
         i += 1
-    return out
+    return [d if not f else None for d, f in zip(out, inside)]
 
 
 def item_starts(lines, dep):
@@ -132,7 +133,8 @@ def split(path, target):
     tests, body, decls = [], [], []
     for seg in segs:
         code = [l for l in seg if l.strip() and not l.startswith(('#[', '//'))]
-        if len(code) == 1 and re.match(r'^(?:pub(?:\([^)]*\))? )?mod \w+;$', code[0]):
+        if len(code) == 1 and (re.match(r'^(?:pub(?:\([^)]*\))? )?mod \w+;$', code[0])
+                               or re.match(r'^include!\(\s*"[^"]+"\s*\);$', code[0])):
             decls.append(seg); continue
         head = [l for l in seg if l.strip()]
         is_test = (len(head) >= 2 and head[0].strip() == '#[cfg(test)]' and re.match(r'^mod \w+ \{$', head[1])
@@ -170,6 +172,8 @@ def split(path, target):
         test_names.append(name)
     for seg in decls:
         pre += [''] + [l for l in seg if l.strip()]
+    # Paths in #[path] and include! are relative to the file's directory, one level up now.
+    pre = [re.sub(r'^(#\[path\s*=\s*"|include!\(\s*")', r'\1../', l) for l in pre]
     while pre and pre[-1] == '': pre.pop()
     tail = [''] + [f'mod {n};' for n in names] + [f'#[cfg(test)]\nmod {n};' for n in test_names] \
         + [f'pub use {n}::*;' for n in names]
@@ -268,7 +272,7 @@ def repair(crate, stem, names, limit=40):
                 vis = 'pub(crate)' if 'import' in text else 'pub(super)'
                 progress |= widen_item(stem, m.group(1), vis)
                 continue
-            m = re.search(r'field `\w+` of struct `(?:[\w:]+::)?(\w+)` is private', text) \
+            m = re.search(r'fields? `\w+`.*? of struct `(?:[\w:]+::)?(\w+)` (?:is|are) private', text) \
                 or re.search(r'cannot initialize a tuple struct which contains private fields', text) and re.search(r'`(\w+)`', text)
             if m:
                 progress |= widen_fields(stem, m.group(1)); continue
@@ -279,15 +283,12 @@ def repair(crate, stem, names, limit=40):
             if m and fname.endswith('mod.rs'):
                 s = open(mod).read().split('\n')
                 if 0 < line <= len(s) and s[line - 1].startswith('pub use '):
-                    s[line - 1] = s[line - 1][len('pub '):]
+                    s[line - 1] = 'pub(crate) ' + s[line - 1][len('pub '):]
+                    open(mod, 'w').write('\n'.join(s)); progress = True
+                elif 0 < line <= len(s) and s[line - 1].startswith('pub(crate) use '):
+                    s[line - 1] = s[line - 1][len('pub(crate) '):]
                     open(mod, 'w').write('\n'.join(s)); progress = True
                 continue
-            m = re.search(r'^unused import: `(\w+)::\*`', text)
-            if m and fname.endswith('mod.rs'):
-                s = open(mod).read().split('\n')
-                if 0 < line <= len(s) and s[line - 1].strip() in (f'use {m.group(1)}::*;', f'pub use {m.group(1)}::*;'):
-                    del s[line - 1]
-                    open(mod, 'w').write('\n'.join(s)); progress = True
         if not errors and not progress:
             return [m for m in msgs if m[0] in ('error', 'warning') and os.path.abspath(os.path.join(CRATES, m[2])).startswith(os.path.abspath(stem))]
         if not progress:
