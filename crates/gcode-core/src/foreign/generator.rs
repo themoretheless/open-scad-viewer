@@ -1,23 +1,4 @@
-//! Tolerant reader for G-code produced by other slicers and firmware flavors.
-//! It recovers movements, layers and totals for preview; it does not validate
-//! a file for printing; volume uses the supplied, declared or default filament diameter.
-
-use crate::foreign_extrusion::Extrusion;
-use crate::foreign_feedrate::Feedrate;
-use crate::foreign_words::{
-    self,
-    Command::{G, InvalidTool, M, T},
-};
-use crate::{
-    GcodeBounds, GcodeMove, GcodePreview, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES,
-    Result, invalid, number, valid_coordinate,
-};
-use std::borrow::Cow;
-
-/// Default filament diameter when a foreign file declares none.
-pub const ASSUMED_FILAMENT_DIAMETER_MM: f64 = 1.75;
-const MAX_ARC_SEGMENTS: usize = 64;
-const ARC_SEGMENT_MM: f64 = 1.0;
+use super::*;
 
 /// Slicer family recognized from header comments.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -222,22 +203,22 @@ fn axis_word(token: &str) -> Result<(u8, f64)> {
     Ok((axis, number(&token[1..])?))
 }
 
-fn axis_words<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Vec<(u8, f64)>> {
+pub(super) fn axis_words<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Vec<(u8, f64)>> {
     rest.map(axis_word).collect()
 }
 
 #[derive(Default)]
-struct MotionWords {
-    xyz: [Option<f64>; 3],
-    e: Option<f64>,
-    f: Option<f64>,
-    i: Option<f64>,
-    j: Option<f64>,
-    r: Option<f64>,
+pub(super) struct MotionWords {
+    pub(super) xyz: [Option<f64>; 3],
+    pub(super) e: Option<f64>,
+    pub(super) f: Option<f64>,
+    pub(super) i: Option<f64>,
+    pub(super) j: Option<f64>,
+    pub(super) r: Option<f64>,
 }
 
 impl MotionWords {
-    fn parse<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Self> {
+    pub(super) fn parse<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Self> {
         let mut out = Self::default();
         for token in rest {
             let (axis, value) = axis_word(token)?;
@@ -257,7 +238,7 @@ impl MotionWords {
     }
 }
 
-fn word(words: &[(u8, f64)], axis: u8) -> Option<f64> {
+pub(super) fn word(words: &[(u8, f64)], axis: u8) -> Option<f64> {
     words
         .iter()
         .rev()
@@ -601,267 +582,4 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
         return Err(invalid("GCODE_NUMERIC", "Totals exceed numeric precision"));
     }
     Ok(result)
-}
-
-fn arc_points(
-    start: [f64; 3],
-    end: [f64; 3],
-    i: Option<f64>,
-    j: Option<f64>,
-    r: Option<f64>,
-    counter_clockwise: bool,
-) -> Result<Vec<[f64; 3]>> {
-    let (cx, cy) = if i.is_some() || j.is_some() {
-        (start[0] + i.unwrap_or(0.0), start[1] + j.unwrap_or(0.0))
-    } else if let Some(r) = r {
-        let dx = end[0] - start[0];
-        let dy = end[1] - start[1];
-        let d = dx.hypot(dy);
-        if d == 0.0 || !r.is_finite() || r.abs() * 2.0 < d - 1e-9 {
-            return Err(invalid(
-                "GCODE_INVALID_COORDINATE",
-                "Arc radius cannot reach the end point",
-            ));
-        }
-        let h = (r * r - (d / 2.0).powi(2)).max(0.0).sqrt();
-        let sign = if counter_clockwise == (r > 0.0) {
-            1.0
-        } else {
-            -1.0
-        };
-        (
-            (start[0] + end[0]) / 2.0 - sign * h * dy / d,
-            (start[1] + end[1]) / 2.0 + sign * h * dx / d,
-        )
-    } else {
-        return Err(invalid(
-            "GCODE_SYNTAX",
-            "Arc needs I/J offsets or an R radius",
-        ));
-    };
-    let radius = (start[0] - cx).hypot(start[1] - cy);
-    if !radius.is_finite() || radius == 0.0 {
-        return Err(invalid("GCODE_INVALID_COORDINATE", "Arc has zero radius"));
-    }
-    let a0 = (start[1] - cy).atan2(start[0] - cx);
-    let a1 = (end[1] - cy).atan2(end[0] - cx);
-    let mut sweep = a1 - a0;
-    let full = std::f64::consts::TAU;
-    if counter_clockwise {
-        if sweep <= 1e-9 {
-            sweep += full;
-        }
-    } else if sweep >= -1e-9 {
-        sweep -= full;
-    }
-    let segments =
-        ((radius * sweep.abs() / ARC_SEGMENT_MM).ceil() as usize).clamp(1, MAX_ARC_SEGMENTS);
-    let mut points = Vec::with_capacity(segments);
-    for step in 1..=segments {
-        let t = step as f64 / segments as f64;
-        let angle = a0 + sweep * t;
-        points.push([
-            cx + radius * angle.cos(),
-            cy + radius * angle.sin(),
-            start[2] + (end[2] - start[2]) * t,
-        ]);
-    }
-    if let Some(last) = points.last_mut() {
-        *last = end;
-    }
-    Ok(points)
-}
-
-/// Dispatches by dialect: native preview/job stay strict; everything else is tolerant.
-pub fn parse_any(gcode: &str) -> Result<(GcodePreview, DialectInfo)> {
-    let info = detect(gcode);
-    let first = gcode.lines().next().unwrap_or("").trim();
-    let preview = if first == format!("; {}", crate::JOB_DIALECT) {
-        crate::parse_job(gcode)?
-    } else if first == format!("; {}", crate::DIALECT) {
-        crate::parse(gcode)?
-    } else {
-        parse_foreign(gcode)?
-    };
-    Ok((preview, info))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const PRUSA: &str = "; generated by PrusaSlicer 2.7.0 on 2024-01-01\n\
-M107\nM104 S215\nM140 S60\nM190 S60\nM109 S215\nG28 W\nG80\nG1 Z0.2 F720\nG1 Y-3 F1000\nG92 E0\nG1 X60 E9 F1000\nG92 E0\nM221 S95\nG21\nG90\nM83\n\
-;LAYER_CHANGE\n;Z:0.2\nG1 Z0.2 F720\nG1 X10 Y10 F7200\nG1 X20 Y10 E0.5 F1200\nG1 X20 Y20 E0.5\n\
-;LAYER_CHANGE\n;Z:0.4\nG1 Z0.4 F720\nG1 X10 Y10 F7200\nG1 X20 Y10 E0.5 F1200\nG1 E-0.8 F2100\n\
-M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
-
-    #[test]
-    fn detects_prusaslicer_and_settings() {
-        let info = detect(PRUSA);
-        assert_eq!(info.generator, Generator::PrusaSlicer);
-        assert_eq!(info.flavor.as_deref(), Some("marlin2"));
-        assert_eq!(info.filament_diameter_mm, Some(1.75));
-        assert!(!info.native);
-    }
-
-    #[test]
-    fn prusa_relative_extrusion_and_layer_markers() {
-        let preview = parse_foreign(PRUSA).unwrap();
-        assert_eq!(preview.layers, 3, "startup + two marked layers");
-        assert!(
-            (preview.extrusion_mm - (9.0 + 1.5 * 0.95)).abs() < 1e-9,
-            "{}",
-            preview.extrusion_mm
-        );
-        assert!((preview.print_distance_mm - 30.0).abs() < 1e-9);
-        assert!(
-            preview
-                .moves
-                .iter()
-                .any(|m| m.layer_index == 2 && m.extruded)
-        );
-        assert!(preview.deposited_volume_mm3 > 0.0);
-    }
-
-    #[test]
-    fn cura_style_absolute_extrusion_with_layer_colon() {
-        let cura = ";FLAVOR:Marlin\n;Generated with Cura_SteamEngine 5.6\nM82\nG28\nG92 E0\n;LAYER_COUNT:2\n;LAYER:0\nG0 X0 Y0 Z0.2 F6000\nG1 X10 Y0 E1 F1200\n;LAYER:1\nG0 Z0.4\nG1 X0 Y0 E2\n";
-        let (preview, info) = parse_any(cura).unwrap();
-        assert_eq!(info.generator, Generator::Cura);
-        assert_eq!(info.flavor.as_deref(), Some("Marlin"));
-        assert_eq!(preview.layers, 2);
-        assert!((preview.extrusion_mm - 2.0).abs() < 1e-9);
-        assert_eq!(preview.moves.last().unwrap().layer_index, 1);
-    }
-
-    #[test]
-    fn infers_layers_from_z_when_no_markers() {
-        let raw = "G90\nM82\nG92 E0\nG1 Z0.2 F600\nG1 X0 Y0\nG1 X10 Y0 E1\nG1 Z0.4\nG1 X0 Y0 E2\nG1 Z0.6\nG1 X10 Y0\n";
-        let preview = parse_foreign(raw).unwrap();
-        assert_eq!(preview.layers, 2, "travel-only Z levels are not layers");
-        assert_eq!(preview.moves.iter().filter(|m| m.extruded).count(), 2);
-    }
-
-    #[test]
-    fn relative_moves_inches_and_compact_words() {
-        let raw = "G20\nG91\nG1Z0.01\nG1X1Y0E0.1F60\nG1X0Y1E0.1\n";
-        let preview = parse_foreign(raw).unwrap();
-        // First XY move from an unknown start establishes position; second is 25.4 mm.
-        assert!(
-            (preview.print_distance_mm - 25.4).abs() < 1e-9,
-            "{}",
-            preview.print_distance_mm
-        );
-        assert!((preview.extrusion_mm - 2.54 * 2.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn arcs_are_chorded_in_xy() {
-        let raw = "G90\nG1 X10 Y0 Z0.2 F600\nG2 X-10 Y0 I-10 J0 E1\n";
-        let preview = parse_foreign(raw).unwrap();
-        let half_circle = std::f64::consts::PI * 10.0;
-        assert!(
-            (preview.print_distance_mm - half_circle).abs() < 0.2,
-            "{}",
-            preview.print_distance_mm
-        );
-        assert!(preview.moves.len() > 10);
-        let rraw = "G90\nG1 X10 Y0 Z0.2 F600\nG3 X-10 Y0 R10 E1\n";
-        let rpreview = parse_foreign(rraw).unwrap();
-        assert!((rpreview.print_distance_mm - half_circle).abs() < 0.2);
-        assert_eq!(
-            parse_foreign("G90\nG18\nG1 X0 Y0 Z0 F600\nG2 X1 Y0 I1 J0\n")
-                .unwrap_err()
-                .code,
-            "GCODE_UNSUPPORTED_COMMAND"
-        );
-    }
-
-    #[test]
-    fn unknown_commands_checksums_and_parentheses_are_skipped() {
-        let raw = "N1 G90*45\nN2 M900 K0.2*11\nSET_PRESSURE_ADVANCE ADVANCE=0.04\nM117 Printing\nG1 X0 Y0 Z0.2 F600 (start)\nG01 X5 Y0 E0.1\n";
-        let preview = parse_foreign(raw).unwrap();
-        assert_eq!(preview.moves.len(), 2);
-        assert!((preview.print_distance_mm - 5.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn native_dialects_stay_strict_via_parse_any() {
-        let bad = format!("; {}\nG1 X0 Y0\n", crate::DIALECT);
-        assert_eq!(parse_any(&bad).unwrap_err().code, "GCODE_PROLOGUE");
-        let info = detect(&bad);
-        assert!(info.native);
-        assert_eq!(info.generator, Generator::OpenScadViewer);
-    }
-
-    #[test]
-    fn empty_or_malformed_motion_fails() {
-        assert_eq!(
-            parse_foreign("; nothing\nM117 hi\n").unwrap_err().code,
-            "GCODE_EMPTY_PLAN"
-        );
-        assert_eq!(
-            parse_foreign("G1 Xabc\n").unwrap_err().code,
-            "GCODE_INVALID_NUMBER"
-        );
-        assert_eq!(
-            parse_foreign("G1 X1000001 Y0 Z0\n").unwrap_err().code,
-            "GCODE_INVALID_COORDINATE"
-        );
-    }
-
-    #[test]
-    fn explicit_diameter_overrides_header() {
-        let raw = "; filament_diameter = 2.85\nG90\nG1 X0 Y0 Z0.2 F600\nG1 X10 Y0 E1\n";
-        let header = parse_foreign(raw).unwrap();
-        let explicit = parse_foreign_with(raw, Some(1.75)).unwrap();
-        assert!(header.deposited_volume_mm3 > explicit.deposited_volume_mm3);
-    }
-
-    #[test]
-    fn fixed_motion_words_match_ordered_reference() {
-        for shift in 0..26 {
-            let mut tokens = Vec::new();
-            for round in 0..4 {
-                for index in 0..26 {
-                    let axis = b'A' + ((index + shift) % 26) as u8;
-                    let axis = if round % 2 == 0 {
-                        axis
-                    } else {
-                        axis.to_ascii_lowercase()
-                    };
-                    tokens.push(format!(
-                        "{}{:.3}",
-                        axis as char,
-                        (round * 26 + index) as f64 / 8.0
-                    ));
-                }
-            }
-            let reference = axis_words(tokens.iter().map(String::as_str)).unwrap();
-            let actual = MotionWords::parse(tokens.iter().map(String::as_str)).unwrap();
-            for (axis, value) in b"XYZEFIJR".iter().zip([
-                actual.xyz[0],
-                actual.xyz[1],
-                actual.xyz[2],
-                actual.e,
-                actual.f,
-                actual.i,
-                actual.j,
-                actual.r,
-            ]) {
-                assert_eq!(value, word(&reference, *axis));
-            }
-        }
-        for token in [
-            "X", "Q", "Qbad", "Xbad", "1", "XNaN", "Xinf", "X1e999", "é1",
-        ] {
-            let tokens = ["X1", token, "X2"];
-            assert_eq!(
-                MotionWords::parse(tokens.into_iter()).err(),
-                axis_words(tokens.into_iter()).err()
-            );
-            assert!(MotionWords::parse(tokens.into_iter()).is_err());
-        }
-    }
 }

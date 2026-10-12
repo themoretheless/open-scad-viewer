@@ -23,7 +23,6 @@
     "crates/bridge-svg/src/svg.rs": 2467,
     "crates/cad-step/src/nurbs_step_shared.rs": 1202,
     "crates/cad-step/src/step_interchange.rs": 2208,
-    "crates/gcode-core/src/foreign.rs": 867,
     "crates/geometry-bridge/src/brep_attestation.rs": 849,
     "crates/geometry-bridge/src/brep_identity.rs": 1409,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1130,
