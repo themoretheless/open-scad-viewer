@@ -57,7 +57,7 @@
     "src/mcp/createServer/createOpenScadMcpServer.ts": 1333,
     "src/mcp/directGeometryProtocol.ts": 754,
     "src/mcp/directGeometrySupervisor.ts": 740,
-    "src/mcp/duckdbModelStore.ts": 1875,
+    "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/geometryService.ts": 585,
     "src/mcp/officialOpenScadRuntimeService.ts": 947,
     "src/mcp/publicError.ts": 550,
@@ -81,6 +81,7 @@
     "src/services/openScadSurface.ts": 716,
     "src/services/semanticProgramCodec.ts": 574,
     "src/services/semanticProgramExecutor.ts": 800,
+    "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
     "src/services/webgpuRenderer.ts": 2900,
     "src/services/workspacePersistence.ts": 529
   },
