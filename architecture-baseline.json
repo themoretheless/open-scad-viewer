@@ -47,7 +47,6 @@
     "crates/geometry-bridge/src/brep_production/mod.rs": 1130,
     "crates/geometry-bridge/src/brep.rs": 1629,
     "crates/geometry-bridge/src/cad_lattice.rs": 1301,
-    "crates/geometry-bridge/src/intersections.rs": 1726,
     "crates/geometry-bridge/src/lib.rs": 2000,
     "crates/geometry-bridge/src/mesh_shell.rs": 1056,
     "crates/geometry-bridge/src/tests.rs": 1212,
