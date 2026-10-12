@@ -59,7 +59,7 @@
     "src/mcp/directGeometrySupervisor.ts": 740,
     "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/geometryService.ts": 585,
-    "src/mcp/officialOpenScadRuntimeService.ts": 947,
+    "src/mcp/officialOpenScadRuntimeService.ts": 624,
     "src/mcp/publicError.ts": 550,
     "src/services/buildCoordinator.ts": 911,
     "src/services/commandRegistry.ts": 646,
