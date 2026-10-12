@@ -41,7 +41,6 @@
     "crates/geometry-bridge/src/brep_attestation.rs": 849,
     "crates/geometry-bridge/src/brep_identity.rs": 1409,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1130,
-    "crates/geometry-bridge/src/brep.rs": 1629,
     "crates/geometry-bridge/src/cad_lattice.rs": 1301,
     "crates/geometry-bridge/src/lib.rs": 2000,
     "crates/geometry-bridge/src/mesh_shell.rs": 1056,
