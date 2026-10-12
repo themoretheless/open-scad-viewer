@@ -17,9 +17,7 @@ use super::{Result, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
-fn invalid(message: &str) -> super::Error {
-    super::Error::new("BREP_SEMANTIC_CONTRACT", message)
-}
+use crate::semantic_contract_error as invalid;
 
 fn exact(value: &Value, keys: &[&str]) -> Result<()> {
     let object = value
