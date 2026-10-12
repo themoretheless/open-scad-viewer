@@ -6,6 +6,7 @@ import {
   type GeometryLanguageContract,
 } from './geometryRouting'
 import { isWellFormedUnicode } from './unicode'
+import { deepFreeze } from './objects'
 
 export {
   GEOMETRY_LANGUAGE_CONTRACTS,
@@ -15,14 +16,6 @@ export {
   type GeometryLanguageContract,
   type GeometrySourceRoutingHeader,
 } from './geometryRouting'
-
-function deepFreeze<T>(value: T): T {
-  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.values(value as Record<string, unknown>).forEach(item => deepFreeze(item))
-    Object.freeze(value)
-  }
-  return value
-}
 
 export const GEOMETRY_ENGINE_CLASSES = Object.freeze(['mesh', 'brep'] as const)
 

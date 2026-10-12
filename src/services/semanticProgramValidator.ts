@@ -33,6 +33,7 @@ import {
 import { sha256Hex } from '../core/sha256'
 import { parseGeometrySourceRoutingHeader } from '../core/geometryRouting'
 import { isSemanticProgramCodecOwnedGraph } from './semanticProgramCodec'
+import { deepFreeze } from '../core/objects'
 
 export class SemanticProgramValidationError extends TypeError {
   constructor(
@@ -2229,14 +2230,6 @@ function snapshotJsonValue(value: unknown, path: string, depth: number, ancestor
   } finally {
     ancestors.delete(value)
   }
-}
-
-function deepFreeze<T>(value: T): T {
-  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.values(value as Record<string, unknown>).forEach(deepFreeze)
-    Object.freeze(value)
-  }
-  return value
 }
 
 function validateCanonicalStringBudget(value: unknown): void {

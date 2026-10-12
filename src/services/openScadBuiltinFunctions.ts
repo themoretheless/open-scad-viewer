@@ -15,6 +15,7 @@ import {
   type FunctionValue,
 } from './openscadCompiler'
 import { isWellFormedUnicode } from '../core/unicode'
+import { nextUp } from '../core/float'
 
 export const OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES = Object.freeze([
   'abs', 'sign', 'rands', 'min', 'max', 'sin', 'cos', 'asin', 'acos', 'tan', 'atan', 'atan2',
@@ -437,18 +438,6 @@ function compareUtf8(left: string, right: string): number {
     if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] < rightBytes[index] ? -1 : 1
   }
   return leftBytes.length - rightBytes.length
-}
-
-function nextUp(value: number): number {
-  if (Number.isNaN(value) || value === Infinity) return value
-  if (value === 0) return Number.MIN_VALUE
-  const buffer = new ArrayBuffer(8)
-  const view = new DataView(buffer)
-  view.setFloat64(0, value, false)
-  let bits = view.getBigUint64(0, false)
-  bits = value > 0 ? bits + 1n : bits - 1n
-  view.setBigUint64(0, bits, false)
-  return view.getFloat64(0, false)
 }
 
 function rangeItemCount(range: { readonly start: number; readonly step: number; readonly end: number }): number {

@@ -1,6 +1,7 @@
 import type { SourceOperationId } from '../core/mesh'
 import type { LanguageDiagnosticCode } from '../core/languageContract'
 import { OpenSCADParseError } from './openscadErrors'
+import { deepFreeze } from '../core/objects'
 
 const MAX_AST_NODES = 25_000
 const MAX_EXPRESSION_DEPTH = 256
@@ -1106,10 +1107,3 @@ export function compileOpenSCAD(
   return finalizeOpenScadProgram(statements)
 }
 
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child)
-    Object.freeze(value)
-  }
-  return value
-}
