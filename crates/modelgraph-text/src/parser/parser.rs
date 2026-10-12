@@ -1,179 +1,26 @@
-use crate::value::json;
-use value_codec::Value as J;
-type R<T> = crate::Result<T>;
-#[derive(Clone)]
-struct Token {
-    text: String,
-    start: usize,
-    end: usize,
-}
-pub struct Statement {
-    pub node: J,
-    pub line: usize,
-}
-struct Parser<'a> {
-    source: &'a str,
-    tokens: Vec<Token>,
-    p: usize,
-    depth: usize,
-    match_indent: Option<usize>,
-    line_starts: Vec<usize>,
-}
-fn ident(s: &str) -> bool {
-    let mut c = s.chars();
-    c.next()
-        .is_some_and(|x| x.is_ascii_alphabetic() || x == '_')
-        && c.all(|x| x.is_ascii_alphanumeric() || x == '_')
-}
-fn unique(xs: impl IntoIterator<Item = String>) -> bool {
-    let mut set = std::collections::HashSet::new();
-    xs.into_iter().all(|x| set.insert(x))
-}
-fn lex(source: &str) -> R<Vec<Token>> {
-    if source.encode_utf16().count() > 262144 {
-        return Err(crate::error("ModelGraph Text exceeds 256 KiB."));
-    }
-    let b = source.as_bytes();
-    let mut p = 0;
-    let mut out = Vec::new();
-    while p < b.len() {
-        let start = p;
-        if b[p] == b' ' || b[p] == b'\t' || b[p] == b'\r' {
-            p += 1;
-            continue;
-        }
-        if source[p..].starts_with("//") {
-            while p < b.len() && b[p] != b'\n' {
-                p += 1
-            }
-            continue;
-        }
-        if source[p..].starts_with("/*")
-            && let Some(end) = source[p + 2..].find("*/")
-        {
-            p += end + 4;
-            continue;
-        }
-        if b[p] == b'"' {
-            p += 1;
-            let mut closed = false;
-            while p < b.len() {
-                if b[p] == b'\n' {
-                    break;
-                }
-                if b[p] == b'"' {
-                    p += 1;
-                    closed = true;
-                    break;
-                }
-                if b[p] == b'\\' {
-                    p += 1
-                }
-                if p < b.len() {
-                    p += source[p..].chars().next().unwrap().len_utf8()
-                }
-            }
-            if !closed {
-                return Err(crate::error(format!("Unexpected character at {start}: \"")));
-            }
-        } else if b[p].is_ascii_digit()
-            || (b[p] == b'.' && b.get(p + 1).is_some_and(u8::is_ascii_digit))
-        {
-            if b[p] == b'.' {
-                p += 1;
-                while p < b.len() && b[p].is_ascii_digit() {
-                    p += 1
-                }
-            } else {
-                while p < b.len() && b[p].is_ascii_digit() {
-                    p += 1
-                }
-                if b.get(p) == Some(&b'.')
-                    && !b
-                        .get(p + 1)
-                        .is_some_and(|c| *c == b'.' || c.is_ascii_alphabetic() || *c == b'_')
-                {
-                    p += 1;
-                    while p < b.len() && b[p].is_ascii_digit() {
-                        p += 1
-                    }
-                }
-            }
-            if b.get(p).is_some_and(|c| *c == b'e' || *c == b'E') {
-                let old = p;
-                p += 1;
-                if b.get(p).is_some_and(|c| *c == b'+' || *c == b'-') {
-                    p += 1
-                }
-                let digits = p;
-                while p < b.len() && b[p].is_ascii_digit() {
-                    p += 1
-                }
-                if p == digits {
-                    p = old
-                }
-            }
-            for unit in ["mm", "cm", "in", "deg", "rad", "m"] {
-                if source[p..].starts_with(unit) {
-                    p += unit.len();
-                    break;
-                }
-            }
-        } else if b[p].is_ascii_alphabetic() || b[p] == b'_' {
-            p += 1;
-            while p < b.len() && (b[p].is_ascii_alphanumeric() || b[p] == b'_') {
-                p += 1
-            }
-        } else if let Some(op) = [
-            "|>", "->", "=>", "..<", "..", "**", "==", "!=", "<=", ">=", "&&", "||",
-        ]
-        .iter()
-        .find(|op| source[p..].starts_with(**op))
-        {
-            p += op.len()
-        } else if b"\n{}()[],.?:;=+*/%<>-!|@".contains(&b[p]) {
-            p += 1
-        } else {
-            return Err(crate::error(format!(
-                "Unexpected character at {}: {}",
-                source[..p].encode_utf16().count(),
-                source[p..].chars().next().unwrap()
-            )));
-        }
-        out.push(Token {
-            text: source[start..p].into(),
-            start,
-            end: p,
-        });
-    }
-    out.push(Token {
-        text: "EOF".into(),
-        start: p,
-        end: p,
-    });
-    Ok(out)
-}
+use super::*;
+
 impl Parser<'_> {
-    fn peek(&self) -> &str {
+    pub(super) fn peek(&self) -> &str {
         &self.tokens[self.p].text
     }
-    fn next(&self) -> &str {
+    pub(super) fn next(&self) -> &str {
         self.tokens
             .get(self.p + 1)
             .map_or("EOF", |t| t.text.as_str())
     }
-    fn err<T>(&self, m: impl AsRef<str>) -> R<T> {
+    pub(super) fn err<T>(&self, m: impl AsRef<str>) -> R<T> {
         Err(crate::error(format!(
             "ModelGraph Text line {}: {}",
             self.line(),
             m.as_ref()
         )))
     }
-    fn line(&self) -> usize {
+    pub(super) fn line(&self) -> usize {
         self.line_starts
             .partition_point(|start| *start <= self.tokens[self.p].start)
     }
-    fn pop(&mut self) -> R<String> {
+    pub(super) fn pop(&mut self) -> R<String> {
         if self.peek() == "EOF" {
             return self.err("Unexpected end of source");
         }
@@ -181,19 +28,19 @@ impl Parser<'_> {
         self.p += 1;
         Ok(s)
     }
-    fn take(&mut self, s: &str) -> R<()> {
+    pub(super) fn take(&mut self, s: &str) -> R<()> {
         if self.peek() != s {
             return self.err(format!("Expected {s}, got {}", self.peek()));
         }
         self.pop()?;
         Ok(())
     }
-    fn inner(&mut self) {
+    pub(super) fn inner(&mut self) {
         while self.peek() == "\n" {
             self.p += 1
         }
     }
-    fn skip(&mut self) {
+    pub(super) fn skip(&mut self) {
         while ["\n", ";"].contains(&self.peek()) {
             self.p += 1
         }
@@ -203,14 +50,14 @@ impl Parser<'_> {
             self.p += 1
         }
     }
-    fn id(&mut self) -> R<String> {
+    pub(super) fn id(&mut self) -> R<String> {
         let s = self.pop()?;
         if !ident(&s) {
             return self.err("Expected an identifier");
         }
         Ok(s)
     }
-    fn ty(&mut self, depth: usize) -> R<J> {
+    pub(super) fn ty(&mut self, depth: usize) -> R<J> {
         if depth > 16 {
             return self.err("Type nesting exceeds 16");
         }
@@ -240,7 +87,7 @@ impl Parser<'_> {
         }
         Ok(json!({"name":&name,"args":args}))
     }
-    fn generics(&mut self, open: &str, close: &str) -> R<Vec<String>> {
+    pub(super) fn generics(&mut self, open: &str, close: &str) -> R<Vec<String>> {
         let mut xs = Vec::new();
         if self.peek() == open {
             self.pop()?;
@@ -310,7 +157,7 @@ impl Parser<'_> {
         }
         Ok((names, J::Object(bounds)))
     }
-    fn trait_members(&mut self, implementation: bool) -> R<J> {
+    pub(super) fn trait_members(&mut self, implementation: bool) -> R<J> {
         self.inner();
         self.take("{")?;
         self.commas();
@@ -389,7 +236,7 @@ impl Parser<'_> {
         self.take("}")?;
         Ok(json!({"fields":fields,"methods":methods,"associated":associated}))
     }
-    fn fields(&mut self, end: &str, alt: &str, defaults: bool) -> R<Vec<J>> {
+    pub(super) fn fields(&mut self, end: &str, alt: &str, defaults: bool) -> R<Vec<J>> {
         let mut xs = Vec::new();
         self.commas();
         while self.peek() != end
@@ -455,7 +302,7 @@ impl Parser<'_> {
         }
         Ok(json!({"kind":"record","args":xs}))
     }
-    fn pattern(&mut self) -> R<J> {
+    pub(super) fn pattern(&mut self) -> R<J> {
         let list = self.peek() == "[";
         let close = if list { "]" } else { "}" };
         self.take(if list { "[" } else { "{" })?;
@@ -477,14 +324,14 @@ impl Parser<'_> {
         }
         Ok(json!({"kind":if list {"list_pattern"} else {"pattern"},"items":xs}))
     }
-    fn binding(&mut self) -> R<J> {
+    pub(super) fn binding(&mut self) -> R<J> {
         if ["{", "["].contains(&self.peek()) {
             self.pattern()
         } else {
             Ok(json!({"kind":"name","value":self.id()?}))
         }
     }
-    fn destructuring_ahead(&self) -> bool {
+    pub(super) fn destructuring_ahead(&self) -> bool {
         if !["[", "{"].contains(&self.peek()) {
             return false;
         }
@@ -495,7 +342,7 @@ impl Parser<'_> {
             .find(|[a, _]| a.text == close)
             .is_some_and(|[_, b]| b.text == "=")
     }
-    fn check_statement(&mut self) -> R<J> {
+    pub(super) fn check_statement(&mut self) -> R<J> {
         let kind = self.pop()?;
         Ok(json!({"kind":kind,"left":self.expr(0)?}))
     }
@@ -558,7 +405,7 @@ impl Parser<'_> {
             json!({"kind":"function","generics":gs,"bounds":bounds,"inputs":inputs,"outputs":outputs,"singleResult":single,"inferResult":inferred,"items":items,"left":result}),
         )
     }
-    fn indent(&self) -> String {
+    pub(super) fn indent(&self) -> String {
         let start = self.tokens[self.p].start;
         let line = self.source[..start].rfind('\n').map_or(0, |p| p + 1);
         self.source[line..start]
@@ -566,7 +413,7 @@ impl Parser<'_> {
             .take_while(|c| *c == ' ' || *c == '\t')
             .collect()
     }
-    fn continuation(&mut self, base: &str, msg: &str) -> R<Option<String>> {
+    pub(super) fn continuation(&mut self, base: &str, msg: &str) -> R<Option<String>> {
         if self.peek() != "\n" {
             return Ok(None);
         }
@@ -603,7 +450,7 @@ impl Parser<'_> {
         self.unique_fields(&xs)?;
         Ok(xs)
     }
-    fn layout(&mut self, base: &str) -> R<J> {
+    pub(super) fn layout(&mut self, base: &str) -> R<J> {
         let (gs, bounds) = self.function_generics("[", "]")?;
         self.inner();
         let inputs = if self.peek() == "->" || self.next() != ":" {
@@ -805,7 +652,7 @@ impl Parser<'_> {
     }
     // A foreach is a value-producing block. Its body has lexical bindings and
     // ends in yield; nested foreach expressions compose without mutation.
-    fn foreach(&mut self) -> R<J> {
+    pub(super) fn foreach(&mut self) -> R<J> {
         let base = self.indent();
         let mut names = Vec::new();
         if self.peek() == "(" {
@@ -885,7 +732,7 @@ impl Parser<'_> {
         }
         Ok(json!({"kind":"comprehension","items":clauses,"left":body}))
     }
-    fn expr(&mut self, min: u8) -> R<J> {
+    pub(super) fn expr(&mut self, min: u8) -> R<J> {
         self.depth += 1;
         if self.depth > 64 {
             return self.err("Expression nesting exceeds 64");
@@ -1127,7 +974,7 @@ impl Parser<'_> {
         self.depth -= 1;
         Ok(a)
     }
-    fn literal(&mut self) -> R<(f64, String, usize, usize)> {
+    pub(super) fn literal(&mut self) -> R<(f64, String, usize, usize)> {
         let start = self.tokens[self.p].start;
         let sign = if self.peek() == "-" {
             self.pop()?;
@@ -1149,290 +996,5 @@ impl Parser<'_> {
             self.source[..start].encode_utf16().count(),
             self.source[..t.end - u.len()].encode_utf16().count(),
         ))
-    }
-}
-pub fn number(s: &str) -> R<(f64, String)> {
-    let unit = ["mm", "cm", "in", "deg", "rad", "m"]
-        .into_iter()
-        .find(|u| s.ends_with(u))
-        .unwrap_or("");
-    let num = s[..s.len() - unit.len()]
-        .parse::<f64>()
-        .map_err(|_| crate::error("Invalid number"))?;
-    if !num.is_finite() {
-        return Err(crate::error("Numeric literal must be finite"));
-    }
-    Ok((num, unit.into()))
-}
-pub fn parse(source: &str) -> R<Vec<Statement>> {
-    let mut p = Parser {
-        match_indent: None,
-        source,
-        tokens: lex(source)?,
-        p: 0,
-        depth: 0,
-        line_starts: std::iter::once(0)
-            .chain(
-                source
-                    .bytes()
-                    .enumerate()
-                    .filter_map(|(i, b)| (b == b'\n').then_some(i + 1)),
-            )
-            .collect(),
-    };
-    let mut out = Vec::new();
-    p.skip();
-    while p.peek() != "EOF" {
-        let node = match p.peek() {
-            "fn" => {
-                let base = p.indent();
-                p.pop()?;
-                let name = p.id()?;
-                json!({"kind":"bind","name":&name,"value":p.layout(&base)?})
-            }
-            "trait" => {
-                p.pop()?;
-                let name = p.id()?;
-                let mut result = p.trait_members(false)?;
-                result["kind"] = json!("trait");
-                result["name"] = json!(name);
-                result
-            }
-            "impl" => {
-                p.pop()?;
-                let name = p.id()?;
-                p.take("for")?;
-                let target = p.ty(0)?;
-                let mut result = p.trait_members(true)?;
-                result["kind"] = json!("impl");
-                result["name"] = json!(name);
-                result["target"] = target;
-                result
-            }
-            "struct" => {
-                let kind = p.pop()?;
-                let name = p.id()?;
-                let gs = if kind == "struct" {
-                    p.generics("<", ">")?
-                } else {
-                    Vec::new()
-                };
-                p.inner();
-                p.take("{")?;
-                let fields = p.fields("}", "", false)?;
-                p.take("}")?;
-                json!({"kind":kind,"name":&name,"generics":gs,"fields":fields})
-            }
-            "{" | "[" => {
-                let pat = p.pattern()?;
-                p.take("=")?;
-                json!({"kind":"destructure","pattern":pat,"value":p.expr(0)?})
-            }
-            "validate" | "assert" => {
-                let kind = p.pop()?;
-                json!({"kind":kind,"value":p.expr(0)?})
-            }
-            "segments" if p.next() != "=" => {
-                p.pop()?;
-                let s = p.pop()?;
-                let n = s.parse::<u32>().ok();
-                if !s.bytes().all(|b| b.is_ascii_digit())
-                    || !n.is_some_and(|n| (12..=128).contains(&n))
-                {
-                    return p.err("segments requires an integer from 12 to 128");
-                }
-                json!({"kind":"segments","value":n})
-            }
-            "param" => {
-                p.pop()?;
-                let name = p.pop()?;
-                if !["=", ":"].contains(&p.peek()) {
-                    return p.err("Expected : or = after parameter name");
-                }
-                p.pop()?;
-                let (v, u, start, end) = p.literal()?;
-                let mut param = json!({"id":&name,"value":v});
-                let mut control = json!({"name":&name,"label":if u.is_empty(){name.clone()}else{format!("{name} ({u})")},"value":v,"valueStart":start,"valueEnd":end});
-                if !u.is_empty() {
-                    param["unit"] = json!(&u)
-                }
-                if p.peek() == "range" {
-                    p.pop()?;
-                    let (min, mu, _, _) = p.literal()?;
-                    p.take("..")?;
-                    let (max, xu, _, _) = p.literal()?;
-                    if mu != u || xu != u {
-                        return p.err("Range units must match parameter units");
-                    }
-                    if min > max || v < min || v > max {
-                        return p.err("Parameter default must lie in its range");
-                    }
-                    param["min"] = json!(min);
-                    param["max"] = json!(max);
-                    control["min"] = json!(min);
-                    control["max"] = json!(max)
-                }
-                json!({"kind":"param","name":&name,"parameter":param,"control":control})
-            }
-            "foreach" => {
-                p.pop()?;
-                json!({"kind":"show","value":p.foreach()?})
-            }
-            "show" => {
-                p.pop()?;
-                json!({"kind":"show","value":p.expr(0)?})
-            }
-            _ => {
-                if p.next() == "(" {
-                    json!({"kind":"statement","value":p.expr(0)?})
-                } else {
-                    let name = p.pop()?;
-                    p.take("=")?;
-                    json!({"kind":"bind","name":&name,"value":p.expr(0)?})
-                }
-            }
-        };
-        out.push(Statement {
-            node,
-            line: p.line(),
-        });
-        if !["EOF", "\n", ";"].contains(&p.peek()) {
-            return p.err(format!("Unexpected {}", p.peek()));
-        }
-        p.skip()
-    }
-    Ok(out)
-}
-
-include!("parser_match.rs");
-
-#[cfg(test)]
-mod statement_check_tests {
-    use super::*;
-
-    fn first_value(source: &str) -> J {
-        parse(source).unwrap()[0].node["value"].clone()
-    }
-
-    fn kinds(items: &J) -> Vec<&str> {
-        items
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|item| item["kind"].as_str().unwrap_or("binding"))
-            .collect()
-    }
-
-    #[test]
-    fn checks_preserve_order_and_expressions_in_brace_functions() {
-        let function = first_value(
-            "check = fn value: f64 -> f64 {\n\
-             assert value > 0\n\
-             doubled = value * 2\n\
-             validate doubled.atLeast(1)\n\
-             assert(doubled >= value)\n\
-             ret doubled\n\
-             }",
-        );
-        assert_eq!(
-            kinds(&function["items"]),
-            ["assert", "binding", "validate", "assert"]
-        );
-        assert_eq!(function["items"][0]["left"]["kind"], "binary");
-        assert_eq!(function["items"][0]["left"]["value"], ">");
-        assert_eq!(function["items"][2]["left"]["kind"], "pipe");
-        assert_eq!(function["items"][3]["left"]["value"], ">=");
-        assert_eq!(function["left"]["value"], "doubled");
-    }
-
-    #[test]
-    fn checks_work_in_layout_and_void_functions() {
-        let statements = parse(
-            "fn checked value: f64 -> f64\n  assert(value > 0)\n  ret value\n\
-             fn checkOnly value: f64\n  validate value.atLeast(0)\n  assert value >= 0\n\
-             output = 1",
-        )
-        .unwrap();
-        assert_eq!(statements.len(), 3);
-        assert_eq!(kinds(&statements[0].node["value"]["items"]), ["assert"]);
-        let void_function = &statements[1].node["value"];
-        assert_eq!(void_function["voidResult"], true);
-        assert_eq!(kinds(&void_function["items"]), ["validate", "assert"]);
-        assert_eq!(statements[2].node["name"], "output");
-    }
-
-    #[test]
-    fn checks_preserve_foreach_clause_order() {
-        let sequence = first_value(
-            "values = foreach value in [1, 2]\n  where value > 0\n  assert value.atLeast(1)\n  doubled = value * 2\n  validate(doubled >= value)\n  yield doubled",
-        );
-        assert_eq!(
-            kinds(&sequence["items"]),
-            ["for", "where", "assert", "let", "validate"]
-        );
-        assert_eq!(sequence["items"][2]["left"]["kind"], "pipe");
-        assert_eq!(sequence["items"][4]["left"]["kind"], "binary");
-        assert_eq!(sequence["left"]["value"], "doubled");
-    }
-
-    #[test]
-    fn match_blocks_can_start_with_either_check_keyword() {
-        let expression = first_value(
-            "value = match 1\n  1 =>\n    assert 1 > 0\n    local = 2\n    validate local.atLeast(1)\n    ret local\n  _ =>\n    validate(1 > 0)\n    ret 0",
-        );
-        let first = &expression["items"][0]["result"];
-        assert_eq!(first["kind"], "match_block");
-        assert_eq!(kinds(&first["items"]), ["assert", "binding", "validate"]);
-        assert_eq!(first["items"][1]["name"], "local");
-        assert_eq!(first["items"][0]["left"]["kind"], "binary");
-        assert_eq!(
-            kinds(&expression["items"][1]["result"]["items"]),
-            ["validate"]
-        );
-    }
-
-    #[test]
-    fn top_level_check_ast_keeps_value_field() {
-        let statements = parse("assert(1 > 0)\nvalidate 2 >= 1").unwrap();
-        assert_eq!(statements[0].node["kind"], "assert");
-        assert_eq!(statements[0].node["value"]["kind"], "binary");
-        assert!(statements[0].node.get("left").is_none());
-        assert_eq!(statements[1].node["kind"], "validate");
-        assert_eq!(statements[1].node["value"]["value"], ">=");
-    }
-
-    #[test]
-    fn checks_follow_block_indentation_and_statement_limits() {
-        for source in [
-            "fn checked value: f64 -> f64\n  assert value > 0\n    validate value > 0\n  ret value",
-            "values = foreach value in [1]\n  assert value > 0\n    validate value > 0\n  yield value",
-            "value = match 1\n  _ =>\n    assert 1 > 0\n      validate 1 > 0\n    ret 1",
-            "check = fn value: f64 -> f64 { assert value > 0 ret value }",
-        ] {
-            assert!(parse(source).is_err(), "Unexpectedly accepted {source}");
-        }
-        for source in [
-            format!(
-                "check = fn value: f64 -> f64 {{\n{}ret value\n}}",
-                "assert value > 0\n".repeat(65)
-            ),
-            format!(
-                "fn checked value: f64 -> f64\n{}  ret value",
-                "  assert value > 0\n".repeat(65)
-            ),
-            format!(
-                "values = foreach value in [1]\n{}  yield value",
-                "  assert value > 0\n".repeat(64)
-            ),
-            format!(
-                "value = match 1\n  _ =>\n{}    ret 1",
-                "    assert 1 > 0\n".repeat(65)
-            ),
-        ] {
-            let error = parse(&source)
-                .err()
-                .expect("Statement budget must apply to checks");
-            assert!(error.message.contains("At most 64"), "{error}");
-        }
     }
 }
