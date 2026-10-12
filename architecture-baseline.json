@@ -68,8 +68,7 @@
     "src/services/openscadParser.ts": 3582,
     "src/services/openscadSemanticLowerer.ts": 3050,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
-    "src/services/webgpuRenderer.ts": 2900,
-    "src/services/workspacePersistence.ts": 529
+    "src/services/webgpuRenderer.ts": 2900
   },
   "layers": []
 }
