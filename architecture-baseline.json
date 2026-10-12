@@ -56,7 +56,6 @@
     "src/mcp/directGeometrySupervisor.ts": 681,
     "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/officialOpenScadRuntimeService.ts": 624,
-    "src/mcp/publicError.ts": 550,
     "src/services/buildCoordinator.ts": 911,
     "src/services/geometry/brepCapability.ts": 540,
     "src/services/geometryBuildEngine.ts": 594,
