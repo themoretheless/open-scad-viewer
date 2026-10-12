@@ -18,7 +18,6 @@
     "crates/modelgraph-runtime/src/emit/emitter/emitter.rs": 1083,
     "crates/modelgraph-runtime/src/eval.rs": 1417,
     "crates/modelgraph-runtime/src/nurbs.rs": 1154,
-    "crates/modelgraph-text/src/lower.rs": 2479,
     "crates/modelgraph-text/src/parser.rs": 1438,
     "crates/nurbs-core/src/foundation.rs": 3449,
     "crates/nurbs-core/src/intersection.rs": 1769,
