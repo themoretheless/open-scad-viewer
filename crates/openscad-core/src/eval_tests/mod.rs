@@ -16,4 +16,3 @@ const STABLE: LanguageProfile = LanguageProfile::Stable2021;
 mod big_stack;
 mod stable_ranges_and_undef_semantics;
 use big_stack::*;
-pub use stable_ranges_and_undef_semantics::*;

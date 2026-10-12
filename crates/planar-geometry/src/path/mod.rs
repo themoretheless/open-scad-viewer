@@ -15,5 +15,4 @@ mod average_axis;
 #[cfg(test)]
 mod tests;
 pub use path_segment::*;
-use bezier_path::*;
 pub use average_axis::*;

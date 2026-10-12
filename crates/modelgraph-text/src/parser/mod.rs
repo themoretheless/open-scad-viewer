@@ -10,5 +10,4 @@ mod number;
 #[cfg(test)]
 mod statement_check_tests;
 pub use statement::*;
-use parser::*;
 pub use number::*;

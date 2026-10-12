@@ -23,5 +23,4 @@ mod guarded_tests;
 #[cfg(test)]
 mod memo_tests;
 pub use value::*;
-use evaluator::*;
 use array::*;

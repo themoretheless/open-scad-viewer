@@ -17,5 +17,4 @@ mod v;
 mod compiler;
 mod compile;
 use v::*;
-use compiler::*;
 pub use compile::*;

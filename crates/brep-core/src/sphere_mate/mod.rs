@@ -44,5 +44,4 @@ mod sphere_inside;
 #[cfg(test)]
 mod parameter_tests;
 pub(crate) use unsupported::*;
-use imprint::*;
 pub(crate) use sphere_inside::*;
