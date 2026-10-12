@@ -22,6 +22,7 @@ import {
   type DirectGeometryRequest,
   type DirectGeometryTerminal,
 } from './directGeometryProtocol'
+import { abortError, attachBoundedOutputDrain, boundedInteger, defaultWorkerFactory } from './directGeometrySupervisor/boundedInteger'
 
 export const DIRECT_GEOMETRY_MAX_ADMITTED_JOBS = 8
 export const DIRECT_GEOMETRY_JOB_DEADLINE_MS = 30_000
@@ -33,7 +34,7 @@ const MAX_STARTUP_TIMEOUT_MS = 30_000
 const MAX_JOB_DEADLINE_MS = 120_000
 const MAX_CANCEL_GRACE_MS = 1_000
 const MAX_JOIN_TIMEOUT_MS = 10_000
-const MAX_DRAINED_CHILD_OUTPUT_BYTES = 8 * 1024
+export const MAX_DRAINED_CHILD_OUTPUT_BYTES = 8 * 1024
 
 export type DirectGeometrySupervisorErrorCode =
   | 'E_DIRECT_GEOMETRY_STARTUP'
@@ -169,66 +170,6 @@ interface ActiveJob {
   stopReason: StopReason | null
   startupTimer: ReturnType<typeof setTimeout> | undefined
   graceTimer: ReturnType<typeof setTimeout> | undefined
-}
-
-function boundedInteger(
-  value: number,
-  label: string,
-  minimum: number,
-  maximum: number,
-): number {
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new RangeError(`${label} must be an integer between ${minimum} and ${maximum}`)
-  }
-  return value
-}
-
-function defaultWorkerFactory(_workerEpoch: number): Worker {
-  return new Worker(new URL('./directGeometry.worker.mjs', import.meta.url), {
-    // The bootstrap owns its loader; do not inherit a second --import tsx realm.
-    execArgv: [],
-    // Geometry source never needs host credentials or configuration. An empty
-    // environment keeps accidental dependency reads from inheriting secrets.
-    env: {},
-    stdout: true,
-    stderr: true,
-    resourceLimits: {
-      maxOldGenerationSizeMb: 256,
-      maxYoungGenerationSizeMb: 32,
-      stackSizeMb: 8,
-    },
-  })
-}
-
-function attachBoundedOutputDrain(stream: Worker['stdout']): () => void {
-  let countedBytes = 0
-  const onData = (chunk: unknown) => {
-    const byteLength = typeof chunk === 'string'
-      ? Buffer.byteLength(chunk)
-      : ArrayBuffer.isView(chunk) ? chunk.byteLength : 0
-    countedBytes = Math.min(MAX_DRAINED_CHILD_OUTPUT_BYTES, countedBytes + byteLength)
-  }
-  try {
-    stream.unpipe()
-    stream.on('data', onData)
-    stream.resume()
-    return () => {
-      try {
-        stream.off('data', onData)
-      } catch {
-        // A joined child owns no further output; cleanup is best effort.
-      }
-    }
-  } catch {
-    // A real Worker pipe supports the operations above. Keep an injected test
-    // double from violating the more important terminate-and-join invariant.
-    try { stream.resume() } catch { /* no-op */ }
-    return () => undefined
-  }
-}
-
-function abortError(message: string): DOMException {
-  return new DOMException(message, 'AbortError')
 }
 
 /**

@@ -55,7 +55,7 @@
     "src/features/MeshModeler.vue": 976,
     "src/mcp/createServer.ts": 963,
     "src/mcp/createServer/createOpenScadMcpServer.ts": 1333,
-    "src/mcp/directGeometrySupervisor.ts": 740,
+    "src/mcp/directGeometrySupervisor.ts": 681,
     "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/geometryService.ts": 585,
     "src/mcp/officialOpenScadRuntimeService.ts": 624,
