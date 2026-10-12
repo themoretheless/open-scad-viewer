@@ -26,7 +26,6 @@
     "crates/nurbs-core/src/sweeps/progressive_sweep/tests.rs": 1048,
     "crates/nurbs-core/src/tests.rs": 1114,
     "crates/nurbs-core/src/transport.rs": 1349,
-    "crates/nurbs-intersect/src/analytic_ss.rs": 913,
     "crates/openscad-core/src/builtins.rs": 1424,
     "crates/openscad-core/src/eval/evaluator/evaluator/evaluator.rs": 3115,
     "crates/openscad-core/src/parser/parser_2/parser.rs": 1085,
