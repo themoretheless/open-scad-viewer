@@ -165,6 +165,8 @@ def split(path, target):
             chunks.append(cur); cur = []
         cur.append(seg)
     if cur: chunks.append(cur)
+    if len(chunks) < 2:
+        raise SystemExit('one oversized item: splitting would only nest it, refusing')
     stem = os.path.splitext(path)[0]
     os.makedirs(stem, exist_ok=True)
     used = {'tests'} | {os.path.splitext(f)[0] for f in os.listdir(stem)}
