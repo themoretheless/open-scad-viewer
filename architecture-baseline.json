@@ -65,7 +65,6 @@
     "src/services/commandRegistry.ts": 646,
     "src/services/geometry/brepCapability.ts": 540,
     "src/services/geometryBuildEngine.ts": 662,
-    "src/services/geometryWorkerProtocol.ts": 821,
     "src/services/mainSolidProtocol.ts": 797,
     "src/services/manifoldPlanBackend.ts": 640,
     "src/services/meshEditing.ts": 511,
