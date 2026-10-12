@@ -68,7 +68,6 @@
     "src/services/openscadCompiler.ts": 911,
     "src/services/openscadParser.ts": 3582,
     "src/services/openscadSemanticLowerer.ts": 3050,
-    "src/services/openScadStableExpressionEval.ts": 582,
     "src/services/semanticProgramCodec.ts": 574,
     "src/services/semanticProgramValidator/validateOccurrenceProduction.ts": 657,
     "src/services/webgpuRenderer.ts": 2900,
