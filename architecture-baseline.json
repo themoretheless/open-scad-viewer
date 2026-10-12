@@ -5,7 +5,6 @@
     "crates/brep-core/src/circular_blend.rs": 1964,
     "crates/brep-core/src/imprint_pipeline.rs": 1659,
     "crates/brep-core/src/lib.rs": 1887,
-    "crates/brep-core/src/nurbs_ss_g6.rs": 2562,
     "crates/brep-core/src/prism.rs": 830,
     "crates/brep-core/src/shared_boundary.rs": 884,
     "crates/brep-core/src/source_shared_edge.rs": 1823,
