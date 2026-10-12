@@ -13,7 +13,6 @@
     "crates/brep-core/src/offset_edge_supports.rs": 1103,
     "crates/brep-core/src/prism.rs": 830,
     "crates/brep-core/src/shared_boundary.rs": 884,
-    "crates/brep-core/src/source_contour_proposal.rs": 1379,
     "crates/brep-core/src/source_shared_edge.rs": 1823,
     "crates/brep-core/src/source_shell_incidence.rs": 2007,
     "crates/brep-core/src/sphere_mate.rs": 1231,
