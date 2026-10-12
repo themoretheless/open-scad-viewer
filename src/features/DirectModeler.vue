@@ -25,7 +25,6 @@ import SketchDimensionPanel from '../components/SketchDimensionPanel.vue'
 import { sketchDimensions } from '../services/directDimensions'
 import { defineAsyncComponent, computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import {solidVertexCount} from '../services/solidMeasurements'
-import type {solidBodyEdges} from '../services/solidBodyEdges'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../services/solidProfileEdit'
 import {isSolidSceneEdit} from '../services/solidSceneEdit'
 import {isSolidBodyEdit,type SolidBodyEditOptions} from '../services/solidBodyEdit'
@@ -64,14 +63,14 @@ import { solidDocumentToMeshDocument } from '../services/solidBridge'
 import type {SolidBrepToolOptions} from '../services/solidBrepTool'
 import type {SolidNurbsEditOptions} from '../services/solidNurbsEdit'
 import { createSolidNurbsCurve, createSolidNurbsSurface, type SolidNurbsSurface, type SolidNurbsCurve } from '../services/solidNurbs'
-import type {FramedSweepResult,SurfaceJetBoundary} from '../services/nurbsConstructors'
-import { evaluateNurbsCurve } from '../services/nurbsCurve'
+import type { SurfaceJetBoundary} from '../services/nurbsConstructors'
 import {isSolidNurbsRefit } from '../services/solidCurveReduction'
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
 import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, triangleNormals, COARSE_DISPLAY, canvasOf, primitiveKinds, PRIMITIVE_ICONS, DEFAULT_GROUP_SOURCE } from './directModeler/helpers'
 import type { Pane } from './directModeler/helpers'
+import { useAdvancedPreview } from './directModeler/useAdvancedPreview'
 import { useNurbsMatching } from './directModeler/useNurbsMatching'
 import { useCommandPalette } from './directModeler/useCommandPalette'
 import { useSourceBodyTools } from './directModeler/useSourceBodyTools'
@@ -825,73 +824,7 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
   finally{if(generation===bodyEditGeneration){bodyEditPending.value=false;if(bodyEditApplyGeneration===generation){bodyEditApplyGeneration=null;applyCommand()}}}
  })
 },{flush:'sync'})
-const advancedPreview = computed(() => {
- if(!advancedOp.value||(advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isNurbsMatch(advancedOp.value))&&bodyEditPending.value)return {document:null,error:'',rawError:'',sweepReport:null}
- if(isSolidSurfaceBuild(advancedOp.value)){const r=surfaceBuildResult.value,error=r?.error||bodyEditError.value;return {document:r?.document??null,error:error?surfaceConstructionError(error):'',rawError:error,sweepReport:r?.report??null}}
- if(advancedOp.value==='nurbs-offset'||advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||isSolidSceneEdit(advancedOp.value))return {document:bodyEditResult.value,error:bodyEditError.value?surfaceConstructionError(bodyEditError.value):'',rawError:bodyEditError.value,sweepReport:null}
- // Explicit reactive dependencies: history itself intentionally is not reactive.
- void document.value;void selection.value;void faceIndex.value;void edgeIndex.value;void edgeIndexes.value;void openingFaces.value;void advanced.value
- const report:{value:FramedSweepResult['report']|null}={value:null}
- try{const result=resultAdvanced(value=>report.value=value);return {document:result,error:'',rawError:'',sweepReport:report.value}}catch(e){return {document:null,error:surfaceConstructionError(e),rawError:e instanceof Error?e.message:String(e),sweepReport:report.value}}
-})
-const pointTrimPreviewPoints=computed(()=>{
- if(advancedOp.value!=='nurbs-point-trim')return []
- const curve=advancedPreview.value.document?.curves?.find(c=>c.id===selection.value)?.curve
- return curve?curvePoints(curve).map(p=>[p[0],p[1],p[2]??0] as Vec3):[]
-})
-const pointTrimCut=computed(()=>{
- if(advancedOp.value!=='nurbs-point-trim')return undefined
- const curve=advancedPreview.value.document?.curves?.find(c=>c.id===selection.value)?.curve
- // Native trim inserts the cut knot, making this endpoint a control point.
- const p=advanced.value.end==='start'?curve?.controlPoints.at(-1):curve?.controlPoints[0]
- return p?[p[0],p[1],p[2]??0]:undefined
-})
-const patchBudgetCurve=computed(()=>{
- const role=advancedOp.value==='nurbs-patch'?advancedPreview.value.rawError.match(/PATCH_BUDGET:([0-3])/):null
- return role?surfaceInputs.value[Number(role[1])]:undefined
-})
-const patchGapPoints=computed(()=>{
- if(advancedOp.value!=='nurbs-patch')return []
- const match=advancedPreview.value.rawError.match(/Coons corner ([1-4]) does not coincide/)
- if(!match)return []
- const pairs=[[[0,0],[2,0]],[[0,1],[3,0]],[[1,0],[2,1]],[[1,1],[3,1]]]
- try{return pairs[Number(match[1])-1].map(([role,end])=>{
-  const curve=document.value.curves!.find(c=>c.id===surfaceInputs.value[role])!.curve
-  const last=surfaceReversed.value[role]?!end:!!end
-  return evaluateNurbsCurve(curve,curve.knots[last?curve.controlPoints.length:curve.degree]).point as Vec3
- })}catch{return []}
-})
-function applyAdvanced(){run(()=>{
- if(!advancedPreview.value.document)return
- const d=structuredClone(advancedPreview.value.document),splitBody=d.bodies.find(b=>b.id==='preview-split');if(splitBody)splitBody.id=crypto.randomUUID()
- const prepared=advancedOp.value==='nurbs-prepare'
- const profileId=(isProfileCommand(advancedOp.value))?surfaceInputs.value[0]:''
- const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset'||advancedOp.value==='loft')?loftPreviewId.value:''
- commit(d);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
-})}
-const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
-const advancedBodyIds=computed(()=>new Set([...selectedIds.value,...sceneBodies.value.filter(b=>b.instance&&selectedIds.value.includes(b.instance.sourceId)).map(b=>b.id),'preview-split',loftPreviewId.value]))
-const advancedPolygons=computed(()=>advancedPreview.value.document?.bodies.filter(b=>advancedBodyIds.value.has(b.id)).flatMap(b=>meshPolygons(b,1)).sort((a,b)=>a.depth-b.depth)??[])
-const advancedSurfaceIds=computed(()=>advancedOp.value==='nurbs-prepare'?surfaceInputs.value:advancedOp.value==='nurbs-match'?[surfaceInputs.value[1]]:advancedOp.value==='nurbs-surface-reduce'||advancedOp.value==='nurbs-surface-rebuild'?[selection.value]:[loftPreviewId.value])
-const advancedSurfacePolygons=computed(()=>advancedPreview.value.document?.surfaces?.filter(item=>advancedSurfaceIds.value.includes(item.id)).flatMap(item=>surfacePolygons(item)).sort((a,b)=>a.depth-b.depth)??[])
-const advancedSketches=computed(()=>advancedPreview.value.document?.sketches.filter(s=>selectedIds.value.includes(s.id)&&samePlane(s.plane,activePlane.value))??[])
-const advancedSketchDisplay=computed(()=>new Map(advancedSketches.value.map(s=>[s.id,profileLoops(s)])))
-const authoredEdges=shallowRef<ReturnType<typeof solidBodyEdges>>([]),bodyEdgesPending=ref(false)
-const bodyEdgesWorker=createSolidPreviewWorker()
-let bodyEdgesGeneration=0
-function cancelBodyEdges(){bodyEdgesGeneration++;bodyEdgesWorker.cancel();bodyEdgesPending.value=false}
-onUnmounted(()=>{cancelBodyEdges();bodyEdgesWorker.dispose()})
-async function refreshBodyEdges(){
- cancelBodyEdges();authoredEdges.value=[]
- const body=selectedBody.value,source=document.value,generation=bodyEdgesGeneration
- if(!props.open||!kernelReady.value||!body||pickMode.value!=='edge')return
- bodyEdgesPending.value=true
- try{
-  const edges=await bodyEdgesWorker.run({kind:'bodyEdges',body})
-  if(generation===bodyEdgesGeneration&&document.value===source&&selectedBody.value===body)authoredEdges.value=edges
- }catch(e){if(generation===bodyEdgesGeneration)error.value=e instanceof Error?e.message:String(e)}
- finally{if(generation===bodyEdgesGeneration)bodyEdgesPending.value=false}
-}
+const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
 const sourceDisplayWorker=createSolidPreviewWorker(),sourceDisplay=new SourceBodyDisplay(sourceDisplayWorker)
 const sourceDisplayResults=shallowRef<Record<string,SourceBodyResult>>({}),sourceDisplayErrors=shallowRef<Record<string,string>>({})
 const sourceDisplayPending=ref(false),sourceEdgeSelection=ref(''),sourceEdgeHover=ref('')
