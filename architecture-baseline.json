@@ -6,7 +6,6 @@
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/prism.rs": 830,
     "crates/brep-core/src/shared_boundary.rs": 884,
-    "crates/brep-core/src/source_shared_edge.rs": 1823,
     "crates/brep-core/src/sphere_mate.rs": 1231,
     "crates/brep-core/src/stepped_prism.rs": 806,
     "crates/brep-core/src/tolerant_boolean.rs": 1640,
