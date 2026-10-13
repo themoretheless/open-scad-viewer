@@ -4,13 +4,7 @@ use polygon_core::{
     Mesh,
     solid::boolean::{Operation, Options, boolean},
 };
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
+use math_core::cross;
 fn unit(v: [f64; 3]) -> Result<[f64; 3]> {
     let magnitude = v.iter().map(|x| x.abs()).fold(0., f64::max);
     if magnitude == 0. || !v.iter().all(|x| x.is_finite()) {

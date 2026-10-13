@@ -1,4 +1,5 @@
 use super::*;
+use math_core::{cross, dot};
 
 fn root(parent: &mut [usize], mut i: usize) -> usize {
     while parent[i] != i {
@@ -185,18 +186,6 @@ impl EdgeHeap {
 
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     std::array::from_fn(|k| a[k] - b[k])
-}
-
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
 pub fn decimate(v: Value) -> Result<Value> {
