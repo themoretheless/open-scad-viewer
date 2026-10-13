@@ -23,7 +23,6 @@
     "crates/openscad-core/src/builtins.rs": 1424,
     "crates/openscad-core/src/eval/evaluator/evaluator.rs": 3115,
     "crates/openscad-core/src/parser/parser_2/parser.rs": 1085,
-    "crates/polygon-core/src/solid/boolean.rs": 1505,
     "crates/sdf-core/src/lib.rs": 2146,
     "crates/sketch-core/src/lib.rs": 960,
     "crates/value-codec/src/lib.rs": 967,
