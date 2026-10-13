@@ -65,9 +65,10 @@ export default defineConfig({
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
             // Keep the generated shader library separate from renderer control code.
             { name: 'renderer-shaders', test: /src[\\/]services[\\/]shaders[\\/]/, includeDependenciesRecursively: false },
-            // Keep independent GPU preview and transparency passes out of renderer control code.
-            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit)\.ts$/, includeDependenciesRecursively: false },
+            // Keep independent GPU preview and compute passes out of renderer control code.
+            { name: 'renderer-gpu-passes', test: /src[\\/]services[\\/](gpuCsgPreview|gpuWboit|gpuPicker|gpuZeroCopyPipeline|gpuSlicer|gpuBvhRaycast|gpuSubdivision|gpuGcodePreview|gpuImageTrace|gpuTrussSolver|gpuSemanticEdges|gpuNurbsTessellate|gpuMarchingCubes)\.ts$/, includeDependenciesRecursively: false },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
+
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],
         },

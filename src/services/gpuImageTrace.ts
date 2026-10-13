@@ -31,151 +31,14 @@ export interface GpuImageContourResult {
   contours: [number, number][][]
 }
 
-export const IMAGE_CONTOUR_WGSL = /* wgsl */`
-struct ContourParams {
-  grid_w: u32,
-  grid_h: u32,
-  mode: u32,
-  max_segments: u32,
-  threshold: f32,
-  width_mm: f32,
-  height_mm: f32,
-  _pad0: f32,
-};
+import IMAGE_CONTOUR_WGSL from '../../crates/compute-core/shaders/image_contour.wgsl?raw'
+export { IMAGE_CONTOUR_WGSL }
 
-@group(0) @binding(0) var<uniform> params: ContourParams;
-@group(0) @binding(1) var<storage, read> rgba_pixels: array<u32>;
-@group(0) @binding(2) var<storage, read_write> segment_counter: array<atomic<u32>, 1>;
-@group(0) @binding(3) var<storage, read_write> out_segments: array<f32>;
 
-fn sample_scalar(ix: u32, iy: u32) -> f32 {
-  let cx = min(ix, params.grid_w - 1u);
-  let cy = min(iy, params.grid_h - 1u);
-  let rgba = rgba_pixels[cy * params.grid_w + cx];
-
-  let r = f32(rgba & 0xFFu) / 255.0;
-  let g = f32((rgba >> 8u) & 0xFFu) / 255.0;
-  let b = f32((rgba >> 16u) & 0xFFu) / 255.0;
-  let a = f32((rgba >> 24u) & 0xFFu) / 255.0;
-
-  if (params.mode == 1u) {
-    return a;
-  }
-  let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return (1.0 - luma) * a;
-}
-
-fn interp_frac(v0: f32, v1: f32, iso: f32) -> f32 {
-  let denom = v1 - v0;
-  if (abs(denom) < 1e-7) {
-    return 0.5;
-  }
-  return clamp((iso - v0) / denom, 0.0, 1.0);
-}
-
-fn to_mm(gx: f32, gy: f32) -> vec2<f32> {
-  let sx = params.width_mm / max(1.0, f32(params.grid_w - 1u));
-  let sy = params.height_mm / max(1.0, f32(params.grid_h - 1u));
-  return vec2<f32>(gx * sx, (f32(params.grid_h - 1u) - gy) * sy);
-}
-
-fn emit_seg(p0: vec2<f32>, p1: vec2<f32>) {
-  let d = p1 - p0;
-  if (dot(d, d) <= 1e-12) {
-    return;
-  }
-  let slot = atomicAdd(&segment_counter[0], 1u);
-  if (slot < params.max_segments) {
-    let off = slot * 4u;
-    out_segments[off + 0u] = p0.x;
-    out_segments[off + 1u] = p0.y;
-    out_segments[off + 2u] = p1.x;
-    out_segments[off + 3u] = p1.y;
-  }
-}
-
-const WG: u32 = 256;
-
-@compute @workgroup_size(WG)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  if (params.grid_w < 2u || params.grid_h < 2u) {
-    return;
-  }
-  let cells_w = params.grid_w - 1u;
-  let cells_h = params.grid_h - 1u;
-  let total_cells = cells_w * cells_h;
-  let cell_idx = id.x;
-  if (cell_idx >= total_cells) {
-    return;
-  }
-
-  let cx = cell_idx % cells_w;
-  let cy = cell_idx / cells_w;
-
-  let v0 = sample_scalar(cx, cy);
-  let v1 = sample_scalar(cx + 1u, cy);
-  let v2 = sample_scalar(cx + 1u, cy + 1u);
-  let v3 = sample_scalar(cx, cy + 1u);
-
-  let iso = params.threshold;
-  var mask = 0u;
-  if (v0 >= iso) { mask |= 1u; }
-  if (v1 >= iso) { mask |= 2u; }
-  if (v2 >= iso) { mask |= 4u; }
-  if (v3 >= iso) { mask |= 8u; }
-
-  if (mask == 0u || mask == 15u) {
-    return;
-  }
-
-  let fx = f32(cx);
-  let fy = f32(cy);
-
-  let e_top = to_mm(fx + interp_frac(v0, v1, iso), fy);
-  let e_right = to_mm(fx + 1.0, fy + interp_frac(v1, v2, iso));
-  let e_bottom = to_mm(fx + interp_frac(v3, v2, iso), fy + 1.0);
-  let e_left = to_mm(fx, fy + interp_frac(v0, v3, iso));
-
-  switch (mask) {
-    case 1u:  { emit_seg(e_left, e_top); }
-    case 2u:  { emit_seg(e_top, e_right); }
-    case 3u:  { emit_seg(e_left, e_right); }
-    case 4u:  { emit_seg(e_right, e_bottom); }
-    case 5u:  {
-      let center = 0.25 * (v0 + v1 + v2 + v3);
-      if (center >= iso) {
-        emit_seg(e_left, e_bottom);
-        emit_seg(e_right, e_top);
-      } else {
-        emit_seg(e_left, e_top);
-        emit_seg(e_right, e_bottom);
-      }
-    }
-    case 6u:  { emit_seg(e_top, e_bottom); }
-    case 7u:  { emit_seg(e_left, e_bottom); }
-    case 8u:  { emit_seg(e_bottom, e_left); }
-    case 9u:  { emit_seg(e_bottom, e_top); }
-    case 10u: {
-      let center = 0.25 * (v0 + v1 + v2 + v3);
-      if (center >= iso) {
-        emit_seg(e_top, e_left);
-        emit_seg(e_bottom, e_right);
-      } else {
-        emit_seg(e_top, e_right);
-        emit_seg(e_bottom, e_left);
-      }
-    }
-    case 11u: { emit_seg(e_bottom, e_right); }
-    case 12u: { emit_seg(e_right, e_left); }
-    case 13u: { emit_seg(e_right, e_top); }
-    case 14u: { emit_seg(e_top, e_left); }
-    default: {}
-  }
-}
-`
-
-function quantKey(p: [number, number]): string {
-  return `${Math.round(p[0] * 1e4)}:${Math.round(p[1] * 1e4)}`
+function quantKey(p: [number, number]): number {
+  const qx = Math.round(p[0] * 1e4) + 50_000_000
+  const qy = Math.round(p[1] * 1e4) + 50_000_000
+  return qx * 100_000_000 + qy
 }
 
 /**
@@ -186,7 +49,8 @@ export function stitchSegmentsToContours(
 ): [number, number][][] {
   if (segments.length === 0) return []
 
-  const startMap = new Map<string, number[]>()
+  const startMap = new Map<number, number[]>()
+
   for (let i = 0; i < segments.length; i++) {
     const key = quantKey(segments[i]!.p0)
     let bucket = startMap.get(key)

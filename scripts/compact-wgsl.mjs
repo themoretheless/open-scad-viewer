@@ -11,9 +11,26 @@ export function compactWgslLiterals(source) {
     return marker + '`' + compact + '`'
   })
 }
+export function compactWgslRawSource(body) {
+  if (body.includes('/*')) return body
+  const uncommented = body.replace(/\/\/[^\r\n]*/g, '')
+  if (/["']/.test(uncommented)) return body
+  return uncommented.split('\n').map(line => line.trim()).filter(Boolean).join('\n')
+}
 export function compactWgslPlugin() {
   return {name:'compact-static-wgsl',apply:'build',enforce:'pre',transform(source,id){
-    if (!/\/src\/services\/(shaders\/generated\/sources|solidGpuView|gpuMarchingCubes|gpuWboit|gpuNurbsTessellate|gpuCsgPreview|gpuPicker|gpuSlicer|geometryCompute|gpuSemanticEdges)\.ts$/.test(id)) return
+    if (/\.wgsl(\?raw)?$/.test(id)) {
+      return {code:source.replace(/export default "([\s\S]*)"/, (m, inner) => {
+        try {
+          const raw = JSON.parse('"' + inner + '"')
+          return 'export default ' + JSON.stringify(compactWgslRawSource(raw))
+        } catch {
+          return m
+        }
+      }),map:null}
+    }
+    if (!/\/src\/services\/(shaders\/generated\/sources|solidGpuView|gpu[A-Za-z0-9]+|geometryCompute)\.ts$/.test(id)) return
     return {code:compactWgslLiterals(source),map:null}
   }}
 }
+
