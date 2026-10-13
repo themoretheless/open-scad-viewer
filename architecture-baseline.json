@@ -12,7 +12,6 @@
     "crates/modelgraph-runtime/src/eval/evaluator.rs": 1018,
     "crates/modelgraph-text/src/lower/compiler.rs": 1889,
     "crates/modelgraph-text/src/parser/parser.rs": 1000,
-    "crates/nurbs-core/src/foundation.rs": 3449,
     "crates/nurbs-core/src/sweeps/progressive_sweep/tests.rs": 1048,
     "crates/nurbs-core/src/tests.rs": 1114,
     "crates/nurbs-core/src/transport/dispatch.rs": 1289,
