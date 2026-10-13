@@ -13,7 +13,6 @@
     "crates/nurbs-core/src/tests.rs": 1114,
     "crates/nurbs-core/src/transport/dispatch.rs": 1289,
     "crates/openscad-core/src/eval/evaluator/evaluator.rs": 3115,
-    "crates/openscad-core/src/parser/parser_2/parser.rs": 1085,
     "crates/sdf-core/src/lib.rs": 2146,
     "crates/sketch-core/src/lib.rs": 960,
     "crates/value-codec/src/lib.rs": 967,
