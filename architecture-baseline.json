@@ -1,6 +1,5 @@
 {
   "sizes": {
-    "crates/brep-core/src/analytic.rs": 869,
     "crates/brep-core/src/box_sphere_boolean.rs": 813,
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/prism.rs": 830,
