@@ -1,12 +1,6 @@
 //! Retained-body hole cutters and native Boolean. No mesh fallback.
 use super::{Result, Value, brep, encode, field, input};
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
+use math_core::cross;
 fn unit(v: [f64; 3]) -> Result<[f64; 3]> {
     let max = v.iter().map(|x| x.abs()).fold(0., f64::max);
     if max == 0. || !v.iter().all(|x| x.is_finite()) {
