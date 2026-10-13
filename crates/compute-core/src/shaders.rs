@@ -171,11 +171,22 @@ pub const MARCHING_CUBES_WGSL: &str = include_str!("../shaders/marching_cubes.wg
 pub const NURBS_TESSELLATE_WGSL: &str = include_str!("../shaders/nurbs_tessellate.wgsl");
 pub const SEMANTIC_EDGES_WGSL: &str = include_str!("../shaders/semantic_edges.wgsl");
 pub const MESH_SLICER_WGSL: &str = include_str!("../shaders/mesh_slicer.wgsl");
+pub const BVH_RAYCAST_WGSL: &str = include_str!("../shaders/bvh_raycast.wgsl");
+pub const CATMULL_CLARK_WGSL: &str = include_str!("../shaders/catmull_clark.wgsl");
+pub const GCODE_SEGMENTS_WGSL: &str = include_str!("../shaders/gcode_segments.wgsl");
+pub const IMAGE_CONTOUR_WGSL: &str = include_str!("../shaders/image_contour.wgsl");
+pub const TRUSS_PCG_WGSL: &str = include_str!("../shaders/truss_pcg.wgsl");
 
-/// Hardware-accelerated CAD geometry kernels (Marching Cubes, NURBS Tessellation, Semantic Edges, Slicer).
-pub const CAD_KERNELS: [(&str, &str); 4] = [
+/// Hardware-accelerated CAD geometry kernels (Marching Cubes, NURBS Tessellation, Semantic Edges, Slicer, BVH Raycast, Catmull-Clark, G-Code, Image Contour, Truss PCG).
+pub const CAD_KERNELS: [(&str, &str); 9] = [
     ("marching_cubes", MARCHING_CUBES_WGSL),
     ("nurbs_tessellate", NURBS_TESSELLATE_WGSL),
     ("semantic_edges", SEMANTIC_EDGES_WGSL),
     ("mesh_slicer", MESH_SLICER_WGSL),
+    ("bvh_raycast", BVH_RAYCAST_WGSL),
+    ("catmull_clark", CATMULL_CLARK_WGSL),
+    ("gcode_segments", GCODE_SEGMENTS_WGSL),
+    ("image_contour", IMAGE_CONTOUR_WGSL),
+    ("truss_pcg", TRUSS_PCG_WGSL),
 ];
+

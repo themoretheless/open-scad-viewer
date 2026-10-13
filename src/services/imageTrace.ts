@@ -34,3 +34,5 @@ export function imageTraceColorSketches(layers:{color:[number,number,number];con
  if(!sketches.length)throw Error('No colors at these trace settings.')
  return sketches
 }
+export {runGpuImageContourTrace,referenceImageContourTrace,stitchSegmentsToContours,type GpuImageContourOptions,type GpuImageContourResult} from './gpuImageTrace'
+
