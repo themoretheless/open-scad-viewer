@@ -23,6 +23,7 @@ export function createPickMatrix(
   pixelX: number,
   pixelY: number,
   windowSize = 1,
+  out?: Float32Array,
 ): Float32Array {
   const w = Math.max(1, viewportWidth)
   const h = Math.max(1, viewportHeight)
@@ -30,13 +31,13 @@ export function createPickMatrix(
 
   // Center of picked pixel in normalized device coordinates [-1, 1]
   const cx = ((pixelX + 0.5) / w) * 2 - 1
-  const cy = 1 - ((pixelY + 0.5) / h) * 2
+  const cy = 1 - ((pixelY + 5e-1) / h) * 2
 
   // Scaling factor: a pixel of NDC width 2/w expands to full NDC width 2
   const sx = w / win
   const sy = h / win
 
-  const m = identityMat4()
+  const m = out ? (out.fill(0), out) : identityMat4()
   // Row 0: x' = sx * (x - cx)
   m[0] = sx
   m[3] = -sx * cx
@@ -48,6 +49,7 @@ export function createPickMatrix(
   m[15] = 1
   return m
 }
+
 
 /* ── WebGPU Picking WGSL Shader ───────────────────────── */
 
@@ -198,6 +200,13 @@ export class GpuPicker {
     })
   }
 
+  private readonly scratchObjData = new ArrayBuffer(256)
+  private readonly scratchObjF32 = new Float32Array(this.scratchObjData)
+  private readonly scratchObjU32 = new Uint32Array(this.scratchObjData)
+  private readonly scratchSceneData = new Float32Array(32)
+  private readonly scratchPickMat = new Float32Array(16)
+  private readonly scratchPickVP = new Float32Array(16)
+
   private ensureObjectBindGroup(dev: GPUDevice, index: number, mesh: GpuPickerMesh): GPUBindGroup {
     if (!this.objUBs[index]) {
       this.objUBs[index] = dev.createBuffer({
@@ -210,16 +219,12 @@ export class GpuPicker {
       })
     }
 
-    const data = new ArrayBuffer(256)
-    const f32 = new Float32Array(data)
-    const u32 = new Uint32Array(data)
-
     // model: mat4x4f (16 floats = 64 bytes)
-    f32.set(mesh.transform, 0)
+    this.scratchObjF32.set(mesh.transform, 0)
     // id: u32 (1-indexed, so 0 is background)
-    u32[16] = index + 1
+    this.scratchObjU32[16] = index + 1
 
-    dev.queue.writeBuffer(this.objUBs[index], 0, data)
+    dev.queue.writeBuffer(this.objUBs[index], 0, this.scratchObjData)
     return this.objBGs[index]
   }
 
@@ -238,16 +243,17 @@ export class GpuPicker {
     this.ensureResources(dev)
 
     // Compute 1x1 pick projection: VP_pick = M_pick * VP_camera
-    const pickMat = createPickMatrix(sceneParams.viewportWidth, sceneParams.viewportHeight, pixelX, pixelY, 1)
-    const pickVP = multiplyMat4(pickMat, sceneParams.cameraViewProjection)
+    const pickMat = createPickMatrix(sceneParams.viewportWidth, sceneParams.viewportHeight, pixelX, pixelY, 1, this.scratchPickMat)
+    const pickVP = multiplyMat4(pickMat, sceneParams.cameraViewProjection, this.scratchPickVP)
 
     // Upload Scene uniforms
-    const sceneData = new Float32Array(32)
+    const sceneData = this.scratchSceneData
     // vp: mat4x4f
     sceneData.set(pickVP, 0)
     // section: vec4f
     const normal = sceneParams.sectionNormal ?? [0, 0, 1]
     sceneData[16] = normal[0]
+
     sceneData[17] = normal[1]
     sceneData[18] = normal[2]
     sceneData[19] = sceneParams.sectionOffset ?? 0

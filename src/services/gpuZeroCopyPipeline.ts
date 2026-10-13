@@ -169,7 +169,7 @@ export function supportsOffscreenWebGpu(): boolean {
  */
 export class GpuBufferArena {
   private readonly device: GPUDevice
-  private readonly pool = new Map<string, GPUBuffer[]>()
+  private readonly pool = new Map<number, GPUBuffer[]>()
   private allocatedBytes = 0
   private activeCount = 0
 
@@ -177,14 +177,13 @@ export class GpuBufferArena {
     this.device = device
   }
 
-  private bucketKey(sizeBytes: number, usage: number): string {
-    // Round up to next power of 2 (minimum 256 bytes)
-    const pow2 = Math.max(256, 1 << Math.ceil(Math.log2(Math.max(1, sizeBytes))))
-    return `${pow2}:${usage}`
+  private bucketSize(sizeBytes: number): number {
+    const n = Math.max(256, Math.ceil(sizeBytes))
+    return 1 << (32 - Math.clz32(n - 1))
   }
 
-  private bucketSize(sizeBytes: number): number {
-    return Math.max(256, 1 << Math.ceil(Math.log2(Math.max(1, sizeBytes))))
+  private bucketKey(sizeBytes: number, usage: number): number {
+    return this.bucketSize(sizeBytes) * 1024 + (usage & 0x3ff)
   }
 
   acquire(sizeBytes: number, usage: number): GPUBuffer {
@@ -215,6 +214,7 @@ export class GpuBufferArena {
     bucket.push(buffer)
     this.activeCount = Math.max(0, this.activeCount - 1)
   }
+
 
   getStats(): { allocatedBytes: number; activeBuffers: number; pooledBuffers: number } {
     let pooled = 0
