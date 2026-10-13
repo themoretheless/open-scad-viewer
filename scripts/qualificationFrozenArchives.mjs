@@ -34,6 +34,12 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  'scripts/refresh-qualification-fingerprints-v74-v91.mjs': 'e70a16fa5e1c95fecc915ac21f61a730a54fca7587866f789f410de9f78796b5',
+  'docs/qualification/own-rust-cad-v57.json': 'c12e6ef04646c38ef5ebc5e4aada90f31e1aaa7dd537921ba5a5bc0c24a183d1',
+  'docs/qualification/g0-toolchain-fingerprints-v74.json': 'ddc95fdac64ee12e35d0246506fc67e3f98e57f980c788fba38de58226edcf87',
+  'docs/qualification/semantic-manifold-g1-plan-v91.json': '91b850d9ec259ce1487f0a49bf2fa8c2dea09b5e33b27da26c483d21b0b4ad35',
+  'docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json': '1c972ad0cac14a503f2e2c2737253aba0098b0c2d95b732d53547381617320cb',
+  'docs/qualification/g0-v74-g1-v91-refreeze-review.md': '50e1c3ef5251b9b3749d5654136929c9007ae5f16baef2676ea59cf087d66981',
   'scripts/refresh-qualification-fingerprints-v73-v90.mjs': '76ebc178cc1fce7836b29b3a2b8eeea0341ff7e879b7c9c1c5b96afe4531df13',
   'docs/qualification/own-rust-cad-v56.json': '7345d6bf28a1238217959158436bc098389f6a192021736d7ee1d0ae597ac1ee',
   'docs/qualification/g0-toolchain-fingerprints-v73.json': '689a61c60b1856e175ebde35702d4882701854f9a1ecb99fadab127f005211cd',
