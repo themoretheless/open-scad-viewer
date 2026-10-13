@@ -2,7 +2,6 @@
   "sizes": {
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-topology/src/lib.rs": 1468,
-    "crates/geometry-bridge/src/brep_attestation.rs": 847,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1128,
     "crates/geometry-bridge/src/tests.rs": 1212,
     "crates/mechanical-core/src/lib.rs": 991,
