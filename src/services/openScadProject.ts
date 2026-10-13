@@ -1,4 +1,5 @@
 import { sha256Hex } from '../core/sha256'
+import { isWellFormedUnicode } from '../core/unicode'
 
 export const OPENSCAD_PROJECT_SCHEMA_VERSION = 2 as const
 export const OPENSCAD_PROJECT_MAX_FILES = 128
@@ -118,17 +119,6 @@ export interface OpenScadProjectBundleV2 {
 }
 
 const UTF8 = new TextEncoder()
-
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const unit = value.charCodeAt(index)
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      const next = value.charCodeAt(++index)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) return false
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) return false
-  }
-  return true
-}
 
 function utf8Length(value: string): number {
   return UTF8.encode(value).byteLength

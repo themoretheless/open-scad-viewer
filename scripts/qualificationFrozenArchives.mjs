@@ -34,6 +34,18 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  'scripts/refresh-qualification-fingerprints-v72-v89.mjs': '6732343c3a2de5595308fc55f2321bf91edf6655fde0251330fe85f2d8c334b2',
+  'docs/qualification/own-rust-cad-v55.json': 'e4723994b18b96328ca3929e4ac0444ff68c577b20fc700d68ff847fbccd0cac',
+  'docs/qualification/g0-toolchain-fingerprints-v72.json': 'd2973bbda20913d0a019446044154ebddb116836f51446cd1d4fcb0e6db5ced0',
+  'docs/qualification/semantic-manifold-g1-plan-v89.json': '514119823a4093a2fe4a763959636a0d30bf966be0e601c7e3c40e963d81c33c',
+  'docs/qualification/g0-v72-g1-v89-refreeze-status-v1.json': 'b0f42b1c43b8b2e5bbd1650961feeb9662b282d3e218edee56a5aa8e60c6b08b',
+  'docs/qualification/g0-v72-g1-v89-refreeze-review.md': 'b0936195677ab91d9d93e7504244d22c4f174087ac99552245ac0d8bd720e9f2',
+  'scripts/refresh-qualification-fingerprints-v71-v88.mjs': 'e765b32b2ef45321864cd0daf5c516a6c7828d217a1f5ba26f78fe9c7584f9f3',
+  'docs/qualification/own-rust-cad-v54.json': '75c5eaa9402a76df508a221fe501d800bc9099ba0954ad1816468972b2753068',
+  'docs/qualification/g0-toolchain-fingerprints-v71.json': 'ddb5c40fa118d33927abdacf144a2a98e1e0dddc94853059e79c975664a063d9',
+  'docs/qualification/semantic-manifold-g1-plan-v88.json': 'a2dee0099486333ee79beaba23247fea469f46e2582b301e7a182e55730545f0',
+  'docs/qualification/g0-v71-g1-v88-refreeze-status-v1.json': '58bf225e2c41757758169c063d7213eb6a3c79657ad632f45fb0acd93d3b51ff',
+  'docs/qualification/g0-v71-g1-v88-refreeze-review.md': 'bf250a45635cef09ebb3a1ba094b09eb5383afe1c76c45f331d03de0feb094aa',
   'scripts/refresh-qualification-fingerprints-v70-v87.mjs': '1338db74ecb741549553722c5f7499de9b385edaf5a6bf04113cbc5bd0e2f8f6',
   'docs/qualification/own-rust-cad-v53.json': 'de7a1bafd42b93b2ed1bb829469f4815e5d1ebf88ded02388a06c7721fc20633',
   'docs/qualification/g0-toolchain-fingerprints-v70.json': 'c3e5dc7942a943e810a3823f931d9f1b38d4e0caf5e1a8dde99831f9bebaa485',

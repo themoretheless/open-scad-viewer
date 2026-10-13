@@ -1,7 +1,7 @@
 //! Sufficient exact identity of rational Bezier equations in normalized chord charts.
 //! This proves equation identity, never root existence or unique root selection.
 use crate::{
-    Algebra, AuthoredScalar, Expansion, InputError, LeafRef, ParameterDecision, ParameterIdentity,
+    Algebra, AuthoredScalar, InputError, LeafRef, ParameterDecision, ParameterIdentity,
     PredicateContext, Reason, Sign, exact_inputs,
 };
 pub fn line_chart_cutter_identity(

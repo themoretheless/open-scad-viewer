@@ -10,7 +10,7 @@ import {readSweepViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
@@ -18,6 +18,9 @@ import ExampleGallery from './components/ExampleGallery.vue'
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
+import { APP_STRINGS as L, type Language } from './i18n/appStrings'
+import { useAppearance } from './composables/useAppearance'
+import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
@@ -67,13 +70,7 @@ import {
 import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
-import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
-import {
-  findLiteralMatches,
-  replaceAllLiteral,
-  replaceExpectedMatch,
-  wrappedMatchIndex,
-} from './services/textSearch'
+import { nextRovingIndex } from './services/rovingFocus'
 import { buildBinaryStl, buildObj } from './services/meshExport'
 import { inspectMesh } from './services/meshInspection'
 import { RendererRecoveryGate } from './services/rendererRecoveryGate'
@@ -84,8 +81,6 @@ import { diagnosticFromBuildError, revealDiagnostic, type EditorDiagnostic } fro
 import {
   setStorageFailureHandler,
   storageGet,
-  storageGetEnum,
-  storageGetJSON,
   storageSet,
   storageSetJSON,
 } from './services/safeStorage'
@@ -106,15 +101,7 @@ import {
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
 import { encodeWorkspaceShare } from './services/workspaceShare'
 import { WebGPURenderer } from './services/webgpuRenderer'
-import { customizeTokens, normalizeHex } from './services/themeCustomization'
-import {
-  assertThemeCatalog,
-  resolveTheme,
-  themeCanvasColor,
-  THEME_CATALOG,
-  THEME_SELECTIONS,
-  type ThemeSelection,
-} from './services/themePreferences'
+import { assertThemeCatalog, THEME_CATALOG } from './services/themePreferences'
 import type {
   DisplayMode,
   DistanceMeasurement,
@@ -126,8 +113,8 @@ import type {
   StandardView,
 } from './services/rendererContracts'
 import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
-
-type Language = 'ru' | 'en'
+import { blockColors, GUTTER_OVERSCAN_ROWS, GUTTER_CONTENT_PADDING_PX, gutterRowPx, MAIN_COMMAND_PREFIX, dockTabs, DOCK_ICONS, revealDockDetails, DOCK_KEY_MAP, closeMenus, closeMenusOutside, STORAGE_NOTICE_THROTTLE_MS, buildSources, downloadBlob, replaceSharedRecoveryHash, hexToRgb, lineAndColumn, readCommandMru, sanitizeFileName } from './appHelpers'
+import type { DockTab } from './appHelpers'
 
 assertExampleCatalog(EXAMPLE_CATALOG)
 assertThemeCatalog(THEME_CATALOG)
@@ -139,152 +126,17 @@ const props = defineProps<{
   workspacePersistence: BrowserWorkspacePersistence
 }>()
 
-const L: Record<Language, Record<string, string>> = {
-  ru: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Настройки', customBase: 'Основной цвет', customAccent: 'Акцентный цвет', customReset: 'Сбросить цвета',
-    render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
-    basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
-    open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
-    exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
-    convertFile: 'Конвертировать…', convertFileHelp: 'Конвертировать файл STL / OBJ / PLY / OFF / AMF / 3MF в выбранный формат', converted: 'Файл конвертирован', exportFormat: 'Формат экспорта',
-    noParameters: 'Добавьте верхнеуровневые переменные; диапазон слайдера: // [min:step:max]',
-    openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
-    meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
-    hint: 'Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус',
-    noGpu: 'WebGPU недоступен: редактор, сборка и экспорт работают, интерактивная 3D-сцена отключена.',
-    backendWebGpu: 'WebGPU · интерактивный', backendHeadless: 'CPU · без 3D', transparencySorted: 'прозрачность по объектам',
-    initializingViewport: 'Запускаем WebGPU…', retryRenderer: 'Повторить запуск 3D',
-    find: 'Найти', replace: 'Заменить', replaceAll: 'Заменить все', matchCase: 'Учитывать регистр',
-    previousMatch: 'Предыдущее совпадение', nextMatch: 'Следующее совпадение', closeSearch: 'Закрыть поиск',
-    noMatches: 'Нет совпадений', tooManyMatches: 'Слишком много совпадений — уточните запрос',
-    theme: 'Тема', systemTheme: 'Как в системе', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
-    language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
-    fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
-    grid: 'Сетка', gridStep: 'Шаг сетки', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
-    left: 'Слева', right: 'Справа', top: 'Сверху', bottom: 'Снизу',
-    compiling: 'Собираем геометрию…', stale: 'Показан предыдущий результат', ready: 'Готово',
-    failed: 'Ошибка сборки',
-    preview: 'Быстрый preview', full: 'Точная сборка', exported: 'Геометрия экспортирована',
-    copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
-    opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
-    workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
-    workerRestarted: 'Сборка не отвечала 30 секунд — повторяем попытку',
-    cancelBuild: 'Отменить сборку', buildCancelled: 'Сборка отменена',
-    buildTimeout: 'Сборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.',
-    storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
-    format: 'Форматировать', saveBrowser: 'Сохранить в браузере', saveBrowserHelp: 'Сохранить текущий код в IndexedDB, заменив сохранённый черновик', savedBrowser: 'Сохранено в IndexedDB', failedBrowser: 'Не удалось сохранить в IndexedDB', unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
-    storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
-    gpuLost: 'WebGPU перезапускается; восстанавливаем сцену…', gpuRecovered: 'Сцена WebGPU восстановлена',
-    gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
-    commands: 'Команды', commandHelp: 'Поиск действий', shortcuts: 'Горячие клавиши', display: 'Отображение',
-    shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
-    shadingPhong: 'Затенение: Phong', shadingPbr: 'Затенение: PBR', shadingMatcap: 'Затенение: Matcap',
-    shadingToon: 'Затенение: Toon', shadingUnlit: 'Затенение: Unlit',
-    renderThemeDefault: 'Тема рендера: стандартная', renderThemeDarkContrast: 'Тема рендера: тёмный контраст', renderThemeLight: 'Тема рендера: светлая',
-    selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
-    unisolate: 'Показать всё', deselect: 'Снять выбор',
-    scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
-    selectionMode: 'Режим выбора', sidebar: 'Боковая панель', closeSidebar: 'Закрыть боковую панель', measure: 'Измерить расстояние',
-    cancelMeasure: 'Отменить измерение', flipSection: 'Перевернуть сечение', hideSelected: 'Скрыть выбранное', cycleSelectionMode: 'Следующий режим выбора',
-    section: 'Плоскость сканирования', scanPlane: 'Срез', hidden: 'Скрыт',
-    sourceStale: 'Сначала дождитесь сборки текущего исходника',
-    needsModel: 'Сначала соберите модель', needsSelection: 'Сначала выберите объект',
-    needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
-    buildInProgress: 'Дождитесь завершения текущей сборки',
-    depthCandidate: 'цель в глубине',
-    export: 'Экспорт', exportTitle: 'Экспорт модели', download: 'Скачать', cancel: 'Отмена', more: 'Ещё', close: 'Закрыть',
-    svg: 'SVG ↔ 3D', photo: '3D по фотографиям', perf: 'Замеры сборки', modelTools: 'Инструменты моделирования',
-    generators: 'Генераторы', codeToSolid: 'Перенести сцену в Solid', codeToMesh: 'Перенести сцену в Mesh', fileMenu: 'Файл', forPrinting: 'печать', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Черновик сохранён в браузере', exportScope: 'Экспортируется вся сцена одним телом', renderShortcut: 'Рендер',
+const {
+  lang, themeSelection, customAccent, customBase, effectiveTokens, isDark,
+  setCustomColor, effectiveCanvasColor, resetCustomColors,
+  toggleLang, toggleTheme, applyPreferences, attachSystemTheme, detachSystemTheme,
+} = useAppearance({
+  onApplied(canvasColor) {
+    renderer?.setBackgroundColor(canvasColor)
+    // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
+    renderer?.setTheme(renderThemeId.value)
   },
-  en: {
-    title: 'OpenSCAD Viewer',
-    settings: 'Settings', customBase: 'Base color', customAccent: 'Accent color', customReset: 'Reset colors',
-    render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
-    basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
-    open: 'Open', save: 'Save', share: 'Share',
-    exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
-    convertFile: 'Convert…', convertFileHelp: 'Convert an STL / OBJ / PLY / OFF / AMF / 3MF file to the selected export format', converted: 'File converted', exportFormat: 'Export format',
-    noParameters: 'Add top-level variables; slider metadata: // [min:step:max]',
-    openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
-    meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
-    hint: 'Click: select · repeat click: cycle deeper · LMB: orbit · RMB/Shift: pan · wheel: zoom · F: focus',
-    noGpu: 'WebGPU is unavailable: editing, builds, and export still work; the interactive 3D viewport is disabled.',
-    backendWebGpu: 'WebGPU · interactive', backendHeadless: 'CPU · no 3D', transparencySorted: 'object-sorted transparency',
-    initializingViewport: 'Starting WebGPU…', retryRenderer: 'Retry 3D viewport',
-    find: 'Find', replace: 'Replace', replaceAll: 'Replace all', matchCase: 'Match case',
-    previousMatch: 'Previous match', nextMatch: 'Next match', closeSearch: 'Close search',
-    noMatches: 'No matches', tooManyMatches: 'Too many matches — refine the query',
-    theme: 'Theme', systemTheme: 'System', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
-    language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
-    fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
-    grid: 'Grid', gridStep: 'Grid step', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
-    left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom',
-    compiling: 'Building geometry…', stale: 'Showing the previous result', ready: 'Ready',
-    failed: 'Build failed',
-    preview: 'Fast preview', full: 'Full build', exported: 'Geometry exported',
-    copied: 'Link copied', copyFailed: 'Link added to the address bar',
-    opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
-    workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
-    workerRestarted: 'Build was unresponsive for 30 seconds — retrying',
-    cancelBuild: 'Cancel build', buildCancelled: 'Build cancelled',
-    buildTimeout: 'Build was unresponsive for another 30 seconds. Edit the model or build again.',
-    storageFailed: 'Could not save data: browser storage is unavailable or full',
-    format: 'Format', saveBrowser: 'Save in browser', saveBrowserHelp: 'Save current code to IndexedDB, replacing the saved draft', savedBrowser: 'Saved to IndexedDB', failedBrowser: 'Could not save to IndexedDB', unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
-    storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
-    gpuLost: 'WebGPU restarted; restoring the scene…', gpuRecovered: 'WebGPU scene restored',
-    gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
-    commands: 'Commands', commandHelp: 'Search actions', shortcuts: 'Keyboard shortcuts', display: 'Display',
-    shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
-    shadingPhong: 'Shading: Phong', shadingPbr: 'Shading: PBR', shadingMatcap: 'Shading: Matcap',
-    shadingToon: 'Shading: Toon', shadingUnlit: 'Shading: Unlit',
-    renderThemeDefault: 'Render theme: Default', renderThemeDarkContrast: 'Render theme: Dark Contrast', renderThemeLight: 'Render theme: Light',
-    selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
-    unisolate: 'Show all', deselect: 'Deselect',
-    scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
-    selectionMode: 'Selection mode', sidebar: 'Sidebar', closeSidebar: 'Close sidebar', measure: 'Measure distance',
-    cancelMeasure: 'Cancel measurement', flipSection: 'Flip section', hideSelected: 'Hide selected', cycleSelectionMode: 'Next selection mode',
-    section: 'Scanning plane', scanPlane: 'Section', hidden: 'Hidden',
-    sourceStale: 'Wait for the current source to finish building first',
-    needsModel: 'Build a model first', needsSelection: 'Select an object first',
-    needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
-    buildInProgress: 'Wait for the current build to finish',
-    depthCandidate: 'depth target',
-    export: 'Export', exportTitle: 'Export model', download: 'Download', cancel: 'Cancel', more: 'More', close: 'Close',
-    svg: 'SVG ↔ 3D', photo: '3D from photos', perf: 'Build measurements', modelTools: 'Modeling tools',
-    generators: 'Generators', codeToSolid: 'Bring scene into Solid', codeToMesh: 'Bring scene into Mesh', fileMenu: 'File', forPrinting: 'printing', forCad: 'CAD, Blender',
-    savedDraftStatus: 'Draft saved in browser', exportScope: 'The whole scene is exported as one body', renderShortcut: 'Render',
-  },
-}
-
-const lang = ref<Language>(storageGetEnum<Language>('scad-lang', ['ru', 'en'], 'ru'))
-const legacyThemeRaw = storageGet('scad-theme')
-const legacyTheme: ThemeSelection = legacyThemeRaw === 'dark' || legacyThemeRaw === 'light' ? legacyThemeRaw : 'system'
-const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection', THEME_SELECTIONS, legacyTheme)
-const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
-const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-const systemPrefersDark = ref(themeMediaQuery.matches)
-const customAccent = ref<string | null>(normalizeHex(storageGet('scad-accent-v1')))
-const customBase = ref<string | null>(normalizeHex(storageGet('scad-base-v1')))
-const effectiveTokens = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).tokens)
-function setCustomColor(kind: 'accent' | 'base', event: Event) {
-  const value = normalizeHex((event.target as HTMLInputElement).value)
-  if (kind === 'accent') customAccent.value = value
-  else customBase.value = value
-  applyPreferences()
-}
-function effectiveCanvasColor() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  return themeCanvasColor({ ...theme, tokens })
-}
-function resetCustomColors() {
-  customAccent.value = null
-  customBase.value = null
-  applyPreferences()
-}
-const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
+})
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
 const code = ref(props.initialWorkspace.source)
 const autoRender = ref(storageGet('scad-auto') !== 'false')
@@ -296,7 +148,6 @@ const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
 const blocks = computed(() => editorBlocks(code.value))
 const foldedLines = ref(new Set<number>())
-const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const editorRows = computed(() => {
   const lines = code.value.split('\n')
@@ -362,11 +213,6 @@ async function editFoldedLine(line: number) {
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => editorRows.value.length)
-// Virtualized gutter: only the visible window of rows (± overscan) is rendered.
-// Row heights must match the CSS: .gutter-row is 1.58em at 12.5px, .guide-row is 1.58em at .82rem.
-const GUTTER_OVERSCAN_ROWS = 12
-const GUTTER_CONTENT_PADDING_PX = 14
-const gutterRowPx = 1.58 * 12.5
 const guideRowPx = ref(1.58 * 0.82 * 16)
 const gutterScrollTop = ref(0)
 const gutterViewportHeight = ref(600)
@@ -738,11 +584,9 @@ const sectionOffset = computed(() => sceneState.value.section.offset)
 const sectionFlip = computed(() => sceneState.value.section.flip)
 const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
-type DockTab = 'scene' | 'inspect' | 'parameters' | 'svg' | 'photo' | 'perf'
 const dockTab = ref<DockTab>('scene')
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
-const MAIN_COMMAND_PREFIX = 'main:'
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const base = paletteCommands.value.filter(isPaletteCommandEnabled)
   // The source tools only make sense while the editor drawer is showing.
@@ -751,45 +595,16 @@ const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
 const dockOpen = ref(true)
-const findOpen = ref(false)
-const replaceOpen = ref(false)
-const findQuery = ref('')
-const findReplacement = ref('')
-const findCaseSensitive = ref(false)
-const activeFindIndex = ref(-1)
-const findResult = computed(() => findLiteralMatches(code.value, findQuery.value, {
-  caseSensitive: findCaseSensitive.value,
-}))
-const findStatus = computed(() => {
-  if (findResult.value.truncated) return t('tooManyMatches')
-  const count = findResult.value.matches.length
-  return count ? `${Math.max(0, activeFindIndex.value) + 1}/${count}` : t('noMatches')
-})
-watch([findQuery, findCaseSensitive, code], () => {
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
+const {
+  findOpen, replaceOpen, findQuery, findReplacement, findCaseSensitive, activeFindIndex, findResult, findStatus,
+  openEditorFind, closeEditorFind, navigateFind, handleFindKeydown,
+  replaceCurrentFindMatch, replaceAllFindMatches,
+} = useEditorFind({
+  code, editor: editorRef, input: findInputRef,
+  translate: key => t(key), notify: message => showNotice(message), onEdited: () => handleEditorInput(),
 })
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
-
-const dockTabs: readonly DockTab[] = ['scene', 'inspect', 'parameters', 'svg', 'photo', 'perf']
-const DOCK_ICONS: Record<DockTab, string> = {
-  scene: 'M4 6h16M4 12h16M4 18h16',
-  inspect: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
-  parameters: 'M4 8h10M18 8h2M4 16h4M12 16h8M16 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
-  svg: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
-  photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
-  perf: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
-}
-// Panels moved into the dock are <details> components; open them when their tab shows.
-function revealDockDetails(el: Element | ComponentPublicInstance | null) {
-  if (!(el instanceof HTMLElement)) return
-  for (const details of el.querySelectorAll<HTMLDetailsElement>(':scope > details')) {
-    if (!details.open) details.open = true
-  }
-}
-const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
-  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
-}
 const exportDialogOpen = ref(false)
 const exportDialogRef = ref<HTMLElement | null>(null)
 function openExportDialog() {
@@ -807,14 +622,6 @@ const persistenceLabel = computed(() => workspaceConflict.value
   ? t('storageConflict')
   : workspacePersistenceStatus.value === 'saving' ? t('savingDraft')
     : workspacePersistenceStatus.value === 'error' ? t('unsavedDraft') : t('savedDraftStatus'))
-function closeMenus() {
-  for (const menu of document.querySelectorAll<HTMLDetailsElement>('.app details.menu[open]')) menu.open = false
-}
-function closeMenusOutside(event: Event) {
-  const target = event.target as Element | null
-  if (target?.closest('details.menu')) return
-  closeMenus()
-}
 function handleDockTabKeydown(event: KeyboardEvent) {
   const key = DOCK_KEY_MAP[event.key]
   if (!key) return
@@ -1060,9 +867,6 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
-/** Rate limit for the storage-write-failure notice. */
-const STORAGE_NOTICE_THROTTLE_MS = 10_000
-
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
 let lastStorageNotice = 0
@@ -1088,7 +892,6 @@ let topbarResizeObserver: ResizeObserver | null = null
 let layoutResizeObserver: ResizeObserver | null = null
 let editorResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
-const buildSources = new Map<number, string>()
 
 const t = (key: string) => L[lang.value][key] ?? key
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
@@ -1101,8 +904,7 @@ onMounted(async () => {
     topbarResizeObserver.observe(topbarRef.value)
   }
   setStorageFailureHandler(reportStorageFailure)
-  themeMediaQuery.addEventListener('change', handleSystemThemeChange)
-  applyPreferences()
+  attachSystemTheme()
   updateBeforeUnloadGuard()
   window.addEventListener('pagehide', flushWorkspacePersistence)
   window.addEventListener('pointerup', endParameterGesture)
@@ -1236,7 +1038,7 @@ onUnmounted(() => {
   buildCoordinator?.dispose()
   buildCoordinator = null
   window.removeEventListener('keydown', handleGlobalKey)
-  themeMediaQuery.removeEventListener('change', handleSystemThemeChange)
+  detachSystemTheme()
   window.removeEventListener('pagehide', flushWorkspacePersistence)
   window.removeEventListener('pointerup', endParameterGesture)
   window.removeEventListener('pointercancel', endParameterGesture)
@@ -1835,43 +1637,6 @@ function handleWorkerError(caught?: unknown) {
   error.value = caught instanceof Error ? `${t('workerError')}: ${caught.message}` : t('workerError')
 }
 
-function toggleLang() {
-  lang.value = lang.value === 'ru' ? 'en' : 'ru'
-  storageSet('scad-lang', lang.value)
-  document.documentElement.lang = lang.value
-}
-
-function toggleTheme() {
-  themeSelection.value = isDark.value ? 'light' : 'dark'
-  applyPreferences()
-}
-
-function handleSystemThemeChange(event: MediaQueryListEvent) {
-  systemPrefersDark.value = event.matches
-  if (themeSelection.value === 'system') applyPreferences()
-}
-
-function applyPreferences() {
-  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
-  document.documentElement.dataset.theme = theme.scheme
-  document.documentElement.dataset.themePreset = themeSelection.value
-  document.documentElement.lang = lang.value
-  document.documentElement.style.colorScheme = theme.scheme
-  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
-  for (const [token, value] of Object.entries(tokens)) {
-    document.documentElement.style.setProperty(token, value)
-  }
-  renderer?.setBackgroundColor(effectiveCanvasColor())
-  if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
-  else storageSet('scad-accent-v1', '')
-  if (customBase.value) storageSet('scad-base-v1', customBase.value)
-  else storageSet('scad-base-v1', '')
-  // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
-  renderer?.setTheme(renderThemeId.value)
-  storageSet('scad-theme-v1', themeSelection.value)
-  storageSet('scad-theme', theme.scheme)
-}
-
 async function loadEditorDocument(example: string, nextFileName: string) {
   applyingWorkspaceReplacement = true
   buildGeneration++
@@ -1974,15 +1739,6 @@ function saveSource() {
   link.click()
   URL.revokeObjectURL(url)
   showNotice(t('saved'))
-}
-
-function downloadBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  link.click()
-  URL.revokeObjectURL(url)
 }
 
 const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
@@ -2122,12 +1878,6 @@ async function shareSource() {
   }
 }
 
-function replaceSharedRecoveryHash(source: string) {
-  const url = new URL(window.location.href)
-  url.hash = `code=${encodeWorkspaceShare(source)}`
-  history.replaceState(null, '', url)
-}
-
 function fitView() { renderer?.fitView() }
 function resetView() {
   viewportController.resetView()
@@ -2175,11 +1925,6 @@ function setDisplayMode(mode: DisplayMode) {
   renderer?.setDisplayMode(mode)
 }
 function changeDisplayMode() { renderer?.setDisplayMode(displayMode.value) }
-
-function hexToRgb(hex: string): [number, number, number] {
-  const value = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#ffffff'
-  return [1, 3, 5].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16) / 255) as [number, number, number]
-}
 function setShadingModel(model: ShadingModel) {
   shadingModel.value = model
   renderer?.setDefaultShadingModel(model)
@@ -2374,91 +2119,6 @@ function handleEditorInput() {
   syncSourceHighlightFromEditor()
 }
 
-function openEditorFind(withReplace = false) {
-  const editor = editorRef.value
-  if (!findOpen.value && editor && editor.selectionStart !== editor.selectionEnd) {
-    findQuery.value = editor.value.slice(editor.selectionStart, editor.selectionEnd)
-  }
-  findOpen.value = true
-  replaceOpen.value = withReplace
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  // The command palette restores its opener after closing. A second render
-  // turn makes the explicit Find target win that documented focus handoff.
-  void nextTick(() => nextTick(() => {
-    findInputRef.value?.focus()
-    findInputRef.value?.select()
-    revealFindMatch()
-  }))
-}
-
-function closeEditorFind() {
-  findOpen.value = false
-  replaceOpen.value = false
-  void nextTick(() => editorRef.value?.focus())
-}
-
-function revealFindMatch() {
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!match || !editorRef.value) return
-  editorRef.value.setSelectionRange(match.start, match.end)
-}
-
-function navigateFind(direction: 1 | -1) {
-  activeFindIndex.value = wrappedMatchIndex(
-    activeFindIndex.value,
-    findResult.value.matches.length,
-    direction,
-  )
-  revealFindMatch()
-}
-
-function handleFindKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    closeEditorFind()
-  } else if (event.key === 'Enter') {
-    event.preventDefault()
-    navigateFind(event.shiftKey ? -1 : 1)
-  }
-}
-
-function replaceCurrentFindMatch() {
-  const editor = editorRef.value
-  const match = findResult.value.matches[activeFindIndex.value]
-  if (!editor || !match) return
-  if (replaceExpectedMatch(code.value, match, findReplacement.value) === null) {
-    activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-    revealFindMatch()
-    return
-  }
-  editor.setRangeText(findReplacement.value, match.start, match.end, 'select')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length
-    ? Math.min(activeFindIndex.value, findResult.value.matches.length - 1)
-    : -1
-  revealFindMatch()
-}
-
-function replaceAllFindMatches() {
-  const editor = editorRef.value
-  if (!editor) return
-  const result = replaceAllLiteral(code.value, findQuery.value, findReplacement.value, {
-    caseSensitive: findCaseSensitive.value,
-  })
-  if (result.status === 'too-many' || result.status === 'too-large') {
-    showNotice(t('tooManyMatches'))
-    return
-  }
-  if (result.status !== 'replaced') return
-  editor.setRangeText(result.source, 0, editor.value.length, 'preserve')
-  code.value = editor.value
-  handleEditorInput()
-  activeFindIndex.value = findResult.value.matches.length ? 0 : -1
-  revealFindMatch()
-}
-
 function revealCurrentDiagnostic() {
   if (editorRef.value && editorDiagnostic.value) revealDiagnostic(editorRef.value, editorDiagnostic.value)
 }
@@ -2551,12 +2211,6 @@ function resetSection() {
 function closeScanPanel() {
   scanPanelOpen.value = false
   void nextTick(() => scanToggleRef.value?.focus())
-}
-
-function lineAndColumn(source: string, offset: number) {
-  const before = source.slice(0, clamp(offset, 0, source.length))
-  const line = before.split('\n').length
-  return { line, column: before.length - before.lastIndexOf('\n') }
 }
 
 function executeCommand(id: string) {
@@ -2727,12 +2381,6 @@ function showNotice(message: string) {
   if (noticeTimeout) clearTimeout(noticeTimeout)
   noticeTimeout = setTimeout(() => { notice.value = '' }, 2200)
 }
-
-function readCommandMru(): string[] {
-  const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
-  return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
-}
-function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 
@@ -3450,547 +3098,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   </div>
 </template>
 
-<style>
-:root {
-  --bg: #1e1d1b;
-  --surface: #262523;
-  --surface-raised: #32302d;
-  --border: #76726a;
-  --hairline: #383530;
-  --text: #ece9e4;
-  --text-dim: #a6a199;
-  --accent: #e29a5a;
-  --accent-strong: #a0511d;
-  --hover: #2f2d2a;
-  --danger: #ff8d84;
-  --warning: #e6b24e;
-  --canvas-bg: #2d2b28;
-  --focus: #f0b98a;
-  --topbar-h: 40px;
-  --statusbar-h: 24px;
-  --dock-w: 320px;
-  --font-ui: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  --radius: 6px;
-}
+<style src="./App.global.css"></style>
 
-[data-theme="light"] {
-  --bg: #f6f4f1;
-  --surface: #ffffff;
-  --surface-raised: #ebe8e3;
-  --border: #8a857c;
-  --hairline: #e3dfd9;
-  --text: #1d1b18;
-  --text-dim: #5d5850;
-  --accent: #a5521a;
-  --accent-strong: #8a4310;
-  --hover: #eeebe6;
-  --danger: #b3261e;
-  --warning: #8a5b00;
-  --canvas-bg: #e4e0da;
-  --focus: #8a4310;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-html, body, #app { width: 100%; height: 100%; margin: 0; }
-body {
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  -webkit-font-smoothing: antialiased;
-}
-button, select, textarea, input { font: inherit; }
-button, select { color: inherit; }
-.sr-only {
-  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-}
-.performance-panel { flex: 0 0 auto; border-top: 1px solid var(--border); color: var(--text); font-size: .72rem; }
-.performance-panel summary { cursor: pointer; padding: 8px 12px; }
-.performance-panel summary span, .performance-panel p { color: var(--text-dim); }
-.performance-content { padding: 0 12px 10px; max-height: 280px; overflow: auto; }
-.performance-panel p { line-height: 1.45; }
-.performance-panel table { width: 100%; border-collapse: collapse; }
-.performance-panel caption { text-align: left; font-weight: 600; margin: 8px 0; }
-.performance-panel th, .performance-panel td { padding: 4px 0; border-bottom: 1px solid var(--border); }
-.performance-panel th { text-align: left; font-weight: 400; }
-.performance-panel td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.performance-panel button { padding: 6px 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; color: var(--text); cursor: pointer; }
-.performance-panel button:disabled { opacity: .5; cursor: default; }
-
-.parameter-presets { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 8px; font-size: .72rem; }
-.parameter-presets p { margin: 0; color: var(--text-dim); line-height: 1.45; }
-.parameter-presets input, .parameter-presets select { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); }
-.preset-save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
-.preset-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.parameter-presets button { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); cursor: pointer; }
-.parameter-presets button:disabled { opacity: .5; cursor: default; }
-.compute-inspector { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
-.compute-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); font-size: .72rem; }
-.compute-panel p { margin: 0; line-height: 1.45; color: var(--text-dim); }
-.compute-panel button { padding: 7px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
-.compute-panel button:disabled { opacity: .5; cursor: default; }
-</style>
-
-<style scoped>
-.app { display: flex; flex-direction: column; min-height: 100vh; height: 100dvh; background: var(--bg); }
-
-/* Top bar: three quiet zones — file, mode, tools. Nothing else competes with the viewport. */
-.topbar {
-  z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
-  padding: 0 8px 0 12px; background: var(--surface); border-bottom: 1px solid var(--hairline); flex-shrink: 0;
-}
-.topbar-left, .topbar-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.topbar-right { justify-content: flex-end; }
-.topbar-left .file-menu { min-width: 0; }
-.topbar-left .file-chip { max-width: min(320px, 100%); }
-.logo { color: var(--text-dim); flex-shrink: 0; margin-right: 6px; }
-
-.icon-btn, .btn, .view-btn {
-  min-height: 28px; border: 0; border-radius: var(--radius); background: transparent;
-  color: var(--text); cursor: pointer; transition: background .1s, color .1s;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-}
-.icon-btn { min-width: 28px; padding: 0 6px; color: var(--text-dim); }
-.icon-btn:hover, .btn:hover, .view-btn:hover { background: var(--hover); color: var(--text); }
-.icon-btn:focus-visible, .btn:focus-visible, .view-btn:focus-visible, .select:focus-visible, summary:focus-visible,
-.view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible, .dock-rail button:focus-visible,
-.selection-modes button:focus-visible, .format-card:focus-within, .mode-switch button:focus-visible {
-  outline: 2px solid var(--focus); outline-offset: 1px;
-}
-.btn { padding: 0 10px; font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--surface-raised); }
-.btn:disabled, .icon-btn:disabled { opacity: .45; cursor: default; }
-.btn-primary { background: var(--accent-strong); color: #fff; font-weight: 600; }
-.btn-primary:hover { background: color-mix(in srgb, var(--accent-strong) 82%, #fff); color: #fff; }
-.btn-primary:disabled { cursor: progress; }
-.command-btn { min-width: 200px; background: var(--bg); justify-content: flex-start; padding-inline: 10px; color: var(--text-dim); font-weight: 400; }
-.command-btn span { flex: 1; text-align: left; }
-.command-btn kbd, .menu-list kbd, .status-hint kbd {
-  padding: 0 5px; border: 1px solid var(--hairline); border-radius: 4px; color: var(--text-dim);
-  font: 10.5px var(--font-mono); white-space: nowrap;
-}
-.source-toggle.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-
-/* Menus (details/summary) */
-.menu { position: relative; }
-.menu > summary { list-style: none; cursor: pointer; }
-.menu > summary::-webkit-details-marker { display: none; }
-.menu-list {
-  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 200px; display: flex; flex-direction: column; gap: 1px;
-  padding: 4px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface);
-  box-shadow: 0 12px 36px rgba(0,0,0,.35);
-}
-.menu-list.menu-right { left: auto; right: 0; }
-.menu-list button, .menu-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; padding: 0 8px;
-  border: 0; border-radius: 5px; background: transparent; color: var(--text); text-align: left; font-size: 12px; white-space: nowrap;
-}
-.menu-list button { cursor: pointer; }
-.menu-row { color: var(--text-dim); }
-.menu-row input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 5px; background: none; cursor: pointer; }
-.menu-row select { height: 24px; padding: 0 4px; border: 1px solid var(--hairline); border-radius: 5px; background: var(--bg); color: var(--text); font-size: 12px; }
-.menu-list button:hover, .menu-list button:focus-visible { background: var(--hover); outline: none; }
-.menu-list button:disabled { opacity: .4; cursor: default; }
-.menu-sep { height: 1px; margin: 3px 4px; background: var(--hairline); }
-.menu-status { padding: 6px 8px 3px; border-top: 1px solid var(--hairline); margin-top: 3px; color: var(--text-dim); font-size: 11px; }
-.file-chip {
-  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius);
-  color: var(--text); max-width: 280px;
-}
-.file-chip:hover, .menu[open] > .file-chip { background: var(--hover); }
-.file-chip svg { color: var(--text-dim); flex-shrink: 0; }
-.file-chip-name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
-.file-chip-dot.error { background: var(--danger); }
-.persistence-status { border: 0; background: transparent; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
-.persistence-error { color: var(--danger); cursor: pointer; }
-.persistence-error:hover { text-decoration: underline; }
-.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: 11px; }
-.persistence-conflict button {
-  border: 0; border-radius: 5px; background: var(--surface-raised);
-  color: var(--text); padding: 3px 6px; cursor: pointer;
-}
-
-/* Mode switch: flat text tabs */
-.mode-switch { display: inline-flex; gap: 2px; justify-self: center; }
-.mode-switch button {
-  height: 28px; padding: 0 12px; border: 0; border-radius: var(--radius); background: transparent;
-  color: var(--text-dim); font-weight: 500; cursor: pointer;
-}
-.mode-switch button:hover { color: var(--text); background: var(--hover); }
-.mode-switch button.active { background: var(--surface-raised); color: var(--text); }
-
-/* Layout */
-.no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 13px; padding: 24px; text-align: center; }
-.main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
-/* With no Code workspace the source opens over the active one. The viewport stays
-   laid out off to the side: hiding it would resize its canvas to zero. */
-.main.editor-drawer {
-  position: fixed;
-  inset: var(--workspace-top, var(--topbar-h)) auto var(--statusbar-h) 0;
-  z-index: 30;
-  width: min(520px, 82vw);
-  border-right: 1px solid var(--hairline);
-  box-shadow: 0 0 40px #0006;
-}
-.main.editor-drawer > .splitter { display: none; }
-.main.editor-drawer > section:not(.editor-panel) {
-  position: absolute;
-  inset: 0 auto 0 100%;
-  width: 60vw;
-  visibility: hidden;
-  pointer-events: none;
-}
-.main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
-.main.editor-drawer.sweep-source-preview { overflow: visible; }
-.main.editor-drawer.sweep-source-preview > .canvas-panel {
-  visibility: visible;
-  pointer-events: auto;
-  width: calc(100vw - min(560px, 82vw));
-  background: var(--canvas-bg);
-}
-
-@media (max-width: 900px) {
-  .main.editor-drawer.sweep-source-preview { width: 100vw; overflow: hidden; }
-  .main.editor-drawer.sweep-source-preview .editor-panel {
-    height: 45%; min-height: 0; flex: none;
-  }
-  .main.editor-drawer.sweep-source-preview > .canvas-panel {
-    inset: 45% 0 0 0; width: 100%; min-height: 0; height: auto;
-  }
-}
-
-.group-editor { display: flex; flex-direction: column; min-height: 0; }
-.group-name-input { flex: 1; min-width: 0; padding: 4px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--hairline); border-radius: 5px; font: inherit; }
-.group-editor .code-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
-.group-editor .code-highlight { position: absolute; inset: 0; margin: 0; pointer-events: none; }
-.group-editor .code-input { position: relative; width: 100%; height: 100%; background: transparent; color: transparent; caret-color: var(--text); border: 0; resize: none; outline: none; }
-.group-hint { margin: 0; padding: 8px 12px; color: var(--text-dim); font-size: 11px; line-height: 1.5; border-top: 1px solid var(--hairline); }
-
-.editor-panel {
-  min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
-  background: var(--bg); overflow-x: hidden; overflow-y: auto;
-}
-.toolbar { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
-.editor-toolbar { flex-wrap: wrap; min-height: 38px; }
-.toolbar-spacer, .statusbar-spacer { flex: 1; }
-.auto-check { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 12px; cursor: pointer; padding-inline: 6px; }
-.auto-check input { accent-color: var(--accent); margin: 0; }
-.select, .view-select {
-  height: 26px; max-width: 140px; border: 0; border-radius: var(--radius);
-  padding: 0 4px; background: transparent; color: var(--text); font-size: 12px; cursor: pointer;
-}
-.view-select:hover { background: var(--hover); }
-
-/* Find */
-.find-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 8px;
-  border-bottom: 1px solid var(--hairline); background: var(--surface); font-size: 12px;
-}
-.find-bar > input[type="search"], .find-bar > input[type="text"] {
-  min-width: 90px; flex: 1 1 110px; height: 26px; padding: 2px 8px; border: 1px solid var(--hairline);
-  border-radius: 5px; background: var(--bg); color: var(--text);
-}
-.find-bar button { min-width: 26px; min-height: 26px; border: 0; border-radius: 5px; background: transparent; color: var(--text); cursor: pointer; }
-.find-bar button:hover { background: var(--hover); }
-.find-bar button:disabled { opacity: .4; cursor: default; }
-.find-status { min-width: 42px; color: var(--text-dim); text-align: center; }
-.find-case { display: flex; align-items: center; gap: 4px; color: var(--text-dim); white-space: nowrap; }
-
-/* Code */
-.code {
-  flex: 1; width: 100%; min-height: 120px; resize: none; border: 0; outline: 0; padding: 14px 15px;
-  background: var(--bg); color: var(--text); caret-color: var(--accent);
-  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6;
-  font-weight: 400; font-style: normal; font-kerning: none; font-variant-ligatures: none; letter-spacing: 0; word-spacing: 0;
-  tab-size: 2; white-space: pre; overflow: auto;
-}
-.code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
-.code-content { position: relative; isolation: isolate; flex: 1; min-width: 0; }
-.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; color: var(--text-dim); opacity: .6; user-select: none; font: 12.5px/1.6 var(--font-mono); }
-.code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
-.code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
-.code-highlight { z-index: 0; pointer-events: none; overflow: hidden; }
-.highlight-content { display: block; width: max-content; min-width: 100%; transform-origin: top left; }
-.code-input { z-index: 2; background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
-.code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-.code-highlight :deep(.syntax-comment) { color: color-mix(in srgb, var(--text-dim) 80%, var(--bg)); }
-.code-highlight :deep(.syntax-keyword) { color: #7ab8f5; }
-.code-highlight :deep(.syntax-string) { color: #9fd0a8; }
-.code-highlight :deep(.syntax-number) { color: #9fd0a8; }
-.code-highlight :deep(.syntax-function) { color: #e6c07b; }
-.code-highlight :deep(.syntax-property) { color: var(--warning); }
-.code-highlight :deep(.syntax-operator) { color: var(--text-dim); }
-[data-theme="light"] .code-highlight :deep(.syntax-keyword) { color: #1f6fc2; }
-[data-theme="light"] .code-highlight :deep(.syntax-function) { color: #8a5b00; }
-[data-theme="light"] .code-highlight :deep(.syntax-string), [data-theme="light"] .code-highlight :deep(.syntax-number) { color: #2f7d3f; }
-@media (forced-colors: active) {
-  .code-highlight { display: none; }
-  .code-input { color: CanvasText; -webkit-text-fill-color: CanvasText; }
-}
-
-/* Messages and stats */
-.message { margin: 8px 10px 0; padding: 8px 10px; border-radius: var(--radius); font: 12px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.diagnostic-link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-.diagnostic-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
-.error { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
-.warning { max-height: 88px; overflow: auto; color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); }
-.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 28px; padding: 4px 12px; border-top: 1px solid var(--hairline); background: var(--surface); color: var(--text-dim); font-size: 11px; }
-.stats strong { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
-.status { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #9fd0a8; }
-.status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.status.busy { color: var(--accent); }
-.status.stale { color: var(--warning); }
-.status.failed { color: var(--danger); }
-[data-theme="light"] .status { color: #2f7d3f; }
-
-/* Splitter: a 1px seam that widens into a handle on hover */
-.splitter {
-  position: relative; z-index: 4; width: 1px; flex: 0 0 1px; cursor: col-resize;
-  background: var(--hairline); touch-action: none;
-}
-.splitter::before { content: ''; position: absolute; inset: 0 -4px; }
-.splitter span { position: absolute; width: 3px; height: 100%; inset: 0 auto auto -1px; background: transparent; transition: background .12s; }
-.splitter:hover span, .splitter:focus-visible span { background: var(--accent); }
-
-/* Viewport: the scene is the interface. Chrome floats over it and stays small. */
-.canvas-panel { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas-bg); }
-.gpu-canvas { width: 100%; height: 100%; display: block; touch-action: none; outline: 0; }
-.viewer-toolbar {
-  position: absolute; z-index: 3; top: 10px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 1px; max-width: calc(100% - 24px); padding: 3px;
-  border: 1px solid var(--hairline); border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); color: var(--text);
-  box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.viewer-toolbar.with-dock { left: calc((100% - var(--dock-w)) / 2); max-width: calc(100% - var(--dock-w) - 24px); }
-.vt-sep { width: 1px; height: 16px; margin-inline: 3px; background: var(--hairline); flex: 0 0 1px; }
-.view-btn { min-height: 28px; padding: 0 9px; color: var(--text-dim); font-size: 12px; font-weight: 500; }
-.view-btn:hover { color: var(--text); }
-.view-btn[aria-pressed="true"], .view-btn.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
-.view-btn.icon-only { min-width: 28px; padding-inline: 0; }
-.scan-toggle { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.scan-active-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.view-select { max-width: 96px; }
-.display-modes, .view-select-label { display: flex; align-items: center; }
-.view-cube-wrap { position: absolute; z-index: 2; top: 56px; right: 12px; }
-.view-cube-wrap.with-dock { right: calc(var(--dock-w) + 12px); }
-.canvas-panel :deep(.modeling-grid-controls) { padding: 0; }
-.canvas-panel :deep(.modeling-grid-controls summary) { border: 0; background: transparent; color: var(--text-dim); border-radius: var(--radius); padding: 5px 7px; }
-.canvas-panel :deep(.modeling-grid-controls summary:hover) { background: var(--hover); color: var(--text); }
-.selection-modes {
-  position: absolute; z-index: 3; top: 56px; left: 10px; display: flex; flex-direction: column; gap: 1px; padding: 3px;
-  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
-  color: var(--text); backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.selection-modes button {
-  min-height: 30px; min-width: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
-  border-radius: 6px; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px;
-}
-.selection-modes button > span:not(.mode-point, .mode-face, .mode-body) { display: none; }
-.selection-modes button:hover { background: var(--hover); color: var(--text); }
-.selection-modes button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
-.selection-modes kbd { display: none; }
-.mode-point { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.mode-face { width: 10px; height: 10px; border: 1.5px solid currentColor; background: color-mix(in srgb, currentColor 25%, transparent); transform: skewY(-18deg); }
-.mode-body { width: 10px; height: 10px; border: 1.5px solid currentColor; box-shadow: inset 2px -2px color-mix(in srgb, currentColor 30%, transparent); }
-
-/* Dock: a slim right panel, tabs as a rail */
-.cad-dock {
-  position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(var(--dock-w), calc(100% - 16px));
-  min-height: 0; display: flex; background: var(--surface); border-left: 1px solid var(--hairline);
-}
-.dock-rail {
-  flex: 0 0 40px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0;
-  border-right: 1px solid var(--hairline); background: var(--bg);
-}
-.dock-rail button, .dock-close {
-  width: 30px; height: 30px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-dim); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.dock-rail button:hover, .dock-close:hover { color: var(--text); background: var(--hover); }
-.dock-rail button.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.dock-rail-spacer { flex: 1; }
-.dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.dock-panel { min-height: 0; display: flex; flex: 1; flex-direction: column; overflow: hidden; }
-.dock-panel > :deep(.outliner), .dock-panel > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0; border-width: 0; }
-.customizer-card { min-height: 0; flex: 1; overflow: auto; background: var(--surface); }
-.dock-scroll { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; }
-.dock-scroll :deep(details.svg-panel), .dock-scroll :deep(details.photo-panel), .dock-scroll > .performance-panel { border: 0; border-radius: 0; background: transparent; }
-.dock-scroll :deep(details.svg-panel > summary), .dock-scroll :deep(details.photo-panel > summary), .dock-scroll > .performance-panel > summary { display: none; }
-.dock-scroll :deep(.svg-content) { max-height: none; padding: 12px; }
-.dock-scroll :deep(.photo-content) { padding: 12px; }
-.dock-scroll > .performance-panel { border-top: 0; }
-.dock-scroll > .performance-panel .performance-content { max-height: none; padding: 12px; }
-.canvas-panel :deep(.main-model-tools) {
-  left: 50%; right: auto; transform: translateX(-50%); bottom: 12px; width: max-content; max-width: calc(100% - 24px); padding: 6px 8px; border-radius: 8px;
-  border-color: var(--hairline); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px);
-  box-shadow: 0 6px 24px rgba(0,0,0,.28);
-}
-.canvas-panel.with-dock :deep(.main-model-tools) { left: calc((100% - var(--dock-w)) / 2); max-width: calc(100% - var(--dock-w) - 24px); }
-
-/* HUD and badges */
-.selection-hud {
-  position: absolute; z-index: 3; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
-  min-height: 28px; padding: 0 4px 0 10px; border: 1px solid var(--hairline);
-  border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text);
-  backdrop-filter: blur(8px); font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.selection-hud > span { display: flex; align-items: center; gap: 6px; }
-.selection-dot { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
-.selection-hud button {
-  min-width: 22px; height: 22px; padding: 0 6px; border: 0;
-  border-radius: 5px; background: transparent; color: var(--text-dim); cursor: pointer;
-}
-.selection-hud button:hover, .selection-hud button[aria-pressed="true"] { background: var(--hover); color: var(--text); }
-.rendering-badge, .stale-badge {
-  position: absolute; z-index: 2; top: 54px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text); border: 1px solid var(--hairline);
-  backdrop-filter: blur(8px); font-size: 11px; pointer-events: none;
-}
-.stale-badge { color: var(--warning); }
-.spinner { width: 10px; height: 10px; border: 2px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Status bar: one quiet line, the control hint lives here instead of over the scene */
-.statusbar {
-  height: var(--statusbar-h); flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 0 12px;
-  background: var(--surface); border-top: 1px solid var(--hairline); color: var(--text-dim); font-size: 11px; white-space: nowrap; overflow: hidden;
-}
-.status-item { display: inline-flex; align-items: center; gap: 6px; }
-.status-hint { margin-left: auto; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
-.status-dot.ok { background: var(--accent); }
-
-/* Dialogs */
-.dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); }
-.dialog {
-  width: min(560px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; box-shadow: 0 24px 64px rgba(0,0,0,.5);
-}
-.dialog-header { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--hairline); }
-.dialog-header > div { flex: 1; }
-.dialog-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
-.dialog-header p { margin: 2px 0 0; color: var(--text-dim); font-size: 11.5px; }
-.format-grid { margin: 0; padding: 16px 18px 6px; border: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.format-grid legend { padding: 0; margin-bottom: 8px; color: var(--text-dim); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-.format-card {
-  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--hairline);
-  background: var(--bg); cursor: pointer;
-}
-.format-card:hover { border-color: var(--border); }
-.format-card.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
-.format-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.format-name { font-weight: 600; }
-.format-card small { color: var(--text-dim); font-size: 11px; }
-.dialog-note { margin: 6px 18px 14px; padding: 8px 10px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--hairline); color: var(--text-dim); font-size: 11.5px; }
-.dialog-note.warning { color: var(--warning); }
-.dialog-footer { display: flex; align-items: center; gap: 6px; padding: 12px 18px; border-top: 1px solid var(--hairline); background: var(--bg); border-radius: 0 0 10px 10px; }
-.toast {
-  position: fixed; z-index: 50; left: 50%; bottom: 40px; transform: translateX(-50%);
-  padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 8px;
-  background: var(--surface-raised); box-shadow: 0 8px 32px rgba(0,0,0,.35); font-size: 12px;
-}
-
-@media (max-width: 1360px) {
-  .command-btn { min-width: 0; }
-  .command-btn span { display: none; }
-}
-
-@media (max-width: 1100px) {
-  .command-btn kbd { display: none; }
-}
-
-@media (max-width: 800px) {
-  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 40px; padding-block: 4px; }
-  .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
-  .mode-switch button { flex: 1; }
-  .main { flex-direction: column; overflow: auto; }
-  .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; }
-  .splitter { display: none; }
-  .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--hairline); }
-  .viewer-toolbar, .viewer-toolbar.with-dock { left: 8px; right: 8px; max-width: none; transform: none; justify-content: center; flex-wrap: wrap; }
-  .view-cube-wrap { top: 56px; right: 8px; }
-  .view-cube-wrap.with-dock { display: none; }
-  .selection-modes { top: 56px; left: 8px; }
-  .selection-hud { left: 8px; transform: none; max-width: calc(100% - 16px); }
-  .cad-dock { width: min(var(--dock-w), calc(100% - 8px)); }
-  .canvas-panel :deep(.main-model-tools), .canvas-panel.with-dock :deep(.main-model-tools) { left: 8px; right: 8px; transform: none; max-width: none; width: auto; }
-  .stats { font-size: 11px; }
-  .status { width: 100%; margin-left: 0; }
-  .statusbar { gap: 10px; }
-  .status-hint { display: none; }
-  .format-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 480px) {
-  .file-chip { max-width: 160px; }
-  .select { max-width: 128px; }
-  .view-btn { padding-inline: 6px; }
-  .view-select { max-width: 78px; }
-  .view-cube-wrap { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-}
-
-@media (forced-colors: active) {
-  * { forced-color-adjust: auto; }
-  button, select, input, textarea { border: 1px solid ButtonText !important; }
-  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
-}
-</style>
-
-<style scoped>
-.gutter-lines { position: relative; padding: 14px 4px 14px 8px; }
-.gutter-row { position: absolute; left: 0; right: 0; display: flex; justify-content: flex-end; height: 1.58em; align-items: center; }
-.fold-toggle, .fold-spacer { display: inline-block; flex: 0 0 20px; width: 20px; }
-.fold-toggle { padding: 0; border: 0; color: var(--text-dim); background: transparent; cursor: pointer; font: inherit; line-height: inherit; }
-.fold-toggle:hover, .fold-toggle:focus-visible { color: var(--accent); background: var(--surface-raised); }
-.code-guides { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
-.guide-lines { position: relative; padding: 14px 15px; }
-.guide-row { position: absolute; left: 0; right: 0; height: 1.58em; }
-.guide-row i { position: absolute; top: 0; bottom: 0; width: 1px; opacity: .5; }
-.folded-editor { z-index: 3; }
-.folded-row { display: flex; min-height: 1.58em; }
-.folded-number { color: var(--text-dim); width: 4ch; text-align: right; flex: 0 0 4ch; }
-.folded-text { position: relative; cursor: text; }
-.folded-guide { position: absolute; top: 0; bottom: 0; width: 1px; opacity: .5; pointer-events: none; }
-.fold-summary { color: var(--text-dim); background: var(--surface-raised); border-radius: 4px; }
-.unfold-all { position: sticky; bottom: 0; left: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; }
-</style>
-
-<style scoped>
-.persistence-error-detail { max-width: 380px; color: var(--danger); font-size: .7rem; overflow-wrap: anywhere; }
-</style>
-
-<style scoped>
-.code-editor :deep(.syntax-occurrence) { background: color-mix(in srgb, var(--accent) 23%, transparent); outline: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 2px; }
-</style>
-
-<style scoped>
-.sweep-preview-status {
- position:absolute;
- z-index:6;
- bottom:40px;
- left:12px;
- max-width:calc(100% - 24px);
- padding:6px 10px;
- border:1px solid var(--border);
- border-radius:6px;
- background:var(--surface-raised);
- color:var(--text);
- font-size:12px;
- pointer-events:none;
-}
-</style>
-
-<style scoped>
-.viewport-material-menu { position: relative; font-size: 11px; }
-.viewport-material-menu > summary { cursor: pointer; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
-.viewport-material-menu :deep(.material-controls) { position: absolute; top: calc(100% + 6px); left: 0; z-index: 35; width: min(280px, calc(100vw - 48px)); padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px #0002; }
-</style>
+<style scoped src="./App.scoped.css"></style>

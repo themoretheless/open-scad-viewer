@@ -1,5 +1,5 @@
 use super::*;
-fn law(a: f64, b: f64) -> Curve {
+pub(super) fn law(a: f64, b: f64) -> Curve {
     Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],
