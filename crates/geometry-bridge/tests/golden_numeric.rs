@@ -327,6 +327,12 @@ fn golden_numeric_outputs_are_bit_identical() {
         std::fs::write(GOLDEN, &actual).unwrap();
         return;
     }
+    // sin/cos/atan2/hypot come from the platform libm, whose last-bit results differ between
+    // glibc, macOS and MSVC. The hashes were recorded on x86_64 Linux (the CI `rust` job), so
+    // only that target compares them; elsewhere every case still runs and must not panic.
+    if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        return;
+    }
     let expected = std::fs::read_to_string(GOLDEN)
         .expect("missing golden file; run with UPDATE_GOLDEN=1 to create it");
     let changed = actual

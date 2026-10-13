@@ -221,6 +221,12 @@ fn emitter_output_is_bit_identical_to_snapshot() {
     if std::env::var_os("UPDATE_EMITTER_SNAPSHOT").is_some() {
         std::fs::write(path, &actual).unwrap();
     }
+    // Emitted geometry goes through platform libm trig, whose last-bit results differ between
+    // glibc, macOS and MSVC. The snapshot was recorded on x86_64 Linux (the CI `rust` job), so
+    // only that target compares it; elsewhere every case still runs and must not panic.
+    if !cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        return;
+    }
     let expected = std::fs::read_to_string(path)
         .expect("snapshot missing; run with UPDATE_EMITTER_SNAPSHOT=1");
     for (a, e) in actual.lines().zip(expected.lines()) {
