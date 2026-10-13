@@ -14,7 +14,6 @@
     "crates/mechanical-core/src/lib.rs": 991,
     "crates/modelgraph-runtime/src/emit/emitter/emitter.rs": 1083,
     "crates/modelgraph-runtime/src/eval/evaluator.rs": 1018,
-    "crates/modelgraph-runtime/src/nurbs.rs": 1154,
     "crates/modelgraph-text/src/lower/compiler.rs": 1889,
     "crates/modelgraph-text/src/parser/parser.rs": 1000,
     "crates/nurbs-core/src/foundation.rs": 3449,
