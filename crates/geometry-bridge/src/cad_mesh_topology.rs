@@ -1,5 +1,6 @@
 //! Display-only planar grouping; this does not construct authored B-rep topology.
 use super::{Result, Value, encode, field, input};
+use math_core::dot;
 use polygon_core::Mesh;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 struct Face {
@@ -13,9 +14,6 @@ struct Edge {
     a: usize,
     b: usize,
     faces: Vec<usize>,
-}
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a.iter().zip(b).map(|(a, b)| a * b).sum()
 }
 // Fixed-seven decimal rounding, with JavaScript's ties-away rule for the
 // legacy display seam key. Multiplying in binary64 first would lose ties.

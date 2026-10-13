@@ -6,13 +6,7 @@ use polygon_core::{
 };
 use math_core::cross;
 fn unit(v: [f64; 3]) -> Result<[f64; 3]> {
-    let magnitude = v.iter().map(|x| x.abs()).fold(0., f64::max);
-    if magnitude == 0. || !v.iter().all(|x| x.is_finite()) {
-        return Err(input("Invalid thread direction."));
-    }
-    let v = v.map(|x| x / magnitude);
-    let length = v[0].hypot(v[1]).hypot(v[2]);
-    Ok(v.map(|x| x / length))
+    super::cad_hole::scaled_unit(v, "Invalid thread direction.")
 }
 pub fn apply(v: Value) -> Result<Value> {
     let body: Value = field(&v, "body")?;

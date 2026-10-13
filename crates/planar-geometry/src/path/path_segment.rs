@@ -34,15 +34,7 @@ pub struct BezierPath {
 pub const FLATTEN_TOLERANCE: f64 = 0.25;
 pub(super) const ELLIPSE_KAPPA: f64 = 0.552_285;
 
-#[inline(always)]
-pub(super) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
-
-#[inline(always)]
-pub(super) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    norm2(sub2(a, b))
-}
+pub(super) use crate::{dist, lerp};
 
 #[inline]
 pub(super) fn perp_line_distance(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {

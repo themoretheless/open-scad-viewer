@@ -308,12 +308,7 @@ pub struct Evaluation {
     pub dv: [f64; 3],
     pub source_unit_normal: [f64; 3],
 }
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|k| a[(k + 1) % 3] * b[(k + 2) % 3] - a[(k + 2) % 3] * b[(k + 1) % 3])
-}
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (0..3).map(|k| a[k] * b[k]).sum()
-}
+use math_core::{cross, dot};
 /// Numerical offset point and first derivatives for predictor/corrector seeds.
 /// Discontinuous source jets are refused. A zero offset Jacobian is returned
 /// unchanged; a point evaluation never certifies offset regularity.

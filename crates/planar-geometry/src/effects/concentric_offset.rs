@@ -1,8 +1,6 @@
 use super::*;
 
-pub(super) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
+pub(super) use crate::lerp;
 
 pub(super) fn bbox_of(points: &[[f64; 2]]) -> Result<([f64; 2], [f64; 2])> {
     check(!points.is_empty(), "Empty point set")?;

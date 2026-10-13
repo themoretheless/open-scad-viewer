@@ -1,6 +1,6 @@
 //! Distance over UV-trimmed surface images. Only proven outside cells are
 //! removed, and only proven inside points may supply an upper distance bound.
-use crate::distance_bounds::{Interval, box_distance};
+use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::surface_distance::{Patch, Witness, at, patch_lower, patches};
 use crate::{
     Result, check, resource,
@@ -110,9 +110,6 @@ impl Ord for Cell {
             .then_with(|| b.order.cmp(&self.order))
     }
 }
-fn midpoint([lo, hi]: [f64; 2]) -> f64 {
-    lo * 0.5 + hi * 0.5
-}
 struct Sample {
     raw: [f64; 2],
     parameters: [f64; 2],
@@ -132,7 +129,7 @@ fn sample_pair(
         let values = |lo: f64, hi: f64| {
             [
                 lo * 0.875 + hi * 0.125,
-                midpoint([lo, hi]),
+                midpoint(lo, hi),
                 lo * 0.125 + hi * 0.875,
             ]
         };
@@ -355,9 +352,9 @@ pub fn distance(
         let mid = if selected.location == Location::Unresolved {
             domains.regions[side]
                 .split_hint(selected.patch.domain, axis)
-                .unwrap_or_else(|| midpoint([lo, hi]))
+                .unwrap_or_else(|| midpoint(lo, hi))
         } else {
-            midpoint([lo, hi])
+            midpoint(lo, hi)
         };
         for range in [[lo, mid], [mid, hi]] {
             cells += 1;

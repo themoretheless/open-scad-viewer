@@ -204,12 +204,7 @@ impl PreparedWinding {
 pub(super) fn sub(a: Point, b: Point) -> [f64; 2] {
     [a.x - b.x, a.y - b.y]
 }
-pub(super) fn cross(a: [f64; 2], b: [f64; 2]) -> f64 {
-    a[0] * b[1] - a[1] * b[0]
-}
-pub(super) fn len(v: [f64; 2]) -> f64 {
-    v[0].hypot(v[1])
-}
+pub(super) use math_core::{cross2 as cross, norm2 as len};
 pub(super) fn at(a: Point, b: Point, t: f64) -> Point {
     Point::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
 }

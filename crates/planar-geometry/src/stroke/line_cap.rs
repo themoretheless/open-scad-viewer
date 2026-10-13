@@ -52,9 +52,7 @@ impl Default for StrokeOptions {
     }
 }
 
-pub(super) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    norm2(sub2(a, b))
-}
+pub(super) use crate::dist;
 pub(super) fn perp(v: [f64; 2]) -> [f64; 2] {
     [-v[1], v[0]]
 }

@@ -1,14 +1,19 @@
 //! Retained-body hole cutters and native Boolean. No mesh fallback.
 use super::{Result, Value, brep, encode, field, input};
 use math_core::cross;
-fn unit(v: [f64; 3]) -> Result<[f64; 3]> {
+/// Overflow-safe unit direction: divide by the largest component, then by
+/// the `hypot`-chain length. Shared with `cad_thread`.
+pub(super) fn scaled_unit(v: [f64; 3], message: &'static str) -> Result<[f64; 3]> {
     let max = v.iter().map(|x| x.abs()).fold(0., f64::max);
     if max == 0. || !v.iter().all(|x| x.is_finite()) {
-        return Err(input("Invalid hole direction."));
+        return Err(input(message));
     }
     let n = v.map(|x| x / max);
     let length = n[0].hypot(n[1]).hypot(n[2]);
     Ok(n.map(|x| x / length))
+}
+fn unit(v: [f64; 3]) -> Result<[f64; 3]> {
+    scaled_unit(v, "Invalid hole direction.")
 }
 pub fn hole(v: Value) -> Result<Value> {
     let body: Value = field(&v, "body")?;

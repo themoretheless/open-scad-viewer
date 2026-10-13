@@ -1,7 +1,6 @@
 //! Corner styles and rounded primitive → Bézier conversion.
 use crate::path::{BezierPath, PathSegment};
-use crate::{Result, check};
-use math_core::{norm2, sub2};
+use crate::{Result, check, dist, lerp};
 
 const KAPPA: f64 = 0.552_285;
 
@@ -14,13 +13,6 @@ pub enum CornerStyle {
     Notch,
 }
 
-fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
-
-fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    norm2(sub2(a, b))
-}
 
 fn resolve_corner(radii: &[f64], styles: &[CornerStyle], i: usize) -> (CornerStyle, f64) {
     let raw = radii.get(i).copied().unwrap_or(0.0);

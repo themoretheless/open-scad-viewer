@@ -29,6 +29,16 @@ const probePath = fileURLToPath(
 )
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
 
+// The probe starts one worker thread per job. Under glibc's default allocator each thread
+// gets its own malloc arena, and arenas freed on thread exit are not always returned to the
+// OS, so RSS can grow by tens of MiB with flat JS heap/external/ArrayBuffer usage. CI pins
+// these for the whole job (.github/workflows/ci.yml); pin them here so local runs measure the same.
+const probeAllocatorEnv = {
+  MALLOC_ARENA_MAX: '2',
+  MALLOC_TRIM_THRESHOLD_: '0',
+  MALLOC_MMAP_THRESHOLD_: '131072',
+}
+
 function slope(samples: readonly MemorySample[], field: keyof Omit<MemorySample, 'job'>): number {
   const count = samples.length
   const meanX = (count - 1) / 2
@@ -49,7 +59,7 @@ function runProbe(): Promise<{ stdout: string; stderr: string }> {
       '--expose-gc', '--import', 'tsx', probePath,
     ], {
       cwd: repositoryRoot,
-      env: process.env,
+      env: { ...process.env, ...probeAllocatorEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let stdout = ''

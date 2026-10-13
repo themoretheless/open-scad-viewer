@@ -38,16 +38,7 @@ pub(crate) fn distance(a: &[f64], b: &[f64]) -> f64 {
         .sum::<f64>()
         .sqrt()
 }
-pub(crate) fn cross3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-pub(crate) fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
+pub(crate) use math_core::{cross as cross3, dot as dot3};
 pub(crate) fn norm3(a: [f64; 3]) -> f64 {
     distance(&a, &[0.; 3])
 }

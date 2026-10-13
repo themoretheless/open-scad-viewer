@@ -2,9 +2,7 @@ use crate::{Result, check, curve::Curve};
 use math_core::{cross, dot, sub};
 
 type Point = [f64; 3];
-fn length(v: Point) -> f64 {
-    v[0].hypot(v[1]).hypot(v[2])
-}
+use crate::sweep_support::vec3_ext::norm as length;
 
 /// Replaces each nonstraight corner of an open spatial polyline by a rational
 /// circular arc of the requested radius. Lines and arcs meet geometrically G1;
