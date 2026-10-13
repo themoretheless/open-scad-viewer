@@ -14,7 +14,7 @@
     "crates/nurbs-core/src/transport/dispatch.rs": 1289,
     "crates/openscad-core/src/eval/evaluator/evaluator.rs": 3115,
     "crates/sdf-core/src/lib.rs": 2146,
-    "crates/sketch-core/src/lib.rs": 960,
+    "crates/sketch-core/src/lib.rs": 955,
     "crates/value-codec/src/lib.rs": 967,
     "scripts/g1-github-actions.mjs": 730,
     "scripts/official-openscad-runtime.mjs": 646,

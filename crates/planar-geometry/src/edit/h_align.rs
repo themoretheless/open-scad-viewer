@@ -87,13 +87,8 @@ impl BBox {
     }
 }
 
-pub(super) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).hypot(a[1] - b[1])
-}
-
-fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-}
+pub(super) use crate::dist;
+use crate::lerp;
 
 // ----- Snap -----
 

@@ -43,3 +43,13 @@ pub(crate) fn error(message: impl Into<String>) -> Error {
 pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
     math_core::ensure(condition, INVALID_INPUT, message)
 }
+/// `a + (b - a) * t` per coordinate: the crate's one 2D point interpolation.
+#[inline(always)]
+pub(crate) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
+    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+}
+/// Euclidean distance as `hypot(a - b)`.
+#[inline(always)]
+pub(crate) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
+    math_core::norm2(math_core::sub2(a, b))
+}
