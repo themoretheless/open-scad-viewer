@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
 import {createDrawingSheets,drawingPdf,vectorDrawingPdf,parseDrawingDimensions} from '../src/services/drawingSheets'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 const body=(id:string)=>{const brep=createBrepBox([0,0,0],[20,10,5]);return {id,name:'Деталь <'+id+'>',brep,mesh:tessellateNurbsBrep(brep,1)}}
 describe('native drawing sheets',()=>{
  it('exports Unicode labels as embedded searchable text without page images',()=>{
@@ -32,6 +32,35 @@ describe('native drawing sheets',()=>{
   expect(parseDrawingDimensions(JSON.stringify(dimensions))).toEqual(dimensions)
   expect(()=>parseDrawingDimensions('[{"bodyId":"a"}]')).toThrow(/Invalid/)
   expect(()=>createDrawingSheets([changed],{...options,linkedDimensions:[{...dimensions[0],bodyId:'missing'}]})).toThrow(/missing body/)
+ })
+ it('keeps durable vertex attachments through reordering and scaling, and rejects ambiguous successors',()=>{
+  const original=body('persistent'),options={template:'A4' as const,scale:1,title:'Part',author:'',perBody:false,hidden:'show' as const}
+  const reference=createDrawingSheets([original],options)[0].references![0]
+  const second=original.brep.vertices.findIndex(v=>v.point[0]!==original.brep.vertices[0].point[0])
+  const dimension={bodyId:original.id,vertices:[0,second] as [number,number],topologySignature:reference.topologySignature,vertexIds:[reference.vertexIds[0],reference.vertexIds[second]] as [string,string],view:'top' as const,axis:'horizontal' as const}
+  const reordered=structuredClone(original.brep)
+  ;[reordered.vertices[0],reordered.vertices[1]]=[reordered.vertices[1],reordered.vertices[0]]
+  ;[reordered.topologyIds!.vertices[0],reordered.topologyIds!.vertices[1]]=[reordered.topologyIds!.vertices[1],reordered.topologyIds!.vertices[0]]
+  for(const edge of reordered.edges)edge.vertices=edge.vertices.map(v=>v===0?1:v===1?0:v) as [number,number]
+  const scaled=transformNurbsBrep(reordered,[[2,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+  const changed={...original,brep:scaled,mesh:tessellateNurbsBrep(scaled,1)}
+  expect(createDrawingSheets([changed],{...options,linkedDimensions:[dimension]})[0].svg).toContain('40.00 mm')
+  const {vertexIds:_,...legacy}=dimension
+  expect(()=>createDrawingSheets([changed],{...options,linkedDimensions:[legacy]})).toThrow(/topology changed/)
+  expect(parseDrawingDimensions(JSON.stringify([dimension]))).toEqual([dimension])
+  expect(()=>parseDrawingDimensions(JSON.stringify([{...dimension,vertexIds:['e:'+ '0'.repeat(32),dimension.vertexIds[1]]}]))).toThrow(/vertex identities/)
+  const split=structuredClone(original.brep)
+  split.topologyIds!.changeSet={...split.topologyIds!.changeSet!,changes:[...split.topologyIds!.changeSet!.changes,{kind:'split',topoKind:'vertex',parents:[dimension.vertexIds[0]],children:dimension.vertexIds,provenance:{operation:'test',operand:null,occurrence:'part'},role:'vertex',anchor:null}]}
+  expect(()=>createDrawingSheets([{...original,brep:split}],{...options,linkedDimensions:[dimension]})).toThrow(/surviving vertices/)
+  const replacement=createBrepBox([10,0,0],[30,10,5])
+  expect(()=>createDrawingSheets([{...original,brep:replacement,mesh:tessellateNurbsBrep(replacement,1)}],{...options,linkedDimensions:[dimension]})).toThrow(/deleted/)
+ })
+ it('includes specification sheets in the shared numbering and native vector PDF',()=>{
+  const bodies=[body('a'),body('b')],parts=bodies.map(b=>({bodyId:b.id,designation:'VC-001',description:'Пластина',material:'Сталь'}))
+  const sheets=createDrawingSheets(bodies,{template:'A4',scale:1,title:'Сборка',author:'Конструктор',perBody:true,specification:true,parts})
+  expect(sheets).toHaveLength(3);expect(sheets[2].kind).toBe('specification');expect(sheets[2].specificationRows).toHaveLength(1);expect(sheets[2].specificationRows![0].quantity).toBe(2)
+  sheets.forEach((s,i)=>expect(s.svg).toContain(`data-sheet-number="true">${i+1}/3`))
+  const pdf=new TextDecoder().decode(vectorDrawingPdf(sheets));expect(pdf).toContain('/Count 3');expect(pdf).toContain('/ToUnicode');expect(pdf).not.toContain('/Subtype /Image')
  })
  it('creates a valid multipage PDF object graph with byte-correct streams and xref',()=>{
   const pdf=drawingPdf([1,2].map(()=>({jpeg:new Uint8Array([255,216,255,217]),width:297,height:210,pixelWidth:10,pixelHeight:10})))

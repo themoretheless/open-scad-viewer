@@ -6,6 +6,8 @@ use nurbs_core::trim_domain::{Classification, TrimDomain};
 pub struct FaceDomain {
     pub(crate) region: TrimDomain,
     natural: [[f64; 2]; 2],
+    linear_boundaries: Vec<[[f64; 2]; 2]>,
+    rectangle_closure: Option<[[f64; 2]; 2]>,
 }
 impl FaceDomain {
     pub fn new(model: &Model, face_index: usize, tolerance_uv: f64) -> Result<Self> {
@@ -16,7 +18,7 @@ impl FaceDomain {
             )
         })?;
         face.surface.validate()?;
-        let loops = std::iter::once(face.outer)
+        let loops: Vec<Vec<nurbs_core::curve::Curve>> = std::iter::once(face.outer)
             .chain(face.holes.iter().copied())
             .map(|index| {
                 let loop_ = model.loops.get(index).ok_or_else(|| {
@@ -27,14 +29,113 @@ impl FaceDomain {
                 Ok(loop_.coedges.iter().map(|c| c.pcurve.clone()).collect())
             })
             .collect::<Result<Vec<_>>>()?;
+        let region = TrimDomain::new(&loops, tolerance_uv)?;
         let s = &face.surface;
         let natural = [
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
             [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
         ];
+        let linear_boundaries = loops
+            .iter()
+            .flatten()
+            .filter(|c| c.degree == 1 && c.control_points.iter().all(|p| p.len() == 2))
+            .flat_map(|c| {
+                c.control_points
+                    .windows(2)
+                    .map(|p| [[p[0][0], p[0][1]], [p[1][0], p[1][1]]])
+            })
+            .collect();
+        let rectangle_closure = if loops.len() == 1
+            && loops[0].len() == 4
+            && loops[0].iter().all(|c| {
+                c.degree == 1
+                    && c.control_points.len() == 2
+                    && !c.periodic
+                    && c.knots[..2].iter().all(|t| *t == c.domain()[0])
+                    && c.knots[2..].iter().all(|t| *t == c.domain()[1])
+                    && c.control_points.iter().all(|p| p.len() == 2)
+            }) {
+            let corners: Vec<_> = loops[0]
+                .iter()
+                .map(|c| [c.control_points[0][0], c.control_points[0][1]])
+                .collect();
+            let bounds: [[f64; 2]; 2] = std::array::from_fn(|k| {
+                [
+                    corners.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min),
+                    corners
+                        .iter()
+                        .map(|p| p[k])
+                        .fold(f64::NEG_INFINITY, f64::max),
+                ]
+            });
+            if (0..2).all(|k| bounds[k][0] < bounds[k][1])
+                && corners.iter().enumerate().all(|(i, p)| {
+                    (0..2).all(|k| p[k] == bounds[k][0] || p[k] == bounds[k][1])
+                        && corners.iter().take(i).all(|q| q != p)
+                })
+                && loops[0]
+                    .iter()
+                    .enumerate()
+                    .all(|(i, c)| c.control_points[1][..] == corners[(i + 1) % 4][..])
+                && loops[0].iter().all(|c| {
+                    (0..2)
+                        .filter(|k| c.control_points[0][*k] == c.control_points[1][*k])
+                        .count()
+                        == 1
+                })
+            {
+                Some(bounds)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         Ok(Self {
-            region: TrimDomain::new(&loops, tolerance_uv)?,
+            rectangle_closure,
+            linear_boundaries,
+            region,
             natural,
+        })
+    }
+    /// Exact closed-set membership for an authored four-sided rectangular
+    /// outer loop without holes. This does not enlarge a general trim band.
+    pub fn contains_closed_rectangle(&self, rectangle: [[f64; 2]; 2]) -> bool {
+        self.rectangle_closure.is_some_and(|bounds| {
+            (0..2).all(|k| {
+                rectangle[k][0].is_finite()
+                    && rectangle[k][1].is_finite()
+                    && rectangle[k][0] <= rectangle[k][1]
+                    && rectangle[k][0] >= bounds[k][0]
+                    && rectangle[k][1] <= bounds[k][1]
+                    && rectangle[k][0] >= self.natural[k][0]
+                    && rectangle[k][1] <= self.natural[k][1]
+            })
+        })
+    }
+    /// Membership in the closed authored face boundary, for a degenerate UV
+    /// rectangle lying wholly on one axis-aligned degree-one pcurve segment.
+    /// Unlike a Boundary-band classification this establishes every point of
+    /// the query belongs to the face closure; no tolerance enlargement is used.
+    pub fn on_linear_boundary(&self, rectangle: [[f64; 2]; 2]) -> bool {
+        if !(0..2).all(|k| {
+            rectangle[k][0].is_finite()
+                && rectangle[k][1].is_finite()
+                && rectangle[k][0] <= rectangle[k][1]
+                && rectangle[k][0] >= self.natural[k][0]
+                && rectangle[k][1] <= self.natural[k][1]
+        }) {
+            return false;
+        }
+        self.linear_boundaries.iter().any(|segment| {
+            (0..2).any(|axis| {
+                let free = 1 - axis;
+                rectangle[axis][0] == rectangle[axis][1]
+                    && segment[0][axis] == rectangle[axis][0]
+                    && segment[1][axis] == rectangle[axis][0]
+                    && rectangle[free][0] >= segment[0][free].min(segment[1][free])
+                    && rectangle[free][1] <= segment[0][free].max(segment[1][free])
+            })
         })
     }
     pub fn classify(&self, rectangle: [[f64; 2]; 2], max_cells: usize) -> Result<Classification> {
@@ -80,6 +181,19 @@ pub fn distance_between_faces(
 mod tests {
     use super::*;
     use nurbs_core::{curve::Curve, trim_domain::Location};
+    #[test]
+    fn closed_linear_boundary_membership_does_not_expand_the_trim() {
+        let model = crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let domain = FaceDomain::new(&model, 0, 1e-7).unwrap();
+        assert!(domain.contains_closed_rectangle([[0., 1.], [0., 1.]]));
+        assert!(domain.contains_closed_rectangle([[0., 0.], [0.25, 0.75]]));
+        assert!(!domain.contains_closed_rectangle([[-1e-15, 1.], [0., 1.]]));
+        assert!(domain.on_linear_boundary([[0., 0.], [0.25, 0.75]]));
+        assert!(domain.on_linear_boundary([[0.25, 0.75], [1., 1.]]));
+        assert!(!domain.on_linear_boundary([[1e-15, 1e-15], [0.25, 0.75]]));
+        assert!(!domain.on_linear_boundary([[0., 0.1], [0.25, 0.75]]));
+        assert!(!domain.on_linear_boundary([[0., 0.], [-0.1, 0.75]]));
+    }
     #[test]
     fn box_faces_use_pcurves_in_loop_order() {
         let model = crate::cuboid([0., 0., 0.], [10., 20., 30.]).unwrap();
@@ -146,22 +260,67 @@ pub struct TrimAudit {
 }
 /// UV-region evidence only; edge lifts, surface embedding and volume validity
 /// have separate checks. Every budget is shared by all inspected faces.
-pub fn audit_trim_regions(model: &Model,tolerance_uv:f64,max_pairs:usize,max_cells:usize,max_domain_cells:usize)->Result<TrimAudit>{
+pub fn audit_trim_regions(
+    model: &Model,
+    tolerance_uv: f64,
+    max_pairs: usize,
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<TrimAudit> {
     model.validate_boundary_diagnostic_inputs()?;
-    if !(1..=100000).contains(&max_pairs)||!(1..=100000).contains(&max_cells)||!(1..=1000000).contains(&max_domain_cells)
-        || !tolerance_uv.is_finite()||tolerance_uv<=0. {
-        return Err(Error::new("BREP_INVALID_INPUT","Trim audit requires positive tolerance and bounded work"));
+    if !(1..=100000).contains(&max_pairs)
+        || !(1..=100000).contains(&max_cells)
+        || !(1..=1000000).contains(&max_domain_cells)
+        || !tolerance_uv.is_finite()
+        || tolerance_uv <= 0.
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Trim audit requires positive tolerance and bounded work",
+        ));
     }
-    let mut out=TrimAudit{faces:Vec::new(),all_valid:!model.faces.is_empty(),pairs:0,cells:0,domain_cells:0};
+    let mut out = TrimAudit {
+        faces: Vec::new(),
+        all_valid: !model.faces.is_empty(),
+        pairs: 0,
+        cells: 0,
+        domain_cells: 0,
+    };
     for face in &model.faces {
-        let loops=std::iter::once(face.outer).chain(face.holes.iter().copied())
-            .map(|wire|model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>()).collect::<Vec<_>>();
-        let result=if out.pairs<max_pairs&&out.cells<max_cells&&out.domain_cells<max_domain_cells
-            && loops.len()<=16&&loops.iter().all(|l|l.len()>=2)&&loops.iter().map(Vec::len).sum::<usize>()<=256 {
-            Some(nurbs_core::trim_region_audit::inspect(&loops,tolerance_uv,max_pairs-out.pairs,max_cells-out.cells,max_domain_cells-out.domain_cells)?)
-        }else{None};
-        if let Some(r)=&result{out.pairs+=r.pairs;out.cells+=r.cells;out.domain_cells+=r.domain_cells;}
-        out.all_valid &= result.as_ref().is_some_and(|r|r.valid==Some(true));out.faces.push(result);
+        let loops: Vec<Vec<nurbs_core::curve::Curve>> = std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .map(|wire| {
+                model.loops[wire]
+                    .coedges
+                    .iter()
+                    .map(|c| c.pcurve.clone())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let result = if out.pairs < max_pairs
+            && out.cells < max_cells
+            && out.domain_cells < max_domain_cells
+            && loops.len() <= 16
+            && loops.iter().all(|l| l.len() >= 2)
+            && loops.iter().map(Vec::len).sum::<usize>() <= 256
+        {
+            Some(nurbs_core::trim_region_audit::inspect(
+                &loops,
+                tolerance_uv,
+                max_pairs - out.pairs,
+                max_cells - out.cells,
+                max_domain_cells - out.domain_cells,
+            )?)
+        } else {
+            None
+        };
+        if let Some(r) = &result {
+            out.pairs += r.pairs;
+            out.cells += r.cells;
+            out.domain_cells += r.domain_cells;
+        }
+        out.all_valid &= result.as_ref().is_some_and(|r| r.valid == Some(true));
+        out.faces.push(result);
     }
     Ok(out)
 }
@@ -169,14 +328,18 @@ pub fn audit_trim_regions(model: &Model,tolerance_uv:f64,max_pairs:usize,max_cel
 mod trim_audit_tests {
     use super::*;
     #[test]
-    fn cube_regions_and_global_exhaustion_preserve_face_indices(){
-        let m=crate::cuboid([0.;3],[1.;3]).unwrap();let before=format!("{m:?}");
-        let r=audit_trim_regions(&m,1e-8,1000,10000,100000).unwrap();
-        assert!(r.all_valid);assert_eq!(r.faces.len(),6);
-        for (p,c,d) in [(1,10000,100000),(1000,1,100000),(1000,10000,1)]{
-            let r=audit_trim_regions(&m,1e-8,p,c,d).unwrap();
-            assert!(!r.all_valid);assert_eq!(r.faces.len(),6);assert!(r.pairs<=p&&r.cells<=c&&r.domain_cells<=d);
+    fn cube_regions_and_global_exhaustion_preserve_face_indices() {
+        let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let before = format!("{m:?}");
+        let r = audit_trim_regions(&m, 1e-8, 1000, 10000, 100000).unwrap();
+        assert!(r.all_valid);
+        assert_eq!(r.faces.len(), 6);
+        for (p, c, d) in [(1, 10000, 100000), (1000, 1, 100000), (1000, 10000, 1)] {
+            let r = audit_trim_regions(&m, 1e-8, p, c, d).unwrap();
+            assert!(!r.all_valid);
+            assert_eq!(r.faces.len(), 6);
+            assert!(r.pairs <= p && r.cells <= c && r.domain_cells <= d);
         }
-        assert_eq!(format!("{m:?}"),before);
+        assert_eq!(format!("{m:?}"), before);
     }
 }

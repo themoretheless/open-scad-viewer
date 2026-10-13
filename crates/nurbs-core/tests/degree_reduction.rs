@@ -17,12 +17,28 @@ fn elevated_rational_line_reduces_with_verified_error() {
     assert!(r.certificate.accepted);
     assert_eq!(r.curve.degree, 1);
     assert!(r.certificate.error_upper <= 0.1);
-    for i in 0..=200 {
-        let t = i as f64 / 200.;
-        let p = r.curve.evaluate(2. + 5. * t).unwrap().point;
-        assert!((p[0] - 12. * t / (1. + 2. * t)).abs() <= r.certificate.error_upper);
-        assert!(p[1].abs() <= r.certificate.error_upper);
+    assert!(r.certificate.exact_zero_recognized);
+    assert_eq!(r.certificate.error_upper, 0.);
+    assert_eq!(s.control_points, vec![vec![0., 0.], vec![3., 0.], vec![4., 0.]]);
+    assert_eq!(s.weights, vec![1., 2., 3.]);
+    assert_eq!(r.curve.control_points, vec![vec![0., 0.], vec![4., 0.]]);
+    assert_eq!(r.curve.weights, vec![1., 3.]);
+    assert_eq!(r.curve.knots, vec![2., 2., 7., 7.]);
+    // Exact homogeneous power coefficients on t=(u-2)/5. Cross multiplication
+    // verifies the rational identity without confusing evaluator rounding with
+    // geometric deviation (even forming u=2+5*t changes represented t).
+    let source_numerator = [0_i64, 12, 0];
+    let source_denominator = [1_i64, 2, 0];
+    let reduced_numerator = [0_i64, 12];
+    let reduced_denominator = [1_i64, 2];
+    let mut residual = [0_i64; 4];
+    for i in 0..3 {
+        for j in 0..2 {
+            residual[i+j] += source_numerator[i] * reduced_denominator[j]
+                - source_denominator[i] * reduced_numerator[j];
+        }
     }
+    assert_eq!(residual, [0; 4]);
     assert_eq!(s, line());
 }
 #[test]

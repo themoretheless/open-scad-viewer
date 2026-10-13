@@ -31,3 +31,5 @@ pub mod curvature_spectrum;
 pub mod higher_derivative_map;
 pub mod reference_deviation;
 pub(crate) mod curve_surface_composition;
+
+pub mod surface_occlusion;

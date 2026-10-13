@@ -39,7 +39,9 @@ it('keeps a complete G1 profile claim when exact G2 fails, within one shared wor
  expect(body.profileSmoothness).toMatchObject({extractionComplete:true,profile:{exactG1G2Certified:false,certifiedOrder:null},profileG1Certified:true,g1Method:'exact-projective-audit',g1Audit:{exactG1G2Certified:true,certifiedOrder:1},stationContinuity:'C0',fullBoundarySmoothnessCertified:false})
  expect(body.profileSmoothness.exactWork).toBe(body.profileSmoothness.profile.exactWork+body.profileSmoothness.g1Audit!.exactWork)
  expect(body.profileSmoothness.exactWork).toBeLessThanOrEqual(1000000)
- const exhausted=inspectMiterProfileSmoothness(body.model,[body.model.faces.length-2,body.model.faces.length-1],body.profileSmoothness.profile.exactWork)
+ // Only the first refused G2 prefix precedes G1; deferred G2 seams are audited later.
+ const firstG2Work=body.profileSmoothness.profile.seams[0]!.work
+ const exhausted=inspectMiterProfileSmoothness(body.model,[body.model.faces.length-2,body.model.faces.length-1],firstG2Work)
  expect(exhausted).toMatchObject({profileG1Certified:false,g1Method:'unproved',g1Audit:{exactWork:0}})
 })
 it('carries independent G1 and unproved G2 through joint-mode Rush, viewport evidence and Solid',async()=>{

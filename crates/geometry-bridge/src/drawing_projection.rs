@@ -1,4 +1,5 @@
-//! Orthographic retained edge projection and bounded mesh hidden-line clipping.
+//! Orthographic retained edges with bounded trimmed NURBS-surface occlusion
+//! and an explicitly selected mesh hidden-line mode.
 use crate::{Result, field, input};
 use nurbs_core::curve::Curve;
 use polygon_core::Mesh;
@@ -235,7 +236,112 @@ impl PlanarFace {
         }
     }
 }
-fn retained_planes(model: &brep_core::Model, view: &str) -> Result<Vec<PlanarFace>> {
+enum RetainedFace {
+    Planar(PlanarFace),
+    Curved {
+        surface: nurbs_core::surface::Surface,
+        domain: brep_core::face_domain::FaceDomain,
+    },
+}
+impl RetainedFace {
+    fn state(&self, curve: &Curve, tolerance: f64, work: &mut usize) -> Result<i8> {
+        let Self::Curved { surface, domain } = self else {
+            let Self::Planar(face) = self else {
+                unreachable!()
+            };
+            return face.state(curve, tolerance, work);
+        };
+        // A curve entirely on a supporting coordinate line of the projected
+        // surface has no interior projected crossing (silhouette convention,
+        // shared with the affine natural-domain boundary case above).
+        if (0..2).any(|k| {
+            let value = curve.control_points[0][k];
+            curve.control_points.iter().all(|p| p[k] == value)
+                && (surface
+                    .control_points
+                    .iter()
+                    .flatten()
+                    .all(|p| p[k] >= value)
+                    || surface
+                        .control_points
+                        .iter()
+                        .flatten()
+                        .all(|p| p[k] <= value))
+        }) {
+            return Ok(0);
+        }
+        if *work >= 2000000 - 64 {
+            return Err(input("B-rep surface occlusion work budget exceeded"));
+        }
+        *work += 64;
+        if let Some(cover) =
+            nurbs_core::surface_occlusion::extrusion_cover(surface, curve, tolerance, 64)?
+        {
+            if domain.contains_closed_rectangle(cover) || domain.on_linear_boundary(cover) {
+                return Ok(1);
+            }
+            let classified = domain.classify(cover, (2000000 - *work).min(4096))?;
+            *work += classified.cells;
+            if classified.location == nurbs_core::trim_domain::Location::Inside {
+                return Ok(1);
+            }
+        }
+        if *work >= 2000000 {
+            return Err(input("B-rep surface occlusion work budget exceeded"));
+        }
+        let report = nurbs_core::surface_occlusion::inspect(
+            surface,
+            curve,
+            tolerance,
+            (2000000 - *work).min(64),
+        )?;
+        *work += report.cells;
+        let mut uncertain = false;
+        for (uv, cover) in report
+            .covers
+            .into_iter()
+            .map(|uv| (uv, true))
+            .chain(report.unresolved.into_iter().map(|uv| (uv, false)))
+        {
+            if *work >= 2000000 {
+                return Err(input("B-rep trim classification work budget exceeded"));
+            }
+            *work += 1;
+            if domain.contains_closed_rectangle(uv) {
+                if cover {
+                    return Ok(1);
+                }
+                uncertain = true;
+                continue;
+            }
+            if cover && domain.on_linear_boundary(uv) {
+                return Ok(1);
+            }
+            if *work >= 2000000 {
+                return Err(input("B-rep trim classification work budget exceeded"));
+            }
+            let classification = domain.classify(uv, (2000000 - *work).min(4096))?;
+            *work += classification.cells;
+            match classification.location {
+                nurbs_core::trim_domain::Location::Inside if cover => return Ok(1),
+                nurbs_core::trim_domain::Location::Outside => {}
+                _ => uncertain = true,
+            }
+        }
+        Ok(if uncertain { -1 } else { 0 })
+    }
+}
+fn curved_face(model: &brep_core::Model, index: usize, view: &str) -> Result<RetainedFace> {
+    let mut surface = model.faces[index].surface.clone();
+    for p in surface.control_points.iter_mut().flatten() {
+        *p = project(p, view).to_vec();
+    }
+    Ok(RetainedFace::Curved {
+        surface,
+        domain: brep_core::face_domain::FaceDomain::new(model, index, 1e-9)?,
+    })
+}
+fn retained_faces(model: &brep_core::Model, view: &str) -> Result<Vec<RetainedFace>> {
     let mut faces = Vec::new();
     for (index, face) in model.faces.iter().enumerate() {
         let s = &face.surface;
@@ -265,9 +371,8 @@ fn retained_planes(model: &brep_core::Model, view: &str) -> Result<Vec<PlanarFac
             || s.control_points[0].len() != 2
             || s.weights.iter().flatten().any(|w| *w != s.weights[0][0])
         {
-            return Err(input(
-                "B-rep surface occlusion currently requires affine planar faces; choose mesh mode for curved surfaces",
-            ));
+            faces.push(curved_face(model, index, view)?);
+            continue;
         }
         let a = project(&s.control_points[0][0], view);
         let b = project(&s.control_points[1][0], view);
@@ -277,7 +382,8 @@ fn retained_planes(model: &brep_core::Model, view: &str) -> Result<Vec<PlanarFac
             (d[k] - (b[k] + c[k] - a[k])).abs()
                 > 256. * f64::EPSILON * (a[k].abs() + b[k].abs() + c[k].abs() + d[k].abs()).max(1.)
         }) {
-            return Err(input("B-rep surface is bilinear rather than affine planar"));
+            faces.push(curved_face(model, index, view)?);
+            continue;
         }
         let uv = [[s.knots_u[1], s.knots_u[2]], [s.knots_v[1], s.knots_v[2]]];
         let mut boundaries = Vec::new();
@@ -298,21 +404,21 @@ fn retained_planes(model: &brep_core::Model, view: &str) -> Result<Vec<PlanarFac
                 }
             }
         }
-        faces.push(PlanarFace {
+        faces.push(RetainedFace::Planar(PlanarFace {
             origin: a,
             u: std::array::from_fn(|k| b[k] - a[k]),
             v: std::array::from_fn(|k| c[k] - a[k]),
             uv: [[s.knots_u[1], s.knots_u[2]], [s.knots_v[1], s.knots_v[2]]],
             domain: brep_core::face_domain::FaceDomain::new(model, index, 1e-9)?,
             boundaries,
-        });
+        }));
     }
     Ok(faces)
 }
 fn clip(
     c: Curve,
     triangles: &[[[f64; 3]; 3]],
-    faces: &[PlanarFace],
+    faces: &[RetainedFace],
     tol: f64,
     work: &mut usize,
     output: &mut Vec<(Curve, bool)>,
@@ -403,18 +509,57 @@ fn linked_dimensions(v: &Value, bodies: &[Value], view: &str) -> Result<Vec<Valu
         return Err(input("Drawing exceeds 64 linked dimensions"));
     }
     let mut result = Vec::new();
+    let mut prepared = std::collections::BTreeMap::new();
     for request in requests {
         let id: String = field(request, "bodyId")?;
         let indices: [usize; 2] = field(request, "vertices")?;
         let signature: String = field(request, "topologySignature")?;
         let axis: String = field(request, "axis")?;
-        let body = bodies
-            .iter()
-            .find(|b| b["id"].as_str() == Some(&id))
-            .ok_or_else(|| input("Linked dimension body no longer exists"))?;
-        let model: brep_core::Model = field(body, "brep")?;
-        model.validate()?;
-        if topology_signature(&model) != signature {
+        if !prepared.contains_key(&id) {
+            let matches: Vec<_> = bodies
+                .iter()
+                .filter(|b| b["id"].as_str() == Some(&id))
+                .collect();
+            if matches.len() != 1 {
+                return Err(input("Linked dimension body is missing or ambiguous"));
+            }
+            let model: brep_core::Model = field(matches[0], "brep")?;
+            let index = brep_core::topology_reference::VertexReferenceIndex::new(&model)?;
+            prepared.insert(id.clone(), (model, index));
+        }
+        let (model, index) = prepared.get(&id).unwrap();
+        let mut indices = indices;
+        let mut status = ["legacy-index"; 2];
+        if request.get("vertexIds").is_some() {
+            let ids: [String; 2] = field(request, "vertexIds")?;
+            for endpoint in 0..2 {
+                let target = brep_core::TopoId::parse(&ids[endpoint])
+                    .map_err(|_| input("Invalid dimension vertex identity"))?;
+                use brep_core::topology_reference::VertexResolution;
+                match index.resolve(target, 100000)? {
+                    VertexResolution::Persistent(i) => {
+                        indices[endpoint] = i;
+                        status[endpoint] = "persistent";
+                    }
+                    VertexResolution::Followed(i) => {
+                        indices[endpoint] = i;
+                        status[endpoint] = "followed";
+                    }
+                    VertexResolution::Missing => {
+                        return Err(input(
+                            "Linked dimension vertex was deleted or its history is unavailable; reattach that dimension",
+                        ));
+                    }
+                    VertexResolution::Ambiguous(candidates) => {
+                        return Err(input(&format!(
+                            "Linked dimension endpoint {} has {} surviving vertices after a split; choose a new attachment",
+                            endpoint + 1,
+                            candidates.len()
+                        )));
+                    }
+                }
+            }
+        } else if topology_signature(model) != signature {
             return Err(input(
                 "Linked dimension topology changed; reattach its vertices",
             ));
@@ -439,7 +584,7 @@ fn linked_dimensions(v: &Value, bodies: &[Value], view: &str) -> Result<Vec<Valu
         if value <= 1e-7 {
             return Err(input("Linked dimension collapses in this projection"));
         }
-        result.push(json!({"a":[p[0],p[1]],"b":[q[0],q[1]],"valueMm":value,"axis":axis,"bodyId":id,"vertices":indices}));
+        result.push(json!({"a":[p[0],p[1]],"b":[q[0],q[1]],"valueMm":value,"axis":axis,"bodyId":id,"vertices":indices,"vertexIds":[model.1.vertices[indices[0]],model.1.vertices[indices[1]]],"referenceStatus":status}));
     }
     Ok(result)
 }
@@ -500,9 +645,9 @@ pub fn drawing(v: &Value) -> Result<Value> {
         if body.get("brep").is_some_and(|b| !b.is_null()) {
             let model: brep_core::Model = field(&body, "brep")?;
             model.validate()?;
-            references.push(json!({"bodyId":body["id"],"topologySignature":topology_signature(&model),"vertices":model.vertices.iter().map(|v|project(&v.point,&view)).collect::<Vec<_>>()}));
+            references.push(json!({"bodyId":body["id"],"topologySignature":topology_signature(&model),"vertices":model.vertices.iter().map(|v|project(&v.point,&view)).collect::<Vec<_>>(),"vertexIds":model.1.vertices.clone()}));
             if occlusion == "brep" {
-                faces.extend(retained_planes(&model, &view)?);
+                faces.extend(retained_faces(&model, &view)?);
                 if faces.len() > 20000 {
                     return Err(input("Drawing exceeds 20000 retained faces"));
                 }
@@ -681,6 +826,77 @@ mod tests {
         json!({"brep":model,"mesh":mesh})
     }
     #[test]
+    fn curved_cylinder_hides_a_body_behind_its_retained_wall() {
+        let model = brep_core::cylinder(2., 4.).unwrap();
+        let front = json!({"brep":model,"mesh":crate::brep::nurbs(&model,1).unwrap().built.mesh});
+        let behind = body([-0.2, 4., 1.], [0.2, 5., 2.]);
+        let source: brep_core::Model = field(&behind, "brep").unwrap();
+        let mut vertical_paths = Vec::new();
+        for edge in &source.edges {
+            if edge.curve.control_points.first().unwrap()[2]
+                == edge.curve.control_points.last().unwrap()[2]
+            {
+                continue;
+            }
+            let mut curve = edge.curve.clone();
+            for p in &mut curve.control_points {
+                *p = project(p, "front").to_vec();
+            }
+            vertical_paths.push(curve_path(&curve).unwrap());
+        }
+        assert_eq!(vertical_paths.len(), 4);
+        let result = drawing(
+            &json!({"bodies":[front,behind],"view":"front","hidden":"dash","occlusion":"brep"}),
+        )
+        .unwrap();
+        for path in vertical_paths {
+            assert!(
+                result["paths"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|p| p["d"].as_str() == Some(&path) && p["hidden"] == true)
+            );
+        }
+        assert!(
+            result["paths"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|p| p["hidden"] == true)
+        );
+    }
+    #[test]
+    fn curved_retained_face_uses_uniform_surface_proof() {
+        let model = brep_core::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap();
+        let surface = nurbs_core::surface::Surface {
+            degree_u: 2,
+            degree_v: 1,
+            knots_u: vec![0., 0., 0., 1., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+                vec![vec![0.5, 0., 3.], vec![0.5, 1., 3.]],
+                vec![vec![1., 0., 0.], vec![1., 1., 0.]],
+            ],
+            weights: vec![vec![1.; 2]; 3],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        // The cuboid contributes only its authored unit-square UV trim; the
+        // surface under test is the independent curved chart with that domain.
+        let face = RetainedFace::Curved {
+            surface,
+            domain: brep_core::face_domain::FaceDomain::new(&model, 0, 1e-9).unwrap(),
+        };
+        let behind = Curve::from_polyline(vec![vec![0.4, 0.4, -1.], vec![0.6, 0.6, -1.]]).unwrap();
+        let mut work = 0;
+        assert_eq!(face.state(&behind, 1e-5, &mut work).unwrap(), 1);
+        assert!(work > 0);
+        let front = Curve::from_polyline(vec![vec![0.4, 0.4, 5.], vec![0.6, 0.6, 5.]]).unwrap();
+        assert_eq!(face.state(&front, 1e-5, &mut work).unwrap(), 0);
+    }
+    #[test]
     fn retained_box_edges_and_hidden_lines_have_native_proof() {
         let b = body([0., 0., 0.], [10., 8., 6.]);
         let all = drawing(&json!({"bodies":[b.clone()],"view":"top","hidden":"show"})).unwrap();
@@ -764,6 +980,92 @@ mod tests {
                     .any(|p| p["d"] == path["d"] && p["hidden"] == false)
             );
         }
+    }
+    #[test]
+    fn durable_dimensions_survive_subdivision_reordering_and_transform() {
+        let source = brep_core::cuboid([0., 0., 0.], [2., 1., 1.]).unwrap();
+        let second = source
+            .vertices
+            .iter()
+            .position(|v| v.point[0] != source.vertices[0].point[0])
+            .unwrap();
+        let ids = [source.1.vertices[0], source.1.vertices[second]];
+        let request = json!({"bodyId":"part","vertices":[0,second],"topologySignature":topology_signature(&source),"vertexIds":ids,"axis":"horizontal"});
+        let wire =
+            brep_core::sketch::polygon_wire(vec![[0., 0.], [1., 0.], [2., 0.], [2., 1.], [0., 1.]])
+                .unwrap();
+        let mut changed = brep_core::prism::extrude(&[wire], 0., 1.).unwrap();
+        changed.inherit_topology_ids(&[&source]);
+        changed.vertices.swap(0, 1);
+        changed.1.vertices.swap(0, 1);
+        for edge in &mut changed.edges {
+            for v in &mut edge.vertices {
+                if *v == 0 {
+                    *v = 1;
+                } else if *v == 1 {
+                    *v = 0;
+                }
+            }
+        }
+        let changed = brep_core::transform::affine(
+            &changed,
+            [
+                [2., 0., 0., 0.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let body = json!({"id":"part","brep":changed,"mesh":crate::brep::nurbs(&changed,1).unwrap().built.mesh});
+        let result =
+            drawing(&json!({"bodies":[body],"view":"top","hidden":"show","dimensions":[request]}))
+                .unwrap();
+        assert_eq!(result["dimensions"][0]["valueMm"].as_f64(), Some(4.));
+        assert_eq!(result["dimensions"][0]["vertexIds"], json!(ids));
+        assert_eq!(
+            result["dimensions"][0]["referenceStatus"],
+            json!(["persistent", "persistent"])
+        );
+        assert_eq!(
+            result["references"][0]["vertexIds"]
+                .as_array()
+                .unwrap()
+                .len(),
+            10
+        );
+    }
+    #[test]
+    fn durable_dimension_split_or_deleted_vertex_requires_explicit_reattachment() {
+        let mut model = brep_core::cuboid([0., 0., 0.], [2., 1., 1.]).unwrap();
+        let ids = [model.1.vertices[0], model.1.vertices[1]];
+        let request = json!({"bodyId":"part","vertices":[0,1],"topologySignature":topology_signature(&model),"vertexIds":ids,"axis":"horizontal"});
+        model.1.change_set.changes.push(brep_core::TopologyChange {
+            kind: brep_core::ChangeKind::Split,
+            topo_kind: brep_core::TopoKind::Vertex,
+            parents: vec![ids[0]],
+            children: ids.to_vec(),
+            provenance: brep_core::ChangeProvenance {
+                operation: "drawing-test".into(),
+                operand: None,
+                occurrence: "part".into(),
+            },
+            role: "vertex".into(),
+            anchor: None,
+        });
+        let body = json!({"id":"part","brep":model,"mesh":crate::brep::nurbs(&model,1).unwrap().built.mesh});
+        let error = drawing(
+            &json!({"bodies":[body],"view":"top","hidden":"show","dimensions":[request.clone()]}),
+        )
+        .unwrap_err();
+        assert!(error.message.contains("surviving vertices"));
+        let mut replacement = self::body([10., 0., 0.], [12., 1., 1.]);
+        replacement["id"] = json!("part");
+        let error = drawing(
+            &json!({"bodies":[replacement],"view":"top","hidden":"show","dimensions":[request]}),
+        )
+        .unwrap_err();
+        assert!(error.message.contains("deleted"));
     }
     #[test]
     fn linked_vertex_dimensions_recompute_and_reject_changed_topology() {

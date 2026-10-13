@@ -1,3 +1,4 @@
+import {checkRetainedAxisAudit as checkAxis} from './retained-axis-audit-contract.mjs'
 import {readSweepManifest} from './sweep-manifest-reader.mjs'
 import {spatialRmfProfileG2BodySources} from './spatial-rmf-profile-g2-sources.mjs'
 import assert from 'node:assert/strict'
@@ -93,20 +94,7 @@ if(spatialG2Only){
 }
 for(const item of spatial){const b=item.boundaryError;assert.equal(b.continuousBound,true);assert.equal(b.withinBudget,true);assert.ok(Number.isFinite(b.errorUpper)&&b.errorUpper>=0&&b.errorUpper<=b.budget);assert.equal(item.nativeVolume.solidGeometryCertified,true);checkCapturedStep(item)}
 const smoothness=[]
-function checkAxis(axis,g2,g1,certifiedG1,certifiedG2){
- assert.equal(axis.extractionComplete,true);assert.deepEqual(axis.unclassifiedFaces,[]);assert.deepEqual(axis.unpairedEdges,[])
- assert.equal(new Set(axis.edgeIds).size,axis.edgeIds.length)
- assert.ok(Number.isSafeInteger(axis.exactWork)&&axis.exactWork>=0&&axis.exactWork<=axis.maxWork)
- assert.equal(axis.exactWork,g2.exactWork+(g1?.exactWork??0))
- assert.equal(certifiedG2,g2.exactG1G2Certified)
- assert.equal(certifiedG1,certifiedG2||g1?.exactG1G2Certified===true)
- for(const [collection,order] of [[g2,2],[g1,1]])if(collection?.exactG1G2Certified){
-  assert.equal(collection.certifiedOrder,order);assert.deepEqual(collection.unresolvedSeams,[])
-  assert.equal(collection.seams.length,axis.edgeIds.length)
-  assert.ok(collection.seams.length>0)
-  assert.ok(collection.seams.every(seam=>seam.certified&&seam.exactIdentity&&seam.regularityCertified))
- }
-}
+
 for(const item of cases){
  checkCompleteBoundaryContract(item)
  const requiredSmoothness=correctedProfileOnly?item.requestedSmoothness:checkRetainedSmoothnessContract(item)
@@ -131,5 +119,5 @@ for(const item of cases){
  checkCapturedStep(item)
  smoothness.push({file:item.file,requiredSmoothness,profileContinuity:p.profile.exactG1G2Certified?'G2':p.profileG1Certified?'G1':'C0',profileG2:p.profile.exactG1G2Certified,stationContinuity:p.stationContinuity,profileEdges:p.edgeIds.length,stationEdges:station.edgeIds.length,capEdges:station.capEdges.length,wholeBoundarySmoothness:false})
 }
-writeFileSync(outputPath,JSON.stringify({schema:'sweep-finite-modes/2',manifestSha256,artifactProvenance:manifest.artifactProvenance,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),declaredSmoothnessContractCases:smoothness.filter(s=>s.requiredSmoothness!==null).length,verifierSourceSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),contractSourceSha256:createHash('sha256').update(readFileSync(new URL('./sweep-retained-smoothness-contracts.mjs',import.meta.url))).digest('hex'),completeBoundaryVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-complete-boundary-contracts.mjs',import.meta.url))).digest('hex'),scope:'Captured finite mode examples only; no general theorem, UI completion, or whole-library completion claim',lawCases,smoothness,spatial:spatial.map(c=>({file:c.file,boundary:c.boundaryError,nativeSolid:true,stationContinuity:c.nativeProfileSmoothness.stationContinuity}))},null,2)+'\n')
+writeFileSync(outputPath,JSON.stringify({schema:'sweep-finite-modes/2',manifestSha256,artifactProvenance:manifest.artifactProvenance,oracleBinding,oracleBindingVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-step-oracle-binding.mjs',import.meta.url))).digest('hex'),declaredSmoothnessContractCases:smoothness.filter(s=>s.requiredSmoothness!==null).length,verifierSourceSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),contractSourceSha256:createHash('sha256').update(readFileSync(new URL('./sweep-retained-smoothness-contracts.mjs',import.meta.url))).digest('hex'),retainedAxisVerifierSha256:createHash('sha256').update(readFileSync(new URL('./retained-axis-audit-contract.mjs',import.meta.url))).digest('hex'),completeBoundaryVerifierSha256:createHash('sha256').update(readFileSync(new URL('./sweep-complete-boundary-contracts.mjs',import.meta.url))).digest('hex'),scope:'Captured finite mode examples only; no general theorem, UI completion, or whole-library completion claim',lawCases,smoothness,spatial:spatial.map(c=>({file:c.file,boundary:c.boundaryError,nativeSolid:true,stationContinuity:c.nativeProfileSmoothness.stationContinuity}))},null,2)+'\n')
 console.log(`${lawCases.length} joint-law cases and ${spatial.length} spatial holonomy cases verified; ${smoothness.length} complete scoped seam ownership audits`)

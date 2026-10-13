@@ -1,9 +1,10 @@
+import {createSpecificationSheets,type DrawingPartMetadata,type DrawingSpecificationRow} from './drawingSpecification'
 import type {DirectBody} from './directModeling'
 import {callGeometryRust} from './geometry/kernel'
-export interface DrawingSheetOptions {template:'A5'|'A4'|'A3'|'A2'|'Letter';scale:number;title:string;author:string;perBody:boolean;portrait?:boolean;hidden?:'show'|'hide'|'dash';dimensions?:boolean;occlusion?:'mesh'|'brep';frame?:'simple'|'detail'|'assembly';drawingNumber?:string;revision?:string;material?:string;linkedDimensions?:DrawingDimension[];vertexLabels?:boolean}
-export interface DrawingDimension {bodyId:string;vertices:[number,number];topologySignature:string;view:'top'|'front'|'right';axis:'horizontal'|'vertical'}
-export interface DrawingReference {bodyId:string;topologySignature:string;vertices:number[][]}
-export interface DrawingSheet {svg:string;width:number;height:number;title:string;references?:DrawingReference[]}
+export interface DrawingSheetOptions {template:'A5'|'A4'|'A3'|'A2'|'Letter';scale:number;title:string;author:string;perBody:boolean;portrait?:boolean;hidden?:'show'|'hide'|'dash';dimensions?:boolean;occlusion?:'mesh'|'brep';frame?:'simple'|'detail'|'assembly';drawingNumber?:string;revision?:string;material?:string;linkedDimensions?:DrawingDimension[];vertexLabels?:boolean;specification?:boolean;parts?:DrawingPartMetadata[];locale?:'ru'|'en'}
+export interface DrawingDimension {bodyId:string;vertices:[number,number];topologySignature:string;vertexIds?:[string,string];view:'top'|'front'|'right';axis:'horizontal'|'vertical'}
+export interface DrawingReference {bodyId:string;topologySignature:string;vertices:number[][];vertexIds:string[]}
+export interface DrawingSheet {svg:string;width:number;height:number;title:string;references?:DrawingReference[];kind?:'drawing'|'specification';specificationRows?:DrawingSpecificationRow[]}
 export function parseDrawingDimensions(text:string):DrawingDimension[]{
  if(text.length>1048576)throw Error('Dimension definitions exceed 1 MiB.')
  const values:unknown=JSON.parse(text)
@@ -11,6 +12,7 @@ export function parseDrawingDimensions(text:string):DrawingDimension[]{
  for(const value of values){
   if(!value||typeof value!=='object')throw Error('Invalid dimension definition.')
   const d=value as DrawingDimension
+  if(d.vertexIds!==undefined&&(!Array.isArray(d.vertexIds)||d.vertexIds.length!==2||d.vertexIds.some(id=>typeof id!=='string'||!/^v:[0-9a-f]{32}$/.test(id))||d.vertexIds[0]===d.vertexIds[1]))throw Error('Invalid dimension vertex identities.')
   if(typeof d.bodyId!=='string'||!d.bodyId||d.bodyId.length>120||typeof d.topologySignature!=='string'||d.topologySignature.length>1000000||!Array.isArray(d.vertices)||d.vertices.length!==2||d.vertices.some(v=>!Number.isInteger(v)||v<0||v>=16384)||d.vertices[0]===d.vertices[1]||!['top','front','right'].includes(d.view)||!['horizontal','vertical'].includes(d.axis))throw Error('Invalid dimension reference.')
  }
  return values as DrawingDimension[]
@@ -39,7 +41,9 @@ export function createDrawingSheets(bodies:DirectBody[],options:DrawingSheetOpti
  if(options.hidden&&!['show','hide','dash'].includes(options.hidden))throw Error('Invalid hidden line mode.')
  const groups=options.perBody?bodies.map(b=>[b]):[bodies]
  if(groups.length>40)throw Error('Drawing export is limited to 40 sheets.')
- return groups.map((group,index)=>{
+ const specifications=createSpecificationSheets(bodies,options,width,height)
+ if(groups.length+specifications.length>40)throw Error('Drawing export is limited to 40 total sheets, including specifications.')
+ const drawingSheets=groups.map((group,index)=>{
   const title=options.perBody?group[0].name:options.title
   const views=[{view:'top',name:'TOP XY'},{view:'front',name:'FRONT XZ'},{view:'right',name:'RIGHT YZ'}] as const
   const cellWidth=(width-24)/3,cellHeight=height-((options.frame&&options.frame!=='simple')?80:(options.linkedDimensions?.length?72:60))
@@ -71,11 +75,13 @@ export function createDrawingSheets(bodies:DirectBody[],options:DrawingSheetOpti
   }).join('')
   const engineering=options.frame&&options.frame!=='simple'
   const headingLines=[...wrapped(title,65),...wrapped(`${options.drawingNumber??''} · ${options.frame==='assembly'?'Assembly':'Detail'}`,65)]
-  const block=engineering?`<g font-size="2.6"><path d="M${width-188} ${height-40}H${width-8}V${height-8}H${width-188}Z M${width-188} ${height-24}H${width-8} M${width-188} ${height-16}H${width-8} M${width-55} ${height-24}V${height-8}" fill="none" stroke="black" stroke-width=".25"/>${headingLines.map((line,i)=>`<text x="${width-184}" y="${height-36+i*3}" font-size="2.4">${escape(line)}</text>`).join('')}${fieldText(width-184,height-21,options.frame==='assembly'?`${group.length} parts`:options.material??'',43)}${fieldText(width-51,height-21,`Rev ${options.revision??''}`,13)}${fieldText(width-184,height-13,options.author,45,2.4)}<text x="${width-51}" y="${height-13}" font-size="2.4">${options.scale}:1</text><text x="${width-51}" y="${height-10}">${index+1}/${groups.length}</text></g>`:''
-  const surfaceNote=engineering?`<text x="12" y="${height-43}" font-size="2.4">${options.occlusion==='brep'?'Planar B-rep':'Mesh occlusion'} · band ${options.occlusion==='brep'?'0.00001':'0.02'} mm</text>`:''
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="white"/><g font-family="sans-serif" font-size="3" fill="black"><rect x="8" y="8" width="${width-16}" height="${height-16}" fill="none" stroke="black" stroke-width=".25"/>${drawings}${engineering?'':`<path d="M8 ${height-32} H${width-8}" stroke="black" stroke-width=".25"/><text x="12" y="${height-25}">${escape(title)}</text><text x="12" y="${height-18}">${escape(options.author)}</text><text x="12" y="${height-11}">Scale ${options.scale}:1 · mm · ${index+1}/${groups.length}</text><text x="${width-95}" y="${height-11}">${approximate?'Mesh/approximated curves':'Retained B-rep curves'} · ${options.occlusion??'mesh'} hidden ${options.hidden??'dash'}</text>`}${block}${surfaceNote}</g></svg>`
-  return {svg,width,height,title,references}
+  const block=engineering?`<g font-size="2.6"><path d="M${width-188} ${height-40}H${width-8}V${height-8}H${width-188}Z M${width-188} ${height-24}H${width-8} M${width-188} ${height-16}H${width-8} M${width-55} ${height-24}V${height-8}" fill="none" stroke="black" stroke-width=".25"/>${headingLines.map((line,i)=>`<text x="${width-184}" y="${height-36+i*3}" font-size="2.4">${escape(line)}</text>`).join('')}${fieldText(width-184,height-21,options.frame==='assembly'?`${group.length} parts`:options.material??'',43)}${fieldText(width-51,height-21,`Rev ${options.revision??''}`,13)}${fieldText(width-184,height-13,options.author,45,2.4)}<text x="${width-51}" y="${height-13}" font-size="2.4">${options.scale}:1</text><text x="${width-51}" y="${height-10}" data-sheet-number="true">${index+1}/${groups.length}</text></g>`:''
+  const surfaceNote=engineering?`<text x="12" y="${height-43}" font-size="2.4">${options.occlusion==='brep'?'B-rep surfaces':'Mesh occlusion'} · band ${options.occlusion==='brep'?'0.00001':'0.02'} mm</text>`:''
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="white"/><g font-family="sans-serif" font-size="3" fill="black"><rect x="8" y="8" width="${width-16}" height="${height-16}" fill="none" stroke="black" stroke-width=".25"/>${drawings}${engineering?'':`<path d="M8 ${height-32} H${width-8}" stroke="black" stroke-width=".25"/><text x="12" y="${height-25}">${escape(title)}</text><text x="12" y="${height-18}">${escape(options.author)}</text><text x="12" y="${height-11}">Scale ${options.scale}:1 · mm · <tspan data-sheet-number="true">${index+1}/${groups.length}</tspan></text><text x="${width-95}" y="${height-11}">${approximate?'Mesh/approximated curves':'Retained B-rep curves'} · ${options.occlusion??'mesh'} hidden ${options.hidden??'dash'}</text>`}${block}${surfaceNote}</g></svg>`
+  return {svg,width,height,title,references,kind:'drawing' as const}
  })
+ const sheets:DrawingSheet[]=[...drawingSheets,...specifications]
+ return sheets.map((sheet,index)=>({...sheet,svg:sheet.svg.replace(/(<(?:text|tspan)\b[^>]*data-sheet-number="true"[^>]*>)[^<]*(<\/(?:text|tspan)>)/g,(_,open,close)=>`${open}${index+1}/${sheets.length}${close}`)}))
 }
 /** JPEG pages preserve Unicode labels and browser font rendering in the PDF. */
 export function drawingPdf(pages:{jpeg:Uint8Array;width:number;height:number;pixelWidth:number;pixelHeight:number}[]):Uint8Array{

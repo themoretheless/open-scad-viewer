@@ -216,3 +216,5 @@ pub use numerics::convex_distance;
 pub use numerics::obb_tree;
 pub use numerics::normal_cone;
 pub use numerics::bezier_extraction;
+
+pub use crate::analysis::surface_occlusion;
