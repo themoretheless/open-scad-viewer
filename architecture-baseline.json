@@ -1,6 +1,5 @@
 {
   "sizes": {
-    "crates/brep-core/src/box_sphere_boolean.rs": 813,
     "crates/brep-core/src/lib.rs": 1887,
     "crates/brep-core/src/shared_boundary.rs": 884,
     "crates/brep-topology/src/lib.rs": 1468,
