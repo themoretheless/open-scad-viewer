@@ -2,7 +2,7 @@
 import packagedArtifact from '../generated/geometry-kernels/identity'
 export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
   {
-    "sha256": "db078792ebfbbe2886bfa2cb9bf120c38f9e99041a9ac76f79c34ff8ef31cb3d",
+    "sha256": "0531b06096cbab85c5f3d965c2c04a0ce96ca57f5957d0ab25ecf88b6f59e4b3",
     "byteLength": 12024798
   }
 ])
