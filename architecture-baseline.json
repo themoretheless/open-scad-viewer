@@ -8,7 +8,6 @@
     "crates/brep-topology/src/lib.rs": 1468,
     "crates/bridge-svg/src/svg.rs": 2467,
     "crates/geometry-bridge/src/brep_attestation.rs": 847,
-    "crates/geometry-bridge/src/brep_identity.rs": 1407,
     "crates/geometry-bridge/src/brep_production/mod.rs": 1128,
     "crates/geometry-bridge/src/mesh_shell.rs": 1056,
     "crates/geometry-bridge/src/tests.rs": 1212,
