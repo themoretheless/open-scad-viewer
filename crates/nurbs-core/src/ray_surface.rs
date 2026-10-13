@@ -53,7 +53,7 @@ fn hull(values: impl Iterator<Item = I>) -> I {
     )
 }
 fn midpoint(x: I) -> f64 {
-    x.lo * 0.5 + x.hi * 0.5
+    crate::distance_bounds::midpoint(x.lo, x.hi)
 }
 fn signed_div(a: I, b: f64) -> Result<I> {
     if b > 0. {

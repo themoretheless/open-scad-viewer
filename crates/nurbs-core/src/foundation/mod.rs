@@ -14,24 +14,7 @@ use value_codec::{Value, json};
 
 const MAX_CERTIFICATE_CELLS: usize = 4096;
 
-fn next_down(x: f64) -> f64 {
-    if x == f64::NEG_INFINITY || x.is_nan() {
-        x
-    } else if x == 0. {
-        -f64::from_bits(1)
-    } else {
-        f64::from_bits(x.to_bits().wrapping_add(if x < 0. { 1 } else { u64::MAX }))
-    }
-}
-fn next_up(x: f64) -> f64 {
-    if x == f64::INFINITY || x.is_nan() {
-        x
-    } else if x == 0. {
-        f64::from_bits(1)
-    } else {
-        f64::from_bits(x.to_bits().wrapping_add(if x < 0. { u64::MAX } else { 1 }))
-    }
-}
+use crate::intersection::{next_down, next_up};
 fn interval(values: impl Iterator<Item = f64>) -> [f64; 2] {
     let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
     for value in values {

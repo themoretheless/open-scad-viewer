@@ -1,6 +1,6 @@
 //! Global distance bounds for positive-weight NURBS curves. Each nonempty knot
 //! span is enclosed by interval de Boor evaluation; no display mesh is used.
-use crate::distance_bounds::{Interval, box_distance};
+use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::{Result, check, curve::Curve, resource};
 use std::{cmp::Ordering, collections::BinaryHeap};
 use value_codec::{Value, json};
@@ -106,9 +106,6 @@ fn spans(curve: &Curve) -> Vec<usize> {
     (curve.degree..curve.control_points.len())
         .filter(|&i| curve.knots[i] < curve.knots[i + 1])
         .collect()
-}
-fn midpoint(a: f64, b: f64) -> f64 {
-    a * 0.5 + b * 0.5
 }
 #[derive(Clone)]
 struct Part {

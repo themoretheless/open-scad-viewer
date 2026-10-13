@@ -1,14 +1,11 @@
 //! Global distance between complete positive-weight tensor-product surfaces.
 //! All nonempty knot rectangles and their pairings remain covered until pruned
 //! by a proven lower bound. Trimmed B-rep faces need additional domain handling.
-use crate::distance_bounds::{Interval, box_distance};
+use crate::distance_bounds::{Interval, box_distance, midpoint};
 use crate::{Result, check, resource, surface::Surface};
 use std::{cmp::Ordering, collections::BinaryHeap};
 use value_codec::{Value, json};
 
-fn midpoint(a: f64, b: f64) -> f64 {
-    a * 0.5 + b * 0.5
-}
 fn spans(degree: usize, knots: &[f64], count: usize) -> Vec<usize> {
     (degree..count)
         .filter(|&i| knots[i] < knots[i + 1])
