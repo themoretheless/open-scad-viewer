@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "sourceSha": "de021272cbe5c26ad0778945c00b2cf5ad2fbbf6",
+  "runUrl": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38522799538",
+  "matrixPassed": true,
+  "plannedWorkUnits": 4740,
+  "completedWorkUnits": 4740,
+  "fragments": 132,
+  "files": [
+    {
+      "path": "fragments.tar.gz",
+      "sha256": "c7888a272c4b7a711b6142656a008353e16f16c3e89d877ccdd7bec5183dfc1a",
+      "byteLength": 100896
+    },
+    {
+      "path": "github-artifacts.tsv",
+      "sha256": "bce4bb5e76bec2fc1faa096c7a40f2db653ab6f0cbd9a50ba57722112f5bb985",
+      "byteLength": 17294
+    },
+    {
+      "path": "hosted-result.json",
+      "sha256": "244a1a0fac4ac71a0effed985292ece5f4629ba2934e93fa49c22d3ef3434a54",
+      "byteLength": 738
+    },
+    {
+      "path": "local-verification.json",
+      "sha256": "029e2e2b416316d2c478acec07ee483c17e56a868c8427771cdbda63054a0f52",
+      "byteLength": 738
+    }
+  ]
+}
