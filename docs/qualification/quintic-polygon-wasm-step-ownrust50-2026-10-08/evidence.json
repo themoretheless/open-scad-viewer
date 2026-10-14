@@ -1,0 +1,214 @@
+{
+  "schema": "quintic-polygon-wasm-step-evidence/1",
+  "ownRustEvidence": "docs/qualification/own-rust-cad-v50.json",
+  "qualificationClaim": "finite-local-cases-only",
+  "g1ResultImported": false,
+  "stepCases": 16,
+  "publicAndPackedVerified": true,
+  "files": {
+    "manifest.json.gz": {
+      "sha256": "8111745543a30a6e4cc584ade0ea8478e1f16ec0aa81125942a9343db150a68d",
+      "byteLength": 627317,
+      "decodedSha256": "9cb121f802ec782741a6fb5613acac8e720e2f5bbe61f2c29dcc93f033989dd3",
+      "decodedByteLength": 9857718
+    },
+    "opencascade-sweep.json.gz": {
+      "sha256": "0fe999df5c4bff586aef2ee1a26bfa272eb60db9b8a93ded2c840603d66d586d",
+      "byteLength": 2615,
+      "decodedSha256": "f2140761203dfdba1d8b58470c266b49720290a4416bac00a26851640dc1b1e6",
+      "decodedByteLength": 29473
+    },
+    "quintic-planar-unit-10.step": {
+      "sha256": "de0b5eea033f82a9724cc27002848774e3f1b0f498f2badf060284f82e647857",
+      "byteLength": 186451
+    },
+    "quintic-planar-unit-10.step.import.json.gz": {
+      "sha256": "3a1f0b110640e3318dd5c29fb7aedc7d4e189f9a318f56e2cb3be9ce15dbbc75",
+      "byteLength": 12070,
+      "decodedSha256": "f0b2816020794311e6d803a13890db4b815588915d5a907504dc7a539a9d1e68",
+      "decodedByteLength": 125026
+    },
+    "quintic-planar-unit-12.step": {
+      "sha256": "a0618f0fd5213055bf05ed649246e50296da81ab1fe0a3d9af0a8cfbf63f24df",
+      "byteLength": 228278
+    },
+    "quintic-planar-unit-12.step.import.json.gz": {
+      "sha256": "5104a643a7c041cc34507e50e61b7e8d39cbaccb48e3a7084b7304a5df840195",
+      "byteLength": 14895,
+      "decodedSha256": "70e9a7bad93268b247af891cc88b9ef88fb95b2bfdd60ed707e5f5dcef9427e0",
+      "decodedByteLength": 152082
+    },
+    "quintic-planar-unit-6.step": {
+      "sha256": "0f142998917cc73fc5e8e1b6f31e9c042a3706f7dda40c8fad69b35b9256c685",
+      "byteLength": 103175
+    },
+    "quintic-planar-unit-6.step.import.json.gz": {
+      "sha256": "d49aacc35df9038b2874bab66ad652fdbdee6e2d7a683f3d4340d83831509be6",
+      "byteLength": 6681,
+      "decodedSha256": "53d3732ee57b8c2835665a5afd75c742441d4d0f5e2b47a71025f20dee23e71a",
+      "decodedByteLength": 69846
+    },
+    "quintic-planar-unit-7.step": {
+      "sha256": "3798192740b1c9b5809e8dc87e771b778055749830c28314bbd012b3ef35567c",
+      "byteLength": 123945
+    },
+    "quintic-planar-unit-7.step.import.json.gz": {
+      "sha256": "b1eabddf3b3f46c4ff020d082f110bda183a63aca6d5ad99dda765b68f94ed14",
+      "byteLength": 7522,
+      "decodedSha256": "a6492065eb851bef552108e6b3386388fb0dd6ed1b2648cf1028caa0a0cfa6b0",
+      "decodedByteLength": 81556
+    },
+    "quintic-planar-weighted-10.step": {
+      "sha256": "1444b43c286e9367ca22f0986fc13fcfd85bcd53fcb084b2e2a482c0c8a2343e",
+      "byteLength": 213019
+    },
+    "quintic-planar-weighted-10.step.import.json.gz": {
+      "sha256": "dc6f7dc9e0dddd146e74bef4b4edf91bd10cc7d7912c1f65ed76ab56de10c0e1",
+      "byteLength": 12090,
+      "decodedSha256": "83616f2277b309e093d3310386742f48592a3a20f3904a0aeae7dc2756462b70",
+      "decodedByteLength": 125026
+    },
+    "quintic-planar-weighted-12.step": {
+      "sha256": "3b0783c4f161a26155c930258aeb4c250eb643e7ca5f61e4bc5c4583fd5b1454",
+      "byteLength": 260750
+    },
+    "quintic-planar-weighted-12.step.import.json.gz": {
+      "sha256": "50ccd1b1d08a968e7cb6182c051d01649d3890b3e6abad9a0d691c49a01ae4ee",
+      "byteLength": 14897,
+      "decodedSha256": "85ec6bb9595e23f6c1ddabed2db2e5ebcc9cb68ada2ea04b4883440fa57aa09e",
+      "decodedByteLength": 152082
+    },
+    "quintic-planar-weighted-6.step": {
+      "sha256": "1e18d2d8216fd6bd3ca97e694a29563171838ce67b6deab42212c457d29687f7",
+      "byteLength": 117935
+    },
+    "quintic-planar-weighted-6.step.import.json.gz": {
+      "sha256": "94a8541bd085d3ada427c7c652315328160f80c46a02298cc3ff16a6a20ffc4d",
+      "byteLength": 6713,
+      "decodedSha256": "95c3cddffcd980f602dcab96c99230aa3384225ae6ec642556334a541cb4ccbc",
+      "decodedByteLength": 69846
+    },
+    "quintic-planar-weighted-7.step": {
+      "sha256": "1b2ff31f2069dea5d38ac9e1a86773d574210c41aa4a19676d726d339529be85",
+      "byteLength": 141657
+    },
+    "quintic-planar-weighted-7.step.import.json.gz": {
+      "sha256": "4f43e12abe4ebfd7f5832d41044c7b5bddb6b53c9c559382a78b2af47bb70220",
+      "byteLength": 7534,
+      "decodedSha256": "fcb33c1b8f1af0754358d39015d6a61366ef781cf37bd970f9dc792b9fd89a62",
+      "decodedByteLength": 81556
+    },
+    "quintic-spatial-unit-10.step": {
+      "sha256": "7b804c971a813f3b2b969ff6f5412628c875a0764b3982e8a39e48c7e942c1e0",
+      "byteLength": 186487
+    },
+    "quintic-spatial-unit-10.step.import.json.gz": {
+      "sha256": "2bd9f499b7b5ca5095becc799e29a89f3e555de3c62e8b76169257f4c0f424c7",
+      "byteLength": 13229,
+      "decodedSha256": "4a1c44897abfa378dd61ff8e90bf1cd5795a676bff51c3cc40cbf7c465596d37",
+      "decodedByteLength": 130054
+    },
+    "quintic-spatial-unit-12.step": {
+      "sha256": "48fd6631e21058d6ad3c3c0d90fa7fa9876ced8d1ac03c81e27ac04276dc733d",
+      "byteLength": 228332
+    },
+    "quintic-spatial-unit-12.step.import.json.gz": {
+      "sha256": "9a8079cd4591cdfe9d7a7b82986caa7d605b832d302ba990ea6f8d9a56a73375",
+      "byteLength": 16273,
+      "decodedSha256": "cbe2588dceeba67bb93838af979dc5e7fa2d4d6065b7ec54bfeccedf6cfb2f78",
+      "decodedByteLength": 158412
+    },
+    "quintic-spatial-unit-6.step": {
+      "sha256": "59325fabf16cee5088605fdc31865f7c77d29c32da282672fb48c7cb6c21ada2",
+      "byteLength": 103229
+    },
+    "quintic-spatial-unit-6.step.import.json.gz": {
+      "sha256": "beff50b94be8e3fb6429e804d0dab22eb9bc7a0cb85eac47085bb44bf5cb6c89",
+      "byteLength": 7314,
+      "decodedSha256": "93b4952321b71e0f8bfe7b0474870f9676d2c2817290d9e8e721fdf2368622a5",
+      "decodedByteLength": 72630
+    },
+    "quintic-spatial-unit-7.step": {
+      "sha256": "ffc291a43240ba542acbb55d0064e734ee4acef970918eb408f88c888d71dd87",
+      "byteLength": 124053
+    },
+    "quintic-spatial-unit-7.step.import.json.gz": {
+      "sha256": "9d7358c1e4695c0bee2ddd06c6205ddb2abffb1ed8ab5eb30c73ea2096c2f592",
+      "byteLength": 8050,
+      "decodedSha256": "f0cd5125f4a911194c87889982f6a3f9c3e7be7efb34892fb73a809633c11e6c",
+      "decodedByteLength": 86644
+    },
+    "quintic-spatial-weighted-10.step": {
+      "sha256": "fc10bc5ef1748efb7c7e85371d7b354a8fcc96816d513b5b157ebd662bccc781",
+      "byteLength": 213055
+    },
+    "quintic-spatial-weighted-10.step.import.json.gz": {
+      "sha256": "e7f0f9dd5764e0414a3c2046e4606263ffed7a452a4b5ab9ab6d7c674f005a49",
+      "byteLength": 13232,
+      "decodedSha256": "5691ef9d55deb483837456b5ba739db7d1d90a78e3e3adf804d82aa76eb3025f",
+      "decodedByteLength": 130054
+    },
+    "quintic-spatial-weighted-12.step": {
+      "sha256": "edb4e2052eb91920f53f899bc5943bee86bdfcfeb30ef0435b5052f6ab0484ea",
+      "byteLength": 260804
+    },
+    "quintic-spatial-weighted-12.step.import.json.gz": {
+      "sha256": "ae99fc25049932afa275f350da0ca5fa629bc6f2488238501c873f9edd44bcb8",
+      "byteLength": 16360,
+      "decodedSha256": "dfa33e7ea1131117d4162543f67a85840f0d583ec7d2802219e3254e8debe084",
+      "decodedByteLength": 158412
+    },
+    "quintic-spatial-weighted-6.step": {
+      "sha256": "05ead0111589e0e2e1fcb9fe237bdeed7a87809524916272982ce7c541f95529",
+      "byteLength": 117989
+    },
+    "quintic-spatial-weighted-6.step.import.json.gz": {
+      "sha256": "6c331e96cef7cc0fddbde7c5ac918dedfd3927697b5631d9f0777692000734af",
+      "byteLength": 7336,
+      "decodedSha256": "890a6553ffeea3f0a47edb24c94a956a7ecc2582c06191c3dd540cc312d3ce97",
+      "decodedByteLength": 72630
+    },
+    "quintic-spatial-weighted-7.step": {
+      "sha256": "8a66d5002235a877d47964fb088d245a3c89769ee8f32f248793afe0c8d89ffc",
+      "byteLength": 141765
+    },
+    "quintic-spatial-weighted-7.step.import.json.gz": {
+      "sha256": "bc7841eef88afec6961801167696dc2b06a44bfcbfcedc1464e0c8470d0995b3",
+      "byteLength": 8098,
+      "decodedSha256": "fdf22955e69d83cf7883921e164203b79ae7b515e1a327b7328a81ee387a1558",
+      "decodedByteLength": 86644
+    },
+    "export-quintic-polygon-step.mts": {
+      "sha256": "2da6145996b0dafe0de383f68ca658cd159faa6fb3b8130d2bdc0c62134f11cc",
+      "byteLength": 3194
+    },
+    "verify-polygon-station-step.py": {
+      "sha256": "9edeed495639eea292b2c7554c9493fb3ad3118d056702f9801c1544dbe95d52",
+      "byteLength": 7034
+    },
+    "verify-sweep-step-occt.py": {
+      "sha256": "8a7e805efc7942abaef0ff92b5289317e62da5ce273114a5333f9fbf2ac74113",
+      "byteLength": 27182
+    },
+    "step_rational_basis.py": {
+      "sha256": "92122461e7f701918b70d97a73b81d180d808ce057de0903e97b843360a1ee84",
+      "byteLength": 794
+    },
+    "wasm-step-export.log.gz": {
+      "sha256": "27af25350055ce12438ce88153b1bc7c381621c4dee55e0e539bfaeff2f0e16c",
+      "byteLength": 157,
+      "decodedSha256": "5e73af6097ac25c5ea52d46a6d2123afae44e39b19624a95565e8b51f9104380",
+      "decodedByteLength": 1088
+    },
+    "wasm-step-occt-current.log.gz": {
+      "sha256": "0fe999df5c4bff586aef2ee1a26bfa272eb60db9b8a93ded2c840603d66d586d",
+      "byteLength": 2615,
+      "decodedSha256": "f2140761203dfdba1d8b58470c266b49720290a4416bac00a26851640dc1b1e6",
+      "decodedByteLength": 29473
+    },
+    "README.md": {
+      "sha256": "0bea5b1610e4694215796c94973869c5d0136e8f73e7f4efd288c334e76433a2",
+      "byteLength": 1249
+    }
+  }
+}

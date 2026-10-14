@@ -6,6 +6,7 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from step_rational_basis import positive_proportional_weights
 from OCP.STEPControl import STEPControl_Reader
 from OCP.IFSelect import IFSelect_RetDone
 from OCP.gp import gp_Pnt, gp_Vec, gp_Pnt2d, gp_Vec2d
@@ -196,8 +197,12 @@ for case in manifest['cases']:
         compatible = (spline.Degree() == expected['degree'] and spline.NbPoles() == len(expected['controlPoints']) and knots == expected['knots'] and spline.IsPeriodic() == bool(expected.get('periodic',False)))
         edge_coefficients_preserved &= compatible
         if compatible:
+            # OCCT may normalize a common positive weight factor. Exact
+            # proportionality preserves the entire rational map, including
+            # its parameter and derivatives; sampled agreement is insufficient.
+            edge_coefficients_preserved &= positive_proportional_weights(
+                [spline.Weight(i+1) for i in range(spline.NbPoles())], expected['weights'])
             for i, control in enumerate(expected['controlPoints']):
-                edge_coefficients_preserved &= spline.Weight(i+1) == expected['weights'][i] and expected['weights'][i] > 0
                 squared = sum((Fraction(a)-Fraction(b))**2 for a,b in zip(spline.Pole(i+1).Coord(),control))
                 edge_coefficients_preserved &= squared <= Fraction(case['surfaceToleranceMm'])**2
         edge_coefficients_preserved &= error <= case['surfaceToleranceMm']
