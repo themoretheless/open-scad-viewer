@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  openScadMinkowski2dViaProduct,
   resolveOpenScad2dMultmatrix,
   resolveOpenScadChildrenSelection,
   resolveOpenScadLinearExtrude,
@@ -142,71 +141,20 @@ describe('kernel-neutral OpenSCAD 2021 geometry-module semantics', () => {
     ])
     expect(resolveOpenScad2dMultmatrix('bad')).toBeNull()
     expect(resolveOpenScad2dMultmatrix([
+      [2, Infinity, null, 4], [], [], [7, 0, 0, 2],
+    ])).toEqual([1, 0, 0, 0, 0.5, 0, 2, 0, 1])
+    expect(resolveOpenScad2dMultmatrix([
+      [], [], [], [0, 0, 0, NaN],
+    ])).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1])
+    expect(resolveOpenScad2dMultmatrix([
       [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0],
     ])).toBeNull()
-  })
-
-  it('computes exact planar Minkowski sums through the product identity', () => {
-    type Rect = readonly [number, number, number, number]
-    type Prism = readonly [number, number, number, number, number, number]
-    const calls: string[] = []
-    const result = openScadMinkowski2dViaProduct<Rect, Prism>([
-      [0, 2, 0, 3],
-      [-1, 4, 2, 5],
-      [10, 11, -2, 1],
-    ], {
-      anchor: section => {
-        calls.push('anchor')
-        return [section[0], section[2]]
-      },
-      translate: (section, offset) => {
-        calls.push('translate')
-        return [
-          section[0] + offset[0], section[1] + offset[0],
-          section[2] + offset[1], section[3] + offset[1],
-        ]
-      },
-      extrudeUnitPrism: section => {
-        calls.push('extrude')
-        return [section[0], section[1], section[2], section[3], 0, 1]
-      },
-      minkowskiSum: (left, right) => {
-        calls.push('sum')
-        return [
-          left[0] + right[0], left[1] + right[1],
-          left[2] + right[2], left[3] + right[3],
-          left[4] + right[4], left[5] + right[5],
-        ]
-      },
-      projectTo2d: solid => {
-        calls.push('project')
-        return [solid[0], solid[1], solid[2], solid[3]]
-      },
-    })
-
-    expect(result).toEqual([9, 17, 0, 9])
-    expect(calls).toEqual([
-      'anchor', 'anchor', 'anchor',
-      'translate', 'translate', 'translate',
-      'extrude', 'extrude', 'sum', 'extrude', 'sum', 'project', 'translate',
-    ])
-  })
-
-  it('preserves empty/single-child Minkowski identities without kernel calls', () => {
-    const kernel = {
-      anchor: (_value: number) => { throw new Error('must not run') },
-      translate: (_value: number, _offset: readonly [number, number]) => { throw new Error('must not run') },
-      extrudeUnitPrism: (_value: number) => { throw new Error('must not run') },
-      minkowskiSum: (_left: never, _right: never) => { throw new Error('must not run') },
-      projectTo2d: (_value: never) => { throw new Error('must not run') },
-    }
-    expect(openScadMinkowski2dViaProduct([], kernel)).toBeUndefined()
-    expect(openScadMinkowski2dViaProduct([7], kernel)).toBe(7)
   })
 
   it('resolves children empty/scalar/vector/range selection in authored order', () => {
     expect(resolveOpenScadChildrenSelection({ provided: false, childCount: 3 })).toEqual([0, 1, 2])
     expect(resolveOpenScadChildrenSelection({ provided: true, value: -0.5, childCount: 3 })).toEqual([0])
+    expect(resolveOpenScadChildrenSelection({ provided: true, value: [0, 2 ** 40, 2 ** 40], childCount: 2 ** 40 + 1 })).toEqual([0, 2 ** 40, 2 ** 40])
     expect(resolveOpenScadChildrenSelection({ provided: true, value: 1.9, childCount: 3 })).toEqual([1])
     expect(resolveOpenScadChildrenSelection({
       provided: true, value: [2, 0, 2], childCount: 3,
@@ -243,6 +191,16 @@ describe('kernel-neutral OpenSCAD 2021 geometry-module semantics', () => {
       maximumRangeItems: 4,
     }, bounded.context)).toEqual([])
     expect(bounded.warnings.map(warning => warning.code)).toEqual(['OPENSCAD_CHILDREN_RANGE_LIMIT'])
+  })
+  it('preserves fractional range endpoints and limits a stalled step', () => {
+    expect(resolveOpenScadChildrenSelection({ provided: true, childCount: 1,
+      value: { kind: 'range-value', start: 0, step: 0.1, end: 0.3 }, maximumRangeItems: 4,
+    })).toEqual([0, 0, 0, 0])
+    const { context, warnings } = harness()
+    expect(resolveOpenScadChildrenSelection({ provided: true, childCount: 1,
+      value: { kind: 'range-value', start: 1e20, step: 1, end: 1e20 }, maximumRangeItems: 4,
+    }, context)).toEqual([])
+    expect(warnings.map(warning => warning.code)).toEqual(['OPENSCAD_CHILDREN_RANGE_LIMIT'])
   })
 
   it('resolves resize zero targets and maximum authored scale for automatic axes', () => {
@@ -308,4 +266,29 @@ describe('kernel-neutral OpenSCAD 2021 geometry-module semantics', () => {
       angle: 90, profileXMin: -1, profileXMax: 1,
     })).toMatchObject({ empty: true, crossesAxis: true, profileSide: 'crossing' })
   })
+
+  it('preserves revolution default warnings and validates profile bounds', () => {
+    for (const angle of [NaN, Infinity, -Infinity, 'bad', null]) {
+      const { context, warnings } = harness()
+      expect(resolveOpenScadRotateExtrude({ angle, profileXMin: 1, profileXMax: 2, fn: 8 }, context))
+        .toMatchObject({ angle: 360, circularSegments: 8, empty: false })
+      expect(warnings.map(warning => warning.code)).toEqual(['OPENSCAD_ROTATE_EXTRUDE_ANGLE_DEFAULTED'])
+    }
+    expect(() => resolveOpenScadRotateExtrude({ profileXMin: NaN, profileXMax: 2 })).toThrow('Invalid revolution profile bounds')
+    expect(() => resolveOpenScadRotateExtrude({ profileXMin: 2, profileXMax: 1 })).toThrow('Invalid revolution profile bounds')
+  })
+})
+
+it('preserves extrusion parameter warnings before empty and explicit-slice selection',()=>{
+  for(const height of [NaN,Infinity,-Infinity,'bad',null]) {
+    const {context,warnings}=harness()
+    const plan=resolveOpenScadLinearExtrude({height,scale:[2,'bad'],twist:Infinity,slices:3.9},context)
+    expect(plan).toMatchObject({height:100,scale:[1,1],twist:0,slices:3,sliceSource:'explicit',manifoldNDivisions:2})
+    expect(warnings.map(warning=>warning.code)).toEqual(['OPENSCAD_LINEAR_EXTRUDE_HEIGHT_DEFAULTED','OPENSCAD_LINEAR_EXTRUDE_SCALE_DEFAULTED'])
+    expect(Object.isFrozen(plan.scale)).toBe(true)
+  }
+  const {context,warnings}=harness()
+  const empty=resolveOpenScadLinearExtrude({height:-1,scale:[2,'bad'],slices:5000},context)
+  expect(empty).toMatchObject({empty:true,slices:0,reduced:false})
+  expect(warnings.map(warning=>warning.code)).toEqual(['OPENSCAD_LINEAR_EXTRUDE_SCALE_DEFAULTED'])
 })

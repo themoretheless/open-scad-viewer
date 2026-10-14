@@ -3,6 +3,8 @@
 use crate::{
     check, distance_bounds::Interval as I, surface::Surface, surface_measure::jets, Result,
 };
+mod bernstein_minors;
+
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
     pub weights: [f64; 2],
@@ -61,16 +63,16 @@ fn inspect_weighted(
 fn inspect_metric(
     s: &Surface,
     projection: [[i8; 3]; 2],
-    row_weights: [f64; 2],
+    row_weights: [f64;2],
     max_cells: usize,
     max_depth: usize,
 ) -> Result<Report> {
     s.validate()?;
     check(
         max_cells <= 100000
+            && row_weights.iter().all(|v|v.is_finite() && *v>0.)
             && s.control_points.iter().flatten().all(|p| p.len() == 3)
-            && row_weights.iter().all(|v| v.is_finite() && *v > 0.)
-            && projection.iter().flatten().all(|v| (-16..=16).contains(v)),
+            && projection.iter().flatten().all(|v| (-64..=64).contains(v)),
         "Invalid linear projection or cell budget",
     )?;
     let independent = (0..3).any(|k| {
@@ -78,12 +80,15 @@ fn inspect_metric(
             != projection[1][k] as i16 * projection[0][(k + 1) % 3] as i16
     });
     check(independent, "Linear projection rows must be independent")?;
+    let projected_surface = exact_projected_surface(s, projection);
+    let working = projected_surface.as_ref().unwrap_or(s);
+    let station_split = exact_station_split(working);
     let mut out = Report {
         certified: false,
         cells: 0,
         projection,
         row_weights,
-        profile_parameterization: None,
+        profile_parameterization:None,
         reason: Some("linear-monotone-projection-unproved"),
     };
     let degrees = [s.degree_u, s.degree_v];
@@ -101,6 +106,17 @@ fn inspect_metric(
         out.reason = Some("continuous-rectangle-domain-unproved");
         return Ok(out);
     }
+    // Gale--Nikaido, Math. Ann. 159 (1965), Theorem 4: a C1 map whose
+    // Jacobian is a P-matrix everywhere on a rectangle is globally injective.
+    // https://fig.if.usp.br/~marchett/fluidos/jacobian-matrix-global-univalence-mapping_gale-nikaido.pdf
+    // A C0 knot join is excluded from this alternative. Strong monotonicity
+    // below remains valid for the existing piecewise smooth continuous case.
+    let continuously_differentiable = (0..2).all(|k| {
+        knots[k]
+            .iter()
+            .filter(|v| **v > knots[k][degrees[k]] && **v < knots[k][counts[k]])
+            .all(|v| knots[k].iter().filter(|x| *x == v).count() < degrees[k])
+    });
     let mut pending = Vec::new();
     for u in degrees[0]..counts[0] {
         for v in degrees[1]..counts[1] {
@@ -127,16 +143,41 @@ fn inspect_metric(
         }
         out.cells += 1;
         let result = (|| -> Result<i8> {
-            let j = jets::calculate(s, span, domain, None)?;
+            if continuously_differentiable
+                && bernstein_minors::certify(s, span, domain, projection).unwrap_or(false)
+            {
+                return Ok(1);
+            }
+            // Differentiate the original homogeneous span before restricting
+            // its value image. Query-cell differences amplify interval widths
+            // on small translated rational walls and waste the shared budget.
+            let derivatives = if let Some((relative, position)) = &station_split {
+                let r = jets::calculate_partial_stable(relative, span, domain, [None; 2])?;
+                let p = jets::calculate_partial_stable(position, span, domain, [None; 2])?;
+                let mut dv = r[0][1];
+                for k in 0..3 {
+                    dv[k] = dv[k].add(p[0][1][k])?;
+                }
+                [r[1][0], dv]
+            } else {
+                let j = jets::calculate_partial_stable(working, span, domain, [None; 2])?;
+                [j[1][0], j[0][1]]
+            };
             let mut projected = [[I::point(0.); 2]; 2];
             for row in 0..2 {
                 for axis in 0..2 {
-                    let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
+                    let width = I::point(knots[axis][span[axis] + 1])
+                        .sub(I::point(knots[axis][span[axis]]))?;
+                    if projected_surface.is_some() {
+                        let derivative = derivatives[axis][row];
+                        projected[row][axis] = derivative.div(width)?;
+                        continue;
+                    }
                     for k in 0..3 {
                         if projection[row][k] == 0 {
                             continue;
                         }
-                        let derivative = if axis == 0 { j[1][0][k] } else { j[0][1][k] };
+                        let derivative = derivatives[axis][k];
                         projected[row][axis] = projected[row][axis].add(
                             derivative
                                 .div(width)?
@@ -145,20 +186,52 @@ fn inspect_metric(
                     }
                 }
             }
+            // Restrict-then-differentiate and differentiate-then-restrict are
+            // independent outward enclosures of the same Jacobian. Neither
+            // dominates for every retained chart. Intersect them rather than
+            // losing the tighter enclosure on corrected miter walls.
+            let restricted = jets::calculate(working, span, domain, None)?;
             for row in 0..2 {
                 for axis in 0..2 {
-                    projected[row][axis] = projected[row][axis].mul(I::point(row_weights[row]))?;
+                    let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
+                    let derivative = if axis == 0 {
+                        restricted[1][0]
+                    } else {
+                        restricted[0][1]
+                    };
+                    let other = if projected_surface.is_some() {
+                        derivative[row].div(width)?
+                    } else {
+                        let mut value = I::point(0.);
+                        for k in 0..3 {
+                            if projection[row][k] != 0 {
+                                value = value.add(
+                                    derivative[k]
+                                        .div(width)?
+                                        .mul(I::point(projection[row][k] as f64))?,
+                                )?;
+                            }
+                        }
+                        value
+                    };
+                    projected[row][axis] = I::new(
+                        projected[row][axis].lo.max(other.lo),
+                        projected[row][axis].hi.min(other.hi),
+                    )?;
                 }
             }
+            for row in 0..2 { for axis in 0..2 { projected[row][axis]=projected[row][axis].mul(I::point(row_weights[row]))?; } }
             let [[uu, uv], [vu, vv]] = projected;
             if uu.hi <= 0. || vv.hi <= 0. {
                 return Ok(-1);
             }
             let off = uv.add(vu)?.mul(I::point(0.5))?;
             let radius = I::point(off.lo.abs().max(off.hi.abs()));
-            Ok(i8::from(
-                uu.lo > 0. && vv.lo > 0. && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.,
-            ))
+            let diagonal = uu.lo > 0. && vv.lo > 0.;
+            let strong_monotonicity = diagonal && uu.mul(vv)?.sub(radius.mul(radius)?)?.lo > 0.;
+            let p_matrix =
+                continuously_differentiable && diagonal && uu.mul(vv)?.sub(uv.mul(vu)?)?.lo > 0.;
+            Ok(i8::from(strong_monotonicity || p_matrix))
         })();
         match result {
             Ok(1) => (),
@@ -452,7 +525,7 @@ mod tests {
             .is_none());
     }
     #[test]
-    fn fixed_weighted_metric_is_proposed_then_proved_on_the_whole_chart() {
+    fn fixed_p_matrix_and_weighted_metric_are_proved_on_the_whole_chart() {
         let s = Surface {
             degree_u: 1,
             degree_v: 1,
@@ -467,15 +540,27 @@ mod tests {
             periodic_v: false,
         };
         let map = [[1, 0, 0], [0, 1, 0]];
-        assert!(!inspect_metric(&s, map, [1., 1.], 64, 1).unwrap().certified);
+        // The constant Jacobian has positive diagonal and determinant 4,
+        // while its symmetric part is indefinite. The C1 P-matrix proof now
+        // admits this shear independently of the weighted SPD alternative.
+        assert_eq!(0.125_f64*16. - (-16.)*0.125,4.);
+        assert!(0.125_f64*16. - ((-16_f64+0.125)/2.).powi(2) < 0.);
+        assert!(inspect_metric(&s, map, [1.,1.],64,1).unwrap().certified);
+        let weighted=inspect_weighted(&s,map,64,1).unwrap();
+        assert!(weighted.certified);
+        assert_eq!(weighted.row_weights,[1./128.,1.]);
         let r = inspect(&s, map, 64).unwrap();
         assert!(r.certified);
-        assert_eq!(r.row_weights, [1. / 128., 1.]);
+        assert_eq!(r.row_weights,[1.,1.]);
         assert!(r.cells <= 64);
-        for budget in [0, 1, 2] {
+        for budget in [0] {
             let refused = inspect(&s, map, budget).unwrap();
             assert!(!refused.certified);
             assert!(refused.cells <= budget);
+        }
+        for budget in [1,2] {
+            let proved=inspect(&s,map,budget).unwrap();
+            assert!(proved.certified && proved.cells<=budget);
         }
         let mut singular = s.clone();
         singular.control_points[1][0] = vec![0.125, -0.125, 0.];
@@ -492,7 +577,7 @@ mod tests {
             }
         }
         assert!(
-            !inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
+            inspect(&s, [[-1, 1, -1], [0, 0, 1]], 1000)
                 .unwrap()
                 .certified
         );
@@ -558,4 +643,65 @@ mod tests {
                 .certified
         );
     }
+}
+
+pub fn inspect_candidate_with_hint(
+    s: &Surface,
+    hint: Option<[[i8; 3]; 2]>,
+    max_cells: usize,
+) -> Result<Report> {
+    let Some(projection) = hint else {
+        return inspect_candidate(s, max_cells);
+    };
+    let first = inspect(s, projection, max_cells)?;
+    if first.certified || first.cells == max_cells {
+        return Ok(first);
+    }
+    let mut fallback = inspect_candidate(s, max_cells - first.cells)?;
+    fallback.cells += first.cells;
+    Ok(fallback)
+}
+
+fn exact_projected_surface(s: &Surface, projection: [[i8; 3]; 2]) -> Option<Surface> {
+    use crate::exact_curve_segments::{exact_add, exact_mul};
+    let mut out = s.clone();
+    for (source, target) in s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(out.control_points.iter_mut().flatten())
+    {
+        for row in 0..2 {
+            let mut value = 0.;
+            for k in 0..3 {
+                value = exact_add(value, exact_mul(source[k], projection[row][k] as f64)?)?;
+            }
+            target[row] = value;
+        }
+        target[2] = 0.;
+    }
+    Some(out)
+}
+/// With weights constant along V, the first control row is an independent
+/// polynomial station curve. Exact pole subtraction gives S=P(V)+R(U,V),
+/// hence Su=Ru and Sv=Pv+Rv. Never replace a pole by a rounded difference.
+fn exact_station_split(s: &Surface) -> Option<(Surface, Surface)> {
+    if s.weights.iter().any(|row| row.iter().any(|w| *w != row[0])) {
+        return None;
+    }
+    let mut relative = s.clone();
+    let mut position = s.clone();
+    for u in 0..s.control_points.len() {
+        for v in 0..s.control_points[0].len() {
+            for k in 0..3 {
+                relative.control_points[u][v][k] = crate::exact_curve_segments::exact_add(
+                    s.control_points[u][v][k],
+                    -s.control_points[0][v][k],
+                )?;
+            }
+            position.control_points[u][v] = s.control_points[0][v].clone();
+            position.weights[u][v] = 1.;
+        }
+    }
+    Some((relative, position))
 }

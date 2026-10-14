@@ -6,17 +6,19 @@ rust-version.workspace = true
 publish.workspace = true
 
 [features]
+default = ["codec"]
+codec = ["dep:value-codec", "geometry-ops/codec"]
 gpu = ["dep:gpu-compute", "dep:compute-core"]
 # CUDA driver-API port of the grid sampler; includes the wgpu path as fallback.
 cuda = ["gpu", "gpu-compute/cuda"]
 
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-compute-core = { path = "../compute-core", optional = true }
-gpu-compute = { path = "../gpu-compute", optional = true }
-value-codec = { path = "../value-codec" }
-geometry-ops = { path = "../geometry-ops" }
-planar-geometry = { path = "../planar-geometry" }
+math-core = { workspace = true }
+compute-core = { workspace = true, optional = true }
+gpu-compute = { workspace = true, optional = true }
+value-codec = { workspace = true, optional = true }
+geometry-ops = { workspace = true }
+planar-geometry = { workspace = true }
 rustc-hash = "=2.1.1"
 
 [dev-dependencies]

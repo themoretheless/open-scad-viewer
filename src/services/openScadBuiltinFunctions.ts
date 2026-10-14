@@ -8,6 +8,8 @@
  * having all names here is not by itself a full-language conformance claim.
  */
 
+import {evaluateDegreeScalar as nativeDegreeMath} from './openScadDegreeMath'
+
 import {
   TT,
   type Expr,

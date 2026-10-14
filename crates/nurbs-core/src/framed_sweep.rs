@@ -12,7 +12,7 @@ fn one_sided_derivative(path:&Curve,t:f64)->Result<Vec<f64>>{
  let [a,b]=path.domain();let side=if t>a{path.trim(a,t)?}else{path.trim(t,b)?};
  side.evaluate(t)?.d1.ok_or_else(||crate::Error::new(crate::INVALID_INPUT,"Sweep requires a regular differentiable path"))
 }
-fn sample(path:&Curve,t:f64)->Result<(V,V)>{
+pub(crate) fn sample(path:&Curve,t:f64)->Result<(V,V)>{
  let e=path.evaluate(t)?;
  let d=match e.d1{Some(d)=>d,None=>one_sided_derivative(path,t)?};
  Ok(([e.point[0],e.point[1],e.point[2]],unit([d[0],d[1],d[2]])?))
@@ -20,7 +20,7 @@ fn sample(path:&Curve,t:f64)->Result<(V,V)>{
 /// Origin is the path start. Initial normal selects a frame, but the first profile
 /// stays at its original world position. Subsequent sections are rigidly transported.
 /// Closed paths distribute frame holonomy along sampled chord length; the seam is C0.
-fn frames(profile:&Curve,path:&Curve,normal:V,sections:usize)->Result<(Vec<Curve>,bool)>{
+pub(crate) fn frames(profile:&Curve,path:&Curve,normal:V,sections:usize)->Result<(Vec<Curve>,bool)>{
  profile.validate()?;path.validate()?;
  check((2..=125).contains(&sections),"Framed sweep frame count exceeds 125")?;
  check(profile.control_points[0].len()==3&&path.control_points[0].len()==3,"Framed sweep requires 3D curves")?;
@@ -153,3 +153,8 @@ pub fn checked_sweep(profile:&Curve,path:&Curve,normal:V,sections:usize,max_devi
  }
 
 }
+
+pub use crate::sweeps::framed_sweep::CheckedSweep;
+pub(crate) use crate::sweeps::framed_sweep::checked_scaled_profile;
+
+pub use crate::sweeps::framed_sweep::SweepReport;

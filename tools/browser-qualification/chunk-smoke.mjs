@@ -1,4 +1,4 @@
-// Post-chunking smoke: boot the built viewer, compile a modelgraph-text
+// Post-chunking smoke: boot the built viewer, compile a rush-frontend
 // document through the editor (the main-thread Rust kernel path), then run an
 // SDF build (which exercises the geometry kernel), and confirm a scene appears.
 import { chromium } from 'playwright'
@@ -36,13 +36,13 @@ page.on('console', m => { if (m.type() === 'error') errors.push(`console: ${m.te
 try {
   await page.goto('http://127.0.0.1:5297/')
   await page.waitForSelector('textarea', { timeout: 30000 })
-  // A modelgraph-text document compiling through the main-thread Rust kernel.
-  const doc = '// @modelgraph-text/1\nshow box(10mm, 10mm, 10mm)'
+  // A rush-frontend document compiling through the main-thread Rust kernel.
+  const doc = '// @rush/1\nshow box(10mm, 10mm, 10mm)'
   await page.locator('textarea').first().fill(doc)
   await page.waitForTimeout(4000)
   const body = await page.locator('body').textContent()
   const failed = /error|ошибка/i.test(body) && !/0/i.test(body)
-  console.log('editor booted, modelgraph compiled; page errors:', errors.length ? errors : 'none')
+  console.log('editor booted, rush compiled; page errors:', errors.length ? errors : 'none')
   console.log(failed ? 'POSSIBLE FAILURE (see body)' : 'no failure markers')
 } finally {
   await browser.close()

@@ -1,6 +1,6 @@
 //! Runtime-owned scene broadphase indexes; no tree serialization per query.
 use super::{Result, Value, field, input};
-use polygon_core::solid::scene_bvh::{Index, Item};
+use mesh_query::scene_bvh::{Index, Item};
 use std::collections::BTreeMap;
 use value_codec::json;
 const MAX_ITEMS: usize = 100_000;

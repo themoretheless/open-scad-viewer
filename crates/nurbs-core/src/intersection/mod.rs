@@ -23,3 +23,6 @@ pub(crate) use next_down::*;
 pub use intersect_curve_curve::*;
 pub(crate) use split_grid_v::*;
 pub use intersect_curve_surface::*;
+
+mod contact_types;
+pub use contact_types::{ContactClass,UnresolvedReason};

@@ -48,7 +48,7 @@ names/settings are authoritative in `crates/Cargo.toml`: the workspace still
 uses `s`; `photogrammetry-core`, `photogrammetry-ffi` and `polygon-core` use `3`,
 and the decompression bootstrap packages use `2`. A workspace-wide switch to
 `z` was evaluated but not retained; see the
-[ModelGraph profile control](design/modelgraph-size-profile-2026-09-20.md).
+[RushGraph profile control](design/rush-size-profile-2026-09-20.md).
 
 | Node WASM default / input | Original, s | Source changes only, s | Source changes + opt3, s |
 | --- | ---: | ---: | ---: |

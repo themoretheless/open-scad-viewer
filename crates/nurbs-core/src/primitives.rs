@@ -223,3 +223,82 @@ mod canonical_quarter_tests {
         }
     }
 }
+
+use crate::surface::Surface;
+#[path="construct/curves/primitives/revolution.rs"] mod revolution;
+pub use revolution::{cone,cone_frustum,cylinder,ellipsoid,elliptic_cylinder,hyperboloid_one_sheet,hyperboloid_two_sheet,sphere,torus};
+pub fn quadratic_patch(bounds: [f64; 4], coefficients: [f64; 6]) -> Result<Surface> {
+    let [x0, x1, y0, y1] = bounds;
+    check(
+        bounds.iter().chain(&coefficients).all(|v| v.is_finite()) && x0 < x1 && y0 < y1,
+        "Quadratic patch needs finite coefficients and increasing XY bounds",
+    )?;
+    let x = [x0, x0 / 2. + x1 / 2., x1];
+    let y = [y0, y0 / 2. + y1 / 2., y1];
+    let xx = [x0 * x0, x0 * x1, x1 * x1];
+    let yy = [y0 * y0, y0 * y1, y1 * y1];
+    let [a, b, c, d, e, f] = coefficients;
+    let controls = (0..3)
+        .map(|i| {
+            (0..3)
+                .map(|j| {
+                    vec![
+                        x[i],
+                        y[j],
+                        a * xx[i] + b * x[i] * y[j] + c * yy[j] + d * x[i] + e * y[j] + f,
+                    ]
+                })
+                .collect()
+        })
+        .collect();
+    let result = Surface {
+        degree_u: 2,
+        degree_v: 2,
+        knots_u: vec![0., 0., 0., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: controls,
+        weights: vec![vec![1.; 3]; 3],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    result.validate()?;
+    Ok(result)
+}
+
+
+pub fn hyperbola(
+    center: [f64; 3],
+    axis_u: [f64; 3],
+    axis_v: [f64; 3],
+    a: f64,
+    b: f64,
+) -> Result<Curve> {
+    ellipse_arc(center, axis_u, axis_v, 0., 90.)?;
+    check(
+        a.is_finite() && b.is_finite() && a < b,
+        "Hyperbola interval must be finite and increasing",
+    )?;
+    let mid = a / 2. + b / 2.;
+    let w = (b / 2. - a / 2.).cosh();
+    let xy = [
+        [a.cosh(), a.sinh()],
+        [mid.cosh() / w, mid.sinh() / w],
+        [b.cosh(), b.sinh()],
+    ];
+    let result = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: xy
+            .iter()
+            .map(|q| {
+                (0..3)
+                    .map(|i| center[i] + axis_u[i] * q[0] + axis_v[i] * q[1])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![1., w, 1.],
+        periodic: false,
+    };
+    result.validate()?;
+    Ok(result)
+}

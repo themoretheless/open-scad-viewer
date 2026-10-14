@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v21",
   "successorOf": "docs/qualification/own-rust-cad-v20.json",
-  "previousSha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
+  "previousSha256": "081050d844a1d164f5439a490fd36fcce0ea3d292d4c0755067a46e40f359c06",
   "recordedAt": "2026-09-29",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v29 / G1 v46 re-freeze. Drift since G0 v28 / G1 v45: the own-Rust geometry kernel was rebuilt from current crate sources (mesh intersection enumeration, NURBS distance and trim work on the feature branch), the source bundle files crates/brep-core/src/operations.rs, crates/brep-core/src/lib.rs, crates/geometry-bridge/src/lib.rs and src/services/geometry/brep.ts changed, package.json gained the test:cad-roadmap script, and tests/manifoldPlanBackend.test.ts now also lists the CadQuantityInput and SceneObjectControls components (neither imports manifold-3d). Notices and lockfiles are byte-identical to own-rust-cad-v20, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

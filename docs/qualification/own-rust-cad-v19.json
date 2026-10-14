@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v19",
   "successorOf": "docs/qualification/own-rust-cad-v18.json",
-  "previousSha256": "9614a7a3cfdfdcc867ca20484d41bde1e251e4aa5da049d7eabc6e76c7bac365",
+  "previousSha256": "330d1204cac180d545849ab4a56fa96c6f89d63fa9bfb2f7295472cccd3421a9",
   "recordedAt": "2026-09-27",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v27 / G1 v44 re-freeze after main rebuilt the geometry kernel: 72a9a6e added sketch dimensions and associative G2 bridge curves to geometry-bridge (new cad_dimensions and cad_bridge_curve modules plus a one-line cad_sketch_trim change). The path-independent WASM is rebuilt on the merged sources. THIRD_PARTY_NOTICES.md, package-lock.json and crates/Cargo.lock are byte-identical to own-rust-cad-v18; the own-Rust source bundle differs only in geometry-bridge/src/lib.rs, which declares the two new modules and registers the new cad_dimensions and cad_bridge_curve operations in the dispatcher; existing operations are untouched. The own-Rust oracle v3 (44 cases) passes unchanged on the rebuilt kernel, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

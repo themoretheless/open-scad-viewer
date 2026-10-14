@@ -1,0 +1,9 @@
+# Shared-generator circular section repair prototype — 2026-10-03
+
+Offline candidate geometry only; production bodies and their certificates were not modified. Exact G2 auditing passes for all represented profile joins in the four previously nonsmooth fixtures after reconstructing each nine-pole circular section from a common quantized center and two common quantized generators. Shared dyadic integer sums retain exact quarter-junction tangent identities. Mantissa exhaustion refuses rather than silently round those sums.
+
+Max authored control-pole displacement upper bounds (mm): progressive scale/twist 6.581303577548516e-13; spatial 6.929545034814853e-13; bounded-corrected and constructor-corrected spatial 9.094947017729284e-13. Bounds are computed from exact Fraction squared distances and the reported floating upper is verified against the exact square. Native exact projective strip audits certify G2 in every candidate wall group, with work 441670, 266777, 266777, 266777 respectively, within two million aggregate operations.
+
+Equal bases and positive rational weights imply the corresponding wall point displacement is bounded by the largest control displacement. This does not establish a repaired B-rep: original coedge curves, cap surfaces/domains and topology have not been rebuilt or revalidated. Integration must update those owned representations and add the correction displacement to the complete continuousBound before any repaired Solid admission. Two other affine fixtures remain unproved separately.
+
+Prototype source: scripts/prototype-sweep-circle-seam-repair.py. Native verification: scripts/check-circle-repair-candidates.mts, accepting candidate JSON and output JSON paths. Candidate wall arrays and actual exact-audit outputs are retained here. Full goal remains active, unpublished.

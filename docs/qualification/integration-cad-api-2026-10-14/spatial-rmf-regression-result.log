@@ -1,0 +1,19 @@
+
+running 2 tests
+test spatial_rmf_qualification::antipodal_closed_spatial_rmf_hollow_complete_boundary_and_material has been running for over 60 seconds
+test spatial_rmf_qualification::parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles has been running for over 60 seconds
+spatial RMF volume proven=true boundary=true nesting=Some(Some(true)) orientations=[Some(true), Some(false)]
+closed spatial RMF hollow=true varying=false periodic=false owned faces=512 wall work=145920 error=Some(0.6238273053496831)
+test spatial_rmf_qualification::antipodal_closed_spatial_rmf_hollow_complete_boundary_and_material ... ok
+
+thread 'spatial_rmf_qualification::parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles' (7800170) panicked at brep-core/src/spatial_rmf_qualification.rs:321:5:
+volume=false boundary=false agreement=true/true trim=true injectivity=false pairs=false next=Some([73, 89]) individual=949 grouped=71117 cells=200000 reasons=[([0, 17], "pair-unresolved"), ([0, 19], "pair-unresolved"), ([0, 1009], "pair-unresolved"), ([0, 1011], "pair-unresolved"), ([1, 16], "pair-unresolved"), ([1, 18], "pair-unresolved"), ([1, 1008], "pair-unresolved"), ([1, 1010], "pair-unresolved")] nesting=None orientation=[(true, None), (false, None), (false, None), (false, None)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test spatial_rmf_qualification::parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles ... FAILED
+
+failures:
+
+failures:
+    spatial_rmf_qualification::parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 1066 filtered out; finished in 3296.50s

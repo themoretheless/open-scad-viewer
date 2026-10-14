@@ -40,6 +40,7 @@ import {
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
 import { projectMeshModelerFaces } from '../services/meshModelerProjection'
+import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
@@ -64,6 +65,18 @@ const document = shallowRef(history.document)
 const undoable = ref(false)
 const redoable = ref(false)
 const error = ref('')
+const kernelReady = ref(isGeometryKernelReady())
+// Mesh can open before Solid or the source viewport has warmed the shared WASM.
+// Publishing readiness invalidates projections that were requested while cold.
+watch(() => props.open, async open => {
+  if (!open || kernelReady.value) return
+  try {
+    await warmGeometryKernel()
+    kernelReady.value = true
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  }
+}, { immediate: true })
 const selection = ref('')
 const selectMode = ref<MeshSelectMode>('object')
 const selectedVerts = ref<number[]>([])
@@ -125,7 +138,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 const floorVisible = ref(true)
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
-  if (!selected.value) return null
+  if (!kernelReady.value || !selected.value) return null
   const base = meshObjectStats(selected.value.mesh)
   return { ...base, edges: buildEdgeList(selected.value.mesh).length }
 })
@@ -632,7 +645,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
-const scene = computed(() => document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+const scene = computed(() => !kernelReady.value ? [] : document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
 const sceneFaces = computed(() => scene.value.flatMap(object =>
   object.tris.map(tri => ({ ...tri, objectId: object.id })),
@@ -677,6 +690,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
         <button type="button" class="tool-icon" :title="label('Панель свойств', 'Properties panel')" :aria-label="label('Панель свойств', 'Properties panel')" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg></button>
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
+        <span v-else-if="!kernelReady" role="status">{{ label('Подготовка геометрии…', 'Preparing geometry…') }}</span>
       </div>
       <ModelingGridControls :locale="locale" />
       <WorkspaceActionBar v-if="selected" :label="label('Действия над объектом', 'Object actions')">
@@ -846,131 +860,4 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
   </div>
 </template>
 
-<style scoped>
-.mesh-workspace {
-  user-select: none;
-  position: fixed;
-  inset: var(--workspace-top, var(--topbar-h, 40px)) 0 var(--statusbar-h, 24px);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
-}
-@media (max-width: 750px) { .mesh-workspace { inset: 0; } }
-.mesh-bar {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.mesh-bar .hint { margin-right: auto; }
-.mesh-bar .command-search { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; background: var(--bg); color: var(--text-dim); border-radius: 8px; padding: 6px 10px; }
-.mesh-bar .command-search span { flex: 1; text-align: left; }
-.mesh-bar .command-search kbd { font: 11px var(--font-mono, monospace); padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; }
-.mesh-bar .icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-.mesh-bar button, .dock-props button, .dock-props select, .dock-props input {
-  background: var(--surface-raised);
-  color: inherit;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.3rem 0.55rem;
-  font: inherit;
-  cursor: pointer;
-}
-.mesh-bar button:hover:not(:disabled), .dock-props button:hover:not(:disabled) { background: var(--hover); }
-.mesh-bar button:disabled, .dock-props button:disabled { opacity: .45; cursor: default; }
-.mesh-bar button:focus-visible, .dock-props button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.mesh-bar .close { margin-left: 0.25rem; }
-.mesh-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.pane-tools { min-height: 46px; padding: 7px 12px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--surface); }
-.pane-tools .subtle { flex: 1; color: var(--text-dim); font-size: 12px; }
-.pane-tools .error { flex-basis: 100%; margin: 0; }
-.tool-icon { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--text); cursor: pointer; }
-.tool-icon:hover { background: var(--hover); }
-.tool-icon[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
-.tool-divider { width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
-.mesh-stage { flex: 1; min-height: 0; display: flex; }
-.mesh-stage-view { flex: 1; min-width: 0; position: relative; }
-.side-dock { flex: 0 0 344px; display: flex; min-height: 0; border-left: 1px solid var(--border); background: var(--bg); }
-.side-dock.collapsed { flex-basis: 46px; }
-.dock-rail { flex: 0 0 46px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-right: 1px solid var(--border); }
-.dock-rail button { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.dock-rail button:hover { color: var(--text); background: var(--hover); }
-.dock-rail button[aria-selected=true] { color: var(--text); background: var(--surface-raised); }
-.dock-rail-spacer { flex: 1; }
-.dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
-.dock-heading { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
-.dock-heading span { color: var(--text-dim); font-weight: 400; }
-.scene-list { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 1px; }
-.scene-list li > button { width: 100%; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-family: var(--font-mono, monospace); font-size: 12.5px; cursor: pointer; }
-.scene-list li > button:hover { background: var(--hover); }
-.scene-list li > button[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); outline: 1px solid var(--accent); outline-offset: -1px; }
-.scene-list small { margin-left: auto; font-size: 11px; color: var(--text-dim); font-family: var(--font-ui, sans-serif); }
-.dot { width: 8px; height: 8px; border-radius: 2px; background: #c3b7a3; }
-.scene-empty { padding: 16px 12px; color: var(--text-dim); font-size: 12px; line-height: 1.5; }
-.dock-props { display: flex; flex-direction: column; gap: 0.75rem; padding: 12px 14px; }
-@media (max-width: 750px) { .side-dock { display: none; } }
-.file-menu { position: relative; }
-.file-menu > summary { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; padding: 0.3rem 0.55rem; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; }
-.file-menu > summary::-webkit-details-marker { display: none; }
-.file-menu > div { position: absolute; right: 0; top: 40px; z-index: 7; width: 270px; display: grid; gap: 6px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 30px #0004; }
-.file-menu button, .file-menu select { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.3rem 0.55rem; font: inherit; cursor: pointer; text-align: left; }
-.file-row { display: flex; gap: 6px; }
-.file-row select { flex: 1; }
-.dock-props h3 { margin: 0 0 0.35rem; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
-.dock-props label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; margin: 0.2rem 0; }
-.dock-props ul { list-style: none; padding: 0; margin: 0.35rem 0 0; }
-.dock-props li button { width: 100%; text-align: left; margin-top: 0.2rem; }
-.dock-props button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
-.row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-.mesh-view { width: 100%; height: 100%; background: var(--canvas-bg); }
-.mesh-view-wrap { position: absolute; inset: 0; min-width: 0; min-height: 0; }
-.mesh-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; pointer-events: none; color: var(--text-dim); padding: 24px; }
-.mesh-empty strong { font-size: 18px; font-weight: 500; }
-.mesh-empty span { font-size: 12px; max-width: 300px; }
-.mesh-view .face { fill: #5c5954; stroke: #1e1d1b; stroke-width: 0.15; cursor: pointer; }
-.mesh-view .face.selected { fill: var(--accent); }
-.mesh-view .edge { stroke: #e9c9a5; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
-.mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
-.mesh-view .vert { fill: #eee; cursor: grab; }
-.mesh-view .vert.selected { fill: #e76f51; }
-.tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; color: var(--text-dim); }
-.stats { font-size: 0.8rem; color: var(--text-dim); }
-.error { color: var(--danger); font-size: 0.85rem; }
-</style>
-
-<style scoped>
-/* Quiet chrome, viewport first: matches the app shell and the Solid workspace. */
-.mesh-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
-.mesh-bar > strong, .mesh-bar > .command-search { display: none; }
-.mesh-bar button:not(.primary), .mesh-bar summary, .dock-props button:not(.primary) { border-color: transparent; background: transparent; border-radius: 6px; }
-.mesh-bar button:hover:not(:disabled), .mesh-bar summary:hover, .dock-props button:hover:not(:disabled) { background: var(--hover); }
-.mesh-body { position: relative; }
-.pane-tools {
-  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
-  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.pane-tools .tool-icon { width: 30px; height: 30px; border-color: transparent; background: transparent; }
-.pane-tools .tool-icon:hover { background: var(--hover); }
-.pane-tools .tool-icon[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: transparent; }
-.pane-tools .tool-divider { height: 16px; background: var(--hairline); }
-.mesh-body > :deep(.modeling-grid-controls) {
-  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
-}
-.mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
-</style>
-
-<style scoped>
-/* Same header as Solid: history on the left, selection count, file menu on the right. */
-.mesh-undo { order: 0; }
-.mesh-redo { order: 1; }
-.mesh-bar .hint { order: 2; }
-.mesh-bar .ws-count { order: 3; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
-.mesh-file { order: 4; }
-</style>
+<style scoped src="./styles/mesh-modeler.css"></style>

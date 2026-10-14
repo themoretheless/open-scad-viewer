@@ -1,0 +1,55 @@
+{
+  "modelSha256": "e39d2cb901da774aa53c57193e343132f487ed4e92384eabacd61d59c37e3596",
+  "boundary": {
+    "budget": 0.01,
+    "closed": false,
+    "continuousBound": true,
+    "errorUpper": 2.6712252978526526e-13,
+    "filledCapErrorUpper": [
+      2.6409992072721386e-13,
+      2.6712252978526526e-13
+    ],
+    "method": "retained-sweep-boundary-union",
+    "reason": null,
+    "scope": "boundary-set-hausdorff",
+    "wallErrorUpper": 2.6712252978526526e-13,
+    "withinBudget": true
+  },
+  "levels": [
+    {
+      "accepted": true,
+      "affineLawsApplied": false,
+      "authoredFramesApplied": false,
+      "budget": 0.01,
+      "certifiedErrorUpper": 9.862880429928478e-15,
+      "closedPath": false,
+      "continuousBound": false,
+      "continuousErrorMethod": "rational-law-derivative-interpolation-real-arithmetic",
+      "continuousErrorUpper": 5e-324,
+      "endpointContourErrorUpper": [
+        6.840271371877092e-15,
+        9.862880429928476e-15
+      ],
+      "errorCertificateCells": 18,
+      "errorCertificateReason": null,
+      "frameTransportCertified": true,
+      "frameTransportReason": null,
+      "holonomyCorrectionRadians": 0,
+      "method": "progressive-miter-fourfold-section-refinement",
+      "orientationGuideApplied": false,
+      "phaseResolved": true,
+      "profileRegularityCertified": true,
+      "regularityCells": 48,
+      "roundingCertified": false,
+      "sampledControlDeviation": 1.962615573354719e-17,
+      "seamContinuity": "open",
+      "sections": 2,
+      "stations": 5,
+      "steps": 1,
+      "unresolvedWallPatches": [],
+      "wallRegularityCertified": true
+    }
+  ],
+  "sourceWasm": "659562122ad80895938e92cb599ca6ddfe850169985754c0c168116f65fb90d6",
+  "scope": "Corrected hollow circle model, full boundary and level history before production adoption; legacy model/boundary parity was independently qualified on f88b523d."
+}

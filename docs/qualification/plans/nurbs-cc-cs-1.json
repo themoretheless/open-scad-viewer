@@ -36,7 +36,7 @@
     "implementation": [
       "crates/nurbs-core/src/intersection.rs",
       "src/services/nurbsFoundation.ts",
-      "src/mcp/modelGraphNurbsTools.ts",
+      "src/mcp/rushGraphNurbsTools.ts",
       "tests/nurbsFoundation.test.ts"
     ],
     "registry": "src/services/geometry/brepCapability.ts",

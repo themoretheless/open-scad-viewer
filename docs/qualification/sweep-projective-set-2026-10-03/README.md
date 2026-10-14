@@ -1,0 +1,15 @@
+# Complete declared projective seam sets and actual progressive sweep, 2026-10-03
+
+Verified local slice; unpublished. Overall sweep/miter goal remains active.
+
+The new TypeScript aggregate audits every explicitly declared seam with one shared exact-work budget, including closure. Any refusal clears the aggregate certified order; an empty set makes no positive claim. Large jet tolerances do not change exact acceptance. Inputs remain unchanged. Completeness of declarations belongs to the caller; this is not automatic whole-body adjacency, cap smoothness or Solid admission.
+
+The native projective audit now supports a common clamped degree-one multispan along basis only after proving identical homogeneous derivatives on every original cross-layer coefficient at every internal knot. Independent interval normals still prove seam regularity. A changed middle row, one ULP, wrong knot spacing, singularity and budget exhaustion refuse. The old strict homogeneous C1/C2 audit keeps its previous basis contract.
+
+An actual progressive sweep of four rational profile arcs, with affine axis scaling, moving center and shared three-station grid, passes all four G2 profile joins including closure. A kink introduced into the middle station fails the internal along proof. This does not establish smoothness for arbitrary moving frames or automatically promote the constructor's continuousBound flag.
+
+Validation: 722 native tests (20 cad-predicates + 702 nurbs-core), additional exact one-ULP/singularity regression, 15 public tests in 3 suites, 22 frozen browser checks, vue-tsc and scoped diff check passed. Rebuilt WASM: 10,679,988 bytes, SHA-256 c4d758cd47949671afa078a7cae2574e3189b01b148d41f1b8acedb7c1467161. All 25 independent STEP cases passed geometry/topology/analytic-volume checks on this artifact. Snapshot: /private/tmp/open-scad-viewer-sweep-projective-set-2026-10-03. Browser uses Chromium headless CPU rendering; held-dispatch lifecycle cancellation does not prove mid-kernel interruption latency. Manifest describes observed critical files, not clean-tree all-source reproducibility. One test-only assertion addition followed release compilation; executable production source remained fixed.
+
+UI matrix passed all 40 wide/narrow scenarios, 394 assertions: Solid success/refusal, boundary-budget refusal preserving the prior body, resource refusal, held build/Solid cancellation, source change and restoration. Full results, screenshots and retained geometry are in ui/matrix.json and its sibling files. The snapshot's source and production dist use this rebuilt WASM.
+
+Remaining full-goal obligations: broader moving-frame/reparameterization and constructor/report integration of smoothness; declared-mode global guarantee completion beyond these selected fixtures; extended closed joint frame/guide/affine acceptance and refusal coverage; final scoped publication with new CI. STEP and UI success on these fixtures does not prove arbitrary geometry, embedding, nesting or all declared modes. Sharp miter corners retain explicit C0.

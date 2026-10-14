@@ -11,3 +11,4 @@ value-codec = { path = "../value-codec" }
 mechanics-core = { path = "../mechanics-core" }
 planar-geometry = { path = "../planar-geometry" }
 polygon-core = { path = "../polygon-core" }
+mesh-section = { workspace = true }

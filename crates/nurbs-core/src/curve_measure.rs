@@ -8,7 +8,7 @@ use crate::{
     distance_bounds::{Interval, box_distance},
     numeric, resource,
 };
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::{cmp::Ordering, collections::{BinaryHeap,BTreeMap}};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopReason {
@@ -31,6 +31,11 @@ pub struct LengthReport {
 #[derive(Clone, Debug)]
 pub struct LengthPoint {
     pub parameter: f64,
+    /// Source-parameter enclosure for the exact length inverse. Bisection only
+    /// discards a side after disjoint prefix/target interval proof. A bracket
+    /// does not assert existence or uniqueness for arbitrary target distances.
+    /// Normalized division endpoints select the original domain endpoints.
+    pub inverse_parameter_bounds: [f64; 2],
     pub point: Vec<f64>,
     /// Original rational point coordinate enclosures at the returned parameter.
     pub point_bounds: Vec<[f64; 2]>,
@@ -167,8 +172,11 @@ fn measure(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<LengthReport> {
+    Ok(measure_partition(curve,domain,tolerance,max_cells)?.0)
+}
+fn measure_partition(curve:&Curve,domain:[f64;2],tolerance:f64,max_cells:usize)->Result<(LengthReport,Vec<Cell>)> {
     if domain[0] == domain[1] {
-        return report(Interval::point(0.), 0, tolerance, StopReason::Tolerance);
+        return Ok((report(Interval::point(0.), 0, tolerance, StopReason::Tolerance)?,Vec::new()));
     }
     let mut heap = BinaryHeap::new();
     let mut cells = 0;
@@ -190,7 +198,7 @@ fn measure(
             bounds = sum(&heap)?;
             let recomputed = report(bounds, cells, tolerance, StopReason::WorkLimit)?;
             if recomputed.within_tolerance || cells + 2 > max_cells {
-                return Ok(recomputed);
+                return Ok((recomputed,heap.into_vec()));
             }
         }
         let largest = heap.pop().unwrap();
@@ -198,7 +206,7 @@ fn measure(
         let mid = a + (b - a) / 2.;
         if !(a < mid && mid < b) {
             heap.push(largest);
-            return report(sum(&heap)?, cells, tolerance, StopReason::PrecisionLimit);
+            return Ok((report(sum(&heap)?, cells, tolerance, StopReason::PrecisionLimit)?,heap.into_vec()));
         }
         let left = cell(curve, largest.span, [a, mid], cells)?;
         let right = cell(curve, largest.span, [mid, b], cells + 1)?;
@@ -250,6 +258,7 @@ fn point_report(
     let bounds = curve_jets::endpoint(curve, span, domain, end)?;
     Ok(LengthPoint {
         parameter,
+        inverse_parameter_bounds: curve.domain(),
         point: curve.evaluate(parameter)?.point,
         point_bounds: bounds[0].iter().map(|i| [i.lo, i.hi]).collect(),
         prefix_bounds: [prefix.lo, prefix.hi],
@@ -271,6 +280,14 @@ fn invert(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<LengthPoint> {
+    let mut cache=BTreeMap::new();
+    invert_with_prefix_cache(curve,target,total,tolerance,max_cells,&mut cache,&[])
+}
+fn invert_with_prefix_cache(
+    curve:&Curve,target:Interval,total:&LengthReport,tolerance:f64,max_cells:usize,
+    cache:&mut BTreeMap<u64,LengthReport>,
+    partition:&[Cell],
+)->Result<LengthPoint>{
     let [a, b] = curve.domain();
     let mut best = point_report(
         curve,
@@ -304,17 +321,57 @@ fn invert(
         if !(lo < mid && mid < hi) {
             best.stop_reason = StopReason::PrecisionLimit;
             best.cells = cells;
+            best.inverse_parameter_bounds = [lo, hi];
             return Ok(best);
         }
         let needed = (curve.degree..curve.control_points.len())
             .filter(|&i| curve.knots[i] < curve.knots[i + 1] && curve.knots[i] < mid)
             .count();
-        if max_cells - cells < needed {
-            best.cells = cells;
-            return Ok(best);
-        }
-        let prefix = measure(curve, [a, mid], tolerance / 8., max_cells - cells)?;
-        cells += prefix.cells;
+        // Cache belongs to one division of this exact source, tolerance and
+        // total measurement. Completed prefix enclosures remain valid for all
+        // station targets; charge their cell construction only once.
+        let prefix=if let Some(prefix)=cache.get(&mid.to_bits()) {
+            prefix.clone()
+        } else {
+            if max_cells - cells < needed {
+                best.cells = cells;
+                best.inverse_parameter_bounds = [lo, hi];
+                return Ok(best);
+            }
+            // Completed cells belong to this exact source and total division.
+            // Sum their original interval enclosures; only the cut cell needs
+            // a new enclosure. Never subtract independent total/prefix boxes.
+            let mut reused=None;
+            if !partition.is_empty() {
+                let mut bounds=Interval::point(0.);
+                let mut cut_work=0;
+                for part in partition {
+                    if part.domain[1]<=mid {bounds=bounds.add(part.length)?;}
+                    else if part.domain[0]<mid {
+                        if cells<max_cells {
+                            bounds=bounds.add(cell(curve,part.span,[part.domain[0],mid],0)?.length)?;
+                            cut_work+=1;
+                        }else {cut_work=usize::MAX;break;}
+                    }
+                }
+                if cut_work!=usize::MAX {
+                    let candidate=report(bounds,cut_work,tolerance/8.,StopReason::WorkLimit)?;
+                    cells+=cut_work;
+                    if candidate.within_tolerance {
+                        reused=Some(LengthReport {cells:0,..candidate});
+                    }
+                }
+            }
+            let prefix=if let Some(reused)=reused {reused} else {
+                if max_cells-cells<needed {
+                    best.cells=cells;best.inverse_parameter_bounds=[lo,hi];return Ok(best);
+                }
+                measure(curve,[a,mid],tolerance/8.,max_cells-cells)?
+            };
+            cells+=prefix.cells;
+            if prefix.within_tolerance {cache.insert(mid.to_bits(),prefix.clone());}
+            prefix
+        };
         let candidate = point_report(
             curve,
             mid,
@@ -329,6 +386,7 @@ fn invert(
         }
         if best.within_tolerance {
             best.cells = cells;
+            best.inverse_parameter_bounds = [lo, hi];
             return Ok(best);
         }
         if prefix.bounds[1] < target.lo {
@@ -343,11 +401,13 @@ fn invert(
                 prefix.stop_reason
             };
             best.cells = cells;
+            best.inverse_parameter_bounds = [lo, hi];
             return Ok(best);
         }
     }
     best.stop_reason = StopReason::IterationLimit;
     best.cells = cells;
+    best.inverse_parameter_bounds = [lo, hi];
     Ok(best)
 }
 /// Point whose original prefix length differs from `distance` by at most the
@@ -403,9 +463,10 @@ pub fn divide_by_length(
         (1..=1024).contains(&segments),
         "Arc division needs 1..1024 segments",
     )?;
-    let total = measure(curve, curve.domain(), tolerance / 8., max_cells)?;
+    let (total,partition) = measure_partition(curve, curve.domain(), tolerance / 8., max_cells)?;
     let mut cells = total.cells;
     let mut points = Vec::new();
+    let mut prefix_cache=BTreeMap::new();
     let mut reason = StopReason::Tolerance;
     for i in 0..=segments {
         // Integer division is rounded; enclose the exact rational fraction.
@@ -442,11 +503,12 @@ pub fn divide_by_length(
             // Prefix and target are the same exact quantity at fraction 0/1.
             // Preserve this correlation rather than subtract independent boxes.
             point.residual_upper = 0.;
+            point.inverse_parameter_bounds = [parameter, parameter];
             point.within_tolerance = true;
             point.stop_reason = StopReason::Tolerance;
             point
         } else {
-            invert(curve, target, &total, tolerance, max_cells - cells)?
+            invert_with_prefix_cache(curve,target,&total,tolerance,max_cells-cells,&mut prefix_cache,&partition)?
         };
         cells += point.cells;
         let accepted = point.within_tolerance;
@@ -469,4 +531,31 @@ pub fn divide_by_length(
             reason
         },
     })
+}
+
+#[cfg(test)]
+mod shared_partition_regression {
+    use super::*;
+    #[test]
+    fn circular_division_reuses_original_total_cells_with_a_shared_budget() {
+        let curve=crate::primitives::circle([0.;3],[0.,0.,1.],4.).unwrap();
+        let division=divide_by_length(&curve,32,0.001,10000).unwrap();
+        assert!(division.within_tolerance,"{division:?}");
+        assert!(division.cells<=10000);
+        assert_eq!(division.points.len(),33);
+        for (i,point) in division.points.iter().enumerate() {
+            assert!(point.residual_upper<=0.001);
+            // Independent circle length reference supplements interval proof.
+            let angle=if i==32 {2.*std::f64::consts::PI} else {
+                point.point[1].atan2(point.point[0]).rem_euclid(2.*std::f64::consts::PI)
+            };
+            let expected=8.*std::f64::consts::PI*i as f64/32.;
+            assert!((4.*angle-expected).abs()<=point.residual_upper+1e-12);
+        }
+        assert!(division.total.bounds[0]<=8.*std::f64::consts::PI
+            && 8.*std::f64::consts::PI<=division.total.bounds[1]);
+        let limited=divide_by_length(&curve,32,0.001,division.total.cells).unwrap();
+        assert!(!limited.within_tolerance);
+        assert!(limited.cells<=division.total.cells);
+    }
 }

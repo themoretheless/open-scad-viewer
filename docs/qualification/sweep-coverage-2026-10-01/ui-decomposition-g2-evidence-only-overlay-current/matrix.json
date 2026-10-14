@@ -1,0 +1,174 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T13:29:01.238Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification. Evidence-only run excludes viewport rendering qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "f84ac06ac159a580c80203474a5273680b3c79cc492e62566d85f0f707498739",
+  "artifactProvenance": {
+    "sha256": "f84ac06ac159a580c80203474a5273680b3c79cc492e62566d85f0f707498739",
+    "byteLength": 11075355,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-d82PMt1s.js"
+    ]
+  },
+  "appSourceSha256": "c6f99b89f5de162f306632f63a907c4b27447f48335b90abd263bdc5f43035c4",
+  "distIndexSha256": "0931aeb6324f2679ea43246a72b8b31314f46a4bd698c3e78b58f5a4f05cdb4f",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "decomposed-profile-g2-progressive-sweep.r",
+      "sourceSha256": "15f4cc51787d2c1d2edc3c4aa10b881ed89b263be633f1ac8d020635f75d6e86",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "decomposition-G2-scoped-corner-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportRenderingQualified": false,
+      "webGpuUnavailable": true,
+      "viewportEvidence": []
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "decomposed-profile-g2-progressive-sweep.r",
+      "sourceSha256": "15f4cc51787d2c1d2edc3c4aa10b881ed89b263be633f1ac8d020635f75d6e86",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "decomposition-G2-scoped-corner-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-retained-patch-evidence",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportRenderingQualified": false,
+      "webGpuUnavailable": true,
+      "viewportEvidence": []
+    }
+  ],
+  "evidenceOnly": true,
+  "sourceHashes": {
+    "src/App.vue": "c6f99b89f5de162f306632f63a907c4b27447f48335b90abd263bdc5f43035c4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "4ad514fdec0b882631f64c15913626e9c71e6c2632e987c0fda7a6b3e5da578c",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "78dd5b97d841dcdbe830d6b8f8385c72f3abe4d640b7d1963f14dec64c389ecc",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

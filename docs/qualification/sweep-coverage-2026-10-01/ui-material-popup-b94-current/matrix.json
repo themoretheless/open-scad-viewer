@@ -1,0 +1,81 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T16:34:21.766Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "b94ebdc0da0a0b96963833a00c914d206017abdcb2c9ce1bafeed39a8fafb28c",
+  "appSourceSha256": "ed0e28e79eb39ab3f5735f08b3611b94725d845c68ccc219f479075bf972846d",
+  "distIndexSha256": "af1f9cb4c8b7e17083f9266def77268624e569f0c39c31089f720b95151ef3a6",
+  "cases": [
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "contact-progressive-sweep.r",
+      "sourceSha256": "7cd625de97a70a45f90f31299d76a29a062c8dac3290d9727bdf1e35ade33d8b",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "surface-solid-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "refused-empty-project-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "emptyProjectPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": []
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "ed0e28e79eb39ab3f5735f08b3611b94725d845c68ccc219f479075bf972846d",
+    "src/services/sweepRetainedCorrespondence.ts": "f0a0f00ec67d01c499efbbe82d6dfd4168caf2299b16a7d1447f6305cdef5d1c",
+    "src/services/geometry/brep.ts": "f28b952b97f670d9290a0b592bdb3ffc6af386278dd29909130612448c2ca920",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "a4f4956e0129b1fe17a9df38d750f7754eac491107f4c017b5f8dbe125c8c19f"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true,
+  "passed": true
+}

@@ -18,8 +18,10 @@ pub mod measure;
 pub mod path;
 pub mod path_offset;
 pub mod pathfinder;
+pub mod primitives;
 pub mod render;
 pub mod rings;
+pub mod sampled_corner;
 pub mod scissors;
 pub mod stroke;
 pub mod tessellation;
@@ -53,3 +55,8 @@ pub(crate) fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 pub(crate) fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
     math_core::norm2(math_core::sub2(a, b))
 }
+
+pub mod sketch_shapes;
+pub mod sketch_transform;
+pub mod sketch_offset;
+pub mod sketch_trim;

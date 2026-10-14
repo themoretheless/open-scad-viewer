@@ -1,0 +1,184 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T14:40:39.299Z",
+  "scope": "Finite retained-miter UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "908dd496b4d4a9391b1453cc86db99dfbed6f70fffeb760cc9ea05da60bd5036",
+  "artifactProvenance": {
+    "sha256": "908dd496b4d4a9391b1453cc86db99dfbed6f70fffeb760cc9ea05da60bd5036",
+    "byteLength": 11109013,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-TarwCWJD.js"
+    ]
+  },
+  "appSourceSha256": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+  "distIndexSha256": "2c7fd2031521d9dc9ca88a4a1b4194064bdac873066526f1861f7f76c814b348",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r",
+      "sourceSha256": "08d0ca8c9066437475812f509e321f614bec33c3940a6a0f59a2497e71ea2d97",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "station-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (64) · Стыки вдоль пути: G2  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.500000 mm  / 2.00000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 66,
+        "shells": 1,
+        "geometrySha256": "81d200c58a68257eb8f4e8035ebd99f226013555bebf53d748f8a1c4daef0880",
+        "renderer": "cpu-svg"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r",
+      "sourceSha256": "08d0ca8c9066437475812f509e321f614bec33c3940a6a0f59a2497e71ea2d97",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "station-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ✓ (64) · Стыки вдоль пути: G2  · Стыки крышек: C0 · Оценка ошибки границы: ≈0.500000 mm  / 2.00000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 66,
+        "shells": 1,
+        "geometrySha256": "81d200c58a68257eb8f4e8035ebd99f226013555bebf53d748f8a1c4daef0880",
+        "renderer": "cpu-svg"
+      },
+      "refusalMessage": "Miter sites must be finite and omit a repeated endpoint",
+      "resourceRefusalMessage": "Miter cap correction unproved: projection-unproved"
+    }
+  ],
+  "evidenceOnly": false,
+  "sourceHashes": {
+    "src/App.vue": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "8cfa4e9ad0ed66d1d5afed6fc0e873af751334e65583e42aefe82b786bac735b",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "08c255a29b56117d1e7a6439b211be07c4a86c68e7d2c7a1dc339ae066deb081",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

@@ -198,8 +198,8 @@ it('does not preserve a stale B-rep after a mesh-only threading request',()=>{
  expect(JSON.stringify(input)).toBe(before)
 })
 it('applies native mesh threading in either axis frame and preserves body metadata',async()=>{
- const {buildModelGraphThread}=await import('../src/services/modelGraphThreads')
- const cutter=buildModelGraphThread({diameter:4,pitch:1,length:2,internal:false,wall:1,clearance:0,starts:1,left_handed:false,segments_per_turn:16})
+ const {buildRushGraphThread}=await import('../src/services/rushGraphThreads')
+ const cutter=buildRushGraphThread({diameter:4,pitch:1,length:2,internal:false,wall:1,clearance:0,starts:1,left_handed:false,segments_per_turn:16})
  const removed=inspectPolygonMesh(cutter.mesh).signedVolumeMm3
  const input=doc(box()),before=JSON.stringify(input)
  for(const [axis,origin] of [[[0,0,1],[5,5,0]],[[1,0,0],[0,5,5]]] as [[number,number,number],[number,number,number]][]){

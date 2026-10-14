@@ -2,6 +2,9 @@
 //! Wall/wall intersections, cap/cap relations and shell containment stay separate.
 use crate::{Error, Model, Result};
 use nurbs_core::sweep_cap_wall::{self, Boundary};
+#[path = "sweep_cap_contacts/endpoint_candidates.rs"]
+mod endpoint_candidates;
+pub use endpoint_candidates::endpoint_chart_candidates;
 #[derive(Clone, Debug)]
 pub struct Report {
     pub cap_certified: bool,
@@ -27,10 +30,19 @@ fn invalid(message: &str) -> Error {
 }
 /// Original binary64 controls in one nondegenerate exact plane. Positive
 /// weights are checked by surface validation before this predicate is called.
-fn planar_control_hull(surface:&nurbs_core::surface::Surface,work:&mut u64,max_work:u64)->bool {
-    if *work>=max_work{return false;}
-    let report=nurbs_core::progressive_miter::cap_retained_plane_certificate::inspect(surface,max_work-*work);
-    *work+=report.work;
+fn planar_control_hull(
+    surface: &nurbs_core::surface::Surface,
+    work: &mut u64,
+    max_work: u64,
+) -> bool {
+    if *work >= max_work {
+        return false;
+    }
+    let report = nurbs_core::progressive_miter::cap_retained_plane_certificate::inspect(
+        surface,
+        max_work - *work,
+    );
+    *work += report.work;
     report.planar_control_hull_certified
 }
 
@@ -79,59 +91,114 @@ fn opposite(model: &Model, cap: usize, wall: usize, a: bool, b: bool) -> bool {
 }
 /// Positive rational control hulls exclude contacts with an exact oblique plane.
 /// All predicates share the same budget as coedge identities in this report.
-fn oblique_plane_contact(cap: &nurbs_core::surface::Surface,
-    wall: &nurbs_core::surface::Surface, boundary: Option<Boundary>,
-    work: &mut u64, max_work: u64) -> (bool,bool) {
-    use cad_predicates::{AuthoredScalar,SourceArena,ToleranceContext,PredicateContext,Limits,Outcome,Sign};
-    if *work>=max_work { return (false,false); }
-    let anchors=[&cap.control_points[0][0],
-        &cap.control_points[cap.control_points.len()-1][0],
-        &cap.control_points[0][cap.control_points[0].len()-1]];
-    let cap_points=cap.control_points.iter().flatten().collect::<Vec<_>>();
-    let points=anchors.into_iter().chain(cap_points.iter().copied())
-        .chain(wall.control_points.iter().flatten()).collect::<Vec<_>>();
-    let values=points.iter().flat_map(|p|p.iter()).map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect();
-    let Ok(source)=SourceArena::authored("sweep-cap-plane",1,values) else { return (false,false); };
-    let tolerance=ToleranceContext::default_valid();
-    let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work:max_work-*work,..Limits::default()},None);
-    let refs=|i:usize|std::array::from_fn(|k|source.leaf(3*i+k).unwrap());
-    let result=(|| -> Option<(bool,bool)> {
-        let mut noncollinear=false;
-        for axes in [[0,1],[1,2],[0,2]] {
-            let p=|i:usize|axes.map(|k|source.leaf(3*i+k).unwrap());
-            match cad_predicates::orient2d(&mut ctx,p(0),p(1),p(2)).ok()?.outcome {
-                Outcome::Sign(Sign::Positive|Sign::Negative)=>{noncollinear=true;break;},
-                Outcome::Sign(Sign::Zero)=>(), _=>return None,
+fn oblique_plane_contact(
+    cap: &nurbs_core::surface::Surface,
+    wall: &nurbs_core::surface::Surface,
+    boundary: Option<Boundary>,
+    work: &mut u64,
+    max_work: u64,
+) -> (bool, bool) {
+    use cad_predicates::{
+        AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
+    };
+    if *work >= max_work {
+        return (false, false);
+    }
+    let anchors = [
+        &cap.control_points[0][0],
+        &cap.control_points[cap.control_points.len() - 1][0],
+        &cap.control_points[0][cap.control_points[0].len() - 1],
+    ];
+    let cap_points = cap.control_points.iter().flatten().collect::<Vec<_>>();
+    let points = anchors
+        .into_iter()
+        .chain(cap_points.iter().copied())
+        .chain(wall.control_points.iter().flatten())
+        .collect::<Vec<_>>();
+    let values = points
+        .iter()
+        .flat_map(|p| p.iter())
+        .map(|x| AuthoredScalar::Binary64Bits(x.to_bits()))
+        .collect();
+    let Ok(source) = SourceArena::authored("sweep-cap-plane", 1, values) else {
+        return (false, false);
+    };
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(
+        &source,
+        &tolerance,
+        Limits {
+            max_work: max_work - *work,
+            ..Limits::default()
+        },
+        None,
+    );
+    let refs = |i: usize| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap());
+    let result = (|| -> Option<(bool, bool)> {
+        let mut noncollinear = false;
+        for axes in [[0, 1], [1, 2], [0, 2]] {
+            let p = |i: usize| axes.map(|k| source.leaf(3 * i + k).unwrap());
+            match cad_predicates::orient2d(&mut ctx, p(0), p(1), p(2))
+                .ok()?
+                .outcome
+            {
+                Outcome::Sign(Sign::Positive | Sign::Negative) => {
+                    noncollinear = true;
+                    break;
+                }
+                Outcome::Sign(Sign::Zero) => (),
+                _ => return None,
             }
         }
-        if !noncollinear { return None; }
-        for i in 3..3+cap_points.len() {
-            if cad_predicates::orient3d(&mut ctx,refs(0),refs(1),refs(2),refs(i)).ok()?.outcome
-                != Outcome::Sign(Sign::Zero) { return None; }
+        if !noncollinear {
+            return None;
         }
-        let declared=boundary.map(|b|match b {
-            Boundary::UMin=>(0,0),Boundary::UMax=>(0,wall.control_points.len()-1),
-            Boundary::VMin=>(1,0),Boundary::VMax=>(1,wall.control_points[0].len()-1),
+        for i in 3..3 + cap_points.len() {
+            if cad_predicates::orient3d(&mut ctx, refs(0), refs(1), refs(2), refs(i))
+                .ok()?
+                .outcome
+                != Outcome::Sign(Sign::Zero)
+            {
+                return None;
+            }
+        }
+        let declared = boundary.map(|b| match b {
+            Boundary::UMin => (0, 0),
+            Boundary::UMax => (0, wall.control_points.len() - 1),
+            Boundary::VMin => (1, 0),
+            Boundary::VMax => (1, wall.control_points[0].len() - 1),
         });
-        let mut side=None; let mut all_strict=true; let mut restricted=declared.is_some();
-        let mut index=3+cap_points.len();
-        for (u,row) in wall.control_points.iter().enumerate() {
-            for (v,_) in row.iter().enumerate() {
-                let Outcome::Sign(sign)=cad_predicates::orient3d(&mut ctx,refs(0),refs(1),refs(2),refs(index)).ok()?.outcome
-                    else { return None; };
-                index+=1;
-                let on_boundary=declared.is_some_and(|(axis,end)|[u,v][axis]==end);
-                if sign==Sign::Zero { all_strict=false; restricted &= on_boundary; }
+        let mut side = None;
+        let mut all_strict = true;
+        let mut restricted = declared.is_some();
+        let mut index = 3 + cap_points.len();
+        for (u, row) in wall.control_points.iter().enumerate() {
+            for (v, _) in row.iter().enumerate() {
+                let Outcome::Sign(sign) =
+                    cad_predicates::orient3d(&mut ctx, refs(0), refs(1), refs(2), refs(index))
+                        .ok()?
+                        .outcome
                 else {
+                    return None;
+                };
+                index += 1;
+                let on_boundary = declared.is_some_and(|(axis, end)| [u, v][axis] == end);
+                if sign == Sign::Zero {
+                    all_strict = false;
+                    restricted &= on_boundary;
+                } else {
                     restricted &= !on_boundary;
-                    if side.is_some_and(|s|s!=sign) { return None; }
-                    side=Some(sign);
+                    if side.is_some_and(|s| s != sign) {
+                        return None;
+                    }
+                    side = Some(sign);
                 }
             }
         }
-        Some((all_strict && side.is_some(),restricted && side.is_some()))
-    })().unwrap_or((false,false));
-    *work+=ctx.work_used();
+        Some((all_strict && side.is_some(), restricted && side.is_some()))
+    })()
+    .unwrap_or((false, false));
+    *work += ctx.work_used();
     result
 }
 /// All listed caps are excluded from wall scope; cap/cap relations are not proved.
@@ -176,7 +243,8 @@ pub fn inspect(model: &Model, cap: usize, caps: &[usize], budget: Budgets) -> Re
         return Ok(out);
     }
     let face = &model.faces[cap];
-    out.planar_control_hull_certified=planar_control_hull(&face.surface,&mut out.exact_work,budget.max_exact_work);
+    out.planar_control_hull_certified =
+        planar_control_hull(&face.surface, &mut out.exact_work, budget.max_exact_work);
     if !nurbs_core::surface_regularity::inspect(&face.surface, budget.max_chart_cells)?
         .spanwise_regular
         || !nurbs_core::surface_injectivity::certify(&face.surface, 1)?.proven
@@ -266,10 +334,17 @@ pub fn inspect(model: &Model, cap: usize, caps: &[usize], budget: Budgets) -> Re
             &[declaration],
             1,
         )?;
-        let oblique=if plane.plane_axis.is_none() {
-            oblique_plane_contact(&face.surface,&model.faces[wall].surface,declaration,
-                &mut out.exact_work,budget.max_exact_work)
-        } else { (false,false) };
+        let oblique = if plane.plane_axis.is_none() {
+            oblique_plane_contact(
+                &face.surface,
+                &model.faces[wall].surface,
+                declaration,
+                &mut out.exact_work,
+                budget.max_exact_work,
+            )
+        } else {
+            (false, false)
+        };
         if (plane.separated_walls == vec![0] || oblique.0) && shared.is_empty() {
             out.separated_walls.push(wall);
             continue;
@@ -303,44 +378,92 @@ pub struct RetainedCapsReport {
     pub reason: &'static str,
 }
 /// Both endpoint contours and filled regions share one atomic exact-work budget.
-pub fn inspect_retained_caps(model: &Model, endpoints: &[Vec<Vec<nurbs_core::curve::Curve>>], budget: Budgets, max_edges: usize) -> Result<RetainedCapsReport> {
+pub fn inspect_retained_caps(
+    model: &Model,
+    endpoints: &[Vec<Vec<nurbs_core::curve::Curve>>],
+    budget: Budgets,
+    max_edges: usize,
+) -> Result<RetainedCapsReport> {
     model.validate()?;
-    let mut out=RetainedCapsReport { exact:false, exact_work:0, faces:Vec::new(), reason:"cap-contour-mismatch" };
-    if model.faces.len()<2 || endpoints.len()!=2 { return Ok(out); }
-    out.faces=vec![model.faces.len()-2,model.faces.len()-1];
-    if !(1..=1024).contains(&max_edges) || !(1..=1_000_000).contains(&budget.max_exact_work) {
-        out.reason="work-limit"; return Ok(out);
+    let mut out = RetainedCapsReport {
+        exact: false,
+        exact_work: 0,
+        faces: Vec::new(),
+        reason: "cap-contour-mismatch",
+    };
+    if model.faces.len() < 2 || endpoints.len() != 2 {
+        return Ok(out);
     }
-    let mut visited=0;
-    for (endpoint,&cap) in endpoints.iter().zip(&out.faces) {
-        let face=&model.faces[cap];
-        let wires=std::iter::once(face.outer).chain(face.holes.iter().copied()).collect::<Vec<_>>();
-        if wires.len()!=endpoint.len() { return Ok(out); }
-        for (ring,wire) in endpoint.iter().zip(wires) {
-            let mut expected=Vec::new();
+    out.faces = vec![model.faces.len() - 2, model.faces.len() - 1];
+    if !(1..=1024).contains(&max_edges) || !(1..=1_000_000).contains(&budget.max_exact_work) {
+        out.reason = "work-limit";
+        return Ok(out);
+    }
+    let mut visited = 0;
+    for (endpoint, &cap) in endpoints.iter().zip(&out.faces) {
+        let face = &model.faces[cap];
+        let wires = std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .collect::<Vec<_>>();
+        if wires.len() != endpoint.len() {
+            return Ok(out);
+        }
+        for (ring, wire) in endpoint.iter().zip(wires) {
+            let mut expected = Vec::new();
             for curve in ring {
-                let Some(parts)=nurbs_core::retained_wall_coefficients::segmented_bezier_controls(curve,1_000_000) else {
-                    out.reason="unsupported-section-decomposition"; return Ok(out);
+                let Some(parts) = nurbs_core::retained_wall_coefficients::segmented_bezier_controls(
+                    curve, 1_000_000,
+                ) else {
+                    out.reason = "unsupported-section-decomposition";
+                    return Ok(out);
                 };
                 expected.extend(parts);
             }
-            let uses=&model.loops[wire].coedges;
-            if expected.len()!=uses.len() || uses.is_empty() { return Ok(out); }
-            visited+=uses.len();
-            if visited>max_edges { out.reason="work-limit"; return Ok(out); }
-            let actual=uses.iter().map(|u|model.edges[u.edge].curve.clone()).collect::<Vec<_>>();
-            let reversed=uses.iter().map(|u|u.reversed).collect::<Vec<_>>();
-            let (exact,work)=nurbs_core::retained_wall_coefficients::contour_matches(&expected,&actual,&reversed,(budget.max_exact_work-out.exact_work) as usize);
-            out.exact_work+=work as u64;
-            if !exact { if out.exact_work==budget.max_exact_work {out.reason="work-limit";} return Ok(out); }
+            let uses = &model.loops[wire].coedges;
+            if expected.len() != uses.len() || uses.is_empty() {
+                return Ok(out);
+            }
+            visited += uses.len();
+            if visited > max_edges {
+                out.reason = "work-limit";
+                return Ok(out);
+            }
+            let actual = uses
+                .iter()
+                .map(|u| model.edges[u.edge].curve.clone())
+                .collect::<Vec<_>>();
+            let reversed = uses.iter().map(|u| u.reversed).collect::<Vec<_>>();
+            let (exact, work) = nurbs_core::retained_wall_coefficients::contour_matches(
+                &expected,
+                &actual,
+                &reversed,
+                (budget.max_exact_work - out.exact_work) as usize,
+            );
+            out.exact_work += work as u64;
+            if !exact {
+                if out.exact_work == budget.max_exact_work {
+                    out.reason = "work-limit";
+                }
+                return Ok(out);
+            }
         }
-        let report=inspect(model,cap,&out.faces,Budgets {max_exact_work:budget.max_exact_work-out.exact_work,..budget})?;
-        out.exact_work+=report.exact_work;
+        let report = inspect(
+            model,
+            cap,
+            &out.faces,
+            Budgets {
+                max_exact_work: budget.max_exact_work - out.exact_work,
+                ..budget
+            },
+        )?;
+        out.exact_work += report.exact_work;
         if !report.cap_certified || !report.planar_control_hull_certified {
-            out.reason="cap-region-unproved"; return Ok(out);
+            out.reason = "cap-region-unproved";
+            return Ok(out);
         }
     }
-    out.exact=true; out.reason="exact-planar-regions";
+    out.exact = true;
+    out.reason = "exact-planar-regions";
     Ok(out)
 }
 
@@ -350,117 +473,307 @@ mod tests {
     #[test]
     fn retained_caps_share_budget_and_reject_changed_source_weights() {
         use nurbs_core::curve::Curve;
-        let ring=|z:f64| {
-            let points=[[0.,0.,z],[1.,0.,z],[1.,1.,z],[0.,1.,z]];
-            (0..4).map(|i|Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![points[i].to_vec(),points[(i+1)%4].to_vec()],weights:vec![1.,1.],periodic:false}).collect::<Vec<_>>()
+        let ring = |z: f64| {
+            let points = [[0., 0., z], [1., 0., z], [1., 1., z], [0., 1., z]];
+            (0..4)
+                .map(|i| Curve {
+                    degree: 1,
+                    knots: vec![0., 0., 1., 1.],
+                    control_points: vec![points[i].to_vec(), points[(i + 1) % 4].to_vec()],
+                    weights: vec![1., 1.],
+                    periodic: false,
+                })
+                .collect::<Vec<_>>()
         };
-        let mut endpoints=vec![vec![ring(0.)],vec![ring(2.)]];
-        let before=endpoints.clone();
-        let model=crate::rational_section_loft(&endpoints).unwrap();
-        let budget=Budgets {max_walls:1024,max_exact_work:1_000_000,max_chart_cells:1000,max_trim_pairs:100000,max_trim_cells:100000,max_trim_domain_cells:1000000};
-        let complete=inspect_retained_caps(&model,&endpoints,budget,1024).unwrap();
-        assert!(complete.exact,"{:?}",complete);
-        assert!(complete.exact_work>1);
-        let cut=inspect_retained_caps(&model,&endpoints,Budgets {max_exact_work:1,..budget},1024).unwrap();
+        let mut endpoints = vec![vec![ring(0.)], vec![ring(2.)]];
+        let before = endpoints.clone();
+        let model = crate::rational_section_loft(&endpoints).unwrap();
+        let budget = Budgets {
+            max_walls: 1024,
+            max_exact_work: 1_000_000,
+            max_chart_cells: 1000,
+            max_trim_pairs: 100000,
+            max_trim_cells: 100000,
+            max_trim_domain_cells: 1000000,
+        };
+        let complete = inspect_retained_caps(&model, &endpoints, budget, 1024).unwrap();
+        assert!(complete.exact, "{:?}", complete);
+        assert!(complete.exact_work > 1);
+        let cut = inspect_retained_caps(
+            &model,
+            &endpoints,
+            Budgets {
+                max_exact_work: 1,
+                ..budget
+            },
+            1024,
+        )
+        .unwrap();
         assert!(!cut.exact);
-        assert!(cut.exact_work<=1);
-        assert_eq!(endpoints,before);
-        endpoints[1][0][0].weights[0]=f64::from_bits(1_f64.to_bits()+1);
-        assert!(!inspect_retained_caps(&model,&endpoints,budget,1024).unwrap().exact);
+        assert!(cut.exact_work <= 1);
+        assert_eq!(endpoints, before);
+        endpoints[1][0][0].weights[0] = f64::from_bits(1_f64.to_bits() + 1);
+        assert!(
+            !inspect_retained_caps(&model, &endpoints, budget, 1024)
+                .unwrap()
+                .exact
+        );
     }
     #[test]
-    fn retained_oblique_plane_requires_exact_original_controls_and_shared_work(){
-        let mut surface=nurbs_core::surface::Surface {
-            degree_u:1,degree_v:1,knots_u:vec![0.,0.,1.,1.],knots_v:vec![0.,0.,1.,1.],
-            control_points:vec![vec![vec![0.,0.,0.],vec![0.,1.,1.]],vec![vec![1.,0.,1.],vec![1.,1.,2.]]],
-            weights:vec![vec![1.,0.5],vec![2.,1.]],periodic_u:false,periodic_v:false,
+    fn retained_oblique_plane_requires_exact_original_controls_and_shared_work() {
+        let mut surface = nurbs_core::surface::Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![0., 0., 0.], vec![0., 1., 1.]],
+                vec![vec![1., 0., 1.], vec![1., 1., 2.]],
+            ],
+            weights: vec![vec![1., 0.5], vec![2., 1.]],
+            periodic_u: false,
+            periodic_v: false,
         };
         surface.validate().unwrap();
-        let mut work=0;
-        assert!(planar_control_hull(&surface,&mut work,1000000));
-        assert!(work>0 && work<=1000000);
-        let mut exhausted=work;
-        assert!(!planar_control_hull(&surface,&mut exhausted,work));
-        assert_eq!(exhausted,work);
-        surface.control_points[1][1][2]=f64::from_bits(2f64.to_bits()+1);
-        assert!(!planar_control_hull(&surface,&mut 0,1000000));
-        surface.control_points[1]=surface.control_points[0].clone();
-        assert!(!planar_control_hull(&surface,&mut 0,1000000));
+        let mut work = 0;
+        assert!(planar_control_hull(&surface, &mut work, 1000000));
+        assert!(work > 0 && work <= 1000000);
+        let mut exhausted = work;
+        assert!(!planar_control_hull(&surface, &mut exhausted, work));
+        assert_eq!(exhausted, work);
+        surface.control_points[1][1][2] = f64::from_bits(2f64.to_bits() + 1);
+        assert!(!planar_control_hull(&surface, &mut 0, 1000000));
+        surface.control_points[1] = surface.control_points[0].clone();
+        assert!(!planar_control_hull(&surface, &mut 0, 1000000));
     }
     #[test]
     fn corrected_spatial_cap_excludes_all_wall_interiors_with_shared_exact_work() {
-        let profiles=vec![
-            nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.5).unwrap(),
-            nurbs_core::primitives::circle([0.;3],[0.,0.,1.],0.2).unwrap().reverse().unwrap(),
+        let profiles = vec![
+            nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.5).unwrap(),
+            nurbs_core::primitives::circle([0.; 3], [0., 0., 1.], 0.2)
+                .unwrap()
+                .reverse()
+                .unwrap(),
         ];
-        let points=[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.],[10.,10.,15.]];
-        let mut sections=nurbs_core::paths::miter_sections(&profiles,&points,[1.,0.,0.],2.).unwrap();
-        let last=sections.len()-1;
-        sections[last]=nurbs_core::section_projection::project(&sections[last],1,[0.,-0.5],17.5,
-            2_f64.powi(-40),1e-9,1000000).unwrap().curves.unwrap();
-        let sections=sections.into_iter().map(|row|row.into_iter().map(|c|vec![c]).collect()).collect::<Vec<_>>();
-        let model=crate::rational_section_loft(&sections).unwrap();
-        let budgets=Budgets{max_walls:24,max_exact_work:1000000,max_chart_cells:10000,
-            max_trim_pairs:10000,max_trim_cells:100000,max_trim_domain_cells:1000000};
-        let report=inspect(&model,25,&[24,25],budgets).unwrap();
-        assert!(report.cap_certified && report.planar_control_hull_certified && report.all_cap_wall_contacts_certified,"{report:?}");
-        assert_eq!(report.allowed_boundaries.len(),8);
-        assert_eq!(report.separated_walls.len(),16);
-        assert!(report.exact_work<=budgets.max_exact_work);
-        let joint=crate::boundary_embedding::inspect_sweep(&model,1e-8,
-            crate::boundary_embedding::Limits{exact_work:1000000,trim_pairs:10000,trim_cells:100000,
-                trim_domain_cells:1000000,spans:1000,contacts:crate::face_contacts::Limits{
-                    pairs:10000,cells:100000,domain_cells:1000000,cells_per_pair:1000,domain_cells_per_pair:10000}},
-            20000,&[24,25],budgets).unwrap();
+        let points = [[0., 0., 0.], [0., 0., 10.], [10., 0., 10.], [10., 10., 15.]];
+        let mut sections =
+            nurbs_core::paths::miter_sections(&profiles, &points, [1., 0., 0.], 2.).unwrap();
+        let last = sections.len() - 1;
+        sections[last] = nurbs_core::section_projection::project(
+            &sections[last],
+            1,
+            [0., -0.5],
+            17.5,
+            2_f64.powi(-40),
+            1e-9,
+            1000000,
+        )
+        .unwrap()
+        .curves
+        .unwrap();
+        let sections = sections
+            .into_iter()
+            .map(|row| row.into_iter().map(|c| vec![c]).collect())
+            .collect::<Vec<_>>();
+        let model = crate::rational_section_loft(&sections).unwrap();
+        let budgets = Budgets {
+            max_walls: 24,
+            max_exact_work: 1000000,
+            max_chart_cells: 10000,
+            max_trim_pairs: 10000,
+            max_trim_cells: 100000,
+            max_trim_domain_cells: 1000000,
+        };
+        let report = inspect(&model, 25, &[24, 25], budgets).unwrap();
+        assert!(
+            report.cap_certified
+                && report.planar_control_hull_certified
+                && report.all_cap_wall_contacts_certified,
+            "{report:?}"
+        );
+        assert_eq!(report.allowed_boundaries.len(), 8);
+        assert_eq!(report.separated_walls.len(), 16);
+        assert!(report.exact_work <= budgets.max_exact_work);
+        let joint = crate::boundary_embedding::inspect_sweep(
+            &model,
+            1e-8,
+            crate::boundary_embedding::Limits {
+                exact_work: 1000000,
+                trim_pairs: 10000,
+                trim_cells: 100000,
+                trim_domain_cells: 1000000,
+                spans: 1000,
+                contacts: crate::face_contacts::Limits {
+                    pairs: 10000,
+                    cells: 100000,
+                    domain_cells: 1000000,
+                    cells_per_pair: 1000,
+                    domain_cells_per_pair: 10000,
+                },
+            },
+            20000,
+            &[24, 25],
+            budgets,
+        )
+        .unwrap();
         assert!(joint.agreement.all_equal && joint.intersections.faces.all_faces_injective);
-        assert!(joint.cap_contacts.iter().all(|(_,r)|r.all_cap_wall_contacts_certified));
-        let unresolved=joint.intersections.pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved")
-            .map(|p|p.faces).collect::<Vec<_>>();
-        println!("spatial remaining pairs: {unresolved:?}; boundary proven: {}",joint.proven);
+        assert!(
+            joint
+                .cap_contacts
+                .iter()
+                .all(|(_, r)| r.all_cap_wall_contacts_certified)
+        );
+        let unresolved = joint
+            .intersections
+            .pairs
+            .pairs
+            .iter()
+            .filter(|p| p.reason == "pair-unresolved")
+            .map(|p| p.faces)
+            .collect::<Vec<_>>();
+        println!(
+            "spatial remaining pairs: {unresolved:?}; boundary proven: {}",
+            joint.proven
+        );
         assert!(joint.proven);
-        for pair in [[9,18],[15,20]] {
-            assert!(crate::boundary_hull_contact::certify(&model,pair).unwrap().vertex.is_some());
+        for pair in [[9, 18], [15, 20]] {
+            assert!(
+                crate::boundary_hull_contact::certify(&model, pair)
+                    .unwrap()
+                    .vertex
+                    .is_some()
+            );
         }
-        let volume_limits=crate::volume_validity::Limits {
-                boundary:crate::boundary_embedding::Limits{exact_work:1000000,trim_pairs:10000,trim_cells:100000,
-                    trim_domain_cells:1000000,spans:1000,contacts:crate::face_contacts::Limits{
-                        pairs:10000,cells:100000,domain_cells:1000000,cells_per_pair:1000,domain_cells_per_pair:10000}},
-                nesting_pairs:1000,nesting_cells:100000,nesting_domain_cells:1000000,
-                orientation_cells:100000,orientation_domain_cells:1000000,orientation_spans:100,
-            };
-        let volume=crate::volume_validity::inspect_sweep(&model,1e-8,volume_limits,20000,&[24,25],budgets).unwrap();
-        println!("spatial volume proven: {}; orientations: {:?}",volume.proven,
-            volume.orientations.iter().map(|o|(o.shell,o.outward,o.attempts.len())).collect::<Vec<_>>());
+        let volume_limits = crate::volume_validity::Limits {
+            boundary: crate::boundary_embedding::Limits {
+                exact_work: 1000000,
+                trim_pairs: 10000,
+                trim_cells: 100000,
+                trim_domain_cells: 1000000,
+                spans: 1000,
+                contacts: crate::face_contacts::Limits {
+                    pairs: 10000,
+                    cells: 100000,
+                    domain_cells: 1000000,
+                    cells_per_pair: 1000,
+                    domain_cells_per_pair: 10000,
+                },
+            },
+            nesting_pairs: 1000,
+            nesting_cells: 100000,
+            nesting_domain_cells: 1000000,
+            orientation_cells: 100000,
+            orientation_domain_cells: 1000000,
+            orientation_spans: 100,
+        };
+        let volume = crate::volume_validity::inspect_sweep(
+            &model,
+            1e-8,
+            volume_limits,
+            20000,
+            &[24, 25],
+            budgets,
+        )
+        .unwrap();
+        println!(
+            "spatial volume proven: {}; orientations: {:?}",
+            volume.proven,
+            volume
+                .orientations
+                .iter()
+                .map(|o| (o.shell, o.outward, o.attempts.len()))
+                .collect::<Vec<_>>()
+        );
         assert!(volume.proven);
-        let mut inward=model.clone();
-        for face in &mut inward.shells[0].faces {face.reversed = !face.reversed;}
-        let wrong=crate::volume_validity::inspect_sweep(&inward,1e-8,volume_limits,20000,&[24,25],budgets).unwrap();
+        let mut inward = model.clone();
+        for face in &mut inward.shells[0].faces {
+            face.reversed = !face.reversed;
+        }
+        let wrong = crate::volume_validity::inspect_sweep(
+            &inward,
+            1e-8,
+            volume_limits,
+            20000,
+            &[24, 25],
+            budgets,
+        )
+        .unwrap();
         assert!(wrong.boundary.proven);
         assert!(!wrong.proven);
-        assert_eq!(wrong.orientations[0].outward,Some(false));
-        for pair in [[16,19],[17,18],[20,23],[21,22]] {
-            assert!(joint.intersections.pairs.pairs.iter().any(|p|p.faces==pair && p.boundary.is_some()));
+        assert_eq!(wrong.orientations[0].outward, Some(false));
+        for pair in [[16, 19], [17, 18], [20, 23], [21, 22]] {
+            assert!(
+                joint
+                    .intersections
+                    .pairs
+                    .pairs
+                    .iter()
+                    .any(|p| p.faces == pair && p.boundary.is_some())
+            );
         }
-        for pair in [[16,20],[16,21],[16,22],[16,23],[18,20],[18,21],[18,22],[18,23],[21,23]] {
-            assert!(joint.intersections.pairs.pairs.iter().any(|p|p.faces==pair && p.reason=="pair-disjoint"));
+        for pair in [
+            [16, 20],
+            [16, 21],
+            [16, 22],
+            [16, 23],
+            [18, 20],
+            [18, 21],
+            [18, 22],
+            [18, 23],
+            [21, 23],
+        ] {
+            assert!(
+                joint
+                    .intersections
+                    .pairs
+                    .pairs
+                    .iter()
+                    .any(|p| p.faces == pair && p.reason == "pair-disjoint")
+            );
         }
-        for pair in [[9,16],[10,19],[13,20],[14,23]] {
-            let certificate=crate::boundary_hull_contact::certify(&model,pair).unwrap();
+        for pair in [[9, 16], [10, 19], [13, 20], [14, 23]] {
+            let certificate = crate::boundary_hull_contact::certify(&model, pair).unwrap();
             assert!(certificate.vertex.is_some());
             assert!(certificate.edges.is_empty());
         }
-        let vertex=crate::boundary_hull_contact::certify(&model,[9,16]).unwrap().vertex.unwrap();
-        let extra=model.faces[9].surface.control_points.iter().flatten()
-            .find(|p|p.as_slice()!=model.vertices[vertex].point).unwrap().clone();
-        let mut overlap=model.clone();
-        overlap.faces[16].surface.control_points[0][0]=extra;
-        assert!(crate::boundary_hull_contact::certify(&overlap,[9,16]).is_none());
-        let limited=inspect(&model,25,&[24,25],Budgets{max_exact_work:0,..budgets}).unwrap();
+        let vertex = crate::boundary_hull_contact::certify(&model, [9, 16])
+            .unwrap()
+            .vertex
+            .unwrap();
+        let extra = model.faces[9]
+            .surface
+            .control_points
+            .iter()
+            .flatten()
+            .find(|p| p.as_slice() != model.vertices[vertex].point)
+            .unwrap()
+            .clone();
+        let mut overlap = model.clone();
+        overlap.faces[16].surface.control_points[0][0] = extra;
+        assert!(crate::boundary_hull_contact::certify(&overlap, [9, 16]).is_none());
+        let limited = inspect(
+            &model,
+            25,
+            &[24, 25],
+            Budgets {
+                max_exact_work: 0,
+                ..budgets
+            },
+        )
+        .unwrap();
         assert!(!limited.all_cap_wall_contacts_certified);
-        let mut cap=model.faces[25].surface.clone();
-        cap.control_points[0][0][1]=cap.control_points[0][0][1].next_up();
-        let mut work=0;
-        assert_eq!(oblique_plane_contact(&cap,&model.faces[16].surface,Some(Boundary::VMax),
-            &mut work,1000000),(false,false));
+        let mut cap = model.faces[25].surface.clone();
+        cap.control_points[0][0][1] = cap.control_points[0][0][1].next_up();
+        let mut work = 0;
+        assert_eq!(
+            oblique_plane_contact(
+                &cap,
+                &model.faces[16].surface,
+                Some(Boundary::VMax),
+                &mut work,
+                1000000
+            ),
+            (false, false)
+        );
     }
 }

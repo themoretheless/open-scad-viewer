@@ -5,6 +5,8 @@ use super::*;
 /// the TS evaluator's shape-list semantics exactly.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapeDescriptor {
+    pub geometry: Option<usize>,
+    pub profile: Option<usize>,
     pub name: String,
     pub dimension: u8,
 }

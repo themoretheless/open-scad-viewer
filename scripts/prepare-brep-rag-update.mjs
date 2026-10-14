@@ -11,7 +11,7 @@ const documents = [
   ['crates/brep-core/README.md', 'B-rep — точный исполняемый набор операций и ограничения'],
   ['crates/cad-predicates/README.md', 'B-rep — кандидат точных предикатов, контексты и пределы'],
   ['docs/design/brep-completion-status.md', 'B-rep — аудит реализации и незавершённые требования'],
-  ['docs/design/modelgraph-nurbs-own-kernel.md', 'ModelGraph NURBS — синтаксис, операции и допустимые параметры'],
+  ['docs/design/rush-nurbs-own-kernel.md', 'RushGraph NURBS — синтаксис, операции и допустимые параметры'],
   ['docs/design/brep-semantic-diagnostic.md', 'B-rep — изолированный семантический запуск и ограничения'],
   ['docs/design/nurbs-intersection-queries.md', 'NURBS — численные запросы пересечений и границы свидетельств'],
   ['docs/architecture/brep-2026-09-12/README.md', 'B-rep — актуализация знаний 2026-09-12'],

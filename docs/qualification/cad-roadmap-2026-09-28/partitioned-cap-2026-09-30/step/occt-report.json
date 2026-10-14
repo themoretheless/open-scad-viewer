@@ -1,0 +1,57 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Boolean \u2192 Push/Pull 2 mm \u2192 fillet R1",
+      "stepSha256": "5682f41607e377c877d2bedc8fda8000f20f18810b884550fe8f0369198f927e",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1.0000000001102229e-07,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          10.0000001,
+          12.000000100000001
+        ]
+      ],
+      "volumeMm3": 2389.6991117985795,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 4.449793777894229e-08,
+      "passed": true,
+      "previewTriangles": 316
+    },
+    {
+      "name": "Boolean \u2192 Push/Pull -2 mm \u2192 fillet R1",
+      "stepSha256": "a29e82673dcb4e97e044cc1cad2e3a41be20dff57e7215649aa7f7feeda4a1bf",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1.0000000001102229e-07,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          10.0000001,
+          8.0000001
+        ]
+      ],
+      "volumeMm3": 1593.132741199053,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 2.9665216061403044e-08,
+      "passed": true,
+      "previewTriangles": 316
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T23:53:01.370Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "3442e7bf38d40144ae273e0c8a42f108dcb051b2c31e2edde017a19ecf49d3b4",
+  "artifactProvenance": {
+    "sha256": "3442e7bf38d40144ae273e0c8a42f108dcb051b2c31e2edde017a19ecf49d3b4",
+    "byteLength": 10971862,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-CjIS2IpX.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "d9b070ab786765afaf7a63e2b07f8a72518331bc3864a3c56a16100ef027b177",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-hollow-boundary.r",
+      "sourceSha256": "3b1dafa530d07e8f4cac0c58620001f578e406378f0c3366e68e949b7de4d092",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "64cd55597bb200c28166f109491a4627ca361c1ff13cd35efcbd6e791e8c2bf0",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-unsegmented-hollow-boundary.r",
+      "sourceSha256": "6e95c9c49001252ac9d8485de470555e5cbf57c37cc52653505409ac649024e7",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 20,
+        "shells": 1,
+        "geometrySha256": "7ddc2f0ba35455cdc0f047de3f8e9fcd9afa066b8f836654f47c918049848607",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Node rf5c60c1f8e5f9ad2_2: Node rf5c60c1f8e5f9ad2_1: Node r8e34191e8fe92695_1: Polyline has a zero-length segment",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "planar-rmf-body-boundary.r",
+      "sourceSha256": "68e26ffa3bd632b080ce746b6169f9d3cea6379f500175bc1a1d0b47c6e8d634",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "error": "Body boundary upper estimate must be visible",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n6\n7\n8\n▾\n9\n10\n11\n12\n13\n14\n// @rush/1\n// Original open planar RMF; native body boundary and Solid are separate audits.\na = line_curve(start: [0,-0.1mm,-0.1mm],end: [0,0.1mm,-0.1mm])\nb = line_curve(start: [0,0.1mm,-0.1mm],end: [0,0.1mm,0.1mm])\nc = line_curve(start: [0,0.1mm,0.1mm],end: [0,-0.1mm,0.1mm])\nd = line_curve(start: [0,-0.1mm,0.1mm],end: [0,-0.1mm,-0.1mm])\npath = bezier_curve(points: [[0,0,0],[0.5mm,0,0],[1mm,1mm,0]])\nshow brep_progressive_sweep([[a,b,c,d]],path,\n orientation: \"rmf\",normal: [0,0,1],\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 3,max_sections: 129,max_deviation: 0.01mm\n).brep_tessellate(4)\n\n\nОбъекты 1\nТреугольники 1 296\nОбъём 0,06\nПлощадь 1,26\nГотово · 122 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 0,001755 mm\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n1 296 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nWebGPU · интерактивный\nManifold\nФайл открыт\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n0 FPS · 0 ms · draw 0 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "942dfbfdada583b9c675af5f8faeee9885a6655c369c41b79a1a0bed54bee836",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "f54f92c4348a79b790be5b06fa5d37868c54f619e7281263c2f48f21e10dda58"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true
+}

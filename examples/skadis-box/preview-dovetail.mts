@@ -1,13 +1,13 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {executeIndependentOpenScad} from '../../src/mcp/independentOpenScadExecution.ts';
 import {parseOpenSCAD} from '../../src/services/openscadParser.ts';
-import {buildSTLBuffer} from '../../src/services/stlExport.ts';
+import {buildBinaryStl} from '../../src/services/meshExport.ts';
 import {isGeometryEvaluationResultPayload} from '../../src/services/geometryWorkerProtocol.ts';
 const dir=new URL('./',import.meta.url);
 const {result}=await executeIndependentOpenScad({source:readFileSync(new URL('skadis-dovetail.scad',dir),'utf8'),files:[],quality:'full',time:0});
 let source='// SKADIS hook assembly preview. Editable: skadis-dovetail.scad\n';
 for(const [i,m] of result.meshes.entries()) {
- const buf=Buffer.from(buildSTLBuffer([m])); const points:number[][]=[]; const faces:number[][]=[]; const ids=new Map<string,number>();
+ const buf=Buffer.from(buildBinaryStl([m])); const points:number[][]=[]; const faces:number[][]=[]; const ids=new Map<string,number>();
  for(let t=0;t<buf.readUInt32LE(80);t++) {
   const face:number[]=[];
   for(let v=0;v<3;v++) {

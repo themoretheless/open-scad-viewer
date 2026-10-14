@@ -28,3 +28,6 @@ optional = true
 name = "curvex-metal-renderer"
 path = "src/main.rs"
 required-features = ["qualification"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"

@@ -9,10 +9,10 @@ import {
   MeshImportError,
   stripMeshExtension,
 } from '../src/services/meshImport'
-import { buildOwnNurbs } from '../src/services/modelGraphNurbsKernel'
-import { MODELGRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/modelGraphNurbs'
+import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel'
+import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs'
 
-const built = buildOwnNurbs(MODELGRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' })
+const built = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' })
 if (!('mesh' in built) || !built.mesh) throw new Error('Missing mesh')
 const closedMesh = built.mesh
 const encoder = new TextEncoder()

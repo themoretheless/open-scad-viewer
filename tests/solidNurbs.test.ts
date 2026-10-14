@@ -2,7 +2,7 @@ import {constructSolidSurface,buildSolidSurface} from '../src/services/solidSurf
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
-import { importModelGraphNurbs } from '../src/services/solidNurbsImport'
+import { importRushGraphNurbs } from '../src/services/solidNurbsImport'
 import {
   createSolidNurbsCurve,
   createSolidNurbsSurface,
@@ -47,9 +47,9 @@ describe('Solid native NURBS bridge', () => {
     expect(document.bodies).toHaveLength(0)
   })
 
-  it('imports reachable native definitions from ModelGraph/NURBS', () => {
-    const imported = importModelGraphNurbs({
-      language: 'modelgraph/nurbs-1',
+  it('imports reachable native definitions from RushGraph/NURBS', () => {
+    const imported = importRushGraphNurbs({
+      language: 'rush/nurbs-1',
       units: 'mm',
       parameters: [],
       nodes: [{
@@ -199,8 +199,9 @@ it('accepts exact curve reduction and retains the original on a refused toleranc
 import {reduceSolidSurface} from '../src/services/solidCurveReduction'
 it.each(['u','v'] as const)('reduces a planar surface in %s with preserved identity and an accepted bound',axis=>{
  const d=emptyDirectDocument(),s=createSolidNurbsSurface('plane');s.surface.controlPoints=Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0]));s.surface.weights=Array.from({length:3},()=>[1,1,1]);d.surfaces!.push(s)
- const before=structuredClone(d),result=reduceSolidSurface(d,'plane',axis,1,0)
- expect(result.certificate.accepted).toBe(true);expect(result.certificate.hausdorffErrorUpper).toBe(0)
+ const before=structuredClone(d),result=reduceSolidSurface(d,'plane',axis,1,1e-12)
+ expect(result.certificate.accepted).toBe(true);expect(result.certificate.hausdorffErrorUpper).toBeGreaterThanOrEqual(0);expect(result.certificate.hausdorffErrorUpper).toBeLessThan(1e-12)
+ const zero=reduceSolidSurface(d,'plane',axis,1,0);expect(zero.certificate.accepted).toBe(false);expect(zero.certificate.rolledBack).toBe(true);expect(zero.document).toEqual(d)
  const out=result.document.surfaces![0];expect(out.id).toBe('plane')
  expect(axis==='u'?out.surface.degreeU:out.surface.degreeV).toBe(1);expect(d).toEqual(before)
  for(const degree of [0,2,3])expect(()=>reduceSolidSurface(d,'plane',axis,degree,0)).toThrow('Target degree')

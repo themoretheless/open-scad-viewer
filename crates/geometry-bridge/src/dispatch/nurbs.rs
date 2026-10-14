@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "brep_nurbs_constant_fillet_family",
     "brep_nurbs_sketch_extrude",
     "brep_nurbs_section_loft_source_audit",
     "brep_nurbs_affine_lattice",
@@ -84,6 +85,11 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_nurbs_constant_fillet_family" => encode(
+            brep_core::feature_family::constant_fillet_family(
+                &field(&v, "model")?, &field::<Vec<usize>>(&v, "edges")?,
+            )?.name(),
+        ),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {

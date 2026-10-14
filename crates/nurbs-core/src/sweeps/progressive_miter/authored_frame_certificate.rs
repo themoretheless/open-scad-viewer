@@ -1,10 +1,33 @@
 //! Continuous authored-frame jets from original rational vector laws.
 //! Derivatives use normalized traversal; this alone is not a sweep certificate.
 use super::{scalar_certificate::Status, vector_certificate};
-use crate::sweep_support::interval_vec3::{add, cross, div, dot_tight as dot, scale as mul, sub};
+use crate::numerics::interval_vec3::{add, cross, div, dot_tight as dot, scale as mul, sub};
 use crate::{Result, check, curve::Curve, distance_bounds::Interval as I};
 type V = [I; 3];
+mod fixed_path_values;
+mod fixed_normal_path;
+mod planar_principal_phase;
+pub(crate) use planar_principal_phase::{certify_initial_planar_principal_phase,certify_planar_principal_values,certify_planar_principal_control_values,certify_planar_principal_control_trajectories,certify_planar_principal_relative_values};
+mod frenet_path_values;
+pub use frenet_path_values::{certify_frenet_cover,certify_frenet_path_values,certify_frenet_control_values,certify_frenet_planar_control_trajectories,certify_frenet_path,certify_frenet_control_trajectories};
+pub use fixed_normal_path::{certify_fixed_normal_path,certify_fixed_normal_path_values,certify_fixed_normal_control_values,certify_fixed_normal_control_trajectories,certify_fixed_normal_cover};
+pub use fixed_path_values::{certify_fixed_path_values,certify_fixed_path_control_values,certify_fixed_path,certify_fixed_path_control_trajectories};
+pub(crate) use fixed_path_values::{certify_fixed_relative_value,certify_fixed_relative_trajectory};
+pub(crate) use fixed_path_values::{certify_fixed_path_control_values_with_frame_path,certify_fixed_path_control_trajectories_with_frame_path};
+pub(crate) use trajectory::{translated_constant_values,translated_constant_jets};
+pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
+mod guided_path_values;
+mod paired_path_values;
+mod guide_width;
+pub use guide_width::{GuideWidthReport, certify_guide_width};
+mod contact_fit;
+pub use contact_fit::{certify_contact_fit, certify_contact_control_trajectories, certify_contact_control_trajectory};
+mod contact_fit_value;
+pub use contact_fit_value::{ContactFitValueReport, certify_contact_fit_value, certify_contact_control_values, certify_contact_control_value};
+pub use guided_path_values::{certify_path_guide_values,certify_path_guide_control_values,certify_path_guide_control_value,certify_path_guide,certify_path_guide_control_trajectories,certify_path_guide_control_trajectory};
+mod trajectory;
+pub use trajectory::{TrajectoriesReport,ControlValuesReport,ControlValueReport, TrajectoryReport, certify_control_trajectory, certify_control_value, certify_control_trajectories, certify_control_values};
 pub use guided_axis::{certify_authored_guide, certify_authored_guide_values};
 #[derive(Clone, Debug)]
 pub struct ValuesReport {
@@ -272,6 +295,12 @@ pub fn certify_guide_values(
     path: [[f64; 2]; 3],
     max_cells: usize,
 ) -> Result<ValuesReport> {
+    certify_guide_values_at(guide,twist,traversal,traversal,tangent,path,max_cells)
+}
+fn certify_guide_values_at(
+    guide:&Curve,twist:&Curve,traversal:[f64;2],law_traversal:[f64;2],
+    tangent:[[f64;2];3],path:[[f64;2];3],max_cells:usize,
+)->Result<ValuesReport>{
     super::validate_law(twist, false)?;
     let rail = vector_certificate::certify_values_traversal(guide, traversal, max_cells, false)?;
     let mut out = ValuesReport {
@@ -284,13 +313,24 @@ pub fn certify_guide_values(
     let Some(rail) = rail.value else {
         return Ok(out);
     };
+    let offset=sub(decode(rail)?,decode(path)?)?;
+    let mut frame=certify_guide_values_from_offset(twist,law_traversal,tangent,offset,max_cells-out.cells)?;
+    frame.cells+=out.cells;
+    Ok(frame)
+}
+fn certify_guide_values_from_offset(
+    twist:&Curve,law_traversal:[f64;2],tangent:[[f64;2];3],offset:V,max_cells:usize,
+)->Result<ValuesReport>{
+    super::validate_law(twist,false)?;
+    let mut out=ValuesReport {status:Status::Unresolved,cells:0,
+        longitudinal:None,transverse:None,binormal:None};
     let charge = (twist.degree..twist.control_points.len())
         .filter(|&i| twist.knots[i] < twist.knots[i + 1])
         .count();
     if charge > max_cells - out.cells {
         return Ok(out);
     }
-    let theta = super::scalar_certificate::value_traversal(twist, traversal, charge)?;
+    let theta = super::scalar_certificate::value_traversal(twist, law_traversal, charge)?;
     out.cells += charge;
     let Some(theta) = theta else {
         return Ok(out);
@@ -303,8 +343,9 @@ pub fn certify_guide_values(
     let Some(t) = normalize(constant(decode(tangent)?))? else {
         return Ok(out);
     };
-    let offset = sub(decode(rail)?, decode(path)?)?;
-    let Some(b) = normalize(constant(cross(t.v, offset)?))? else {
+    // Positive speed cancels in binormal normalization. Use original
+    // velocity directly instead of repeating the interval tangent quotient.
+    let Some(b) = normalize(constant(cross(decode(tangent)?, offset)?))? else {
         return Ok(out);
     };
     let n = cross(b.v, t.v)?;
@@ -424,217 +465,130 @@ pub fn certify(
     out.reason = None;
     Ok(out)
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn law(points: Vec<Vec<f64>>, domain: [f64; 2]) -> Curve {
-        Curve {
-            degree: 1,
-            knots: vec![domain[0], domain[0], domain[1], domain[1]],
-            weights: vec![1.; points.len()],
-            control_points: points,
-            periodic: false,
-        }
-    }
-    #[test]
-    fn rotating_frame_has_normalized_traversal_jets_and_shared_budget() {
-        let a = law(vec![vec![1., 0., 0.], vec![1., 1., 0.]], [2., 5.]);
-        let b = law(vec![vec![0., 0., 2.], vec![0., 0., 2.]], [7., 9.]);
-        let before = (a.clone(), b.clone());
-        let r = certify(&a, &b, [0., 1.], 6).unwrap();
-        assert_eq!(r.status, Status::Certified);
-        assert_eq!(r.cells, 6);
-        for i in 0..=20 {
-            let f = i as f64 / 20.;
-            let h = (1. + f * f).sqrt();
-            let v = [1. / h, f / h, 0.];
-            let d = [-f / h.powi(3), 1. / h.powi(3), 0.];
-            let dd = [(2. * f * f - 1.) / h.powi(5), -3. * f / h.powi(5), 0.];
-            let t = r.longitudinal.as_ref().unwrap();
-            for k in 0..3 {
-                for (range, x) in [(t.value[k], v[k]), (t.first[k], d[k]), (t.second[k], dd[k])] {
-                    assert!(range[0] <= x && x <= range[1], "{range:?} misses {x}");
-                }
-            }
-        }
-        for budget in [0, 3, 5] {
-            let r = certify(&a, &b, [0., 1.], budget).unwrap();
-            assert_eq!(r.status, Status::Unresolved);
-            assert!(r.cells <= budget);
-            assert!(r.longitudinal.is_none() && r.transverse.is_none() && r.binormal.is_none());
-        }
-        assert_eq!(a.control_points, before.0.control_points);
-        assert_eq!(b.knots, before.1.knots);
-    }
-    #[test]
-    fn rational_frame_encloses_all_axes_and_chain_rule_derivatives() {
-        let mut a = law(vec![vec![1., 0., 0.], vec![1., 1., 0.]], [2., 5.]);
-        a.weights = vec![1., 0.5];
-        let b = law(vec![vec![0., 0., 2.], vec![0., 0., 2.]], [7., 9.]);
-        let r = certify(&a, &b, [0., 1.], 6).unwrap();
-        assert_eq!(r.status, Status::Certified);
-        for i in 0..=20 {
-            let f = i as f64 / 20.;
-            let denominator = 1. - 0.5 * f;
-            let g = 0.5 * f / denominator;
-            let gd = 0.5 / denominator.powi(2);
-            let gdd = 0.5 / denominator.powi(3);
-            let h = (1. + g * g).sqrt();
-            let v = [1. / h, g / h, 0.];
-            let d = [-g / h.powi(3) * gd, gd / h.powi(3), 0.];
-            let dd = [
-                (2. * g * g - 1.) / h.powi(5) * gd * gd - g / h.powi(3) * gdd,
-                -3. * g / h.powi(5) * gd * gd + gdd / h.powi(3),
-                0.,
-            ];
-            for (axis, values, first, second) in [
-                (r.longitudinal.as_ref().unwrap(), v, d, dd),
-                (
-                    r.transverse.as_ref().unwrap(),
-                    [0., 0., 1.],
-                    [0.; 3],
-                    [0.; 3],
-                ),
-                (
-                    r.binormal.as_ref().unwrap(),
-                    [v[1], -v[0], 0.],
-                    [d[1], -d[0], 0.],
-                    [dd[1], -dd[0], 0.],
-                ),
-            ] {
-                for k in 0..3 {
-                    for (range, x) in [
-                        (axis.value[k], values[k]),
-                        (axis.first[k], first[k]),
-                        (axis.second[k], second[k]),
-                    ] {
-                        assert!(range[0] <= x && x <= range[1], "{range:?} misses {x}");
-                    }
-                }
-            }
-        }
-    }
-    #[test]
-    fn twist_uses_independent_domain_and_shared_frame_budget() {
-        let a = law(vec![vec![0., 0., 1.], vec![0., 0., 1.]], [2., 5.]);
-        let b = law(vec![vec![1., 0., 0.], vec![1., 0., 0.]], [7., 9.]);
-        let mut twist = law(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [11., 15.]);
-        twist.weights = vec![1., 0.5];
-        let r = certify_twisted(&a, &b, &twist, [0., 1.], 7).unwrap();
-        assert_eq!(r.status, Status::Certified);
-        assert_eq!(r.cells, 7);
-        for i in 0..=20 {
-            let f = i as f64 / 20.;
-            let denominator = 1. - 0.5 * f;
-            let theta = 0.5 * f / denominator;
-            let td = 0.5 / denominator.powi(2);
-            let tdd = 0.5 / denominator.powi(3);
-            let (s, c) = theta.sin_cos();
-            let values = certify_twisted_values(&a, &b, &twist, [f, f], 7).unwrap();
-            assert_eq!(values.status, Status::Certified);
-            assert_eq!(values.cells, 7);
-            for (range, x) in values.transverse.unwrap().into_iter().zip([c, s, 0.]) {
-                assert!(range[0] <= x && x <= range[1]);
-            }
-            let v = [c, s, 0.];
-            let d = [-s * td, c * td, 0.];
-            let dd = [-c * td * td - s * tdd, -s * td * td + c * tdd, 0.];
-            for (axis, values, first, second) in [
-                (r.transverse.as_ref().unwrap(), v, d, dd),
-                (
-                    r.binormal.as_ref().unwrap(),
-                    [-v[1], v[0], 0.],
-                    [-d[1], d[0], 0.],
-                    [-dd[1], dd[0], 0.],
-                ),
-                (
-                    r.longitudinal.as_ref().unwrap(),
-                    [0., 0., 1.],
-                    [0.; 3],
-                    [0.; 3],
-                ),
-            ] {
-                for k in 0..3 {
-                    for (range, x) in [
-                        (axis.value[k], values[k]),
-                        (axis.first[k], first[k]),
-                        (axis.second[k], second[k]),
-                    ] {
-                        assert!(range[0] <= x && x <= range[1], "{range:?} misses {x}");
-                    }
-                }
-            }
-        }
-        let refused = certify_twisted(&a, &b, &twist, [0., 1.], 6).unwrap();
-        assert_eq!(refused.status, Status::Unresolved);
-        assert_eq!(refused.cells, 6);
-        assert!(
-            refused.longitudinal.is_none()
-                && refused.transverse.is_none()
-                && refused.binormal.is_none()
-        );
-        assert_eq!(refused.reason, Some("twist-law-enclosure-unresolved"));
-        let values = certify_twisted_values(&a, &b, &twist, [0., 0.], 6).unwrap();
-        assert_eq!(values.status, Status::Unresolved);
-        assert_eq!(values.cells, 6);
-        assert!(values.transverse.is_none() && values.binormal.is_none());
-    }
-    #[test]
-    fn guide_projection_jets_follow_the_original_rail_and_shared_budget() {
-        let guide = law(vec![vec![1., 0., 0.], vec![1., 1., 10.]], [7., 9.]);
-        let twist = law(vec![vec![0., 0., 0.]; 2], [2., 5.]);
-        let tangent = [[0., 0.], [0., 0.], [1., 1.]];
-        let path = [[0., 0.], [0., 0.], [0., 10.]];
-        let velocity = [[0., 0.], [0., 0.], [10., 10.]];
-        let r = certify_guide(&guide, &twist, [0., 1.], tangent, path, velocity, 4).unwrap();
-        assert_eq!(r.status, Status::Certified);
-        assert_eq!(r.cells, 4);
-        let n = r.transverse.as_ref().unwrap();
-        for i in 0..=20 {
-            let f = i as f64 / 20.;
-            let h = (1. + f * f).sqrt();
-            let position = [[0., 0.], [0., 0.], [10. * f, 10. * f]];
-            let values =
-                certify_guide_values(&guide, &twist, [f, f], tangent, position, 4).unwrap();
-            assert_eq!(values.status, Status::Certified);
-            assert_eq!(values.cells, 4);
-            for (range, x) in values
-                .transverse
-                .unwrap()
-                .into_iter()
-                .zip([1. / h, f / h, 0.])
-            {
-                assert!(range[0] <= x && x <= range[1]);
-            }
 
-            let v = [1. / h, f / h, 0.];
-            let d = [-f / h.powi(3), 1. / h.powi(3), 0.];
-            let dd = [(2. * f * f - 1.) / h.powi(5), -3. * f / h.powi(5), 0.];
-            for k in 0..3 {
-                for (range, x) in [(n.value[k], v[k]), (n.first[k], d[k]), (n.second[k], dd[k])] {
-                    assert!(range[0] <= x && x <= range[1]);
-                }
-            }
+/// Whole-traversal frame regularity, with one shared budget across adaptive
+/// restrictions of the original laws. This proves nonzero longitudinal and
+/// nonparallel transverse directions, not sweep error or global embedding.
+#[derive(Clone, Debug)]
+pub struct RegularityReport {
+    pub status: Status,
+    pub cells: usize,
+    pub certified_intervals: usize,
+    pub reason: Option<&'static str>,
+    /// Complete ordered traversal cover only; partial work is never published
+    /// as a family of usable frame jets.
+    pub intervals: Option<Vec<RegularFrameInterval>>,
+}
+#[derive(Clone, Debug)]
+pub struct RegularFrameInterval {
+    pub traversal: [f64; 2],
+    pub longitudinal: FrameJet,
+    pub transverse: FrameJet,
+    pub binormal: FrameJet,
+}
+pub fn certify_regularity(
+    longitudinal: &Curve,
+    transverse: &Curve,
+    max_cells: usize,
+) -> Result<RegularityReport> {
+    check(max_cells <= 100000, "Authored frame budget exceeds100000 cells")?;
+    longitudinal.validate()?;
+    transverse.validate()?;
+    certify_frame_cover(max_cells, |interval, remaining| {
+        certify(longitudinal, transverse, interval, remaining)
+    })
+}
+/// Complete twisted authored-frame jet cover. Twist and both direction laws
+/// charge the same adaptive budget; all derivatives use normalized traversal.
+pub fn certify_twisted_cover(
+    longitudinal: &Curve,
+    transverse: &Curve,
+    twist: &Curve,
+    max_cells: usize,
+) -> Result<RegularityReport> {
+    check(max_cells <= 100000, "Authored frame budget exceeds100000 cells")?;
+    longitudinal.validate()?;
+    transverse.validate()?;
+    super::validate_law(twist, false)?;
+    certify_frame_cover(max_cells, |interval, remaining| {
+        certify_twisted(longitudinal, transverse, twist, interval, remaining)
+    })
+}
+/// Whole-traversal fixed frame and independent twist regularity.
+pub fn certify_fixed_cover(path:&Curve,normal:[f64;3],twist:&Curve,max_cells:usize)->Result<RegularityReport>{
+    check(max_cells<=100000,"Fixed frame cover work exceeds100000 cells")?;
+    path.validate()?;super::validate_law(twist,false)?;
+    check(normal.iter().all(|x|x.is_finite())&&path.control_points.iter().all(|p|p.len()==3),"Fixed cover requires finite XYZ source and normal")?;
+    certify_frame_cover(max_cells,|interval,remaining|certify_fixed_path(path,normal,twist,interval,remaining))
+}
+/// Original same-traversal guided frame cover. Independent arc inversions
+/// are not supplied by this cover.
+pub fn certify_guided_cover(path:&Curve,guide:&Curve,twist:&Curve,max_cells:usize)->Result<RegularityReport>{
+    check(max_cells<=100000,"Guided frame cover work exceeds100000 cells")?;
+    path.validate()?;guide.validate()?;super::validate_law(twist,false)?;
+    check([path,guide].iter().all(|c|c.control_points.iter().all(|p|p.len()==3)),"Guided cover requires XYZ source curves")?;
+    certify_frame_cover(max_cells,|interval,remaining|certify_path_guide(path,guide,twist,interval,remaining))
+}
+fn certify_frame_cover(
+    max_cells: usize,
+    mut certify_interval: impl FnMut([f64; 2], usize) -> Result<Report>,
+) -> Result<RegularityReport> {
+    let mut out = RegularityReport {
+        status: Status::Unresolved,
+        cells: 0,
+        certified_intervals: 0,
+        reason: Some("frame-regularity-work-limit"),
+        intervals: None,
+    };
+    let mut pending = vec![[0., 1.]];
+    let mut intervals = Vec::new();
+    while let Some(interval) = pending.pop() {
+        if out.cells == max_cells {
+            return Ok(out);
         }
-        let r = certify_guide(&guide, &twist, [0., 1.], tangent, path, velocity, 3).unwrap();
-        assert_eq!(r.status, Status::Unresolved);
-        assert_eq!(r.cells, 3);
-        assert!(r.transverse.is_none());
-        let crossing = law(vec![vec![1., 0., 0.], vec![-1., 0., 10.]], [7., 9.]);
-        let r = certify_guide(&crossing, &twist, [0., 1.], tangent, path, velocity, 4).unwrap();
-        assert_eq!(r.reason, Some("guide-transverse-direction-unproved"));
-        assert!(r.longitudinal.is_none());
+        let report = certify_interval(interval, max_cells - out.cells)?;
+        out.cells += report.cells;
+        if report.status == Status::Certified {
+            out.certified_intervals += 1;
+            intervals.push(RegularFrameInterval {
+                traversal: interval,
+                longitudinal: report.longitudinal.unwrap(),
+                transverse: report.transverse.unwrap(),
+                binormal: report.binormal.unwrap(),
+            });
+            continue;
+        }
+        if report.cells == 0 || out.cells == max_cells {
+            return Ok(out);
+        }
+        let middle = interval[0] + (interval[1] - interval[0]) * 0.5;
+        if middle == interval[0] || middle == interval[1] {
+            out.reason = Some("frame-regularity-subdivision-unresolved");
+            return Ok(out);
+        }
+        pending.push([middle, interval[1]]);
+        pending.push([interval[0], middle]);
     }
-    #[test]
-    fn singular_and_parallel_directions_refuse_without_partial_frame() {
-        let a = law(vec![vec![1., 0., 0.], vec![-1., 0., 0.]], [0., 1.]);
-        let b = law(vec![vec![0., 1., 0.], vec![0., 1., 0.]], [0., 1.]);
-        let r = certify(&a, &b, [0., 1.], 6).unwrap();
-        assert_eq!(r.reason, Some("longitudinal-nonzero-unproved"));
-        assert!(r.longitudinal.is_none());
-        let a = law(vec![vec![1., 0., 0.], vec![1., 0., 0.]], [0., 1.]);
-        let r = certify(&a, &a, [0., 1.], 6).unwrap();
-        assert_eq!(r.reason, Some("transverse-nonparallel-unproved"));
-        assert_eq!(r.status, Status::Unresolved);
-    }
+    out.status = Status::Certified;
+    out.reason = None;
+    out.intervals = Some(intervals);
+    Ok(out)
+}
+#[cfg(test)]
+#[path = "tests/authored_frame_certificate.rs"]
+mod tests;
+
+pub(crate) use frenet_path_values::certify_frenet_relative_values;
+
+pub(crate) use guided_path_values::{certify_path_guide_relative_values,certify_contact_relative_values};
+
+pub(crate) use guided_path_values::certify_independent_guided_cover;
+
+/// Internal fresh-source frame owner supplies its already charged frame.
+pub(crate) fn relative_control_values_from_frame(
+ scale:&Curve, affine:Option<(&Curve,&Curve)>, qs:&[[[f64;2];3]],
+ station:[f64;2], max_cells:usize, frame:ValuesReport,
+)->Result<ControlValuesReport>{
+ let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
+ trajectory::control_values_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
 }

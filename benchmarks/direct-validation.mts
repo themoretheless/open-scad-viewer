@@ -7,7 +7,7 @@ import { parseDirectDocument, type DirectDocument } from '../src/services/direct
 import { runExactSolidRequest } from '../src/services/solid/exactSolidRuntime'
 
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
-const source = readFileSync('examples/modelgraph-text/planetary-spinner.mg', 'utf8')
+const source = readFileSync('examples/rush-frontend/planetary-spinner.r', 'utf8')
 const built = await runExactSolidRequest({ kind: 'exact-solid', version: 1, source })
 assert(built.ok, built.ok ? '' : built.error.message)
 const input = JSON.parse(built.document) as DirectDocument

@@ -8,7 +8,7 @@
     {"id":"NF2-SURFACE-GLOBAL-PROJECTION","status":"Complete","evidence":["crates/nurbs-core/src/foundation.rs","tests/nurbsFoundation.test.ts"]},
     {"id":"NF2-NONPLANAR-NORMAL-CONE","status":"Complete","evidence":["crates/nurbs-core/src/tests.rs","tests/nurbsFoundation.test.ts"]},
     {"id":"NF2-CERTIFIED-SIMPLIFICATION","status":"Complete","evidence":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/tests.rs"]},
-    {"id":"NF2-WASM-TS-PRODUCT","status":"Complete","evidence":["src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"]},
+    {"id":"NF2-WASM-TS-PRODUCT","status":"Complete","evidence":["src/services/nurbsFoundation.ts","src/services/rushGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"]},
     {"id":"NF2-PERIODIC-SIMPLIFICATION","status":"ResearchOnly","evidence":[]}
   ],
   "blockingOpenRows": [],

@@ -140,11 +140,12 @@ fn plan(v: &Value) -> Result<(Vec<ToolpathLayer>, ToolpathSettings, Mesh)> {
             "Slicing supports at most 100000 triangles",
         ));
     }
-    let index = polygon_core::solid::section::MeshSectionIndex::new(&mesh)?;
+    let index =
+        mesh_section::MeshSectionIndex::new(&mesh.view()).map_err(crate::legacy_mesh_error)?;
     let mut visits = 0usize;
     let layers = slicer_core::schedule_layers(
         |z| {
-            let section = index.section(z)?;
+            let section = index.section(z).map_err(crate::legacy_mesh_error)?;
             visits += section.candidate_triangles;
             if visits > MAX_SLICE_TRIANGLE_VISITS {
                 return Err(Error::new(

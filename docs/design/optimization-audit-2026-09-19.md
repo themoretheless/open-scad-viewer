@@ -140,7 +140,7 @@ CUDA-`launch` (11 в `math-core/src/cuda.rs`, по одному в `sdf-core`,
 | `src/services/threemfExport.ts`, `zipExport.ts`, `objExport.ts` | 517 | вытеснены Rust-экспортом (`meshExport.ts`, `meshExportFormats.ts`); удалены после повторной проверки импортов. `stlExport.ts` сохранён: его напрямую импортируют семь `examples/skadis-box/*.mts` |
 | `src/config/index.ts` | 151 | «Static configuration tables extracted from App.vue» |
 | `src/renderer/shaders.ts` | 139 | WGSL инлайнится в `webgpuRenderer.ts:91-265`; модуль сам предупреждает о тройном копипасте структуры |
-| `src/services/brepDiagnosticWorkerLane.ts`, `modelGraphTextNurbs.ts` | 29 | |
+| `src/services/brepDiagnosticWorkerLane.ts`, `rushFrontendNurbs.ts` | 29 | |
 
 Удаление подтверждено повторной проверкой статических и динамических импортов
 в `src`, `tests`, `scripts`, `benchmarks` и `tools`; динамических `import()` по
@@ -171,7 +171,7 @@ CUDA-`launch` (11 в `math-core/src/cuda.rs`, по одному в `sdf-core`,
 ### 3.3 God-модули и смешанные обязанности
 
 `openscadParser.ts` одновременно mesh-эвалуатор, точка входа stable-профиля
-(`parseOpenScadProject`), диспетчер ModelGraph-текста и глобальная очередь
+(`parseOpenScadProject`), диспетчер RushGraph-текста и глобальная очередь
 сериализации всей геометрии (`parseQueue`). `webgpuRenderer.ts` (2 759
 строк, 133 строки полей класса) держит 12 pipeline'ов, picking, input,
 overlays и анимацию, хотя вспомогательные модули (`cameraGestures`,

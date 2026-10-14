@@ -79,6 +79,7 @@ mod transport;
 pub use transport::{dispatch, execute};
 
 #[cfg(all(test, feature = "transport"))]
+#[path="tests.rs"]
 mod tests;
 
 pub mod chord_fill_selection;
@@ -194,3 +195,223 @@ pub mod surface_projected_jordan;
 pub mod surface_self_chord;
 
 pub mod surface_self_chord_coverage;
+
+pub mod domains;
+
+pub mod numerics;
+
+pub mod core;
+
+pub mod distance;
+
+pub mod construct;
+
+pub mod analysis;
+
+pub mod editing;
+
+pub mod join;
+
+pub mod trim;
+
+pub mod tessellation;
+
+pub mod certificates;
+
+pub mod offset;
+
+pub mod retained_wall_domain_certificate;
+
+pub use numerics::bezier_extraction;
+
+pub use numerics::compensated;
+
+pub use numerics::conditioning;
+
+pub use numerics::convex_distance;
+
+pub use numerics::dual;
+
+pub use numerics::interval_newton;
+
+pub use numerics::normal_cone;
+
+pub use numerics::obb_tree;
+
+pub use numerics::robust_solvers;
+
+pub use numerics::simd_kernels;
+
+pub use numerics::sparse_linalg;
+
+pub use numerics::sturm;
+
+pub use numerics::error_upper;
+
+pub use core::bounds;
+
+pub use core::canonical;
+
+pub use core::coordinate_frame;
+
+pub use crate::tessellation::shared_tessellation;
+
+#[path="intersection/self_curve.rs"] pub mod curve_self_intersection;
+
+#[path="intersection/self_surface.rs"] pub mod surface_self_intersection;
+
+pub use crate::analysis::curve_pullback;
+
+pub use crate::construct::surfaces::function_surface;
+
+pub use crate::join::periodic_seam;
+
+pub use crate::join::curve_join;
+
+pub use crate::construct::surfaces::sections::sections;
+
+pub use crate::construct::surfaces::sections::circle_sweep_repair;
+
+pub use crate::construct::surfaces::sections::miter_section_correction;
+
+pub use crate::construct::surfaces::sections::sweep_section_projection;
+
+pub use crate::construct::surfaces::sections::phase as section_phase;
+
+pub use crate::editing::weight_edit;
+
+pub use crate::construct::curves::engineering_profiles;
+
+pub use crate::construct::surfaces::boundary_fill;
+
+pub use crate::analysis::curve_differential;
+
+pub use crate::analysis::surface_differential;
+
+pub use crate::analysis::curve_extrema;
+
+pub use crate::analysis::curve_analysis;
+
+pub use crate::editing::direct_edit;
+
+pub use crate::editing::morph;
+
+pub use crate::editing::fairing;
+
+pub use crate::analysis::geodesic;
+
+pub use crate::analysis::unrolling;
+
+pub use crate::construct::curves::biarc;
+
+pub use crate::construct::curves::curve_extension;
+
+pub use crate::analysis::curve_deviation;
+
+pub use crate::analysis::curve_plane;
+
+pub use crate::tessellation::curve_tessellation;
+
+pub use crate::tessellation::surface_tessellation;
+
+pub use crate::distance::curve_surface_distance;
+
+pub use crate::construct::curves::formula;
+
+pub use crate::sweeps::profile_sweep;
+
+pub use crate::construct::curves::helix;
+
+pub use crate::construct::curves::involute;
+
+pub use crate::construct::curves::logarithmic_spiral;
+
+pub use crate::construct::curves::lissajous;
+
+pub use crate::construct::curves::trochoid;
+
+pub use crate::construct::curves::circular_rolling;
+
+pub use crate::construct::curves::archimedean_spiral;
+
+pub use crate::construct::curves::catenary;
+
+pub use crate::construct::surfaces::catenoid;
+
+pub use crate::construct::surfaces::helicoid;
+
+pub use crate::construct::curves::toroidal_spiral;
+
+pub use crate::construct::curves::spherical_spiral;
+
+pub use crate::construct::curves::clothoid;
+
+pub use crate::construct::surfaces::screw_surface;
+
+pub use crate::sweeps::pipe;
+
+pub use crate::sweeps::ribbon;
+
+pub use crate::construct::surfaces::transitions::circle as circle_transition;
+
+pub use crate::construct::surfaces::transitions::ellipse as ellipse_transition;
+
+pub use crate::construct::surfaces::transitions::circle_rectangle as circle_rectangle_transition;
+
+pub use crate::construct::surfaces::extrusion_patches;
+
+pub use crate::construct::surfaces::hermite_patch;
+
+pub use crate::construct::surfaces::patches;
+
+pub use crate::sweeps::scaled_sweep;
+
+pub use crate::construct::surfaces::triangular_patch;
+
+pub use crate::sweeps::twist_sweep;
+
+pub use crate::sweeps::two_guide_sweep;
+
+pub use distance_bounds::DistanceStopReason;
+
+pub use crate::analysis::frechet;
+
+pub use crate::construct::curves::curve_reconstruction;
+
+pub use crate::join::surface_join;
+
+pub use crate::join::surface_g1;
+
+pub use crate::join::surface_g2;
+
+pub use crate::analysis::surface_shape_operator;
+
+pub use crate::editing::surface_edit;
+
+
+
+
+
+
+
+
+
+pub use crate::sweeps::helical_sweep;
+
+pub use crate::construct::curves::rack;
+
+pub use crate::construct::curves::thread;
+
+pub use crate::analysis::surface_parameter_bounds;
+
+pub use crate::construct::curves::curve_chain;
+
+pub(crate) use numerics::exact_products;
+
+#[path="distance/curve_distance.rs"] mod native_curve_distance;
+#[path="distance/surface_distance.rs"] mod native_surface_distance;
+
+#[path="analysis/curve_surface_composition.rs"] mod native_curve_surface_composition;
+#[path="offset/curve_offset.rs"] mod native_curve_offset;
+
+pub(crate) use numerics::exact_curve_segments;

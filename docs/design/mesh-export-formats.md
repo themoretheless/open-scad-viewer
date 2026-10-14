@@ -1,6 +1,6 @@
 # Mesh export formats
 
-The shared exporter has no added dependency. Browser export uses current eligible scene geometry; modelgraph_export builds ModelGraph/1, and modelgraph_nurbs_export uses the own NURBS process. NURBS JSON export retains the source graph; mesh exports are explicitly derived geometry.
+The shared exporter has no added dependency. Browser export uses current eligible scene geometry; rush_export builds Rush IR/1, and rush_nurbs_export uses the own NURBS process. NURBS JSON export retains the source graph; mesh exports are explicitly derived geometry.
 
 | Format key | Encoding | Geometry requirement |
 |---|---|---|

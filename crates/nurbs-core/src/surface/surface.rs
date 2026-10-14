@@ -577,3 +577,5 @@ pub fn extrude(c: &Curve, vector: [f64; 3]) -> Result<Surface> {
         .collect();
     loft(&[c.clone(), second])
 }
+
+impl Evaluation { pub fn curvatures(&self)->Option<(f64,f64)> {Some((self.gaussian_curvature?,self.mean_curvature?))} pub fn domains(&self)->([f64;2],[f64;2]) {(self.domain_u,self.domain_v)} }

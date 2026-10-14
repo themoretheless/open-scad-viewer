@@ -99,6 +99,9 @@ export interface OpenScadCylinderPrimitivePlan extends OpenScadPrimitivePlanBase
 
 export interface OpenScadPolyhedronPrimitivePlan extends OpenScadPrimitivePlanBase {
   readonly kind: 'polyhedron'
+  readonly vertices: readonly number[]
+  readonly indices: readonly number[]
+  readonly usable: boolean
   /** Coordinate polygons in authored face order, after index conversion/skips. */
   readonly polygons: readonly (readonly OpenScadVec3[])[]
   readonly facesSource: 'faces' | 'triangles' | 'default'

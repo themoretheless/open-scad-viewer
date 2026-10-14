@@ -17,10 +17,13 @@ for(let i=0;i<digits95.length;i++)rank95[digits95.charCodeAt(i)]=i
 const rank108=new Int16Array(128).fill(-1)
 const digits108=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+digits94
 for(let i=0;i<digits108.length;i++)rank108[digits108.charCodeAt(i)]=i
+const rank118=new Int16Array(128).fill(-1)
+const digits118=String.fromCharCode(22,23,24,25,26,28,29,30,31,127)+digits108
+for(let i=0;i<digits118.length;i++)rank118[digits118.charCodeAt(i)]=i
 export function decodeBase91(text:string,maximum=4*1024*1024+4):Uint8Array<ArrayBuffer>{
- const extended=text.startsWith('bAx:'),control=text.startsWith('b95:'),tabbed=text.startsWith('b94:'),widest=text.startsWith('b93:'),wide=text.startsWith('b92:'),base=extended?108:control?95:tabbed?94:widest?93:wide?92:91,threshold=base*base-8193
- const digits=extended?rank108:control?rank95:tabbed?rank94:widest?rank93:wide?rank92:rank,variable=extended||control||tabbed||widest||wide||text.startsWith('b9v:')
- if(!/^b(?:91|9v|92|93|94|95|Ax):[0-9a-f]{8}/.test(text)||text.length>12+2*Math.ceil(maximum*8/13))throw Error('Base91 size limit')
+ const dense=text.startsWith('bBx:'),extended=text.startsWith('bAx:'),control=text.startsWith('b95:'),tabbed=text.startsWith('b94:'),widest=text.startsWith('b93:'),wide=text.startsWith('b92:'),base=dense?118:extended?108:control?95:tabbed?94:widest?93:wide?92:91,threshold=base*base-8193
+ const digits=dense?rank118:extended?rank108:control?rank95:tabbed?rank94:widest?rank93:wide?rank92:rank,variable=dense||extended||control||tabbed||widest||wide||text.startsWith('b9v:')
+ if(!/^b(?:91|9v|92|93|94|95|Ax|Bx):[0-9a-f]{8}/.test(text)||text.length>12+2*Math.ceil(maximum*8/13))throw Error('Base91 size limit')
  const size=parseInt(text.slice(4,12),16)
  if(size>maximum||(text.length-12)%2!==0||(!variable&&text.length!==12+2*Math.ceil(size*8/13)))throw Error('Base91 size mismatch')
  const out=new Uint8Array(size)

@@ -391,3 +391,5 @@ pub(crate) fn upper_cell_on(
     }
     Ok((branches > 0).then_some(maximum))
 }
+
+pub(crate) use crate::native_curve_surface_composition::trace_candidate;

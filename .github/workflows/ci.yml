@@ -15,7 +15,9 @@ concurrency:
 jobs:
   rust:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # A cold workspace build plus whole-shell proofs exceeded 40 minutes on hosted Linux.
+    # Match native-smoke execution time; proof work budgets and test coverage stay fixed.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@master

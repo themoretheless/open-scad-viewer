@@ -15,5 +15,5 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
   "wasmSha256": packagedArtifact.sha256,
   "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
   "lockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
-  "rustLockfileSha256": "d29d942b59796c4f6579467456956a6480dd9d1640696dc6dc8a25c3646c1beb"
+  "rustLockfileSha256": "471646f31c91112a85e2621f728b242172cdd5886a0bc67605e22b1ceb15f3ac"
 })

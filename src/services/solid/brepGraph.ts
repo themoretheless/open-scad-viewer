@@ -1,13 +1,14 @@
+import {callGeometryRust} from '../geometry/kernel'
 /**
- * The one place that knows how an exact solid is spelled as `modelgraph/nurbs-1` nodes.
+ * The one place that knows how an exact solid is spelled as `rush/nurbs-1` nodes.
  *
  * Both source languages reach the Solid workspace through this builder: the OpenSCAD
- * evaluator via a `CadKernelOps` adapter, and ModelGraph Text by rewriting its compiled
+ * evaluator via a `CadKernelOps` adapter, and Rush by rewriting its compiled
  * document. Keeping the primitive, transform and curve spellings here is what stops the
  * two adapters from drifting apart, since the mapping is identical for both.
  *
- * Nothing here executes geometry. The builder only produces nodes and the rule for
- * refusing a construct that has no exact analogue.
+ * Native constructors supply primitive coordinates and transform matrices. This
+ * adapter assigns node IDs and records unsupported constructs for the Solid build.
  */
 
 export type BrepNode = Record<string, unknown> & { id: string; op: string }
@@ -20,7 +21,6 @@ export type BrepProfile = { kind: 'profile'; loops: string[][] }
 
 export type Matrix4 = [number[], number[], number[], number[]]
 
-const TAU = Math.PI * 2
 
 export interface BrepGearNodeSpec {
   module: number
@@ -53,6 +53,7 @@ export interface BrepGraphBuilder {
   revolve(input: BrepValue, angleDegrees: number): BrepValue
   /** A polyline loop of degree-1 curves through the given closed ring. */
   polylineLoop(ring: readonly (readonly [number, number])[]): string[]
+  rectangleLoop(size: readonly [number, number], center: boolean): string[]
   /** A closed circle as four exact rational quadratic arcs. */
   circleLoop(radius: number): string[]
 }
@@ -74,46 +75,17 @@ export function requireExact(
   return build(ids)
 }
 
-export const translationMatrix = (x: number, y: number, z: number): Matrix4 => [
-  [1, 0, 0, x],
-  [0, 1, 0, y],
-  [0, 0, 1, z],
-  [0, 0, 0, 1],
-]
+const nativeMatrix = (operation: string, vector: number[]) =>
+  callGeometryRust<Matrix4 | null>('affine_matrix', {operation, vector})
 
-export const scaleMatrix = (x: number, y: number, z: number): Matrix4 => [
-  [x, 0, 0, 0],
-  [0, y, 0, 0],
-  [0, 0, z, 0],
-  [0, 0, 0, 1],
-]
+export const translationMatrix = (x: number, y: number, z: number): Matrix4 => nativeMatrix('translate', [x, y, z])!
+export const scaleMatrix = (x: number, y: number, z: number): Matrix4 => nativeMatrix('scale', [x, y, z])!
 
 /** Extrinsic X, then Y, then Z rotation, which is the order OpenSCAD applies. */
-export function rotationMatrix(degreesX: number, degreesY: number, degreesZ: number): Matrix4 {
-  const [rx, ry, rz] = [degreesX, degreesY, degreesZ].map(d => (d * Math.PI) / 180)
-  const [cx, sx] = [Math.cos(rx), Math.sin(rx)]
-  const [cy, sy] = [Math.cos(ry), Math.sin(ry)]
-  const [cz, sz] = [Math.cos(rz), Math.sin(rz)]
-  return [
-    [cy * cz, cz * sx * sy - cx * sz, cx * cz * sy + sx * sz, 0],
-    [cy * sz, cx * cz + sx * sy * sz, -cz * sx + cx * sy * sz, 0],
-    [-sy, cy * sx, cx * cy, 0],
-    [0, 0, 0, 1],
-  ]
-}
+export const rotationMatrix = (x: number, y: number, z: number): Matrix4 => nativeMatrix('rotate', [x, y, z])!
 
 /** Householder reflection about the plane through the origin with the given normal. */
-export function mirrorMatrix(nx: number, ny: number, nz: number): Matrix4 | null {
-  const length = Math.hypot(nx, ny, nz)
-  if (length === 0) return null
-  const [x, y, z] = [nx / length, ny / length, nz / length]
-  return [
-    [1 - 2 * x * x, -2 * x * y, -2 * x * z, 0],
-    [-2 * x * y, 1 - 2 * y * y, -2 * y * z, 0],
-    [-2 * x * z, -2 * y * z, 1 - 2 * z * z, 0],
-    [0, 0, 0, 1],
-  ]
-}
+export const mirrorMatrix = (x: number, y: number, z: number): Matrix4 | null => nativeMatrix('mirror', [x, y, z])
 
 export function createBrepGraphBuilder(): BrepGraphBuilder {
   const nodes: BrepNode[] = []
@@ -135,6 +107,9 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
 
   const line = (from: readonly [number, number], to: readonly [number, number]): string =>
     curve(1, [0, 0, 1, 1], [[from[0], from[1], 0], [to[0], to[1], 0]], [1, 1])
+
+  const polylineLoop = (ring: readonly (readonly [number, number])[]): string[] =>
+    ring.map((from, index) => line(from, ring[(index + 1) % ring.length]))
 
   return {
     nodes,
@@ -168,22 +143,16 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
     revolve: (input, angleDegrees) => requireExact([input], ([id]) =>
       node({ op: 'brep_revolve', input: id, angle: angleDegrees })),
 
-    polylineLoop: ring => ring.map((from, index) => line(from, ring[(index + 1) % ring.length])),
+    polylineLoop,
+
+    rectangleLoop(size, center) {
+      const ring = callGeometryRust<[number, number][]>('planar_rectangle_corners', {size, center})
+      return polylineLoop(ring)
+    },
 
     circleLoop(radius) {
-      const w = Math.SQRT1_2
-      // The shoulder of a 90-degree rational quadratic arc sits at radius / cos(45 degrees).
-      const shoulder = radius / w
-      return [0, 1, 2, 3].map(quadrant => {
-        const start = (quadrant * TAU) / 4
-        const mid = start + TAU / 8
-        const end = start + TAU / 4
-        return curve(2, [0, 0, 0, 1, 1, 1], [
-          [radius * Math.cos(start), radius * Math.sin(start), 0],
-          [shoulder * Math.cos(mid), shoulder * Math.sin(mid), 0],
-          [radius * Math.cos(end), radius * Math.sin(end), 0],
-        ], [1, w, 1])
-      })
+      const arcs = callGeometryRust<{degree: number; knots: number[]; controlPoints: number[][]; weights: number[]}[]>('nurbs_circle_quadrants', {radius})
+      return arcs.map(arc => curve(arc.degree, arc.knots, arc.controlPoints, arc.weights))
     },
   }
 }

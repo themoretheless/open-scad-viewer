@@ -587,7 +587,7 @@ fn polar_cells(s: &Surface, subdivisions: usize) -> usize {
     active(&s.knots_u,s.degree_u,s.control_points.len())
         * active(&s.knots_v,s.degree_v,s.control_points[0].len()) * subdivisions * subdivisions
 }
-fn polar_projection_candidates(s: &Surface) -> Result<Vec<[[f64;4];3]>> {
+pub fn polar_projection_candidates(s: &Surface) -> Result<Vec<[[f64;4];3]>> {
     // Restrict automatic frame guesses to one clamped quadratic iso-curve.
     // The public verifier also accepts other degrees and explicit frames.
     if s.degree_u != 2 || s.control_points.len() != 3
@@ -742,3 +742,5 @@ fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
         rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent-rows[2][axis]*anchor;rows
     })
 }
+
+pub fn projective_projection_candidates(s:&Surface)->Result<[[[f64;4];3];6]> {s.validate()?;Ok(projective_projections(s))}

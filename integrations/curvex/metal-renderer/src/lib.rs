@@ -1,8 +1,10 @@
 //! GPU-resident, immutable 2D geometry. The application owns revision lifetimes.
 //! Camera and material changes must not mutate this buffer allocation.
+#![recursion_limit = "256"]
 pub mod cache;
 #[cfg(feature = "egui-integration")]
 pub mod egui_integration;
+pub mod memory_budget;
 use wgpu::util::DeviceExt;
 
 /// Packed position and premultiplied sRGBA vertex, independent of UI types.
@@ -56,23 +58,29 @@ impl ResidentMesh {
             return Err("GPU geometry budget exceeded");
         }
         // Explicit byte encoding avoids layout/unsafe assumptions across UI crates.
-        let mut vb = Vec::with_capacity(vertex_bytes as usize);
+        let mut vb = Vec::new();
+        vb.try_reserve_exact(usize::try_from(vertex_bytes).map_err(|_| "vertex size overflow")?)
+            .map_err(|_| "vertex staging allocation failed")?;
         for v in vertices {
             for p in v.position {
                 vb.extend_from_slice(&p.to_le_bytes());
             }
             vb.extend_from_slice(&v.color);
         }
-        let mut ib = Vec::with_capacity(index_bytes as usize);
+        let vertices = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("2D resident vertices"),
+            contents: &vb,
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        drop(vb);
+        let mut ib = Vec::new();
+        ib.try_reserve_exact(usize::try_from(index_bytes).map_err(|_| "index size overflow")?)
+            .map_err(|_| "index staging allocation failed")?;
         for i in indices {
             ib.extend_from_slice(&i.to_le_bytes());
         }
         Ok(Self {
-            vertices: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("2D resident vertices"),
-                contents: &vb,
-                usage: wgpu::BufferUsages::VERTEX,
-            }),
+            vertices,
             indices: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("2D resident indices"),
                 contents: &ib,

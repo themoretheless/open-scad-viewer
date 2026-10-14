@@ -23,3 +23,10 @@ pub fn dispatch(v: Value) -> Routed {
         _ => return Routed::Unhandled(v),
     })
 }
+
+fn legacy_mesh_error(error: Error) -> Error {
+    match error.code {
+        "MESH_INVALID_INPUT" | "MESH_QUERY_INVALID_INPUT" | "MESH_SECTION_INVALID_INPUT" | "MESH_IO_INVALID_INPUT" => Error::new("POLYGON_INVALID_INPUT", error.message.replace("the mesh resource budget", "the polygon resource budget")),
+        _ => error,
+    }
+}

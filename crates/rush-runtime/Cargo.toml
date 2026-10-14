@@ -1,0 +1,12 @@
+[package]
+name = "rush-runtime"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+math-core = { workspace = true }
+sketch-core = { workspace = true }
+value-codec = { workspace = true }
+mechanical-core = { workspace = true, features = ["codec"] }

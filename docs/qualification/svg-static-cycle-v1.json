@@ -58,7 +58,7 @@
       "Physical units, curve tolerance, compound holes, strokes and transformed projections",
       "Non-scaling strokes, dashes, markers and per-instance paint resources in outer viewport coordinates",
       "SVG → solid → SVG with independent area, volume, bounds and topology checks",
-      "Optional editable ModelGraph, nested holes/islands and explicit graph admission limits"
+      "Optional editable RushGraph, nested holes/islands and explicit graph admission limits"
     ],
     "interaction": [
       "Real isolated worker, responsive host, warm reuse, cancellation and hard timeout",
@@ -83,6 +83,6 @@
     "CSS math, custom variables, viewport-relative lengths and cascade at-rules require resolved values.",
     "Effects use opt-in pixel silhouettes; text requires the correct supplied outline font for matching metrics. Custom SVG/COLR/bitmap font tables are unsupported.",
     "Reference/marker/text and non-scaling resource expansion use conservative budgets before normalization or resource cloning.",
-    "ModelGraph uses its own profile/node budgets; SCAD source and general transport limits apply."
+    "RushGraph uses its own profile/node budgets; SCAD source and general transport limits apply."
   ]
 }

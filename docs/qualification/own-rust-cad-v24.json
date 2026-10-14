@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v24",
   "successorOf": "docs/qualification/own-rust-cad-v23.json",
-  "previousSha256": "3c189bdaa302e4bff4f407f772c31983a2a5bf6b25873f38775b29f0939d9dc5",
+  "previousSha256": "e0a15b1d539ef5d0ec37b2aecf23c4c15c4bd5748dbf25add8d1a7db48c2bbcb",
   "recordedAt": "2026-09-29",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v32 / G1 v49 re-freeze. Drift since G0 v31 / G1 v48: the concurrent feature branch kept editing bound crate sources (crates/brep-core/src/lib.rs, face_contact.rs and face_contacts.rs work, plus nurbs-core surface contact search) after the v31/v48 publish, so the source-bundle digest changed; the packed kernel WASM is byte-identical to own-rust-cad-v22. Notices and lockfiles are byte-identical to own-rust-cad-v23, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

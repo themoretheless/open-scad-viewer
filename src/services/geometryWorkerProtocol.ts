@@ -88,6 +88,8 @@ export interface GeometrySweepPreview extends GeometryJobEnvelope {
  sections:number
  accepted:boolean
  continuousErrorUpper?:number
+ /** Maximum for the certified subset of profiles, not the full boundary. */
+ knownProfileErrorUpper?:number
  profileRegularityCertified?:boolean
  wallRegularityCertified?:boolean|null
  certifiedErrorUpper?:number|null

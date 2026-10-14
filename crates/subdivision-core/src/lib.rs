@@ -1,16 +1,10 @@
+#![doc = include_str!("../README.md")]
 //! Bounded Catmull–Clark refinement. Original polygon IDs survive refinement.
 //! Tessellation is a neutral triangle buffer; mesh inspect/fit lives in the bridge.
-#![feature(
-    try_blocks,
-    gen_blocks,
-    yield_expr,
-    super_let,
-    deref_patterns,
-    yeet_expr
-)]
-#![allow(unused_features)]
 use rustc_hash::{FxHashMap, FxHashSet};
 type Point = math_core::V3;
+#[cfg(feature = "codec")]
+mod serialization;
 pub use math_core::{Error, Result};
 const INVALID_INPUT: &str = "SUBDIVISION_INVALID_INPUT";
 fn error(message: impl Into<String>) -> Error {
@@ -21,55 +15,13 @@ pub struct Cage {
     pub vertices: Vec<Point>,
     pub faces: Vec<Vec<usize>>,
 }
-impl value_codec::Serialize for Cage {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert(
-            "vertices".into(),
-            value_codec::Serialize::to_value(&self.vertices),
-        );
-        object.insert(
-            "faces".into(),
-            value_codec::Serialize::to_value(&self.faces),
-        );
-        value_codec::Value::Object(object)
-    }
-}
-impl<'de> value_codec::Deserialize<'de> for Cage {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let vertices: Vec<Point> = value_codec::Deserialize::from_value(
-            object
-                .remove("vertices")
-                .ok_or_else(|| value_codec::error("Missing field vertices"))?,
-        )?;
-        let faces: Vec<Vec<usize>> = value_codec::Deserialize::from_value(
-            object
-                .remove("faces")
-                .ok_or_else(|| value_codec::error("Missing field faces"))?,
-        )?;
-        Ok(Self { vertices, faces })
-    }
-}
+
 #[derive(Clone, Debug)]
 pub struct Refined {
     pub cage: Cage,
     pub face_ids: Vec<usize>,
 }
-impl value_codec::Serialize for Refined {
-    fn to_value(&self) -> value_codec::Value {
-        let mut object = value_codec::Map::new();
-        object.insert("cage".into(), value_codec::Serialize::to_value(&self.cage));
-        object.insert(
-            "faceIds".into(),
-            value_codec::Serialize::to_value(&self.face_ids),
-        );
-        value_codec::Value::Object(object)
-    }
-}
+
 fn avg(p: impl Iterator<Item = Point>, n: usize) -> Point {
     let mut r = [0.; 3];
     for q in p {

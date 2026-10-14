@@ -1,6 +1,8 @@
 //! Runtime-local native scene export sessions. Handles are never reused.
-use super::{Result, Value, field, input, mesh_analysis};
-use polygon_core::solid::export_file::{Builder, MAX_BYTES};
+use super::{Result, Value, field, input, legacy_mesh_error, mesh_analysis};
+#[cfg(test)]
+use crate::Error;
+use mesh_io::export_file::{Builder, MAX_BYTES};
 use std::collections::BTreeMap;
 use value_codec::json;
 #[derive(Default)]
@@ -29,6 +31,7 @@ pub fn append(id: u32, vertices: &[f64], indices: &[u32], matrix: &[f64]) -> Res
             .get_mut(&id)
             .ok_or_else(|| input("Unknown or disposed export session"))?
             .append(vertices, indices, matrix, MAX_BYTES.saturating_sub(others))
+            .map_err(legacy_mesh_error)
     })
 }
 pub fn dispatch(v: Value) -> Result<Value> {
@@ -62,7 +65,8 @@ pub fn dispatch(v: Value) -> Result<Value> {
                     .builders
                     .remove(&id)
                     .ok_or_else(|| input("Unknown or disposed export session"))?
-                    .finish()?;
+                    .finish()
+                    .map_err(legacy_mesh_error)?;
                 Ok(json!(mesh_analysis::store(
                     mesh_analysis::AnalysisBuffers::Bytes { bytes }
                 )))
@@ -93,5 +97,30 @@ mod tests {
             .unwrap() as u32;
         assert!(next > id);
         dispatch(json!({"action":"dispose","handle":next})).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod wire_tests {
+    use super::*;
+    #[test]
+    fn invalid_scene_data_preserves_error_and_poison_contract() {
+        let id = dispatch(json!({"action":"begin","format":"stl","name":""}))
+            .unwrap()
+            .as_u64()
+            .unwrap() as u32;
+        let error = append(id, &[1.], &[], &[0.; 16]).unwrap_err();
+        assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+        assert_eq!(
+            error.message,
+            "Mesh export requires finite affine triangle data"
+        );
+        let error = dispatch(json!({"action":"finish","handle":id})).unwrap_err();
+        assert_eq!(error.code, "POLYGON_INVALID_INPUT");
+        assert!(error.message.contains("failed export session"));
+        assert_eq!(
+            legacy_mesh_error(Error::new("MESH_EXPORT_TOO_MANY_TRIANGLES", "budget")).code,
+            "MESH_EXPORT_TOO_MANY_TRIANGLES"
+        );
     }
 }

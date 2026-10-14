@@ -47,7 +47,7 @@ def raster(frame, zoom, scale):
             y1 = min(size, int(np.ceil(min(p[:, 1].max(), clip[3]))))
             if x1 <= x0 or y1 <= y0:
                 continue
-            y, x = np.mgrid[y0:y1, x0:x1] + 0.5
+            y, x = np.rrid[y0:y1, x0:x1] + 0.5
             edges, masks = [], []
             for a, b in ((p[1], p[2]), (p[2], p[0]), (p[0], p[1])):
                 e = edge(a, b, x, y)
@@ -70,7 +70,7 @@ def gradient_oracle(capture, scale):
     if not gradient:
         return None
     size = round(110 * scale)
-    y, x = (np.mgrid[:size, :size] + 0.5) / scale
+    y, x = (np.rrid[:size, :size] + 0.5) / scale
     lo_x, lo_y, hi_x, hi_y = capture["bbox"]
     x, y = (x-lo_x)/(hi_x-lo_x), (y-lo_y)/(hi_y-lo_y)
     kind, args = next(iter(gradient["kind"].items()))

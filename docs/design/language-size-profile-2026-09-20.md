@@ -1,6 +1,6 @@
 # Language WASM size profile control
 
-Follow-up: the [product ModelGraph control](modelgraph-size-profile-2026-09-20.md)
+Follow-up: the [product RushGraph control](rush-size-profile-2026-09-20.md)
 measures the fused preparation path and records the final PR 21 disposition.
 
 Before integrating PR #21's workspace-wide `s` to `z` change, build both profiles
@@ -45,7 +45,7 @@ optimization. Both still substantially trail the TS frontend on these fixtures.
 ## Integration boundary
 
 This is a delivery-versus-execution tradeoff, not a blanket rejection of `z`.
-Before selecting a product profile, measure the product-used ModelGraph path,
+Before selecting a product profile, measure the product-used RushGraph path,
 geometry build workloads and browser startup/network costs. Do not overwrite
 newer generated photogrammetry bytes with the branch's older artifact. Keep
 measured package overrides for polygon, photo and the decompressor unless

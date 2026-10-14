@@ -137,3 +137,8 @@ pub fn interpolate_surface_grid(
         "resource":{"maxControlsPerAxis":32},"evidence":tolerance_evidence(&tolerance)}}),
     )
 }
+
+pub use super::native_fitting::{interpolate_surface_grid_report,fit_surface_cloud_certified_report};
+pub(crate) use super::native_fitting::dense_solve;
+
+pub use super::native_fitting::fit_curve_points_report;

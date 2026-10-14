@@ -6,8 +6,8 @@
   "positiveCorpus": [
     "TS intersectNurbsCurveCurveCertified complete transverse report",
     "TS intersectNurbsCurveSurfaceCertified piercing and overlap with CoedgeTrim",
-    "ModelGraph foundation_successor version nurbs-foundation/5",
-    "MCP modelgraph_nurbs_intersect tool registration"
+    "RushGraph foundation_successor version nurbs-foundation/5",
+    "MCP rush_nurbs_intersect tool registration"
   ],
   "negativeCorpus": [
     "surface-surface not offered by product CC/CS queries",

@@ -18,7 +18,7 @@
 - Ступенчатые тела повторно участвуют в операциях после сериализации,
   поворота и отражения. Внутренние грани удаляются по границам исходных ячеек;
   сопоставление не восстанавливает поверхность из треугольников.
-- ModelGraph JSON/text предоставляет `brep_extrude_curves` для вложенных
+- RushGraph JSON/text предоставляет `brep_extrude_curves` для вложенных
   ссылок на 2D NURBS-контуры. Прямые и рациональные круговые дуги сохраняются.
 - Новый внутренний SemanticProgram backend исполняет примитивы, профили,
   поддержанные Boolean, преобразования и прямое выдавливание. Он сохраняет
@@ -469,7 +469,7 @@ The complete debug suites for brep-core, brep-topology and nurbs-core pass:
 130 tests, including kernel operations, identities, archives, mass integration,
 incidence and intersection queries. Six related TypeScript/WASM test files pass
 43 tests covering analytic primitives, mass, regularized/stepped Boolean,
-ModelGraph and intersections. These results establish regression evidence for
+RushGraph and intersections. These results establish regression evidence for
 the current tested envelope, not the full qualification matrix.
 
 The main requirements table now reflects candidate-10 recipe persistence,

@@ -17,6 +17,7 @@ export function sampleCurve(c:AnalyticCurve):Point2[] {
 }
 export function bakeSketch(s:DirectSketch):DirectSketch {requirePolylineSketch(s);const next=structuredClone(s);delete next.analytic;return next}
 export function transformSketch(s:DirectSketch,delta:Point2,angle:number,scale:number,pivot?:Point2):DirectSketch {
+ if(s.editablePath)requirePolylineSketch(s)
  if(s.retainedProfile)return transformRetainedSketch(s,delta,angle,scale,pivot)
  return callGeometryRust('cad_transform_sketch',{sketch:s,delta,angle,scale,pivot:pivot??null})
 }
@@ -24,6 +25,7 @@ export function validateSimpleSketch(points:Point2[],closed=true) {
  callGeometryRust('cad_validate_sketch',{points,closed})
 }
 export function offsetSketch(s:DirectSketch,distance:number):DirectSketch {
+ if(s.editablePath)requirePolylineSketch(s)
  if(s.retainedProfile)return offsetRetainedSketch(s,distance)
  return callGeometryRust('cad_offset_sketch',{sketch:s,distance})
 }

@@ -204,7 +204,8 @@ pub fn graph(v: Value) -> Result<Value> {
     }
 
     if matches!(pattern.as_str(), "bcc" | "octet") {
-        return crate::cad_centered_lattice::graph(min, max, cells, &pattern);
+        let g=polygon_core::lattice_tools::centered_graph(min,max,cells,&pattern)?;
+        return encode(value_codec::json!({"nodes":g.nodes,"edges":g.edges}));
     }
 
     let mut seed = seed.trunc().rem_euclid(4294967296.) as u32;

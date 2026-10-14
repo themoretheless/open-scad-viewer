@@ -12,6 +12,27 @@ pub(super) fn profile_request(v: &Value, profiles: &Value) -> Result<Value> {
             req[target] = law(&o[source], false)?;
         }
     }
+    // Preserve explicitly authored proof and endpoint-correction budgets.
+    for (source, target) in [
+        ("rmfTransportSteps", "rmf_transport_steps"),
+        ("errorMaxCells", "error_max_cells"),
+        ("errorMaxProducts", "error_max_products"),
+    ] {
+        if let Some(value) = o.get(source) {
+            req[target] = value.clone();
+        }
+    }
+    if let Some(correction) = o.get("capCorrection") {
+        for (source, target) in [
+            ("tolerance", "cap_correction_tolerance"),
+            ("quantum", "cap_correction_quantum"),
+            ("maxWork", "cap_correction_max_work"),
+        ] {
+            if let Some(value) = correction.get(source) {
+                req[target] = value.clone();
+            }
+        }
+    }
     if !o["orientationGuide"].is_null() {
         req["orientation_guide"] = o["orientationGuide"].clone();
         if !o["contactAnchor"].is_null() {
@@ -84,153 +105,44 @@ pub(super) fn bounded_request(v: &Value, miter: bool) -> Result<(Value, Vec<usiz
 pub fn profile_body(v: Value) -> Result<Value> {
     profile_body_from(v, None, None)
 }
-pub(super) fn profile_body_from(v: Value, accepted: Option<Value>, prepared: Option<Value>) -> Result<Value> {
-    use nurbs_core::{
-        curve::Curve,
-        progressive_sweep::{MultiSweep, Options, Orientation, Spacing},
-    };
-    let (request, sizes) = if let Some(request) = prepared {
-        let loops: Vec<Vec<Value>> = field(&v, "loops")?;
-        (request, loops.iter().map(Vec::len).collect())
+pub(super) fn profile_body_from(
+    v: Value,
+    accepted: Option<Value>,
+    prepared: Option<Value>,
+) -> Result<Value> {
+    let (mut request, _) = if let Some(request) = prepared {
+        (request, ())
     } else {
-        let (request, sizes, _) = bounded_request(&v, false)?;
-        (request, sizes)
+        let (request, _, _) = bounded_request(&v, false)?;
+        (request, ())
     };
-    let approximation = match accepted {
-        Some(level) => level,
-        None => nurbs("surface_progressive_sweep_profiles", request.clone())?,
-    };
-    let report = &approximation["report"];
-    if !yes(report, "accepted") {
-        return Err(input("Progressive body sampled refinement exceeds budget"));
-    }
-    let profiles: Vec<Curve> = field(&request, "profiles")?;
-    let path: Curve = field(&request, "path")?;
-    let scale: Curve = field(&request, "scale")?;
-    let twist: Curve = field(&request, "twist")?;
-    let orientation = match field::<String>(&request, "orientation")?.as_str() {
-        "rmf" => Orientation::RotationMinimizing,
-        "fixed" | "authored" => Orientation::Fixed,
-        "fixed_normal" => Orientation::FixedNormal,
-        "frenet" => Orientation::Frenet,
-        "corrected_frenet" => Orientation::CorrectedFrenet,
-        _ => return Err(input("Unknown sweep orientation")),
-    };
-    let spacing = match field::<String>(&request, "spacing")?.as_str() {
-        "parameter" => Spacing::Parameter,
-        "arc_length" => Spacing::ArcLength {
-            tolerance: field(&request, "length_tolerance")?,
-            max_cells: field(&request, "length_max_cells")?,
-        },
-        _ => return Err(input("Unknown sweep station spacing")),
-    };
-    let options = Options {
-        normal: field(&request, "normal")?,
-        orientation,
-        spacing,
-        initial_sections: field(&request, "initial_sections")?,
-        max_sections: field(&request, "max_sections")?,
-        max_deviation: field(&request, "max_deviation")?,
-    };
-    let constant = |v: [f64; 3]| {
-        field::<Curve>(
-            &json!({"curve":{"degree":1,"knots":[0.,0.,1.,1.],"controlPoints":[v,v],"weights":[1.,1.],"periodic":false}}),
-            "curve",
-        )
-    };
-    let axes = if request["axis_scale"].is_null() {
-        constant([1.; 3])?
-    } else {
-        field(&request, "axis_scale")?
-    };
-    let center = if request["center_law"].is_null() {
-        constant([0.; 3])?
-    } else {
-        field(&request, "center_law")?
-    };
-    let frame_axis = if request["frame_axis"].is_null() {
-        None
-    } else {
-        Some(field::<Curve>(&request, "frame_axis")?)
-    };
-    let frame_normal = if request["frame_normal"].is_null() {
-        None
-    } else {
-        Some(field::<Curve>(&request, "frame_normal")?)
-    };
-    let guide = if request["orientation_guide"].is_null() {
-        None
-    } else {
-        Some(field::<Curve>(&request, "orientation_guide")?)
-    };
-    let authored = request["orientation"] == json!("authored");
-    let mut sweep = MultiSweep::new(&profiles, &path, &scale, &twist, options)?;
-    if let Some(g) = guide.as_ref() {
-        sweep = if request["contact_parameter"].is_null() {
-            sweep.with_orientation_guide(g)?
-        } else {
-            sweep.with_contact_guide(
-                g,
-                value(&request, "contact_profile", json!(0))
-                    .as_u64()
-                    .ok_or_else(|| input("Invalid contact profile"))? as usize,
-                field(&request, "contact_parameter")?,
-            )?
-        };
-    }
-    if authored {
-        sweep = sweep.with_frame_laws(
-            frame_axis
-                .as_ref()
-                .ok_or_else(|| input("Authored sweep requires frameAxis"))?,
-            frame_normal
-                .as_ref()
-                .ok_or_else(|| input("Authored sweep requires frameNormal"))?,
-        )?;
-    }
-    if authored
-        || guide.is_some()
-        || !request["axis_scale"].is_null()
-        || !request["center_law"].is_null()
+    if accepted
+        .as_ref()
+        .is_some_and(|level| !yes(&level["report"], "accepted"))
     {
-        sweep = sweep.with_affine_laws(&axes, &center)?;
+        return Err(input(
+            "Progressive body continuous retained-patch error or refinement exceeds budget",
+        ));
     }
-    let count: usize = field(report, "sections")?;
-    let by_profile = sweep.sections_at(count)?;
-    let rows: Vec<Value> = (0..count)
-        .map(|station| {
-            json!(
-                by_profile
-                    .iter()
-                    .map(|profile| profile[station].clone())
-                    .collect::<Vec<_>>()
-            )
-        })
-        .collect();
-    let sections = partition(&json!(rows), &sizes)?;
-    let closed = yes(report, "closedPath");
-    let model = call(
-        if closed {
-            "brep_nurbs_periodic_section_loft"
-        } else {
-            "brep_nurbs_rational_section_loft"
-        },
-        json!({"sections":sections}),
-    )?;
+    request["loops"] = v["loops"].clone();
+    // Rebuild from the native constructor-owned retained sections. Re-lofting
+    // sampled rows here would discard correction and full-boundary evidence.
+    let mut body = call("brep_nurbs_progressive_profile_body", request)?;
+    let model = body["model"].clone();
+    let closed = yes(&body["approximation"]["report"], "closedPath");
     let caps = cap_faces(&model, closed)?;
     let volume = call(
         "brep_sweep_volume_audit",
         merge(json!({"model":model,"capFaces":caps}), &volume_budgets()),
     )?;
-    // The host forwards the native construction report without deriving proof
-    // claims. Bind the retained-body result to that report for Rush/viewport.
-    let mut approximation = approximation;
-    approximation["report"]["volume"] = volume.clone();
-    approximation["report"]["wallRegularityCertified"] = volume["allFacesInjective"].clone();
-    approximation["report"]["seamContinuity"] = json!("C0");
-    // This certifies the actual retained body, not the ideal swept family.
-    Ok(json!({"model":model,"approximation":approximation,"volume":volume,"globalEmbeddingCertified":false}))
+    body["volume"] = volume.clone();
+    body["approximation"]["report"]["volume"] = volume.clone();
+    body["approximation"]["report"]["wallRegularityCertified"] =
+        volume["allFacesInjective"].clone();
+    body["approximation"]["report"]["seamContinuity"] = json!("C0");
+    Ok(body)
 }
+
 #[derive(Clone)]
 struct Stream {
     request: Value,
@@ -339,8 +251,11 @@ pub fn stream_next(v: Value) -> Result<Value> {
         } else {
             "surface_progressive_sweep_level"
         },
-        req,
+        req.clone(),
     )?;
+    if !state.miter && state.raw {
+        preview = evidence::profile(preview, &req, &state.request["options"])?;
+    }
     state.finish = yes(&preview["report"], "accepted") || state.count >= state.maximum;
     if !state.finish {
         state.count = if state.miter {
@@ -402,9 +317,11 @@ pub(super) fn miter_wall_preview(preview: Value) -> Result<Value> {
 pub fn constructor(v: Value) -> Result<Value> {
     let operation = field::<String>(&v, "operation")?;
     if ["surface_scaled_sweep", "surface_profile_sweep"].contains(&operation.as_str()) {
-        let mut request=json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]});
-        if let Some(cells)=v.get("maxCells") {request["maxCells"]=cells.clone();}
-        return nurbs(&operation,request);
+        let mut request = json!({"profile":v["profile"],"path":v["path"],"scale":law(&v["scale"],false)?,"origin":v["origin"],"normal":v["normal"],"sections":v["sections"],"max_deviation":v["maxDeviation"]});
+        if let Some(cells) = v.get("maxCells") {
+            request["maxCells"] = cells.clone();
+        }
+        return nurbs(&operation, request);
     }
     let miter = operation.starts_with("curve_progressive_miter");
     if ![
@@ -454,7 +371,12 @@ pub fn constructor(v: Value) -> Result<Value> {
             request[key] = value.clone();
         }
     }
-    nurbs(&operation, request)
+    let result = nurbs(&operation, request.clone())?;
+    if miter {
+        Ok(result)
+    } else {
+        evidence::profile(result, &request, &v["options"])
+    }
 }
 
 /// Compatibility payload projections still perform every law conversion natively.
@@ -462,6 +384,33 @@ pub fn law_payload(v: Value) -> Result<Value> {
     let options = &v["options"];
     let kind = field::<String>(&v, "kind")?;
     match kind.as_str() {
+        "source" => {
+            let mut request = profile_request(&v, &Value::Null)?;
+            let object = request.as_object_mut().unwrap();
+            for key in [
+                "profiles",
+                "rmf_transport_steps",
+                "error_max_cells",
+                "error_max_products",
+                "cap_correction_tolerance",
+                "cap_correction_quantum",
+                "cap_correction_max_work",
+            ] {
+                object.remove(key);
+            }
+            if options["orientation"] != json!("authored") {
+                object.remove("frame_axis");
+                object.remove("frame_normal");
+            } else if options["frameAxis"].is_null() || options["frameNormal"].is_null() {
+                return Err(input("Authored sweep requires frameAxis and frameNormal"));
+            }
+            for key in ["axis_scale", "center_law"] {
+                if !object.contains_key(key) {
+                    object.insert(key.into(), Value::Null);
+                }
+            }
+            Ok(request)
+        }
         "guide" => {
             let mut result = json!({});
             if let Some(guide) = options.get("orientationGuide") {

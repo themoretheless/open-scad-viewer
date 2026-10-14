@@ -10,7 +10,7 @@ Convex mesh push/pull, chamfer, faceted fillet and shell now execute entirely in
 
 Mesh plane splitting now runs as one native transaction: Rust admits the plane, constructs and places the cutter, performs both Booleans and validates both closed halves before returning. The TS adapter retains only transport and UI names/IDs. [Scoped evidence](../qualification/brep-native-mesh-split-v1.json): 73 tests in five files, both typechecks and 68 verified artifacts (4,622,021 bytes). Axis/oblique and concave cuts match independent volumes; extreme normal scaling and atomic refusal pass. Shared qualification below predates this kernel; numerical mesh splitting does not close general B-rep or the remaining Rust migration.
 
-Shared qualification refreshed after native workbench machining/Boolean chains and ruled B-rep loft with Solid preview/history integration. SVG 122 and own-CAD 218 reports bind the same rebuilt WASM; 335 expanded tests in 44 files pass without failures/pending cases, plus three manifest tests. Native B-rep 107, polygon-core 73 and ModelGraph-runtime 56, both typechecks and 68 distribution artifacts (4,624,043 bytes) pass. [Checkpoint](../qualification/brep-shared-ruled-loft-v1.json). Prior stale-shared-report caveats below are historical for this checkpoint. The full requirements table remains incomplete; regression qualification does not close general B-rep or Rust migration.
+Shared qualification refreshed after native workbench machining/Boolean chains and ruled B-rep loft with Solid preview/history integration. SVG 122 and own-CAD 218 reports bind the same rebuilt WASM; 335 expanded tests in 44 files pass without failures/pending cases, plus three manifest tests. Native B-rep 107, polygon-core 73 and RushGraph-runtime 56, both typechecks and 68 distribution artifacts (4,624,043 bytes) pass. [Checkpoint](../qualification/brep-shared-ruled-loft-v1.json). Prior stale-shared-report caveats below are historical for this checkpoint. The full requirements table remains incomplete; regression qualification does not close general B-rep or Rust migration.
 
 Ruled loft correspondence admission now refines quadratic Bernstein support bounds by bounded de Casteljau subdivision. A failing native fixture reproduced the former rejection of a valid 90-degree section rotation; 90/120/150-degree cases now pass with volumes matching an independent section-area integral, while collapsed twists still refuse. [Scoped evidence](../qualification/brep-ruled-loft-bound-refinement-v1.json): 107 native B-rep tests, 86 integration tests, both typechecks and 68 verified artifacts (4,624,043 bytes). Depth 24 and a shared one-million-node budget bound work with typed unresolved/resource outcomes. Coefficient arithmetic is not fully certified; general loft and B-rep completion remain open.
 
@@ -24,7 +24,7 @@ Workbench hole operations now share one Rust entry point: retained bodies use th
 
 Workbench mesh threading now runs as one Rust transaction: generate the faceted cutter, place it along the requested axis, perform union/difference, inspect the closed result and return updated body metadata. Retained B-rep refusal is enforced natively. [Scoped evidence](../qualification/brep-native-thread-body-v1.json): 66 integration tests, both typechecks and 68 verified artifacts (4,617,610 bytes). X/Z cuts match cutter volume; external partial union matches independent triangle clipping/integration, replacing an invalid half-length/half-volume assumption without relaxing tolerance. Analytic B-rep threading and full completion remain open.
 
-The TS helical thread generator and radius formula are replaced by typed Rust/WASM adapters to the existing ModelGraph-runtime generator. Native generation now exposes mesh buffers alongside source/report; malformed public inputs are admitted before unchecked field access. Workbench threading of retained B-rep now refuses instead of changing its mesh while keeping stale B-rep. [Scoped evidence](../qualification/brep-native-thread-generator-v1.json): 56 native runtime tests, 65 integration tests, both typechecks and 68 verified artifacts (4,617,040 bytes). This remains a faceted basic thread; analytic retained threading, remaining mesh-operation orchestration and general completion remain open.
+The TS helical thread generator and radius formula are replaced by typed Rust/WASM adapters to the existing RushGraph-runtime generator. Native generation now exposes mesh buffers alongside source/report; malformed public inputs are admitted before unchecked field access. Workbench threading of retained B-rep now refuses instead of changing its mesh while keeping stale B-rep. [Scoped evidence](../qualification/brep-native-thread-generator-v1.json): 56 native runtime tests, 65 integration tests, both typechecks and 68 verified artifacts (4,617,040 bytes). This remains a faceted basic thread; analytic retained threading, remaining mesh-operation orchestration and general completion remain open.
 
 The direct point transformation API now computes centroid, rotation, scale and translation in Rust; TS only transports the batch. The centroid sums divided coordinates to avoid overflowing a representable average. [Scoped evidence](../qualification/brep-native-direct-point-transform-v1.json): 88 tests in seven files, both typechecks and 68 verified artifacts (4,619,650 bytes). Mixed 2D/3D dimensions, large finite centroids, malformed/overflow refusal and recovery pass. Other host geometry and full B-rep completion remain open.
 
@@ -280,7 +280,7 @@ versus compressed size admission. Vue/MCP typechecks, Vite and verification of
 compression orchestration still run in TS and remain to migrate. Shared
 qualification predates this WASM; full B-rep completion remains unproved.
 
-The ModelGraph/independent mesh export path now admits and serializes ASCII
+The RushGraph/independent mesh export path now admits and serializes ASCII
 STL, binary STL, OBJ, PLY, OFF and AMF in Rust (`polygon-core::mesh_export`).
 The host receives a committed byte-buffer handle, copies it and frees it in a
 finally block. Native admission retains the 100,000-triangle and 4 MiB artifact
@@ -554,7 +554,7 @@ The current tree contains native Rust `nurbs-core`, `brep-topology`, `brep-core`
 and a shared WASM geometry bridge. Indexed oriented topology, rational curves and
 surfaces, planar constructors and Boolean operations, exact round construction,
 faceted feature construction, serialization, topology IDs, display tessellation,
-Solid UI, and ModelGraph NURBS entry points are executable. The current native
+Solid UI, and RushGraph NURBS entry points are executable. The current native
 tree additionally contains exact sphere/torus, cone and revolve poles, signed
 partial revolution, convex planar push/shell/split, numerical mass integration,
 and bounded geometry intersection queries. Their documented
@@ -563,7 +563,7 @@ envelope is [brep-core/README.md](../../crates/brep-core/README.md).
 These are distinct from the permanent `openscad-viewer/brep-1` engine route.
 `src/services/geometryBuildEngine.ts` and `src/mcp/createServer.ts` still expose
 that route as unavailable/not deployed. The existence of `brep_*` nodes under
-`modelgraph/nurbs-1` does not establish a deployed B-rep source contract.
+`rush/nurbs-1` does not establish a deployed B-rep source contract.
 
 `Model::validate` explicitly reports `geometryAgreement =
 sampled_with_tolerance` and `solidGeometryStatus = not_certified`. Retain these
@@ -587,7 +587,7 @@ In-flight changes must be re-read and their tests inspected before updating a ro
 | 8a. Complete CC/CS/analytic SS intersections | `crates/brep-core/src/{intersections,analytic_ss,coverage_verifier,predicate_evidence}.rs` | Advanced. Affine surface/surface pairs and the frozen analytic plane↔cylinder/sphere/cone (+ coaxial cylinder miss) matrix may publish `Coverage::Complete` with an independent coverage verifier; transverse line/plane Complete requires cad-predicates orient3d opposite-halfspace evidence. `permits_topology_change()` on individual reports remains hard-false. General NURBS SS and out-of-matrix contacts stay Incomplete/Unsupported. |
 | 8b. Lifted UV trimming and material classification | `crates/brep-core/src/{trim_sew,uv_arrangement,solid_audit,coverage_verifier}.rs` | **Closed** for full-matrix admitted charts: monotone nesting, holes, periodic/pole, freeform touches, missed-branch, A4 audit. |
 | 9a. Canonical primitives | `crates/brep-core/src/{lib,analytic,operations}.rs`, `tests/brepAnalytic.test.ts` | Partial. Exact box/wedge, cylinder/frustum/tube, sphere and ring torus now exist. Native tests cover rational sphere/torus equations, genus, pole incidence, orientation and roundtrip behavior; cones and axis-touching profiles have explicit poles. Complete independent geometric certification, full scale/transform covariance and the supported-parameter boundary matrix. A faceted sphere does not satisfy an analytic sphere requirement. |
-| 9b. Extrusion and revolution of ProfileSet | `extrude_polygon_with_holes`, `revolve`, direct modeling and ModelGraph tests | Partial. Concave polygon extrusion with holes, full-turn straight-segment profiles, supported axis contacts and signed partial revolutions with exact caps are implemented. Native tests cover their oriented volumes and pole topology. Complete arbitrary supported profile curves, revolution profile holes, general workplanes and consistent New/Add/Cut behavior, with the complete analytic/topological matrix. |
+| 9b. Extrusion and revolution of ProfileSet | `extrude_polygon_with_holes`, `revolve`, direct modeling and RushGraph tests | Partial. Concave polygon extrusion with holes, full-turn straight-segment profiles, supported axis contacts and signed partial revolutions with exact caps are implemented. Native tests cover their oriented volumes and pole topology. Complete arbitrary supported profile curves, revolution profile holes, general workplanes and consistent New/Add/Cut behavior, with the complete analytic/topological matrix. |
 | 9c. Regularized curved Boolean / SolidSet | `crates/brep-core/src/{imprint_pipeline,profile_imprint,analytic_boolean,sphere_boolean,solid_audit,analytic_ss}.rs` | **Closed** for the frozen matrix: exact rational-arc cylinder/profile imprint, sphere under `BooleanCertificate`, disjoint admitted mixed empty algebra, and typed refuse for non-empty mixed/cone/torus cells; no `prismatic_boolean`, mesh, or Manifold authorship. |
 | 10. Canonicalization, exact sewing, explicit healing | `trim_sew.rs`, `solid_audit.rs` | **Qualified finite v2 cells** for boundary correspondence, exact proof-bound sew and global solid audit. `authorized-heal-gap-le1/1` remains **Unavailable**: only zero-displacement transaction/refusal tests exist; no positive-gap bridge/product evidence exists, and silent heal remains forbidden. |
 | 11. Certified shell-aware tessellation | `geometry-bridge/src/brep.rs` TessellationCertificate | **Closed** for analytic `/2` plus append-only `certified-generic-rational-freeform-tessellation/1` (equal-weight clamped Bezier ≤3, Bernstein second-difference bound). Varying-weight / loft / bent-sweep remain ExplicitRefuse. |
@@ -769,7 +769,7 @@ evidence. Missing, indirect or uncertain evidence leaves the goal active.
   previously observed oracle/manifest/error-type/engine-identity assertions;
   the other six were timeouts while native compilation competed for CPU.
   Rechecking those files and B-rep/Solid tests with one worker passed 271 tests.
-  A subsequent affine B-rep reflection/ModelGraph run passed 17 tests.
+  A subsequent affine B-rep reflection/RushGraph run passed 17 tests.
 - Final type checks passed. Production compilation succeeded; `verify-dist`
   still refuses the 1,459,552-byte geometry chunk against its 1,200,000-byte
   limit. No size allowance or qualification fingerprint was silently relaxed.
@@ -806,7 +806,7 @@ parameter accuracy returns an explicit error. Colliding entity IDs use owning
 shell geometry, preserving reindexing invariance without merging nearby objects.
 
 Empty results now survive serialization, native analysis refusal, tessellation,
-polygon conversion, ModelGraph snapshots and later Boolean operations. Solid
+polygon conversion, RushGraph snapshots and later Boolean operations. Solid
 removes an emptied body atomically and Undo restores the inputs. Canonical empty
 B-reps cannot be loaded with a stale nonempty display mesh. Nonempty open sheets
 remain valid display entries; empty scenes produce neither phantom entities nor
@@ -815,10 +815,10 @@ an open-surface warning.
 Verification at this integration point:
 
 - 197 native tests passed across brep-core, brep-topology, geometry-bridge,
-  nurbs-core, modelgraph-text and modelgraph-runtime, including adversarial mass
+  nurbs-core, rush-frontend and rush-runtime, including adversarial mass
   integration and the new interval, pose, identity/decode and registry tests.
   Log: `/private/tmp/brep-native-expanded-final.log`.
-- 66 B-rep/Solid/ModelGraph/WASM tests passed in 8 files after Brotli geometry
+- 66 B-rep/Solid/RushGraph/WASM tests passed in 8 files after Brotli geometry
   startup integration. Log: `/private/tmp/brep-compressed-integration.log`.
 - Browser Code mode built the supplied rational cylinder subtraction example
   into one visible mesh (3260 display triangles at detail16), with mesh export
@@ -842,7 +842,7 @@ declared outer/inner shell orientation; serialization does not rely on hidden
 construction metadata. Native tests cover arbitrary common axes and reflections,
 holes, cavities, cap contacts, repeated operations and explicit resource limits.
 
-`brep_extrude_curves` is now public in ModelGraph JSON and text. Nested references
+`brep_extrude_curves` is now public in RushGraph JSON and text. Nested references
 to 2D NURBS curves retain their definitions through extrusion, including holes,
 full circles and rational line segments. Degree/shape/units/reference/active-span
 limits remain checked by the native path. No sampled polygon reconstructs these
@@ -877,7 +877,7 @@ Verification of the 21:13:02 geometry artifact:
 - 15 WASM tests passed for stepped Boolean and the scene adapter (including
   closed shared-edge tessellation at multiple details, exact-volume comparison,
   sealed cavities, rotated reuse, Float32 failures and cancellation).
-- 23 ModelGraph tests passed, including five new rational-curve extrusion cases;
+- 23 RushGraph tests passed, including five new rational-curve extrusion cases;
   18 semantic backend tests and four profile bridge tests passed.
 - The two affected semantic/lowering oracle suites plus initial scene tests
   passed 174 tests. Two stale ordinary test expectations were corrected to the
@@ -1652,7 +1652,7 @@ The complete debug suites for brep-core, brep-topology and nurbs-core pass:
 130 tests, including kernel operations, identities, archives, mass integration,
 incidence and intersection queries. Six related TypeScript/WASM test files pass
 43 tests covering analytic primitives, mass, regularized/stepped Boolean,
-ModelGraph and intersections. These results establish regression evidence for
+RushGraph and intersections. These results establish regression evidence for
 the current tested envelope, not the full qualification matrix.
 
 The main requirements table now reflects candidate-10 recipe persistence,

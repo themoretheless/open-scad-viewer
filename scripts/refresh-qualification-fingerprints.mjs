@@ -22,6 +22,12 @@ export const REFRESH_EXECUTORS = Object.freeze([
   '.gitattributes',
   'scripts/qualificationFrozenArchives.mjs',
   'scripts/browserMemoryErrors.mjs',
+  'scripts/check-sweep-miter-matrix-browser.mjs',
+  'scripts/sweep-browser-surface-evidence.mjs',
+  'scripts/sweep-browser-worker-probe.mjs',
+  'scripts/export-sweep-step-oracle.mts',
+  'scripts/sweep-step-miter-fixtures.mts',
+  'scripts/sweep-step-profile-fixtures.mts',
   '.github/workflows/g1-qualification-clean.yml',
   'scripts/materialize-qualification-kernels.mjs',
   'scripts/pack-geometry-kernel.mjs',
@@ -61,6 +67,23 @@ const oldReview = 'docs/qualification/g0-v76-g1-v93-refreeze-review.md'
 const githubEnvironment = 'docs/qualification/environment-freeze/g1-github-actions-v36.json'
 import {FROZEN_ARCHIVES} from './qualificationFrozenArchives.mjs'
 export {FROZEN_ARCHIVES}
+
+export function artifactBindingChanges(kind, before, after) {
+  const changes=[]
+    const nextById = new Map(after.map(item => [item.id, item]))
+    for (const item of before) {
+      const next = nextById.get(item.id)
+      const oldHash = typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value
+      const nextHash = next ? typeof next.sha256 === 'string' ? next.sha256 : next.sha256.value : null
+      if (oldHash !== nextHash) changes.push({ kind, id: item.id, previousSha256: oldHash, currentSha256: nextHash })
+    }
+    const previousIds = new Set(before.map(item => item.id))
+    for (const item of after.filter(item => !previousIds.has(item.id))) {
+      changes.push({kind, id:item.id, previousSha256:null,
+        currentSha256:typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value})
+    }
+  return changes
+}
 
 export function refreshInputPaths(root = defaultRoot) {
   const fingerprint = JSON.parse(ordinaryBytes(root, oldFingerprint))
@@ -277,34 +300,11 @@ export function prepareQualificationRefresh({
   assert(plan.matrix.every(row => row.evidenceState === 'not-executed-clean-post-freeze'))
 
   const artifactBytes = { fingerprint: jsonBytes(fingerprint), plan: jsonBytes(plan) }
-  const changes = []
-  for (const [kind, before, after] of [
+  const changes = [
     ['g0-artifact', previousFingerprint.artifacts, fingerprint.artifacts],
     ['g1-artifact', previousPlan.bindings.artifacts, plan.bindings.artifacts],
     ['g1-bundle', previousPlan.bindings.bundles, plan.bindings.bundles],
-  ]) {
-    before.forEach((item, index) => {
-      const oldHash = typeof item.sha256 === 'string' ? item.sha256 : item.sha256.value
-      const nextHash = typeof after[index].sha256 === 'string' ? after[index].sha256 : after[index].sha256.value
-      if (oldHash !== nextHash) changes.push({ kind, id: item.id, previousSha256: oldHash, currentSha256: nextHash })
-    })
-  }
-  for (const artifact of fingerprint.artifacts.slice(previousFingerprint.artifacts.length)) {
-    changes.push({
-      kind: 'g0-artifact',
-      id: artifact.id,
-      previousSha256: null,
-      currentSha256: artifact.sha256,
-    })
-  }
-  for (const artifact of plan.bindings.artifacts.slice(previousPlan.bindings.artifacts.length)) {
-    changes.push({
-      kind: 'g1-artifact',
-      id: artifact.id,
-      previousSha256: null,
-      currentSha256: artifact.sha256.value,
-    })
-  }
+  ].flatMap(([kind,before,after])=>artifactBindingChanges(kind,before,after))
   const status = {
     schema: 'open-scad-viewer/qualification-refreeze-status', schemaVersion: 1,
     statusId: 'g0-v77-g1-v94-refreeze-status-v1', recordedAt, reason: reason.trim(),

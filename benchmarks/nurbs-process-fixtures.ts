@@ -16,14 +16,14 @@ export const nurbsProcessFixtures = [
     name: operation,
     volume: [15, 1, 7][index]!,
     document: {
-      language: 'modelgraph/nurbs-1', units: 'mm',
+      language: 'rush/nurbs-1', units: 'mm',
       nodes: [...nodes, { id: 'result', op: 'mesh_boolean', inputs: ['a', 'b'], operation }], root: 'result',
     },
   })),
   {
     name: 'large-stl', volume: 8,
     document: {
-      language: 'modelgraph/nurbs-1', units: 'mm',
+      language: 'rush/nurbs-1', units: 'mm',
       nodes: [nodes[0], { ...nodes[1], segments_u: 48, segments_v: 48 }, nodes[2]], root: 'a',
     },
   },

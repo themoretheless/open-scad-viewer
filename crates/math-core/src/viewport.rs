@@ -4,14 +4,10 @@ pub type Matrix = [f64; 16];
 pub type Point = [f64; 3];
 /// Matrix transport has f32 GPU storage, with f64 accumulation.
 pub fn multiply(a: &Matrix, b: &Matrix) -> Matrix {
-    std::array::from_fn(|i| {
-        let mut sum = 0.;
-        for k in 0..4 {
-            sum += a[i / 4 * 4 + k] * b[k * 4 + i % 4]
-        }
-        sum as f32 as f64
-    })
+    use crate::affine::{from_row_major, multiply, to_row_major};
+    to_row_major(multiply(from_row_major(*a), from_row_major(*b))).map(|x| x as f32 as f64)
 }
+
 pub fn transpose(m: &Matrix) -> Matrix {
     std::array::from_fn(|i| m[i % 4 * 4 + i / 4])
 }
@@ -53,11 +49,12 @@ pub fn inverse(m: &Matrix) -> Option<Matrix> {
         for value in &mut rows[c] {
             *value /= d
         }
-        for r in 0..4 {
+        let pivot_row = rows[c];
+        for (r, row) in rows.iter_mut().enumerate() {
             if r != c {
-                let factor = rows[r][c];
-                for k in 0..8 {
-                    rows[r][k] -= factor * rows[c][k]
+                let factor = row[c];
+                for (value, pivot_value) in row.iter_mut().zip(pivot_row) {
+                    *value -= factor * pivot_value;
                 }
             }
         }

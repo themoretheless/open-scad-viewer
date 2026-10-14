@@ -1,0 +1,234 @@
+{
+  "oracle": "OpenCascade/cadquery-ocp",
+  "manifestSha256": "e4394eecfc04366e5bf99f73c4aabd4b4956c35479aab21ea3a0d93055ad5978",
+  "artifactProvenance": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "38934a40615d530ea1f41e5e4af3b5c0b7430f94c9b9af855923c7ff35c8bba3",
+    "geometryWasmByteLength": 11601801,
+    "publicAndPackedVerified": true
+  },
+  "cases": [
+    {
+      "file": "closed-contact-hollow-body-boundary.step",
+      "stepSha256": "562bc490023e19423ffcdabbca671aab35bf5f253a50b3a5c5296245ea4741ce",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 256,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 512,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 1024,
+      "pcurve_samples": 7168,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 1024,
+      "sampled_pcurve_surface_max_error_mm": 1.3322676295501878e-15,
+      "sampled_pcurve_derivative_max_error": 9.08995101411847e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 512,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 256,
+      "sampled_surface_max_error_mm": 8.881784197001252e-16,
+      "sampled_derivative_max_error": 1.0235652761497001e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        4.902961263192384,
+        -1.2257403157980957
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 3.6772209473942916,
+      "expected_volume": 3.6772209473942383,
+      "relative_volume_error": 1.4492114002497052e-14,
+      "integration_error": 8.589922968050858e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "volume_integration": {
+        "method": "OpenCascade/span-aware-Gauss-Kronrod",
+        "values": [
+          {
+            "eps": 1e-10,
+            "volume": 3.6772209473942916,
+            "estimatedError": 6.565299337148814e-12
+          },
+          {
+            "eps": 1e-12,
+            "volume": 3.6772209473942916,
+            "estimatedError": 8.589922968050858e-13
+          }
+        ],
+        "agreementThreshold": 3.677220947394292e-10,
+        "converged": true
+      },
+      "shell_volume_integrations": [
+        {
+          "method": "OpenCascade/span-aware-Gauss-Kronrod",
+          "values": [
+            {
+              "eps": 1e-10,
+              "volume": 4.902961263192384,
+              "estimatedError": 4.685390678052707e-13
+            },
+            {
+              "eps": 1e-12,
+              "volume": 4.902961263192384,
+              "estimatedError": 4.685390678052707e-13
+            }
+          ],
+          "agreementThreshold": 4.902961263192384e-10,
+          "converged": true
+        },
+        {
+          "method": "OpenCascade/span-aware-Gauss-Kronrod",
+          "values": [
+            {
+              "eps": 1e-10,
+              "volume": -1.2257403157980957,
+              "estimatedError": 2.1844827348735963e-11
+            },
+            {
+              "eps": 1e-12,
+              "volume": -1.2257403157980957,
+              "estimatedError": 8.614755677204841e-13
+            }
+          ],
+          "agreementThreshold": 1.2257403157980957e-10,
+          "converged": true
+        }
+      ],
+      "legacy_adaptive_gauss": {
+        "volume": 3.6772209482556604,
+        "estimatedError": 4.0197521201538293e-16
+      },
+      "full_domain_cap_coedge_uses": 0
+    },
+    {
+      "file": "closed-arc-length-contact-hollow-body-boundary.step",
+      "stepSha256": "51dac7ddbc37d466fcdc6ecb5fe030cbcdbafca3d9b7c8a5bc532d1c6114e408",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 256,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 512,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 1024,
+      "pcurve_samples": 7168,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 1024,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 9.08995101411847e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 512,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 256,
+      "sampled_surface_max_error_mm": 1.3322676295501878e-15,
+      "sampled_derivative_max_error": 1.2212453270876722e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        4.9031545476266105,
+        -1.225788636906653
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 3.6773659107199634,
+      "expected_volume": 3.6773659107199688,
+      "relative_volume_error": 1.4491542717209246e-15,
+      "integration_error": 8.590670001070163e-13,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "volume_integration": {
+        "method": "OpenCascade/span-aware-Gauss-Kronrod",
+        "values": [
+          {
+            "eps": 1e-10,
+            "volume": 3.6773659107199634,
+            "estimatedError": 6.5653585039322774e-12
+          },
+          {
+            "eps": 1e-12,
+            "volume": 3.6773659107199634,
+            "estimatedError": 8.590670001070163e-13
+          }
+        ],
+        "agreementThreshold": 3.6773659107199637e-10,
+        "converged": true
+      },
+      "shell_volume_integrations": [
+        {
+          "method": "OpenCascade/span-aware-Gauss-Kronrod",
+          "values": [
+            {
+              "eps": 1e-10,
+              "volume": 4.9031545476266105,
+              "estimatedError": 4.685313475819041e-13
+            },
+            {
+              "eps": 1e-12,
+              "volume": 4.9031545476266105,
+              "estimatedError": 4.685313475819041e-13
+            }
+          ],
+          "agreementThreshold": 4.90315454762661e-10,
+          "converged": true
+        },
+        {
+          "method": "OpenCascade/span-aware-Gauss-Kronrod",
+          "values": [
+            {
+              "eps": 1e-10,
+              "volume": -1.225788636906653,
+              "estimatedError": 2.184594394641414e-11
+            },
+            {
+              "eps": 1e-12,
+              "volume": -1.225788636906653,
+              "estimatedError": 8.618220936161676e-13
+            }
+          ],
+          "agreementThreshold": 1.225788636906653e-10,
+          "converged": true
+        }
+      ],
+      "legacy_adaptive_gauss": {
+        "volume": 3.6773659115813606,
+        "estimatedError": 4.598149343568363e-16
+      },
+      "full_domain_cap_coedge_uses": 0
+    }
+  ],
+  "passed": true,
+  "scope": "fixture import, topology and analytic volume; surface/seam/containment matrix remains separate"
+}

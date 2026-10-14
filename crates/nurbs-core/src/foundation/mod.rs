@@ -66,7 +66,7 @@ mod projection;
 mod edit;
 mod periodic;
 mod reparameterization;
-mod fitting;
+pub mod fitting;
 mod interval_root;
 mod materialize;
 mod cloud_fit;
@@ -372,3 +372,17 @@ pub use reparameterization_retention::{certify_reparameterized_curve_retention,c
 #[path = "../reparameterization_materialization.rs"]
 mod reparameterization_materialization;
 pub use reparameterization_materialization::materialize_reparameterized_curve_bounded;
+
+pub mod guards;
+
+mod native_fitting;
+
+pub mod parameter_mapping;
+pub mod bracketed;
+
+pub mod interpolation;
+
+mod native_knot_removal;
+
+mod curve_projection;
+pub use curve_projection::{ProjectionStatus,CandidateClassification,ProjectionCandidate,CurveProjection,project_curve_report};

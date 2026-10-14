@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {analyzeNurbsBrep,booleanNurbsBrep,createBrepBox,createBrepCylinder,createBrepTube,extrudeBrepCurves,inspectNurbsBrep,nurbsBrepToPolygon,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 import {parseOpenSCAD} from '../src/services/openscadParser'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import {GeometryKernelError} from '../src/services/geometry/kernel'
 
 it('rejects malformed legacy B-rep documents without trapping the shared WASM instance',()=>{
@@ -60,11 +60,11 @@ it('keeps rational circle Boolean geometry while display detail changes',()=>{
  expect(analyzeNurbsBrep(ring).signedVolumeMm3).toBeCloseTo(analyzeNurbsBrep(createBrepTube(3,1,5)).signedVolumeMm3,6)
 })
 
-it('exposes curved Boolean and XOR through ModelGraph text and keeps empty bounds null',async()=>{
- const scene=await parseOpenSCAD('// @modelgraph-text/1\na=brep_cylinder(3mm,5mm)\nb=brep_cylinder(1mm,5mm)\nshow a.brep_xor(b).brep_tessellate(8)')
+it('exposes curved Boolean and XOR through RushGraph text and keeps empty bounds null',async()=>{
+ const scene=await parseOpenSCAD('// @rush/1\na=brep_cylinder(3mm,5mm)\nb=brep_cylinder(1mm,5mm)\nshow a.brep_xor(b).brep_tessellate(8)')
  expect(scene.meshes).toHaveLength(1)
  expect(scene.meshes[0].faceIdsAuthoritative).toBe(true)
- const result=buildOwnNurbs({language:'modelgraph/nurbs-1',units:'mm',nodes:[{id:'a',op:'brep_cylinder',radius:3,height:5},{id:'zero',op:'brep_boolean',inputs:['a','a'],operation:'difference'},{id:'display',op:'brep_tessellate',input:'zero',segments:4}],root:'display'},{action:'build'})!
+ const result=buildOwnNurbs({language:'rush/nurbs-1',units:'mm',nodes:[{id:'a',op:'brep_cylinder',radius:3,height:5},{id:'zero',op:'brep_boolean',inputs:['a','a'],operation:'difference'},{id:'display',op:'brep_tessellate',input:'zero',segments:4}],root:'display'},{action:'build'})!
  expect(result.report.bounds).toBeNull()
  expect(result.mesh?.indices.length).toBe(0)
 })

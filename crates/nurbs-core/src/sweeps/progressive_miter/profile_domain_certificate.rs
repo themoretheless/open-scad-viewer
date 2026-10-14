@@ -9,6 +9,7 @@ use crate::{Result, check};
 pub struct Report {
     pub local_domain_certified: bool,
     pub source_plane_axis: Option<usize>,
+    pub source_plane_normal: Option<[[f64;2];3]>,
     pub cells: usize,
     pub pairs: usize,
     pub exact_work: u64,
@@ -16,19 +17,31 @@ pub struct Report {
 }
 impl Sweep<'_> {
     pub fn certify_local_profile_domain(
-        &self,
-        loop_sizes: &[usize],
-        tolerance: f64,
-        max_pairs: usize,
-        max_cells: usize,
-        max_exact_work: u64,
+        &self, loop_sizes: &[usize], tolerance: f64, max_pairs: usize,
+        max_cells: usize, max_exact_work: u64,
     ) -> Result<Report> {
+        let transport = &self.transport_certificate;
+        let axis = if transport.status == Status::Certified {
+            Some(transport.tangents.as_ref().unwrap()[0])
+        } else { None };
+        certify_original_profile_projection_domain(self.profiles, loop_sizes, axis,
+            transport.cells, tolerance, max_pairs, max_cells, max_exact_work)
+    }
+}
+
+/// Constructor-owned original profiles and independently proved initial axis.
+/// This shared proof does not certify endpoint caps or retained body error.
+pub(crate) fn certify_original_profile_projection_domain(
+    profiles: &[crate::curve::Curve], loop_sizes: &[usize],
+    initial_axis: Option<[[f64;2];3]>, frame_cells: usize,
+    tolerance: f64, max_pairs: usize, max_cells: usize, max_exact_work: u64,
+) -> Result<Report> {
         check(
             !loop_sizes.is_empty()
                 && loop_sizes.len() <= 16
                 && loop_sizes.iter().all(|n| *n > 0 && *n <= 64)
-                && loop_sizes.iter().sum::<usize>() == self.profiles.len()
-                && self.profiles.len() <= 64
+                && loop_sizes.iter().sum::<usize>() == profiles.len()
+                && profiles.len() <= 64
                 && max_cells <= 100000
                 && max_pairs <= 100000
                 && tolerance.is_finite()
@@ -38,13 +51,13 @@ impl Sweep<'_> {
         let mut out = Report {
             local_domain_certified: false,
             source_plane_axis: None,
+            source_plane_normal: None,
             cells: 0,
             pairs: 0,
             exact_work: 0,
             reason: Some("source-plane-unproved"),
         };
-        let points = self
-            .profiles
+        let points = profiles
             .iter()
             .flat_map(|c| c.control_points.iter().cloned())
             .collect::<Vec<_>>();
@@ -73,19 +86,19 @@ impl Sweep<'_> {
             return Ok(out);
         };
         out.source_plane_axis = Some(axis);
-        let transport = &self.transport_certificate;
-        if transport.status != Status::Certified {
+        out.source_plane_normal = Some(normal);
+        let Some(initial_axis) = initial_axis else {
             out.reason = Some("initial-frame-unproved");
             return Ok(out);
-        }
-        if transport.cells >= max_cells {
+        };
+        if frame_cells >= max_cells {
             out.reason = Some("work-limit");
             return Ok(out);
         }
-        out.cells = transport.cells;
+        out.cells = frame_cells;
         let projection = projection::certify(
             normal,
-            transport.tangents.as_ref().unwrap()[0],
+            initial_axis,
             max_cells - out.cells,
         )?;
         out.cells += projection.cells;
@@ -99,7 +112,7 @@ impl Sweep<'_> {
         let mut loops = Vec::with_capacity(loop_sizes.len());
         for size in loop_sizes {
             let mut wire = Vec::with_capacity(*size);
-            for curve in &self.profiles[at..at + size] {
+            for curve in &profiles[at..at + size] {
                 let mut c = curve.clone();
                 c.control_points = c
                     .control_points
@@ -133,7 +146,6 @@ impl Sweep<'_> {
         out.local_domain_certified = true;
         out.reason = None;
         Ok(out)
-    }
 }
 /// Endpoint material domains are affine images of the certified local region.
 /// This certifies ownership geometry, not shell winding/orientation or error.

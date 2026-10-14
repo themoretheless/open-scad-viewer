@@ -1,3 +1,4 @@
+import { languageRequest } from '../languages/kernel'
 import { SILENT_CONTEXT } from '../openScadStablePrimitiveSemantics'
 import type { NormalizedLimits, OpenScadBoxPrimitiveInput, OpenScadBoxPrimitivePlan, OpenScadCylinderPrimitiveInput, OpenScadCylinderPrimitivePlan, OpenScadPolyhedronPrimitiveInput, OpenScadPolyhedronPrimitivePlan, OpenScadPrimitiveReduction, OpenScadPrimitiveSafetyLimits, OpenScadRadialPrimitiveInput, OpenScadRadialPrimitivePlan, OpenScadStablePrimitiveContext, OpenScadStablePrimitiveName, OpenScadStablePrimitiveWarning, OpenScadVec2, OpenScadVec3, RadiusPair } from '../openScadStablePrimitiveSemantics'
 
@@ -296,12 +297,12 @@ export function resolveOpenScadPolyhedron(
   input: OpenScadPolyhedronPrimitiveInput = {},
   context: OpenScadStablePrimitiveContext = SILENT_CONTEXT,
 ): OpenScadPolyhedronPrimitivePlan {
-  const limits = normalizeLimits(input.limits)
+  const limits = indexedPolicy(input.limits,input.convexity)
   const points = asVector(input.points)
   if (points.length > limits.maximumPoints) {
     const limited = reduction('polyhedron', 'points', points.length, limits.maximumPoints, context)
     return Object.freeze({
-      kind: 'polyhedron', polygons: Object.freeze([]), facesSource: 'default', convexity: convexity(input.convexity),
+      kind: 'polyhedron', vertices: Object.freeze([]), indices: Object.freeze([]), usable: false, polygons: Object.freeze([]), facesSource: 'default', convexity: limits.convexity,
       aborted: true, sourcePointCount: points.length, empty: true, reduced: true, reduction: limited,
     })
   }
@@ -319,68 +320,58 @@ export function resolveOpenScadPolyhedron(
   if (faces.length > limits.maximumFacesOrPaths) {
     const limited = reduction('polyhedron', 'faces', faces.length, limits.maximumFacesOrPaths, context)
     return Object.freeze({
-      kind: 'polyhedron', polygons: Object.freeze([]), facesSource, convexity: convexity(input.convexity),
+      kind: 'polyhedron', vertices: Object.freeze([]), indices: Object.freeze([]), usable: false, polygons: Object.freeze([]), facesSource, convexity: limits.convexity,
       aborted: true, sourcePointCount: points.length, empty: true, reduced: true, reduction: limited,
     })
   }
 
-  const polygons: OpenScadVec3[][] = []
-  let indexCount = 0
-  for (let faceIndex = 0; faceIndex < faces.length; faceIndex++) {
-    const authoredFace = asVector(faces[faceIndex])
-    const polygon: OpenScadVec3[] = []
-    polygons.push(polygon)
-    for (let facePointIndex = 0; facePointIndex < authoredFace.length; facePointIndex++) {
-      indexCount++
-      if (indexCount > limits.maximumIndices) {
-        const limited = reduction('polyhedron', 'indices', indexCount, limits.maximumIndices, context)
-        return Object.freeze({
-          kind: 'polyhedron', polygons: frozenPolygons3(polygons), facesSource,
-          convexity: convexity(input.convexity), aborted: true, sourcePointCount: points.length,
-          empty: polygons.every(candidate => candidate.length < 3), reduced: true, reduction: limited,
-        })
-      }
-      const index = unsignedIndex(authoredFace[facePointIndex])
-      if (index >= points.length) {
-        warn(context, {
-          code: 'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
-          message: 'polyhedron skipped a face entry whose point index is outside the point vector',
-          primitive: 'polyhedron',
-          field: `faces[${faceIndex}]`,
-          index,
-          value: authoredFace[facePointIndex],
-        })
-        continue
-      }
-      const converted = point3(points[index])
-      if (converted === null) {
-        warn(context, {
-          code: 'OPENSCAD_PRIMITIVE_POINT_INVALID',
-          message: 'polyhedron stopped after a referenced point failed exact vec2/vec3 conversion',
-          primitive: 'polyhedron',
-          field: `points[${index}]`,
-          index,
-          value: points[index],
-        })
-        return Object.freeze({
-          kind: 'polyhedron', polygons: frozenPolygons3(polygons), facesSource,
-          convexity: convexity(input.convexity), aborted: true, sourcePointCount: points.length,
-          empty: polygons.every(candidate => candidate.length < 3), reduced: false, reduction: null,
-        })
-      }
-      polygon.push(converted)
-    }
+  const nativePoints=points.map(point=>Array.isArray(point)&&point.length<=3?Array.from(point,indexedNumber):[])
+  const maximumIndices=Number.isFinite(limits.maximumIndices)?limits.maximumIndices:Number.MAX_SAFE_INTEGER
+  const nativeFaces=indexedRows(faces,maximumIndices)
+  type Event={kind:'bounds'|'point'|'limit';face?:number;entry?:number;index?:number;actual?:number}
+  const response=languageRequest(28,{points:nativePoints,faces:nativeFaces,maximumIndices}) as {ok:boolean;value:{vertices:number[];indices:number[];usable:boolean;polygons:number[][][];events:Event[];aborted:boolean;empty:boolean};error?:{message:string}}
+  if(!response.ok)throw new Error(response.error?.message??'Native polyhedron expansion failed')
+  let limited:OpenScadPrimitiveReduction|null=null
+  for(const event of response.value.events){
+    if(event.kind==='limit')limited=reduction('polyhedron','indices',event.actual!,limits.maximumIndices,context)
+    else if(event.kind==='bounds')warn(context,{
+      code:'OPENSCAD_PRIMITIVE_INDEX_OUT_OF_BOUNDS',
+      message:'polyhedron skipped a face entry whose point index is outside the point vector',
+      primitive:'polyhedron',field:`faces[${event.face}]`,index:event.index,
+      value:asVector(faces[event.face!])[event.entry!],
+    })
+    else warn(context,{
+      code:'OPENSCAD_PRIMITIVE_POINT_INVALID',
+      message:'polyhedron stopped after a referenced point failed exact vec2/vec3 conversion',
+      primitive:'polyhedron',field:`points[${event.index}]`,index:event.index,value:points[event.index!],
+    })
   }
+  const polygons=response.value.polygons.map(polygon=>polygon.map(point=>freeze3(point[0],point[1],point[2])))
+  return Object.freeze({kind:'polyhedron',vertices:Object.freeze(response.value.vertices),indices:Object.freeze(response.value.indices),usable:response.value.usable,polygons:frozenPolygons3(polygons),facesSource,
+    convexity:limits.convexity,aborted:response.value.aborted,sourcePointCount:points.length,
+    empty:response.value.empty,reduced:limited!==null,reduction:limited})
+}
 
-  return Object.freeze({
-    kind: 'polyhedron',
-    polygons: frozenPolygons3(polygons),
-    facesSource,
-    convexity: convexity(input.convexity),
-    aborted: false,
-    sourcePointCount: points.length,
-    empty: polygons.every(polygon => polygon.length < 3),
-    reduced: false,
-    reduction: null,
+function indexedPolicy(limits:OpenScadPrimitiveSafetyLimits|undefined,convexity:unknown):IndexedPolicy {
+  const encode=(value:unknown)=>typeof value==='number'?Number.isFinite(value)?value:String(value):null
+  const values=[limits?.maximumPoints,limits?.maximumFacesOrPaths,limits?.maximumIndices]
+  const response=languageRequest(30,{limits:values.map(value=>({missing:value===undefined,number:encode(value)})),convexity:encode(convexity)}) as {ok:boolean;field?:string;value:{limits:(number|string)[];convexity:number}}
+  if(!response.ok)throw new RangeError(`${response.field} must be a non-negative safe integer`)
+  const [maximumPoints,maximumFacesOrPaths,maximumIndices]=response.value.limits.map(Number)
+  return Object.freeze({maximumPoints,maximumFacesOrPaths,maximumIndices,convexity:response.value.convexity})
+}
+
+function indexedNumber(value:unknown):number|string|null {
+  return typeof value==='number'?Number.isFinite(value)?value:String(value):null
+}
+
+function indexedRows(rows:readonly unknown[],maximum:number):(number|string|null)[][] {
+  let remaining=maximum+1
+  return Array.from(rows,row=>{
+    const entries=asVector(row),count=Math.min(entries.length,remaining)
+    remaining-=count
+    return Array.from(entries.slice(0,count),indexedNumber)
   })
 }
+
+interface IndexedPolicy { readonly maximumPoints:number; readonly maximumFacesOrPaths:number; readonly maximumIndices:number; readonly convexity:number }

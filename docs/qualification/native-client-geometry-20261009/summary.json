@@ -1,0 +1,45 @@
+{
+  "schema": "native-client-geometry-finite-evidence/1",
+  "recordedAt": "2026-10-09",
+  "artifact": {
+    "sha256": "c71fecea1cb784e8dc2da08909a1c7f73d9774a038ad30fe049029b4e1817892",
+    "byteLength": 11849588
+  },
+  "contractsPassed": 162,
+  "contractFiles": 15,
+  "nativeTests": {
+    "nurbsUnits": 1537,
+    "mathUnits": 81,
+    "wallSearch": 1,
+    "bridgeClientGeometry": 2
+  },
+  "browser": {
+    "cases": 2,
+    "assertions": 26,
+    "backend": "metal"
+  },
+  "checks": [
+    "NURBS catalog",
+    "current API map",
+    "algorithm owner census",
+    "architecture",
+    "Vue and MCP types",
+    "math Clippy",
+    "dist budget"
+  ],
+  "records": [
+    {
+      "path": "docs/qualification/native-client-geometry-20261009/contracts.json",
+      "sha256": "b28a936c45c9348b25cfdbc9b3b15590a7381bbed3576abd53779d2d18c0bf13"
+    },
+    {
+      "path": "docs/qualification/native-client-geometry-20261009/ui.json",
+      "sha256": "e37cab19454506ce7971ffbcb7cf198cfbb1817bf42094141d15d4114a42fc52"
+    }
+  ],
+  "scope": [
+    "Finite regressions of migrated proposals and report consistency, not arbitrary global geometry or clean G0/G1 qualification.",
+    "Earlier 155-case STEP matrix belongs to OwnRust58 artifact 79f12832a71cf5cb9669b76b610fe2cb812debbcc6c8cb3a6f2806ab511f84d3; it is not relabeled as a run on this artifact.",
+    "Proposal samples do not certify coverage. Explicit caller-supplied evaluation hooks remain transport inputs."
+  ]
+}

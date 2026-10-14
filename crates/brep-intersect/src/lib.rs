@@ -37,3 +37,7 @@ pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect
 pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 pub use brep_core::intersections::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
+
+mod sphere_sphere { pub use brep_core::intersections::sphere_sphere::*; }
+
+use brep_core::intersections::{CanonicalPlane, recognize_plane};

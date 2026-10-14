@@ -1,0 +1,151 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T10:23:00.636Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "f3ff638d8cf96f55ac9f98f011a7852ffa0b06ec15a03cbb872e2a6524ef2af4",
+  "artifactProvenance": {
+    "sha256": "f3ff638d8cf96f55ac9f98f011a7852ffa0b06ec15a03cbb872e2a6524ef2af4",
+    "byteLength": 11061382,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-CuabSxnq.js"
+    ]
+  },
+  "appSourceSha256": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+  "distIndexSha256": "c06b077a3f6b89a1ad08ecd854de200933768d9b6ab92de6fa82b529a664312c",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-nonaxial-planar-rmf-body-boundary.r",
+      "sourceSha256": "171d5efcc4a7c076a24182f7a03127299e6a57e0f81b018a1b97a81f0ee8a41f",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [],
+      "solid": {
+        "faces": 18,
+        "shells": 1,
+        "geometrySha256": "b12a95522f30f45af8c4cd19d16fb04e8c2b188016cbd83c6c98420398bac9f4",
+        "renderer": "webgpu"
+      },
+      "refusalMessage": "Sweep path extent is zero or unrepresentable",
+      "resourceRefusalMessage": "Progressive body sampled refinement exceeds budget"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "arc-length-curved-planar-rmf-body-boundary.r",
+      "sourceSha256": "2e6c4c9abb0459792eec12cceb23947f87c00f1a2fd9ff0434e5b4e713740734",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        },
+        {
+          "case": "material-panel-open-close",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-fit-through-UI",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "viewportEvidence": [],
+      "error": "page.screenshot: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n▾\n13\n14\n15\n16\n17\n18\n19\n20\n21\n// @rush/1\n// Original curved planar RMF arc-length boundary; native Solid audit is separate.\na = line_curve(start: [0,0,0],end: [0.1mm,0,0])\nb = line_curve(start: [0.1mm,0,0],end: [0.1mm,0.1mm,0])\nc = line_curve(start: [0.1mm,0.1mm,0],end: [0,0.1mm,0])\nd = line_curve(start: [0,0.1mm,0],end: [0,0,0])\nh0 = line_curve(start: [0.025mm,0.025mm,0],end: [0.025mm,0.075mm,0])\nh1 = line_curve(start: [0.025mm,0.075mm,0],end: [0.075mm,0.075mm,0])\nh2 = line_curve(start: [0.075mm,0.075mm,0],end: [0.075mm,0.025mm,0])\nh3 = line_curve(start: [0.075mm,0.025mm,0],end: [0.025mm,0.025mm,0])\npath = bezier_curve(points: [[0,0,0],[0,0,0.5mm],[0,1mm,1mm]])\nshow brep_progressive_sweep([[a,b,c,d],[h0,h1,h2,h3]],path,\n cap_correction_tolerance: 0.000000001mm,cap_correction_quantum: 0.0000000000009094947017729282mm,cap_correction_max_work: 1000000,\n orientation: \"rmf\",normal: [1,0,0],spacing: \"arc_length\",\n axis_scale: {degree: 1,knots: [0,0,1,1],values: [[2,3,1],[2,3,1]],weights: [1,1]},\n center_law: {degree: 1,knots: [0,0,1,1],values: [[0,0,0],[0,0,0]],weights: [1,1]},\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 3,max_sections: 17,length_tolerance: 0.001mm,length_max_cells: 100000,max_deviation: 2mm\n).brep_tessellate(4)\n\n\nОбъекты 1\nТреугольники 360\nОбъём 0,06\nПлощадь 1,97\nГотово · 10 203 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 0,753494 mm\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nWebGPU · интерактивный\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n1 FPS · 1008.4 ms · draw 1 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "1124b23f24c5e6e4361c92a043d5df087f0bc05e52fef52164804b04ee4ff42b",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "38062fba5c012d99ddb92d7a9bf46705d69e143847072c2aa0b5ba61fe34399b",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "e229fe0c5b1a3105cc659c70bd437a8c2d0e4873120bedbda09534a93a32ccc3",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": true
+}

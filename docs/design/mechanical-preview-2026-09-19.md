@@ -6,7 +6,7 @@ the geometry service quality to `preview` still produced 52,064 triangles: the
 generated source explicitly sets `$fn = 48`. Changing `flank_segments` also did
 not reduce that retained-B-rep display mesh.
 
-`modelgraph_generate` now keeps its full build for analysis and the returned
+`rush_generate` now keeps its full build for analysis and the returned
 document, then compiles a separate `segments: 12` document only when the full
 mesh exceeds the image triangle budget. The default assembly produces 10,240
 triangles and three PNG views. No mesh faces are dropped or randomly sampled.
@@ -53,7 +53,7 @@ two teeth, outside the supported 3..256 range. The MCP guide matches that
 contract and does not claim generated undercut or manufacturing certification.
 
 This change is intentionally confined to mechanical generation. General
-ModelGraph reports may contain explicit per-node tessellation or sampled input
+RushGraph reports may contain explicit per-node tessellation or sampled input
 meshes; changing a global segment value would not reliably reduce them.
 
 ## Verification

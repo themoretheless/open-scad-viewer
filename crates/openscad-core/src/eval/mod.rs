@@ -37,3 +37,8 @@ mod evaluator;
 mod evaluate_program;
 pub use quality::*;
 pub use evaluate_program::*;
+
+mod expressions;
+mod comprehensions;
+mod function_calls;
+mod recording;

@@ -299,3 +299,5 @@ pub fn inspect_surface_jets_checked_report(
     let accepted=regular&&smooth&&error<=max_error;
     Ok(json!({"continuityOrder":order,"normalScale":scale,"regularityCertified":regular,"referenceRegularity":reference_regularity,"editedRegularity":edited_regularity,"errorBounds":error_bounds,"accepted":accepted,"errorUpper":error,"maxError":max_error,"tangentialSmoothnessCertified":smooth,"method":"homogeneous-normalized-boundary-jets"}))
 }
+
+pub use crate::join::continuity::{ProjectiveSeam,ProjectiveSeamCollectionReport,propose_boundary_normal_scale,inspect_projective_seam_collection_until_refused};

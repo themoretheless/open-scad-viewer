@@ -4,6 +4,12 @@
 //! Bounds enclose values and one-sided derivatives with respect to the authored
 //! knot parameter. They do not certify frames, stations, or a sweep surface.
 use crate::{Result, check, curve::Curve, distance_bounds::Interval};
+mod third;
+mod fourth;
+pub use fourth::{FourthReport,certify_fourth_traversal};
+mod first_point;
+pub use first_point::{PointFirstReport,certify_first_point};
+pub use third::{ThirdReport,certify_third_traversal};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -41,6 +47,30 @@ fn derivative(values: &[Interval], degree: usize, width: Interval) -> Result<Vec
         .collect()
 }
 fn span_jets(c: &Curve, span: usize, lo: f64, hi: f64) -> Result<[Interval; 3]> {
+    let a=c.knots[span];
+    let b=c.knots[span+1];
+    // Outward traversal mapping can overlap an adjacent knot span by only
+    // one ulp. Differentiate its original full-span polynomial before
+    // restriction: dividing differences of restricted poles by a tiny width
+    // needlessly destroys the enclosure (or underflows its denominator).
+    if hi-lo <= (b-a)*1e-10 {
+        let controls=crate::curve_distance::restricted_controls(c,span,Interval::new(a,b)?)?;
+        let width=Interval::point(b).sub(Interval::point(a))?;
+        let local=Interval::new(lo,hi)?.sub(Interval::point(a))?.div(width)?.intersect(0.,1.)?;
+        let numerator=controls.iter().map(|p|p[0]).collect::<Vec<_>>();
+        let weights=controls.iter().map(|p|p[3]).collect::<Vec<_>>();
+        let n1=derivative(&numerator,c.degree,width)?;
+        let w1=derivative(&weights,c.degree,width)?;
+        let n2=derivative(&n1,c.degree.saturating_sub(1),width)?;
+        let w2=derivative(&w1,c.degree.saturating_sub(1),width)?;
+        let evaluate=|v|first_point::evaluate(v,local);
+        let weight=evaluate(weights)?;
+        let relative=evaluate(numerator)?.div(weight)?;
+        let weight_first=evaluate(w1)?;
+        let first=evaluate(n1)?.sub(relative.mul(weight_first)?)?.div(weight)?;
+        let second=evaluate(n2)?.sub(first.mul(weight_first)?.mul(Interval::point(2.))?)?.sub(relative.mul(evaluate(w2)?)?)?.div(weight)?;
+        return Ok([relative.add(Interval::point(c.control_points[span-c.degree][0]))?,first,second]);
+    }
     let controls = crate::curve_distance::restricted_controls(c, span, Interval::new(lo, hi)?)?;
     let width = Interval::point(hi).sub(Interval::point(lo))?;
     let numerator: Vec<_> = controls.iter().map(|p| p[0]).collect();
@@ -321,4 +351,84 @@ mod tests {
         assert_eq!(u.status, Status::Unresolved);
         assert!(u.value.is_none());
     }
+}
+
+/// One-sided endpoint derivative from the whole original active span.
+/// Avoids dividing a vanishing point restriction; caller charges one span.
+pub fn endpoint_first(c: &Curve, at_end: bool, max_cells: usize) -> Result<Option<[f64; 2]>> {
+    c.validate()?;
+    check(
+        max_cells <= 100000
+            && c.control_points
+                .iter()
+                .all(|p| p.len() == 3 && p[1] == 0. && p[2] == 0.),
+        "Invalid scalar endpoint input",
+    )?;
+    if max_cells == 0 {
+        return Ok(None);
+    }
+    if c.degree == 0 {
+        return Ok(Some([0., 0.]));
+    }
+    let spans = (c.degree..c.control_points.len())
+        .filter(|&i| c.knots[i] < c.knots[i + 1])
+        .collect::<Vec<_>>();
+    let span = if at_end {
+        *spans.last().unwrap()
+    } else {
+        spans[0]
+    };
+    let result = (|| -> Result<Interval> {
+        let a = c.knots[span];
+        let b = c.knots[span + 1];
+        let controls = crate::curve_distance::restricted_controls(c, span, Interval::new(a, b)?)?;
+        let end = if at_end { c.degree } else { 0 };
+        let (left, right) = if at_end {
+            (c.degree - 1, c.degree)
+        } else {
+            (0, 1)
+        };
+        let relative = controls[end][0].div(controls[end][3])?;
+        let n = controls[right][0].sub(controls[left][0])?;
+        let w = controls[right][3].sub(controls[left][3])?;
+        n.sub(relative.mul(w)?)?.div(controls[end][3])?.mul(
+            Interval::point(c.degree as f64).div(Interval::point(b).sub(Interval::point(a))?)?,
+        )
+    })();
+    Ok(result.ok().map(|v| [v.lo, v.hi]))
+}
+
+#[test]
+fn rational_original_endpoint_first_avoids_point_width_division() {
+    let c = Curve {
+        degree: 1,
+        knots: vec![7., 7., 9., 9.],
+        control_points: vec![vec![1., 0., 0.], vec![2., 0., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    for (end, expected) in [(false, 1.), (true, 0.25)] {
+        let v = endpoint_first(&c, end, 1).unwrap().unwrap();
+        assert!(v[0] <= expected && expected <= v[1]);
+        assert!(v[1] - v[0] < 1e-10);
+    }
+    assert!(endpoint_first(&c, false, 0).unwrap().is_none());
+}
+
+#[test]
+fn tiny_original_span_restriction_retains_rational_jets() {
+    let curve=Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![1.,0.,0.],vec![2.,0.,0.]],weights:vec![1.,2.],periodic:false};
+    let lo=0.5_f64;
+    let hi=lo.next_up();
+    let report=certify(&curve,[lo,hi],1).unwrap();
+    assert_eq!(report.status,Status::Certified);
+    for t in [lo,hi] {
+        for (bound,expected) in [(report.value.unwrap(),(1.+3.*t)/(1.+t)),(report.first.unwrap(),2./(1.+t).powi(2)),(report.second.unwrap(),-4./(1.+t).powi(3))] {
+            assert!(bound[0]<=expected && expected<=bound[1],"{bound:?} excludes {expected}");
+            assert!(bound[1]-bound[0]<1e-10);
+        }
+    }
+    let short=certify(&curve,[lo,hi],0).unwrap();
+    assert_eq!(short.status,Status::Unresolved);
+    assert!(short.value.is_none() && short.first.is_none() && short.second.is_none());
 }

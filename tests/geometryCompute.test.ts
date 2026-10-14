@@ -76,3 +76,15 @@ describe('world surface-area compute pilot', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+it('retains compensated area across native batches and cancels between them', async () => {
+  const mesh = input()
+  mesh.indices = new Uint32Array(2050 * 3)
+  for (let i = 0; i < mesh.indices.length; i += 3) mesh.indices.set([0, 1, 2], i)
+  expect(await cpuSurfaceArea(mesh, new AbortController().signal)).toBe(6150)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 0)
+  try {
+    await expect(cpuSurfaceArea(mesh, controller.signal)).rejects.toThrow()
+  } finally { clearTimeout(timer) }
+})

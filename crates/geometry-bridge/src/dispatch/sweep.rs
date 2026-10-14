@@ -1,7 +1,20 @@
 //! Bridge operations of the `sweep` family.
 use crate::*;
+#[path = "sweep_profile.rs"]
+mod native_profile;
 
 const OPS: &[&str] = &[
+    "brep_nurbs_progressive_profile_body",
+    "brep_miter_wall_preview",
+    "brep_miter_sharp_stations",
+    "brep_miter_section_partition",
+    "brep_miter_body_plan",
+    "brep_miter_reconstruct_stations",
+    "brep_miter_affine_boundary",
+    "brep_miter_owned_place",
+    "brep_miter_owned_reconstruct",
+    "brep_miter_owned_construct",
+    "brep_sweep_retained_charts_audit",
     "brep_sweep_viewport_evidence",
     "brep_progressive_profile_body",
     "brep_sweep_law_payload",
@@ -40,6 +53,17 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "brep_nurbs_progressive_profile_body" => native_profile::build(v),
+        "brep_miter_wall_preview" => cad_miter_layout::preview(v),
+        "brep_miter_sharp_stations" => cad_miter_layout::sharp(v),
+        "brep_miter_section_partition" => cad_miter_layout::partition(v),
+        "brep_miter_body_plan" => cad_miter_layout::plan(v),
+        "brep_miter_reconstruct_stations" => cad_miter_layout::reconstruct(v),
+        "brep_miter_affine_boundary" => cad_miter_layout::affine_boundary(v),
+        "brep_miter_owned_place" => cad_miter_owned::place(v),
+        "brep_miter_owned_reconstruct" => cad_miter_owned::reconstruct(v),
+        "brep_miter_owned_construct" => cad_miter_owned::construct(v),
+        "brep_sweep_retained_charts_audit" => cad_sweep_smoothness::diagnose_charts(v),
         "brep_sweep_viewport_evidence" => sweep_viewport::read(v),
         "brep_progressive_profile_body" => sweep_pipeline::profile_body(v),
         "brep_sweep_law_payload" => sweep_pipeline::law_payload(v),
@@ -96,10 +120,27 @@ fn handle(v: Value) -> Result<Value> {
             Ok(json!({"certified":r.error_upper.is_some(),"capErrorUpper":r.error_upper,"products":r.products,"regions":regions,"reason":r.reason}))
         }
         "brep_sweep_retained_caps_audit" => {
-            let r=brep_core::sweep_cap_contacts::inspect_retained_caps(&field(&v,"model")?,&field::<Vec<Vec<Vec<Curve>>>>(&v,"endpoints")?,brep_core::sweep_cap_contacts::Budgets {
-                max_walls:field(&v,"maxWalls")?,max_exact_work:field(&v,"maxExactWork")?,max_chart_cells:field(&v,"maxChartCells")?,max_trim_pairs:field(&v,"maxTrimPairs")?,max_trim_cells:field(&v,"maxTrimCells")?,max_trim_domain_cells:field(&v,"maxTrimDomainCells")?,
-            },field(&v,"maxEdges")?)?;
-            Ok(json!({"exact":r.exact,"capErrorUpper":if r.exact {Some(0)} else {None},"exactWork":r.exact_work,"faces":r.faces,"reason":r.reason}))
+            let model = field::<brep_core::Model>(&v, "model")?;
+            let endpoints = field::<[Vec<Vec<Curve>>; 2]>(&v, "endpoints")?;
+            let report = brep_core::sweep_retained_caps::inspect(
+                &model,
+                &endpoints,
+                brep_core::sweep_cap_contacts::Budgets {
+                    max_walls: field(&v, "maxWalls")?,
+                    max_exact_work: field(&v, "maxExactWork")?,
+                    max_chart_cells: field(&v, "maxChartCells")?,
+                    max_trim_pairs: field(&v, "maxTrimPairs")?,
+                    max_trim_cells: field(&v, "maxTrimCells")?,
+                    max_trim_domain_cells: field(&v, "maxTrimDomainCells")?,
+                },
+                field(&v, "maxEdges")?,
+            )?;
+            Ok(
+                json!({"exact":report.exact,"capErrorUpper":if report.exact {Some(0.)}else{None},
+                "exactWork":report.exact_work,"faces":[model.faces.len().saturating_sub(2),model.faces.len().saturating_sub(1)],
+                "inspectedEdges":report.inspected_edges,"reason":report.reason,
+                "continuousBound":false,"globalEmbeddingCertified":false,"solidCertified":false}),
+            )
         }
         "brep_sweep_cap_contacts_audit" => {
             let report=brep_core::sweep_cap_contacts::inspect(&field::<brep_core::Model>(&v,"model")?,field(&v,"capFace")?,

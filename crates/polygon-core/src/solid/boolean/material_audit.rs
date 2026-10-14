@@ -105,14 +105,13 @@ fn audit_with_budget(mesh: &Mesh, max_work: usize) -> Result<MaterialAudit> {
             .iter()
             .copied()
             .max_by_key(|&j| containers[j].len());
-        if let Some(p) = parent {
-            if containers[p].len() + 1 != depth
-                || containers[p].iter().any(|j| !containers[i].contains(j))
-            {
+        if let Some(p) = parent
+            && (containers[p].len() + 1 != depth
+                || containers[p].iter().any(|j| !containers[i].contains(j)))
+        {
                 return Err(invalid(
                     "Shell containment does not form a nested hierarchy",
                 ));
-            }
         }
         shells.push(MaterialShell {
             first_triangle: group[0],
@@ -141,13 +140,13 @@ mod tests {
         )
         .unwrap()
         .mesh;
-        for p in mesh.positions.chunks_exact_mut(3) {
+        for p in mesh.positions.as_chunks_mut::<3>().0 {
             for k in 0..3 {
                 p[k] += offset[k];
             }
         }
         if reversed {
-            for t in mesh.indices.chunks_exact_mut(3) {
+            for t in mesh.indices.as_chunks_mut::<3>().0 {
                 t.swap(1, 2);
             }
         }

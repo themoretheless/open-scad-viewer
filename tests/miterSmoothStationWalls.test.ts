@@ -96,8 +96,10 @@ it('composes the full bound and proves Solid after genuinely curved owned-source
  })
  const sections=source.approximation.sections.map(station=>station.map(curve=>[curve]))
  const options={quantum:.125,maxWork:10000,wallTolerance:.5,maxDeviation:2}
- expect(()=>smoothCertifiedMiterBody(source,sections,[],{...options,maxDeviation:1})).toThrow(/complete boundary error/)
+ expect(()=>smoothCertifiedMiterBody(source,sections,[],{...options,maxDeviation:.8})).toThrow(/complete boundary error/)
  const result=smoothCertifiedMiterBody(source,sections,[],options)
+ expect(result.boundaryCertificate.errorUpper).toBeGreaterThan(.8)
+ expect(result.boundaryCertificate.errorUpper).toBeLessThanOrEqual(1)
  expect(result.candidate.wallDisplacementUpper).toBeGreaterThan(.39)
  expect(result.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true})
  expect(result.volume.solidGeometryCertified).toBe(true)
@@ -105,4 +107,111 @@ it('composes the full bound and proves Solid after genuinely curved owned-source
  const imported=importDirectStepV5(exportDirectStepV5(result.model).text).model
  expect(inspectSweepVolume(imported,[imported.faces.length-2,imported.faces.length-1],DEFAULT_SWEEP_VOLUME_BUDGETS).solidGeometryCertified).toBe(true)
  expect(inspectMiterStationSmoothness(imported,[imported.faces.length-2,imported.faces.length-1]).stationG2Certified).toBe(true)
+})
+
+it('certifies periodic polynomial profiles after owned curved-center station reconstruction',()=>{
+ const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
+ const profile:NurbsCurve={degree:2,knots:[0,1,2,3,4,5,6,7,8],
+  controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],
+  weights:[1,1,1,1,1,1],periodic:true}
+ const source=createProgressiveMiterBrepProfileBody([[profile]],[[0,0,0],[0,0,10]],law(1),law(0),{
+  normal:[1,0,0],initialSteps:2,maxSteps:2,maxDeviation:1,
+  centerLaw:{degree:1,knots:[0,0,.5,1,1],values:[[0,0,0],[1,0,0],[0,0,0]],weights:[1,1,1]},
+ })
+ const before=structuredClone(source.model)
+ const options={quantum:.125,maxWork:10000,wallTolerance:.5,maxDeviation:2}
+ const result=reconstructCertifiedMiterStations(source,options)
+ expect(result.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true})
+ expect(result.volume.solidGeometryCertified).toBe(true)
+ expect(result.profileSmoothness.profile).toMatchObject({exactG1G2Certified:true,certifiedOrder:2})
+ expect(result.profileSmoothness.station.stationG2Certified).toBe(true)
+ expect(source.model).toEqual(before)
+ expect(()=>reconstructCertifiedMiterStations(source,{...options,maxWork:0})).toThrow()
+ const caps=[result.model.faces.length-2,result.model.faces.length-1]
+ for(const face of caps)expect(result.model.faces[face]).toEqual(source.model.faces[face])
+ const imported=importDirectStepV5(exportDirectStepV5(result.model).text).model
+ expect(inspectMiterStationSmoothness(imported,caps).stationG2Certified).toBe(true)
+ expect(inspectSweepVolume(imported,caps,DEFAULT_SWEEP_VOLUME_BUDGETS).solidGeometryCertified).toBe(true)
+})
+
+it.each(['hollow polygon','nonuniform periodic rational'] as const)('qualifies owned general reconstruction of %s',mode=>{
+ const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
+ const ring=(r:number,reverse:boolean):NurbsCurve[]=>{
+  const p=[[-r,-r,0],[r,-r,0],[r,r,0],[-r,r,0],[-r,-r,0]]
+  if(reverse)p.reverse()
+  return p.slice(1).map((b,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[p[i]!,b],weights:[1,1],periodic:false}))
+ }
+ const rational:NurbsCurve={degree:2,knots:[0,1,2,3,4,5,6,7,8],
+  controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],
+  weights:[1,.5,1,1,1,.5],periodic:true}
+ const hollow=mode==='hollow polygon'
+ const source=createProgressiveMiterBrepProfileBody(hollow?[ring(2,false),ring(.5,true)]:[[rational]],
+  [[0,0,0],[0,0,10]],law(1),law(0),{normal:[1,0,0],initialSteps:2,maxSteps:2,maxDeviation:1,
+   centerLaw:{degree:1,knots:[0,0,.5,1,1],values:[[0,0,0],[hollow?.5:0,0,0],[0,0,0]],weights:[1,1,1]}})
+ const before=structuredClone(source.model)
+ const options={quantum:.125,maxWork:100000,wallTolerance:.5,maxDeviation:2}
+ const result=reconstructCertifiedMiterStations(source,options)
+ expect(result.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true})
+ expect(result.volume.solidGeometryCertified).toBe(true)
+ expect(result.profileSmoothness.station.stationG2Certified).toBe(true)
+ if(hollow)expect(result.profileSmoothness.profileG1Certified).toBe(false)
+ else expect(result.profileSmoothness.profileG1Certified).toBe(true)
+ expect(source.model).toEqual(before)
+ expect(()=>reconstructCertifiedMiterStations(source,{...options,maxWork:0})).toThrow()
+ const caps=[result.model.faces.length-2,result.model.faces.length-1]
+ for(const face of caps){
+  expect(result.model.faces[face]).toEqual(source.model.faces[face])
+  expect(result.model.faces[face]!.holes).toHaveLength(hollow?1:0)
+ }
+ const imported=importDirectStepV5(exportDirectStepV5(result.model).text).model
+ expect(inspectMiterStationSmoothness(imported,caps).stationG2Certified).toBe(true)
+ expect(inspectSweepVolume(imported,caps,DEFAULT_SWEEP_VOLUME_BUDGETS).solidGeometryCertified).toBe(true)
+})
+
+it('carries nonuniform rational station certificates through the Rush geometry graph',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const source=readFileSync('examples/rush/progressive-miter-reconstructed-rational-profile.r','utf8')
+ const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ const construction=built.report.construction![built.nativeGeometry!.nodeId] as {
+  continuousBound:boolean;boundaryCertificate:{withinBudget:boolean};
+  profileSmoothness:{profileG1Certified:boolean;station:{stationG2Certified:boolean}}
+ }
+ expect(construction.continuousBound).toBe(true)
+ expect(construction.boundaryCertificate.withinBudget).toBe(true)
+ expect(construction.profileSmoothness.station.stationG2Certified).toBe(true)
+ expect(construction.profileSmoothness.profileG1Certified).toBe(true)
+ expect(JSON.parse(built.nativeGeometry!.geometryJson).geometry).toBeDefined()
+ expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({
+  profileG1Certified:true,stationG2Certified:true,solidGeometryCertified:true,continuousBound:true,capContinuity:'C0',
+ })
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {kind,...model}=built.report.definitions[built.nativeGeometry!.nodeId] as unknown as import('../src/services/geometry/brep').NurbsBrep & {kind:string}
+ expect(kind).toBe('brep')
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)?.solidGeometryCertified).toBe(true)
+ const tampered=structuredClone(model)
+ tampered.faces[0]!.surface.controlPoints[0]![0]![0]!+=.125
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/snapshot binding/)
+})
+
+
+it('admits the closed rational hollow frame/guide/affine case through native Rush replay',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {compileRushFrontend}=await import('../src/services/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const source=readFileSync('examples/rush/closed-rational-frame-guide-affine-hollow-placed.r','utf8')
+ const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
+ expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG1Certified:true,solidGeometryCertified:true,continuousBound:true})
+ const {kind,...model}=built.report.definitions[built.nativeGeometry!.nodeId] as unknown as import('../src/services/geometry/brep').NurbsBrep & {kind:string}
+ expect(kind).toBe('brep')
+ expect(model.shells).toHaveLength(2)
+ expect(model.shells.every(shell=>shell.closed)).toBe(true)
+ expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)?.solidGeometryCertified).toBe(true)
+ const tampered=structuredClone(model)
+ tampered.faces[0]!.surface.controlPoints[0]![0]![0]!+=.125
+ expect(()=>inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,tampered)).toThrow(/snapshot binding/)
 })

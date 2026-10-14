@@ -2,7 +2,7 @@
   "base_commit": "66f95240d46877e4fd72739433688d9f2d876fd3",
   "files": {
     "crates/Cargo.lock": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3",
-    "crates/Cargo.toml": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+    "crates/Cargo.toml": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
     "crates/compute-cuda/README.md": "50df8e9ed727470cd898cb98f53e464460970752e7d593f3bee00a807635e8ca",
     "crates/compute-cuda/qualification/compile_nvrtc.py": "9c98602dbc47bf1915219967a5420d090434f2012c3d7bb6dbd580081a4556cc",
     "crates/compute-cuda/qualification/qualify-nvrtc.sh": "5f0b89421006df96daa1b1e96812e18a2e87d88e9cf41c285f794843b2e453ff",

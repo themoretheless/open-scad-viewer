@@ -72,7 +72,7 @@ B-rep, включая 256 граней. Общая геометрическая 
 ## Язык описания
 
 ```text
-// @modelgraph-text/1
+// @rush/1
 mesh = brep_box([-10,-10,-10],[10,10,10]).brep_tessellate(1)
 show mesh.mesh_to_sdf().sdf_offset(1mm).sdf_tessellate([-15,-15,-15],[15,15,15],[12,12,12])
 ```
@@ -86,5 +86,5 @@ show mesh.mesh_to_sdf().sdf_offset(1mm).sdf_tessellate([-15,-15,-15],[15,15,15],
 
 Для произвольных данных есть `triangle_mesh(vertices,triangles)` — массивы
 трёхмерных координат и троек индексов. Полные исходные определения сохраняются
-в документе. Подключение к существующему пути ModelGraph не меняет backend
+в документе. Подключение к существующему пути RushGraph не меняет backend
 старых программ и спиннера.

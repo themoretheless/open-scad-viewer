@@ -76,6 +76,7 @@ pub struct GeometryCache {
     clock: u64,
     bytes: u64,
     max_bytes: u64,
+    retention_bytes: u64,
     max_entries: usize,
     stats: CacheStats,
 }
@@ -87,9 +88,22 @@ impl GeometryCache {
             clock: 0,
             bytes: 0,
             max_bytes,
+            retention_bytes: max_bytes,
             max_entries,
             stats: CacheStats::default(),
         }
+    }
+    /// Shrink retained ownership without invalidating in-flight Arc leases.
+    pub fn set_retention_budget(&mut self, bytes: u64) {
+        self.retention_bytes = bytes.min(self.max_bytes);
+        while self.bytes > self.retention_bytes {
+            let (_, key) = self.ages.pop_first().expect("cache accounting invariant");
+            self.bytes -= self.entries.remove(&key).unwrap().mesh.allocated_bytes;
+            self.stats.evictions += 1;
+        }
+    }
+    pub fn retention_budget(&self) -> u64 {
+        self.retention_bytes
     }
     pub fn retained_bytes(&self) -> u64 {
         self.bytes
@@ -132,8 +146,23 @@ impl GeometryCache {
             .ok_or("batch size overflow")?;
         let key = Key::Batch(data.iter().map(|d| d.id).collect());
         self.prepare_with(key, bytes, || {
+            let vertex_count = data
+                .iter()
+                .try_fold(0usize, |n, d| n.checked_add(d.vertices.len()))
+                .ok_or("batch vertex overflow")?;
+            let index_count = data
+                .iter()
+                .try_fold(0usize, |n, d| n.checked_add(d.indices.len()))
+                .ok_or("batch index overflow")?;
+            u32::try_from(vertex_count).map_err(|_| "batch vertex overflow")?;
             let mut vertices = Vec::new();
             let mut indices = Vec::new();
+            vertices
+                .try_reserve_exact(vertex_count)
+                .map_err(|_| "batch allocation failed")?;
+            indices
+                .try_reserve_exact(index_count)
+                .map_err(|_| "batch allocation failed")?;
             for mesh in data {
                 let base = u32::try_from(vertices.len()).map_err(|_| "batch vertex overflow")?;
                 vertices.extend_from_slice(&mesh.vertices);
@@ -174,13 +203,17 @@ impl GeometryCache {
         // Admission and data validation precede eviction; failed admission leaves
         // all reusable entries intact. Device allocation errors belong to the host.
         let mesh = Arc::new(upload()?);
-        while self.entries.len() >= self.max_entries || self.bytes > self.max_bytes - bytes {
+        self.stats.uploads += 1;
+        self.stats.uploaded_bytes += bytes;
+        // Keep drawing under pressure, but do not retain an oversized upload.
+        if bytes > self.retention_bytes {
+            return Ok(mesh);
+        }
+        while self.entries.len() >= self.max_entries || self.bytes > self.retention_bytes - bytes {
             let (_, id) = self.ages.pop_first().expect("cache accounting invariant");
             self.bytes -= self.entries.remove(&id).unwrap().mesh.allocated_bytes;
             self.stats.evictions += 1;
         }
-        self.stats.uploads += 1;
-        self.stats.uploaded_bytes += bytes;
         self.bytes += bytes;
         self.ages.insert(age, key.clone());
         self.entries.insert(

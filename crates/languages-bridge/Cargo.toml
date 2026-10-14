@@ -9,7 +9,8 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
-value-codec = { path = "../value-codec" }
-modelgraph-runtime = { path = "../modelgraph-runtime" }
-modelgraph-text = { path = "../modelgraph-text" }
-openscad-core = { path = "../openscad-core" }
+geometry-ops = { workspace = true, features = ["codec"] }
+value-codec = { workspace = true }
+rush-runtime = { workspace = true }
+rush-frontend = { workspace = true }
+openscad-core = { workspace = true }

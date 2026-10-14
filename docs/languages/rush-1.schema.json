@@ -1,0 +1,5488 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "const": "rush/ir-1"
+    },
+    "units": {
+      "type": "string",
+      "const": "mm"
+    },
+    "type_policy": {
+      "type": "string",
+      "enum": [
+        "legacy",
+        "strict"
+      ]
+    },
+    "constraints": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "parameters": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "value": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "mm",
+              "cm",
+              "m",
+              "in",
+              "deg",
+              "rad"
+            ]
+          },
+          "min": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "max": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "integer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nodes": {
+      "minItems": 1,
+      "maxItems": 128,
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assert"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "constraints": {
+                "maxItems": 64,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "geometry_assertions": {
+                "maxItems": 64,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "target": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "check": {
+                      "type": "string",
+                      "enum": [
+                        "hasBodies",
+                        "isWatertight",
+                        "hasNoDegenerateTriangles",
+                        "height",
+                        "width",
+                        "depth"
+                      ]
+                    },
+                    "expected": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "tolerance": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "message": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "target",
+                    "check",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "gear"
+              },
+              "teeth": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "module": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "pressure_angle": {
+                "default": 20,
+                "$ref": "#/$defs/__schema1"
+              },
+              "thickness": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "bore": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "backlash": {
+                "default": 0.15,
+                "$ref": "#/$defs/__schema1"
+              },
+              "clearance": {
+                "default": 0.5,
+                "$ref": "#/$defs/__schema1"
+              },
+              "internal": {
+                "default": false,
+                "type": "boolean"
+              },
+              "rim_width": {
+                "default": 6,
+                "$ref": "#/$defs/__schema1"
+              },
+              "flank_segments": {
+                "default": 6,
+                "$ref": "#/$defs/__schema1"
+              },
+              "helix_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "herringbone": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "teeth",
+              "module",
+              "pressure_angle",
+              "thickness",
+              "bore",
+              "backlash",
+              "clearance",
+              "internal",
+              "rim_width",
+              "flank_segments",
+              "helix_angle",
+              "herringbone"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planetary_spinner"
+              },
+              "inner_radius": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "outer_radius": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "bore": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "gap": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "helix_angle": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inner_radius",
+              "outer_radius",
+              "bore",
+              "gap",
+              "height",
+              "helix_angle"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "planetary_gears"
+              },
+              "sun_teeth": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "planet_teeth": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "planet_count": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "module": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "pressure_angle": {
+                "default": 20,
+                "$ref": "#/$defs/__schema1"
+              },
+              "thickness": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "bore": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "backlash": {
+                "default": 0.15,
+                "$ref": "#/$defs/__schema1"
+              },
+              "clearance": {
+                "default": 0.5,
+                "$ref": "#/$defs/__schema1"
+              },
+              "rim_width": {
+                "default": 6,
+                "$ref": "#/$defs/__schema1"
+              },
+              "flank_segments": {
+                "default": 6,
+                "$ref": "#/$defs/__schema1"
+              },
+              "carrier_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "helix_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "herringbone": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "sun_teeth",
+              "planet_teeth",
+              "planet_count",
+              "module",
+              "pressure_angle",
+              "thickness",
+              "bore",
+              "backlash",
+              "clearance",
+              "rim_width",
+              "flank_segments",
+              "carrier_angle",
+              "helix_angle",
+              "herringbone"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "thread"
+              },
+              "diameter": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "pitch": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "length": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "internal": {
+                "default": false,
+                "type": "boolean"
+              },
+              "wall": {
+                "default": 3,
+                "$ref": "#/$defs/__schema1"
+              },
+              "clearance": {
+                "default": 0.2,
+                "$ref": "#/$defs/__schema1"
+              },
+              "starts": {
+                "default": 1,
+                "$ref": "#/$defs/__schema1"
+              },
+              "left_handed": {
+                "default": false,
+                "type": "boolean"
+              },
+              "segments_per_turn": {
+                "default": 32,
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "diameter",
+              "pitch",
+              "length",
+              "internal",
+              "wall",
+              "clearance",
+              "starts",
+              "left_handed",
+              "segments_per_turn"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "affine"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "rows": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
+                  },
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "rows"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "hull"
+              },
+              "inputs": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "mirror"
+              },
+              "normal": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "normal",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "offset"
+              },
+              "distance": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "radius",
+                  "delta"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "distance",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "projection"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "section"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "height",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "advanced_extrude"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "twist": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "top_scale": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "slices": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "height",
+              "twist",
+              "top_scale",
+              "slices",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "cone"
+              },
+              "radius_bottom": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "radius_top": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "radius_bottom",
+              "radius_top",
+              "height",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "torus"
+              },
+              "major_radius": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "minor_radius": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "major_radius",
+              "minor_radius"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "linear_pattern"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "count": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "step": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ],
+                "items": false,
+                "minItems": 3,
+                "maxItems": 3
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "count",
+              "step"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "circular_pattern"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "count": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "angle_step": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "count",
+              "angle_step"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "loft"
+              },
+              "profile": {
+                "minItems": 3,
+                "maxItems": 64,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "sections": {
+                "minItems": 2,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "z": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "scale": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "offset": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  },
+                  "required": [
+                    "z",
+                    "scale",
+                    "offset"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "profile",
+              "sections"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "assembly"
+              },
+              "components": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "input": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "anchors": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          },
+                          "origin": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            ],
+                            "items": false,
+                            "minItems": 3,
+                            "maxItems": 3
+                          },
+                          "rotation": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            ],
+                            "items": false,
+                            "minItems": 3,
+                            "maxItems": 3
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "origin",
+                          "rotation"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "placement": {
+                      "type": "object",
+                      "properties": {
+                        "origin": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        },
+                        "rotation": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        }
+                      },
+                      "required": [
+                        "origin",
+                        "rotation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "mate": {
+                      "type": "object",
+                      "properties": {
+                        "component": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "anchor": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "own_anchor": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "gap": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "rotation": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        },
+                        "joint": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "revolute",
+                                "slider"
+                              ]
+                            },
+                            "position": {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            "min": {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            "max": {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "position",
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "component",
+                        "anchor",
+                        "own_anchor",
+                        "gap",
+                        "rotation"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "input",
+                    "anchors"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "components"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "sketch"
+              },
+              "points": {
+                "minItems": 3,
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "position": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "position"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "boundary": {
+                "minItems": 3,
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "constraints": {
+                "maxItems": 48,
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "fix"
+                        },
+                        "point": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "at": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "point",
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "horizontal",
+                            "vertical",
+                            "coincident"
+                          ]
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "distance"
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "value": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "parallel",
+                            "perpendicular",
+                            "equal_length"
+                          ]
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "c": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "d": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b",
+                        "c",
+                        "d"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "allow_underconstrained": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "points",
+              "boundary",
+              "constraints",
+              "allow_underconstrained"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "rectangle"
+              },
+              "size": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ]
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "size",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "circle"
+              },
+              "radius": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "radius"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "polygon"
+              },
+              "points": {
+                "minItems": 3,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "points"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "extrude"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "height",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "revolve"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "angle": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "input",
+              "angle"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "evaluate"
+              },
+              "value": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "call"
+              },
+              "function": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "args": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "additionalProperties": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "function",
+              "args"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "match"
+              },
+              "value": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "arms": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "pattern": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "guard": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "input": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    }
+                  },
+                  "required": [
+                    "pattern",
+                    "input"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "value",
+              "arms"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "if"
+              },
+              "condition": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "then": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "else": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "condition",
+              "then",
+              "else"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "collect"
+              },
+              "values": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "binding": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "values",
+              "binding",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "group"
+              },
+              "inputs": {
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "map"
+              },
+              "count": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "index": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "count",
+              "index",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "box"
+              },
+              "size": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ]
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "size",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "sphere"
+              },
+              "radius": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "radius"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "cylinder"
+              },
+              "radius": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "height": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "center": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "radius",
+              "height",
+              "center"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "translate"
+              },
+              "vector": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ]
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "vector",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "rotate"
+              },
+              "vector": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ]
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "vector",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "scale"
+              },
+              "vector": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                ]
+              },
+              "input": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "vector",
+              "input"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "union"
+              },
+              "inputs": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "intersection"
+              },
+              "inputs": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "inputs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "op": {
+                "type": "string",
+                "const": "difference"
+              },
+              "base": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "subtract": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "op",
+              "base",
+              "subtract"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+    },
+    "functions": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "scalar",
+                  "value"
+                ]
+              },
+              "parameters": {
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "body": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "parameters",
+              "body"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "kind": {
+                "type": "string",
+                "const": "geometry"
+              },
+              "parameters": {
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "nodes": {
+                "minItems": 1,
+                "maxItems": 128,
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "assert"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "constraints": {
+                          "maxItems": 64,
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "geometry_assertions": {
+                          "maxItems": 64,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "target": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "check": {
+                                "type": "string",
+                                "enum": [
+                                  "hasBodies",
+                                  "isWatertight",
+                                  "hasNoDegenerateTriangles",
+                                  "height",
+                                  "width",
+                                  "depth"
+                                ]
+                              },
+                              "expected": {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              "tolerance": {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              "message": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "target",
+                              "check",
+                              "message"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "gear"
+                        },
+                        "teeth": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "module": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "pressure_angle": {
+                          "default": 20,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "thickness": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "bore": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "backlash": {
+                          "default": 0.15,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "clearance": {
+                          "default": 0.5,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "internal": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "rim_width": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "flank_segments": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "helix_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "herringbone": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "teeth",
+                        "module",
+                        "pressure_angle",
+                        "thickness",
+                        "bore",
+                        "backlash",
+                        "clearance",
+                        "internal",
+                        "rim_width",
+                        "flank_segments",
+                        "helix_angle",
+                        "herringbone"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "planetary_spinner"
+                        },
+                        "inner_radius": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "outer_radius": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "bore": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "gap": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "helix_angle": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inner_radius",
+                        "outer_radius",
+                        "bore",
+                        "gap",
+                        "height",
+                        "helix_angle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "planetary_gears"
+                        },
+                        "sun_teeth": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "planet_teeth": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "planet_count": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "module": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "pressure_angle": {
+                          "default": 20,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "thickness": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "bore": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "backlash": {
+                          "default": 0.15,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "clearance": {
+                          "default": 0.5,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "rim_width": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "flank_segments": {
+                          "default": 6,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "carrier_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "helix_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "herringbone": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "sun_teeth",
+                        "planet_teeth",
+                        "planet_count",
+                        "module",
+                        "pressure_angle",
+                        "thickness",
+                        "bore",
+                        "backlash",
+                        "clearance",
+                        "rim_width",
+                        "flank_segments",
+                        "carrier_angle",
+                        "helix_angle",
+                        "herringbone"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "thread"
+                        },
+                        "diameter": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "pitch": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "length": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "internal": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "wall": {
+                          "default": 3,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "clearance": {
+                          "default": 0.2,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "starts": {
+                          "default": 1,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "left_handed": {
+                          "default": false,
+                          "type": "boolean"
+                        },
+                        "segments_per_turn": {
+                          "default": 32,
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "diameter",
+                        "pitch",
+                        "length",
+                        "internal",
+                        "wall",
+                        "clearance",
+                        "starts",
+                        "left_handed",
+                        "segments_per_turn"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "affine"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
+                            },
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
+                            },
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 4,
+                              "maxItems": 4
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "rows"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "hull"
+                        },
+                        "inputs": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inputs"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "mirror"
+                        },
+                        "normal": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "normal",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "offset"
+                        },
+                        "distance": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "radius",
+                            "delta"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "distance",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "projection"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "section"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "height",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "advanced_extrude"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "twist": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "top_scale": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 2,
+                          "maxItems": 2
+                        },
+                        "slices": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 64
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "height",
+                        "twist",
+                        "top_scale",
+                        "slices",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "cone"
+                        },
+                        "radius_bottom": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "radius_top": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "radius_bottom",
+                        "radius_top",
+                        "height",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "torus"
+                        },
+                        "major_radius": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "minor_radius": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "major_radius",
+                        "minor_radius"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "linear_pattern"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "count": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "step": {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ],
+                          "items": false,
+                          "minItems": 3,
+                          "maxItems": 3
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "count",
+                        "step"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "circular_pattern"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "count": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "angle_step": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "count",
+                        "angle_step"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "loft"
+                        },
+                        "profile": {
+                          "minItems": 3,
+                          "maxItems": 64,
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            ],
+                            "items": false,
+                            "minItems": 2,
+                            "maxItems": 2
+                          }
+                        },
+                        "sections": {
+                          "minItems": 2,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "z": {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              "scale": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  }
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
+                              },
+                              "offset": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  }
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
+                              }
+                            },
+                            "required": [
+                              "z",
+                              "scale",
+                              "offset"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "profile",
+                        "sections"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "assembly"
+                        },
+                        "components": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "input": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "anchors": {
+                                "maxItems": 32,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                    },
+                                    "origin": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        }
+                                      ],
+                                      "items": false,
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    "rotation": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/__schema1"
+                                        }
+                                      ],
+                                      "items": false,
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "origin",
+                                    "rotation"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "placement": {
+                                "type": "object",
+                                "properties": {
+                                  "origin": {
+                                    "type": "array",
+                                    "prefixItems": [
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      }
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
+                                  },
+                                  "rotation": {
+                                    "type": "array",
+                                    "prefixItems": [
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      }
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
+                                  }
+                                },
+                                "required": [
+                                  "origin",
+                                  "rotation"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "mate": {
+                                "type": "object",
+                                "properties": {
+                                  "component": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "anchor": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "own_anchor": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "gap": {
+                                    "$ref": "#/$defs/__schema1"
+                                  },
+                                  "rotation": {
+                                    "type": "array",
+                                    "prefixItems": [
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      }
+                                    ],
+                                    "items": false,
+                                    "minItems": 3,
+                                    "maxItems": 3
+                                  },
+                                  "joint": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "revolute",
+                                          "slider"
+                                        ]
+                                      },
+                                      "position": {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      "min": {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      "max": {
+                                        "$ref": "#/$defs/__schema1"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "position",
+                                      "min",
+                                      "max"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "component",
+                                  "anchor",
+                                  "own_anchor",
+                                  "gap",
+                                  "rotation"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "input",
+                              "anchors"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "components"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "sketch"
+                        },
+                        "points": {
+                          "minItems": 3,
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "position": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/__schema1"
+                                  }
+                                ],
+                                "items": false,
+                                "minItems": 2,
+                                "maxItems": 2
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "position"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "boundary": {
+                          "minItems": 3,
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        },
+                        "constraints": {
+                          "maxItems": 48,
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "fix"
+                                  },
+                                  "point": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "at": {
+                                    "type": "array",
+                                    "prefixItems": [
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/__schema1"
+                                      }
+                                    ],
+                                    "items": false,
+                                    "minItems": 2,
+                                    "maxItems": 2
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "point",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "horizontal",
+                                      "vertical",
+                                      "coincident"
+                                    ]
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "distance"
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "value": {
+                                    "$ref": "#/$defs/__schema1"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "parallel",
+                                      "perpendicular",
+                                      "equal_length"
+                                    ]
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "c": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "d": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b",
+                                  "c",
+                                  "d"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "allow_underconstrained": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "points",
+                        "boundary",
+                        "constraints",
+                        "allow_underconstrained"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "rectangle"
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 2,
+                              "maxItems": 2
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ]
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "size",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "circle"
+                        },
+                        "radius": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "radius"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "polygon"
+                        },
+                        "points": {
+                          "minItems": 3,
+                          "maxItems": 256,
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            ],
+                            "items": false,
+                            "minItems": 2,
+                            "maxItems": 2
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "points"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "extrude"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "height",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "revolve"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "angle": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "input",
+                        "angle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "evaluate"
+                        },
+                        "value": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "call"
+                        },
+                        "function": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "args": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema1"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "function",
+                        "args"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "match"
+                        },
+                        "value": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "arms": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pattern": {
+                                "$ref": "#/$defs/__schema3"
+                              },
+                              "guard": {
+                                "$ref": "#/$defs/__schema1"
+                              },
+                              "input": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              }
+                            },
+                            "required": [
+                              "pattern",
+                              "input"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "value",
+                        "arms"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "if"
+                        },
+                        "condition": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "then": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "else": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "condition",
+                        "then",
+                        "else"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "collect"
+                        },
+                        "values": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "binding": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "values",
+                        "binding",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "group"
+                        },
+                        "inputs": {
+                          "maxItems": 256,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inputs"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "map"
+                        },
+                        "count": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "index": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "count",
+                        "index",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "box"
+                        },
+                        "size": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ]
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "size",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "sphere"
+                        },
+                        "radius": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "radius"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "cylinder"
+                        },
+                        "radius": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "height": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "center": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "radius",
+                        "height",
+                        "center"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "translate"
+                        },
+                        "vector": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ]
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "vector",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "rotate"
+                        },
+                        "vector": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ]
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "vector",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "scale"
+                        },
+                        "vector": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "prefixItems": [
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema1"
+                                }
+                              ],
+                              "items": false,
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          ]
+                        },
+                        "input": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "vector",
+                        "input"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "union"
+                        },
+                        "inputs": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inputs"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "intersection"
+                        },
+                        "inputs": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "inputs"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "op": {
+                          "type": "string",
+                          "const": "difference"
+                        },
+                        "base": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "subtract": {
+                          "minItems": 1,
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "op",
+                        "base",
+                        "subtract"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "root": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "parameters",
+              "nodes",
+              "root"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "geometry_assertions": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "check": {
+            "type": "string",
+            "enum": [
+              "hasBodies",
+              "isWatertight",
+              "hasNoDegenerateTriangles",
+              "height",
+              "width",
+              "depth"
+            ]
+          },
+          "expected": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "tolerance": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "check",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "assertions": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "condition": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "condition",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "segments": {
+      "default": 48,
+      "type": "integer",
+      "minimum": 12,
+      "maximum": 128
+    }
+  },
+  "required": [
+    "language",
+    "units",
+    "parameters",
+    "nodes",
+    "root",
+    "segments"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+        },
+        "left": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "relation": {
+          "type": "string",
+          "enum": [
+            "le",
+            "ge",
+            "eq",
+            "lt",
+            "gt"
+          ]
+        },
+        "right": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "tolerance": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "id",
+        "left",
+        "relation",
+        "right",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        {
+          "type": "object",
+          "properties": {
+            "param": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+            }
+          },
+          "required": [
+            "param"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "local": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+            }
+          },
+          "required": [
+            "local"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "memo"
+                },
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "id",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "geometry_effects"
+                },
+                "input": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "guarded"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "binding": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "steps": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "assert",
+                          "where",
+                          "while"
+                        ]
+                      },
+                      "value": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "binding",
+                "steps"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "assert_value"
+                },
+                "constraints": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "geometry_assertions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      },
+                      "target": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                      },
+                      "check": {
+                        "type": "string",
+                        "enum": [
+                          "hasBodies",
+                          "isWatertight",
+                          "hasNoDegenerateTriangles",
+                          "height",
+                          "width",
+                          "depth"
+                        ]
+                      },
+                      "expected": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "tolerance": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "message": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "target",
+                      "check",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "checked"
+                },
+                "checks": {
+                  "maxItems": 256,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "checks",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "typed"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "int",
+                    "f32",
+                    "f64",
+                    "length",
+                    "angle"
+                  ]
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "quantity"
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": -1000000,
+                  "maximum": 1000000
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "mm",
+                    "cm",
+                    "m",
+                    "in",
+                    "deg",
+                    "rad"
+                  ]
+                }
+              },
+              "required": [
+                "op",
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "geometry"
+                },
+                "function": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "lambda"
+                },
+                "parameters": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  }
+                },
+                "body": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "parameters",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "apply"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "args": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "list"
+                },
+                "items": {
+                  "maxItems": 256,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "items"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "range"
+                },
+                "count": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "start": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "step": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "count",
+                "start",
+                "step"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "interval"
+                },
+                "start": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "end": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "inclusive": {
+                  "type": "boolean"
+                },
+                "count": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "step": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "start",
+                "end",
+                "inclusive"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "zip"
+                },
+                "inputs": {
+                  "minItems": 2,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "inputs"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "enumerate"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "map",
+                    "filter",
+                    "flatmap"
+                  ]
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "function"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "text"
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              },
+              "required": [
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "record"
+                },
+                "fields": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "fields"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "field"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "query"
+                },
+                "method": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "argument": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "functions": {
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "keys": {
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "descending": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "function",
+                      "descending"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "method",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "reduce"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "function": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "initial": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "function",
+                "initial"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "at"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "index": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "index"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "length"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "subtract",
+                    "multiply",
+                    "divide",
+                    "min",
+                    "max",
+                    "pow",
+                    "mod",
+                    "lt",
+                    "le",
+                    "eq",
+                    "and",
+                    "or"
+                  ]
+                },
+                "args": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "required": [
+                "op",
+                "args"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "negate",
+                    "abs",
+                    "sqrt",
+                    "sin",
+                    "cos",
+                    "floor",
+                    "ceil",
+                    "not"
+                  ]
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "typed_value"
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "type": {
+                  "$ref": "#/$defs/__schema2"
+                }
+              },
+              "required": [
+                "op",
+                "value",
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "match"
+                },
+                "input": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "arms": {
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "pattern": {
+                        "$ref": "#/$defs/__schema3"
+                      },
+                      "guard": {
+                        "$ref": "#/$defs/__schema1"
+                      },
+                      "body": {
+                        "$ref": "#/$defs/__schema1"
+                      }
+                    },
+                    "required": [
+                      "pattern",
+                      "body"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "input",
+                "arms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "if"
+                },
+                "condition": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "then": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "else": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "condition",
+                "then",
+                "else"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "let"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "body": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "required": [
+                "op",
+                "name",
+                "value",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "const": "call"
+                },
+                "function": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "op",
+                "function",
+                "args"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+        },
+        "args": {
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema2"
+          }
+        },
+        "fields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema2"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "__schema3": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "wildcard"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "bind"
+            },
+            "name": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "value": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "as"
+            },
+            "name": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+            },
+            "pattern": {
+              "$ref": "#/$defs/__schema3"
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "pattern"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "or"
+            },
+            "patterns": {
+              "minItems": 1,
+              "maxItems": 32,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema3"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "patterns"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "range"
+            },
+            "start": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "end": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "inclusive": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "start",
+            "end",
+            "inclusive"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "list"
+            },
+            "prefix": {
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "suffix": {
+              "maxItems": 256,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "rest": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                },
+                {
+                  "type": "string",
+                  "const": "_"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "prefix",
+            "suffix"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "record"
+            },
+            "fields": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/__schema3"
+              }
+            },
+            "exact": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "fields",
+            "exact"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "type"
+            },
+            "name": {
+              "type": "string",
+              "enum": [
+                "int",
+                "f32",
+                "f64",
+                "str",
+                "length",
+                "angle",
+                "list",
+                "record"
+              ]
+            },
+            "pattern": {
+              "$ref": "#/$defs/__schema3"
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "pattern"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

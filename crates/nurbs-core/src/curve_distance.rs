@@ -598,3 +598,5 @@ mod two_curve_tests {
         assert!(((result.points[1][0] - 30.).hypot(result.points[1][1]) - 10.).abs() < 1e-10);
     }
 }
+
+pub use crate::native_curve_distance::{NearestPoint,nearest_point};

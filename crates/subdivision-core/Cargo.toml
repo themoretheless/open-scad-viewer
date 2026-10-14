@@ -5,8 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+default = ["codec"]
+codec = ["dep:value-codec", "geometry-ops/codec"]
+
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-value-codec = { path = "../value-codec" }
-geometry-ops = { path = "../geometry-ops" }
+math-core = { workspace = true }
+value-codec = { workspace = true, optional = true }
+geometry-ops = { workspace = true }
 rustc-hash = "=2.1.1"

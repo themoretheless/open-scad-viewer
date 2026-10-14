@@ -1,5 +1,5 @@
 /**
- * Host boundary for the OpenSCAD and ModelGraph frontends.
+ * Host boundary for the OpenSCAD and RushGraph frontends.
  *
  * The frontends ship as their own wasm module, so a session that never compiles source never loads
  * them and the geometry kernel stays small enough to instantiate on the main thread. The transport
@@ -110,7 +110,7 @@ export function scadEvalRust(source: string, profile: 'openscad-viewer-subset@1'
 export type GraphRustResult<T> = {ok:true;value:T} | {ok:false;error:{code:string;path:string;message:string;details?:unknown};customizer?:unknown}
 export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',value:unknown):GraphRustResult<T> {
   if(kind==='text') {
-    if(typeof value !== 'string' || value.length > 262144)return {ok:false,error:{code:'text_error',path:'',message:'ModelGraph Text exceeds 256 KiB.'}}
+    if(typeof value !== 'string' || value.length > 262144)return {ok:false,error:{code:'text_error',path:'',message:'Rush exceeds 256 KiB.'}}
     return languageRequest(4,value) as GraphRustResult<T>
   }
   // NURBS counts resolved values in Rust: each {param:id} becomes one value.

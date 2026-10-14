@@ -1,0 +1,24 @@
+[package]
+name = "mesh-query"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = true
+description = "Triangle BVH ray picking, closest points and sampled mesh distances"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
+documentation = "https://docs.rs/mesh-query"
+keywords = ["mesh", "geometry", "bvh", "cad"]
+categories = ["mathematics", "science"]
+include = ["src/**", "tests/**", "examples/**", "benches/**", "Cargo.toml", "README.md", "LICENSE"]
+
+[dependencies]
+math-core = { workspace = true }
+mesh-topology = { workspace = true }
+
+[dev-dependencies]
+serde_json = "1"
+
+[[bench]]
+name = "picking"
+harness = false

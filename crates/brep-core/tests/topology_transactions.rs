@@ -181,6 +181,8 @@ fn full_model_boolean_transaction_preserves_geometry_and_identity_through_histor
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn versioned_snapshot_roundtrip_preserves_identity_and_rejects_corruption() {
     use brep_core::transactions::{MAX_MODEL_SNAPSHOT_BYTES, ModelSnapshot, ModelStore};
     use value_codec::json;
@@ -240,6 +242,8 @@ fn versioned_snapshot_roundtrip_preserves_identity_and_rejects_corruption() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn model_history_roundtrip_restores_both_stacks_with_fresh_transaction_identity() {
     use brep_core::transactions::*;
     let mut store = ModelStore::new(ModelSnapshot::new(cuboid([0.; 3], [2.; 3]).unwrap()).unwrap());
@@ -282,6 +286,8 @@ fn model_history_roundtrip_restores_both_stacks_with_fresh_transaction_identity(
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn analytic_history_preserves_rational_weights_poles_and_identity_bits() {
     use brep_core::transactions::*;
     use value_codec::Serialize;
@@ -352,6 +358,8 @@ fn analytic_history_preserves_rational_weights_poles_and_identity_bits() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn canonical_empty_survives_transaction_persistence_and_history_without_stale_ids() {
     use brep_core::{boolean, transactions::*};
     use value_codec::Serialize;
@@ -396,4 +404,31 @@ fn canonical_empty_survives_transaction_persistence_and_history_without_stale_id
     assert_eq!(loaded.snapshot().model().to_value(), tool_value);
     loaded.undo().unwrap();
     assert!(loaded.snapshot().model().is_empty());
+}
+
+#[test]
+
+#[cfg(feature = "codec")]
+fn native_model_equality_matches_codec_comparison_for_geometry_and_identity() {
+    let source = cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let mutations: &[fn(&mut Model)] = &[
+        |m| m.vertices[0].point[0] = -0.,
+        |m| m.vertices[0].point[0] += 0.1,
+        |m| m.edges[0].curve.control_points[0][0] += 0.1,
+        |m| m.edges[0].curve.weights[0] += 0.1,
+        |m| m.loops[0].coedges[0].reversed ^= true,
+        |m| m.faces[0].surface.weights[0][0] += 0.1,
+        |m| m.shells[0].faces[0].reversed ^= true,
+        |m| m.1.faces.swap(0, 1),
+        |m| m.tolerance_mm *= 2.,
+    ];
+    let original_wire = value_codec::to_value(&source).unwrap();
+    for mutate in mutations {
+        let mut candidate = source.clone();
+        mutate(&mut candidate);
+        assert_eq!(
+            source == candidate,
+            original_wire == value_codec::to_value(&candidate).unwrap()
+        );
+    }
 }

@@ -1,4 +1,4 @@
-import { buildOwnNurbs, type OwnNurbsRequest } from '../services/modelGraphNurbsKernel';
+import { buildOwnNurbs, type OwnNurbsRequest } from '../services/rushGraphNurbsKernel';
 import { stringifyMeshJson } from '../services/meshJson';
 let input = '';
 process.stdin.setEncoding('utf8');

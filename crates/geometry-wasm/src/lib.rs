@@ -241,3 +241,89 @@ pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
 pub unsafe extern "C" fn abi_array_free(handle: usize) {
     unsafe { geometry_bridge::abi::abi_array_free(handle) }
 }
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_check(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+/// `mode`: 0 = Conservative, 1 = Full.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_repair(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    epsilon: f64,
+    mode: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode) }
+}
+
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_metrics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_manifold_metrics(vp, vl, ip, il, fmt) }
+}
+
+/// # Safety
+/// All vertex/index buffers must reference live caller-owned memory; read only.
+/// `op`: 0 = union, 1 = intersection, 2 = difference.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_manifold_boolean(
+    a_vp: usize,
+    a_vl: usize,
+    a_ip: usize,
+    a_il: usize,
+    a_fmt: u32,
+    b_vp: usize,
+    b_vl: usize,
+    b_ip: usize,
+    b_il: usize,
+    b_fmt: u32,
+    op: u32,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_manifold_boolean(
+            a_vp, a_vl, a_ip, a_il, a_fmt, b_vp, b_vl, b_ip, b_il, b_fmt, op,
+        )
+    }
+}
+
+/// # Safety
+/// Byte range must be a live caller-owned allocation from this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_decode(format:u32,ptr:usize,len:usize)->u64{
+ unsafe{geometry_bridge::abi::abi_mesh_decode(format,ptr,len)}
+}
+/// # Safety
+/// Float range must be a live caller-owned allocation from this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
+ unsafe{geometry_bridge::abi::abi_mesh_soup_render(ptr,len)}
+}
+
+/// # Safety
+/// vp/vl must reference a live caller-owned f64 buffer, read only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
+    unsafe { geometry_bridge::abi::abi_transparent_bsp(width,vp,vl,limit,operations,tolerance) }
+}

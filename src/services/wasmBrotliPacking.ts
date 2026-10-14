@@ -56,7 +56,7 @@ export function unpackBrotliWasm(input: Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 export function unpackBrotliWasmBase64(packed: string): Uint8Array<ArrayBuffer> {
-  if((packed.startsWith('b91:')||packed.startsWith('b9v:')||packed.startsWith('b92:')||packed.startsWith('b93:')||packed.startsWith('b94:')||packed.startsWith('b95:')||packed.startsWith('bAx:')))return unpackBrotliWasm(decodeBase91(packed,inputLimit+4))
+  if((packed.startsWith('b91:')||packed.startsWith('b9v:')||packed.startsWith('b92:')||packed.startsWith('b93:')||packed.startsWith('b94:')||packed.startsWith('b95:')||packed.startsWith('bAx:')||packed.startsWith('bBx:')))return unpackBrotliWasm(decodeBase91(packed,inputLimit+4))
   // Tagged compact literals use Rust for both ASCII decoding and decompression.
   // The historical entry point still accepts legacy base64 packages.
   if (packed.startsWith('b85:')) {

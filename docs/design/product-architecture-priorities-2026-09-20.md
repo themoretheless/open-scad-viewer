@@ -28,7 +28,7 @@ separating a drawing's definition from its placement, not evidence that our
 sketch features are wholly absent.
 [Primary source](https://replicad.xyz/docs/api/classes/Blueprint/)
 
-Our `modelGraphAssembly.ts` already supports acyclic anchor mates, placements,
+Our `rushGraphAssembly.ts` already supports acyclic anchor mates, placements,
 slider/revolute positions and bounds. A general constraint solver would be an
 extension, not the first assembly implementation. Face/edge query parity with
 CadQuery and drawing parity with Replicad have not been established here.

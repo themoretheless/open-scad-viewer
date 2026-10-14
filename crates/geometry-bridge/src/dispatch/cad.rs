@@ -2,6 +2,10 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "cad_sampled_shell",
+    "cad_local_mesh_blend",
+    "cad_body_keypoints",
+    "cad_client_geometry",
     "cad_surface_boundary_measure",
     "cad_mesh_intersection",
     "cad_mesh_intersections",
@@ -81,6 +85,10 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "cad_sampled_shell" => cad_local_mesh_tools::shell(v),
+        "cad_local_mesh_blend" => cad_local_mesh_tools::blend(v),
+        "cad_body_keypoints" => cad_body_keypoints::geometry(v),
+        "cad_client_geometry" => cad_client_geometry::run(v),
         "cad_surface_boundary_measure" => cad_surface_diagnostics::measure(v),
         "cad_mesh_intersection" => cad_diagnostics::intersection(v),
         "cad_mesh_intersections" => cad_diagnostics::intersections(v),

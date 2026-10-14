@@ -16,3 +16,5 @@ mod tests;
 pub use certified_cylinder_radius::*;
 pub use certified_mass_properties::*;
 pub use mass_properties::*;
+
+pub mod surface_classify;

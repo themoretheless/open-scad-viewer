@@ -150,3 +150,14 @@ Geometry, arrangement and adaptive-gradient precision/work limits remain;
 arbitrary pathological documents and other hardware require their own testing.
 Historical checkpoint/diagnostic JSON files are retained for provenance;
 `production-*` files supersede their interim performance and readiness claims.
+
+The egui retained GPU cache now samples reclaimable host memory at most once per
+second. On macOS this uses free plus inactive pages; Linux uses MemAvailable.
+The retained budget is one eighth of the estimate after a 256 MiB reserve,
+capped at 512 MiB. Unavailable telemetry retains the previous 64 MiB default.
+At memory pressure the retained budget can reach zero; existing frame leases
+remain valid and new retained paints use a 16 MiB transient admission allowance
+before falling back to the host painter. These limits cover cache ownership,
+not total RSS, VRAM or other renderer instances. Batch assembly reserves exact
+capacity and byte encoding releases vertex staging before encoding indices.
+The headless qualification verifies shrink, recovery and pixel preservation.

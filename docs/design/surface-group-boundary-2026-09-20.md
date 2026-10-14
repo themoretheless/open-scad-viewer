@@ -96,7 +96,7 @@ the retained scene. Report: `tmp/performance/surface-group-app-smoke/report.json
 
 Full Vitest on `58083906` completed in 105.84 s: 3310 passed, 16 failed across
 347 files. Nine failures remain in historical qualification/fingerprint checks.
-Seven `modelGraphHttp` failures were `listen EPERM` from the sandbox; all seven
+Seven `rushGraphHttp` failures were `listen EPERM` from the sandbox; all seven
 pass when rerun with loopback permission. The full-suite log is
 `/private/tmp/osv-worker-selection-full-tests.log`. This is not a green full suite.
 

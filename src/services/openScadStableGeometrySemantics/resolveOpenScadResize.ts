@@ -1,3 +1,4 @@
+import { languageRequest } from '../languages/kernel'
 import { SILENT_CONTEXT } from '../openScadStableGeometrySemantics'
 import type { OpenScadResizeResolution, OpenScadResizeResolutionInput, OpenScadRotateExtrudeResolution, OpenScadRotateExtrudeResolutionInput, OpenScadStableGeometryContext } from '../openScadStableGeometrySemantics'
 import { resolveOpenScadSweepFragments } from '../openScadStableModuleSemantics'
@@ -19,27 +20,27 @@ export function resolveOpenScadResize(
     return Object.freeze({ scales: identity, applied: false, valid: false })
   }
   const automatic = autoAxes(input.auto, input.dimension)
-  const direct: Array<number | undefined> = []
-  for (let axis = 0; axis < input.dimension; axis++) {
-    const target = input.newsize[axis]
-    if (typeof target !== 'number' || !Number.isFinite(target) || target <= 0) {
-      direct.push(undefined)
-      continue
-    }
-    const extent = input.extents[axis]
-    if (typeof extent !== 'number' || !Number.isFinite(extent) || extent <= 0) {
-      context.warn({
-        code: 'OPENSCAD_RESIZE_ZERO_EXTENT',
-        message: `resize cannot map a zero-width axis ${axis} to a positive target`,
-        value: extent,
-      })
-      return Object.freeze({ scales: identity, applied: false, valid: false })
-    }
-    direct.push(target / extent)
+  const positive = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+  const encode = (value: number) => Number.isFinite(value) ? value : String(value)
+  const response = languageRequest(13, {
+    targets: Array.from({length: input.dimension}, (_, axis) => positive((input.newsize as unknown[])[axis])),
+    ...(input.bounds ? { bounds: input.bounds.map(bound => ({
+      min: Array.from({length: input.dimension}, (_, axis) => encode(bound.min[axis] ?? Infinity)),
+      max: Array.from({length: input.dimension}, (_, axis) => encode(bound.max[axis] ?? -Infinity)),
+    })) } : { extents: Array.from({length: input.dimension}, (_, axis) => encode(input.extents?.[axis] ?? NaN)) }),
+    automatic,
+  }) as {ok: boolean; value: {scales: (number | 'Infinity')[]; invalidAxis: number | null; extents: (number | string)[]}; error?: {message: string}}
+  if (!response.ok) throw new Error(response.error?.message ?? 'OpenSCAD resize calculation failed')
+  const axis = response.value.invalidAxis
+  if (axis !== null) {
+    context.warn({
+      code: 'OPENSCAD_RESIZE_ZERO_EXTENT',
+      message: `resize cannot map a zero-width axis ${axis} to a positive target`,
+      value: Number(response.value.extents[axis]),
+    })
+    return Object.freeze({scales: identity, applied: false, valid: false})
   }
-  const authored = direct.filter((scale): scale is number => scale !== undefined)
-  const aspectScale = authored.length === 0 ? 1 : Math.max(...authored)
-  const scales = direct.map((scale, axis) => scale ?? (automatic[axis] ? aspectScale : 1))
+  const scales = response.value.scales.map(Number)
   return Object.freeze({
     scales: Object.freeze(scales),
     applied: scales.some(scale => scale !== 1),

@@ -3,7 +3,10 @@ name = "gpu-compute"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
-publish.workspace = true
+publish = true
+description = "GPU compute sessions with optional CUDA driver support"
+license = "MIT"
+repository = "https://github.com/themoretheless/open-scad-viewer"
 
 [features]
 # CUDA driver API on NVIDIA hardware. `nvcuda`/`libcuda` is loaded at run time

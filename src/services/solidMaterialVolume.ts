@@ -73,10 +73,7 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
  if(!r.proven)return r.lengthIntervalMm===null&&r.pointEnclosures===null
  const d=r.lengthIntervalMm,p=r.pointEnclosures
  if(!interval(d)||d[0]<0||!Array.isArray(p)||p.length!==2||!p.every(x=>Array.isArray(x)&&x.length===3&&x.every(interval)))return false
- const lower=Math.hypot(...p[0].map((x,k)=>Math.max(0,x[0]-p[1][k][1],p[1][k][0]-x[1])))
- const upper=Math.hypot(...p[0].map((x,k)=>Math.max(Math.abs(x[0]-p[1][k][1]),Math.abs(x[1]-p[1][k][0]))))
- const slack=Number.EPSILON*Math.max(1,upper,...p.flat(2).map(Math.abs))*32
- return d[0]<=lower+slack&&d[1]>=upper-slack
+ return callGeometryRust<boolean>('cad_client_geometry',{operation:'materialWitness',bounds:p,lo:d[0],hi:d[1]})
 }
 export const inspectMaterialSegment=(options:MaterialOptions):MaterialSegment=>callGeometryRust('cad_material_segment',options)
 export const inspectMaterialChord=(options:MaterialOptions):MaterialChord=>callGeometryRust('cad_material_chord',options)

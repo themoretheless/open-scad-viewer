@@ -117,7 +117,7 @@ was not replaced, and its frozen evidence was not refreshed.
 
 `benchmarks/language-artifact-parity.mts` accepts two WASM paths and compares their
 real MGV1 ABI responses, freeing request/response allocations. The 14 checked-in
-ModelGraph examples exercise operations 1 and 4; five OpenSCAD sources under two
+RushGraph examples exercise operations 1 and 4; five OpenSCAD sources under two
 profiles exercise parsing/evaluation, assertions and syntax refusals (10 and 11).
 All 48 cases matched, with successful results required for every operation and
 refusal coverage required overall. Each case records input/output hashes.

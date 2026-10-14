@@ -79,6 +79,7 @@ export interface CadKernelOps {
   mirror(input: CadKernelHandle, normal: readonly number[]): CadKernelHandle
   transform2(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   transform3(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
+  transform3Projective(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   boolean2(
     operation: 'union' | 'intersection' | 'difference',
     inputs: readonly CadKernelHandle[],
@@ -110,6 +111,7 @@ export interface CadKernelOps {
     miterLimit?: number,
     circularSegments?: number,
   ): CadKernelHandle
+  minkowskiSum2(inputs: CadKernelHandle[]): CadKernelHandle
   minkowskiSum3(left: CadKernelHandle, right: CadKernelHandle): CadKernelHandle
   polygons(input: CadKernelHandle): Array<Array<[number, number]>>
   bounds(input: CadKernelHandle): { min: number[]; max: number[] }
@@ -350,6 +352,9 @@ export function createCadKernelOps(
     transform3(input, matrix) {
       return handle(3, geometry3(input).transform(matrix4(matrix)))
     },
+    transform3Projective(input, matrix) {
+      return handle(3, geometry3(input).transformProjective(matrix4(matrix)))
+    },
     boolean2(operation, inputs) {
       const sections = geometries2(inputs)
       if (operation === 'union') return handle(2, wasm.CrossSection.union(sections))
@@ -385,6 +390,9 @@ export function createCadKernelOps(
     offset(input, distance, join, miterLimit, circularSegments) {
       if (join === undefined) return handle(2, geometry2(input).offset(distance))
       return handle(2, geometry2(input).offset(distance, join, miterLimit, circularSegments))
+    },
+    minkowskiSum2(inputs) {
+      return handle(2, wasm.CrossSection.minkowski(inputs.map(geometry2)))
     },
     minkowskiSum3(left, right) {
       return handle(3, geometry3(left).minkowskiSum(geometry3(right)))

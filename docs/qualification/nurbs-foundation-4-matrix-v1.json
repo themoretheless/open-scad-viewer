@@ -8,7 +8,7 @@
     {"id": "NF4-SINGULARITY-LOCALIZATION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "crates/nurbs-core/src/tests.rs"]},
     {"id": "NF4-MAP-MATERIALIZATION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "scripts/nurbs-foundation-4-oracle.py", "tests/nurbsFoundation.test.ts"]},
     {"id": "NF4-CLOUD-HAUSDORFF", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "tests/nurbsFoundation.test.ts"]},
-    {"id": "NF4-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/modelGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
+    {"id": "NF4-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/rushGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
   ],
   "blockingOpenRows": []
 }

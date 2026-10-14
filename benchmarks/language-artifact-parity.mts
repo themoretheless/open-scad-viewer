@@ -28,8 +28,8 @@ function request(wasm: Exports, op: number, value: unknown) {
   } finally { wasm.abi_free(pointer, bytes.length) }
 }
 const cases: { name: string; op: number; value: unknown }[] = []
-for (const name of readdirSync('examples/modelgraph-text').filter(name => name.endsWith('.mg')).sort()) {
-  const source = readFileSync(`examples/modelgraph-text/${name}`, 'utf8')
+for (const name of readdirSync('examples/rush-frontend').filter(name => name.endsWith('.r')).sort()) {
+  const source = readFileSync(`examples/rush-frontend/${name}`, 'utf8')
   for (const op of [1, 4]) cases.push({ name, op, value: source })
 }
 for (const source of ['cube([1,2,3]);', 'for(i=[0:3]) translate([i*2,0,0]) sphere(1);',

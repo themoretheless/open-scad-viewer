@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+default = ["codec"]
+codec = []
+
 [dependencies]
 brep-core = { path = "../brep-core" }
 nurbs-intersect = { path = "../nurbs-intersect" }

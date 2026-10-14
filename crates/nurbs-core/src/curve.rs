@@ -172,10 +172,8 @@ pub fn validate_basis(p: usize, k: &[f64], n: usize) -> Result<[f64; 2]> {
     )?;
     let mut multiplicity = 0;
     for i in 0..k.len() {
-        check(
-            k[i].is_finite() && k[i].abs() <= 1e9,
-            "Knots must be finite and bounded by 1e9",
-        )?;
+        if !k[i].is_finite() { return Err(crate::input(format!("knots[{i}] must be finite"))); }
+        if k[i].abs() > 1e9 { return Err(crate::input(format!("knots[{i}] must be bounded by 1e9"))); }
         check(i == 0 || k[i] >= k[i - 1], "Knots must be nondecreasing")?;
         multiplicity = if i > 0 && k[i] == k[i - 1] {
             multiplicity + 1
@@ -251,22 +249,20 @@ impl Curve {
             dim == 2 || dim == 3,
             "Control points must have two or three coordinates",
         )?;
-        check(
-            self.control_points
-                .iter()
-                .all(|p| p.len() == dim && p.iter().all(|x| x.is_finite() && x.abs() <= 1e9)),
-            "Control points must have consistent dimensions and finite coordinates bounded by 1e9",
-        )?;
-        check(
-            self.weights.len() == n,
-            "Weights must match the control point count",
-        )?;
-        check(
-            self.weights
-                .iter()
-                .all(|w| w.is_finite() && *w >= 1e-12 && *w <= 1e12),
-            "Weights must be positive, finite, and in [1e-12, 1e12]",
-        )?;
+        for (i, point) in self.control_points.iter().enumerate() {
+            if point.len() != dim || point.iter().any(|x| !x.is_finite() || x.abs() > 1e9) {
+                return Err(crate::input(format!("control_points[{i}] must have consistent dimensions and finite coordinates bounded by 1e9")));
+            }
+        }
+        check(self.weights.len() == n, "Weights must match the control point count")?;
+        for (i, weight) in self.weights.iter().enumerate() {
+            if !weight.is_finite() || *weight <= 0. {
+                return Err(crate::input(format!("Weights must be positive, finite (weights[{i}])")));
+            }
+            if *weight < 1e-12 || *weight > 1e12 {
+                return Err(crate::input(format!("Weights must be in [1e-12, 1e12] (weights[{i}])")));
+            }
+        }
         let max = self.weights.iter().copied().fold(0., f64::max);
         let min = self.weights.iter().copied().fold(f64::INFINITY, f64::min);
         check(
@@ -306,6 +302,9 @@ impl Curve {
     }
     pub fn evaluate(&self, u: f64) -> Result<Evaluation> {
         self.validate()?;
+        self.evaluate_validated(u)
+    }
+    pub(crate) fn evaluate_validated(&self, u:f64)->Result<Evaluation> {
         let b = basis(
             self.degree,
             &self.knots,
@@ -725,3 +724,145 @@ pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Ba
         derivative_side: side,
     })
 }
+
+#[path="core/curve/basis.rs"] mod native_basis;
+pub use native_basis::{basis_funs_ders,find_span,find_span_hinted};
+
+pub fn merge_near_knots(curve: &Curve, eps: f64) -> Result<Curve> {
+    curve.validate()?;
+    check(
+        eps.is_finite() && eps > 0.,
+        "Merge epsilon must be positive and finite",
+    )?;
+    let mut knots = curve.knots.clone();
+    let mut i = 0;
+    while i < knots.len() {
+        let mut end = i + 1;
+        let mut sum = knots[i];
+        while end < knots.len() && knots[end] - knots[end - 1] < eps {
+            sum += knots[end];
+            end += 1;
+        }
+        let mean = sum / (end - i) as f64;
+        for k in &mut knots[i..end] {
+            *k = mean;
+        }
+        i = end;
+    }
+    let result = Curve {
+        knots,
+        ..curve.clone()
+    };
+    result.validate()?;
+    Ok(result)
+}
+
+pub fn clamped(curve: &Curve) -> Result<Curve> {
+    curve.validate()?;
+    let [a, b] = curve.domain();
+    curve.clamp(a, b)
+}
+
+pub fn normalize_knots(curve: &Curve) -> Result<Curve> {
+    curve.validate()?;
+    let [a, b] = curve.domain();
+    numeric(b > a, "The active knot domain must have positive length")?;
+    let mut result = curve.clone();
+    for k in &mut result.knots {
+        *k = (*k - a) / (b - a);
+    }
+    result.validate()?;
+    Ok(result)
+}
+
+impl Curve { pub fn refine(&self, new_knots: &[f64]) -> Result<Self> {
+        self.validate()?;
+        if new_knots.is_empty() {
+            return Ok(self.clone());
+        }
+        let p = self.degree;
+        let n = self.control_points.len() - 1;
+        let [a, b] = self.domain();
+        for (i, &x) in new_knots.iter().enumerate() {
+            check(
+                x.is_finite() && x >= a && x <= b,
+                "Refinement knots must lie inside the active domain",
+            )?;
+            check(
+                i == 0 || new_knots[i - 1] <= x,
+                "Refinement knots must be sorted nondecreasing",
+            )?;
+        }
+        let mut i = 0;
+        while i < new_knots.len() {
+            let mut j = i + 1;
+            while j < new_knots.len() && new_knots[j] == new_knots[i] {
+                j += 1;
+            }
+            let max = if new_knots[i] == a || new_knots[i] == b {
+                p + 1
+            } else {
+                p
+            };
+            check(
+                multiplicity(&self.knots, new_knots[i]) + (j - i) <= max,
+                "Refinement would exceed the permitted knot multiplicity",
+            )?;
+            i = j;
+        }
+        budget(self.control_points.len() + new_knots.len())?;
+        let r = new_knots.len() - 1;
+        let m = n + p + 1;
+        let work = Homogeneous::from(self);
+        let a = find_span(p, &self.knots, n + 1, new_knots[0])?;
+        let b = find_span(p, &self.knots, n + 1, new_knots[r])? + 1;
+        let mut controls = vec![Vec::new(); n + r + 2];
+        let mut knots = vec![0.; m + r + 2];
+        for j in 0..=a - p {
+            controls[j] = work.controls[j].clone();
+        }
+        for j in b - 1..=n {
+            controls[j + r + 1] = work.controls[j].clone();
+        }
+        for j in 0..=a {
+            knots[j] = self.knots[j];
+        }
+        for j in b + p..=m {
+            knots[j + r + 1] = self.knots[j];
+        }
+        let mut i = b + p - 1;
+        let mut k = b + p + r;
+        for j in (0..=r).rev() {
+            while new_knots[j] <= self.knots[i] && i > a {
+                controls[k - p - 1] = work.controls[i - p - 1].clone();
+                knots[k] = self.knots[i];
+                k -= 1;
+                i -= 1;
+            }
+            controls[k - p - 1] = controls[k - p].clone();
+            for l in 1..=p {
+                let ind = k - p + l;
+                let mut alpha = knots[k + l] - new_knots[j];
+                if alpha == 0. {
+                    controls[ind - 1] = controls[ind].clone();
+                } else {
+                    alpha /= knots[k + l] - self.knots[i - p + l];
+                    let (before, after) = controls.split_at_mut(ind);
+                    for axis in 0..before[ind - 1].len() {
+                        before[ind - 1][axis] =
+                            alpha * before[ind - 1][axis] + (1. - alpha) * after[0][axis];
+                    }
+                }
+            }
+            knots[k] = new_knots[j];
+            if j > 0 {
+                k -= 1;
+            }
+        }
+        Homogeneous {
+            degree: p,
+            knots,
+            controls,
+        }
+        .to_curve()
+    } }

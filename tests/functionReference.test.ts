@@ -5,11 +5,11 @@ import {
   searchFunctionReference,
   type ReferenceLanguage,
 } from '../src/data/functionReference'
-import { compileModelGraphText } from '../src/services/modelGraphText'
+import { compileRushFrontend } from '../src/services/rushFrontend'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
 
-const languages: ReferenceLanguage[] = ['openscad', 'modelgraph']
+const languages: ReferenceLanguage[] = ['openscad', 'rush']
 const examples = FUNCTION_REFERENCE.flatMap(entry => languages.flatMap(language => {
   const variant = entry.variants[language]
   return variant ? [{ id: entry.id, language, example: variant.example }] : []
@@ -17,8 +17,8 @@ const examples = FUNCTION_REFERENCE.flatMap(entry => languages.flatMap(language 
 
 describe('function reference examples', () => {
   it.each(examples)('$language: $id compiles and produces browser geometry', async ({ language, example }) => {
-    if (language === 'modelgraph') {
-      expect(compileModelGraphText(example).document.nodes.length).toBeGreaterThan(0)
+    if (language === 'rush') {
+      expect(compileRushFrontend(example).document.nodes.length).toBeGreaterThan(0)
     } else {
       const lowered = lowerOpenSCADToSemanticProgram(example)
       expect(lowered.program.core.nodes.length).toBeGreaterThan(0)
@@ -40,8 +40,8 @@ describe('function reference discovery', () => {
     expect(ids('  перемещает   осям ')).toContain('translate')
     expect(ids('moves geometry')).toContain('translate')
     expect(ids('создает сферу')).toContain('sphere')
-    expect(ids('extrude', 'modelgraph')).toContain('extrude')
-    expect(ids('subtract', 'modelgraph')).toContain('difference')
+    expect(ids('extrude', 'rush')).toContain('extrude')
+    expect(ids('subtract', 'rush')).toContain('difference')
   })
 
   it.each([
@@ -54,9 +54,9 @@ describe('function reference discovery', () => {
   })
 
   it('filters by the selected language and category together', () => {
-    expect(ids('sin', 'modelgraph')).not.toContain('sin')
+    expect(ids('sin', 'rush')).not.toContain('sin')
     expect(ids('select', 'openscad')).not.toContain('select')
-    const transforms = searchFunctionReference('', 'modelgraph', 'transforms')
+    const transforms = searchFunctionReference('', 'rush', 'transforms')
     expect(transforms.map(entry => entry.id)).toEqual(['translate', 'rotate', 'scale', 'mirror'])
     expect(searchFunctionReference('sphere', 'openscad', 'transforms')).toEqual([])
     expect(ids('this-function-does-not-exist')).toEqual([])
@@ -73,7 +73,7 @@ describe('function reference discovery', () => {
         const variant = entry.variants[language]
         if (!variant) continue
         expect(variant.signature.trim()).not.toBe('')
-        expect(variant.example.startsWith('// @modelgraph-text/1')).toBe(language === 'modelgraph')
+        expect(variant.example.startsWith('// @rush/1')).toBe(language === 'rush')
         for (const parameter of variant.parameters) {
           expect(parameter.description.ru.trim()).not.toBe('')
           expect(parameter.description.en.trim()).not.toBe('')

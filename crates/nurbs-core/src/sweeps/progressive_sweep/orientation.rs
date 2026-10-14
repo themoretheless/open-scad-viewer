@@ -1,5 +1,4 @@
 use super::*;
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Orientation {
     RotationMinimizing,
@@ -42,6 +41,18 @@ pub struct LevelReport {
     pub budget: f64,
     pub closed_path: bool,
     pub length_residual_upper: Option<f64>,
+    pub continuous_error_upper: Option<f64>,
+    /// Bounds both original end-section contours, before decomposition/correction.
+    pub original_section_endpoint_error_upper: Option<f64>,
+    /// Retained end contours, including decomposition, before correction/caps.
+    pub endpoint_contour_error_upper: Option<[f64;2]>,
+    /// Maximum among certified profiles, even when the complete union is unresolved.
+    /// This controls conservative admission but is not a bound for every profile.
+    pub known_profile_error_upper: Option<f64>,
+    pub error_certificate_cells: usize,
+    pub decomposition_products: usize,
+    pub error_certificate_reason: Option<&'static str>,
+    pub continuous_bound: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -70,6 +81,9 @@ pub struct Sweep<'a> {
     pub(super) frame_laws: Option<(&'a Curve, &'a Curve)>,
     pub(super) orientation_guide: Option<&'a Curve>,
     pub(super) contact_point: Option<V>,
+    /// Original anchor ownership, including the reference contour in MultiSweep.
+    pub(super) contact_source: Option<(&'a Curve, f64)>,
+    pub(super) spatial_rmf_error_limits: Option<[usize;3]>,
     pub(super) options: Options,
     pub(super) next_sections: Option<usize>,
 }
@@ -93,7 +107,7 @@ pub(super) fn project(normal: V, tangent: V) -> Result<V> {
     )?;
     unit(transverse)
 }
-fn reflect(a: V, direction: V) -> Result<V> {
+pub(super) fn reflect(a: V, direction: V) -> Result<V> {
     let n = unit(direction)?;
     Ok(sub(a, n.map(|x| 2. * dot(a, n) * x)))
 }

@@ -4,6 +4,10 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+[features]
+default = ["codec"]
+codec = ["dep:value-codec"]
+
 [dependencies]
-math-core = { package = "osv-math", path = "../math-core" }
-value-codec = { path = "../value-codec" }
+math-core = { workspace = true }
+value-codec = { workspace = true, optional = true }

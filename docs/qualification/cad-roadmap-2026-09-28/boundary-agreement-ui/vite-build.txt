@@ -3,16 +3,16 @@ transforming...
 ✓ 426 modules transformed.
 rendering chunks...
 computing gzip size...
-dist/assets/modelGraphText-e0SQVbu9.js                 0.81 kB
+dist/assets/rushFrontend-e0SQVbu9.js                 0.81 kB
 dist/assets/exactSolidRuntime-CpK2_C4q.js              2.24 kB
-dist/assets/modelGraphNurbsCompiler-TZaaEgLP.js        2.30 kB
+dist/assets/rushGraphNurbsCompiler-TZaaEgLP.js        2.30 kB
 dist/assets/worker-wasm-packing-BfhFtB1R.js            2.91 kB
 dist/index.html                                        4.20 kB │ gzip:     1.33 kB
-dist/assets/modelGraphTextScene-ChDblpUg.js            7.30 kB
+dist/assets/rushFrontendScene-ChDblpUg.js            7.30 kB
 dist/assets/photogrammetry.worker-BK3i8TIk.js         15.56 kB
 dist/assets/gcodePreview.worker-B8T-m8xh.js           16.01 kB
-dist/assets/modelGraphNurbsKernel-DI1IvEci.js         18.85 kB
-dist/assets/solidModelGraphImport-CDriqogp.js         19.07 kB
+dist/assets/rushGraphNurbsKernel-DI1IvEci.js         18.85 kB
+dist/assets/solidRushGraphImport-CDriqogp.js         19.07 kB
 dist/assets/openScadTextRuntime-Du7AOF5I.js           26.38 kB
 dist/assets/svg.worker-iU9ZnnTI.js                    38.00 kB
 dist/assets/mainSolid.worker-Cs0WIF89.js             115.57 kB
@@ -39,7 +39,7 @@ dist/assets/_plugin-vue_export-helper-BDNMzG2s.js      0.08 kB │ gzip:     0.0
 dist/assets/svgWorkerClient-BZf5umNP.js                0.08 kB │ gzip:     0.08 kB
 dist/assets/wasmBrotliPacking-D2V20EvB.js              0.10 kB │ gzip:     0.10 kB
 dist/assets/meshConvert-DJs-idKL.js                    0.10 kB │ gzip:     0.10 kB
-dist/assets/modelGraphText-DPtNO6Jw.js                 0.11 kB │ gzip:     0.11 kB
+dist/assets/rushFrontend-DPtNO6Jw.js                 0.11 kB │ gzip:     0.11 kB
 dist/assets/detect-c_zDdQxi.js                         0.19 kB │ gzip:     0.16 kB
 dist/assets/meshJson-CVKQT5bI.js                       0.20 kB │ gzip:     0.15 kB
 dist/assets/meshExportFormats-DCO6P3jL.js              0.22 kB │ gzip:     0.16 kB
@@ -67,7 +67,7 @@ dist/assets/polygon-CB7QR5wE.js                        2.51 kB │ gzip:     1.0
 dist/assets/solidBridge-6f9067KL.js                    2.65 kB │ gzip:     1.18 kB
 dist/assets/workspaceIndexedDb-0upCznE3.js             2.82 kB │ gzip:     1.13 kB
 dist/assets/stlImport-D6P0joMn.js                      3.29 kB │ gzip:     1.55 kB
-dist/assets/modelgraph-text-2XvDfQyn.js                4.36 kB │ gzip:     1.96 kB
+dist/assets/rush-frontend-2XvDfQyn.js                4.36 kB │ gzip:     1.96 kB
 dist/assets/mainSolidWorker-COMxDj-n.js                4.41 kB │ gzip:     1.93 kB
 dist/assets/solidStepAssembly-CoLz5u0x.js              4.68 kB │ gzip:     2.23 kB
 dist/assets/svgWorkerClient-tbe-xW5V.js                5.20 kB │ gzip:     2.16 kB

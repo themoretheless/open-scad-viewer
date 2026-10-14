@@ -1,0 +1,76 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-07T04:42:05.476Z",
+  "scope": "Finite progressive surface UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "nativeRunningCancelProbe": false,
+  "geometryWasmSha256": "5b6f00d0b4eebed104fc69d9c4c908fa30cdbfe9381dd563e2292a3dff891a9e",
+  "artifactProvenance": {
+    "sha256": "5b6f00d0b4eebed104fc69d9c4c908fa30cdbfe9381dd563e2292a3dff891a9e",
+    "byteLength": 11588342,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-LLVJkOvw.js"
+    ]
+  },
+  "appSourceSha256": "2386754292abf7abe6892da4df44ce379ebd6553205b5d2766e24eb1167913b1",
+  "distIndexSha256": "fdc51af0406776526f1bf3e1b6df1cb03ddfb235f6287e8e5e85ea4de4796b30",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "closed-antipodal-spatial-rmf-progressive-sweep.r",
+      "sourceSha256": "313870b7eae2e11a41c2c114b398570c66e5826ac127bef3790771e031bac2b5",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "viewport-renderer-ready",
+          "status": "passed"
+        },
+        {
+          "case": "separate-retained-surface-regularity-presentation",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "gpuAdapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      },
+      "error": "Refinement must use the source error budget\n\n1 !== 2\n",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n6\n▾\n7\n8\n9\n10\n11\n12\n13\n// @rush/1\n// Original closed C1 quadratic path with exact antipodal Bishop holonomy.\n// Full principal-angle enclosure; source C1 does not certify retained G1/G2.\nprofile = bezier_curve(points: [[0.01mm,0,0],[0.02mm,0,0]])\npath = nurbs_curve(degree: 2,knots: [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 10],control_points: [[0mm,0mm,0mm],[1mm,0mm,0mm],[1mm,1mm,0mm],[1mm,2mm,0mm],[1mm,2mm,1mm],[1mm,2mm,2mm],[2mm,2mm,2mm],[3mm,2mm,2mm],[3mm,3mm,2mm],[3mm,4mm,2mm],[2mm,4mm,2mm],[1mm,4mm,2mm],[1mm,4mm,1mm],[1mm,4mm,0mm],[1mm,3mm,0mm],[1mm,2mm,0mm],[0mm,2mm,0mm],[-1mm,2mm,0mm],[-1mm,1mm,0mm],[-1mm,0mm,0mm],[0mm,0mm,0mm]],weights: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])\nshow progressive_sweep(profile,path,\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n normal: [0,0,1],orientation: \"rmf\",spacing: \"arc_length\",\n initial_sections: 65,max_sections: 65,length_tolerance: 0.001mm,length_max_cells: 100000,\n rmf_transport_steps: 4096,error_max_cells: 100000,error_max_products: 1000000,max_deviation: 1mm\n).nurbs_patches_tessellate(segments: 4)\n\n\n⚠ Open surface: enclosed volume is undefined.\nОбъекты 1\nТреугольники 192\nОбъём 0\nПлощадь 20,09\nГотово · 891 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nОшибка sweep-поверхностей относительно исходного переноса профиля: доказана · ≤0.134856 / 1.00000 mm · C2 замкнутого исходного кадра: не доказана · C1 замкнутого исходного кадра: не доказана · Регулярность поверхностей: не доказана · Область: сохранённые поверхности\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n192 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nWebGPU · интерактивный\nManifold\nФайл открыт\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms · draw 1134.9 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб"
+    }
+  ],
+  "evidenceOnly": false,
+  "gpuBackendRequested": "metal",
+  "sourceHashes": {
+    "src/App.vue": "2386754292abf7abe6892da4df44ce379ebd6553205b5d2766e24eb1167913b1",
+    "src/services/sweepRetainedCorrespondence.ts": "8194f6ff8ab4e8dd53b57c3d7009d536f4878ad77d3cf8bbc42376d7a5f57be7",
+    "src/services/geometry/brep.ts": "c611944f6bdca94fa4626c15e7d813decdd438d1fa9bc761b97a0a50edae0f9f",
+    "src/services/nurbsMiterOwnedBoundary.ts": "c323be51de8360daf985ddf0a041d0337cde31d5113b3f29f86cd429c5f0c477",
+    "crates/brep-core/src/sweep_miter_owned.rs": "ba36ded3e1b3b65629ea24e1b2c661b8d3bada9f925b23c4f42875afb237720d",
+    "crates/geometry-bridge/src/cad_miter_owned.rs": "00f6b4a381420b52878e0479a18be0a52c8a0990ec4da807b0f948e17c273346",
+    "crates/nurbs-core/src/sweeps/progressive_sweep.rs": "7e173b01e37119e9f1689ab207a2b939b122fb5e0ad25189f210abfc301f7c38",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs": "029b75dd6e258b3221f6cf7888aacc11569ae9f31b104dac52be8824b7c4302d",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs": "9516c463ece2f5d7fd692b0ed094926e6b6a4d4f821dbd96ee23a38bc76b5505",
+    "crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs": "ef9223c0b183452eeee2529d74766b93d18fe5e555ff49c6af911539fb0906d0",
+    "src/services/nurbsSectionProjection.ts": "8e26cbcc02036766372d09b52ecf78eb4dfa7ee45db964d9f64c47467d8b6361",
+    "src/services/nurbsCircleSectionRepair.ts": "1cde562fed41b8a34a62413eb5cf333d55f6899ecf223e05793d415d928eac56",
+    "src/services/miterBodyLayout.ts": "68040fb9a9b7c9b79e84ede6bdff3d591cdd66aa0c80e25a4644ff4f3483eca8",
+    "src/services/sweepBoundaryCertificate.ts": "a3f4f93d3d5a9a5bc9ca34a9e73a52187535ee56ae5c777c9b39391079f0c116",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "aae12075d621ad6565fa2f261e8bd841da3fe14bd9203ed47789d91171e58194",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "c49a12863952c7ce97e59d94d8c09558f2c4db4e7e0ac3df962c227c0137e32a",
+    "scripts/sweep-native-cancel-probe.mjs": "ea1b53318ac616cb8426982083d20aff5068299699bcd55d42e622dd60f8e580"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

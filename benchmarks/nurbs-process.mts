@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { runOwnNurbs } from '../src/mcp/modelGraphNurbsRuntime'
+import { runOwnNurbs } from '../src/mcp/rushGraphNurbsRuntime'
 import { nurbsProcessFixtures } from './nurbs-process-fixtures'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
@@ -15,8 +15,8 @@ assert.ok(Number.isSafeInteger(iterations) && iterations >= 1 && iterations <= 5
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
 const inputs = [
   'benchmarks/nurbs-process.mts', 'benchmarks/nurbs-process-fixtures.ts',
-  'src/mcp/modelGraphNurbsRuntime.ts', 'src/mcp/ownNurbsProcess.ts',
-  'src/services/modelGraphNurbsKernel.ts', 'src/services/modelGraphNurbs.ts',
+  'src/mcp/rushGraphNurbsRuntime.ts', 'src/mcp/ownNurbsProcess.ts',
+  'src/services/rushGraphNurbsKernel.ts', 'src/services/rushGraphNurbs.ts',
   'src/services/geometry/kernel.ts', 'src/generated/geometry-kernels/bytes.ts',
   'src/generated/language-kernel/bytes.ts',
   'src/generated/wasm-brotli/bytes.ts', 'src/services/wasmBrotliPacking.ts',

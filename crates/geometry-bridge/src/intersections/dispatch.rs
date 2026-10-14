@@ -58,7 +58,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         Some("brep_intersect_sphere_sphere") => encode(brep_intersect::intersect_sphere_sphere(
             &field(&v, "first")?,
             &field(&v, "second")?,
-            options,
+            brep_core::intersections::Options {distance_tolerance:options.distance_tolerance,parameter_tolerance:options.parameter_tolerance,max_depth:options.max_depth,max_boxes:options.max_boxes},
         )?),
         Some("brep_intersect_sphere_cylinder") => encode(brep_intersect::intersect_sphere_cylinder(
             &field(&v, "first")?,

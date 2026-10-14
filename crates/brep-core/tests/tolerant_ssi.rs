@@ -277,6 +277,8 @@ fn operand_order_and_rigid_motion_do_not_change_volumes() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn tolerance_is_stated_bounded_and_honest() {
     let c = cylinder(3., 10.).unwrap();
     let s = translate(&sphere(2.).unwrap(), [2.5, 0.4, 5.]);

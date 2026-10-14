@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {EXAMPLES} from '../src/data/examples'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import {analyzeNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
 
 function circularLensArea(r:number,R:number,d:number):number {
@@ -12,9 +12,9 @@ function circularLensArea(r:number,R:number,d:number):number {
 }
 
 it('builds and exports the public stepped enclosure with retained curved B-rep authority',()=>{
-  const source=readFileSync(new URL('../examples/brep/stepped-enclosure.mg',import.meta.url),'utf8')
+  const source=readFileSync(new URL('../examples/brep/stepped-enclosure.r',import.meta.url),'utf8')
   expect(EXAMPLES['brep-enclosure']).toBe(source)
-  const compiled=compileModelGraphText(source)
+  const compiled=compileRushFrontend(source)
   expect(compiled.execution_target).toBe('own-nurbs')
   if(compiled.execution_target!=='own-nurbs')throw new Error('Example must use the native NURBS backend')
   const result=buildOwnNurbs(compiled.document,{action:'build',display:{segments:6,subdivisionLevels:0}})

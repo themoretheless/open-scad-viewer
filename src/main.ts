@@ -1,5 +1,5 @@
 import { createApp, markRaw } from 'vue'
-import { sourceFileExtension } from './services/modelGraphTextDetect'
+import { sourceFileExtension } from './services/rushFrontendDetect'
 import App from './App.vue'
 import { EXAMPLES } from './data/examples'
 import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './services/safeStorage'

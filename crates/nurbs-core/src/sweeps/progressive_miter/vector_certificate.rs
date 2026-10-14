@@ -2,6 +2,10 @@
 //! These law enclosures alone do not certify a frame or sweep geometry.
 use super::scalar_certificate::{self, Status};
 use crate::{Result, check, curve::Curve};
+mod third;
+mod fourth;
+pub use fourth::{FourthReport,certify_fourth_traversal};
+pub use third::{ThirdReport, certify_third_traversal};
 #[derive(Clone, Debug)]
 pub struct ValuesReport {
     pub cells: usize,
@@ -177,4 +181,77 @@ mod tests {
         assert!(certify_traversal(&law, [-0.1, 1.], 6, false).is_err());
         assert!(certify_traversal(&law, [0., 1.], 100001, false).is_err());
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct EndpointFirstReport {
+    pub cells: usize,
+    pub first: Option<[[f64; 2]; 3]>,
+}
+/// Original one-sided XYZ derivative, with a single shared component budget.
+pub fn certify_endpoint_first(
+    law: &Curve,
+    at_end: bool,
+    max_cells: usize,
+) -> Result<EndpointFirstReport> {
+    law.validate()?;
+    check(
+        max_cells <= 100000 && law.control_points.iter().all(|p| p.len() == 3),
+        "Invalid vector endpoint input",
+    )?;
+    let mut out = EndpointFirstReport {
+        cells: 0,
+        first: None,
+    };
+    let mut first = [[0.; 2]; 3];
+    for axis in 0..3 {
+        if out.cells == max_cells {
+            return Ok(out);
+        }
+        let mut scalar = law.clone();
+        scalar.control_points = law
+            .control_points
+            .iter()
+            .map(|p| vec![p[axis], 0., 0.])
+            .collect();
+        let value = scalar_certificate::endpoint_first(&scalar, at_end, 1)?;
+        out.cells += 1;
+        let Some(value) = value else {
+            return Ok(out);
+        };
+        first[axis] = value;
+    }
+    out.first = Some(first);
+    Ok(out)
+}
+
+/// Same derivative payload at an arbitrary normalized traversal point.
+pub type PointFirstReport = EndpointFirstReport;
+pub fn certify_first_point(law: &Curve, t: f64, max_cells: usize) -> Result<PointFirstReport> {
+    law.validate()?;
+    check(
+        max_cells <= 100000 && law.control_points.iter().all(|p| p.len() == 3),
+        "Invalid vector point derivative input",
+    )?;
+    let mut out = PointFirstReport {
+        cells: 0,
+        first: None,
+    };
+    let mut first = [[0.; 2]; 3];
+    for axis in 0..3 {
+        let mut scalar = law.clone();
+        scalar.control_points = law
+            .control_points
+            .iter()
+            .map(|p| vec![p[axis], 0., 0.])
+            .collect();
+        let result = scalar_certificate::certify_first_point(&scalar, t, max_cells - out.cells)?;
+        out.cells += result.cells;
+        let Some(value) = result.first else {
+            return Ok(out);
+        };
+        first[axis] = value;
+    }
+    out.first = Some(first);
+    Ok(out)
 }

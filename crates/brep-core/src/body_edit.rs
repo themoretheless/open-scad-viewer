@@ -264,6 +264,7 @@ mod tests {
         .unwrap()
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn preserves_standalone_shells_beside_edited_components() {
         let mut model = mixed_unit_assembly();
         let source = model.clone();
@@ -284,6 +285,7 @@ mod tests {
     }
     #[test]
     #[ignore = "explicit assembly edit timing"]
+    #[cfg(feature = "codec")]
     fn assembly_edit_timing() {
         let count: usize = std::env::var("CAD_BODY_EDIT_COUNT")
             .unwrap_or_else(|_| "64".into())
@@ -336,6 +338,7 @@ mod tests {
         }
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn cylinder_edit_preserves_separate_body_with_cavity() {
         let cavity = crate::operations::boolean(
             &crate::cuboid([10., 10., 10.], [20., 20., 20.]).unwrap(),
@@ -376,6 +379,7 @@ mod tests {
         );
     }
     #[test]
+    #[cfg(feature = "codec")]
     fn mixed_unit_component_push_preserves_other_body_and_identities() {
         let model = mixed_unit_assembly();
         let original = value_codec::to_string(&model).unwrap();

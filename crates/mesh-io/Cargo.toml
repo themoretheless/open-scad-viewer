@@ -1,0 +1,12 @@
+[package]
+name = "mesh-io"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+math-core = { workspace = true }
+mesh-topology = { workspace = true }
+crc32fast = "=1.5.2"
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }

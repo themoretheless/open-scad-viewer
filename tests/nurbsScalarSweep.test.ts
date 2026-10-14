@@ -2,8 +2,8 @@ import {expect,it} from 'vitest'
 import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
 import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/services/rushFrontend'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 const profile=bezierNurbsCurve([[1,0,0],[2,0,0]])
 const path=bezierNurbsCurve([[0,0,0],[0,0,5]])
 const scale={degree:1,knots:[10,10,14,14],values:[1,2],weights:[3,1]}
@@ -32,7 +32,7 @@ it('promotes accepted RMF surfaces and refuses unproved continuous deviation wit
 it('exposes both constructors through the existing Rush path',()=>{
  for(const op of ['scaled_sweep','profile_sweep']){
   const source=`// @rush/1\np = circle_curve(center:[0,0,0],normal:[0,0,1],radius:1mm)\nc = bezier_curve(points:[[0,0,0],[0,0,5mm]])\nshow ${op}(p,c,scale:{degree:1,knots:[0,0,1,1],values:[1,2],weights:[1,1]},${op==='scaled_sweep'?'origin:[0,0,0]':'normal:[1,0,0],sections:5,max_deviation:0.01mm'}).tessellate(segments_u:4,segments_v:4)`
-  const result=buildOwnNurbs(compileModelGraphText(source).document,{action:'build'})
+  const result=buildOwnNurbs(compileRushFrontend(source).document,{action:'build'})
   expect(result.mesh!.indices.length).toBeGreaterThan(0)
  }
 })

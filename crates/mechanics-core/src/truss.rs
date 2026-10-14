@@ -1,12 +1,17 @@
 //! Small-displacement, axial-only 3D bars with explicit zero-displacement supports.
 //! No inferred supports, moments, bending, buckling, or strength recommendations.
-use crate::{Error, Result};
-use nalgebra::{DMatrix, DVector};
+use crate::buckling::{MAX_MODES, solve_modes};
+use crate::diagnostics::{
+    MIN_NORMALIZED_PIVOT, SingularityDiagnosis, diagnose_singular, summarize,
+};
+use crate::{Error, MassModel, Result};
+use nalgebra::{Cholesky, DMatrix, DVector, Dyn};
 use std::collections::BTreeSet;
 
 pub const MAX_NODES: usize = 125;
 pub const MAX_MEMBERS: usize = 400;
-const MIN_NORMALIZED_PIVOT: f64 = 1e-12;
+/// Global DOF names per node, used in singularity diagnostics.
+pub const DOF_NAMES: [&str; 3] = ["x", "y", "z"];
 const MAX_RELATIVE_RESIDUAL: f64 = 1e-9;
 
 #[derive(Clone, Debug)]
@@ -47,10 +52,14 @@ fn numeric() -> Error {
         "Truss calculation exceeds finite numeric range",
     )
 }
-fn singular() -> Error {
+fn singular_diagnosed(stiffness: &DMatrix<f64>, free: &[usize]) -> Error {
+    let diagnosis = diagnose_singular(stiffness, free, &DOF_NAMES);
     Error::new(
         "TRUSS_SINGULAR",
-        "Truss has an unrestrained or numerically singular mode",
+        format!(
+            "Truss has an unrestrained or numerically singular mode: {}",
+            summarize(&diagnosis)
+        ),
     )
 }
 
@@ -59,6 +68,7 @@ struct Bar {
     direction: [f64; 3],
     stiffness: f64,
     area: f64,
+    length: f64,
 }
 
 fn validate(model: &Model) -> Result<Vec<Bar>> {
@@ -112,18 +122,16 @@ fn validate(model: &Model) -> Result<Vec<Bar>> {
             direction: delta.map(|v| v / length),
             stiffness,
             area: member.area_mm2,
+            length,
         });
     }
     Ok(bars)
 }
 
-/// Solve only an admitted, numerically stable pin-jointed model. Errors do not
-/// carry successful-looking displacement, stiffness, stress, or margin values.
-pub fn solve(model: &Model) -> Result<Response> {
-    let bars = validate(model)?;
-    let ndof = model.nodes_mm.len() * 3;
+/// Global stiffness of validated bars; shared by `solve` and `diagnose`.
+fn assemble_stiffness(bars: &[Bar], ndof: usize) -> DMatrix<f64> {
     let mut stiffness = DMatrix::<f64>::zeros(ndof, ndof);
-    for bar in &bars {
+    for bar in bars {
         let [a, b] = bar.nodes;
         for i in 0..3 {
             for j in 0..3 {
@@ -135,6 +143,15 @@ pub fn solve(model: &Model) -> Result<Response> {
             }
         }
     }
+    stiffness
+}
+
+/// Solve only an admitted, numerically stable pin-jointed model. Errors do not
+/// carry successful-looking displacement, stiffness, stress, or margin values.
+pub fn solve(model: &Model) -> Result<Response> {
+    let bars = validate(model)?;
+    let ndof = model.nodes_mm.len() * 3;
+    let stiffness = assemble_stiffness(&bars, ndof);
     let mut result = solve_stiffness(model, &stiffness)?;
     let mut axial_forces_n = Vec::with_capacity(bars.len());
     let mut axial_stresses_mpa = Vec::with_capacity(bars.len());
@@ -158,47 +175,306 @@ pub fn solve(model: &Model) -> Result<Response> {
     Ok(result)
 }
 
-/// Shared bounded linear solve. Callers validate their model and assembled matrix.
-pub(crate) fn solve_stiffness(model: &Model, stiffness: &DMatrix<f64>) -> Result<Response> {
+/// Explain why a model would be refused as singular, or confirm it is stable.
+/// Load-independent: the restraint mask and the member layout decide; forces
+/// are merely shape-checked.
+pub fn diagnose(model: &Model) -> Result<SingularityDiagnosis> {
+    let bars = validate(model)?;
     let ndof = model.nodes_mm.len() * 3;
+    let stiffness = assemble_stiffness(&bars, ndof);
     if stiffness.iter().any(|v| !v.is_finite()) {
         return Err(numeric());
     }
     let free: Vec<usize> = (0..ndof)
         .filter(|&i| !model.restrained[i / 3][i % 3])
         .collect();
-    let mut displacement = DVector::<f64>::zeros(ndof);
+    Ok(diagnose_singular(&stiffness, &free, &DOF_NAMES))
+}
+
+/// One buckling mode of the reference load state, nodal form.
+#[derive(Clone, Debug)]
+pub struct TrussBucklingMode {
+    /// Signed factor on the model loads (buckling load = λ·reference);
+    /// negative means the truss buckles under the reversed load.
+    pub load_factor: f64,
+    /// Mode shape over all DOFs, max |component| = 1; restrained DOFs are zero.
+    pub displacements: Vec<[f64; 3]>,
+    pub relative_residual: f64,
+}
+
+/// Eigenvalue buckling of the truss under its own load vector.
+#[derive(Clone, Debug)]
+pub struct TrussBucklingResponse {
+    /// Ascending |load_factor|; the first entry is the critical mode.
+    pub modes: Vec<TrussBucklingMode>,
+    /// Member axial forces of the reference state (tension positive) that the
+    /// geometric stiffness is built from.
+    pub axial_forces_n: Vec<f64>,
+    pub free_dofs: usize,
+}
+
+/// Linear buckling of a pin-jointed truss under its own load vector as the
+/// reference state. The geometric stiffness of a bar is transverse only
+/// (N/L·(I − ddᵀ)); bars carry no bending, so lattice shear flexibility is
+/// part of the answer. Not a certified stability calculation.
+pub fn buckling(model: &Model, modes: usize) -> Result<TrussBucklingResponse> {
+    if modes == 0 || modes > MAX_MODES {
+        return Err(invalid("Buckling returns between 1 and 8 modes"));
+    }
+    let bars = validate(model)?;
+    let ndof = model.nodes_mm.len() * 3;
+    let stiffness = assemble_stiffness(&bars, ndof);
+    let reference = solve(model)?;
+    let factored = factor_reduced(&stiffness, &model.restrained)?;
+    let mut geometric = DMatrix::<f64>::zeros(ndof, ndof);
+    for (bar, &axial_n) in bars.iter().zip(&reference.axial_forces_n) {
+        let c = axial_n / bar.length;
+        let [a, b] = bar.nodes;
+        for i in 0..3 {
+            for j in 0..3 {
+                // B = I − d·dᵀ: transverse geometric stiffness of a bar.
+                let value = c * (f64::from(i == j) - bar.direction[i] * bar.direction[j]);
+                geometric[(a * 3 + i, a * 3 + j)] += value;
+                geometric[(b * 3 + i, b * 3 + j)] += value;
+                geometric[(a * 3 + i, b * 3 + j)] -= value;
+                geometric[(b * 3 + i, a * 3 + j)] -= value;
+            }
+        }
+    }
+    if geometric.iter().any(|v| !v.is_finite()) {
+        return Err(numeric());
+    }
+    let solved = match &factored.factor {
+        Some(factor) => solve_modes(
+            factor,
+            &factored.scales,
+            &factored.free,
+            &stiffness,
+            &geometric,
+            modes,
+        )?,
+        None => Vec::new(),
+    };
+    let n = model.nodes_mm.len();
+    let modes_out = solved
+        .into_iter()
+        .map(|mode| TrussBucklingMode {
+            load_factor: mode.load_factor,
+            displacements: (0..n)
+                .map(|i| std::array::from_fn(|k| mode.shape[i * 3 + k]))
+                .collect(),
+            relative_residual: mode.relative_residual,
+        })
+        .collect();
+    Ok(TrussBucklingResponse {
+        modes: modes_out,
+        axial_forces_n: reference.axial_forces_n,
+        free_dofs: factored.free.len(),
+    })
+}
+
+/// One vibration mode, nodal form.
+#[derive(Clone, Debug)]
+pub struct TrussModalMode {
+    pub frequency_hz: f64,
+    /// Angular frequency ω = 2πf.
+    pub omega_rad_s: f64,
+    /// Mode shape over all DOFs, max |component| = 1; restrained DOFs are zero.
+    pub displacements: Vec<[f64; 3]>,
+    /// ‖Kφ − ω²Mφ‖∞ / (‖Kφ‖∞ + ‖ω²Mφ‖∞) on the free DOFs.
+    pub relative_residual: f64,
+}
+
+/// Natural frequencies and mode shapes of the truss.
+#[derive(Clone, Debug)]
+pub struct TrussModalResponse {
+    /// Ascending frequency.
+    pub modes: Vec<TrussModalMode>,
+    /// Total bar mass in tonnes (1 t·mm/s² = 1 N with mm units).
+    pub total_mass_t: f64,
+    pub free_dofs: usize,
+}
+
+/// Small-displacement modal analysis: Kφ = ω²Mφ with bar mass from
+/// `densities_t_mm3` (t/mm³; steel ≈ 7.85e-9; zero means a massless bar).
+/// Lumped mass halves each bar onto its ends; consistent uses the isotropic
+/// ρAL/6·[[2I,I],[I,2I]] block. Massless free DOFs have no finite frequency and
+/// do not appear among the modes. Not a certified dynamic calculation.
+pub fn modal(
+    model: &Model,
+    densities_t_mm3: &[f64],
+    mass_model: MassModel,
+    modes: usize,
+) -> Result<TrussModalResponse> {
+    if modes == 0 || modes > MAX_MODES {
+        return Err(invalid("Modal analysis returns between 1 and 8 modes"));
+    }
+    if densities_t_mm3.len() != model.members.len() {
+        return Err(invalid("Each member requires a density (0 for massless)"));
+    }
+    if densities_t_mm3.iter().any(|d| !d.is_finite() || *d < 0.) {
+        return Err(invalid("Densities must be finite and nonnegative"));
+    }
+    let bars = validate(model)?;
+    let ndof = model.nodes_mm.len() * 3;
+    let stiffness = assemble_stiffness(&bars, ndof);
+    let factored = factor_reduced(&stiffness, &model.restrained)?;
+    let mut mass = DMatrix::<f64>::zeros(ndof, ndof);
+    for (bar, &rho) in bars.iter().zip(densities_t_mm3) {
+        let total = rho * bar.area * bar.length;
+        let [a, b] = bar.nodes;
+        match mass_model {
+            MassModel::Lumped => {
+                for node in [a, b] {
+                    for axis in 0..3 {
+                        mass[(node * 3 + axis, node * 3 + axis)] += total / 2.;
+                    }
+                }
+            }
+            MassModel::Consistent => {
+                for i in 0..3 {
+                    for j in 0..3 {
+                        let block = total / 6. * f64::from(i == j);
+                        mass[(a * 3 + i, a * 3 + j)] += 2. * block;
+                        mass[(b * 3 + i, b * 3 + j)] += 2. * block;
+                        mass[(a * 3 + i, b * 3 + j)] += block;
+                        mass[(b * 3 + i, a * 3 + j)] += block;
+                    }
+                }
+            }
+        }
+    }
+    if mass.iter().any(|v| !v.is_finite()) {
+        return Err(numeric());
+    }
+    // Kφ = ω²Mφ is the shared pencil with geometric := −M; load_factor = ω².
+    let negative_mass = -&mass;
+    let solved = match &factored.factor {
+        Some(factor) => solve_modes(
+            factor,
+            &factored.scales,
+            &factored.free,
+            &stiffness,
+            &negative_mass,
+            modes,
+        )?,
+        None => Vec::new(),
+    };
+    let total_mass_t = bars
+        .iter()
+        .zip(densities_t_mm3)
+        .map(|(bar, rho)| rho * bar.area * bar.length)
+        .sum();
+    let n = model.nodes_mm.len();
+    let modes_out = solved
+        .into_iter()
+        .map(|mode| {
+            let omega = mode.load_factor.sqrt();
+            TrussModalMode {
+                frequency_hz: omega / (2. * std::f64::consts::PI),
+                omega_rad_s: omega,
+                displacements: (0..n)
+                    .map(|i| std::array::from_fn(|k| mode.shape[i * 3 + k]))
+                    .collect(),
+                relative_residual: mode.relative_residual,
+            }
+        })
+        .collect();
+    Ok(TrussModalResponse {
+        modes: modes_out,
+        total_mass_t,
+        free_dofs: factored.free.len(),
+    })
+}
+
+/// Maximum requested load increments in one nonlinear solve.
+pub const MAX_LOAD_STEPS: usize = 200;
+/// Maximum Newton iterations per load increment.
+pub const MAX_NR_ITERATIONS: usize = 200;
+
+mod nonlinear;
+use nonlinear::*;
+pub use nonlinear::{NonlinearOptions, NonlinearStep, TrussNonlinearResponse, solve_nonlinear};
+
+
+/// Equilibrated Cholesky factorization of the free-DOF block, shared by the
+/// linear solve and the buckling eigenproblem.
+pub(crate) struct Factored {
+    pub(crate) free: Vec<usize>,
+    pub(crate) scales: Vec<f64>,
+    pub(crate) factor: Option<Cholesky<f64, Dyn>>,
+}
+
+pub(crate) fn factor_reduced(stiffness: &DMatrix<f64>, restrained: &[[bool; 3]]) -> Result<Factored> {
+    let ndof = stiffness.nrows();
+    let free: Vec<usize> = (0..ndof)
+        .filter(|&i| !restrained[i / 3][i % 3])
+        .collect();
+    let mut scales = Vec::new();
+    let mut factor = None;
     if !free.is_empty() {
         // Diagonal equilibration makes the refusal threshold independent of a
         // common modulus/unit scale. This is not a condition-number estimate.
-        let mut scales = Vec::with_capacity(free.len());
+        scales.reserve(free.len());
+        let mut zero_diagonal = false;
         for &i in &free {
             let diagonal = stiffness[(i, i)];
             if diagonal <= 0. {
-                return Err(singular());
+                zero_diagonal = true;
+                break;
             }
             scales.push(diagonal.sqrt());
+        }
+        if zero_diagonal {
+            return Err(singular_diagnosed(stiffness, &free));
         }
         let reduced = DMatrix::from_fn(free.len(), free.len(), |i, j| {
             stiffness[(free[i], free[j])] / scales[i] / scales[j]
         });
+        if reduced.iter().any(|v| !v.is_finite()) {
+            return Err(numeric());
+        }
+        let Some(chol) = reduced.cholesky() else {
+            return Err(singular_diagnosed(stiffness, &free));
+        };
+        if chol
+            .l_dirty()
+            .diagonal()
+            .iter()
+            .any(|&v| !v.is_finite() || v * v <= MIN_NORMALIZED_PIVOT)
+        {
+            return Err(singular_diagnosed(stiffness, &free));
+        }
+        factor = Some(chol);
+    }
+    Ok(Factored {
+        free,
+        scales,
+        factor,
+    })
+}
+
+/// Shared bounded linear solve. Callers validate their model and assembled matrix.
+pub(crate) fn solve_stiffness(model: &Model, stiffness: &DMatrix<f64>) -> Result<Response> {
+    let ndof = model.nodes_mm.len() * 3;
+    if stiffness.iter().any(|v| !v.is_finite()) {
+        return Err(numeric());
+    }
+    let Factored {
+        free,
+        scales,
+        factor,
+    } = factor_reduced(stiffness, &model.restrained)?;
+    let mut displacement = DVector::<f64>::zeros(ndof);
+    if let Some(factor) = &factor {
         let rhs = DVector::from_iterator(
             free.len(),
             free.iter()
                 .enumerate()
                 .map(|(i, &dof)| model.forces_n[dof / 3][dof % 3] / scales[i]),
         );
-        if reduced.iter().chain(rhs.iter()).any(|v| !v.is_finite()) {
+        if rhs.iter().any(|v| !v.is_finite()) {
             return Err(numeric());
-        }
-        let factor = reduced.cholesky().ok_or_else(singular)?;
-        if factor
-            .l_dirty()
-            .diagonal()
-            .iter()
-            .any(|&v| !v.is_finite() || v * v <= MIN_NORMALIZED_PIVOT)
-        {
-            return Err(singular());
         }
         let solved = factor.solve(&rhs);
         for (i, &dof) in free.iter().enumerate() {
@@ -278,243 +554,5 @@ pub(crate) fn solve_stiffness(model: &Model, stiffness: &DMatrix<f64>) -> Result
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn bar() -> Model {
-        Model {
-            nodes_mm: vec![[0., 0., 0.], [0., 0., 10.]],
-            members: vec![Member {
-                nodes: [0, 1],
-                young_mpa: 2000.,
-                area_mm2: 2.,
-            }],
-            restrained: vec![[true; 3], [true, true, false]],
-            forces_n: vec![[0.; 3], [0., 0., 100.]],
-        }
-    }
-    fn close(a: f64, b: f64) {
-        assert!((a - b).abs() <= 1e-10 * b.abs().max(1.), "{a} != {b}");
-    }
-
-    #[test]
-    fn axial_bar_has_analytical_deflection_stress_and_reaction() {
-        let response = solve(&bar()).unwrap();
-        close(response.displacements_mm[1][2], 0.25);
-        close(response.axial_forces_n[0], 100.);
-        close(response.axial_stresses_mpa[0], 50.);
-        close(response.reactions_n[0][2], -100.);
-        close(response.reactions_n[1][2], 0.);
-        assert!(response.max_relative_residual < 1e-12);
-        assert_eq!(response.free_dofs, 1);
-    }
-
-    #[test]
-    fn refuses_the_branch_two_node_lateral_load_regression() {
-        let mut model = bar();
-        model.restrained[1] = [false; 3];
-        model.forces_n[1] = [100., 0., 0.];
-        assert_eq!(solve(&model).unwrap_err().code, "TRUSS_SINGULAR");
-        model.forces_n[1] = [0.; 3];
-        assert_eq!(solve(&model).unwrap_err().code, "TRUSS_SINGULAR");
-    }
-
-    #[test]
-    fn series_members_share_force_and_preserve_equilibrium() {
-        let mut model = bar();
-        model.nodes_mm.push([0., 0., 20.]);
-        model.members.push(Member {
-            nodes: [1, 2],
-            young_mpa: 2000.,
-            area_mm2: 2.,
-        });
-        model.restrained.push([true, true, false]);
-        model.forces_n[1] = [0.; 3];
-        model.forces_n.push([0., 0., 100.]);
-        let result = solve(&model).unwrap();
-        close(result.displacements_mm[1][2], 0.25);
-        close(result.displacements_mm[2][2], 0.5);
-        for force in result.axial_forces_n {
-            close(force, 100.);
-        }
-        close(result.reactions_n.iter().map(|r| r[2]).sum::<f64>(), -100.);
-    }
-
-    #[test]
-    fn restraint_loads_are_reactions_not_member_force_proxies() {
-        let mut model = bar();
-        model.restrained[1] = [true; 3];
-        let result = solve(&model).unwrap();
-        assert_eq!(result.free_dofs, 0);
-        assert_eq!(result.displacements_mm, vec![[0.; 3]; 2]);
-        assert_eq!(result.reactions_n[1], [0., 0., -100.]);
-        assert_eq!(result.axial_forces_n, [0.]);
-    }
-
-    #[test]
-    fn uniform_modulus_and_load_scaling_preserves_displacements() {
-        for scale in [1e-100, 1e-20, 1., 1e20, 1e100] {
-            let mut model = bar();
-            model.members[0].young_mpa *= scale;
-            model.forces_n[1][2] *= scale;
-            let result = solve(&model).unwrap();
-            close(result.displacements_mm[1][2], 0.25);
-            close(result.reactions_n[0][2] / scale, -100.);
-        }
-    }
-
-    #[test]
-    fn rejects_invalid_input_before_matrix_allocation() {
-        let mut models = Vec::new();
-        let mut m = bar();
-        m.nodes_mm[1] = m.nodes_mm[0];
-        models.push(m);
-        let mut m = bar();
-        m.nodes_mm[0][0] = f64::NAN;
-        models.push(m);
-        let mut m = bar();
-        m.forces_n[1][2] = f64::INFINITY;
-        models.push(m);
-        let mut m = bar();
-        m.restrained.clear();
-        models.push(m);
-        let mut m = bar();
-        m.members[0].nodes = [0, 2];
-        models.push(m);
-        let mut m = bar();
-        m.members.push(m.members[0].clone());
-        models.push(m);
-        let mut m = bar();
-        m.members[0].young_mpa = 0.;
-        models.push(m);
-        let mut m = bar();
-        m.members[0].area_mm2 = -1.;
-        models.push(m);
-        let mut m = bar();
-        m.nodes_mm = vec![[0.; 3]; 126];
-        models.push(m);
-        let mut m = bar();
-        m.members = vec![m.members[0].clone(); 401];
-        models.push(m);
-        for model in models {
-            assert_eq!(solve(&model).unwrap_err().code, "TRUSS_INVALID_INPUT");
-        }
-    }
-
-    #[test]
-    fn refuses_nearly_collinear_free_modes_and_numeric_overflow() {
-        let model = Model {
-            nodes_mm: vec![[0., 0., 0.], [1., 1., 0.], [1., 1. + 1e-8, 0.]],
-            members: vec![
-                Member {
-                    nodes: [0, 1],
-                    young_mpa: 2000.,
-                    area_mm2: 2.,
-                },
-                Member {
-                    nodes: [0, 2],
-                    young_mpa: 2000.,
-                    area_mm2: 2.,
-                },
-            ],
-            restrained: vec![[false, false, true], [true; 3], [true; 3]],
-            forces_n: vec![[100., 0., 0.], [0.; 3], [0.; 3]],
-        };
-        assert_eq!(solve(&model).unwrap_err().code, "TRUSS_SINGULAR");
-        let mut model = bar();
-        model.members[0].young_mpa = f64::MAX;
-        assert_eq!(solve(&model).unwrap_err().code, "TRUSS_NUMERIC_RANGE");
-    }
-
-    #[test]
-    fn rotated_translated_tripod_preserves_response_and_vector_reactions() {
-        let model = Model {
-            nodes_mm: vec![[0.; 3], [10., 0., 0.], [0., 10., 0.], [0., 0., 10.]],
-            members: (1..4)
-                .map(|i| Member {
-                    nodes: [0, i],
-                    young_mpa: 2000.,
-                    area_mm2: 2.,
-                })
-                .collect(),
-            restrained: vec![[false; 3], [true; 3], [true; 3], [true; 3]],
-            forces_n: vec![[100., 200., 300.], [0.; 3], [0.; 3], [0.; 3]],
-        };
-        let response = solve(&model).unwrap();
-        for (actual, expected) in response.displacements_mm[0].iter().zip([0.25, 0.5, 0.75]) {
-            close(*actual, expected);
-        }
-        let rotate = |p: [f64; 3]| {
-            let h = 0.5f64.sqrt();
-            [(p[0] - p[1]) * h, (p[0] + p[1]) * h, p[2]]
-        };
-        let mut transformed = model.clone();
-        transformed.nodes_mm = model
-            .nodes_mm
-            .iter()
-            .map(|&p| {
-                let r = rotate(p);
-                std::array::from_fn(|k| r[k] + [100., -40., 17.][k])
-            })
-            .collect();
-        transformed.forces_n = model.forces_n.iter().copied().map(rotate).collect();
-        let rotated = solve(&transformed).unwrap();
-        for i in 0..4 {
-            for k in 0..3 {
-                close(
-                    rotated.displacements_mm[i][k],
-                    rotate(response.displacements_mm[i])[k],
-                );
-                close(
-                    rotated.reactions_n[i][k],
-                    rotate(response.reactions_n[i])[k],
-                );
-            }
-        }
-        for k in 0..3 {
-            close(
-                rotated.reactions_n.iter().map(|r| r[k]).sum::<f64>(),
-                -transformed.forces_n[0][k],
-            );
-        }
-        // Reversing member endpoints must not reverse the tension convention.
-        for member in &mut transformed.members {
-            member.nodes.swap(0, 1);
-        }
-        let reversed = solve(&transformed).unwrap();
-        for (a, b) in reversed.axial_forces_n.iter().zip(rotated.axial_forces_n) {
-            close(*a, b);
-        }
-    }
-
-    #[test]
-    fn admits_the_node_limit_with_independent_stable_tripods() {
-        let mut model = Model {
-            nodes_mm: vec![[10., 0., 0.], [0., 10., 0.], [0., 0., 0.]],
-            members: Vec::new(),
-            restrained: vec![[true; 3]; 3],
-            forces_n: vec![[0.; 3]; 3],
-        };
-        for i in 3..MAX_NODES {
-            model.nodes_mm.push([1., 2., 10. + i as f64 / 10.]);
-            model.restrained.push([false; 3]);
-            model.forces_n.push([1., -2., -3.]);
-            for anchor in 0..3 {
-                model.members.push(Member {
-                    nodes: [anchor, i],
-                    young_mpa: 2000.,
-                    area_mm2: 2.,
-                });
-            }
-        }
-        let result = solve(&model).unwrap();
-        assert_eq!(result.free_dofs, 366);
-        assert!(result.max_relative_residual < 1e-12);
-        for k in 0..3 {
-            close(
-                result.reactions_n.iter().map(|r| r[k]).sum::<f64>(),
-                -model.forces_n.iter().map(|f| f[k]).sum::<f64>(),
-            );
-        }
-    }
-}
+#[path = "tests/truss.rs"]
+mod tests;

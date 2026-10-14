@@ -149,7 +149,10 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
         }
     }
     if !free.is_empty() && free.len()<=2 {
-        let axes=[free[0],if free.len()==2 {free[1]}else{(0..3).find(|&k|k!=free[0]).unwrap()}];
+        let projections=if free.len()==2 {vec![[free[0],free[1]]]} else {
+            (0..3).filter(|&k|k!=free[0]).map(|k|[free[0],k]).collect()
+        };
+        for axes in projections {
         // Shared station support can leave two transverse coordinates free.
         // An exact projected separator may restrict that contact to one
         // authored vertex even when its coordinate AABBs overlap in area.
@@ -163,7 +166,35 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
                     || (hulls[usize::from(f==faces[1])][k][0]!=intersection[k][0]
                         && hulls[usize::from(f==faces[1])][k][1]!=intersection[k][0])
                     || p[k]==intersection[k][0])).collect::<Vec<_>>());
-            for candidate in [[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]] {
+            let mut candidates=vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![0.,1.,0.],vec![0.,0.,1.]];
+            // Coordinate support already restricts the contact to this plane.
+            // A rotated corner need not be separated by a world-axis proposal;
+            // use bounded candidate generation, then verify all retained
+            // source poles with the exact projected orientation predicate.
+            if poles.iter().all(|ps|ps.len()<=16) {
+                let mut projected=[0.;2];
+                let mut directions=Vec::new();
+                for (face,ps) in poles.iter().enumerate() {for p in ps {
+                    let mut d=[p[axes[0]]-point[axes[0]],p[axes[1]]-point[axes[1]]];
+                    let length=d[0].hypot(d[1]);
+                    if length>0. && length.is_finite() {
+                        for x in &mut d {*x/=length;if face==1 {*x = -*x;}}
+                        directions.push(d);
+                    }
+                }}
+                for _ in 0..256 {for d in &directions {
+                    let dot=projected[0]*d[0]+projected[1]*d[1];
+                    if dot<1. {for k in 0..2 {projected[k]+=(1.-dot)*d[k];}}
+                }}
+                let length=projected[0].hypot(projected[1]);
+                if length>0. && length.is_finite() {
+                    let mut anchor=point.to_vec();
+                    anchor[axes[0]]-=projected[1]/length;
+                    anchor[axes[1]]+=projected[0]/length;
+                    candidates.push(anchor);
+                }
+            }
+            for candidate in candidates {
                 let sides=poles.each_ref().map(|ps| {
                     let mut side=None;
                     for p in ps {
@@ -186,6 +217,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
                     }
                 }
             }
+        }
         }
     }
     if free.len()>1{return None;}

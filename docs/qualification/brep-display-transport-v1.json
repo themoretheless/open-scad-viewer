@@ -87,7 +87,7 @@
     "node scripts/record-svg-evidence.mjs",
     "VITEST_MAX_WORKERS=1 node scripts/record-own-cad-evidence.mjs",
     "npx vitest run --maxWorkers=3",
-    "npx vitest run tests/modelGraphHttp.test.ts --maxWorkers=1 (local-port permission)",
+    "npx vitest run tests/rushGraphHttp.test.ts --maxWorkers=1 (local-port permission)",
     "npx vue-tsc --noEmit",
     "npx tsc --noEmit -p tsconfig.mcp.json",
     "npx vite build",

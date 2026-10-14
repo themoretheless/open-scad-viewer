@@ -264,7 +264,7 @@ of the 20-body spinner and states the exact retained-key bound and its limits.
 The [owned JSON follow-up](owned-json-2026-09-19.md) removes a redundant full-tree
 copy while preserving number normalization and caller isolation.
 
-The [ModelGraph runtime/schema split](modelgraph-runtime-split-2026-09-19.md)
+The [RushGraph runtime/schema split](rush-runtime-split-2026-09-19.md)
 records delivery-byte savings, compatibility hashes and real browser checks;
 the existing bundle audit and exact-solid browser commands reproduce its checks.
 

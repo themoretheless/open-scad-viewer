@@ -38,3 +38,19 @@ provides the sign. Sources have at most 4096 triangles; extraction is bounded to
 8 million triangle/primitive samples. See docs/design/mesh-reconstruction.md.
 
 Reference: https://paulbourke.net/geometry/polygonise/
+
+## Native dependency boundary
+
+Use `default-features = false` for typed fields and CPU extraction without
+value-codec. Enable `gpu` explicitly for the portable device backend or `cuda`
+for its CUDA driver path. GPU selection and field semantics are independent of
+`codec`; the default codec feature retains existing host serialization.
+
+```rust
+use sdf_core::{Field, Grid, polygonize};
+let field = Field::Sphere { center: [0.;3], radius: 1. };
+let grid = Grid { min: [-2.;3], max: [2.;3], cells: [8;3] };
+let mesh = polygonize(&field, &grid)?;
+assert!(!mesh.indices.is_empty());
+# Ok::<(), sdf_core::Error>(())
+```

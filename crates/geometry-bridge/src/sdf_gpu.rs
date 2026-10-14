@@ -94,9 +94,8 @@ pub fn prepare_batch(v: &Value) -> crate::Result<Value> {
                 continue;
             }
         };
-        let samples = (grid.cells[0] as u64 + 1)
-            * (grid.cells[1] as u64 + 1)
-            * (grid.cells[2] as u64 + 1);
+        let samples =
+            (grid.cells[0] as u64 + 1) * (grid.cells[1] as u64 + 1) * (grid.cells[2] as u64 + 1);
         if total_samples + samples > MAX_BATCH_SAMPLES {
             return Err(input(format!(
                 "sdf_prepare_batch samples exceed the {MAX_BATCH_SAMPLES} ceiling"

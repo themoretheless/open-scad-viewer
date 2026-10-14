@@ -18,7 +18,6 @@ type Inspection = {
     };
 };
 const call = <T>(action: string, args: object = {}) => callGeometryRust<T>('cad', { action, ...args });
-const identity = () => [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
 let original = 0;
 class Handle {
     private deleted = false;
@@ -79,17 +78,14 @@ export class CadSolid extends Handle {
     add(b: CadSolid) { return CadSolid.union([this, b]); }
     subtract(b: CadSolid) { return CadSolid.difference([this, b]); }
     intersect(b: CadSolid) { return CadSolid.intersection([this, b]); }
-    private matrix(matrix: number[][]) { const result = new CadSolid(call('transform', { id: this.handle, matrix })); result.original = this.original; return result; }
-    transform(m: Mat4) { const rows = Array.from({ length: 4 }, (_, i) => Array.from({ length: 4 }, (_, j) => m[j * 4 + i])); rows[3] = [0, 0, 0, 1]; return this.matrix(rows); }
-    translate(v: Vec3) { const m = identity(); for (let i = 0; i < 3; i++)
-        m[i]![3] = v[i]!; return this.matrix(m); }
-    scale(v: Vec3 | number) { const values = typeof v === 'number' ? [v, v, v] : v; const m = identity(); for (let i = 0; i < 3; i++)
-        m[i]![i] = values[i]!; return this.matrix(m); }
-    rotate(v: Vec3) { const [x, y, z] = v.map(a => a * Math.PI / 180); const [a, b, c, d, e, f] = [Math.cos(x!), Math.sin(x!), Math.cos(y!), Math.sin(y!), Math.cos(z!), Math.sin(z!)]; return this.matrix([[e * c, e * d * b - f * a, e * d * a + f * b, 0], [f * c, f * d * b + e * a, f * d * a - e * b, 0], [-d, c * b, c * a, 0], [0, 0, 0, 1]]); }
-    mirror(v: Vec3) { const n = Math.hypot(...v); if (!n)
-        return CadSolid.union([]); const u = v.map(x => x / n); const m = identity(); for (let i = 0; i < 3; i++)
-        for (let j = 0; j < 3; j++)
-            m[i]![j] -= 2 * u[i]! * u[j]!; return this.matrix(m); }
+    transform(values: Mat4) { return this.affine('solid_matrix', { values }); }
+    /** Stable-profile projective transform: honors the full homogeneous fourth row. */
+    transformProjective(values: Mat4) { return this.affine('solid_matrix_projective', { values }); }
+    translate(offset: Vec3) { return this.affine('translate', { offset }); }
+    scale(v: Vec3 | number) { return this.affine('scale', { factors: typeof v === 'number' ? [v, v, v] : v }); }
+    private affine(operation: string, args: object) { const result = new CadSolid(call('transform', { id: this.handle, operation, ...args })); result.original = this.original; return result; }
+    rotate(v: Vec3) { return this.affine('rotate', { angles: v }); }
+    mirror(v: Vec3) { return this.affine('mirror', { normal: v }); }
     delete() { super.delete(); this.meshSnapshot = undefined; }
     originalID() { return this.original; }
     asOriginal() { const m = new CadSolid(call('copy', { id: this.handle })); return m; }
@@ -139,15 +135,15 @@ export class CadSolid extends Handle {
 }
 export class CrossSection extends Handle {
     constructor(value: number | Polygons, fill = 'Positive') { super(typeof value === 'number' ? value : call<number>('profile', { rings: typeof value[0]?.[0] === 'number' ? [value] : value, fill })); }
-    static square(size: Vec2, center = false) { const [x, y] = size; if (x === 0 || y === 0)
-        return new CrossSection([]); const a = center ? -x / 2 : 0, b = center ? -y / 2 : 0; return new CrossSection([[[a, b], [a + x, b], [a + x, b + y], [a, b + y]]]); }
-    static circle(radius: number, segments = 32) { return new CrossSection([Array.from({ length: segments }, (_, i) => [radius * Math.cos(i * 2 * Math.PI / segments), radius * Math.sin(i * 2 * Math.PI / segments)] as Vec2)]); }
+    static square(size: Vec2, center = false) { return new CrossSection(call<number>('square', { size, center })); }
+    static circle(radius: number, segments = 32) { return new CrossSection(call<number>('circle', { radius, segments })); }
     static ofPolygons(p: Polygons, fill = 'Positive') { if (!p.length || !p[0]?.length)
         throw new TypeError("Cannot read properties of undefined (reading 'length')"); return new CrossSection(p, fill); }
     private static combine(values: CrossSection[], operation: string) { return new CrossSection(call<number>('combine', { ids: values.map(v => v.handle), dimension: 2, operation })); }
     static union(values: CrossSection[]) { return this.combine(values, 'union'); }
     static intersection(values: CrossSection[]) { return this.combine(values, 'intersection'); }
     static difference(values: CrossSection[]) { return this.combine(values, 'difference'); }
+    static minkowski(values: CrossSection[]) { return new CrossSection(call<number>('minkowski_profiles', { ids: values.map(value => value.handle) })); }
     static xor(values: CrossSection[]) { return this.combine(values, 'xor'); }
     static exclude(values: CrossSection[]) { return this.xor(values); }
     static hull(values: CrossSection[]) { return new CrossSection(call<number>('hull', { ids: values.map(v => v.handle), dimension: 2 })); }
@@ -162,16 +158,12 @@ export class CrossSection extends Handle {
     add(b: CrossSection) { return CrossSection.union([this, b]); }
     subtract(b: CrossSection) { return CrossSection.difference([this, b]); }
     intersect(b: CrossSection) { return CrossSection.intersection([this, b]); }
-    private matrix(matrix: number[][]) { return new CrossSection(call<number>('transform', { id: this.handle, matrix })); }
-    transform(v: Mat3) { return this.matrix([[v[0], v[3], 0, v[6]], [v[1], v[4], 0, v[7]], [0, 0, 1, 0], [0, 0, 0, 1]]); }
-    translate(v: readonly [
-        number,
-        number
-    ]) { const m = identity(); m[0]![3] = v[0]; m[1]![3] = v[1]; return this.matrix(m); }
-    mirror(v: Vec2) { const n = Math.hypot(...v); if (!n)
-        return new CrossSection([]); const x = v[0] / n, y = v[1] / n; return this.matrix([[1 - 2 * x * x, -2 * x * y, 0, 0], [-2 * x * y, 1 - 2 * y * y, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]); }
-    scale(v: Vec2 | number) { const u = typeof v === 'number' ? [v, v] : v; const m = identity(); m[0]![0] = u[0]!; m[1]![1] = u[1]!; return this.matrix(m); }
-    rotate(angle: number) { const a = angle * Math.PI / 180; return this.matrix([[Math.cos(a), -Math.sin(a), 0, 0], [Math.sin(a), Math.cos(a), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]); }
+    private affine(operation: string, args: object) { return new CrossSection(call<number>('transform', { id: this.handle, operation, ...args })); }
+    transform(values: Mat3) { return this.affine('planar_matrix', { values }); }
+    translate(v: readonly [number, number]) { return this.affine('translate', { offset: [v[0], v[1], 0] }); }
+    mirror(v: Vec2) { return this.affine('mirror', { normal: [v[0], v[1], 0] }); }
+    scale(v: Vec2 | number) { const u = typeof v === 'number' ? [v, v] : v; return this.affine('scale', { factors: [u[0], u[1], 1] }); }
+    rotate(angle: number) { return this.affine('rotate', { angles: [0, 0, angle] }); }
     offset(distance: number, join = 'Round', _miter = 2, segments = 8) { return new CrossSection(call<number>('offset', { id: this.handle, distance, join, segments })); }
     extrude(height: number, slices = 0, twist = 0, scale: Vec2 = [1, 1], center = false) { return CadSolid.extrude(this, height, slices, twist, scale, center); }
     revolve(segments = 32, angle = 360) { return CadSolid.revolve(this, segments, angle); }

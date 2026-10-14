@@ -3,7 +3,7 @@
   "scope": "Changed tensor/CUDA/math sources and qualification scripts; unrelated concurrent frontend edits excluded",
   "files": {
     "crates/Cargo.lock": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3",
-    "crates/Cargo.toml": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+    "crates/Cargo.toml": "3761ac3b9f9879b2382b13b1b9b7e84789acc2d2a36ca058c8d189b8044570ea",
     "crates/compute-cuda/README.md": "18b892557a80800f5e8fb6ca0ec392be99b2e4f7962c911df67705589f9c9d6d",
     "crates/compute-cuda/qualification/compile_nvrtc.py": "7441bbada4199af6450e9d00379ba7d59f25df273ac79982b25cd6f7ef1f188a",
     "crates/compute-cuda/qualification/qualify-nvrtc.sh": "5f0b89421006df96daa1b1e96812e18a2e87d88e9cf41c285f794843b2e453ff",

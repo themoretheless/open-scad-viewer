@@ -133,6 +133,7 @@ fn normalize_ring_edges(polygon: &mut Vec<[f64; 3]>, points: &[[f64; 3]], tolera
     *polygon = normalized;
 }
 
+#[derive(Clone)]
 pub(crate) struct PlanarBoundary {
     pub(crate) outer: Vec<[f64; 3]>,
     pub(crate) holes: Vec<Vec<[f64; 3]>>,

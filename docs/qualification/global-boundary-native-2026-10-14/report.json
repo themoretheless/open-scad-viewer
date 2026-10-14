@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-14",
+  "scope": "native retained boundary and sweep certification; not a universal geometry qualification",
+  "sourceBase": "3a932542f",
+  "implemented": [
+    "shared whole-boundary interval Jacobian audit including caps",
+    "joint closed embedding and piecewise regularity certificate",
+    "optional native volume transport regularBoundarySolidCertified requiring both actual volume evidence and complete regularity",
+    "closed RMF seam regression at 6/10/18/33/34/66 stations including chunk boundaries and zero-work refusal"
+  ],
+  "validated": {
+    "progressiveSweepPassed": 186,
+    "boundaryEmbeddingPassed": 9,
+    "selfIntersectionPassed": 4,
+    "volumeValidityPassed": 14,
+    "volumeValidityIgnored": 1,
+    "strictVolumeTransportPassed": 1,
+    "spatial1024FaceThreeCavityPassed": 1,
+    "wasmTargetCheck": "passed"
+  },
+  "remaining": [
+    "general sphere(2) stereographic coefficients have nonexact world-edge agreement; explicitly invoked ignored curved-primitive roadmap still fails",
+    "quotient pole charts are not promoted to ordinary nonzero-Jacobian charts by this strict audit",
+    "arbitrary source-frame/error/cap combinations require their own complete source and retained proofs",
+    "packaged WASM and G1 v96 remain historical artifacts; no new WASM qualification or fingerprint refreeze inferred"
+  ],
+  "logs": [
+    {
+      "id": "progressive-sweep",
+      "sha256": "8e40eaf18b695c3e3bf1754e5919f968776883ce2336571a364c8d93727dfd91",
+      "byteLength": 53435,
+      "status": "passed"
+    },
+    {
+      "id": "boundary-embedding",
+      "sha256": "bb07706aa037d57f226f8bef080631cfb57181c9bf1a2faa4140d527d1302c83",
+      "byteLength": 20038,
+      "status": "passed"
+    },
+    {
+      "id": "self-intersection",
+      "sha256": "ff250644d838b2be2d729dd79035999f201e869a732dafe94a22f80001f5b424",
+      "byteLength": 18600,
+      "status": "passed"
+    },
+    {
+      "id": "volume-validity",
+      "sha256": "d7816619b9a3a44bb0781b515b1bebf193e2594ad3ce784b34fc0426504c7213",
+      "byteLength": 21144,
+      "status": "passed"
+    },
+    {
+      "id": "spatial-three-cavity",
+      "sha256": "8fe750ba4002e3ed5f43d6ea5af183510a286b914f30d72c8ac61c72c70daa22",
+      "byteLength": 18357,
+      "status": "passed"
+    },
+    {
+      "id": "strict-volume-transport",
+      "sha256": "1e9302d14a1847215a9ad04d834b595809c366f0f868db31800a4677aacfd612",
+      "byteLength": 23524,
+      "status": "passed"
+    },
+    {
+      "id": "wasm-target-check",
+      "sha256": "28c70b8e363adf622e43587033ea00a5a8e71c450e0bc985b56308caa5864b88",
+      "byteLength": 21762,
+      "status": "passed"
+    },
+    {
+      "id": "curved-primitive-roadmap",
+      "sha256": "f2d72146a342b0d246dd4b1bfe78b3f18df125460458c753d13e813f2f1a31ae",
+      "byteLength": 14711,
+      "status": "known-roadmap-failure"
+    }
+  ],
+  "logArchive": {
+    "path": "native-logs.tar.gz",
+    "sha256": "80c8b553b8c9f9a1e9eda119f9eec3c95bcbefdba50f521dc6e40de07fefc492",
+    "byteLength": 22069
+  }
+}

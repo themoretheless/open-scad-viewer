@@ -46,12 +46,16 @@ fn circle(center: [f64; 2], radius: f64, ccw: bool) -> Vec<Curve> {
     }
     arcs
 }
+
 fn roundtrip(model: &Model) {
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    #[cfg(feature = "codec")]
+    {
     let json = value_codec::to_string(model).unwrap();
     let decoded: Model = value_codec::from_str(&json).unwrap();
     decoded.validate().unwrap();
     assert_eq!(json, value_codec::to_string(&decoded).unwrap());
+    }
 }
 #[test]
 fn circular_holes_preserve_curves_and_exact_mass() {

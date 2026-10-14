@@ -1,5 +1,4 @@
 use super::*;
-
 pub fn approximate(
     profile: &Curve,
     path: &Curve,
@@ -39,9 +38,9 @@ pub struct MultiApproximation {
 }
 
 pub struct MultiSweep<'a> {
-    sweeps: Vec<Sweep<'a>>,
-    options: Options,
-    next_sections: Option<usize>,
+    pub(super) sweeps: Vec<Sweep<'a>>,
+    pub(super) options: Options,
+    pub(super) next_sections: Option<usize>,
 }
 
 impl<'a> MultiSweep<'a> {
@@ -69,6 +68,10 @@ impl<'a> MultiSweep<'a> {
 }
 
 impl<'a> MultiSweep<'a> {
+    pub fn with_spatial_rmf_error_limits(mut self,steps:usize,cells:usize,products:usize)->Result<Self>{
+        self.sweeps=self.sweeps.into_iter().map(|s|s.with_spatial_rmf_error_limits(steps,cells,products)).collect::<Result<_>>()?;
+        Ok(self)
+    }
     /// Retained preview sections in authored profile order, each on the same grid.
     /// Body admission still requires an accepted aggregate level report.
     pub fn sections_at(&self, count: usize) -> Result<Vec<Vec<Curve>>> {
@@ -91,11 +94,16 @@ impl<'a> MultiSweep<'a> {
             .remove(profile_index)
             .with_contact_guide(guide, parameter)?;
         let point = reference.contact_point.unwrap();
+        let source = reference.contact_source.unwrap();
         self.sweeps.insert(profile_index, reference);
         self.sweeps = self
             .sweeps
             .into_iter()
-            .map(|s| s.with_contact_point(guide, point))
+            .map(|s| {
+                let mut result = s.with_contact_point(guide, point)?;
+                result.contact_source = Some(source);
+                Ok(result)
+            })
             .collect::<Result<_>>()?;
         self.next_sections = Some(self.options.initial_sections);
         Ok(self)
@@ -145,8 +153,57 @@ impl MultiSweep<'_> {
         let mut patches = Vec::new();
         let mut ranges = Vec::new();
         let mut report: Option<LevelReport> = None;
+        // One invocation owns the original path and all profile certificates.
+        // Measure that shared source once; per-profile pose and decomposition
+        // work still consume the remaining aggregate budget.
+        let first=&self.sweeps[0];
+        let [_,cell_limit,product_limit]=first.spatial_rmf_error_limits.unwrap_or([512,10000,1000000]);
+        let shared_guided=first.frame_laws.is_none()&&first.orientation_guide.is_some()
+            &&first.orientation_guide.is_some_and(|g|!g.periodic)
+            &&match first.orientation_guide{Some(g)=>!path_is_closed(g)?,None=>false};
+        let shared_length=if cell_limit>0 && (first.spatial_rmf_error_limits.is_some() || ((shared_guided || first.frame_laws.is_some() || (first.options.orientation==Orientation::Fixed||first.options.orientation==Orientation::FixedNormal||first.options.orientation==Orientation::Frenet||first.options.orientation==Orientation::RotationMinimizing||first.options.orientation==Orientation::CorrectedFrenet)
+            && first.orientation_guide.is_none() && first.contact_point.is_none())&&(!authored_error::original_line(first.path)||shared_guided&&(first.contact_source.is_some()||first.orientation_guide.is_some_and(|g|!authored_error::original_line(g))))
+            && !first.path.periodic&&!path_is_closed(first.path)?)) {
+            if let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing {
+                check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)&&s.options.spacing==first.options.spacing),
+                    "Shared length certificate requires identical original source and spacing")?;
+                let phase=if first.contact_point.is_some() {first.orientation_guide.map(|guide|arc_guide::certify(first.path,guide,max_cells.min(cell_limit))).transpose()?}else{None};
+                let phase_cells=phase.as_ref().map_or(0,|p|p.cells);
+                let tolerance=phase.as_ref().and_then(|p|p.scale_upper).filter(|scale|*scale>1.).map_or(tolerance,|scale|(tolerance/scale).next_down());
+                // The shared source division owns both the exact phase premise
+                // and the inverse-length cells, preserving the aggregate ceiling.
+                let mut division=crate::curve_measure::divide_by_length(first.path,count-1,tolerance,max_cells.min(cell_limit)-phase_cells)?;
+                division.cells+=phase_cells;
+                Some(division)
+            }else{None}
+        }else{None};
+        let mut cells=shared_length.as_ref().map_or(0,|report|report.cells);
+        let shared_guide=if shared_guided&&shared_length.is_some()&&cells<cell_limit {
+            let guide=first.orientation_guide.unwrap();
+            check(self.sweeps.iter().all(|s|s.orientation_guide.is_some_and(|g|std::ptr::eq(g,guide))),
+                "Shared guide length certificate requires identical original guide")?;
+            let Spacing::ArcLength {tolerance,max_cells}=first.options.spacing else{unreachable!()};
+            let report=crate::curve_measure::divide_by_length(guide,count-1,tolerance,max_cells.min(cell_limit-cells))?;
+            cells+=report.cells;Some(report)
+        }else{None};
+        // Both station policies share precisely the same original Bishop
+        // transport and closing phase. Source arc division is also shared.
+        // Every profile query/decomposition consumes the remaining allowance.
+        let shared_rmf=if let Some([steps,_,_])=first.spatial_rmf_error_limits {
+                check(self.sweeps.iter().all(|s|std::ptr::eq(s.path,first.path)
+                    &&s.options.normal==first.options.normal&&s.options.spacing==first.options.spacing
+                    &&s.spatial_rmf_error_limits==first.spatial_rmf_error_limits),
+                    "Shared RMF certificate requires identical original source and policy")?;
+                let remaining=cell_limit-cells;
+                let proof=rmf_transport::certify_original_rmf_transport_shared(first.path,first.options.normal,
+                    steps,remaining,path_is_closed(first.path)?)?;
+                cells+=proof.cells+proof.exact_work as usize;Some(proof)
+        }else{None};
+        let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level(count)?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref())?;
+            cells+=level.report.error_certificate_cells;
+            products+=level.report.decomposition_products;
             check(
                 patches.len() + level.patches.len() <= 4096,
                 "Multi-profile sweep exceeds 4096 total retained patches",
@@ -159,14 +216,32 @@ impl MultiSweep<'_> {
                 total.sampled_control_deviation = total
                     .sampled_control_deviation
                     .max(level.report.sampled_control_deviation);
+                total.continuous_bound &= level.report.continuous_bound;
+                total.known_profile_error_upper = match (total.known_profile_error_upper,level.report.known_profile_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),(a,b)=>a.or(b),
+                };
+                total.continuous_error_upper = match (total.continuous_error_upper,level.report.continuous_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),_=>None,
+                };
+                total.original_section_endpoint_error_upper = match (total.original_section_endpoint_error_upper,level.report.original_section_endpoint_error_upper) {
+                    (Some(a),Some(b))=>Some(a.max(b)),_=>None,
+                };
+                total.endpoint_contour_error_upper = match (total.endpoint_contour_error_upper,level.report.endpoint_contour_error_upper) {
+                    (Some(a),Some(b))=>Some([a[0].max(b[0]),a[1].max(b[1])]),_=>None,
+                };
+                total.error_certificate_cells += level.report.error_certificate_cells;
+                total.decomposition_products += level.report.decomposition_products;
+                total.error_certificate_reason = total.error_certificate_reason.or(level.report.error_certificate_reason);
             } else {
                 report = Some(level.report);
             }
         }
+        let mut report=report.unwrap();
+        report.error_certificate_cells=cells;
         Ok(MultiLevel {
             patches,
             profile_patch_ranges: ranges,
-            report: report.unwrap(),
+            report,
         })
     }
 }
@@ -208,6 +283,19 @@ pub fn approximate_affine_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_affine_laws(axis_scale, center)?,
     )
+}
+
+/// Original closed spatial RMF error policy, shared across all profiles.
+pub fn approximate_spatial_rmf_profiles(
+    profiles: &[Curve], path: &Curve, scale: &Curve, twist: &Curve,
+    affine: Option<(&Curve, &Curve)>, options: Options,
+    transport_steps: usize, max_cells: usize, max_products: usize,
+) -> Result<MultiApproximation> {
+    let sweep = MultiSweep::new(profiles, path, scale, twist, options)?;
+    let sweep = if let Some((axes, center)) = affine {
+        sweep.with_affine_laws(axes, center)?
+    } else { sweep };
+    collect_profiles(sweep.with_spatial_rmf_error_limits(transport_steps, max_cells, max_products)?)
 }
 
 /// Complete authored frames, simultaneous affine laws and aggregate admission.
@@ -268,7 +356,7 @@ pub fn approximate_contact_profiles(
     )
 }
 
-fn collect_profiles(sweep: MultiSweep<'_>) -> Result<MultiApproximation> {
+pub(crate) fn collect_profiles(sweep: MultiSweep<'_>) -> Result<MultiApproximation> {
     let mut result = MultiApproximation {
         patches: None,
         profile_patch_ranges: None,
@@ -312,8 +400,7 @@ pub(super) fn closed_extent(path: &Curve, start: V, end: V) -> Result<bool> {
     Ok(start == end || norm(sub(end, start)) / extent <= 64. * f64::EPSILON)
 }
 
-pub(super) fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
-    let parts = |curve: &Curve| -> Result<Vec<Curve>> {
+pub(super) fn profile_parts(curve: &Curve) -> Result<Vec<Curve>> {
         if curve.control_points.len() <= 32 {
             return Ok(vec![curve.clone()]);
         }
@@ -326,8 +413,9 @@ pub(super) fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
             .iter()
             .map(|s| s.definition().clone())
             .collect())
-    };
-    let rows = sections.iter().map(parts).collect::<Result<Vec<_>>>()?;
+}
+pub(super) fn patches(sections: &[Curve]) -> Result<Vec<Surface>> {
+    let rows = sections.iter().map(profile_parts).collect::<Result<Vec<_>>>()?;
     let count = sections.len();
     let columns = (count - 1).div_ceil(31);
     check(

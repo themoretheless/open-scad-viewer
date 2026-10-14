@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-11",
+  "status": "passed",
+  "pinnedOversizedFiles": 148,
+  "layerViolations": 0,
+  "sizeLimitsIncreased": false,
+  "movedPins": [
+    {
+      "path": "crates/brep-intersect/src/cone_cone.rs",
+      "previousPath": "crates/brep-core/src/intersections/cone_cone.rs",
+      "previousLimit": 839,
+      "lines": 836
+    },
+    {
+      "path": "crates/brep-intersect/src/cone_torus.rs",
+      "previousPath": "crates/brep-core/src/intersections/cone_torus.rs",
+      "previousLimit": 1184,
+      "lines": 1180
+    },
+    {
+      "path": "crates/brep-intersect/src/cylinder_cylinder.rs",
+      "previousPath": "crates/brep-core/src/intersections/cylinder_cylinder.rs",
+      "previousLimit": 865,
+      "lines": 863
+    },
+    {
+      "path": "crates/brep-intersect/src/cylinder_torus.rs",
+      "previousPath": "crates/brep-core/src/intersections/cylinder_torus.rs",
+      "previousLimit": 972,
+      "lines": 971
+    },
+    {
+      "path": "crates/brep-intersect/src/plane_cone.rs",
+      "previousPath": "crates/brep-core/src/intersections/plane_cone.rs",
+      "previousLimit": 2333,
+      "lines": 1972
+    },
+    {
+      "path": "crates/brep-intersect/src/plane_cylinder.rs",
+      "previousPath": "crates/brep-core/src/intersections/plane_cylinder.rs",
+      "previousLimit": 1298,
+      "lines": 1294
+    },
+    {
+      "path": "crates/brep-intersect/src/plane_sphere.rs",
+      "previousPath": "crates/brep-core/src/intersections/plane_sphere.rs",
+      "previousLimit": 1073,
+      "lines": 933
+    },
+    {
+      "path": "crates/brep-intersect/src/plane_torus.rs",
+      "previousPath": "crates/brep-core/src/intersections/plane_torus.rs",
+      "previousLimit": 1361,
+      "lines": 1081
+    },
+    {
+      "path": "crates/brep-intersect/src/sphere_cone.rs",
+      "previousPath": "crates/brep-core/src/intersections/sphere_cone.rs",
+      "previousLimit": 880,
+      "lines": 876
+    },
+    {
+      "path": "crates/brep-intersect/src/sphere_cylinder.rs",
+      "previousPath": "crates/brep-core/src/intersections/sphere_cylinder.rs",
+      "previousLimit": 1083,
+      "lines": 809
+    },
+    {
+      "path": "crates/brep-intersect/src/torus_torus.rs",
+      "previousPath": "crates/brep-core/src/intersections/torus_torus.rs",
+      "previousLimit": 926,
+      "lines": 925
+    },
+    {
+      "path": "crates/cad-step/src/iges_interchange_v2.rs",
+      "previousPath": "crates/brep-core/src/iges_interchange_v2.rs",
+      "previousLimit": 1413,
+      "lines": 1413
+    },
+    {
+      "path": "crates/cad-step/src/nurbs_step_shared.rs",
+      "previousPath": "crates/brep-core/src/nurbs_step_shared.rs",
+      "previousLimit": 1202,
+      "lines": 1202
+    },
+    {
+      "path": "crates/cad-step/src/step_interchange_v3.rs",
+      "previousPath": "crates/brep-core/src/step_interchange_v3.rs",
+      "previousLimit": 5274,
+      "lines": 5234
+    },
+    {
+      "path": "crates/cad-step/src/step_interchange.rs",
+      "previousPath": "crates/brep-core/src/step_interchange.rs",
+      "previousLimit": 2208,
+      "lines": 2208
+    },
+    {
+      "path": "crates/nurbs-intersect/src/analytic_ss.rs",
+      "previousPath": "crates/brep-core/src/analytic_ss.rs",
+      "previousLimit": 933,
+      "lines": 913
+    },
+    {
+      "path": "crates/nurbs-intersect/src/nurbs_ss.rs",
+      "previousPath": "crates/brep-core/src/nurbs_ss_g6.rs",
+      "previousLimit": 5022,
+      "lines": 2526
+    }
+  ],
+  "auditTests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "gpuDependencyAudit": "passed",
+  "ciClippyGroups": {
+    "passed": 3,
+    "failed": 0
+  },
+  "vueTypecheck": "passed"
+}

@@ -149,3 +149,47 @@ it('preserves per-ray painter order when a world tree is projected through chang
  }
  expect(checked).toBeGreaterThan(100)
 })
+
+it('matches the frozen BSP for separated layers and preserves crossing surfaces and attributes',async()=>{
+ const {ReferenceTransparentBsp}=await import('../benchmarks/rush/transparentBsp-reference')
+ const groups=[[],[red,blue],Array.from({length:100},(_,i)=>({owner:String(i),triangle:[[-1,-1,i],[1,-1,i],[0,1,i]]} as TransparentFragment)),Array.from({length:24},(_,i)=>({owner:String(i),triangle:[[-1,-1],[1,-1],[0,1]].map(([x,y])=>[x,y,Math.sin(i*1.7)*x+Math.cos(i*2.3)*y+i*.017,x+2*y]) as unknown as TransparentFragment['triangle']}))]
+ for(const source of groups){
+  const before=structuredClone(source),actual=new TransparentBsp(source),expected=new ReferenceTransparentBsp(source)
+  if(source.length!==24){expect(actual.operationCount).toBe(expected.operationCount);expect(actual.fragmentCount).toBe(expected.fragmentCount)}
+  else {
+   // Roundoff can change tiny sliver fragmentation; compare the represented surfaces.
+   const areas=(tree:TransparentBsp|InstanceType<typeof ReferenceTransparentBsp>)=>{
+    const totals=new Map<string,number>()
+    for(const f of tree.ordered([0,0,1])){
+     const [a,b,c]=f.triangle,u=b.map((v,k)=>v-a[k]),v=c.map((v,k)=>v-a[k])
+     const area=Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0])/2
+     totals.set(f.owner,(totals.get(f.owner)??0)+area)
+     for(const p of f.triangle)expect(p[3]).toBeCloseTo(p[0]+2*p[1],10)
+    }
+    return totals
+   }
+   const a=areas(actual),b=areas(expected)
+   expect([...a.keys()].sort()).toEqual([...b.keys()].sort())
+   for(const [id,area] of a)expect(area).toBeCloseTo(b.get(id)!,10)
+   expect(actual.operationCount).toBeLessThanOrEqual(100000)
+   continue
+  }
+  for(const direction of [[0,0,1],[0,0,-1],[.3,.4,1]] as const){
+   const a=actual.ordered(direction),b=expected.ordered(direction)
+   expect(a.map(f=>f.owner)).toEqual(b.map(f=>f.owner))
+   a.forEach((f,i)=>f.triangle.forEach((v,j)=>v.forEach((x,k)=>expect(x).toBeCloseTo(b[i].triangle[j][k],10))))
+  }
+  expect(source).toEqual(before)
+ }
+})
+
+it('handles empty and degenerate buffers and leaves failed builds reusable',()=>{
+ const empty=new TransparentBsp([])
+ expect(empty.fragmentCount).toBe(0);expect(empty.ordered([0,0,1])).toEqual([])
+ empty.writeOrdered([0,0,1],new Float32Array())
+ expect(new TransparentBsp([{owner:'zero',triangle:[[0,0,0],[0,0,0],[0,0,0]]}]).fragmentCount).toBe(0)
+ expect(()=>new TransparentBsp([{owner:'bad',triangle:[[NaN,0,0],[1,0,0],[0,1,0]]}])).toThrow('vertex')
+ expect(()=>new TransparentBsp([{owner:'bad',triangle:[[0,0,0],[1,0],[0,1,0]]}])).toThrow('width')
+ expect(()=>new TransparentBsp([red,blue],2)).toThrow('fragment limit')
+ expect(new TransparentBsp([red,blue]).fragmentCount).toBe(3)
+})

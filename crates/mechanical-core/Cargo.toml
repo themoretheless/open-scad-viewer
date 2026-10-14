@@ -8,5 +8,9 @@ publish.workspace = true
 [lib]
 crate-type = ["rlib"]
 
+[features]
+default = ["codec"]
+codec = ["dep:value-codec"]
+
 [dependencies]
-value-codec = { path = "../value-codec" }
+value-codec = { workspace = true, optional = true }

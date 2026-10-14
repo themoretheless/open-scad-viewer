@@ -9,6 +9,7 @@ pub enum Quality {
 /// Host knobs for one evaluation. `should_abort` is the synchronous
 /// cancellation flag (TS `shouldAbort` polled at statement/loop checkpoints).
 pub struct EvaluatorOptions<'h> {
+    pub record_geometry: bool,
     pub should_abort: Option<&'h dyn Fn() -> bool>,
     /// Unseeded `rands` stream. TS uses `Math.random`; the deterministic
     /// default here is a splitmix64 stream (seeded `rands` is exact either way).
@@ -21,6 +22,7 @@ pub struct EvaluatorOptions<'h> {
 impl Default for EvaluatorOptions<'_> {
     fn default() -> Self {
         Self {
+            record_geometry: false,
             should_abort: None,
             random: None,
             animation_time: 0.0,
@@ -31,6 +33,7 @@ impl Default for EvaluatorOptions<'_> {
 
 /// Result of a successful evaluation.
 pub struct Evaluation {
+    pub geometry: Option<geometry_ops::solid_program::Program>,
     pub shapes: Vec<ShapeDescriptor>,
     pub warnings: Vec<String>,
     pub reduced: bool,
@@ -85,6 +88,9 @@ impl<'a> Ctx<'a> {
 
 /// Shared evaluator state (one per `evaluate` call).
 pub struct Evaluator<'a> {
+    pub(super) record_geometry: bool,
+    pub(super) geometry: RefCell<Vec<geometry_ops::solid_program::Node>>,
+    pub(super) profiles: RefCell<Vec<geometry_ops::profile_program::Node>>,
     pub(super) units: &'a [u16],
     pub(super) profile: LanguageProfile,
     pub(super) quality: Quality,

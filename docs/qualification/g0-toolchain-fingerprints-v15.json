@@ -338,5 +338,5 @@
       "note": "Current bytes are newly bound in v15; v14 remains archived. Bind append-only V11 direct IGES and STEP successors plus rebuilt own-Rust WASM; preserve prior freezes and reset G1 clean work."
     }
   ],
-  "previousFingerprintSha256": "ec0622e4ae436ad329a59397413052d886d7b7fe729a8639c775beaa14bd97ac"
+  "previousFingerprintSha256": "400f03ae2220c4b15fbceb78cc60a8b8423fdef4b73f2fa023cf05177695ff72"
 }

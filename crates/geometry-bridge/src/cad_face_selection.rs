@@ -2,10 +2,14 @@
 //! This is not persistent topological naming or certified correspondence.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
-pub fn select(v: Value) -> Result<Value> { select_impl(v, false) }
+pub fn select(v: Value) -> Result<Value> {
+    select_impl(v, false)
+}
 /// Push-cap admission may resolve a connected coplanar collection. The native
 /// cap operation must validate connectivity and refuse remote coplanar pieces.
-pub fn select_cap(v: Value) -> Result<Value> { select_impl(v, true) }
+pub fn select_cap(v: Value) -> Result<Value> {
+    select_impl(v, true)
+}
 fn select_impl(v: Value, cap: bool) -> Result<Value> {
     let body: Value = field(&v, "body")?;
     let model: brep_core::Model = field(&body, "brep")?;

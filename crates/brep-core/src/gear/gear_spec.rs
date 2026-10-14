@@ -51,10 +51,15 @@ pub struct GearGeometry {
     pub tip_radius: f64,
     pub root_radius: f64,
     pub outside_radius: f64,
-    /// Deviation of the fitted flanks from the analytic involute.
+    /// Continuous real-arithmetic remainder for the Hermite involute flanks.
+    /// Excludes binary64 trig, control placement and evaluation rounding.
     pub flank_deviation: f64,
-    /// Deviation of the helical walls from the exact sweep (zero for spur).
+    /// Whether the flank error report also covers binary64 rounding.
+    pub flank_rounding_certified: bool,
+    /// Continuous real-arithmetic remainder for the helical walls (zero for spur).
+    /// Binary64 rounding is excluded.
     pub sweep_deviation: f64,
+    pub sweep_rounding_certified: bool,
     pub face_count: usize,
 }
 
@@ -133,7 +138,7 @@ pub fn circle_arcs(teeth: usize) -> usize {
 
 /// Involute of the base circle `base` between roll parameters `t0..t1`,
 /// placed at the tooth centre with half-angle function `half`; `sign` picks
-/// the flank side. Fitted by interpolation and verified.
+/// the flank side. Quintic Hermite approximation with an ideal continuous bound.
 fn involute(
     base: f64,
     t0: f64,
@@ -142,44 +147,36 @@ fn involute(
     sign: f64,
     half: &dyn Fn(f64) -> f64,
 ) -> Result<(Curve, f64)> {
-    let point = |t: f64| -> [f64; 2] {
-        let r = base * (1. + t * t).sqrt();
-        polar(r, center + sign * half(r))
-    };
-    // NURBS curves and surfaces admit at most 32 control points per
-    // direction, so the fit is refined only up to 24 spans.
-    let schedule = [8usize, 12, 16, 24];
-    for (step, &samples) in schedule.iter().enumerate() {
-        let last = step + 1 == schedule.len();
-        let params: Vec<f64> = (0..=samples).map(|i| i as f64 / samples as f64).collect();
-        let data: Vec<Vec<f64>> = params
-            .iter()
-            .map(|&s| point(t0 + (t1 - t0) * s).to_vec())
-            .collect();
-        let curve = interpolate(&params, &data)?;
-        let mut worst: f64 = 0.;
-        for i in 0..samples {
-            for k in 1..4 {
-                let s = (i as f64 + k as f64 / 4.) / samples as f64;
-                let p = curve.evaluate(s)?.point;
-                let q = point(t0 + (t1 - t0) * s);
-                worst = worst.max((p[0] - q[0]).hypot(p[1] - q[1]));
-            }
-        }
-        if worst <= FLANK_FIT {
-            return Ok((curve, worst));
-        }
-        if last {
-            if worst > FLANK_FIT * 100. {
-                return Err(invalid(format!(
-                    "Gear flank could not be fitted within {:.0e} mm (achieved {worst:.2e})",
-                    FLANK_FIT * 100.
-                )));
-            }
-            return Ok((curve, worst));
-        }
+    // Reuse the native involute Hermite constructor and its continuous
+    // real-arithmetic remainder instead of a finite sample acceptance test.
+    let approximation = nurbs_core::involute::approximate_quintic(
+        [0.; 3],
+        base,
+        t0.min(t1),
+        t0.max(t1),
+        FLANK_FIT,
+    )?;
+    let mut curve = approximation.curve;
+    if curve.control_points.len() > 32 {
+        return Err(invalid(
+            "Gear flank needs more than 32 surface controls at the requested tolerance; reduce module or increase teeth",
+        ));
     }
-    unreachable!("flank fit schedule is not empty")
+    let angle = center + sign * half(base);
+    let (sin, cos) = angle.sin_cos();
+    for point in &mut curve.control_points {
+        let (x, y) = (point[0], point[1]);
+        // The canonical involute has polar angle t-atan(t). Reflection
+        // followed by rotation yields center+sign*(half(base)-t+atan(t)).
+        *point = vec![cos * x + sign * sin * y, sin * x - sign * cos * y];
+    }
+    if t1 < t0 {
+        curve = reverse2(&curve);
+    }
+    curve.validate()?;
+    // Orthogonal placement preserves the ideal Euclidean remainder.
+    // Binary64 trigonometry, placement and evaluation rounding are excluded.
+    Ok((curve, approximation.real_arithmetic_error_estimate))
 }
 
 fn reverse2(c: &Curve) -> Curve {
@@ -338,7 +335,9 @@ pub(super) fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)
         root_radius: root,
         outside_radius: outside,
         flank_deviation,
+        flank_rounding_certified: false,
         sweep_deviation: 0.,
+        sweep_rounding_certified: false,
         face_count: 0,
     };
     Ok((loops, geometry))

@@ -195,7 +195,10 @@ impl Sweep<'_> {
         for section in sections {
             let mut offset = 0;
             for size in loop_sizes {
-                if *size == 1 && section[offset].periodic { offset += size; continue; }
+                if *size == 1 && crate::numerics::exact_curve_segments::translated_active_seam_closed(&section[offset]) {
+                    offset += size;
+                    continue;
+                }
                 for local in 0..*size {
                     let a = &section[offset+local];
                     let b = &section[offset+(local+1)%size];
@@ -209,7 +212,7 @@ impl Sweep<'_> {
                         }
                         // Exact blossom extraction proves active-domain endpoints;
                         // exterior poles are not endpoints of an unclamped curve.
-                        let pieces = crate::sweep_support::exact_curve_segments::inspect(c)?;
+                        let pieces = crate::numerics::exact_curve_segments::inspect(c)?;
                         Some((pieces.first()?.control_points.first()?.clone(),
                             pieces.last()?.control_points.last()?.clone()))
                     };

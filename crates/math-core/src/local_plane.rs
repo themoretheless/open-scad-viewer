@@ -91,7 +91,7 @@ mod tests {
         for local in planes {
             assert!(local.neighbors >= 3);
             assert!(local.max_squared_neighbor_distance.is_finite());
-            for axis in 0..3 {
+            for (axis, _) in want.iter().enumerate() {
                 assert!((local.plane.normal[axis] - want[axis]).abs() < 1e-10);
             }
             for point in &support {

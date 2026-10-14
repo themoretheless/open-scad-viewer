@@ -245,10 +245,10 @@ export interface NurbsCurveCurveIntersectionCertificate {
 export interface NurbsCurveSurfaceIntersectionCertificate {
   version: 'nurbs-foundation/5'
   kind: 'curve_surface'
-  coverage: NurbsIntersectionCoverage
+  coverage: NurbsIntersectionCoverage & {searchComplete: boolean; certified: boolean}
   components: Array<Record<string, unknown>>
   unresolved: Array<Record<string, unknown>>
-  rounding: 'binary64-nextafter-outward'
+  rounding: 'uncertified-binary64'
   evidence: NurbsFoundationEvidence
 }
 
@@ -259,12 +259,19 @@ export const intersectNurbsCurveCurveCertified = (
 ): NurbsCurveCurveIntersectionCertificate =>
   callNurbsRust('curve_curve_intersect_certified', {first, second, ...toleranceArgs(tolerance)})
 
+/** Returns legacy candidates, not a certified complete intersection.
+ * Check coverage.certified before using the result as a geometric proof.
+ * The historical name is retained for compatibility.
+ */
 export const intersectNurbsCurveSurfaceCertified = (
   curve: NurbsCurve,
   surface: NurbsSurface,
   tolerance?: NurbsToleranceContext,
 ): NurbsCurveSurfaceIntersectionCertificate =>
   callNurbsRust('curve_surface_intersect_certified', {curve, surface, ...toleranceArgs(tolerance)})
+
+/** Preferred name for the legacy curve/surface candidate solver. */
+export const intersectNurbsCurveSurfaceCandidates = intersectNurbsCurveSurfaceCertified
 
 export interface NurbsSurfaceSurfaceIntersectionCertificate {
   version: 'nurbs-ss/1'

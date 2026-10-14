@@ -65,7 +65,7 @@ export interface GeometryBuildRequest {
 export interface GeometryBuildControl {
   shouldAbort?: () => boolean
   onYield?: () => void
-  onSweepPreview?: import('./modelGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
+  onSweepPreview?: import('./rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
 }
 
 export interface GeometryBuildResult {

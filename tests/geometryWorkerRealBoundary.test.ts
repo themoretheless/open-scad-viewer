@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it } from 'vitest'
 import { sha256Hex } from '../src/core/sha256'
@@ -68,12 +69,12 @@ class NodeWorkerAsWebWorker implements ManifoldPlanQualificationWorkerLike {
   }
 }
 
-function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value is T): Promise<T> {
+function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value is T, timeoutMs = 10_000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       cleanup()
       reject(new Error('Timed out waiting for real Worker boundary message'))
-    }, 10_000)
+    }, timeoutMs)
     const onMessage = (value: unknown) => {
       if (!predicate(value)) return
       cleanup()
@@ -255,3 +256,49 @@ describe('real structured-clone geometry Worker boundaries', () => {
     })
   }, 30_000)
 })
+
+
+it.each(['progressive-sweep','contact-progressive-hollow-body','progressive-miter-hollow-body'])('streams cloned Rush previews and cancellation for %s through a real worker',async(name)=>{
+ const worker=spawnWebWorker(new URL('../src/workers/geometry.worker.ts',import.meta.url))
+ await ready(worker)
+ const source=readFileSync(`examples/rush/${name}.r`,'utf8')
+ const request=(jobId:number):GeometryBuildRequest=>({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,
+  type:'build',acknowledgeSweepPreviews:true,documentRevision:jobId,jobId,quality:'full',source,sourceSha256:sha256Hex(source)})
+ const events:GeometryWorkerEvent[]=[]
+ let cancelOnPreview=false
+ worker.on('message',(value:unknown)=>{
+  if(!isGeometryWorkerEvent(value))return
+  events.push(value)
+  if(cancelOnPreview&&value.status==='sweep-preview'){
+   cancelOnPreview=false
+   worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'cancel',
+    documentRevision:value.documentRevision,jobId:value.jobId,reason:'user'})
+  }
+  if(value.status==='sweep-preview')worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'sweep-preview-ack',documentRevision:value.documentRevision,jobId:value.jobId,quality:value.quality,sourceSha256:value.sourceSha256,nodeId:value.nodeId,sections:value.sections})
+ })
+ const first=request(1),completed=waitForMessage(worker,isDirectTerminalFor(first),45_000)
+ worker.postMessage(first)
+ expect(await completed).toMatchObject({status:'succeeded'})
+ const previews=events.filter(e=>e.status==='sweep-preview')
+ expect(previews.length).toBeGreaterThan(0)
+ if(name==='progressive-sweep'){
+  expect(previews.length).toBeGreaterThan(1)
+  expect(previews[0]).toMatchObject({accepted:false,sections:5})
+ }
+ expect(previews.at(-1)).toMatchObject({accepted:true})
+ for(const preview of previews){
+  if(preview.status!=='sweep-preview')throw new Error('expected preview')
+  expect(preview.meshes[0]!.vertices.byteLength).toBeGreaterThan(0)
+  expect(preview.meshes[0]!.faceIdsAuthoritative).toBe(false)
+  expect(preview.meshes[0]!.nativeGeometry).toBeUndefined()
+ }
+ cancelOnPreview=true
+ const second=request(2),cancelled=waitForMessage(worker,isDirectTerminalFor(second),45_000)
+ worker.postMessage(second)
+ expect(await cancelled).toMatchObject({status:'cancelled',reason:'user'})
+ expect(events.some(e=>e.jobId===2&&e.status==='succeeded')).toBe(false)
+ const third=request(3),recovered=waitForMessage(worker,isDirectTerminalFor(third),45_000)
+ worker.postMessage(third)
+ expect(await recovered).toMatchObject({status:'succeeded'})
+ await terminate(worker)
+},150_000)

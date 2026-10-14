@@ -1,0 +1,751 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-11",
+  "qualificationClaim": "none",
+  "wasm": {
+    "sha256": "be3f8c6b1fc43012fe8e63b0cebbb0786e3eccf58710055f4feb0128f2635048",
+    "byteLength": 11954592
+  },
+  "passedTests": 162,
+  "failedTests": 0,
+  "files": [
+    {
+      "path": "tests/mainSolidWorker.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "cancels superseded geometry without allowing stale results to resolve",
+          "status": "passed"
+        },
+        {
+          "name": "propagates geometry failures without killing the warm worker",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/mainSolidWorkerClient.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "reuses the CAD realm for truss and inspection and retains typed failures",
+          "status": "passed"
+        },
+        {
+          "name": "settles superseded work once and ignores captured late callbacks",
+          "status": "passed"
+        },
+        {
+          "name": "ignores old IDs on a warm realm and snapshots response dimensions",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"version\":2}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"id\":99}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"kind\":\"inspect\"}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"result\":{}}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"result\":{\"displacementsMm\":[[0,0,0],[0.25,0,0]],\"reactionsN\":[[-100,0,0],[0,0,0]],\"axialForcesN\":[null],\"axialStressesMpa\":[50],\"maxDeflectionMm\":0.25,\"maxRelativeResidual\":0,\"freeDofs\":1}}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"result\":{\"displacementsMm\":[[0,0,0],[0.25,0,0]],\"reactionsN\":[[-100,0,0],[0,0,0]],\"axialForcesN\":[null],\"axialStressesMpa\":[50],\"maxDeflectionMm\":0.25,\"maxRelativeResidual\":0,\"freeDofs\":1}}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"result\":{\"displacementsMm\":[],\"reactionsN\":[[-100,0,0],[0,0,0]],\"axialForcesN\":[100],\"axialStressesMpa\":[50],\"maxDeflectionMm\":0.25,\"maxRelativeResidual\":0,\"freeDofs\":1}}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"result\":{\"displacementsMm\":[[0,0,0],[0.25,0,0]],\"reactionsN\":[[-100,0,0],[0,0,0]],\"axialForcesN\":[100],\"axialStressesMpa\":[50],\"maxDeflectionMm\":0.25,\"maxRelativeResidual\":1,\"freeDofs\":1}}",
+          "status": "passed"
+        },
+        {
+          "name": "discards malformed or mismatched responses: {\"ok\":false,\"error\":{\"name\":\"Error\",\"message\":\"bad\",\"code\":42}}",
+          "status": "passed"
+        },
+        {
+          "name": "aborts noncooperative work, cleans listeners and starts a fresh realm",
+          "status": "passed"
+        },
+        {
+          "name": "times out, clears timers and does not time out a later successful job",
+          "status": "passed"
+        },
+        {
+          "name": "rejects pre-aborted and invalid deadline calls without superseding active work",
+          "status": "passed"
+        },
+        {
+          "name": "discards crashed or undecodable workers: onerror",
+          "status": "passed"
+        },
+        {
+          "name": "discards crashed or undecodable workers: onmessageerror",
+          "status": "passed"
+        },
+        {
+          "name": "recovers from constructor and postMessage failures and closes deterministically",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed closest-point coordinates: {\"closestPoints\":[[0,0,0],[1,0,null]]}",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed closest-point coordinates: {\"closestPoints\":[[0,0],[1,0,0]]}",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed closest-point coordinates: {\"closestPoints\":[[0,0,0]]}",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed closest-point coordinates: {\"closestPoints\":\"invalid\"}",
+          "status": "passed"
+        },
+        {
+          "name": "preserves closest-point witnesses through the worker response",
+          "status": "passed"
+        },
+        {
+          "name": "checks mesh-contact indices against the requested mesh",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed profile diagnostics instead of exposing them to the scene",
+          "status": "passed"
+        },
+        {
+          "name": "refuses a contradictory NURBS certificate before it reaches Apply",
+          "status": "passed"
+        },
+        {
+          "name": "preserves incomplete mesh inspection and rejects contradictory completion claims",
+          "status": "passed"
+        },
+        {
+          "name": "terminates a curve-distance request and ignores its late reply after restart",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/mainSolidWorkerRealBoundary.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "rounds all rotated cuboid edges with endpoint radii through the real body-edit worker",
+          "status": "passed"
+        },
+        {
+          "name": "prepares and extrudes polynomial rounded profiles through the shipped worker",
+          "status": "passed"
+        },
+        {
+          "name": "runs the shipped entry with real WASM, reuses it and preserves typed errors",
+          "status": "passed"
+        },
+        {
+          "name": "runs the public scenario API in the shared real worker and returns the exact input snapshot",
+          "status": "passed"
+        },
+        {
+          "name": "terminates an entered noncooperative call and recovers with a real CAD worker",
+          "status": "passed"
+        },
+        {
+          "name": "generates nominal graphs off-thread and exposes, rather than hides, their bounding-box scope",
+          "status": "passed"
+        },
+        {
+          "name": "transfers loads across explicit solid bonds in the real worker and preserves solver refusal",
+          "status": "passed"
+        },
+        {
+          "name": "retains a bounded NURBS offset through the real worker and preserves source geometry",
+          "status": "passed"
+        },
+        {
+          "name": "retains a periodic bevel offset through real WASM with explicit source roles",
+          "status": "passed"
+        },
+        {
+          "name": "reinspects edited current chords through the real worker without construction metadata",
+          "status": "passed"
+        },
+        {
+          "name": "constructs trimmed offset loops through real WASM and refuses incomplete arrangements",
+          "status": "passed"
+        },
+        {
+          "name": "proves diagonal overlap contacts through the real worker without mutating the source",
+          "status": "passed"
+        },
+        {
+          "name": "distinguishes an exact interior endpoint contact from a nearby separated chord",
+          "status": "passed"
+        },
+        {
+          "name": "transforms typed scene meshes through postMessage without detaching or changing source buffers",
+          "status": "passed"
+        },
+        {
+          "name": "changes groups through the worker without changing geometry, identities or instance links",
+          "status": "passed"
+        },
+        {
+          "name": "accepts compact scene snapshots with exact parity and rejects invalid geometry before metadata edits",
+          "status": "passed"
+        },
+        {
+          "name": "revolves retained holed profiles through postMessage and preserves source controls and identities",
+          "status": "passed"
+        },
+        {
+          "name": "builds a retained holed loft through postMessage without changing source profiles",
+          "status": "passed"
+        },
+        {
+          "name": "preserves retained profile segment provenance across the real worker boundary",
+          "status": "passed"
+        },
+        {
+          "name": "retains multispan trim proofs and incomplete budgets across real postMessage",
+          "status": "passed"
+        },
+        {
+          "name": "prepares original general NURBS through the real worker boundary",
+          "status": "passed"
+        },
+        {
+          "name": "converges oblique sphere distances across the real worker boundary",
+          "status": "passed"
+        },
+        {
+          "name": "certifies every parameter of an offset contact band through the actual worker and WASM",
+          "status": "passed"
+        },
+        {
+          "name": "admits a trimmed offset contact band through real WASM and worker with holes and bounded work",
+          "status": "passed"
+        },
+        {
+          "name": "links original source coedges through real WASM and worker without promoting tolerance agreement",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies center tangent regularity through real WASM and worker, including a nearly collapsed offset",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies local envelopes through the real worker with work stops, invalid input and Retry",
+          "status": "passed"
+        },
+        {
+          "name": "keeps envelope cancellation final after a genuine successful late worker response",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies actual finite envelope patches in the real worker with authored candidates and Retry",
+          "status": "passed"
+        },
+        {
+          "name": "refuses a captured successful finite-patch response after cancellation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/mainSolidWorkerRuntime.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "rejects overlapping requests during initialization and recovers after typed errors",
+          "status": "passed"
+        },
+        {
+          "name": "runs contact inspection through the worker handler and warmed WASM",
+          "status": "passed"
+        },
+        {
+          "name": "extrudes a document in the worker without mutating its source",
+          "status": "passed"
+        },
+        {
+          "name": "uses the same exact revolve result for new, union and complete subtraction",
+          "status": "passed"
+        },
+        {
+          "name": "splits a body in the worker, retaining its identity and source snapshot",
+          "status": "passed"
+        },
+        {
+          "name": "computes profile difference and retained offset in the worker with holes and stable IDs",
+          "status": "passed"
+        },
+        {
+          "name": "returns profile gap diagnostics and the accepted contour through the worker protocol",
+          "status": "passed"
+        },
+        {
+          "name": "returns validated NURBS refit certificates for curve and surface edits",
+          "status": "passed"
+        },
+        {
+          "name": "preserves the sweep refinement report on worker refusal and success",
+          "status": "passed"
+        },
+        {
+          "name": "carries curve, surface and seam proof reports through the actual worker protocol",
+          "status": "passed"
+        },
+        {
+          "name": "updates linked geometry in the scene worker preview without changing its source snapshot",
+          "status": "passed"
+        },
+        {
+          "name": "builds a ruled solid loft in the worker with its requested identity",
+          "status": "passed"
+        },
+        {
+          "name": "runs exact Boolean groups in a worker with one anchor ID, empty results and immutable inputs",
+          "status": "passed"
+        },
+        {
+          "name": "builds sketch corners and circular copies with stable IDs without mutating the request",
+          "status": "passed"
+        },
+        {
+          "name": "keeps numeric sketch transforms in the support plane in the worker",
+          "status": "passed"
+        },
+        {
+          "name": "edits a CV and its dependent bridge, and moves mesh vertices without changing the source",
+          "status": "passed"
+        },
+        {
+          "name": "edits analytic circle/arc handles and sketch vertices in isolated worker snapshots",
+          "status": "passed"
+        },
+        {
+          "name": "runs native NURBS commands with stable identities and preserved knot/elevation geometry",
+          "status": "passed"
+        },
+        {
+          "name": "creates a dependent bridge and runs B-rep properties/detail in the worker",
+          "status": "passed"
+        },
+        {
+          "name": "restores compact linked geometry through the authoritative document parser",
+          "status": "passed"
+        },
+        {
+          "name": "prepares transferable display buffers without detaching request geometry",
+          "status": "passed"
+        },
+        {
+          "name": "imports RushGraph definitions into a validated document without mutating or detaching its source",
+          "status": "passed"
+        },
+        {
+          "name": "measures vertices and curvature in the worker and validates numeric response shapes",
+          "status": "passed"
+        },
+        {
+          "name": "reports sampled surface boundaries through the worker with bounded result validation",
+          "status": "passed"
+        },
+        {
+          "name": "tessellates surface display into owned transferable buffers and rejects malformed meshes",
+          "status": "passed"
+        },
+        {
+          "name": "samples retained profile loops in the worker without changing rational geometry",
+          "status": "passed"
+        },
+        {
+          "name": "samples rational curve display in a cancellable queue with exact input keys",
+          "status": "passed"
+        },
+        {
+          "name": "prepares mesh topology in the worker and rejects invalid picking indices",
+          "status": "passed"
+        },
+        {
+          "name": "prepares authored edges in a worker with bounded vertex references",
+          "status": "passed"
+        },
+        {
+          "name": "prepares a planar face workplane and rejects a stale face index",
+          "status": "passed"
+        },
+        {
+          "name": "prepares cloneable exact snap geometry in a worker and validates curve intervals",
+          "status": "passed"
+        },
+        {
+          "name": "prepares planar sketch snap targets in the worker and rejects malformed results",
+          "status": "passed"
+        },
+        {
+          "name": "trims an open rational curve at a picked point in the worker without changing its identity",
+          "status": "passed"
+        },
+        {
+          "name": "trims a screen-picked curve in model coordinates and preserves depth",
+          "status": "passed"
+        },
+        {
+          "name": "keeps the midpoint projection of a tilted rational arc through the worker",
+          "status": "passed"
+        },
+        {
+          "name": "reports opt-in warmup execution and transfer preparation timings without changing the result",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/mainSolidWorkerTransport.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "moves restoreDocument mesh buffers exactly once while preserving views, UVs and aliases",
+          "status": "passed"
+        },
+        {
+          "name": "moves sceneEdit mesh buffers exactly once while preserving views, UVs and aliases",
+          "status": "passed"
+        },
+        {
+          "name": "does not transfer unrelated scene results or failed responses",
+          "status": "passed"
+        },
+        {
+          "name": "rejects out-of-range or malformed profile provenance without throwing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/numericSketchAuthoring.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "bounds rectangle corners, dimensions and non-finite input",
+          "status": "passed"
+        },
+        {
+          "name": "retains slot lines and rational end caps for centers 0,0,10,0",
+          "status": "passed"
+        },
+        {
+          "name": "retains slot lines and rational end caps for centers 10,0,0,0",
+          "status": "passed"
+        },
+        {
+          "name": "retains slot lines and rational end caps for centers 0,0,3,4",
+          "status": "passed"
+        },
+        {
+          "name": "retains slot lines and rational end caps for centers 3,4,0,0",
+          "status": "passed"
+        },
+        {
+          "name": "refuses coincident centers, bad width and contours beyond the coordinate limit",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/nurbsProfileSweep.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "matches an independent rational profile and scale equation on a straight path",
+          "status": "passed"
+        },
+        {
+          "name": "retains curved construction diagnostics and refuses unmet budgets",
+          "status": "passed"
+        },
+        {
+          "name": "retains a cyclic seam and rejects incompatible closed scale endpoints",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidDistance.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "accepts native containment, invalid-volume, contact and separated-volume reports",
+          "status": "passed"
+        },
+        {
+          "name": "rejects inconsistent proof, budgets, shell ownership and contact coordinates",
+          "status": "passed"
+        },
+        {
+          "name": "terminates an obsolete solid-distance request and rejects incomplete proof in replies",
+          "status": "passed"
+        },
+        {
+          "name": "validates actual WASM volume-distance responses without changing either input",
+          "status": "passed"
+        },
+        {
+          "name": "keeps the cavity witness on the inner authored shell",
+          "status": "passed"
+        },
+        {
+          "name": "validates native curved-cylinder volume and original-face witness reports",
+          "status": "passed"
+        },
+        {
+          "name": "validates native exact-sphere volume and separation without accepting incomplete validity",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies actual WASM exact sphere distances across the tested radius scales",
+          "status": "passed"
+        },
+        {
+          "name": "audits multispan NURBS trim boundaries in WASM and retains unknown when trim work runs out",
+          "status": "passed"
+        },
+        {
+          "name": "converges oblique sphere clearances with original-face witnesses in actual WASM",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidGeneralProfilePreparation.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "prepares a mixed sketch and NURBS chain while preserving identity, source and history",
+          "status": "passed"
+        },
+        {
+          "name": "infers a spatial sketch plane and keeps the original rational curves within measured projection error",
+          "status": "passed"
+        },
+        {
+          "name": "refuses nonplanar control nets and leaves ambiguous endpoint inputs untouched",
+          "status": "passed"
+        },
+        {
+          "name": "localizes both rational crossings of a refused contour and keeps the document unchanged",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidMaterial.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "preserves material through history, reload and geometric editing",
+          "status": "passed"
+        },
+        {
+          "name": "rejects malformed material at the saved-document boundary",
+          "status": "passed"
+        },
+        {
+          "name": "persists bounded metallic and roughness parameters through undo and reload",
+          "status": "passed"
+        },
+        {
+          "name": "preserves opacity through history, reload and geometric edits without sharing the material",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidMaterialVolume.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "accepts original native material segments, chords and explicit refusals",
+          "status": "passed"
+        },
+        {
+          "name": "rejects source, budget, volume, seed and endpoint proof mutations",
+          "status": "passed"
+        },
+        {
+          "name": "cancels obsolete material job 0 and rejects stale or forged replies",
+          "status": "passed"
+        },
+        {
+          "name": "cancels obsolete material job 1 and rejects stale or forged replies",
+          "status": "passed"
+        },
+        {
+          "name": "binds native normal evidence to request tolerance, original endpoints and shared budget",
+          "status": "passed"
+        },
+        {
+          "name": "rejects normal evidence with inconsistent classification, bounds or coverage",
+          "status": "passed"
+        },
+        {
+          "name": "cancels a normal audit when its budget changes and rejects the old configuration",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidMaterialWall.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "accepts native full wall bounds and explicit refusal or wide intervals",
+          "status": "passed"
+        },
+        {
+          "name": "rejects changed sources, groups, budgets and substituted surface-gap upper bounds",
+          "status": "passed"
+        },
+        {
+          "name": "cancels obsolete face groups, ignores late replies and retries after a forged source",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidSelfIntersection.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "validates owned quotient proofs and their shared budget without certifying pairs",
+          "status": "passed"
+        },
+        {
+          "name": "binds native polar proof coefficients to the source and leaves collapsed tips unresolved",
+          "status": "passed"
+        },
+        {
+          "name": "validates aggregate proof only when every face and pair is covered",
+          "status": "passed"
+        },
+        {
+          "name": "keeps unvisited faces explicit and rejects a proof over an exhausted budget",
+          "status": "passed"
+        },
+        {
+          "name": "terminates obsolete work and validates the current worker reply",
+          "status": "passed"
+        },
+        {
+          "name": "validates actual WASM reports for full coverage and each exhausted budget",
+          "status": "passed"
+        },
+        {
+          "name": "runs real combined diagnostics through the worker after a rejected span budget",
+          "status": "passed"
+        },
+        {
+          "name": "checks the linear basis and actual subdivision budget in face proofs",
+          "status": "passed"
+        },
+        {
+          "name": "accepts actual native cylinder linear-projection reports without certifying all pairs",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies actual WASM complete cylinder face and pair proofs",
+          "status": "passed"
+        },
+        {
+          "name": "validates native complete-cylinder pair classification with linear face proofs",
+          "status": "passed"
+        },
+        {
+          "name": "checks native perspective face proofs against source coefficients and complete work counts",
+          "status": "passed"
+        },
+        {
+          "name": "authors actual WASM sphere equators with matching rational edge and trim traversals",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies actual WASM perspective face proofs and exhausted aggregate budgets",
+          "status": "passed"
+        },
+        {
+          "name": "qualifies owned quotient charts in actual WASM and keeps exhausted coverage explicit",
+          "status": "passed"
+        },
+        {
+          "name": "binds explicit boundary audit and exact contacts to source, budgets and ownership",
+          "status": "passed"
+        },
+        {
+          "name": "cancels an audited request when the audit mode changes and ignores its late reply",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/solidWallSearch.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "finds original material walls after rigid rotation and translation without editing the source",
+          "status": "passed"
+        },
+        {
+          "name": "keeps annular candidate geometry covariant under rigid placement without claiming volume qualification",
+          "status": "passed"
+        },
+        {
+          "name": "refuses invalid groups and skips singular normal samples",
+          "status": "passed"
+        },
+        {
+          "name": "bounds whole-model sample work and skips singular regions without marking them covered",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "path": "tests/sourceBodyDisplay.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "source display preparation ignores a late result after cancellation",
+          "status": "passed"
+        },
+        {
+          "name": "source display preparation retries with source inputs and preserves errors per body",
+          "status": "passed"
+        },
+        {
+          "name": "source display preparation a replacement request owns publication even if the old worker responds",
+          "status": "passed"
+        },
+        {
+          "name": "source display preparation retains native diagnostics on refusal and continues with the next body",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

@@ -9,4 +9,5 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
-value-codec = { path = "../value-codec" }
+geometry-ops = { workspace = true }
+value-codec = { workspace = true }

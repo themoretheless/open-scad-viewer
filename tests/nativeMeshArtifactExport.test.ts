@@ -13,7 +13,7 @@ it('copies native file bytes before releasing their result handle', () => {
     expect(release).toHaveBeenCalledTimes(1)
     expect(real.exports.abi_array_field(release.mock.calls[0][0], 1)).toBe(0)
     exportMeshArtifactInKernel(mesh, 'ply')
-    expect(new TextDecoder().decode(bytes)).toBe('# ModelGraph; units: millimeter\nv 0 0 0\nv 2 0 0\nv 0 3 0\nf 1 2 3\n')
+    expect(new TextDecoder().decode(bytes)).toBe('# RushGraph; units: millimeter\nv 0 0 0\nv 2 0 0\nv 0 3 0\nf 1 2 3\n')
     expect(() => exportMeshArtifactInKernel(mesh, 'amf')).toThrow('closed')
     expect(release).toHaveBeenCalledTimes(2)
   } finally { spy.mockRestore() }

@@ -11,7 +11,7 @@
     {"id":"NF3-SINGULARITY-LOCALIZATION","status":"Complete","evidence":["crates/nurbs-core/src/foundation.rs"]},
     {"id":"NF3-REPARAMETERIZATION","status":"Complete","evidence":["scripts/nurbs-foundation-3-oracle.py","tests/nurbsFoundation.test.ts"]},
     {"id":"NF3-FITTING","status":"Complete","evidence":["crates/nurbs-core/src/tests.rs","tests/nurbsFoundation.test.ts"]},
-    {"id":"NF3-PRODUCT","status":"Complete","evidence":["src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"]}
+    {"id":"NF3-PRODUCT","status":"Complete","evidence":["src/services/rushGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"]}
   ],
   "blockingOpenRows":[]
 }

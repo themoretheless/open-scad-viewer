@@ -1,0 +1,9 @@
+# Native global boundary milestone
+
+The new Rust `boundary_embedding::regularity` module audits every actual face, including caps, under one shared cell budget. Invalid geometry is an input error; zero work, unresolved cells, folds and exhausted initial grids cannot produce a positive certificate. `inspect_joint` additionally requires the existing whole-boundary exact agreement, topology, trim, face injectivity and all pair-contact proofs. A crease may remain C0: piecewise regular boundary does not mean globally G1/G2.
+
+`brep_sweep_volume_audit` accepts optional `maxRegularityCells` and returns `boundaryRegularity` and `regularBoundarySolidCertified`. The latter is true only when independent material-volume evidence (including nesting/orientation) and every face Jacobian are certified. Without the optional audit it is false. Existing volume fields retain their original contract. TS contains no new geometric logic.
+
+The 1024-face spatial three-cavity fixture proves actual material admission and regularity of every face; reducing the shared work below the observed total refuses regularity. All 186 progressive-sweep tests pass, including source spatial RMF holonomy and authored/guided frame checks. Closed retained seam tests cover nonstandard counts and the 31-span chunk boundary; exact C0 is never labelled G1.
+
+This is a bounded native milestone, not completion of every geometric regime. Forced execution of the old ignored curved-primitive roadmap exposes the known sphere(2) exact-boundary mismatch: the rounded stereographic coefficient radius/3 is not exact. The audit correctly refuses it. Pole quotient charts and arbitrary combined frame/cap cases remain subject to their independent certificates. Packaged WASM and the full G1 v96 results refer to their earlier frozen source; they are not relabelled for these changes. See report.json for the exact validation and remaining scope.

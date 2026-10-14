@@ -46,6 +46,7 @@ fn near(actual: f64, expected: f64) {
         "{actual} != {expected}"
     );
 }
+
 fn check(model: &Model, expected: f64) {
     assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
     let actual = volume(model);
@@ -54,10 +55,13 @@ fn check(model: &Model, expected: f64) {
         assert!(actual > 0.);
         assert!(model.edges.iter().any(|e| e.curve.degree == 2));
     }
+    #[cfg(feature = "codec")]
+    {
     let json = value_codec::to_string(model).unwrap();
     let decoded: Model = value_codec::from_str(&json).unwrap();
     decoded.validate().unwrap();
     assert_eq!(json, value_codec::to_string(&decoded).unwrap());
+    }
 }
 fn cap_area_at(model: &Model, z: f64) -> f64 {
     model
@@ -155,6 +159,8 @@ fn unequal_footprints_meeting_on_a_cap_regularize_without_an_internal_face() {
     check(&boolean(&a, &b, "difference").unwrap(), 18. * PI);
 }
 #[test]
+
+#[cfg(feature = "codec")]
 fn transverse_step_reuses_with_a_different_footprint_after_roundtrip() {
     let a = cylinder(3., 0., 5., 0.);
     let b = cylinder(3., 1., 3., 3.);
@@ -166,6 +172,8 @@ fn transverse_step_reuses_with_a_different_footprint_after_roundtrip() {
     check(&trimmed, 45. * PI - 2. * (6. * PI - 4.5 * 3f64.sqrt()));
 }
 #[test]
+
+#[cfg(feature = "codec")]
 fn blind_circular_pocket_has_real_step_caps_and_reuses_after_roundtrip() {
     let a = cylinder(3., 0., 10., 0.);
     let cutter = cylinder(1., 4., 12., 0.);
@@ -222,6 +230,8 @@ fn circle_line_steps_preserve_analytic_carrier_and_regularized_empty() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn unresolved_slabs_and_nonprismatic_curves_refuse_without_changing_operands() {
     let a = cylinder(3., 0., 5., 0.);
     let near = cylinder(3., 1e-6, 3., 3.);
@@ -234,6 +244,8 @@ fn unresolved_slabs_and_nonprismatic_curves_refuse_without_changing_operands() {
 }
 
 #[test]
+
+#[cfg(feature = "codec")]
 fn reversed_outer_inner_shell_roles_are_refused_on_reuse() {
     let mut invalid = boolean(
         &cylinder(3., 0., 10., 0.),

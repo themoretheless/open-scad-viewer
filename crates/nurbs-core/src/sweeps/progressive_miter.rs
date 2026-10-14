@@ -604,3 +604,5 @@ pub fn approximate(
 #[cfg(test)]
 #[path="tests/progressive_miter_tests.rs"]
 mod tests;
+
+#[cfg(feature="codec")] mod serialization;

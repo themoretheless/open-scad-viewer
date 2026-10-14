@@ -7,31 +7,26 @@ pub struct Report {
     pub products: usize,
     pub reason: Option<&'static str>,
 }
-/// Atomic aggregate: an unproved span invalidates every earlier bound.
-#[derive(Clone, Debug)]
-pub struct BatchReport {
-    pub error_upper: Option<f64>,
-    pub products: usize,
-    pub pairs_inspected: usize,
-    pub reason: Option<&'static str>,
-}
-pub fn inspect_batch(pairs: &[(&Curve, usize, &Curve)], max_products: usize) -> Result<BatchReport> {
-    let mut out = BatchReport { error_upper: None, products: 0, pairs_inspected: 0, reason: None };
-    if max_products > 1_000_000 || pairs.is_empty() || pairs.len() > 2048 {
-        out.reason = Some("work-limit");
-        return Ok(out);
-    }
-    let mut maximum: f64 = 0.;
-    for &(original, span, retained) in pairs {
-        let report = inspect(original, span, retained, max_products - out.products)?;
+/// Complete ordered active-span coverage, with one shared product allowance.
+/// A partial partition never exposes an aggregate error bound. This is a
+/// source/retained curve correspondence premise, not filled-region ownership.
+pub fn inspect_partition(original: &Curve, retained: &[Curve], max_products: usize) -> Result<Report> {
+    original.validate()?;
+    check(max_products <= 1000000, "Decomposition product budget exceeds1000000")?;
+    let spans = (original.degree..original.control_points.len())
+        .filter(|&i| original.knots[i] < original.knots[i + 1])
+        .collect::<Vec<_>>();
+    let mut out = Report { error_upper: None, products: 0, reason: Some("incomplete-span-partition") };
+    if spans.is_empty() || retained.len() != spans.len() { return Ok(out); }
+    let mut upper = 0f64;
+    for (span, curve) in spans.into_iter().zip(retained) {
+        let report = inspect(original, span, curve, max_products - out.products)?;
         out.products += report.products;
-        out.pairs_inspected += 1;
-        match report.error_upper {
-            Some(upper) => maximum = maximum.max(upper),
-            None => { out.reason = Some(report.reason.unwrap_or("span-unproved")); return Ok(out); }
-        }
+        let Some(error) = report.error_upper else { out.reason = report.reason; return Ok(out); };
+        upper = upper.max(error);
     }
-    out.error_upper = Some(maximum);
+    out.error_upper = Some(upper);
+    out.reason = None;
     Ok(out)
 }
 fn choose(n: usize, k: usize) -> f64 {
@@ -178,6 +173,33 @@ mod tests {
         let before = original.clone();
         let parts = original.decompose().unwrap();
         assert_eq!(parts.len(), 3);
+        let retained=parts.iter().map(|p|p.definition().clone()).collect::<Vec<_>>();
+        let complete=inspect_partition(&original,&retained,27).unwrap();
+        assert!(complete.error_upper.unwrap()<1e-10);
+        assert_eq!(complete.products,27);
+        let partial=inspect_partition(&original,&retained,26).unwrap();
+        assert!(partial.error_upper.is_none());
+        assert_eq!(partial.products,18);
+        assert_eq!(partial.reason,Some("work-limit"));
+        assert!(inspect_partition(&original,&retained[..2],27).unwrap().error_upper.is_none());
+        let mut damaged=retained.clone();damaged[1].control_points[1][2]=0.25;
+        assert!(inspect_partition(&original,&damaged,27).unwrap().error_upper.unwrap()>=0.01);
+        let mut permuted=retained.clone();permuted.swap(0,2);
+        let permuted_bound=inspect_partition(&original,&permuted,27).unwrap().error_upper.unwrap();
+        assert!(permuted_bound>0.1);
+        // Equal partition cardinality cannot masquerade as correct station
+        // correspondence: compare all spans against independently evaluated
+        // original parameters, including the exchanged endpoint spans.
+        for (index,part) in permuted.iter().enumerate() {
+            let span=original.degree+index;let domain=part.domain();
+            for step in 0..=10 {
+                let t=step as f64/10.;
+                let source=original.evaluate(original.knots[span]+t*(original.knots[span+1]-original.knots[span])).unwrap().point;
+                let target=part.evaluate(domain[0]+t*(domain[1]-domain[0])).unwrap().point;
+                let error=source.iter().zip(target).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+                assert!(error<=permuted_bound);
+            }
+        }
         for (span, part) in (2..5).zip(parts) {
             assert_eq!(part.domain(), [original.knots[span], original.knots[span + 1]]);
             let report = inspect(&original, span, part.definition(), 9).unwrap();
@@ -279,32 +301,48 @@ mod tests {
     }
 }
 
+pub struct BatchReport {
+    pub error_upper:Option<f64>,pub products:usize,pub pairs_inspected:usize,pub reason:Option<&'static str>,
+}
+/// Complete explicitly declared pair set under one shared product budget.
+/// No omitted span, filled-region or original sweep transport claim is inferred.
+pub fn inspect_batch(pairs:&[(&Curve,usize,&Curve)],max_products:usize)->Result<BatchReport> {
+    let mut out=BatchReport {error_upper:None,products:0,pairs_inspected:0,reason:Some("work-limit")};
+    if max_products>1000000 || pairs.is_empty() || pairs.len()>2048 {return Ok(out);}
+    let mut maximum=0f64;
+    for &(original,span,retained) in pairs {
+        let r=inspect(original,span,retained,max_products-out.products)?;
+        check(r.products<=max_products-out.products,"Invalid native decomposition product accounting")?;
+        out.products+=r.products;out.pairs_inspected+=1;
+        let Some(upper)=r.error_upper else {out.reason=r.reason.or(Some("span-unproved"));return Ok(out);};
+        maximum=maximum.max(upper);
+    }
+    out.error_upper=Some(maximum);out.reason=None;Ok(out)
+}
 #[cfg(test)]
 mod batch_tests {
     use super::*;
     #[test]
-    fn last_span_exhaustion_discards_previous_bound_and_preserves_sources() {
-        let c = Curve { degree: 1, knots: vec![0.,0.,1.,1.], control_points: vec![vec![0.,0.,0.],vec![1.,0.,0.]], weights: vec![1.,2.], periodic: false };
-        let mut shifted=c.clone();
-        for p in &mut shifted.control_points { p[2]=0.125; }
-        let before=shifted.clone();
-        let pairs=[(&c,1,&c),(&c,1,&shifted)];
-        let complete=inspect_batch(&pairs,8).unwrap();
-        assert!(complete.error_upper.unwrap() >= 0.125);
-        assert_eq!((complete.products,complete.pairs_inspected),(8,2));
-        let refused=inspect_batch(&pairs,7).unwrap();
-        assert_eq!(refused.error_upper,None);
-        assert_eq!(refused.reason,Some("work-limit"));
-        assert_eq!((refused.products,refused.pairs_inspected),(4,2));
-        assert_eq!(shifted,before);
-        assert_eq!(inspect_batch(&[],8).unwrap().reason,Some("work-limit"));
+    fn batch_has_one_budget_and_never_returns_a_partial_maximum() {
+        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,0.,0.]],weights:vec![1.;3],periodic:false};
         #[cfg(feature="transport")]
         {
-            let request=value_codec::json!({"op":"curve_decomposition_batch_audit","pairs":[{"curve":c,"span":1,"retained":c},{"curve":c,"span":1,"retained":shifted}],"maxProducts":7});
-            let result=crate::transport::dispatch(request).unwrap();
-            assert!(result["errorUpper"].is_null());
-            assert_eq!(result["pairsInspected"],2);
-            assert_eq!(result["continuousBound"],false);
+            let request=value_codec::json!({"op":"curve_decomposition_batch_audit","pairs":[
+                {"curve":c,"span":2,"retained":c},{"curve":c,"span":2,"retained":c}],"maxProducts":1000});
+            let r=crate::transport::dispatch(request.clone()).unwrap();
+            assert!(r["errorUpper"].as_f64().is_some());
+            assert_eq!(r["pairsInspected"],2);
+            let mut zero=request; zero["maxProducts"]=value_codec::json!(-1);
+            let r=crate::transport::dispatch(zero).unwrap();
+            assert!(r["errorUpper"].is_null()); assert_eq!(r["reason"],"work-limit");
         }
+        let pairs=[(&c,2,&c),(&c,2,&c)];
+        let r=inspect_batch(&pairs,1000).unwrap();
+        assert!(r.error_upper.is_some() && r.pairs_inspected==2);
+        let short=inspect_batch(&pairs,r.products-1).unwrap();
+        assert!(short.error_upper.is_none() && short.pairs_inspected==2 && short.products<r.products);
+        assert!(inspect_batch(&[],1000).unwrap().error_upper.is_none());
+        assert!(inspect_batch(&[(&c,2,&c),(&c,0,&c)],1000).unwrap().error_upper.is_none());
     }
 }

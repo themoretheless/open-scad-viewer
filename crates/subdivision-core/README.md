@@ -23,3 +23,23 @@ Reference: https://graphics.pixar.com/people/derose/publications/Geri/paper.pdf
 fits the control positions to original-vertex samples at one subdivision step,
 with backtracking and a separate sampled geometric-deviation report. This does
 not infer a coarse quad layout. See docs/design/mesh-reconstruction.md.
+
+## Native dependency boundary
+
+Use `default-features = false` for native `Cage`, `Refined` and triangle-buffer
+operations. Runtime dependencies are `osv-math`, `geometry-ops` and `rustc-hash`;
+`geometry-ops` also disables its default codec. The default `codec` feature
+retains the existing value transport implementations in a separate module.
+
+```rust
+use subdivision_core::Cage;
+let cage = Cage::from_faces(
+    vec![[0.,0.,0.], [2.,0.,0.], [2.,2.,0.], [0.,2.,0.]],
+    vec![vec![0,1,2,3]],
+)?;
+let refined = cage.subdivide(2)?;
+let (triangles, source_faces) = refined.triangulate()?;
+assert_eq!(source_faces.len(), triangles.indices.len()/3);
+assert!(source_faces.iter().all(|&id| id == 0));
+# Ok::<(), subdivision_core::Error>(())
+```

@@ -1,0 +1,67 @@
+{
+  "oracle": "OpenCascade/cadquery-ocp",
+  "manifestSha256": "3d9e4efab180db547ff2cd5e950b4b190ff80eae7f15dd01079a0b0d1206987f",
+  "artifactProvenance": {
+    "schema": "sweep-step-artifact/1",
+    "geometryWasmSha256": "5b6f00d0b4eebed104fc69d9c4c908fa30cdbfe9381dd563e2292a3dff891a9e",
+    "geometryWasmByteLength": 11588342,
+    "publicAndPackedVerified": true
+  },
+  "cases": [
+    {
+      "file": "closed-original-spatial-rmf-holonomy-antipodal-affine-hollow-tube.step",
+      "stepSha256": "e62e5fe859509cc97bbcad0bd9d11a17cb6d657373624139c56acc39043b9a77",
+      "retained_cap_planarity_agreement": null,
+      "authored_cap_exact_planarity": [],
+      "native_volume_certified": true,
+      "native_external_material_agreement": true,
+      "valid": true,
+      "faces": 512,
+      "solids": 1,
+      "shells": 2,
+      "shell_closed": [
+        true,
+        true
+      ],
+      "edges": 1024,
+      "same_parameter": true,
+      "sampled_material_side_probe_agreement": true,
+      "material_side_probes": 2048,
+      "pcurve_samples": 14336,
+      "full_domain_wall_pcurve_uv_preserved": true,
+      "full_domain_wall_pcurve_uses": 2048,
+      "sampled_pcurve_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_pcurve_derivative_max_error": 6.800116025829084e-16,
+      "face_loop_ownership_preserved": true,
+      "matched_source_edges": 1024,
+      "full_domain_edge_distance_within_tolerance": true,
+      "edge_face_uses": [
+        2
+      ],
+      "manifold_edges": true,
+      "opposite_edge_uses": true,
+      "sampled_wall_faces": 512,
+      "sampled_surface_max_error_mm": 1.7763568394002505e-15,
+      "sampled_derivative_max_error": 1.6375789613221059e-15,
+      "surface_preserved": true,
+      "control_net_within_tolerance": true,
+      "exact_shared_basis": true,
+      "full_domain_wall_distance_within_tolerance": true,
+      "shell_volumes": [
+        0.19040641589935103,
+        -0.03046502654389632
+      ],
+      "cap_hole_faces": 0,
+      "shell_orientation": true,
+      "volume": 0.15994138935545488,
+      "expected_volume": 0.1599413893179892,
+      "relative_volume_error": 2.342462424234643e-10,
+      "integration_error": 9.771146779367787e-14,
+      "passed": true,
+      "full_domain_cap_coedge_distance_within_tolerance": true,
+      "full_domain_cap_coedge_uses": 0
+    }
+  ],
+  "passed": true,
+  "scope": "fixture import, topology and analytic volume; surface/seam/containment matrix remains separate"
+}

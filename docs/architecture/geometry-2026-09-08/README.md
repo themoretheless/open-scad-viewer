@@ -6,7 +6,7 @@
 
 ## Что прочитано и сверено
 
-1. Rust workspace из восьми crates; публичные APIs, native/WASM dispatch и ModelGraph → scene publication. [Аудит](../../design/geometry-architecture-audit-2026-09-08.md) указывает конкретные исходники.
+1. Rust workspace из восьми crates; публичные APIs, native/WASM dispatch и RushGraph → scene publication. [Аудит](../../design/geometry-architecture-audit-2026-09-08.md) указывает конкретные исходники.
 2. Старые `architecture.md`, `rust-brep-nurbs-kernel.md`, `brep-nurbs-14-stage-master-plan.md`, текущая матрица native-modeling и реконструкции. Старые «два постоянных движка» согласованы с позднейшим требованием собственного polygon-ядра; frozen artifacts не изменены.
 3. Предыдущие обзоры geometry processing, CAD/HCI, Plasticity и второй исследовательский проход. Они использованы как историческая подборка. Две прежние сотни репозиториев **не перепроверялись здесь по одному**.
 4. RAG: catalog → wiki search → raw search → выбранные документы. Общий поиск `SDF subdivision` дал омонимы из других проектов; эти результаты исключены. Семантический wiki-поиск дважды завершился timeout; точечный текстовый поиск отработал.

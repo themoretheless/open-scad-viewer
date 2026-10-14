@@ -12,7 +12,7 @@ use crate::{
 use cad_predicates::ToleranceSpecIdentity;
 use nurbs_core::surface::Axis;
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
-use nurbs_intersect::nurbs_ss::*;
+pub use nurbs_intersect::nurbs_ss::*;
 use nurbs_intersect::predicate_evidence::{
     ComposedEvidence, EvidenceClaim, PredicateEvidence, compose_predicate_evidence,
 };

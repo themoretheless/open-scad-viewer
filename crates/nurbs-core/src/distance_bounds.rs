@@ -11,7 +11,7 @@ pub(crate) fn midpoint(a: f64, b: f64) -> f64 {
 /// distance machinery and promoted for public certified-enclosure APIs
 /// (`crate::interval_eval`). Every arithmetic operation rounds `lo` down and
 /// `hi` up, so the true result always lies inside.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Interval {
     pub lo: f64,
     pub hi: f64,
@@ -115,4 +115,5 @@ pub enum DistanceStopReason {
     PrecisionLimit,
     EmptyDomain,
     DomainWorkLimit,
+    Separated,
 }

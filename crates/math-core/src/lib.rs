@@ -1,6 +1,8 @@
 //! Small dense linear algebra and accelerated geometry math kernels.
 
 mod acceleration;
+pub mod affine;
+pub mod projective;
 mod bounds;
 mod chamfer;
 mod device;
@@ -13,6 +15,8 @@ mod nearest_four;
 mod nearest_neighbor;
 mod nearest_two;
 mod registration;
+mod rounding;
+pub use rounding::{next_down, next_up};
 mod stats;
 mod transform_error;
 mod types;
@@ -33,8 +37,8 @@ pub use distance_pairs::{
 };
 pub use error::{Error, Result, ensure};
 pub use linalg::{
-    add, add2, cross, cross2, det, dot, dot2, eigen, finite, mm, mv, norm, norm2, rotation, scale,
-    scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
+    add, add2, cholesky_banded, cross, cross2, det, dot, dot2, eigen, finite, mm, mv, norm, norm2,
+    rotation, scale, scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
 };
 pub use local_plane::{LocalPlane, local_point_planes};
 pub use moments::{
@@ -63,3 +67,6 @@ pub use types::{ID, M3, V2, V3};
 pub mod camera_gestures;
 pub mod orbit_camera;
 pub mod viewport;
+
+pub mod witness_bounds;
+pub mod profile_plane;

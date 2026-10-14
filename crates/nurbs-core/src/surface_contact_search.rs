@@ -2,11 +2,11 @@
 //! Spatial separation or a complete outside-trim classification removes a cell. A section
 //! witness proves existence, never coverage of its surrounding intersection arc.
 use crate::{
-    check,
+    Result, check,
+    foundation::guards::Budget,
     surface::Surface,
     surface_contact::{self, Witness},
     surface_distance::rectangle_bounds,
-    Result,
 };
 use std::collections::VecDeque;
 
@@ -65,7 +65,7 @@ pub fn search_domains(
         (1..=1_000_000).contains(&max_domain_cells),
         "Bound original domain classification work",
     )?;
-    search_impl(a, b, max_cells, Some(domains), max_domain_cells)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
 }
 fn natural(s: &Surface) -> [[f64; 2]; 2] {
     [
@@ -77,7 +77,7 @@ fn natural(s: &Surface) -> [[f64; 2]; 2] {
 /// remain explicit, including the current search cell. No mesh or seed convergence is
 /// used as a proof of absence. This searches surface charts, not trimmed faces.
 pub fn search(a: &Surface, b: &Surface, max_cells: usize) -> Result<Report> {
-    search_impl(a, b, max_cells, None, 0)
+    search_impl(a, b, max_cells, None, 0, false)
 }
 /// Search authored nonperiodic trimmed charts. Only complete outside
 /// classifications prune cells; only two inside classifications accept roots.
@@ -96,13 +96,26 @@ pub fn search_trimmed(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(
-        a,
-        b,
-        max_cells,
-        Some([domains[0], domains[1]]),
-        max_domain_cells,
-    )
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
+}
+/// Sweep admission additionally prunes whole cells using outward oblique
+/// rational control hulls. Existing plain contact accounting stays unchanged.
+pub fn search_trimmed_with_control_hulls(
+    a: &Surface,
+    b: &Surface,
+    domains: [&crate::trim_domain::TrimDomain; 2],
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<Report> {
+    check(
+        !(a.periodic_u || a.periodic_v || b.periodic_u || b.periodic_v),
+        "Periodic trim charts require branch-aware contact classification",
+    )?;
+    check(
+        (1..=1_000_000).contains(&max_domain_cells),
+        "Trim contact work budget must be in 1..1000000",
+    )?;
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, true)
 }
 fn search_impl(
     a: &Surface,
@@ -110,6 +123,7 @@ fn search_impl(
     max_cells: usize,
     domains: Option<[&dyn DomainClassifier; 2]>,
     max_domain_cells: usize,
+    control_hulls: bool,
 ) -> Result<Report> {
     a.validate()?;
     b.validate()?;
@@ -151,12 +165,23 @@ fn search_impl(
             Location::Unresolved
         })
     };
+    // Unified guard backing the max_cells work limit (item 1065); it fires
+    // only if the cell bookkeeping above is ever broken.
+    let mut guard = Budget::with_iterations(max_cells)?.guard("surface_contact_search");
     while cells < max_cells {
+        guard.tick()?;
+        guard.check()?;
         let Some(cell) = queue.pop_front() else { break };
         cells += 1;
         let aa = rectangle_bounds(a, cell[0])?;
         let bb = rectangle_bounds(b, cell[1])?;
         if (0..3).any(|k| aa[k][1] < bb[k][0] || bb[k][1] < aa[k][0]) {
+            continue;
+        }
+        if control_hulls
+            && crate::surface_distance::rectangle_control_gap(a, b, cell)?
+                .is_some_and(|gap| gap > 0.)
+        {
             continue;
         }
         if classify(cell, &mut domain_cells)? == crate::trim_domain::Location::Outside {
@@ -341,5 +366,23 @@ mod tests {
             .unresolved
             .iter()
             .any(|c| c.iter().flatten().all(|d| d[0] <= 0.5 && d[1] >= 0.5)));
+    }
+
+    #[test]
+    fn cell_guard_matches_the_work_limit() {
+        // Guard sized exactly at max_cells: the loop can never outrun it.
+        let mut guard = Budget::with_iterations(7)
+            .unwrap()
+            .guard("surface_contact_search");
+        for _ in 0..7 {
+            guard.tick().unwrap();
+        }
+        let err = guard.tick().unwrap_err();
+        assert_eq!(err.code, crate::RESOURCE_LIMIT, "{err:?}");
+        assert!(err.contains("surface_contact_search"));
+        // And the public search still honors its own limit unchanged.
+        let a = plane();
+        let r = search(&a, &a, 7).unwrap();
+        assert_eq!(r.cells, 7);
     }
 }

@@ -1,0 +1,53 @@
+{
+  "status": "three-cavity-native-qualified-artifact-validation-pending",
+  "preservationCommit": "752bd964774d52edbd844ae9c6f5a20e9a0b36bb",
+  "approvedScope": "Adapt sweep and B-rep to existing main modules; preserve public APIs; native regression and WASM rebuild",
+  "passed": {
+    "nativeSsTests": 108,
+    "linearMonotonicityTests": 6,
+    "sweepProtocolAndAsyncHistoryTests": 11,
+    "concentricHollowBody": "parameter and arc-length spacing; complete boundary and material",
+    "geometryBridgeCheck": true,
+    "frozenArchiveHashes": 366,
+    "brepIdentityTests": 7,
+    "filletRouteTests": 1,
+    "sweepRetainedCapsTests": 2,
+    "sweepWallContractTests": 3,
+    "geometryBridgeTestCompilation": true,
+    "progressiveBodyRouteCheck": true,
+    "spatialHollowBody": "complete boundary, volume, nesting and orientations",
+    "languageNativeTests": {
+      "openscad": 71,
+      "rushFrontend": 13,
+      "rushRuntime": 58
+    },
+    "languageApiCheck": true,
+    "mcpTypecheck": true,
+    "cadUiRouteCheck": true,
+    "threeCavityNativeAcceptance": true
+  },
+  "pending": [
+    "fresh geometry/language WASM and browser validation",
+    "broader integration regressions recorded in native fix evidence",
+    "final source-bound qualification evidence and distribution checks"
+  ],
+  "claimBoundary": "No full B-rep suite, browser acceptance, clean qualification, completed merge or push is claimed. WIP source is preserved locally.",
+  "resolvedFailure": {
+    "test": "parameter_periodic_spatial_rmf_three_disjoint_holes_complete_boundary_and_roles",
+    "boundaryCertified": false,
+    "volumeCertified": false,
+    "exactAgreement": true,
+    "trimValid": true,
+    "allFacesInjective": false,
+    "allPairsClassified": false,
+    "cells": 200000,
+    "nextPair": [
+      73,
+      89
+    ],
+    "individualPairs": 949,
+    "groupedPairs": 71117,
+    "limitsChanged": false
+  },
+  "nativeFixEvidence": "docs/qualification/three-cavity-injectivity-2026-10-14/result.json"
+}

@@ -135,6 +135,8 @@ pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) 
         let theta = 0.5 * (2. * a[p][q]).atan2(a[q][q] - a[p][p]);
         let (c, s) = (theta.cos(), theta.sin());
         let (app, aqq, apq) = (a[p][p], a[q][q], a[p][q]);
+        // Symmetric updates read and write both rows and columns.
+        #[allow(clippy::needless_range_loop, reason = "Jacobi rotation updates symmetric matrix entries")]
         for k in 0..n {
             if k != p && k != q {
                 let (kp, kq) = (a[k][p], a[k][q]);
@@ -275,6 +277,175 @@ mod transform_tests {
                 assert!((expected[k] - q[k]).abs() < 1e-12);
             }
         }
+    }
+}
+
+/// Banded Cholesky (lower triangle stored, half-bandwidth `bw`) — O(n·bw²).
+/// For the banded normal equations of B-spline fitting (bw = 2p+1).
+/// Row-major packed storage: `a[i*bw + j]` = A[i][i+j] for j < bw, i.e. the
+/// diagonal and upper band; the lower band follows by symmetry. On success `a`
+/// holds the factor (a[i*bw] = L[i][i], a[i*bw+j] = L[i+j][i]) and `b` holds
+/// the solution of A·x = b.
+/// Returns None on non-positive pivot or malformed input (caller maps to its
+/// error type).
+pub fn cholesky_banded(n: usize, bw: usize, a: &mut [f64], b: &mut [f64]) -> Option<()> {
+    if bw == 0 || a.len() != n * bw || b.len() != n {
+        return None;
+    }
+    for i in 0..n {
+        let start = i.saturating_sub(bw - 1);
+        for j in start..i {
+            let mut s = a[j * bw + (i - j)];
+            let kstart = start.max(j.saturating_sub(bw - 1));
+            for k in kstart..j {
+                s -= a[k * bw + (i - k)] * a[k * bw + (j - k)];
+            }
+            let d = a[j * bw];
+            if d <= 0. || !d.is_finite() {
+                return None;
+            }
+            a[j * bw + (i - j)] = s / d;
+        }
+        let mut d = a[i * bw];
+        for k in start..i {
+            let l = a[k * bw + (i - k)];
+            d -= l * l;
+        }
+        if d <= 0. || !d.is_finite() {
+            return None;
+        }
+        a[i * bw] = d.sqrt();
+    }
+    // Forward substitution L·y = b with L[i][k] = a[k*bw + (i-k)].
+    for i in 0..n {
+        let start = i.saturating_sub(bw - 1);
+        let mut s = b[i];
+        for k in start..i {
+            s -= a[k * bw + (i - k)] * b[k];
+        }
+        b[i] = s / a[i * bw];
+    }
+    // Back substitution Lᵀ·x = y with L[j][i] = a[i*bw + (j-i)].
+    for i in (0..n).rev() {
+        let mut s = b[i];
+        let end = (i + bw).min(n);
+        for j in (i + 1)..end {
+            s -= a[i * bw + (j - i)] * b[j];
+        }
+        b[i] = s / a[i * bw];
+    }
+    Some(())
+}
+
+#[cfg(test)]
+mod banded_tests {
+    use super::*;
+
+    fn lcg(state: &mut u64) -> f64 {
+        *state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (*state >> 11) as f64 / (1u64 << 53) as f64
+    }
+
+    #[test]
+    fn banded_matches_dense_solve() {
+        const N: usize = 12;
+        const BW: usize = 4;
+        let mut state = 0x9E3779B97F4A7C15;
+        // Random lower-banded R; A = R·Rᵀ + I is SPD with half-bandwidth BW.
+        let mut r = [[0.; N]; N];
+        for (i, row) in r.iter_mut().enumerate() {
+            for value in row.iter_mut().take(i + 1).skip(i.saturating_sub(BW - 1)) {
+                *value = lcg(&mut state) - 0.5;
+            }
+            row[i] += 2.;
+        }
+        let mut dense = [[0.; N]; N];
+        for i in 0..N {
+            for j in 0..N {
+                dense[i][j] = (0..=i.min(j)).map(|k| r[i][k] * r[j][k]).sum();
+            }
+        }
+        let rhs: [f64; N] = std::array::from_fn(|_| lcg(&mut state) - 0.5);
+        let expected = solve(dense, rhs).expect("dense system is SPD");
+        let mut packed = vec![0.; N * BW];
+        for i in 0..N {
+            for j in 0..BW.min(N - i) {
+                packed[i * BW + j] = dense[i][i + j];
+            }
+        }
+        let mut b = rhs.to_vec();
+        assert!(cholesky_banded(N, BW, &mut packed, &mut b).is_some());
+        for i in 0..N {
+            assert!(
+                (b[i] - expected[i]).abs() < 1e-8,
+                "row {i}: banded {} vs dense {}",
+                b[i],
+                expected[i]
+            );
+        }
+    }
+
+    #[test]
+    fn banded_full_bandwidth_matches_dense() {
+        const N: usize = 6;
+        let mut state = 42;
+        let mut dense = [[0.; N]; N];
+        for i in 0..N {
+            for j in 0..=i {
+                let v = lcg(&mut state) - 0.5;
+                dense[i][j] = v;
+                dense[j][i] = v;
+            }
+            dense[i][i] += N as f64;
+        }
+        let rhs: [f64; N] = std::array::from_fn(|_| lcg(&mut state));
+        let expected = solve(dense, rhs).unwrap();
+        let mut packed = vec![0.; N * N];
+        for i in 0..N {
+            for j in 0..(N - i) {
+                packed[i * N + j] = dense[i][i + j];
+            }
+        }
+        let mut b = rhs.to_vec();
+        assert!(cholesky_banded(N, N, &mut packed, &mut b).is_some());
+        for i in 0..N {
+            assert!((b[i] - expected[i]).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn banded_rejects_non_spd_and_bad_shapes() {
+        // Negative pivot: diagonal entry is negative.
+        let mut a = vec![0.; 3 * 2];
+        a[0] = -1.;
+        a[2] = 1.;
+        a[4] = 1.;
+        let mut b = vec![0.; 3];
+        assert!(cholesky_banded(3, 2, &mut a, &mut b).is_none());
+        // Indefinite despite positive diagonal: [[1, 2], [2, 1]].
+        let mut a = vec![1., 2., 1., 0.];
+        let mut b = vec![1., 1.];
+        assert!(cholesky_banded(2, 2, &mut a, &mut b).is_none());
+        for pivot in [0., -0., f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(cholesky_banded(1, 1, &mut [pivot], &mut [1.]).is_none());
+        }
+        // Malformed storage.
+        assert!(cholesky_banded(3, 0, &mut [], &mut []).is_none());
+        let mut a = vec![1.; 5];
+        let mut b = vec![1.; 3];
+        assert!(cholesky_banded(3, 2, &mut a, &mut b).is_none());
+    }
+
+    #[test]
+    fn banded_diagonal_system() {
+        let mut a = vec![4., 9., 16.];
+        let mut b = vec![8., 27., 64.];
+        assert!(cholesky_banded(3, 1, &mut a, &mut b).is_some());
+        assert!((b[0] - 2.).abs() < 1e-14);
+        assert!((b[1] - 3.).abs() < 1e-14);
+        assert!((b[2] - 4.).abs() < 1e-14);
     }
 }
 

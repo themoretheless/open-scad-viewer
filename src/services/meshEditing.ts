@@ -1,5 +1,6 @@
+import {callGeometryRust} from './geometry/kernel'
 import type { SculptBrush } from './geometryEditing'
-import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonFaces, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { stringifyMeshJson } from './meshJson'
 import { parseBinaryStl } from './stlImport'
 import { parseMeshDocument } from './meshEditing/parseMeshDocument'

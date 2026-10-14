@@ -11,7 +11,7 @@ impl Parser<'_> {
     }
     pub(super) fn err<T>(&self, m: impl AsRef<str>) -> R<T> {
         Err(crate::error(format!(
-            "ModelGraph Text line {}: {}",
+            "Rush line {}: {}",
             self.line(),
             m.as_ref()
         )))
@@ -986,7 +986,7 @@ impl Parser<'_> {
         self.pop()?;
         let (v, u) = number(&t.text).map_err(|_| {
             crate::error(format!(
-                "ModelGraph Text line {}: Parameter default must be a numeric literal",
+                "Rush line {}: Parameter default must be a numeric literal",
                 self.line()
             ))
         })?;

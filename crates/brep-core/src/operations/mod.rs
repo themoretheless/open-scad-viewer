@@ -63,7 +63,7 @@ fn unit(a: [f64; 3]) -> Result<[f64; 3]> {
 fn close(a: [f64; 3], b: [f64; 3], tolerance: f64) -> bool {
     norm(sub(a, b)) <= tolerance
 }
-fn loop_vertices(model: &Model, loop_id: usize) -> Result<Vec<usize>> {
+pub(crate) fn loop_vertices(model: &Model, loop_id: usize) -> Result<Vec<usize>> {
     let wire = model
         .loops
         .get(loop_id)

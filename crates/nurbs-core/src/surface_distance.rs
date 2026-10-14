@@ -147,7 +147,7 @@ pub(crate) fn enclosure(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) ->
 pub(crate) struct Patch {
     pub(crate) span: [usize; 2],
     pub(crate) domain: [[f64; 2]; 2],
-    bounds: Vec<Interval>,
+    pub(crate) bounds: Vec<Interval>,
     controls: Vec<Vec<Interval>>,
     // Relative span length ensures alternating subdivision even with very
     // different U/V knot scales. Exact constant directions need no splitting.
@@ -683,4 +683,69 @@ pub fn enclosure_distance(a: &[[f64;2]], b: &[[f64;2]]) -> Result<(f64,f64)> {
     check(a.len()==3 && b.len()==3, "Distance boxes must have three axes")?;
     let convert=|p:&[[f64;2]]| p.iter().map(|v| Interval::new(v[0],v[1])).collect::<Result<Vec<_>>>();
     box_distance(&convert(a)?, &convert(b)?)
+}
+
+pub use crate::native_surface_distance::nearest_point;
+
+pub(crate) fn rectangle_control_gap(
+    a: &Surface,
+    b: &Surface,
+    domains: [[[f64; 2]; 2]; 2],
+) -> Result<Option<f64>> {
+    let span = |s: &Surface, d: [[f64; 2]; 2]| -> Option<[usize; 2]> {
+        let u = (s.degree_u..s.control_points.len()).find(|&i| {
+            s.knots_u[i] < s.knots_u[i + 1]
+                && d[0][0] >= s.knots_u[i]
+                && d[0][1] <= s.knots_u[i + 1]
+        })?;
+        let v = (s.degree_v..s.control_points[0].len()).find(|&i| {
+            s.knots_v[i] < s.knots_v[i + 1]
+                && d[1][0] >= s.knots_v[i]
+                && d[1][1] <= s.knots_v[i + 1]
+        })?;
+        Some([u, v])
+    };
+    let (Some(sa), Some(sb)) = (span(a, domains[0]), span(b, domains[1])) else {
+        return Ok(None);
+    };
+    let pa = Patch::new(a, sa, domains[0])?;
+    let pb = Patch::new(b, sb, domains[1])?;
+    let lower = patch_lower(&pa, &pb)?;
+    if lower > 0. {
+        return Ok(Some(lower));
+    }
+    // Fixed integer normals include inverse directions of simple shears.
+    // Each interval dot encloses every actual rational control pole; no
+    // rounded separating plane or control midpoint is a positive premise.
+    for x in 0..=1 {
+        for y in -1..=1 {
+            for z in -1..=1 {
+                if x == 0 && (y < 0 || y == 0 && z <= 0) {
+                    continue;
+                }
+                let n = [x, y, z];
+                let project = |p: &Patch| -> Result<Interval> {
+                    let mut lo = f64::INFINITY;
+                    let mut hi = f64::NEG_INFINITY;
+                    for c in &p.controls {
+                        let mut value = Interval::point(0.);
+                        for k in 0..3 {
+                            value = value.add(c[k].mul(Interval::point(n[k] as f64))?)?;
+                        }
+                        lo = lo.min(value.lo);
+                        hi = hi.max(value.hi);
+                    }
+                    Interval::new(lo, hi)
+                };
+                let gap = box_distance(&[project(&pa)?], &[project(&pb)?])?.0;
+                if gap > 0. {
+                    let norm = (n.iter().map(|v| (*v as f64).powi(2)).sum::<f64>())
+                        .sqrt()
+                        .next_up();
+                    return Ok(Some((gap / norm).next_down().max(0.)));
+                }
+            }
+        }
+    }
+    Ok(Some(0.))
 }

@@ -1,12 +1,12 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {parseOpenSCAD} from '../../src/services/openscadParser.ts';
-import {buildSTLBuffer} from '../../src/services/stlExport.ts';
+import {buildBinaryStl} from '../../src/services/meshExport.ts';
 import {isGeometryEvaluationResultPayload} from '../../src/services/geometryWorkerProtocol.ts';
 const dir=new URL('./',import.meta.url);
 const result=await parseOpenSCAD(readFileSync(new URL('skadis-hooks.scad',dir),'utf8'),{quality:'full'});
 let source='// SKADIS hook assembly preview. Editable: skadis-hooks.scad\n';
 for(const [i,m] of result.meshes.entries()) {
- const buf=Buffer.from(buildSTLBuffer([m])); const points:number[][]=[]; const faces:number[][]=[]; const ids=new Map<string,number>();
+ const buf=Buffer.from(buildBinaryStl([m])); const points:number[][]=[]; const faces:number[][]=[]; const ids=new Map<string,number>();
  for(let t=0;t<buf.readUInt32LE(80);t++) {
   const face:number[]=[];
   for(let v=0;v<3;v++) {

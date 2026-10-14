@@ -3,7 +3,7 @@ import { callGeometryRust } from './geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
 import { sampleCurve } from './directSketchGeometry'
 import type { NurbsCurve } from './nurbsCurve'
-import { solveModelGraphSketch, type SketchConstraint as SolverConstraint } from './modelGraphSketch'
+import { solveRushGraphSketch, type SketchConstraint as SolverConstraint } from './rushGraphSketch'
 export type SketchDimension = {kind:'length';a:number;b:number} | {kind:'angle';a:number;b:number;c:number} | {kind:'horizontal'|'vertical';a:number;b:number} | {kind:'radius'|'diameter'}
 export interface DimensionResult { points:Point2[]; measurements:{value:number|null;label:Point2;lines:Point2[][]}[] }
 export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:number}):DimensionResult {
@@ -18,7 +18,7 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
   const dimensions = sketch.dimensions??[]
   if (edit && dimensions.length > 1 && dimensions.every(d=>d.kind==='length') && sketch.points.length>=3 && sketch.points.length<=16) {
     const constraints: SolverConstraint[] = dimensions.map((d,i) => ({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:i===edit.index?edit.value:(callGeometryRust('cad_dimensions',{points:sketch.points,dimensions:[d]}) as DimensionResult).measurements[0].value!}))
-    const solved = solveModelGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),constraints)
+    const solved = solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),constraints)
     if (solved.status==='inconsistent'||solved.status==='not_converged') throw Error('Sketch dimensions conflict or did not converge.')
     const points = solved.points.map(p=>p.position)
     const result = callGeometryRust('cad_dimensions',{points,dimensions:sketch.dimensions??[]}) as DimensionResult
@@ -39,5 +39,5 @@ export function sketchDimensionStatus(sketch:DirectSketch) {
  const dimensions=sketch.dimensions??[]
  if(sketch.analytic || sketch.points.length<3 || sketch.points.length>16 || !dimensions.length || !dimensions.every(d=>d.kind==='length'))return null
  const measured=sketchDimensions(sketch)
- return solveModelGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),dimensions.map((d,i)=>({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:measured.measurements[i].value!})))
+ return solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),dimensions.map((d,i)=>({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:measured.measurements[i].value!})))
 }

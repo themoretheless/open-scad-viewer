@@ -26,16 +26,20 @@ pub struct Report {
     pub orientation_domain_cells: usize,
 }
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,0,None)
+    inspect_impl(model,tolerance_uv,limits,0,None,&[])
 }
 /// Joint sweep boundary evidence precedes nesting and material orientation.
 /// Empty cap selection is the closed no-cap case; no artificial caps are inferred.
 pub fn inspect_sweep(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
     caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets)->Result<Report> {
-    inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)))
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)),&[])
+}
+pub fn inspect_sweep_with_projections(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
+    caps:&[usize],cap_limits:crate::sweep_cap_contacts::Budgets,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
+    inspect_impl(model,tolerance_uv,limits,max_linear_cells,Some((caps,cap_limits)),proposals)
 }
 fn inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usize,
-    caps:Option<(&[usize],crate::sweep_cap_contacts::Budgets)>)->Result<Report> {
+    caps:Option<(&[usize],crate::sweep_cap_contacts::Budgets)>,proposals:&[Option<[[i8;3];2]>])->Result<Report> {
     if !(1..=1000000).contains(&limits.orientation_cells)
         || !(1..=8000000).contains(&limits.orientation_domain_cells)
         || !(1..=100000).contains(&limits.orientation_spans)
@@ -45,9 +49,10 @@ fn inspect_impl(model:&Model,tolerance_uv:f64,limits:Limits,max_linear_cells:usi
         return Err(Error::new("BREP_INVALID_INPUT", "Volume audit requires bounded positive stage budgets"));
     }
     let boundary = match caps {
-        Some((caps,budget)) if !caps.is_empty()=>boundary_embedding::inspect_sweep(
-            model,tolerance_uv,limits.boundary,max_linear_cells,caps,budget)?,
-        _=>boundary_embedding::inspect_with_linear(model,tolerance_uv,limits.boundary,max_linear_cells)?,
+        Some((caps,budget))=>boundary_embedding::inspect_sweep_with_projections(
+            model,tolerance_uv,limits.boundary,max_linear_cells,caps,budget,proposals)?,
+        _ if max_linear_cells == 0 => boundary_embedding::inspect(model,tolerance_uv,limits.boundary)?,
+        _ => boundary_embedding::inspect_with_linear(model,tolerance_uv,limits.boundary,max_linear_cells)?,
     };
     let mut out = Report { proven: false, boundary, nesting: None,
         orientations: (0..model.shells.len()).map(|shell| ShellOrientation {
@@ -130,6 +135,104 @@ mod tests {
             orientation_cells: 100000, orientation_domain_cells: 1000000, orientation_spans: 100 }
     }
     #[test]
+    fn corrected_inflection_hollow_arc_covers_every_pair_in_original_limits() {
+        use nurbs_core::{curve::Curve,primitives::line,progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let ring=|points:[[f64;3];4]|(0..4).map(|i|line(points[i],points[(i+1)%4]).unwrap()).collect();
+        let loops=vec![ring([[0.03125,-0.03125,-0.03125],[-0.03125,0.03125,-0.03125],[-0.03125,0.03125,0.03125],[0.03125,-0.03125,0.03125]]),
+            ring([[0.015625,-0.015625,-0.015625],[0.015625,-0.015625,0.015625],[-0.015625,0.015625,0.015625],[-0.015625,0.015625,-0.015625]])];
+        let path=Curve {degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,-1.,0.],vec![3.,0.,0.]],weights:vec![1.;4],periodic:false};
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let body=crate::analytic::progressive_profile_body_with_evidence_and_correction(&loops,&path,&scale,&twist,None,None,None,
+            Options {normal:[0.,0.,1.],orientation:Orientation::CorrectedFrenet,
+                spacing:Spacing::ArcLength {tolerance:0.001,max_cells:100000},initial_sections:3,max_sections:65,max_deviation:0.1},
+            Some(crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000})).unwrap();
+        assert_eq!(body.boundary_error_within_budget,Some(true));
+        assert!(body.boundary_error_upper.unwrap()<=0.1);
+        assert_eq!(body.model.faces.len(),258);
+        let before=body.model.clone();
+        let report=inspect_sweep(&body.model,1e-8,limits(),20000,&[256,257],crate::sweep_cap_contacts::Budgets {
+            max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,max_trim_pairs:100000,
+            max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
+        let pairs=&report.boundary.intersections.pairs;
+        assert!(report.proven,"boundary={} next={:?} individual={} grouped={} cells={} unresolved={:?}",
+            report.boundary.proven,pairs.next_pair,pairs.pairs.len(),pairs.grouped_pairs,pairs.cells,
+            pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved").map(|p|p.faces).take(10).collect::<Vec<_>>());
+        assert_eq!(pairs.total_pairs,33153);
+        assert_eq!(pairs.pairs.len()+pairs.grouped_pairs,pairs.total_pairs);
+        assert!(pairs.pairs.len()<=10000 && pairs.cells<=100000 && pairs.domain_cells<=1000000);
+        assert!(pairs.grouped_pairs>0 && pairs.next_pair.is_none());
+        assert_eq!(body.model,before);
+    }
+    #[test]
+    fn corrected_affine_inflection_hollow_parameter_and_arc_preserve_original_limits() {
+        use nurbs_core::{curve::Curve,primitives::line,progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let ring=|points:[[f64;3];4]|(0..4).map(|i|line(points[i],points[(i+1)%4]).unwrap()).collect();
+        let loops=vec![ring([[0.03125,-0.03125,-0.03125],[-0.03125,0.03125,-0.03125],[-0.03125,0.03125,0.03125],[0.03125,-0.03125,0.03125]]),
+            ring([[0.015625,-0.015625,-0.015625],[0.015625,-0.015625,0.015625],[-0.015625,0.015625,0.015625],[-0.015625,0.015625,-0.015625]])];
+        let path=Curve {degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,-1.,0.],vec![3.,0.,0.]],weights:vec![1.;4],periodic:false};
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let axes=constant_vector_law([1.25,0.75,1.]).unwrap();
+        let center=constant_vector_law([0.002,-0.003,0.]).unwrap();
+        for spacing in [Spacing::Parameter,Spacing::ArcLength {tolerance:0.001,max_cells:100000}] {
+        let body=crate::analytic::progressive_profile_body_with_evidence_and_correction(&loops,&path,&scale,&twist,Some((&axes,&center)),None,None,
+            Options {normal:[0.,0.,1.],orientation:Orientation::CorrectedFrenet,
+                spacing,initial_sections:3,max_sections:65,max_deviation:0.1},
+            Some(crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000})).unwrap();
+        assert_eq!(body.boundary_error_within_budget,Some(true));
+        assert!(body.boundary_error_upper.unwrap()<=0.1);
+        let face_count=body.model.faces.len();
+        let before=body.model.clone();
+        let report=inspect_sweep(&body.model,1e-8,limits(),20000,&[face_count-2,face_count-1],crate::sweep_cap_contacts::Budgets {
+            max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,max_trim_pairs:100000,
+            max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
+        let pairs=&report.boundary.intersections.pairs;
+        assert!(report.proven,"boundary={} next={:?} individual={} grouped={} cells={} unresolved={:?}",
+            report.boundary.proven,pairs.next_pair,pairs.pairs.len(),pairs.grouped_pairs,pairs.cells,
+            pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved").map(|p|p.faces).take(10).collect::<Vec<_>>());
+        assert_eq!(pairs.total_pairs,face_count*(face_count-1)/2);
+        assert_eq!(pairs.pairs.len()+pairs.grouped_pairs,pairs.total_pairs);
+        assert!(pairs.pairs.len()<=10000 && pairs.cells<=100000 && pairs.domain_cells<=1000000);
+        assert!(pairs.grouped_pairs>0 && pairs.next_pair.is_none());
+        assert_eq!(body.model,before);
+        }
+    }
+    #[test]
+    fn corrected_affine_zero_initial_curvature_hollow_parameter_and_arc_preserve_limits() {
+        use nurbs_core::{curve::Curve,primitives::line,progressive_sweep::{Options,Orientation,Spacing,constant_vector_law}};
+        let ring=|points:[[f64;3];4]|(0..4).map(|i|line(points[i],points[(i+1)%4]).unwrap()).collect();
+        let loops=vec![ring([[0.,-0.03125,-0.03125],[0.,0.03125,-0.03125],[0.,0.03125,0.03125],[0.,-0.03125,0.03125]]),
+            ring([[0.,-0.015625,-0.015625],[0.,-0.015625,0.015625],[0.,0.015625,0.015625],[0.,0.015625,-0.015625]])];
+        let path=Curve {degree:3,knots:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+            control_points:vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![2.,0.,0.],vec![3.,1.,0.]],weights:vec![1.;4],periodic:false};
+        let scale=constant_vector_law([1.,0.,0.]).unwrap();let twist=constant_vector_law([0.;3]).unwrap();
+        let axes=constant_vector_law([1.25,0.75,1.]).unwrap();
+        let center=constant_vector_law([0.002,-0.003,0.]).unwrap();
+        for spacing in [Spacing::Parameter,Spacing::ArcLength {tolerance:0.001,max_cells:100000}] {
+        let body=crate::analytic::progressive_profile_body_with_evidence_and_correction(&loops,&path,&scale,&twist,Some((&axes,&center)),None,None,
+            Options {normal:[0.,0.,1.],orientation:Orientation::CorrectedFrenet,
+                spacing,initial_sections:3,max_sections:65,max_deviation:0.1},
+            Some(crate::analytic::EndpointCapCorrection {quantum:2_f64.powi(-40),tolerance:1e-9,max_work:1000000})).unwrap();
+        assert_eq!(body.boundary_error_within_budget,Some(true));
+        assert!(body.boundary_error_upper.unwrap()<=0.1);
+        let face_count=body.model.faces.len();
+        let before=body.model.clone();
+        let report=inspect_sweep(&body.model,1e-8,limits(),20000,&[face_count-2,face_count-1],crate::sweep_cap_contacts::Budgets {
+            max_walls:1024,max_exact_work:1000000,max_chart_cells:1000,max_trim_pairs:100000,
+            max_trim_cells:100000,max_trim_domain_cells:1000000}).unwrap();
+        let pairs=&report.boundary.intersections.pairs;
+        assert!(report.proven,"boundary={} next={:?} individual={} grouped={} cells={} unresolved={:?}",
+            report.boundary.proven,pairs.next_pair,pairs.pairs.len(),pairs.grouped_pairs,pairs.cells,
+            pairs.pairs.iter().filter(|p|p.reason=="pair-unresolved").map(|p|p.faces).take(10).collect::<Vec<_>>());
+        assert_eq!(pairs.total_pairs,face_count*(face_count-1)/2);
+        assert_eq!(pairs.pairs.len()+pairs.grouped_pairs,pairs.total_pairs);
+        assert!(pairs.pairs.len()<=10000 && pairs.cells<=100000 && pairs.domain_cells<=1000000);
+        assert!(pairs.grouped_pairs>0 && pairs.next_pair.is_none());
+        assert_eq!(body.model,before);
+        }
+    }
+    #[test]
     fn affine_closed_hollow_reuses_fresh_disjoint_face_proofs_for_exact_witnesses(){
         let profiles=[nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.5).unwrap(),
             nurbs_core::primitives::circle([0.;3],[1.,0.,0.],0.2).unwrap().reverse().unwrap()];
@@ -152,6 +255,7 @@ mod tests {
         assert_eq!(nesting.pairs[0].result.boundary.lower_bound_mm,0.);
         assert!(nesting.cells<=limits().nesting_cells && nesting.domain_cells<=limits().nesting_domain_cells);
         assert_eq!(proof.orientations.iter().map(|s|s.outward).collect::<Vec<_>>(),vec![Some(true),Some(false)]);
+        assert!(!proof.boundary.intersections.pairs.disjoint_groups.is_empty());
         // An affine hollow miter keeps its embedded boundary and cavity
         // ownership when every inner face is flipped, but material orientation
         // must independently refuse the volume certificate.
@@ -168,6 +272,17 @@ mod tests {
         assert!(!refused_orientation.proven);
         assert_eq!(refused_orientation.orientations[inner].outward,Some(true));
         assert_eq!(inverted_cavity,before);
+        let mut missing_group=inspect_with_full_test_limits(&model).boundary;
+        let cross_group=missing_group.intersections.pairs.disjoint_groups.iter().position(|group|
+            model.shells[0].faces.iter().any(|fa|fa.face==group.face)
+                && model.shells[1].faces.iter().any(|fb|group.range[0]<=fb.face && fb.face<group.range[1])
+            || model.shells[1].faces.iter().any(|fa|fa.face==group.face)
+                && model.shells[0].faces.iter().any(|fb|group.range[0]<=fb.face && fb.face<group.range[1])).unwrap();
+        missing_group.intersections.pairs.disjoint_groups.remove(cross_group);
+        let refused_group=crate::shell_nesting::inspect_with_boundary(&model,model.tolerance_mm,1e-8,
+            100,2,2,Some(&missing_group)).unwrap();
+        assert!(refused_group.parents.is_none() && refused_group.roles_consistent.is_none());
+        assert!(!refused_group.pairs[0].result.boundary_separation_certified);
         let mut missing=proof.boundary;
         let cross_pair=missing.intersections.pairs.pairs.iter().position(|p|
             model.shells[0].faces.iter().any(|fa|p.faces.contains(&fa.face))

@@ -1,18 +1,18 @@
-import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../modelGraphNurbsKernel'
-import type { OwnNurbsBuildControl, OwnNurbsRequest, SdfTessellationJob } from '../modelGraphNurbsKernel'
+import { PendingProgressiveBody, PendingProgressiveMiter, PendingProgressiveSweep } from '../rushGraphNurbsKernel'
+import type { OwnNurbsBuildControl, OwnNurbsRequest, SdfTessellationJob } from '../rushGraphNurbsKernel'
 import { createProgressiveBrepProfileBody, streamProgressiveBrepProfileBody, streamProgressiveMiterBrepProfileBody } from '../geometry/brep'
 import type { ProgressiveMiterBrepBody } from '../geometry/brep'
 import { progressiveSweepNurbsProfiles, streamProgressiveNurbsProfiles } from '../nurbsConstructors'
 import type { ProgressiveSweepPreview } from '../nurbsConstructors'
 import type { SdfField } from '../geometry/sdf'
 import { buildOwnNurbsResolved } from './buildOwnNurbsResolved'
-import { compileModelGraphNurbs } from '../modelGraphNurbsCompiler'
+import { compileRushGraphNurbs } from '../rushGraphNurbsCompiler'
 
 /** Collects sdf_tessellate jobs resolvable without mesh evaluation, so the
  * caller can run their grid sampling on the GPU before the synchronous build. */
 export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
     type SdfField = import('../geometry/sdf').SdfField
-    const compiled = compileModelGraphNurbs(document)
+    const compiled = compileRushGraphNurbs(document)
     const nodes = new Map(compiled.resolved_document.nodes.map(n => [n.id, n] as const))
     const memo = new Map<string, SdfField | null>()
     const pure = (key: string): SdfField | null => {

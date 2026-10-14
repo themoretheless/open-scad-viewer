@@ -557,3 +557,5 @@ mod tests {
         }
     }
 }
+
+pub(crate) use crate::native_curve_offset::fit_offset_sites;

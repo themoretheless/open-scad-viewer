@@ -26,3 +26,7 @@ mod cylinder;
 mod revolve_region_angle;
 pub use cylinder::*;
 pub use revolve_region_angle::*;
+
+pub use rational_loft::{progressive_guided_profile_body,progressive_authored_profile_body,progressive_affine_profile_body,progressive_profile_body};
+
+pub use rational_loft::{progressive_profile_body_with_evidence_and_correction,EndpointCapCorrection,progressive_profile_body_with_rmf_policy};

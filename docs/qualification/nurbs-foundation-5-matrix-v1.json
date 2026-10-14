@@ -8,7 +8,7 @@
     {"id": "NF5-CURVE-SURFACE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "crates/nurbs-core/src/tests.rs", "tests/nurbsFoundation.test.ts"]},
     {"id": "NF5-CONTACT-OWNERSHIP", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "crates/nurbs-core/src/tests.rs"]},
     {"id": "NF5-COMPOSITION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "crates/nurbs-core/src/tests.rs"]},
-    {"id": "NF5-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/modelGraphNurbsKernel.ts", "src/mcp/modelGraphNurbsTools.ts", "tests/nurbsFoundation.test.ts"]}
+    {"id": "NF5-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/rushGraphNurbsKernel.ts", "src/mcp/rushGraphNurbsTools.ts", "tests/nurbsFoundation.test.ts"]}
   ],
   "blockingOpenRows": []
 }

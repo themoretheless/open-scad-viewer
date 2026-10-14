@@ -1,3 +1,4 @@
+import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from './openScadLegacySegments'
 import type { GeometryQuality } from '../core/build'
 import {
   deriveSemanticAmbiguityGroupId,

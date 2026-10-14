@@ -2,6 +2,14 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "frame_solve",
+    "frame_envelope",
+    "frame_diagnose",
+    "frame_buckling",
+    "frame_modal",
+    "frame_collapse",
+    "frame_influence",
+
     "scene_picking",
     "viewport",
     "camera_gesture",
@@ -49,6 +57,14 @@ pub(crate) fn route(v: Value) -> Routed {
 
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "frame_solve" => frame::solve(v),
+        "frame_envelope" => frame::envelope(v),
+        "frame_diagnose" => frame::diagnose(v),
+        "frame_buckling" => frame::buckling(v),
+        "frame_modal" => frame::modal(v),
+        "frame_collapse" => frame::collapse(v),
+        "frame_influence" => frame::influence(v),
+
         "scene_picking" => scene_picking::dispatch(v),
         "viewport" => viewport::dispatch(v),
         "camera_gesture" => camera_gestures::dispatch(v),

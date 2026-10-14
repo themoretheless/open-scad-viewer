@@ -5,8 +5,8 @@ import MaterialControls from './features/MaterialControls.vue'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
-import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
-import {readSweepViewportEvidence} from './services/sweepViewportEvidence'
+import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/rushFrontendDetect'
+import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
@@ -14,7 +14,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, 
 import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
-import ExampleGallery from './components/ExampleGallery.vue'
+const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.vue'))
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
@@ -35,7 +35,7 @@ const SvgPanel = defineAsyncComponent(() => import('./features/SvgPanel.vue'))
 const PhotogrammetryPanel = defineAsyncComponent(() => import('./features/PhotogrammetryPanel.vue'))
 const InspectPanel = defineAsyncComponent(() => import('./components/InspectPanel.vue'))
 const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.vue'))
-import KeyboardShortcuts from './components/KeyboardShortcuts.vue'
+const KeyboardShortcuts = defineAsyncComponent(() => import('./components/KeyboardShortcuts.vue'))
 import ViewCube from './components/ViewCube.vue'
 import type {
   DistanceMeasurement as PanelMeasurement,
@@ -326,7 +326,7 @@ const editorOpen = ref(false)
 // Keep its GPU resources separate from the active Solid/Mesh viewport.
 const sourceViewportVisible = computed(() =>
   (!directModelerOpen.value && !meshModelerOpen.value && !functionReferenceOpen.value) ||
-  (editorOpen.value && isModelGraphText(code.value) &&
+  (editorOpen.value && isRushFrontend(code.value) &&
     (code.value.includes('progressive_sweep') || code.value.includes('miter_sweep'))))
 watch(sourceViewportVisible, async visible => {
   if (!visible) {
@@ -504,7 +504,7 @@ function commitMainSource(source:string, selectIndex=selectedMesh.value) {
  } catch(e){error.value=e instanceof Error?e.message:String(e)}
 }
 function appendMainPrimitive(source:string) {
- if(isModelGraphText(code.value)){error.value=lang.value==='ru'?'Примитивы доступны в документе OpenSCAD.':'Primitives require an OpenSCAD document.';return}
+ if(isRushFrontend(code.value)){error.value=lang.value==='ru'?'Примитивы доступны в документе OpenSCAD.':'Primitives require an OpenSCAD document.';return}
  commitMainSource(code.value+'\n'+source,-1)
 }
 function undoMainGeometry(redo=false){
@@ -567,6 +567,10 @@ const canPreviousView = computed(() => viewportState.value.canGoBack)
 const commandMru = ref<string[]>(readCommandMru())
 const sweepFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
  ? sceneMeshes.value.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
+const sweepPatchFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepPatchViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
+const sweepBodyFinalEvidence=computed(()=>!rendering.value&&!stale.value&&renderedSource.value===code.value
+ ? sceneMeshes.value.map(mesh=>readSweepBodyBoundaryViewportEvidence(mesh.nativeGeometry)).filter(evidence=>evidence!==null) : [])
 const sceneMeshes = computed({
   get: () => sceneState.value.meshes,
   set: (meshes: MeshData[]) => { sceneController.update({ meshes }) },
@@ -667,20 +671,20 @@ async function runGeometryAnalysis() {
   }
 }
 
-// The modelgraph compiler pulls the geometry kernel chunk; load it only when a
-// modelgraph-text document is actually open.
+// The rush compiler pulls the geometry kernel chunk; load it only when a
+// rush-frontend document is actually open.
 const compactControls = ref<{parameters: import('./services/scadCustomizer').CustomizerParameter[]; errors: string[]}>({parameters: [], errors: []})
 watchEffect(async () => {
   const source = code.value
-  if (!isModelGraphText(source)) {
+  if (!isRushFrontend(source)) {
     compactControls.value = {parameters: [], errors: []}
     return
   }
-  const controls = (await import('./services/modelGraphText')).modelGraphTextControls(source)
+  const controls = (await import('./services/rushFrontend')).rushFrontendControls(source)
   if (code.value === source) compactControls.value = controls
 })
 const customizerParameters = computed(() => {
-  if (!isModelGraphText(code.value)) return extractCustomizerParameters(code.value)
+  if (!isRushFrontend(code.value)) return extractCustomizerParameters(code.value)
   return compactControls.value.parameters
 })
 const presetName = ref('')
@@ -2487,7 +2491,7 @@ function showNotice(message: string) {
     <main
       ref="mainRef"
       class="main"
-      :class="{ 'editor-drawer': editorOpen, 'sweep-source-preview': editorOpen && isModelGraphText(code) && (code.includes('progressive_sweep') || code.includes('miter_sweep')) }"
+      :class="{ 'editor-drawer': editorOpen, 'sweep-source-preview': editorOpen && isRushFrontend(code) && (code.includes('progressive_sweep') || code.includes('miter_sweep')) }"
       :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
     >
       <section
@@ -2789,6 +2793,49 @@ function showNotice(message: string) {
           :aria-label="t('viewport')"
           @keydown="handleViewportKey"
         />
+        <div v-if="sweepBodyFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-body-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepBodyFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Непрерывная ошибка границы sweep-тела' : 'Continuous sweep body boundary error' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            <span v-if="evidence.errorUpper !== null"> · {{ lang === 'ru' ? 'оценка' : 'bound' }} ≈ {{ evidence.errorUpper > 0 && evidence.errorUpper < 0.000001 ? evidence.errorUpper.toExponential(3) : formatNumber(evidence.errorUpper, 6) }} mm</span>
+            <span v-if="evidence.withinBudget === false"> · {{ lang === 'ru' ? 'превышает допуск' : 'exceeds tolerance' }}</span>
+          </div>
+        </div>
+        <div v-if="sweepPatchFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">
+          <div v-for="evidence in sweepPatchFinalEvidence" :key="evidence.nodeId">
+            {{ lang === 'ru' ? 'Ошибка sweep-поверхностей относительно исходного переноса профиля' : 'Sweep patch error relative to original profile transport' }}:
+            {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            <template v-if="evidence.errorUpper !== null"> · ≤{{ evidence.errorUpper.toPrecision(6) }} / {{ evidence.budget?.toPrecision(6) }} mm</template>
+            <template v-if="evidence.sourceFrameC2Certified !== null && evidence.closedSourceFrameC2Certified === null">
+              · {{ lang === 'ru' ? 'C2 исходного кадра' : 'Original frame C2' }}:
+              {{ evidence.sourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.closedSourceFrameC2Certified !== null">
+              · {{ lang === 'ru' ? 'C2 замкнутого исходного кадра' : 'Closed source frame C2' }}:
+              {{ evidence.closedSourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.closedSourceFrameC1Certified !== null">
+              · {{ lang === 'ru' ? 'C1 замкнутого исходного кадра' : 'Closed source frame C1' }}:
+              {{ evidence.closedSourceFrameC1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.decompositionG2Certified !== null">
+              · {{ lang === 'ru' ? 'G2 между частями одного профиля' : 'G2 between parts of one profile' }}:
+              {{ evidence.decompositionG2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+              <template v-if="evidence.decompositionJoinCount !== null"> ({{ evidence.decompositionJoinCount }})</template>
+            </template>
+            <template v-if="evidence.decompositionG1Certified !== null && evidence.decompositionG2Certified !== true">
+              · {{ lang === 'ru' ? 'G1 между частями одного профиля' : 'G1 between parts of one profile' }}:
+              {{ evidence.decompositionG1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            <template v-if="evidence.sourceFrameRegularityCertified !== null">
+              · {{ lang === 'ru' ? 'Регулярность исходного кадра' : 'Original frame regularity' }}:
+              {{ evidence.sourceFrameRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            </template>
+            · {{ lang === 'ru' ? 'Регулярность поверхностей' : 'Surface regularity' }}:
+            {{ evidence.surfaceRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+            · {{ lang === 'ru' ? 'Область: сохранённые поверхности' : 'Scope: retained patches' }}
+          </div>
+        </div>
         <div v-if="sweepFinalEvidence.length" class="sweep-preview-status" data-testid="sweep-final-evidence" role="status" aria-live="polite">
           <div v-for="evidence in sweepFinalEvidence" :key="evidence.nodeId">
             {{ lang === 'ru' ? 'Геометрия тела' : 'Solid geometry' }}:
@@ -2936,10 +2983,10 @@ function showNotice(message: string) {
           />
           </div>
           <div v-else-if="dockTab === 'svg'" class="dock-scroll" :ref="revealDockDetails">
-          <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
+          <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isRushFrontend(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
           </div>
           <div v-else-if="dockTab === 'photo'" class="dock-scroll" :ref="revealDockDetails">
-          <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
+          <PhotogrammetryPanel :locale="lang" :can-append="!isRushFrontend(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
           </div>
           <div v-else-if="dockTab === 'perf'" class="dock-scroll" :ref="revealDockDetails">
 <details class="performance-panel" open>
@@ -3055,7 +3102,7 @@ function showNotice(message: string) {
       @backend="solidGpuActive = $event"
       :open="directModelerOpen"
       :locale="lang"
-      :can-append="!isModelGraphText(code)"
+      :can-append="!isRushFrontend(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
       :append-bodies="solidAppendBodies"
@@ -3075,6 +3122,7 @@ function showNotice(message: string) {
     />
     <MechanicalGenerator :open="mechanicalGeneratorOpen" :locale="lang" @close="mechanicalGeneratorOpen = false" @generate="loadMechanicalModel" @download-current="saveSource" />
     <ExampleGallery
+      v-if="exampleGalleryOpen"
       :open="exampleGalleryOpen"
       :examples="EXAMPLE_CATALOG"
       :locale="lang"
@@ -3085,11 +3133,12 @@ function showNotice(message: string) {
     <FunctionReference
       :open="functionReferenceOpen"
       :locale="lang"
-      :language="isModelGraphText(code) ? 'modelgraph' : 'openscad'"
+      :language="isRushFrontend(code) ? 'rush' : 'openscad'"
       :initial-query="functionReferenceQuery"
       @close="functionReferenceOpen = false"
     />
     <KeyboardShortcuts
+      v-if="shortcutHelpOpen"
       :open="shortcutHelpOpen"
       :groups="shortcutHelpGroups"
       :locale="lang"

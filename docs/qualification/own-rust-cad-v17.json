@@ -49,7 +49,7 @@
   "dependencyFingerprints": {
     "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
     "npmLockfileSha256": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
-    "rustLockfileSha256": "845ecc2077260479526e05b7c88d9113c6c8bf7677caa51e033c73faef10f32c"
+    "rustLockfileSha256": "2e6ce5f98b7696916ff5bd497a9d23d8d42163244f788859c1546f9f7b9be361"
   },
   "claimBoundary": [
     "This is a reproducible byte fingerprint, not an external clean qualification run.",

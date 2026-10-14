@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v18",
   "successorOf": "docs/qualification/own-rust-cad-v17.json",
-  "previousSha256": "ddc01de6a708b0e3a6732fd056f55f4db377b39538348c2d758fdaeb703f7e2b",
+  "previousSha256": "76ed9a91c3a699852cd143867b5191e7afabfaed4c4a6f8bc6a45b30efc40b3f",
   "recordedAt": "2026-09-27",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v26 / G1 v43 re-freeze after main rebuilt the geometry kernel: 5d21f7f added cooperative mesh analysis (geometry-bridge ABI and mesh_analysis, geometry-wasm exports, polygon-core BVH and edges) and f45a7da migrated osv-math native geometry to software binary64; both are in the kernel dependency graph, so the path-independent WASM changes. The own-Rust geometry source bundle, notices and package-lock.json are byte-identical to own-rust-cad-v17; crates/Cargo.lock gained optional osv-math dependencies (compute-cuda, compute-mlx, tensor-core) that the kernel build does not enable. The own-Rust oracle v3 (44 cases) passes unchanged on the rebuilt kernel, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

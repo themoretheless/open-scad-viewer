@@ -65,7 +65,7 @@ fn push_face(
     });
     FaceUse { face, reversed }
 }
-fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
+pub(crate) fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
     let [a, b] = bounds;
     Surface {
         degree_u: 1,
@@ -81,7 +81,7 @@ fn cap_surface(bounds: [[f64; 2]; 2], z: f64) -> Surface {
         periodic_v: false,
     }
 }
-fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
+pub(crate) fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
     let mut result = curve.clone();
     for p in &mut result.control_points {
         for i in 0..2 {

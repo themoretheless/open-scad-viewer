@@ -40,3 +40,31 @@ test('optimizer failure is catchable and does not alter the input', () => {
     assert.equal(readFileSync(input, 'utf8'), 'invalid module')
   } finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+test('explicit native optimizer rejects missing or unrecognized tools before changing Cargo input', () => {
+  const directory=mkdtempSync(join(tmpdir(),'wasm-opt-driver-'))
+  try {
+    const input=join(directory,'cargo.wasm'),original=Buffer.from([0,97,115,109,1,0,0,0])
+    writeFileSync(input,original)
+    assert.throws(()=>optimizeWasm(input,{nativePath:'relative-path'}),/absolute executable/)
+    assert.throws(()=>optimizeWasm(input,{nativePath:join(directory,'missing')}),/absolute executable/)
+    assert.throws(()=>optimizeWasm(input,{nativePath:process.execPath}),/version must match/)
+    assert.deepEqual(readFileSync(input),original)
+  } finally {rmSync(directory,{recursive:true,force:true})}
+})
+
+test('native and bundled optimizers agree on executable fixture bytes', {skip:!process.env.OSV_TEST_WASM_OPT_NATIVE}, () => {
+  const directory=mkdtempSync(join(tmpdir(),'wasm-opt-native-parity-')),module=new binaryen.Module()
+  try {
+    module.addFunction('answer',binaryen.none,binaryen.i32,[],module.i32.add(module.i32.const(20),module.i32.const(22)))
+    module.addFunctionExport('answer','answer')
+    const input=join(directory,'cargo.wasm'),original=Buffer.from(module.emitBinary())
+    writeFileSync(input,original)
+    const bundled=optimizeWasm(input,{nativePath:''})
+    const native=optimizeWasm(input,{nativePath:process.env.OSV_TEST_WASM_OPT_NATIVE})
+    assert.deepEqual(native,bundled)
+    assert.deepEqual(readFileSync(input),original)
+    assert.equal(new WebAssembly.Instance(new WebAssembly.Module(native)).exports.answer(),42)
+    assert.deepEqual(optimizeWasm(input,{nativePath:process.env.OSV_TEST_WASM_OPT_NATIVE}),native)
+  } finally {module.dispose();rmSync(directory,{recursive:true,force:true})}
+})

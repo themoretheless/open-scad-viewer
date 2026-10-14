@@ -23,7 +23,7 @@ import {
   reparameterizeNurbsCurveExact,
 } from '../src/services/nurbsFoundation'
 import {evaluateNurbsCurve, type NurbsCurve} from '../src/services/nurbsCurve'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 
 const arc: NurbsCurve = {
   degree: 2,
@@ -135,9 +135,9 @@ describe('NURBS foundation product boundary', () => {
     expect(projectPointToNurbsCurveCertified(transformed,[100800,-199800,7]).coverage?.endpointsIncluded).toBe(true)
   })
 
-  test('ModelGraph product reports carry the foundation certificate', () => {
+  test('RushGraph product reports carry the foundation certificate', () => {
     const built = buildOwnNurbs({
-      language: 'modelgraph/nurbs-1', units: 'mm', parameters: [],
+      language: 'rush/nurbs-1', units: 'mm', parameters: [],
       nodes: [{id: 'arc', op: 'curve', degree: 2, knots: arc.knots,
         control_points: arc.controlPoints, weights: arc.weights, periodic: false}],
       root: 'arc',
@@ -184,7 +184,10 @@ describe('NURBS foundation product boundary', () => {
     const piercing = {degree:1,knots:[0,0,1,1],controlPoints:[[0.25,0.4,-1],[0.25,0.4,1]],weights:[1,1]}
     const cs = intersectNurbsCurveSurfaceCertified(piercing, plane)
     expect(cs.kind).toBe('curve_surface')
-    expect(cs.coverage.complete).toBe(true)
+    expect(cs.coverage.complete).toBe(false)
+    expect(cs.coverage.searchComplete).toBe(true)
+    expect(cs.coverage.certified).toBe(false)
+    expect(cs.rounding).toBe('uncertified-binary64')
     expect(cs.components.some(c => c.kind === 'point')).toBe(true)
     const onPlane = {degree:1,knots:[0,0,1,1],controlPoints:[[0.1,0.2,0],[0.8,0.7,0]],weights:[1,1]}
     const overlap = intersectNurbsCurveSurfaceCertified(onPlane, plane)

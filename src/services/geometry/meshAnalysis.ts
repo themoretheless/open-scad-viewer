@@ -1,3 +1,4 @@
+import {copyBuffer} from './bufferTransport'
 /**
  * Raw-buffer bindings for the Rust mesh-analysis kernels (BVH build and
  * semantic edge extraction). Transport follows the handle + typed-view copy
@@ -34,13 +35,6 @@ export function surfaceGroupsInKernel(vertices: Float32Array, indices: Uint32Arr
 export interface KernelSemanticEdgesResult {
   readonly indices: Uint32Array
   readonly diagnostics: MeshTopologyDiagnostics
-}
-
-function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], bytes: Uint8Array): number {
-  const ptr = wasm.abi_alloc(bytes.byteLength)
-  if (!ptr) throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT', 'Mesh exceeds transport limit')
-  new Uint8Array(kernelRuntime().memory.buffer, ptr, bytes.byteLength).set(bytes)
-  return ptr
 }
 
 /** One upload per mesh; retain f64 placed coordinates without numeric JSON encoding.
@@ -328,3 +322,6 @@ export function extractSemanticEdgesInKernel(
     if (vp) wasm.abi_free(vp, vertices.byteLength)
   }
 }
+
+/** Manifoldness report from the manifold-core kernel (abi_manifold_check). */
+export * from './manifoldAnalysis'

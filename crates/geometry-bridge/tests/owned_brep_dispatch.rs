@@ -106,3 +106,18 @@ fn display_still_checks_geometry_and_options() {
         );
     }
 }
+
+#[test]
+fn fillet_family_route_preserves_native_selection_and_refusal() {
+    for model in [cuboid([0.; 3], [2., 3., 4.]).unwrap(), brep_core::sphere(2.).unwrap()] {
+        for edges in [vec![], vec![0]] {
+            let expected = brep_core::feature_family::constant_fillet_family(&model, &edges)
+                .unwrap().name();
+            assert_eq!(dispatch(json!({"op":"brep_nurbs_constant_fillet_family",
+                "model":model,"edges":edges})).unwrap(), json!(expected));
+        }
+        let error = dispatch(json!({"op":"brep_nurbs_constant_fillet_family",
+            "model":model,"edges":[model.edges.len()]})).unwrap_err();
+        assert_eq!(error.code, "BREP_INVALID_INPUT");
+    }
+}

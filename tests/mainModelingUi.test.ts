@@ -95,3 +95,30 @@ it('draws and extrudes a sketch directly on the main workplane',async()=>{
  svg.props.onPointerdown(ui.event(svg,0,0));svg.props.onPointermove(ui.event(svg,10,10));svg.props.onPointerup();await nextTick();await ui.click('Extrude')
  expect(emitted).toHaveLength(1);expect(inspectPolygonMesh(emitted[0].mesh).signedVolumeMm3).toBeCloseTo(1000)
 })
+
+it('authors Bézier nodes, edits handles, cancels a drag and extrudes from the viewport',async()=>{
+ const bodies:any[]=[],ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en',onBody:(b:any)=>bodies.push(b)})
+ await ui.click('bezier');const svg=ui.all().find(n=>n.tag==='svg')!
+ for(const [x,y] of [[0,0],[40,0],[40,40],[0,40]])svg.props.onPointerdown(ui.event(svg,x,y))
+ await nextTick();await ui.click('Close contour')
+ expect(ui.all().filter(n=>n.tag==='circle'&&String(n.props.r)==='6')).toHaveLength(4)
+ const path=()=>ui.all().find(n=>n.tag==='polyline'&&n.props['stroke-width']==='3')!.props.points
+ const before=path(),handle=ui.all().find(n=>n.tag==='circle'&&String(n.props.r)==='4')!
+ handle.props.onPointerdown(ui.event(handle));svg.props.onPointermove(ui.event(svg,15,-20));await nextTick()
+ expect(path()).not.toEqual(before)
+ svg.props.onPointercancel();await nextTick();expect(path()).toEqual(before)
+ const anchor=ui.all().filter(n=>n.tag==='circle'&&String(n.props.r)==='6')[1]
+ anchor.props.onPointerdown(ui.event(anchor,40,0));svg.props.onPointermove(ui.event(svg,50,1));await nextTick()
+ expect(ui.all().some(n=>n.tag==='line'&&n.props['stroke-dasharray']==='5 4')).toBe(true)
+ svg.props.onPointerup();await nextTick();await ui.click('Extrude');expect(bodies).toHaveLength(1)
+ expect(inspectPolygonMesh(bodies[0].mesh).signedVolumeMm3).toBeGreaterThan(0)
+})
+it('outlines a closed sketch as a region with a hole before viewport extrusion',async()=>{
+ const bodies:any[]=[],ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en',onBody:(b:any)=>bodies.push(b)})
+ await ui.click('rectangle');const svg=ui.all().find(n=>n.tag==='svg')!
+ svg.props.onPointerdown(ui.event(svg,0,0));svg.props.onPointermove(ui.event(svg,20,20));svg.props.onPointerup();await nextTick()
+ await ui.click('Outline Stroke');await ui.click('Extrude')
+ expect(bodies).toHaveLength(1)
+ const volume=inspectPolygonMesh(bodies[0].mesh).signedVolumeMm3
+ expect(volume).toBeGreaterThan(750);expect(volume).toBeLessThan(850)
+})

@@ -1,14 +1,15 @@
 import { expect, it, vi } from 'vitest'
 import { SurfaceGroupContentCache } from '../src/services/surfaceGroupContentCache'
 
-it('reuses IDs and evicts oldest entries at the count limit', () => {
+it('reuses IDs and evicts least recently used entries at the count limit', () => {
   const cache = new SurfaceGroupContentCache({ maxEntries: 2, maxBytes: 100 })
   const compute = vi.fn(() => new Uint32Array([1]))
   const first = cache.getOrCompute('a', compute)
   cache.getOrCompute('b', compute)
   expect(cache.getOrCompute('a', compute)).toBe(first)
   cache.getOrCompute('c', compute)
-  expect(cache.getOrCompute('a', compute)).not.toBe(first)
+  expect(cache.getOrCompute('a', compute)).toBe(first)
+  cache.getOrCompute('b', compute)
   expect(compute).toHaveBeenCalledTimes(4)
   expect(cache.size).toBe(2)
   expect(cache.retainedBytes).toBe(12)

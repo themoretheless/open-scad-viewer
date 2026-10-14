@@ -1,7 +1,16 @@
 //! Explicit mesh-to-NURBS conversion. PN patches approximate a chosen smoothing;
 //! they do not recover unknown original CAD surfaces or prove global continuity.
 use super::*;
-use polygon_core::solid::proximity::{closest_triangle, valid_source};
+use mesh_query::proximity::closest_triangle;
+pub(crate) fn valid_source(mesh: &Mesh, max_triangles: usize) -> Result<Mesh> {
+    let result = mesh_query::proximity::valid_source(&mesh.view(), max_triangles)
+        .map_err(legacy_mesh_error)?;
+    Ok(Mesh {
+        positions: result.positions,
+        indices: result.indices,
+        uv: None,
+    })
+}
 type Point = math_core::V3;
 use math_core::{cross, dot, norm, sub};
 #[derive(Clone, Copy)]
@@ -268,19 +277,29 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
 /// Tessellate individual patches and sew matching boundary samples. No B-rep
 /// is inferred for smooth patches; the source face IDs remain explicit.
 /// Authored surface union carries no mesh reconstruction provenance.
-pub struct SurfaceSet { pub patches:Vec<Surface>,pub face_ids:Vec<usize> }
+pub struct SurfaceSet {
+    pub patches: Vec<Surface>,
+    pub face_ids: Vec<usize>,
+}
 impl<'de> value_codec::Deserialize<'de> for SurfaceSet {
-    fn from_value(value:value_codec::Value)->value_codec::Result<Self> {
-        Ok(Self {patches:value_codec::from_value(value["patches"].clone())?,face_ids:value_codec::from_value(value["faceIds"].clone())?})
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        Ok(Self {
+            patches: value_codec::from_value(value["patches"].clone())?,
+            face_ids: value_codec::from_value(value["faceIds"].clone())?,
+        })
     }
 }
-pub fn tessellate_surface_set(set:&SurfaceSet,segments:usize)->Result<brep::Tessellation> {
-    tessellate_surfaces(&set.patches,&set.face_ids,segments)
+pub fn tessellate_surface_set(set: &SurfaceSet, segments: usize) -> Result<brep::Tessellation> {
+    tessellate_surfaces(&set.patches, &set.face_ids, segments)
 }
-pub fn tessellate_patches(set:&PatchSet,segments:usize)->Result<brep::Tessellation> {
-    tessellate_surfaces(&set.patches,&set.face_ids,segments)
+pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tessellation> {
+    tessellate_surfaces(&set.patches, &set.face_ids, segments)
 }
-fn tessellate_surfaces(patches:&[Surface],face_ids:&[usize],segments:usize) -> Result<brep::Tessellation> {
+pub fn tessellate_surfaces(
+    patches: &[Surface],
+    face_ids: &[usize],
+    segments: usize,
+) -> Result<brep::Tessellation> {
     if patches.is_empty()
         || patches.len() > 2048
         || face_ids.len() != patches.len()
@@ -438,7 +457,7 @@ pub struct SubdivisionFit {
     pub iterations: usize,
     pub vertex_residual_before_mm: f64,
     pub vertex_residual_after_mm: f64,
-    pub deviation: polygon_core::solid::proximity::Deviation,
+    pub deviation: mesh_query::Deviation,
     pub correspondence: &'static str,
 }
 impl value_codec::Serialize for SubdivisionFit {
@@ -459,7 +478,7 @@ impl value_codec::Serialize for SubdivisionFit {
         );
         object.insert(
             "deviation".into(),
-            value_codec::Serialize::to_value(&self.deviation),
+            json!({"sampledMaxMm":self.deviation.sampled_max_mm,"sampledRmsMm":self.deviation.sampled_rms_mm,"sampleCount":self.deviation.sample_count,"errorBoundCertified":self.deviation.error_bound_certified}),
         );
         object.insert(
             "correspondence".into(),
@@ -489,10 +508,11 @@ pub fn mesh_to_subdivision(mesh: &Mesh, iterations: usize) -> Result<Subdivision
             .collect(),
     )?;
     let preview = crate::mesh_from_triangles(cage.subdivide(1)?.triangulate()?.0);
-    polygon_core::solid::proximity::sample_deviation(&source, &preview)?;
+    mesh_query::sample_deviation(&source.view(), &preview.view()).map_err(legacy_mesh_error)?;
     let fit = subdivision_core::fit(&cage, iterations)?;
     let output = crate::mesh_from_triangles(fit.cage.subdivide(1)?.triangulate()?.0);
-    let deviation = polygon_core::solid::proximity::sample_deviation(&source, &output)?;
+    let deviation =
+        mesh_query::sample_deviation(&source.view(), &output.view()).map_err(legacy_mesh_error)?;
     Ok(SubdivisionFit {
         cage: fit.cage,
         iterations: fit.iterations,
@@ -512,18 +532,20 @@ mod tests {
     }
     #[test]
     fn authored_surface_set_tessellates_without_reconstruction_metadata() {
-        let mesh=cube();let reconstructed=nurbs_from_mesh(&mesh,Mode::Faceted,0.).unwrap();
-        let payload=json!({"patches":reconstructed.patches,"faceIds":reconstructed.face_ids});
-        let mut authored:SurfaceSet=value_codec::from_value(payload).unwrap();
-        let actual=tessellate_surface_set(&authored,3).unwrap();
-        let legacy=tessellate_patches(&reconstructed,3).unwrap();
-        assert_eq!(actual.built.mesh.positions,legacy.built.mesh.positions);
-        assert_eq!(actual.built.mesh.indices,legacy.built.mesh.indices);
-        assert_eq!(actual.face_ids,legacy.face_ids);
+        let mesh = cube();
+        let reconstructed = nurbs_from_mesh(&mesh, Mode::Faceted, 0.).unwrap();
+        let payload = json!({"patches":reconstructed.patches,"faceIds":reconstructed.face_ids});
+        let mut authored: SurfaceSet = value_codec::from_value(payload).unwrap();
+        let actual = tessellate_surface_set(&authored, 3).unwrap();
+        let legacy = tessellate_patches(&reconstructed, 3).unwrap();
+        assert_eq!(actual.built.mesh.positions, legacy.built.mesh.positions);
+        assert_eq!(actual.built.mesh.indices, legacy.built.mesh.indices);
+        assert_eq!(actual.face_ids, legacy.face_ids);
         assert!(actual.built.report.closed);
-        assert!((actual.built.report.signed_volume_mm3-8.).abs()<1e-9);
-        authored.face_ids.pop();assert!(tessellate_surface_set(&authored,3).is_err());
-        assert!(tessellate_surface_set(&authored,0).is_err());
+        assert!((actual.built.report.signed_volume_mm3 - 8.).abs() < 1e-9);
+        authored.face_ids.pop();
+        assert!(tessellate_surface_set(&authored, 3).is_err());
+        assert!(tessellate_surface_set(&authored, 0).is_err());
     }
     #[test]
     fn exact_nurbs_round_trip() {
@@ -534,7 +556,7 @@ mod tests {
         assert!(output.built.report.closed);
         assert!((output.built.report.signed_volume_mm3 - 8.).abs() < 1e-9);
         assert!(
-            polygon_core::solid::proximity::sample_deviation(&mesh, &output.built.mesh)
+            mesh_query::sample_deviation(&mesh.view(), &output.built.mesh.view())
                 .unwrap()
                 .sampled_max_mm
                 < 1e-9

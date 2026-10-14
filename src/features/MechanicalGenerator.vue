@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
-import { compileModelGraph } from '../services/modelGraphCompiler'
+import { compileRushGraph } from '../services/rushGraphCompiler'
 import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../services/mechanicalGeneratorContract'
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()
@@ -9,7 +9,7 @@ const dialog=ref<HTMLDialogElement|null>(null)
 const kind=ref<'gear'|'planetary_gears'|'thread'>('gear')
 const values=ref<Record<string,number|boolean>>({...GEAR_DEFAULTS})
 const error=ref('')
-const generated=ref<ReturnType<typeof compileModelGraph>|null>(null)
+const generated=ref<ReturnType<typeof compileRushGraph>|null>(null)
 const ru=computed(()=>props.locale==='ru')
 const names:Record<string,[string,string]>={
   teeth:['Число зубьев','Teeth'],module:['Модуль, мм','Module, mm'],pressure_angle:['Угол давления, °','Pressure angle, °'],thickness:['Толщина, мм','Thickness, mm'],bore:['Отверстие, мм','Bore diameter, mm'],backlash:['Боковой зазор на шестерню, мм','Backlash per gear, mm'],clearance:['Зазор, мм','Clearance, mm'],internal:['Внутренний вариант','Internal'],rim_width:['Толщина обода, мм','Rim width, mm'],flank_segments:['Сегменты боковой линии зуба','Flank segments'],sun_teeth:['Зубья солнечной шестерни','Sun teeth'],planet_teeth:['Зубья сателлита','Planet teeth'],planet_count:['Число сателлитов','Planets'],carrier_angle:['Поворот водила, °','Carrier angle, °'],diameter:['Диаметр резьбы, мм','Thread diameter, mm'],pitch:['Шаг резьбы, мм','Thread pitch, mm'],length:['Длина, мм','Length, mm'],wall:['Стенка втулки, мм','Sleeve wall, mm'],starts:['Число заходов','Starts'],left_handed:['Левая резьба','Left handed'],segments_per_turn:['Сегменты на оборот','Segments per turn'],
@@ -20,13 +20,13 @@ watch(values,()=>{generated.value=null;error.value=''},{deep:true})
 watch(()=>props.open,async open=>{await nextTick();if(open&&!dialog.value?.open)dialog.value?.showModal();else if(!open&&dialog.value?.open)dialog.value.close()})
 function generate(){
   error.value=''
-  try {generated.value=compileModelGraph(createMechanicalDocument({kind:kind.value,...values.value}))}
+  try {generated.value=compileRushGraph(createMechanicalDocument({kind:kind.value,...values.value}))}
   catch(e){generated.value=null;error.value=e instanceof Error?e.message:String(e)}
 }
 function download(){
   if(!generated.value)return
   const url=URL.createObjectURL(new Blob([stringifyMeshJson(generated.value.document, 2)],{type:'application/json'}))
-  const a=document.createElement('a');a.href=url;a.download=`${kind.value}.modelgraph.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const a=document.createElement('a');a.href=url;a.download=`${kind.value}.rush.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function openEditor(save:boolean){
   if(!generated.value)return
@@ -53,7 +53,7 @@ function openEditor(save:boolean){
       </form>
       <section v-if="generated" class="generated" aria-live="polite">
         <p>{{ru?'Модель создана. Открытие заменит текущий текст в редакторе.':'Model generated. Opening it replaces the current editor text.'}}</p>
-        <div class="actions"><button type="button" @click="download">{{ru?'Скачать ModelGraph':'Download ModelGraph'}}</button><button type="button" @click="openEditor(true)">{{ru?'Скачать текущую и открыть':'Save current and open'}}</button><button class="primary" type="button" @click="openEditor(false)">{{ru?'Открыть в редакторе':'Open in editor'}}</button></div>
+        <div class="actions"><button type="button" @click="download">{{ru?'Скачать RushGraph':'Download RushGraph'}}</button><button type="button" @click="openEditor(true)">{{ru?'Скачать текущую и открыть':'Save current and open'}}</button><button class="primary" type="button" @click="openEditor(false)">{{ru?'Открыть в редакторе':'Open in editor'}}</button></div>
       </section>
     </dialog>
   </Teleport>

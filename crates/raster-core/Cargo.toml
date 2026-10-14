@@ -7,7 +7,7 @@ publish.workspace = true
 
 [dependencies]
 wgpu.workspace = true
-gpu-compute = { path = "../gpu-compute" }
+gpu-compute = { workspace = true }
 
 [dev-dependencies]
 # WGSL validation for the shipped shaders. The version tracks the wgpu 30 line

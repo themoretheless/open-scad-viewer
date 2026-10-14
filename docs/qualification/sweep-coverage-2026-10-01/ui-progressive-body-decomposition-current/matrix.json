@@ -1,0 +1,58 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T23:33:07.458Z",
+  "scope": "Finite constructor-owned progressive body boundary UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "81e22eb732a9dad8bb76d6b729c33c4dd9db350203fa806e61143840f22b7ec0",
+  "artifactProvenance": {
+    "sha256": "81e22eb732a9dad8bb76d6b729c33c4dd9db350203fa806e61143840f22b7ec0",
+    "byteLength": 10970819,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-Bj56YPqH.js"
+    ]
+  },
+  "appSourceSha256": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+  "distIndexSha256": "e7c50fa78e9ed6b7d9b65a522e437607cdb33b83c7b5ebe1705fe084dc478e5b",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "progressive-hollow-boundary.r",
+      "sourceSha256": "3b1dafa530d07e8f4cac0c58620001f578e406378f0c3366e68e949b7de4d092",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "nonzero-small-bound-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "constructor-owned-complete-body-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "body-boundary-strict-refusal-and-restoration",
+          "status": "passed"
+        }
+      ],
+      "pageErrors": [],
+      "status": "failed",
+      "viewportEvidence": [],
+      "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Закрыть боковую панель', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" data-v-646926a1=\"\" class=\"dock-close\" title=\"Закрыть боковую панель\" aria-label=\"Закрыть боковую панель\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div role=\"alert\" class=\"no-gpu\" data-v-646926a1=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div role=\"alert\" class=\"no-gpu\" data-v-646926a1=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div role=\"alert\" class=\"no-gpu\" data-v-646926a1=\"\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+      "bodyText": "OpenSCAD Viewer\nsweep-matrix.r\nSolid\nMesh\nКоманды\nCtrl K\nЭкспорт\nПоделиться\n?\nRU\nТема\nКак в системе\nТёмная\nСветлая\nNord\nSolarized\nVR\nСобрать\nАвто\nВ Solid\nПримеры\nГенераторы\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n▾\n13\n14\n15\n16\n17\n18\n// @rush/1\n// Complete boundary error for this straight source; global embedding is separate.\na = line_curve(start: [0,0,0],end: [2mm,0,0])\nb = line_curve(start: [2mm,0,0],end: [2mm,2mm,0])\nc = line_curve(start: [2mm,2mm,0],end: [0,2mm,0])\nd = line_curve(start: [0,2mm,0],end: [0,0,0])\nh0 = line_curve(start: [0.5mm,0.5mm,0],end: [0.5mm,1.5mm,0])\nh1 = line_curve(start: [0.5mm,1.5mm,0],end: [1.5mm,1.5mm,0])\nh2 = line_curve(start: [1.5mm,1.5mm,0],end: [1.5mm,0.5mm,0])\nh3 = line_curve(start: [1.5mm,0.5mm,0],end: [0.5mm,0.5mm,0])\npath = line_curve(start: [0,0,0],end: [0,0,10mm])\nshow brep_progressive_sweep([[a,b,c,d],[h0,h1,h2,h3]],path,\n orientation: \"rmf\",normal: [1,0,0],\n scale: {degree: 1,knots: [0,0,1,1],values: [1,1],weights: [1,1]},\n twist: {degree: 1,knots: [0,0,1,1],values: [0deg,0deg],weights: [1,1]},\n initial_sections: 3,max_sections: 3,max_deviation: 0.01mm\n).brep_tessellate(4)\n\n\nОбъекты 1\nТреугольники 48\nОбъём 30\nПлощадь 126\nГотово · 73 ms\nКлетка\nmm\ncm\nm\nin\nМатериал\nВид\nИзометрия\nСпереди\nСзади\nСлева\nСправа\nСверху\nСнизу\nНепрерывная ошибка границы sweep-тела: доказана · оценка ≈ 1.785e-13 mm\nFailed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists.\nПовторить запуск 3D\nX\nY\nZ\nTOP\nFRONT\nRIGHT\nBK\nL\nB\nISO\nСцена\n1\n⌄\nМЕШИ\n1\nОбъект 1\n48 тр.\nEnter выбрать · / фокус · . изолировать · H видимость\nКлик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус\nCPU · SVG\nManifold\nSolid\nPlasticity-like CAD\n↶\n↷\nМышь\nИнструменты\n?\nКоманда…\nCtrl K\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nНаведение\nВыбор\nПредпросмотр\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n120 FPS · 8.3 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб\nWebGPU отключён. Работа продолжена на CPU; можно сохранить проект.\n×"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "819ff268370b969b65f757ea122a1e575c842a278509ea83e95b238317b53de4",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "942dfbfdada583b9c675af5f8faeee9885a6655c369c41b79a1a0bed54bee836",
+    "src/features/DirectModeler.vue": "5b5338e291bcca843020a3686f67557444e0d1d3785afea963ff0d56e0874f63",
+    "src/generated/geometry-kernels/bytes.ts": "e6e0c6a36a55155e62c03353d2f26131c3c3e0995572d3979c14f0250276b0bb"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false
+}

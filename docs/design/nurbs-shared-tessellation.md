@@ -1,0 +1,11 @@
+# Согласованная тесселяция общих границ патчей
+
+`shared_tessellation::tessellate(surfaces,seams,segments,tolerance,max_cells,max_agreement_cells)` создаёт один indexed mesh для полных прямоугольных NURBS charts. Seam задаёт два patch IDs, natural side U0/U1/V0/V1 и направление. Нормализованное affine/reversed correspondence явно является частью входа. Тримированные faces и автоматический поиск соответствий относятся к отдельным операциям.
+
+Перед welding проводится full-interval original edge/pcurve lift agreement на обеих исходных поверхностях. Unresolved/Mismatch либо исчерпание общего seam budget возвращают report без mesh. Общая uniform strip grid исключает T-junction на заданных seam, включая разные исходные knots/degrees и reversed correspondence. Union-find канонизирует каждый seam node; все соседние треугольники ссылаются на единственный vertex index. Источники не меняются.
+
+Каждый исходный parameter rectangle полностью ограничивается outward surface hull. Каждый треугольник ограничивается hull фактически авторенных canonical vertices; box-distance upper покрывает corresponding-position и symmetric Hausdorff error в пределах source cell, включая смещение weld. Оценка консервативна: coarse planar mesh может не получить малый tolerance certificate даже при фактическом нулевом отклонении. Report возвращает error_upper и within_tolerance; отсутствие регулярности или правильной triangle orientation не доказывается этим positional report.
+
+Limits: 1..16 surfaces, <=64 seams, 1..128 segments по каждой оси, finite positive tolerance, 1..100000 source cells и 1..1000000 agreement cells; исходный grid должен помещаться в cell budget. Один original surface имеет <=32 controls по оси; работа rectangle enclosure ограничена этим input bound. Счётчик cells считает source rectangles, agreement_cells все проверки seam. Потеря различимости grid points и невалидные patch addresses дают ошибки.
+
+3 независимых теста: соседние поверхности с разными V knots имеют ровно 9 общих indexed vertices при segments=8 (153 vertices вместо 162), без T-junction; reversed seam также welds correctly; mismatch не создаёт mesh; недостаточная geometric accuracy не выдаёт сертификат; invalid resolution и work budget отклоняются. Источники сохраняются, bounds и counters проверены.

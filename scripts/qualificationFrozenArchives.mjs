@@ -381,7 +381,7 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'docs/qualification/semantic-manifold-g1-plan-v83.json': '1c89ddec3d8ad340887a1add39a091e00f3a1b8ec05473344199d68cf6416f96',
   'docs/qualification/g0-v66-g1-v83-refreeze-status-v1.json': '2c79babc2ab5c5fe7e547fe81360b07ef781489c323f927c4967bc1bf78ee505',
   'docs/qualification/g0-v66-g1-v83-refreeze-review.md': '1b4d2c459677b1c8a2d1bfe4521d0549af183c4cf2b9fc95db8e25ce8bd1ebb9',
-  'scripts/refresh-qualification-fingerprints-v75-v92.mjs': '61a91644030770dfc992e8e43426539a34c5f847409e9a6dfc0bbf3ee12249b0',
+  'scripts/refresh-qualification-fingerprints-v75-v92.mjs': '93ed8092fa58ad496afc5a55fa95ccb88f509d414ce548177f5d596a6e9dddca',
   'docs/qualification/own-rust-cad-v58.json': 'b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c',
   'docs/qualification/g0-toolchain-fingerprints-v75.json': '33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424',
   'docs/qualification/semantic-manifold-g1-plan-v92.json': '61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb',

@@ -1,0 +1,184 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-05T14:25:28.111Z",
+  "scope": "Finite retained-miter UI scenarios;  held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "nativeCancelProbe": false,
+  "geometryWasmSha256": "45d7d527e0a3d44775025b8b7ee1a221291d39b36fe1a3f202902cb4296da44f",
+  "artifactProvenance": {
+    "sha256": "45d7d527e0a3d44775025b8b7ee1a221291d39b36fe1a3f202902cb4296da44f",
+    "byteLength": 11105035,
+    "sourcePublicDistVerified": true,
+    "geometryWorkerFiles": [
+      "geometry.worker-DRywAB3l.js"
+    ]
+  },
+  "appSourceSha256": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+  "distIndexSha256": "3ff8453ca444f2c778eaf43bea41edfbbe6681c6fc956b84ad9353cd9009b5a5",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-g1-profile-frame-guide-affine.r",
+      "sourceSha256": "0323d2e94bdd7e260a79a0bf1a33e2019ef0a5023e2e23b675c0b4479c32307c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "independent-G1-with-unproved-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ? (4) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈2.92155e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 6,
+        "shells": 1,
+        "geometrySha256": "62b3ab8f5b67575e9b07486aff9bb114b34496b40861ce8f53a35b21788486c9",
+        "renderer": "cpu-svg"
+      },
+      "refusalMessage": "Progressive miter profile tangent regularity could not be proved",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    },
+    {
+      "viewport": {
+        "width": 600,
+        "height": 1000
+      },
+      "file": "miter-g1-profile-frame-guide-affine.r",
+      "sourceSha256": "0323d2e94bdd7e260a79a0bf1a33e2019ef0a5023e2e23b675c0b4479c32307c",
+      "assertions": [
+        {
+          "case": "build",
+          "status": "passed"
+        },
+        {
+          "case": "scoped-profile-smoothness-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "independent-G1-with-unproved-G2",
+          "status": "passed"
+        },
+        {
+          "case": "continuous-boundary-presentation",
+          "status": "passed"
+        },
+        {
+          "case": "build-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-cancellation",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "source-change",
+          "status": "passed",
+          "fault": "held worker dispatch"
+        },
+        {
+          "case": "solid-publication",
+          "status": "passed"
+        },
+        {
+          "case": "restore",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-build-refusal",
+          "status": "passed"
+        },
+        {
+          "case": "invalid-path-solid-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        },
+        {
+          "case": "bounded-work-refusal",
+          "status": "passed",
+          "retainedBodyPreserved": true
+        }
+      ],
+      "pageErrors": [],
+      "status": "passed",
+      "viewportEvidence": [
+        "Геометрия тела: доказана · Непрерывная ошибка границы: доказана · Регулярность профиля / стен: ✓ / ✓  · G1 / G2 стыков профиля: ✓ / ? (4) · Стыки вдоль пути: C0  · Стыки крышек: C0 · Оценка ошибки границы: ≈2.92155e-14 mm  / 0.0100000 mm  · в допуске"
+      ],
+      "solid": {
+        "faces": 6,
+        "shells": 1,
+        "geometrySha256": "62b3ab8f5b67575e9b07486aff9bb114b34496b40861ce8f53a35b21788486c9",
+        "renderer": "cpu-svg"
+      },
+      "refusalMessage": "Progressive miter profile tangent regularity could not be proved",
+      "resourceRefusalMessage": "Progressive miter refinement/phase budget not met within the body face budget"
+    }
+  ],
+  "evidenceOnly": false,
+  "sourceHashes": {
+    "src/App.vue": "9fd6b933919d434a6c32994d850c1ddcbd707cb706e95c5971cf933edffe1109",
+    "src/services/sweepRetainedCorrespondence.ts": "fc65d2a6255d9e9cec0daada25e82e145e61936d5b38e24487955228abb41675",
+    "src/services/geometry/brep.ts": "9657403498e225abd5b79fbdd1c52197158022ef0fef77f42a79c9bcc1c9e360",
+    "src/features/DirectModeler.vue": "793c1a5bd1e0dd95ee219663cfaedb73ee5ed4a389b928e36f41b0cac873d0e2",
+    "src/generated/geometry-kernels/bytes.ts": "78858bb6f2c0d6476aa049ab39dd9ce7e41b4dc797119ee53b9c54c365323f60",
+    "scripts/check-sweep-miter-matrix-browser.mjs": "08c255a29b56117d1e7a6439b211be07c4a86c68e7d2c7a1dc339ae066deb081",
+    "scripts/sweep-native-cancel-probe.mjs": "3a85f609d08259a51e1ef9dd5cd1405614d25e08c02cab4ea2a0b86e43759018"
+  },
+  "browser": "151.0.7922.34",
+  "headed": false,
+  "passed": true
+}

@@ -36,7 +36,7 @@ pub fn install(
     let Ok(pipeline) = RetainedPipeline::new(device, format, samples.max(1)) else {
         return false;
     };
-    let budget = 64 * 1024 * 1024;
+    let budget = crate::memory_budget::MAX_CACHE_BYTES;
     renderer.callback_resources.insert(Resources {
         pipeline,
         cache: GeometryCache::new(budget, 8192),
@@ -86,12 +86,18 @@ struct FrameAdmission {
 /// rewritten with `Painter::set` after subsequent retained paints are appended.
 /// Curvex canvas drawing follows this ordering contract.
 pub fn paint(painter: &egui::Painter, mesh: Arc<MeshData>, mut camera: Camera) -> bool {
-    let Some(config) = painter
+    let Some(mut config) = painter
         .ctx()
         .data(|data| data.get_temp::<Config>(egui::Id::new(CONTEXT_KEY)))
     else {
         return false;
     };
+    // Keep a small transient frame allowance; larger shapes use the ordinary
+    // egui fallback while available RAM is low. Upload admission stays stable
+    // across paint/prepare so a changing sample cannot invalidate a queued draw.
+    config.budget = config
+        .budget
+        .min(crate::memory_budget::retained_cache_budget().max(16 * 1024 * 1024));
     if mesh.byte_size() > config.budget || mesh.byte_size() > config.max_buffer {
         return false;
     }
@@ -194,6 +200,9 @@ impl egui_wgpu::CallbackTrait for Draw {
             .get_mut::<Resources>()
             .expect("retained renderer lifecycle");
         if state.frame != self.frame {
+            state
+                .cache
+                .set_retention_budget(crate::memory_budget::retained_cache_budget());
             state.cameras.clear();
             state.frame = self.frame;
         }

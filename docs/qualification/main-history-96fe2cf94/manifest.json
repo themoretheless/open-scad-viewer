@@ -1,0 +1,107 @@
+{
+  "sourceCommit": "96fe2cf94a510efb707fc858df5132ccd0f0d0a9",
+  "qualificationClaim": "none",
+  "reason": "Preserve colliding upstream historical versions byte-for-byte under their source branch identity; canonical prior integration records remain immutable.",
+  "files": [
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v68.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-toolchain-fingerprints-v68.json",
+      "sha256": "36cbec7bef2804e579ad319633b11b10c7d0f2236f20be8a5d8caa7fbb756a01"
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v69.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-toolchain-fingerprints-v69.json",
+      "sha256": "edf522b71fc95dca308701d9207a78f89534606d9ee9331d66283b4ad356ef69"
+    },
+    {
+      "originalPath": "docs/qualification/g0-toolchain-fingerprints-v70.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-toolchain-fingerprints-v70.json",
+      "sha256": "c3e5dc7942a943e810a3823f931d9f1b38d4e0caf5e1a8dde99831f9bebaa485"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v68-g1-v85-refreeze-review.md",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v68-g1-v85-refreeze-review.md",
+      "sha256": "01a8a928f07bc5d17138c82a43e1fee40b387c124e67b078a0c22d44a9f76e4a"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v68-g1-v85-refreeze-status-v1.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v68-g1-v85-refreeze-status-v1.json",
+      "sha256": "f05080e04a4232438e0e96e646b54aaae0fcd3ae05fd36dc3a80e3cade71731b"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v69-g1-v86-refreeze-review.md",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v69-g1-v86-refreeze-review.md",
+      "sha256": "b2273d8cebd5deb0c43cb92967d70492898221a4b847b5489cc92fabd52a9322"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v69-g1-v86-refreeze-status-v1.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v69-g1-v86-refreeze-status-v1.json",
+      "sha256": "fb9fd376c8c8e35749a157b956d9838fcf523696a58790ca4b1bec862221af27"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v70-g1-v87-refreeze-review.md",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v70-g1-v87-refreeze-review.md",
+      "sha256": "e3783cd643da820d7b6a9c7bef2162a2129c9cb06ff648ffc9fd9e8836329784"
+    },
+    {
+      "originalPath": "docs/qualification/g0-v70-g1-v87-refreeze-status-v1.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/g0-v70-g1-v87-refreeze-status-v1.json",
+      "sha256": "aef9f74950ce06ecf89156259355e495c014b2430afb5d881b74145adce17632"
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v51.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/own-rust-cad-v51.json",
+      "sha256": "46fe7ea1471ed5c9bc4932c0feb68b5312b20101d14023b7d86a1d54b5cf4588"
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v52.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/own-rust-cad-v52.json",
+      "sha256": "c9385e2d89e01b7b0bb987c8060eb14e421276cae2cca6794a9ae2b78bdbde46"
+    },
+    {
+      "originalPath": "docs/qualification/own-rust-cad-v53.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/own-rust-cad-v53.json",
+      "sha256": "de7a1bafd42b93b2ed1bb829469f4815e5d1ebf88ded02388a06c7721fc20633"
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v85.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/semantic-manifold-g1-plan-v85.json",
+      "sha256": "9ee430296e5052293100d79c3c0aba73f17c1cb68c41f4f41ef4ce7ec1b1683b"
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v86.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/semantic-manifold-g1-plan-v86.json",
+      "sha256": "e850ea166074a5b34473aafd928536c8c5fda9e79ceb9334cc34bb5b179ab11a"
+    },
+    {
+      "originalPath": "docs/qualification/semantic-manifold-g1-plan-v87.json",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/docs/qualification/semantic-manifold-g1-plan-v87.json",
+      "sha256": "f298106faa2f9e5cf1b62c6bb64055f74645351c42a2d2dba67b59c727168ed6"
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v68-v85.mjs",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/scripts/refresh-qualification-fingerprints-v68-v85.mjs",
+      "sha256": "892dc4369663fcc084bd82d8c7277aa4a23e80605a169ab0360045b758f8875a"
+    },
+    {
+      "originalPath": "scripts/refresh-qualification-fingerprints-v69-v86.mjs",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/scripts/refresh-qualification-fingerprints-v69-v86.mjs",
+      "sha256": "e2dc9b29468f7bc954aaa1aca7f81d4de683d765326c0a8e96b36e11be4fbdd5"
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v51.mjs",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/scripts/release-own-rust-v51.mjs",
+      "sha256": "95db2abf5a136d2b39cec94c336fc0f53a3a929d5574d01cfdbbedac36fe67e8"
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v52.mjs",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/scripts/release-own-rust-v52.mjs",
+      "sha256": "2bc33637902363d49eab4a514e907e19f684e6aa654143d404a125a08ae3ae6d"
+    },
+    {
+      "originalPath": "scripts/release-own-rust-v53.mjs",
+      "preservedPath": "docs/qualification/main-history-96fe2cf94/scripts/release-own-rust-v53.mjs",
+      "sha256": "823cfcc8615153dc5b7cf4baf224a4f262f7a1c52c736ca1aac48c7d852a92be"
+    }
+  ]
+}

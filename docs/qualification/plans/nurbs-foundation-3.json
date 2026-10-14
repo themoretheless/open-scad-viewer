@@ -28,7 +28,7 @@
       "complete unresolved normal-cone localization to rational Bezier knot cells",
       "strictly monotone positive rational and contiguous piecewise maps with semantic composition and inverse interval chains",
       "bounded curve least-squares fitting and tensor degree-one surface interpolation or approximate-fit reports",
-      "rank conditioning resource and no-fitted-to-exact-promotion reports through Rust WASM TypeScript and ModelGraph"
+      "rank conditioning resource and no-fitted-to-exact-promotion reports through Rust WASM TypeScript and RushGraph"
     ],
     "excluded":[
       "general nonlinear surface projection uniqueness after terminal-box overlap",
@@ -49,7 +49,7 @@
     {"id":"CA12-NF3-PRODUCT","expected":"Complete","blocksQualification":true}
   ],
   "bindings":{
-    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/lib.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts","scripts/nurbs-foundation-3-oracle.py"],
+    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/lib.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/rushGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts","scripts/nurbs-foundation-3-oracle.py"],
     "registry":"src/services/geometry/brepCapability.ts",
     "evidenceJson":"docs/qualification/nurbs-foundation-3-evidence-v1.json"
   },

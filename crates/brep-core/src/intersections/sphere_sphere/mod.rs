@@ -36,3 +36,5 @@ mod intersect_sphere_sphere;
 mod tests;
 pub use sphere_patch_circle::*;
 pub use intersect_sphere_sphere::*;
+
+use std::f64::consts::TAU;

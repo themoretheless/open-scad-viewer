@@ -2,7 +2,7 @@
 //!
 //! Section estimates: area, centroid, second moments, section moduli,
 //! a scanline wall-width probe, and σ = Mc/I (+ N/A). Not a surface kernel,
-//! not a subdivision cage, not gear/thread generation (those live in ModelGraph).
+//! not a subdivision cage, not gear/thread generation (those live in RushGraph).
 //! The separate `truss` module solves bounded linear pin-jointed bar systems.
 //! Neither module is a print process or a material certificate. The host (CAD)
 //! sections a mesh; this crate never holds CAD handles. Coordinates are
@@ -20,7 +20,12 @@
 pub const MAX_POINTS: usize = 16_384;
 
 pub mod bonded_solid;
+pub mod buckling;
+pub mod combos;
+pub mod diagnostics;
+pub mod frame;
 pub mod print_strength;
+pub mod section;
 pub mod thermal_strength;
 pub mod truss;
 pub mod truss_loads;
@@ -28,6 +33,16 @@ pub mod truss_loads;
 pub use math_core::{Error, Result};
 use math_core::{cross2, sub2};
 pub use planar_geometry::{LayerSection, MAX_LAYERS};
+
+/// How member mass is distributed in modal analysis.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MassModel {
+    /// Half of each member's mass goes to each end's translational DOFs.
+    Lumped,
+    /// Full shape-function mass coupling (rotational inertia included for
+    /// frame members; isotropic ρAL/6·[[2I,I],[I,2I]] for truss bars).
+    Consistent,
+}
 
 /// Bending moments about the section x/y axes and optional axial force.
 #[derive(Clone, Copy, Debug, PartialEq)]

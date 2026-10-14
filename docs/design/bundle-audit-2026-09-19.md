@@ -1,6 +1,6 @@
 # Bundle attribution: 2026-09-19
 
-Latest follow-up: [ModelGraph runtime/schema separation](modelgraph-runtime-split-2026-09-19.md)
+Latest follow-up: [RushGraph runtime/schema separation](rush-runtime-split-2026-09-19.md)
 removes another 152,084 delivery bytes, preserving compiler hashes, MCP schemas
 and browser workflows. The current normal build is 5,782,657 bytes; the
 5,600,000-byte aggregate budget remains unmet.
@@ -42,7 +42,7 @@ Largest repeated application sources include `openscadParser.ts`,
 `openscadSemanticLowerer.ts`, `openScadImport.ts` and
 `semanticProgramValidator.ts`. They occur in the geometry worker and in the
 main application's parser/build-engine chunks. Zod occurs in both
-`modelGraphNurbs` and `modelgraph-text` chunks. HarfBuzz JS glue remains repeated;
+`rushGraphNurbs` and `rush-frontend` chunks. HarfBuzz JS glue remains repeated;
 its much larger packed WASM payload is already shared.
 
 ## Architecture finding

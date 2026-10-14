@@ -1,7 +1,7 @@
 {
   "id": "own-rust-cad-v22",
   "successorOf": "docs/qualification/own-rust-cad-v21.json",
-  "previousSha256": "e309d0b9381d396536926bb3446ad95549c7ebb7cd091e5af81be45b744a270c",
+  "previousSha256": "0d6d015dba4fe6e819e805d9aab0ba86d4439b9364f21d586a53d1003c36f002",
   "recordedAt": "2026-09-29",
   "purpose": "Append-only current-byte fingerprint re-issued for the G0 v30 / G1 v47 re-freeze. Drift since G0 v29 / G1 v46: the own-Rust geometry kernel was rebuilt again from current crate sources (continued feature-branch work including exact cylinder end-cap push/pull, with further changes across brep-core, geometry-bridge, nurbs-core and polygon-core), and scripts/verify-dist.mjs had three size budgets bumped per its documented convention (DirectModeler, mainSolid.worker and totalBudget) after audited bundle growth. Notices and lockfiles are byte-identical to own-rust-cad-v21, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
   "qualificationClaim": "none",

@@ -1,0 +1,11 @@
+[package]
+name = "manifold-ops"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+manifold-core = { workspace = true }
+polygon-core = { workspace = true, features = ["codec"] }
+math-core = { workspace = true }

@@ -488,3 +488,5 @@ pub(super) fn krawczyk_cc(
         Ok(None)
     }
 }
+
+pub(crate) fn coedge_trim_report(curve:[f64;2],pcurve:[f64;2],lifts:[[i32;2];2])->brep_topology::CoedgeTrim { brep_topology::CoedgeTrim {curve_parameter:curve,pcurve_parameter:pcurve,periodic_lift:lifts} }

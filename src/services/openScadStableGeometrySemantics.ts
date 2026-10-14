@@ -7,14 +7,10 @@
  * Manifold's interior-division count).
  */
 
+import { languageRequest } from './languages/kernel'
 import type { RangeValue } from './openscadCompiler'
 import {
   OPENSCAD_2021_GEOMETRY_EPSILON,
-  OPENSCAD_DEFAULT_FA,
-  OPENSCAD_DEFAULT_FN,
-  OPENSCAD_DEFAULT_FS,
-  OPENSCAD_MIN_FA,
-  OPENSCAD_MIN_FS,
   resolveOpenScadSweepFragments,
   type OpenScadStableModuleSemanticsContext,
 } from './openScadStableModuleSemantics'
@@ -120,7 +116,8 @@ export interface OpenScadChildrenSelectionInput {
 
 export interface OpenScadResizeResolutionInput {
   readonly dimension: 2 | 3
-  readonly extents: readonly number[]
+  readonly extents?: readonly number[]
+  readonly bounds?: readonly { readonly min: readonly number[]; readonly max: readonly number[] }[]
   readonly newsize: unknown
   readonly auto?: unknown
 }

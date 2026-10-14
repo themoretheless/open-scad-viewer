@@ -27,7 +27,7 @@
       "seams wrap counts poles singularities and multiple roots or components",
       "exact or interval parameter boxes geometry enclosures orientation and ToleranceContext evidence",
       "nested and periodic rational composition materialization where admitted",
-      "Rust WASM TypeScript ModelGraph and MCP product queries"
+      "Rust WASM TypeScript RushGraph and MCP product queries"
     ],
     "excluded": [
       "general surface-surface intersection",
@@ -49,8 +49,8 @@
       "crates/nurbs-core/src/lib.rs",
       "crates/nurbs-core/src/tests.rs",
       "src/services/nurbsFoundation.ts",
-      "src/services/modelGraphNurbsKernel.ts",
-      "src/mcp/modelGraphNurbsTools.ts",
+      "src/services/rushGraphNurbsKernel.ts",
+      "src/mcp/rushGraphNurbsTools.ts",
       "tests/nurbsFoundation.test.ts",
       "scripts/nurbs-foundation-5-oracle.py"
     ],

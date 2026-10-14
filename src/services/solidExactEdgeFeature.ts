@@ -1,5 +1,5 @@
 import type {DirectBody} from './directModeling'
-import {exactConvexChamfer,exactAnnularFillet,exactLayeredPrismFillet,exactSimplePrismFillet,exactVariableRadiusFillet,exactValence3CornerBlend,tessellateNurbsBrep} from './geometry/brep'
+import {constantFilletFamily,exactConvexChamfer,exactAnnularFillet,exactLayeredPrismFillet,exactSimplePrismFillet,exactVariableRadiusFillet,exactValence3CornerBlend,tessellateNurbsBrep} from './geometry/brep'
 import {assertBrepCapabilityAllowsTopology} from './geometry/brepCapability'
 import {selectedBrepStraightEdge,solidTopology} from './directSolidTools'
 
@@ -16,17 +16,8 @@ export function solidExactEdgeFeature(body:DirectBody,displayEdges:number[],size
   if(!edge)throw Error('Select an existing straight edge before applying the feature.')
   return selectedBrepStraightEdge(body,[edge.a,edge.b])
  })
- const annular=kind==='fillet'&&fillet.mode==='constant'&&edges.some(i=>body.brep!.edges[i].curve.degree>1)
- let layered=false
- if(kind==='fillet'&&fillet.mode==='constant'&&!annular&&edges.length){
-  const model=body.brep,[a,b]=model.edges[edges[0]].vertices.map(i=>model.vertices[i].point)
-  const d=b.map((x,i)=>x-a[i]),length=Math.hypot(...d)
-  if(length>0){
-   const levels=model.vertices.map(v=>v.point.reduce((sum,x,i)=>sum+(x-a[i])*d[i]/length,0))
-   const low=Math.min(...levels),high=Math.max(...levels),tol=model.toleranceMm*16
-   layered=levels.some(z=>z>low+tol&&z<high-tol)
-  }
- }
+ const family=kind==='fillet'&&fillet.mode==='constant'?constantFilletFamily(body.brep,edges):'simple'
+ const annular=family==='annular',layered=family==='layered'
  const capability=kind==='chamfer'?'exact-convex-straight-edge-chamfer/1':fillet.mode==='variable'?'exact-variable-radius-fillet/1':fillet.mode==='corner'?'exact-valence3-corner-blend/1':annular?'exact-annular-circular-edge-fillet/1':layered?'exact-layered-prism-edge-fillet/1':'exact-simple-prism-convex-edge-fillet/1'
  assertBrepCapabilityAllowsTopology(capability)
  const result=kind==='chamfer'?exactConvexChamfer(body.brep,edges,size):fillet.mode==='variable'?exactVariableRadiusFillet(body.brep,edges,[[size,fillet.endRadius]]):fillet.mode==='corner'?exactValence3CornerBlend(body.brep,edges,size):annular?exactAnnularFillet(body.brep,edges,size):layered?exactLayeredPrismFillet(body.brep,edges,size):exactSimplePrismFillet(body.brep,edges,size)

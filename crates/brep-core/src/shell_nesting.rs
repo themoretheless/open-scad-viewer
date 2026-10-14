@@ -38,6 +38,28 @@ pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f
     let total_pairs = n*(n-1)/2;
     let mut out = Report { pairs: Vec::new(), total_pairs, cells: 0, domain_cells: 0, parents: None, roles_consistent: None };
     let shells = (0..n).map(|i| solid_audit::isolated_outward_shell(model,i,false)).collect::<Result<Vec<_>>>()?;
+    // Index only this invocation's fresh complete proof. Keep the exact
+    // separation predicates; avoid rescanning every record for every face pair.
+    let separation_index = boundary.filter(|proof| proof.proven
+        && proof.intersections.pairs.all_pairs_classified
+        && proof.intersections.pairs.next_pair.is_none()).map(|proof| {
+        let pairs = &proof.intersections.pairs;
+        let individual = pairs.pairs.iter()
+            .filter(|p| p.reason == "pair-disjoint" && p.boundary.is_none())
+            .map(|p| (p.faces[0].min(p.faces[1]), p.faces[0].max(p.faces[1])))
+            .collect::<std::collections::HashSet<_>>();
+        let mut groups = std::collections::HashMap::<usize, Vec<_>>::new();
+        for group in &pairs.disjoint_groups {
+            if group.axis < 3 && group.range[0] > group.face
+                && if group.first_before_range {
+                    group.first_bounds[group.axis][1] < group.range_bounds[group.axis][0]
+                } else { group.range_bounds[group.axis][1] < group.first_bounds[group.axis][0] }
+            {
+                groups.entry(group.face).or_default().push(group.range);
+            }
+        }
+        (individual, groups)
+    });
     let mut inside = vec![vec![false;n];n];
     for a in 0..n { for b in a+1..n {
         if out.pairs.len() == max_pairs || max_cells-out.cells < 2 || max_domain_cells-out.domain_cells < 2 {
@@ -46,17 +68,18 @@ pub(crate) fn inspect_with_boundary(model:&Model,tolerance_mm:f64,tolerance_uv:f
         let remaining = total_pairs-out.pairs.len();
         let pair_cells=((max_cells-out.cells)/remaining).max(2);
         let pair_domains=((max_domain_cells-out.domain_cells)/remaining).max(2);
-        let mut r = shell_relation::inspect(&shells[a],&shells[b],tolerance_mm,tolerance_uv,pair_cells,pair_domains)?;
-        let separated=boundary.is_some_and(|proof|{
-            let pairs=&proof.intersections.pairs;
-            proof.proven && pairs.all_pairs_classified && pairs.next_pair.is_none()
-                && model.shells[a].faces.iter().all(|fa|model.shells[b].faces.iter().all(|fb|
-                    pairs.pairs.iter().any(|p|p.reason=="pair-disjoint" && p.boundary.is_none()
-                        && (p.faces==[fa.face,fb.face] || p.faces==[fb.face,fa.face]))))
+        let separated = separation_index.as_ref().is_some_and(|(individual, groups)| {
+            model.shells[a].faces.iter().all(|fa| model.shells[b].faces.iter().all(|fb| {
+                let first = fa.face.min(fb.face);
+                let second = fa.face.max(fb.face);
+                individual.contains(&(first, second))
+                    || groups.get(&first).is_some_and(|ranges| ranges.iter()
+                        .any(|range| range[0] <= second && second < range[1]))
+            }))
         });
-        if r.reason=="boundary-separation-unproven" && separated {
-            shell_relation::classify_exact_boundary_witnesses(&shells[a],&shells[b],&mut r,tolerance_uv,pair_cells,pair_domains)?;
-        }
+        let r=if separated {
+            shell_relation::inspect_certified_boundaries(&shells[a],&shells[b],tolerance_uv,pair_cells,pair_domains)?
+        } else {shell_relation::inspect(&shells[a],&shells[b],tolerance_mm,tolerance_uv,pair_cells,pair_domains)?};
         out.cells += r.boundary.cells + r.witness_parity.iter().flatten().map(|p|p.cells).sum::<usize>();
         out.domain_cells += r.boundary.domain_cells + r.witness_parity.iter().flatten().map(|p|p.domain_cells).sum::<usize>();
         out.pairs.push(Pair { shells: [a,b], result: r });
