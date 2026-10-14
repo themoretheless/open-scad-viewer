@@ -1,58 +1,58 @@
-name: Native final snapshot and fingerprint verification
+name: Independent merged Rust WASM build
 on:
   push:
     branches: [codex/golden-numeric-audit-20261014]
 permissions:
   contents: read
 jobs:
-  strict-snapshot:
+  wasm-build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: 394e9462d322ec433ffbab400cd1653076fc8b68
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2026-09-16
-      - uses: actions/cache/restore@v4
-        with:
-          path: ~/.cargo/registry
-          key: rust-Linux-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Execute the committed strict 81-case Rush snapshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo test --locked --manifest-path crates/Cargo.toml -p rush-runtime --test emitter_snapshot | tee strict-snapshot.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: final-strict-rush-snapshot
-          path: strict-snapshot.log
-          retention-days: 30
-  fingerprints:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: 394e9462d322ec433ffbab400cd1653076fc8b68
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
-      - run: node scripts/materialize-qualification-kernels.mjs
-      - name: Execute all 31 frozen fingerprint and qualification checks
-        env:
-          VITEST_MAX_WORKERS: '2'
+      - name: Build all packaged WASM from the exact Rust subtree
         shell: bash
         run: |
           set -euo pipefail
-          node node_modules/vitest/vitest.mjs run tests/g0ToolchainFingerprints.test.ts tests/g1GithubActionsQualification.test.ts --maxWorkers 2 | tee fingerprints.log
+          npm run build:geometry 2>&1 | tee linux-wasm-build.log
+      - name: Record source and observed artifact bytes without qualification credit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import {readFileSync,readdirSync,writeFileSync} from 'node:fs'
+          import {createHash} from 'node:crypto'
+          import {execFileSync} from 'node:child_process'
+          const sha=b=>createHash('sha256').update(b).digest('hex')
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim()
+          const scripts=['package.json','package-lock.json','rust-toolchain.toml','crates/Cargo.lock','scripts/build-geometry-kernels.mjs','scripts/build-language-kernel.mjs','scripts/build-photogrammetry.mjs','scripts/build-vr.mjs','scripts/build-wasm-brotli.mjs','scripts/pack-geometry-kernel.mjs','scripts/pack-language-kernel.mjs','scripts/pack-photogrammetry.mjs','scripts/pack-harfbuzz.mjs','scripts/wasm-optimize.mjs','scripts/reproducible-cargo.mjs']
+          const artifacts=readdirSync('public/wasm').filter(p=>p.endsWith('.wasm')).sort().map(p=>{const path='public/wasm/'+p,b=readFileSync(path);return {path,sha256:sha(b),byteLength:b.length}})
+          const report={scope:'Build observation only; zero semantic qualification work or production approval',sourceSha:git('rev-parse','HEAD'),rustSubtree:git('rev-parse','HEAD:crates'),builder:{os:process.platform,arch:process.arch,node:process.version,rustc:execFileSync('rustc',['--version'],{encoding:'utf8'}).trim(),binaryen:JSON.parse(readFileSync('node_modules/binaryen/package.json','utf8')).version},inputs:scripts.map(path=>({path,sha256:sha(readFileSync(path))})),artifacts,buildPipeline:'passed',qualificationCredit:0}
+          writeFileSync('linux-wasm-build.json',JSON.stringify(report,null,2)+'\n')
+          JS
+          tar -czf wasm-artifacts.tar.gz public/wasm src/generated/geometry-kernels/identity.ts src/generated/language-kernel/identity.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: final-source-fingerprint-checks
-          path: fingerprints.log
+          name: independent-merged-wasm-build
+          path: |
+            wasm-artifacts.tar.gz
+            linux-wasm-build.json
+            linux-wasm-build.log
+          if-no-files-found: error
           retention-days: 30
