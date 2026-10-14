@@ -53,6 +53,7 @@ export default defineConfig({
             { name: 'rush-frontend', test: /src[\\/]services[\\/]rushFrontend\.ts$/ },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
+            { name: 'editor-controls', test: /src[\\/](composables[\\/]useEditor(Formatting|Resize)|services[\\/](codeFormat|editorBlocks))\.ts$/ },
             {
               // Direct-modeling helpers are shared by lazy CAD panels; they must
               // not capture the geometry kernel they reference.

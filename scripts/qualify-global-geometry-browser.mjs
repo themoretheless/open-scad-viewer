@@ -9,12 +9,14 @@ import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 const fixturePath=resolve(process.argv[2]??'docs/qualification/global-geometry-2026-10-14/nonplanar-fixtures.json.gz')
 const output=resolve(process.argv[3]??'/tmp/osv-global-browser-qualification.json')
 const bytes=await readFile(fixturePath),json=fixturePath.endsWith('.gz')?gunzipSync(bytes):bytes
-const server=await createServer({configFile:false,root:process.cwd(),server:{host:'127.0.0.1',port:0},logLevel:'warn'})
-server.middlewares.use((req,res,next)=>{
+const serveFixtures=(req,res,next)=>{
  if(req.url==='/global-geometry-fixtures.json'){res.setHeader('Content-Type','application/json');res.end(json);return}
  if(req.url==='/global-geometry-qualification'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Native geometry qualification</title>');return}
  next()
-})
+}
+const server=await createServer({configFile:false,root:process.cwd(),appType:'custom',
+ plugins:[{name:'native-geometry-fixtures',configureServer(server){server.middlewares.use(serveFixtures)}}],
+ server:{host:'127.0.0.1',port:0},logLevel:'warn'})
 await server.listen()
 const {playwright}=await loadQualificationPlaywrightPackage()
 const browser=await playwright.chromium.launch({headless:true,channel:'chromium'})
