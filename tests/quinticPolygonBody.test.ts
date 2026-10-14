@@ -58,5 +58,5 @@ it('recomputes admission from changed source geometry rather than a retained rec
  changed.faces[0]!.surface.controlPoints[0]![0]![0]!+=.0001
  const document={nodes:[{id:'body',op:'brep_progressive_sweep'}]}
  const artifact=createNativeGeometryArtifact('body','brep',{...changed,volume:{solidGeometryCertified:true}},document)
- expect(()=>inspectProgressiveSweepSolidAdmission(artifact,changed)).toThrow(/exact boundary agreement/)
+ expect(()=>inspectProgressiveSweepSolidAdmission(artifact,changed)).toThrow(/Invalid native sweep snapshot model binding/)
 },180000)

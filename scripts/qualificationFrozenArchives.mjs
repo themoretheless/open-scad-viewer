@@ -438,4 +438,13 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'docs/qualification/g0-v74-g1-v91-refreeze-status-v1.json': 'a42ec2d40f42baeed644ae20ec0d4ede34e78f75fccb5d3d1eb5a44385ce8800',
   'docs/qualification/g0-v74-g1-v91-refreeze-review.md': 'b9c3225095f7ce8a6e2a7f13fff90caa1b33a2ebc768a72435b05e16fa1fbaea',
   'scripts/refresh-qualification-fingerprints-v74-v91.mjs': '402809e6bee3f5a21ee1a5c372c1b724b5b806a4eed526f9bf6411abc08a83c1',
+  'docs/qualification/own-rust-cad-v64.json': '60770de4e38b9dbee6a9d10fce5a04757223fd0438168d2a75d4a98167935dba',
+  'docs/qualification/g0-toolchain-fingerprints-v80.json': '1309e975a4ac3ca8c0e031d14d4d9dd2bc8050aad98dedc37c7ca4262d083930',
+  'docs/qualification/semantic-manifold-g1-plan-v97.json': '2ab759b39a9fcc50176180a1d59df569a3ce548dc8c8491256fb0f9a061f1286',
+  'docs/qualification/g0-v80-g1-v97-refreeze-status-v1.json': '6929e04ff8cd00c25d16d749b057ce9c190cd5168aa5505b5c33591fe59727a8',
+  'docs/qualification/g0-v80-g1-v97-refreeze-review.md': 'f4f5aca610783629a4fc9721f3e1b65c7c2988c14adf1028730925e76b20e4da',
+  'scripts/release-own-rust-v64.mjs': '813c01a8668d6dbf04cd6a05d4fe57662be9685b811bcf197ba3f74e855bb405',
+  'scripts/refresh-qualification-fingerprints-v80-v97.mjs': '6d114c6d6420faed9207260e5c8b9be3ba7662d5431ac1671791901d727b57e1',
+  'docs/qualification/environment-freeze/g1-github-actions-v36.json': '7e1e0c837b44047b5e7965a1b17769cdefc7b888fa77515ed71ce8963669ab73',
+  'docs/qualification/own-rust-cad-v65.json': '7fec30268ff5c12278287444474754104cc07f7f41b4924a1a6ccf49183c9b5e',
 })

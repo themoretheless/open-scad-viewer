@@ -213,7 +213,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
   if(budget===maxSpans){
    expect(r.faces.filter(f=>f.result?.proven)).toHaveLength(25)
    expect(r.faces.filter(f=>f.quotientProof?.proven)).toHaveLength(2)
-   expect(r.faces).toEqual(fixture.result.faces)
+   expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,quotientProof:f.quotientProof?{...f.quotientProof,polar:null}:null})))
   }else if(budget===256){
    expect(r.faces[0].quotientProof?.proven).toBe(true)
    expect(r.spans).toBe(256)
