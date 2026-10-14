@@ -22,8 +22,28 @@ export function addEncodedStringBytes(length: number, budget: EncodingBudget, pa
   if (budget.stringBytes > SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'aggregate string bytes exceed the encode budget')
 }
 
+const UTF8 = new TextEncoder()
+// Object keys come from the fixed semantic schema. Their encodings are only read (ByteWriter
+// copies them, CanonicalBodyComparator compares them), so one cached array per key is safe.
+// Methods are bound at load, like the codec's other registries, so later prototype changes
+// cannot substitute cached bytes.
+const KEY_BYTES = new Map<string, Uint8Array>()
+const getKeyBytes = Map.prototype.get.bind(KEY_BYTES) as (key: string) => Uint8Array | undefined
+const setKeyBytes = Map.prototype.set.bind(KEY_BYTES) as (key: string, bytes: Uint8Array) => unknown
+const KEY_BYTES_LIMIT = 4096
+let keyBytesCount = 0
+
+function keyBytes(key: string): Uint8Array {
+  let bytes = getKeyBytes(key)
+  if (bytes === undefined) {
+    bytes = UTF8.encode(key)
+    if (key.length <= 64 && keyBytesCount < KEY_BYTES_LIMIT) { setKeyBytes(key, bytes); keyBytesCount++ }
+  }
+  return bytes
+}
+
 export function encodeStringBody(value: string, writer: BinaryWriter, budget: EncodingBudget, path: string): void {
-  const bytes = new TextEncoder().encode(value)
+  const bytes = UTF8.encode(value)
   addEncodedStringBytes(bytes.length, budget, path)
   writer.u32(bytes.length)
   writer.raw(bytes)
@@ -53,7 +73,7 @@ export function encodeValue(value: unknown, writer: BinaryWriter, budget: Encodi
   if (value !== null && typeof value === 'object') {
     writer.byte(Tag.Object)
     const entries = Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => ({ item, bytes: new TextEncoder().encode(key) }))
+      .map(([key, item]) => ({ item, bytes: keyBytes(key) }))
       .sort((left, right) => compareBytes(left.bytes, right.bytes))
     writer.u32(entries.length)
     for (const entry of entries) {
@@ -80,9 +100,24 @@ export function frame(magic: Uint8Array, payload: unknown): Uint8Array {
   return writer.finish()
 }
 
+// Envelope bytes of normalized programs, which are deep-frozen so their encoding is fixed.
+// Kept private: encodeSemanticProgram returns copies, attestation only reads.
+const ENVELOPE_BYTES = new WeakMap<object, Uint8Array>()
+const getEnvelopeBytes = WeakMap.prototype.get.bind(ENVELOPE_BYTES) as (program: object) => Uint8Array | undefined
+const setEnvelopeBytes = WeakMap.prototype.set.bind(ENVELOPE_BYTES) as (program: object, bytes: Uint8Array) => unknown
+
+function envelopeBytes(program: SemanticProgramV1): Uint8Array {
+  let bytes = getEnvelopeBytes(program)
+  if (bytes === undefined) {
+    bytes = frame(ENVELOPE_MAGIC, program)
+    setEnvelopeBytes(program, bytes)
+  }
+  return bytes
+}
+
 export function encodeSemanticProgram(input: unknown): Uint8Array {
   const program = normalizeSemanticProgram(input)
-  return frame(ENVELOPE_MAGIC, program)
+  return envelopeBytes(program).slice()
 }
 
 export function encodeSemanticProgramCore(input: unknown): Uint8Array {
@@ -133,7 +168,7 @@ export function semanticTessellationPolicyHash(input: unknown): string {
 
 export function attestSemanticProgram(input: unknown): SemanticProgramAttestation {
   const program = normalizeSemanticProgram(input)
-  const envelopeBytes = frame(ENVELOPE_MAGIC, program)
+  const envelope = envelopeBytes(program)
   const coreBytes = frame(CORE_MAGIC, program.core)
   const programHash = semanticProgramHashFromCore(program.core, coreBytes)
   const policyBytes = frame(TESSELLATION_MAGIC, tessellationPolicy(program, programHash))
@@ -144,8 +179,8 @@ export function attestSemanticProgram(input: unknown): SemanticProgramAttestatio
     programHash,
     tessellationPolicyHash: sha256Hex(lengthPrefixedPreimage(TESSELLATION_HASH_DOMAIN, policyBytes)),
     coreBytesSha256: sha256Hex(coreBytes),
-    envelopeBytesSha256: sha256Hex(envelopeBytes),
-    canonicalBytes: envelopeBytes.length,
+    envelopeBytesSha256: sha256Hex(envelope),
+    canonicalBytes: envelope.length,
   })
 }
 
