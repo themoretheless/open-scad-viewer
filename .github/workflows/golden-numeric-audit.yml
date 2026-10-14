@@ -15,7 +15,7 @@ jobs:
           path: baseline
       - uses: actions/checkout@v6
         with:
-          ref: 3c19575792ef5002fe9fb85357bd0b36075caab5
+          ref: 6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3
           path: current
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -50,7 +50,7 @@ jobs:
               p.write_text(s)
           PY
           for source in baseline current; do
-            CARGO_TARGET_DIR="$PWD/native-target-$source" GOLDEN_AUDIT_DIR="$PWD/evidence/$source" UPDATE_GOLDEN=1 cargo test --locked --manifest-path "$source/crates/Cargo.toml" -p geometry-bridge --test golden_numeric > "evidence/$source/test.log" 2>&1
+            CARGO_TARGET_DIR="$PWD/native-target-$source" GOLDEN_AUDIT_DIR="$PWD/evidence/$source" cargo test --locked --manifest-path "$source/crates/Cargo.toml" -p geometry-bridge --test golden_numeric > "evidence/$source/test.log" 2>&1
             cp "$source/crates/geometry-bridge/tests/fixtures/golden_numeric.txt" "evidence/$source/actual-hashes.txt"
           done
           python3 - <<'PY'
@@ -70,4 +70,31 @@ jobs:
         with:
           name: native-golden-diagnostic-only
           path: evidence/
+          retention-days: 30
+
+  fingerprints:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/materialize-qualification-kernels.mjs
+      - name: Verify all 31 frozen fingerprint and qualification checks
+        env:
+          VITEST_MAX_WORKERS: '2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node node_modules/vitest/vitest.mjs run tests/g0ToolchainFingerprints.test.ts tests/g1GithubActionsQualification.test.ts --maxWorkers 2 | tee fingerprints.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-golden-source-fingerprint-checks
+          path: fingerprints.log
           retention-days: 30
