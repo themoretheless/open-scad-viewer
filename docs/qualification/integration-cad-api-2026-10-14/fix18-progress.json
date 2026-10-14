@@ -49,7 +49,14 @@
       "sha256": "fbf62332d774fc8928f8c9a3e72cb5ad4d8d59737aa17a9f15a6f4c236b25b33"
     }
   },
-  "push": "pending",
+  "push": {
+    "status": "succeeded",
+    "sourceCommit": "9b49d75940ee8129d37502c1d45c93c86f2a0146",
+    "branches": [
+      "main",
+      "codex/integrate-available-20261013"
+    ]
+  },
   "languageWasm": {
     "status": "rebuilt",
     "bytes": 2762982,
