@@ -967,3 +967,6 @@ mod original_curve_exclusion_tests {
         assert!(curve_box(&c, c.domain()).is_err());
     }
 }
+
+#[path="intersection/planar_scalar.rs"]
+pub mod planar_scalar;

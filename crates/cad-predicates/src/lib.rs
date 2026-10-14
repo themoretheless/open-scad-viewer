@@ -393,3 +393,6 @@ pub fn classify_residual(
 
 #[cfg(test)]
 mod tests;
+
+mod planar_bezier_roots;
+pub use planar_bezier_roots::*;

@@ -310,7 +310,7 @@ pub fn inspect_profile(model: &Model, cap_faces: &[usize], max_work: u64) -> Res
     // Preserve the existing successful profile prefix and station proof first.
     // Only unused caller work is then spent on deferred profile seams.
     let mut profile = inspect_axis_impl(model, cap_faces, Axis::Profile, max_work, true)?;
-    let station = inspect_axis(
+    let mut station = inspect_axis(
         model,
         cap_faces,
         Axis::Station,
@@ -318,6 +318,9 @@ pub fn inspect_profile(model: &Model, cap_faces: &[usize], max_work: u64) -> Res
     )?;
     let remaining=max_work-profile.exact_work-station.exact_work;
     finish_deferred_profile(model,cap_faces,&mut profile,remaining)?;
+    // Publish disjoint budgets after deferred profile work consumes its share.
+    // The station proof remains valid within this final envelope.
+    station.max_work = max_work - profile.exact_work;
     let total_exact_work = profile.exact_work + station.exact_work;
     let station_continuity = if station.g2_certified {
         "G2"
@@ -401,6 +404,8 @@ mod tests {
         }
         assert_eq!(report.profile.exact_work,report.profile.g2.exact_work+report.profile.g1.as_ref().map_or(0,|r|r.exact_work));
         assert_eq!(report.total_exact_work,report.profile.exact_work+report.station.exact_work);
+        assert_eq!(report.station.max_work,2_000_000-report.profile.exact_work);
+        assert!(report.station.exact_work<=report.station.max_work);
         assert!(report.total_exact_work<=2_000_000);assert_eq!(model,before);
     }
     #[test]
@@ -479,6 +484,8 @@ mod tests {
         assert!(!combined.profile.g1_certified&&!combined.profile.g2_certified);
         assert!(combined.station.g2_certified,"combined work={}",combined.total_exact_work);
         assert_eq!(combined.station_continuity,"G2");
+        assert_eq!(combined.station.max_work,2_000_000-combined.profile.exact_work);
+        assert!(combined.station.exact_work<=combined.station.max_work);
         assert!(combined.total_exact_work<=2000000);
         assert_eq!(combined.profile.g2.seams.len(),combined.profile.edge_ids.len());
         assert_eq!(combined.profile.g2.unresolved_seams.len(),combined.profile.edge_ids.len());

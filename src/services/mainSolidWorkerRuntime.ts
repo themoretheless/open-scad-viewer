@@ -1,5 +1,3 @@
-import {exportAssemblyFrames} from './assemblyFrameExport'
-import {sampleAssemblyAnimation} from './assemblyAnimation'
 import {executeDirectTransaction} from './directTransactions'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
@@ -82,8 +80,8 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
     case 'boolean':return applySolidBoolean(job.document,job.options)
-    case 'animationFrames':return exportAssemblyFrames(job.document,job.animation,job.fps)
-    case 'animationSample':return sampleAssemblyAnimation(job.document,job.animation,job.time)
+    case 'animationFrames':return (await import('./assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
+    case 'animationSample':return (await import('./assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
     case 'drawingPdf':return (await import('./drawingSheets')).vectorDrawingPdf(job.sheets)
     case 'drawingSheets':return (await import('./drawingSheets')).createDrawingSheets(job.bodies,job.options)
     case 'transaction':return executeDirectTransaction(job.document,job.script)
