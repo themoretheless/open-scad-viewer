@@ -75,8 +75,16 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         },
         proposals,
     )?;
+    // Opt-in strict joint obligation: preserve the older volume contract while
+    // reporting whole-boundary Jacobians under one explicit shared budget.
+    let regularity = v.get("maxRegularityCells").map(|_| {
+        brep_core::boundary_embedding::regularity::inspect(&model, field(&v, "maxRegularityCells")?)
+    }).transpose()?;
     Ok(
-        json!({"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
+        json!({"regularBoundarySolidCertified":regularity.as_ref().is_some_and(|p|r.proven && p.all_faces_regular),
+        "boundaryRegularity":regularity.as_ref().map(|p|json!({"allFacesRegular":p.all_faces_regular,
+            "cells":p.cells,"unresolvedFaces":p.unresolved_faces,"scope":"whole-retained-boundary-piecewise-regular"})),
+        "solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
         "nextPair":r.boundary.intersections.pairs.next_pair,

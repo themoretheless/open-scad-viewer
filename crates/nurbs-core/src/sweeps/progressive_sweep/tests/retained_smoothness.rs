@@ -507,20 +507,25 @@ fn actual_closed_rmf_station_seam_keeps_c0_distinct_from_g1() {
             orientation: Orientation::RotationMinimizing,
             spacing: Spacing::Parameter,
             initial_sections: 5,
-            max_sections: 33,
+            max_sections: 66,
             max_deviation: 1.,
         },
     )
     .unwrap();
-    let level = sweep.preview_at(33).unwrap();
-    assert!(level.report.closed_path);
-    let proof = level.certify_retained_station_seams(1, 1000000).unwrap();
-    assert!(!proof.all_station_seams_certified);
-    assert!(proof.seams.iter().all(|r| r.c0_identity), "{proof:?}");
-    let closure = proof.seams.iter().filter(|r| r.closure).collect::<Vec<_>>();
-    assert_eq!(closure.len(), 1);
-    assert_eq!(proof.seams.len(), 32);
-    assert!(closure.iter().all(|r| !r.certified));
+    for count in [6, 10, 18, 33, 34, 66] {
+        let level = sweep.preview_at(count).unwrap();
+        assert!(level.report.closed_path);
+        let proof = level.certify_retained_station_seams(1, 1000000).unwrap();
+        assert!(!proof.all_station_seams_certified);
+        assert!(proof.seams.iter().all(|r| r.c0_identity), "{proof:?}");
+        let closure = proof.seams.iter().filter(|r| r.closure).collect::<Vec<_>>();
+        assert_eq!(closure.len(), 1);
+        assert_eq!(proof.seams.len(), count - 1);
+        assert!(closure.iter().all(|r| !r.certified));
+        let short = level.certify_retained_station_seams(1, 0).unwrap();
+        assert!(!short.all_station_seams_certified);
+        assert!(short.seams.iter().all(|r| !r.certified));
+    }
 }
 #[test]
 fn actual_retained_straight_sweep_seams_prove_g2_and_charge_shared_work() {

@@ -412,6 +412,13 @@ fn default_spatial_three_cavity_budget_proves_actual_material_and_refuses_short_
     assert_eq!(source, before);
     assert_eq!(body["model"]["faces"].as_array().unwrap().len(), 1024);
     assert_eq!(body["volume"]["solidGeometryCertified"], json!(true));
+    let actual: brep_core::Model = value_codec::from_value(body["model"].clone()).unwrap();
+    let regular = brep_core::boundary_embedding::regularity::inspect(&actual, 100000).unwrap();
+    assert!(regular.all_faces_regular, "unresolved={:?}", regular.unresolved_faces);
+    assert_eq!(regular.faces.len(), 1024);
+    let short = brep_core::boundary_embedding::regularity::inspect(&actual, regular.cells-1).unwrap();
+    assert!(!short.all_faces_regular);
+
     assert_eq!(
         body["volume"]["nesting"]["parents"],
         json!([None::<usize>, Some(0usize), Some(0usize), Some(0usize)])
@@ -462,4 +469,27 @@ fn legacy_bare_model_snapshot_preserves_native_admission_and_rejects_forged_meta
     );
     v["geometryJson"] = json!(v["model"].to_string());
     assert!(admission(v).is_err());
+}
+
+#[test]
+fn global_regular_boundary_volume_keeps_independent_obligations_and_work() {
+    let mut v = volume_budgets();
+    v["model"] = json!(brep_core::cuboid([0.;3],[1.;3]).unwrap());
+    v["capFaces"] = json!([]);
+    v["maxRegularityCells"] = json!(1000);
+    let full = call("brep_sweep_volume_audit", v.clone()).unwrap();
+    assert_eq!(full["solidGeometryCertified"], true);
+    assert_eq!(full["regularBoundarySolidCertified"], true);
+    assert_eq!(full["boundaryRegularity"]["unresolvedFaces"], json!([]));
+    v["maxRegularityCells"] = json!(0);
+    let short = call("brep_sweep_volume_audit", v.clone()).unwrap();
+    assert_eq!(short["solidGeometryCertified"], true);
+    assert_eq!(short["regularBoundarySolidCertified"], false);
+    assert_eq!(short["boundaryRegularity"]["unresolvedFaces"], json!([0,1,2,3,4,5]));
+    v["maxRegularityCells"] = json!(1000);
+    v["maxPairs"] = json!(1);
+    let short = call("brep_sweep_volume_audit", v).unwrap();
+    assert_eq!(short["boundaryRegularity"]["allFacesRegular"], true);
+    assert_eq!(short["solidGeometryCertified"], false);
+    assert_eq!(short["regularBoundarySolidCertified"], false);
 }

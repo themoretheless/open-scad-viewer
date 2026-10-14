@@ -1,5 +1,6 @@
 //! Joint evidence for a closed embedded boundary. Material roles, nesting and
 //! outward orientation are deliberately separate requirements for solid volume.
+pub mod regularity;
 use crate::{Error, Model, Result, boundary_agreement, face_contacts, face_domain, self_intersection};
 
 #[derive(Clone, Copy)]
