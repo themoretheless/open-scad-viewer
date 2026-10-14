@@ -39433,7 +39433,7 @@
     },
     {
       "file": "src/services/sweep/certificates/nurbsSweepEmbedding.ts",
-      "sha256": "5ac95672b9024c00071b52f899207b41d37b941f2a06b2ccb5ed4782fb468851",
+      "sha256": "9bc4a4fc8846f5d3e8f38511e45c407e33cd3ede8997594506bc0db7eab65979",
       "generated": false,
       "owner": "nurbs-core",
       "decision": "nurbs",
@@ -39444,7 +39444,7 @@
         },
         {
           "name": "inspectSweepVolume",
-          "line": 75
+          "line": 79
         }
       ],
       "loops": 0,
