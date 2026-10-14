@@ -1,73 +1,58 @@
-name: Native Rush snapshot diagnostic only
+name: Native final snapshot and fingerprint verification
 on:
   push:
     branches: [codex/golden-numeric-audit-20261014]
 permissions:
   contents: read
 jobs:
-  compare:
+  strict-snapshot:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: 2d63a3bec114041daf4cec8a789a882585d18646
-          path: baseline
-      - uses: actions/checkout@v6
-        with:
-          ref: 6dff3e94a2b0eb56f7024d6c2faf9766f6badbf3
-          path: current
+          ref: 394e9462d322ec433ffbab400cd1653076fc8b68
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-09-16
-          components: clippy
       - uses: actions/cache/restore@v4
         with:
           path: ~/.cargo/registry
-          key: rust-Linux-${{ hashFiles('current/crates/Cargo.lock', 'current/rust-toolchain.toml') }}
-      - name: Capture baseline/current Rush emitter payloads
+          key: rust-Linux-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Execute the committed strict 81-case Rush snapshot
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence
-          printf '%s\n' "$ImageOS/$ImageVersion" > evidence/runner.txt
-          rustc -Vv > evidence/rustc.txt
-          python3 - <<'PY'
-          from pathlib import Path
-          import shutil
-          for name,crate in [('baseline','modelgraph-runtime'),('current','rush-runtime')]:
-              root=Path(name)/'crates'/crate;out=Path('evidence')/name;out.mkdir()
-              shutil.copyfile(root/'tests/fixtures/emitter-snapshot.tsv',out/'original-snapshot.tsv')
-              p=root/'tests/emitter_snapshot.rs';s=p.read_text()
-              if name=='current':
-                  assert s.count('"language":"modelgraph/1"')==1
-                  s=s.replace('"language":"modelgraph/1"','"language":"rush/ir-1"')
-              (out/'proposed-test.rs').write_text(s)
-              marker='        let kind = &out[..out.find(\':\').unwrap()];'
-              assert s.count(marker)==1
-              s=s.replace(marker,'''        if let Some(path) = std::env::var_os("EMITTER_AUDIT_DIR") {
-                      std::fs::write(std::path::PathBuf::from(path).join(name.replace('/', "__")), &out).unwrap();
-                  }
-          '''+marker);p.write_text(s)
-          PY
-          for source in baseline current; do
-            if [[ "$source" == baseline ]]; then package=modelgraph-runtime; else package=rush-runtime; fi
-            CARGO_TARGET_DIR="$PWD/native-target-$source" EMITTER_AUDIT_DIR="$PWD/evidence/$source" UPDATE_EMITTER_SNAPSHOT=1 cargo test --locked --manifest-path "$source/crates/Cargo.toml" -p "$package" --test emitter_snapshot > "evidence/$source/test.log" 2>&1
-            cp "$source/crates/$package/tests/fixtures/emitter-snapshot.tsv" "evidence/$source/actual-snapshot.tsv"
-          done
-      - name: Check all native packages after Rush and exact Linux lint gates
-        shell: bash
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/native-target-current
-        run: |
-          set -euo pipefail
-          cargo test --locked --manifest-path current/crates/Cargo.toml -p rush-runtime -p sdf-core -p sketch-core -p slicer-core -p subdivision-core -p tensor-core -p value-codec -p vr-core -p wasm-brotli --no-fail-fast > evidence/remaining-native-tests.log 2>&1
-          cargo clippy --locked --manifest-path current/crates/Cargo.toml -p tensor-core -p compute-core -p compute-cuda -p compute-mlx --all-targets -- -D warnings > evidence/clippy-compute.log 2>&1
-          cargo clippy --locked --manifest-path current/crates/Cargo.toml -p osv-math -p osv-math-compute --all-targets -- -D warnings > evidence/clippy-math.log 2>&1
-          cargo clippy --locked --manifest-path current/crates/Cargo.toml -p osv-math-compute --features gpu,tensor --all-targets -- -D warnings > evidence/clippy-math-gpu.log 2>&1
+          cargo test --locked --manifest-path crates/Cargo.toml -p rush-runtime --test emitter_snapshot | tee strict-snapshot.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-rush-snapshot-diagnostic-only
-          path: evidence/
+          name: final-strict-rush-snapshot
+          path: strict-snapshot.log
+          retention-days: 30
+  fingerprints:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 394e9462d322ec433ffbab400cd1653076fc8b68
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/materialize-qualification-kernels.mjs
+      - name: Execute all 31 frozen fingerprint and qualification checks
+        env:
+          VITEST_MAX_WORKERS: '2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node node_modules/vitest/vitest.mjs run tests/g0ToolchainFingerprints.test.ts tests/g1GithubActionsQualification.test.ts --maxWorkers 2 | tee fingerprints.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-source-fingerprint-checks
+          path: fingerprints.log
           retention-days: 30
