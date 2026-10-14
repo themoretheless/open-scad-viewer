@@ -19,12 +19,16 @@ pub struct Quotient {
     pub pole_edge: usize,
     pub pole_vertex: usize,
     pub result: surface_quotient_injectivity::Report,
+    pub polar: Option<surface_quotient_injectivity::PolarReport>,
+}
+impl Quotient {
+    pub fn proven(&self) -> bool { self.result.proven || self.polar.as_ref().is_some_and(|r|r.proven) }
 }
 impl Face {
     pub fn absence_proven(&self) -> bool {
         self.result.as_ref().is_some_and(|r| r.proven)
             || self.linear.as_ref().is_some_and(|r| r.certified)
-            || self.quotient.as_ref().is_some_and(|q| q.result.proven)
+            || self.quotient.as_ref().is_some_and(|q| q.proven())
     }
 }
 #[derive(Clone, Debug)]
@@ -103,11 +107,18 @@ fn inspect_impl(
                     max_spans - report.spans,
                 )?;
                 report.spans += proof.cells;
+                let polar = if !proof.proven && max_spans-report.spans >= 64 {
+                    let r=surface_quotient_injectivity::certify_polar_source_frame(
+                        &f.surface,end,8,max_spans-report.spans)?;
+                    report.spans+=r.cells;
+                    Some(r)
+                } else { None };
                 Some(Quotient {
                     collapsed_end: end,
                     pole_edge: edge,
                     pole_vertex: vertex,
                     result: proof,
+                    polar,
                 })
             } else {
                 None
@@ -136,7 +147,7 @@ pub fn inspect_with_projections(
     inspect_impl(model, max_spans, max_linear_cells, false, proposals)
 }
 
-fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize, usize)> {
+pub(crate) fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize, usize)> {
     let f = &model.faces[face];
     let s = &f.surface;
     let u = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
@@ -144,7 +155,7 @@ fn declared_pole(model: &Model, face: usize) -> Option<(usize, usize, usize)> {
     for loop_index in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
         for ce in &model.loops[loop_index].coedges {
             let edge = &model.edges[ce.edge];
-            if edge.vertices[0] != edge.vertices[1] {
+            if !edge.degenerate || edge.vertices[0] != edge.vertices[1] {
                 continue;
             }
             let pole = model.vertices[edge.vertices[0]].point;
@@ -338,7 +349,7 @@ mod tests {
         assert_eq!(
             r.faces
                 .iter()
-                .filter(|f| f.quotient.as_ref().is_some_and(|q| q.result.proven))
+                .filter(|f| f.quotient.as_ref().is_some_and(|q| q.proven()))
                 .count(),
             2
         );

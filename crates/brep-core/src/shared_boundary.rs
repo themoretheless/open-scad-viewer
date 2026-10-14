@@ -147,28 +147,8 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, edge: &Curve) -> Option<(usize, u
     }
     None
 }
-// Zero controls off the owned boundary need not be reachable surface points.
-// Positive single-Bezier bases restrict support-plane contact to complete
-// zero natural edges and zero corners. Extra collapsed edges are allowed only
-// when all their controls equal an endpoint of the owned boundary curve.
-fn bezier_plane_edge_only(s:&Surface,plane:[&[f64];3],boundary:(usize,usize))->bool {
-    let sizes=[s.control_points.len(),s.control_points[0].len()];
-    let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
-    if (0..2).any(|k|degrees[k]==0||sizes[k]!=degrees[k]+1||!clamped(knots[k],degrees[k],sizes[k])){return false;}
-    let at=|fixed:usize,free:usize|if boundary.0==0{&s.control_points[fixed][free]}else{&s.control_points[free][fixed]};
-    let endpoints=[at(boundary.1,0),at(boundary.1,sizes[1-boundary.0]-1)];
-    let zero=|p:&[f64]|orient(&[plane[0],plane[1],plane[2],p],None)==Some(Sign::Zero);
-    for u in [0,sizes[0]-1]{for v in [0,sizes[1]-1]{
-        if [u,v][boundary.0]!=boundary.1&&zero(&s.control_points[u][v])
-            && !endpoints.contains(&&s.control_points[u][v]){return false;}
-    }}
-    for axis in 0..2 {for fixed in [0,sizes[axis]-1] {
-        if axis==boundary.0&&fixed==boundary.1{continue;}
-        let controls=(0..sizes[1-axis]).map(|free|if axis==0{&s.control_points[fixed][free]}else{&s.control_points[free][fixed]}).collect::<Vec<_>>();
-        if controls.iter().all(|p|zero(p)) && !endpoints.iter().any(|endpoint|controls.iter().all(|p|*p==*endpoint)){return false;}
-    }}
-    true
-}
+mod pole_support;
+use pole_support::bezier_plane_edge_only;
 
 fn sided(first: &Surface, second: &Surface, boundary: (usize, usize)) -> bool {
     let points: Vec<_> = second
@@ -325,11 +305,13 @@ fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->b
                 let size=[s.control_points.len(),s.control_points[0].len()][bound.0];
                 let degree=[s.degree_u,s.degree_v][bound.0];
                 if size!=degree+1{return None;}
-                // The opposite endpoint Bernstein basis is strictly positive
-                // everywhere away from the declared boundary. Its complete
-                // row must lie strictly on the common side, including corners.
-                let opposite=if bound.1==0{size-1}else{0};
-                if s.control_points.iter().enumerate().any(|(u,row)|row.iter().enumerate().any(|(v,p)|[u,v][bound.0]==opposite&&p[axis]==value)){return None;}
+                // Positive Bernstein bases expose only complete zero edges or
+                // zero corners. Permit a collapsed pole only when it is an
+                // endpoint of the exact shared edge, never an extra contact.
+                let mut plane=[vec![0.;3],vec![0.;3],vec![0.;3]];
+                for point in &mut plane {point[axis]=value;}
+                plane[1][(axis+1)%3]=1.; plane[2][(axis+2)%3]=1.;
+                if !bezier_plane_edge_only(s,[&plane[0],&plane[1],&plane[2]],bound){return None;}
             }
             positive
         };

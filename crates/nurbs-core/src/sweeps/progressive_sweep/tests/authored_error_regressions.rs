@@ -1,6 +1,6 @@
 //! Original-law sweep regression cases.
 use super::*;
-
+#[path = "fixed_normal_arc_line.rs"] mod fixed_normal_arc_line;
 #[test]
 fn original_knot_transition_uses_owned_value_bound_and_shared_work() {
     let profile = crate::primitives::line([1., 0., 0.], [2., 0., 0.]).unwrap();

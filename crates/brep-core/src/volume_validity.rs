@@ -492,9 +492,8 @@ mod tests {
         assert_eq!(r.orientations[0].outward,Some(true));assert_eq!(format!("{m:?}"),before);
     }
     #[test]
-    #[ignore = "Roadmap gate: curved face embedding remains unproven"]
     fn authored_curved_primitives_have_certified_volume_validity(){
-        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{
+        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere_exact(2.).unwrap())]{
             let r=inspect(&m,1e-8,limits()).unwrap();
             if !r.boundary.agreement.all_equal {
                 for use_ in &r.boundary.agreement.uses {

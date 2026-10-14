@@ -390,3 +390,7 @@ pub(super) use profile::*;
 #[cfg(test)]
 #[path = "tests/sweep_profile_admission.rs"]
 mod profile_admission_tests;
+
+#[cfg(test)]
+#[path = "tests/frame_cap_qualification.rs"]
+mod frame_cap_qualification;
