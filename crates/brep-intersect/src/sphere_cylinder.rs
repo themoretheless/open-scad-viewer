@@ -166,7 +166,7 @@ pub fn intersect_sphere_cylinder(
     let mut report = Report::default();
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
     let (Some(sphere), Some(cylinder)) = (
-        sphere_sphere::recognize(sphere_model)?,
+        sphere_sphere::recognize_any(sphere_model)?,
         recognize_cylinder(cylinder_model)?,
     ) else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);

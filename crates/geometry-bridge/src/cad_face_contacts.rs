@@ -243,6 +243,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
                     "collapsedEnd":j.collapsed_end,"projection":j.projection,"proven":j.report.proven,
                     "reason":j.report.reason,"cells":j.report.cells,"weightedBounds":j.report.weighted_bounds,
                     "dominanceMarginLower":j.report.dominance_margin_lower}))}),
+            brep_core::face_contacts::SharedBoundary::BilinearGraph(c)=>json!({"kind":"bilinear-graph","edge":c.edge,"graphFace":c.graph_face,"sidedFace":c.sided_face,"polynomialWork":c.polynomial_work}),
             brep_core::face_contacts::SharedBoundary::PlanarFace(c)=>json!({"kind":"planar-face","edge":c.edge,"planarFace":c.planar_face,"sidedFace":c.sided_face}),
             brep_core::face_contacts::SharedBoundary::OppositeSides(c)=>json!({"kind":"opposite-sides","edge":c.edge,"faces":c.faces}),
         }),"witness":witness,"cells":cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})

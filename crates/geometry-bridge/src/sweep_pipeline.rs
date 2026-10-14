@@ -394,3 +394,6 @@ mod profile_admission_tests;
 #[cfg(test)]
 #[path = "tests/frame_cap_qualification.rs"]
 mod frame_cap_qualification;
+#[cfg(test)]
+#[path = "tests/nonplanar_frame_caps.rs"]
+mod nonplanar_frame_caps;
