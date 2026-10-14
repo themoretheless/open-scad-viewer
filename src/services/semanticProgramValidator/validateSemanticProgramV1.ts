@@ -6,6 +6,7 @@ import { deepFreeze } from '../../core/objects'
 import { isSemanticProgramCodecOwnedGraph } from '../semanticProgramCodec'
 import { parseGeometrySourceRoutingHeader } from '../../core/geometryRouting'
 import { sha256Hex } from '../../core/sha256'
+import { utf8ByteLength } from '../../core/utf8Order'
 import { validateExecution, validateResult } from './validateResult'
 import { validateNodes } from './validateNodes'
 import { validateOccurrenceProduction } from './validateOccurrenceProduction'
@@ -211,11 +212,10 @@ export function snapshotJsonValue(value: unknown, path: string, depth: number, a
 }
 
 export function validateCanonicalStringBudget(value: unknown): void {
-  const encoder = new TextEncoder()
   const pending: Array<{ value: unknown; path: string }> = [{ value, path: '$' }]
   let bytes = 0
   const add = (text: string, path: string) => {
-    bytes += encoder.encode(text).length
+    bytes += utf8ByteLength(text)
     if (bytes > SEMANTIC_PROGRAM_LIMITS.canonicalStringBytes) {
       fail('E_SEMANTIC_LIMIT', path, `canonical string/key bytes exceed ${SEMANTIC_PROGRAM_LIMITS.canonicalStringBytes}`)
     }
@@ -237,7 +237,20 @@ export function validateCanonicalStringBudget(value: unknown): void {
   }
 }
 
+// Programs this function returned: fresh snapshots that passed validation and were then
+// deep-frozen. Normalizing one again would copy and re-check immutable data and cannot change
+// the result, so it is returned as is. Only normalizeSemanticProgram adds to this set, and its
+// methods are bound at load so later prototype changes cannot forge membership.
+const NORMALIZED_PROGRAMS = new WeakSet<object>()
+const addNormalizedProgram = WeakSet.prototype.add.bind(NORMALIZED_PROGRAMS)
+const isNormalizedProgram = WeakSet.prototype.has.bind(NORMALIZED_PROGRAMS)
+
 export function normalizeSemanticProgram(input: unknown, exactSource?: string): SemanticProgramV1 {
+  if (input !== null && typeof input === 'object' && isNormalizedProgram(input)) {
+    const program = input as SemanticProgramV1
+    if (exactSource !== undefined) attestSemanticProgramSource(program, exactSource)
+    return program
+  }
   let snapshot = snapshotJsonValue(input, '$', 0, new Set(), { values: 0 })
   if (!isRecord(snapshot)) fail('E_SEMANTIC_SCHEMA', '$', 'expected a semantic program envelope')
   if (snapshot.version === 0) {
@@ -247,6 +260,7 @@ export function normalizeSemanticProgram(input: unknown, exactSource?: string): 
   validateSemanticProgramV1(snapshot)
   const program = deepFreeze(snapshot)
   if (exactSource !== undefined) attestSemanticProgramSource(program, exactSource)
+  addNormalizedProgram(program)
   return program
 }
 
