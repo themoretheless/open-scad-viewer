@@ -2,7 +2,7 @@
 
 Geometry, corrections and proof decisions stay in Rust. TypeScript runners only transport authored inputs and check native results.
 
-This successor integrates `main` 2d63a3bec, retaining both histories of 63 colliding immutable qualification records. The incoming bytes are preserved under `parallel-main-history-2026-10-14` with a manifest of both digests. None of those results validates the present source. Structural extractions preserve native match-arm bytes; the movement manifest records their identities. The architecture ratchet gains no oversized files or raised limits. Internal crate declarations share workspace dependencies, and typed BRep/intersection kernels compile without wire codecs.
+This successor integrates `main` 2d63a3bec, retaining both histories of 63 colliding immutable qualification records. The incoming bytes are preserved under `parallel-main-history-2026-10-14` with a manifest of both digests. None of those results validates the present source. Structural extractions preserve native match-arm bytes; the movement manifest records their identities. Compared with the geometry predecessor, the architecture ratchet gains no oversized files or raised limits. Existing legacy native compatibility paths remain pinned. Internal crate declarations share workspace dependencies, and typed BRep/intersection kernels compile without wire codecs.
 
 The new exact bilinear graph predicate uses original binary64 control/weight leaves and expansion arithmetic. A cap is admitted only when its complete carrier polynomial vanishes and the joined wall has strict sign away from the exact owned boundary. It participates in the existing joint trim, injectivity, ownership and regularity checks. Pair/regularity exhaustion still refuses admission.
 

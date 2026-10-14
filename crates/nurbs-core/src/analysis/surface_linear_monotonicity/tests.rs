@@ -182,13 +182,15 @@
             periodic_v: false,
         };
         let map = [[1, 0, 0], [0, 1, 0]];
-        assert!(!inspect_metric(&s, map, [1., 1.], 64, 1).unwrap().certified);
-        let r = inspect(&s, map, 64).unwrap();
+        // The retained P-matrix theorem already proves this chart without
+        // a symmetric metric. Exercise the independent weighted route directly.
+        assert!(inspect_metric(&s, map, [1., 1.], 64, 1).unwrap().certified);
+        let r = inspect_weighted(&s, map, 64, 1).unwrap();
         assert!(r.certified);
         assert_eq!(r.row_weights, [1. / 128., 1.]);
         assert!(r.cells <= 64);
-        for budget in [0, 1, 2] {
-            let refused = inspect(&s, map, budget).unwrap();
+        for budget in 0..r.cells {
+            let refused = inspect_weighted(&s, map, budget, 1).unwrap();
             assert!(!refused.certified);
             assert!(refused.cells <= budget);
         }
