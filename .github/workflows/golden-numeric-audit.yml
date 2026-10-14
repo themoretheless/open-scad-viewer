@@ -38,7 +38,12 @@ jobs:
           for name,crate in [('baseline','modelgraph-runtime'),('current','rush-runtime')]:
               root=Path(name)/'crates'/crate;out=Path('evidence')/name;out.mkdir()
               shutil.copyfile(root/'tests/fixtures/emitter-snapshot.tsv',out/'original-snapshot.tsv')
-              p=root/'tests/emitter_snapshot.rs';s=p.read_text();marker='        let kind = &out[..out.find(\':\').unwrap()];'
+              p=root/'tests/emitter_snapshot.rs';s=p.read_text()
+              if name=='current':
+                  assert s.count('"language":"modelgraph/1"')==1
+                  s=s.replace('"language":"modelgraph/1"','"language":"rush/ir-1"')
+              (out/'proposed-test.rs').write_text(s)
+              marker='        let kind = &out[..out.find(\':\').unwrap()];'
               assert s.count(marker)==1
               s=s.replace(marker,'''        if let Some(path) = std::env::var_os("EMITTER_AUDIT_DIR") {
                       std::fs::write(std::path::PathBuf::from(path).join(name.replace('/', "__")), &out).unwrap();
