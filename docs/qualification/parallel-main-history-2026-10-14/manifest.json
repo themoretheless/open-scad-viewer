@@ -339,6 +339,59 @@
       "retainedSha256": "32afc942401fdf4612832639a0fafc39ad7faf686f6d50b40c342d3e375699c0",
       "incomingSha256": "6c33ef3489cf1b72e06c4f770de83090768fe669b6a17449d0fbafaf2ac3bd2f",
       "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v61.mjs"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v79.json",
+      "retainedSha256": "4893d80debcdbfb8fa04b53eb333a1997d41727cfa41297d2deee50b02aaceda",
+      "incomingSha256": "b80929f34611754e541389659e1299f3298c87c76e673f9a902bae32a3e5bb4b",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-toolchain-fingerprints-v79.json",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "docs/qualification/g0-v79-g1-v96-refreeze-review.md",
+      "retainedSha256": "57c9090fe69c0b561592edd613238565f9b18c7a10679624a544af3f09bdf100",
+      "incomingSha256": "472c9a601ac60430e7c14b27eb9f34629a1af861e5de38c4c9f6f21a1968e083",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v79-g1-v96-refreeze-review.md",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "docs/qualification/g0-v79-g1-v96-refreeze-status-v1.json",
+      "retainedSha256": "ac069ed825bf781e13ebc57ba140c9ea4d27a4d445e45d8b586d01cdeb775fff",
+      "incomingSha256": "c6f1114fa85bcec158f21460e817bbfc9fb79d76db9308cb65f5bffc0cccadbf",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/g0-v79-g1-v96-refreeze-status-v1.json",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v62.json",
+      "retainedSha256": "ecbda4a1a705154c86ce52f159436580d26d80c1bc247d2568120725498bdf0f",
+      "incomingSha256": "a0cd10def0f2747e0677356c4d3de860d2cc5e2948109db559a5d7e77a3af0bf",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/own-rust-cad-v62.json",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v96.json",
+      "retainedSha256": "2214424bac6457210d4af281c546674e16245f40bff09a6bcbabe5b64b0e1342",
+      "incomingSha256": "939be45a14ec9512eea723f4ca0494b2cdc0477e02899e4726b5c2fba0e727e2",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/docs/qualification/semantic-manifold-g1-plan-v96.json",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v78-v95.mjs",
+      "retainedSha256": "ec7357b87185273517074dc538a2878fa0ea02bdeda4efa918716089f62106cd",
+      "incomingSha256": "c8d83e650a5787da790953b73bc5d71161e6132772929f6328385959de05119d",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/refresh-qualification-fingerprints-v78-v95.mjs",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
+    },
+    {
+      "path": "scripts/release-own-rust-v62.mjs",
+      "retainedSha256": "d123cb647e6184f16fe8f018f2f5e52099dff09419a2e2e59725d70dbc79ea58",
+      "incomingSha256": "7db80630612b67951dd66e3642dd59bcee09e3dac652ae98b20978841b855438",
+      "incomingArchive": "docs/qualification/parallel-main-history-2026-10-14/scripts/release-own-rust-v62.mjs",
+      "incomingCommit": "2d63a3bec114041daf4cec8a789a882585d18646"
     }
+  ],
+  "incomingCommits": [
+    "ec9499e08fc39bb6e9dde01b3d58c72b458bd76d",
+    "2d63a3bec114041daf4cec8a789a882585d18646"
   ]
 }

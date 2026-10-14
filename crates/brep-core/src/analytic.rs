@@ -790,3 +790,5 @@ mod rational_loft_legacy;
 pub use rational_loft_legacy::{capped_loft_with_caps, capped_loft_with_caps_checked, LoftCap};
 
 pub use rational_loft::section_loft_source_matches;
+
+pub use rational_loft::{PolygonStationWalls, smooth_polygon_station_walls};

@@ -15,3 +15,6 @@ def same_positive_projective_weights(a, b):
         return False
     aa, bb = [Fraction(x) for x in a], [Fraction(x) for x in b]
     return all(x * bb[0] == y * aa[0] for x, y in zip(aa, bb))
+
+# Compatibility name for the independently qualified quintic STEP runner.
+positive_proportional_weights = same_positive_projective_weights
