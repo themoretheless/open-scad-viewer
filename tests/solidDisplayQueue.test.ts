@@ -53,7 +53,12 @@ it('publishes all cached keys after a large scan yields and never requests refin
  for(const b of bodies)cache.set(solidDisplayKey(b),display(b))
  const port={cancel:vi.fn(),run:vi.fn()},yieldScan=vi.fn(async()=>{})
  const queue=new SolidDisplayQueue(port,cache,yieldScan)
- expect(await queue.prepare(bodies)).toBe(true)
+ // The queue also yields when a slice runs 8 ms; freeze the clock so only the 32-body rule
+ // applies and the count does not depend on how fast the machine is.
+ const now=vi.spyOn(performance,'now').mockReturnValue(0)
+ let prepared:boolean
+ try{prepared=await queue.prepare(bodies)}finally{now.mockRestore()}
+ expect(prepared).toBe(true)
  expect(yieldScan).toHaveBeenCalledTimes(3)
  expect(port.run).not.toHaveBeenCalled()
  for(const b of bodies)expect(queue.get(b)).toBe(cache.get(solidDisplayKey(b)))

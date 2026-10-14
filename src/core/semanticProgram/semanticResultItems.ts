@@ -106,9 +106,21 @@ export function stableJson(value: unknown): string {
     .join(',')}}`
 }
 
+const UTF8 = new TextEncoder()
+// Domains are a handful of fixed literals; their encodings are only read below.
+// Methods are bound at load so later prototype changes cannot substitute cached bytes.
+const DOMAIN_BYTES = new Map<string, Uint8Array>()
+const getDomainBytes = Map.prototype.get.bind(DOMAIN_BYTES) as (domain: string) => Uint8Array | undefined
+const setDomainBytes = Map.prototype.set.bind(DOMAIN_BYTES) as (domain: string, bytes: Uint8Array) => unknown
+let domainBytesCount = 0
+
 export function identityDigest(domain: string, payload: unknown): string {
-  const domainBytes = new TextEncoder().encode(domain)
-  const payloadBytes = new TextEncoder().encode(stableJson(payload))
+  let domainBytes = getDomainBytes(domain)
+  if (domainBytes === undefined) {
+    domainBytes = UTF8.encode(domain)
+    if (domainBytesCount < 64) { setDomainBytes(domain, domainBytes); domainBytesCount++ }
+  }
+  const payloadBytes = UTF8.encode(stableJson(payload))
   const preimage = new Uint8Array(4 + domainBytes.length + 4 + payloadBytes.length)
   const view = new DataView(preimage.buffer)
   view.setUint32(0, domainBytes.length, false)

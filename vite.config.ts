@@ -34,6 +34,9 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
+            // Shared shell translations and helpers have their own cacheable module.
+            // Keep their dependencies in their existing groups.
+            { name: 'app-shell', test: /src[\\/](appHelpers\.ts|i18n[\\/]appStrings\.ts)$/, includeDependenciesRecursively: false },
             { name: 'geometry-kernel-bytes', test: /src[\\/]generated[\\/]geometry-kernels[\\/]bytes/ },
             { name: 'language-kernel-bytes', test: /src[\\/]generated[\\/]language-kernel[\\/]bytes/ },
             { name: 'harfbuzz-bytes', test: /src[\\/]generated[\\/]harfbuzz[\\/]bytes/ },

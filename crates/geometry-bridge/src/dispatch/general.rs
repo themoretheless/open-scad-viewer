@@ -2,6 +2,7 @@
 use crate::*;
 
 const OPS: &[&str] = &[
+    "sketch_solve_diagnostics",
     "frame_solve",
     "frame_envelope",
     "frame_diagnose",
@@ -88,6 +89,21 @@ fn handle(v: Value) -> Result<Value> {
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             field(&v, "segments")?,
         )?),
+        "sketch_solve_diagnostics" => {
+            let (solution, diagnostics) = sketch_core::solve_with_diagnostics_options(
+                &field(&v, "sketch")?,
+                sketch_core::SolverOptions {
+                    tolerance: field(&v, "tolerance")?,
+                    max_iterations: 64,
+                },
+            )?;
+            encode(json!({"solution": solution, "diagnostics": {
+                "redundantEquations": diagnostics.redundant_equations,
+                "degenerateConstraints": diagnostics.degenerate_constraints,
+                "constraintResiduals": diagnostics.constraint_residuals,
+                "inconsistent": diagnostics.inconsistent,
+            }}))
+        }
         "sketch_solve" => encode(sketch_core::solve(
             &field(&v, "sketch")?,
             field(&v, "tolerance")?,

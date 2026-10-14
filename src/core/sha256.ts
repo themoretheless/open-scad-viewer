@@ -29,8 +29,13 @@ function rotateRight(value: number, bits: number): number {
   return (value >>> bits) | (value << (32 - bits))
 }
 
+const UTF8 = new TextEncoder()
+// The message schedule is fully rewritten for every block; sha256Hex is synchronous and never
+// re-entered, so one module-level buffer replaces a per-call allocation.
+const schedule = new Uint32Array(64)
+
 export function sha256Hex(input: string | Uint8Array): string {
-  const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input
+  const bytes = typeof input === 'string' ? UTF8.encode(input) : input
   const paddedLength = Math.ceil((bytes.length + 9) / 64) * 64
   const padded = new Uint8Array(paddedLength)
   padded.set(bytes)
@@ -48,11 +53,10 @@ export function sha256Hex(input: string | Uint8Array): string {
   let h5 = 0x9b05688c
   let h6 = 0x1f83d9ab
   let h7 = 0x5be0cd19
-  const schedule = new Uint32Array(64)
-
   for (let offset = 0; offset < paddedLength; offset += 64) {
-    for (let index = 0; index < 16; index++) {
-      schedule[index] = view.getUint32(offset + index * 4, false)
+    for (let index = 0, at = offset; index < 16; index++, at += 4) {
+      // Big-endian word, as DataView.getUint32(at, false) reads it.
+      schedule[index] = ((padded[at] << 24) | (padded[at + 1] << 16) | (padded[at + 2] << 8) | padded[at + 3]) >>> 0
     }
     for (let index = 16; index < 64; index++) {
       const left = schedule[index - 15]

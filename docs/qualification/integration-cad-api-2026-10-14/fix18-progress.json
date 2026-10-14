@@ -1,5 +1,5 @@
 {
-  "status": "all-38-observed-failures-pass-final-full-run-pending",
+  "status": "local-delivery-checks-passed",
   "sourceSha256": {
     "crates/nurbs-core/src/curve.rs": "c16e2cf00285793b5fc63c2771e4574d2a15cce3ad7ea0be16e557d10f05e582",
     "crates/nurbs-core/src/transport/dispatch.rs": "9db8bf3f7bd02c922860b4e6929824b7fea5791cf6421f8bea51dfb1660b99a0",
@@ -37,11 +37,23 @@
     "Report non-finite curve input locations while retaining numerical limits",
     "Prove actual active-domain closure rather than trusting the periodic flag"
   ],
-  "wasm": "pending",
+  "wasm": {
+    "geometry": {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "bytes": 11776372,
+      "sha256": "d7247c370a0e956a62b534860c6d73badd15c9af3ec69e4bcca03cf3526c0248"
+    },
+    "language": {
+      "path": "public/wasm/language-kernel.wasm",
+      "bytes": 2521860,
+      "sha256": "fbf62332d774fc8928f8c9a3e72cb5ad4d8d59737aa17a9f15a6f4c236b25b33"
+    }
+  },
   "push": "pending",
   "languageWasm": {
     "status": "rebuilt",
     "bytes": 2762982,
     "sha256": "6be02f96a3af03a838c5824c6d91374468eb0ebc9d9dfb0bcd4ed6d8e169dc17"
-  }
+  },
+  "finalEvidence": "docs/qualification/native-integration-fix18-2026-10-14/result.json"
 }

@@ -1,0 +1,16 @@
+nurbs-qualified-regression.log
+test result: ok. 1579 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 263.65s
+bridge-qualified-regression.log
+test result: ok. 330 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 342.10s
+delivery-final-tests.log
+ Test Files  32 passed (32)
+      Tests  536 passed (536)
+delivery-final-types.log
+passed with empty diagnostics
+delivery-final-dist.log
+Verified 159 dist artifacts (8222176 asset bytes + 15018161 raw WASM bytes = 23240337 total bytes)
+wasm-packaging-tests.log
+ℹ tests 15
+ℹ pass 14
+ℹ fail 0
+ℹ skipped 1

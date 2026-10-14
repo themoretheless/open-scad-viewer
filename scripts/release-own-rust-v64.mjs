@@ -5,7 +5,7 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,p)),sha=v=>createHash('sha256').update(v).digest('hex')
 if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v64.json')))throw new Error('Historical own-rust-cad-v64 evidence already exists; publish a new version instead of overwriting it')
-const previousPath='docs/qualification/own-rust-cad-v60.json',previous=JSON.parse(bytes(previousPath))
+const previousPath='docs/qualification/own-rust-cad-v62.json',previous=JSON.parse(bytes(previousPath))
 const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
 const additions=changed.filter(path=>existsSync(resolve(root,path))).filter(path=>['vite.config.ts','vite.qualification.config.ts','scripts/qualificationKernelModuleDelivery.mjs','src/workers/manifoldPlanQualification.worker.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
 const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
@@ -43,7 +43,7 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
 const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
 writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v64.json'),JSON.stringify({
   id:'own-rust-cad-v64',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-14',
-  purpose:'Record the combined main and CAD sweep/B-rep source with preserved main APIs, typed SS reports and shared-budget stable-jet injectivity. Native SS regressions and the concentric hollow control are local evidence; clean G0/G1 qualification is not inferred.',qualificationClaim:'none',
+  purpose:'Record current main with integrated CAD and language sources, restored constructor and worker protocols, exact active-domain closure, rational contour charts and shared-budget Bernstein injectivity. Native regression and packaged-command checks are local evidence; clean G0/G1 qualification is not inferred.',qualificationClaim:'none',
   wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
   sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
   dependencyFingerprints,

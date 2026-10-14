@@ -1,5 +1,5 @@
-# G0 v78 / G1 v95 metadata amendment
+# G0 v78 / G1 v95 re-freeze review
 
-Restore original source bytes in the temporary race-test fixture before testing destination collision. The broader OwnRust source binding correctly rejects the mutated fixture. Preserve the exact native terminal log with a narrow Git data diff attribute.
+Append-only re-freeze after the semantic lowering speed-up (src/core/sha256.ts and semantic codec/validator internals); byte-identical canonical output; no capability change; preserve ownRust60.
 
-OwnRust62 binds these metadata changes. Rust production sources and the rebuilt be3f8c6b artifact are unchanged. Native 5697 passed, 6 ignored; current artifact contracts 162 passed. These are finite checks, not full semantic, STEP or browser qualification. Earlier evidence remains immutable. G1 v95 starts with no completed clean work units.
+Preserve ownRust60, G0v77, G1v94 and all earlier records byte for byte. Bind current source, observed ownRust61 WASM, fixtures, transport tests and executors in new append-only records. No previous G1 result is imported: all 4740 clean semantic work units remain incomplete for this version. No G0/G1 approval or production cutover is claimed.
