@@ -435,7 +435,11 @@ fn default_spatial_three_cavity_budget_proves_actual_material_and_refuses_short_
     assert_eq!(limits["maxLinearCells"], json!(30000));
     limits["model"] = model;
     limits["capFaces"] = json!([]);
-    limits["maxLinearCells"] = json!(20000);
+    // A faster valid proof may need fewer than the former 20,000 cells.
+    // Refuse at one cell below the work actually needed by this model.
+    let linear_cells = proof["linearCells"].as_u64().unwrap();
+    assert!(linear_cells > 0 && linear_cells <= 30000);
+    limits["maxLinearCells"] = json!(linear_cells - 1);
     limits["maxPairs"] = json!(1);
     limits["maxCells"] = json!(1);
     let refused = call("brep_sweep_volume_audit", limits).unwrap();

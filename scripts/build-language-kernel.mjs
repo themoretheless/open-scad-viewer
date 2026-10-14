@@ -12,7 +12,10 @@ const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'sr
 const publicWasm=resolve(root,'public/wasm')
 const cargoTarget=resolve(root,'crates/target')
 const reproducible=reproducibleCargo(root)
-const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"',...reproducible.args,'--target','wasm32-unknown-unknown','--manifest-path','crates/languages-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,...reproducible.env,CARGO_TARGET_DIR:cargoTarget}})
+// Keep native profiles intact; only the browser language module uses size-first codegen.
+const languageSizeFlags = ['languages-bridge','rush-frontend','rush-runtime','openscad-core']
+  .flatMap(name => ['--config', `profile.release.package.${name}.opt-level="z"`])
+const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"',...languageSizeFlags,...reproducible.args,'--target','wasm32-unknown-unknown','--manifest-path','crates/languages-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,...reproducible.env,CARGO_TARGET_DIR:cargoTarget}})
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
 mkdirSync(publicWasm,{recursive:true})

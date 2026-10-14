@@ -1,3 +1,4 @@
+import {INCOMING_MAIN_ARCHIVES} from './qualificationIncomingMainArchives.mjs'
 import {PARALLEL_MAIN_ARCHIVES} from './qualificationParallelMainArchives.mjs'
 const historicalPlanHashes = [
   '050a1dd7a30d19dd85a8ed16fd724f7579c2430f1d7bf03ed68009d46bd2cbfa',
@@ -35,7 +36,17 @@ const historicalPlanHashes = [
   '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
+  'docs/qualification/own-rust-cad-v70.json': '55cc3ab75c80c1a4513e112fd0f01a421ca4d1f5e2a24f6f3886c42b0c758dec',
+  'scripts/release-own-rust-v70.mjs': 'a11a1611e76146574ae304bb521dbaffc05ee183e07fd28807c248e0db905486',
+  "scripts/refresh-qualification-fingerprints-v84-v101.mjs": "b0b3e5eac371fac42db472f842b73a573685e03ea6e0c003c11649794e21c6b8",
+  "scripts/release-own-rust-v69.mjs": "7b820fadf3cfb9d5ea665b487077934bc732f5fda771a345610e3b3a38e82899",
+  "docs/qualification/own-rust-cad-v69.json": "d3b951d1d501f24126da9702005807304b740f02cf2ed870b4a912f68b5a812d",
+  "docs/qualification/g0-toolchain-fingerprints-v84.json": "0d2ee9b608afb296ddecab5abf31ac3aa802841faab7d97990b0e478cc97dcc1",
+  "docs/qualification/semantic-manifold-g1-plan-v101.json": "caf8bc925b9ee54e07fa35533edebc8c6138051414942ed0e588d2e3b875d2c9",
+  "docs/qualification/g0-v84-g1-v101-refreeze-review.md": "c0e508f4573dd1762053a59df30a863d4b0b79aad1c256606a719288b3d7cfbe",
+  "docs/qualification/g0-v84-g1-v101-refreeze-status-v1.json": "b6ddc9209674bd301bdcf8a09b5029804cd12caa5c846b612dadfe2cfdbd2fd4",
   ...PARALLEL_MAIN_ARCHIVES,
+  ...INCOMING_MAIN_ARCHIVES,
 
   'docs/qualification/own-rust-cad-v63.json': '62002c196ac9267b0e646ce7f923f85235a6207fd42c91c1cf0aa7a24cc71128',
   'docs/qualification/g0-toolchain-fingerprints-v79.json': '4893d80debcdbfb8fa04b53eb333a1997d41727cfa41297d2deee50b02aaceda',

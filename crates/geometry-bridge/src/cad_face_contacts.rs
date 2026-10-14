@@ -89,6 +89,8 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
         "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
         "nextPair":r.boundary.intersections.pairs.next_pair,
+        "linearCells":r.boundary.intersections.faces.linear_cells,
+        "totalPairs":r.boundary.intersections.pairs.total_pairs,
         "individualPairs":r.boundary.intersections.pairs.pairs.len(),
         "groupedPairs":r.boundary.intersections.pairs.grouped_pairs,
         "groupCells":r.boundary.intersections.pairs.group_cells,

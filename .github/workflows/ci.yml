@@ -115,9 +115,10 @@ jobs:
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    # Hosted Windows exceeded 90 minutes during the full proof workspace.
-    # Keep every test and numerical/work limit; allow the job to complete.
-    timeout-minutes: 120
+    # Windows previously exhausted 90 minutes before the last workspace packages.
+    # Fresh native geometry matrices alone took 733 + 717 seconds on the audit host.
+    # Preserve every test, individual deadline and mathematical work budget.
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:

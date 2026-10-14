@@ -1,0 +1,275 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-15",
+  "sourceParents": [
+    "394e9462d322ec433ffbab400cd1653076fc8b68",
+    "7fb7db9440753c2890756c74643fff3dc64450ce"
+  ],
+  "sourceBinding": "OwnRust70 binds final source bytes; parent commits alone are not the final content identity.",
+  "qualificationClaim": "none",
+  "scope": "Finite native frame/cap matrices and read-only pole-sphere queries; no arbitrary moving-frame, freeform-cap, pole Boolean or production-approval claim. Product lifecycle evidence is limited to the four recorded UI cases.",
+  "native": {
+    "status": "passed",
+    "scope": "153 focused geometry tests, not the full workspace",
+    "tests": 153,
+    "groups": {
+      "intersections": 132,
+      "graph-predicate": 2,
+      "monotonicity": 15,
+      "nonplanar-matrix": 1,
+      "frame-cap-matrix": 1,
+      "three-cavity": 1,
+      "fillet-family": 1
+    },
+    "matrixCells": 288,
+    "matrixPassed": 216,
+    "matrixRefused": 72
+  },
+  "architecture": {
+    "status": "passed",
+    "pinnedOversizedFiles": 56,
+    "pinnedLayerViolations": 0,
+    "raisedPins": 0
+  },
+  "typedWithoutCodecs": {
+    "status": "passed",
+    "packages": [
+      "brep-core",
+      "nurbs-intersect",
+      "brep-intersect"
+    ]
+  },
+  "wasm": {
+    "sha256": "21e5ca1473fc9d7094784bc2b3369e7a4b97d874fe9fe55d0d2e4203a64925f7",
+    "byteLength": 12011978,
+    "optimizer": "Native Binaryen 116; four optimizer checks passed, including tiny executable-fixture byte parity. Full cross-builder byte identity is not inferred.",
+    "completeBuildPipeline": "passed"
+  },
+  "node": {
+    "status": "passed",
+    "path": "docs/qualification/merged-main-geometry-2026-10-14/node.json"
+  },
+  "browser": {
+    "status": "passed",
+    "path": "docs/qualification/merged-main-geometry-2026-10-14/browser.json"
+  },
+  "productUiMatrix": {
+    "status": "passed",
+    "cases": 4,
+    "checks": 36,
+    "path": "docs/qualification/merged-main-geometry-2026-10-14/profile-solid-ui/manifest.json",
+    "qualificationCredit": 0
+  },
+  "typechecks": {
+    "status": "passed",
+    "targets": [
+      "Vue application",
+      "MCP"
+    ]
+  },
+  "clippy": {
+    "status": "passed",
+    "gates": [
+      "tensor/compute",
+      "math/math-compute",
+      "math-compute gpu,tensor"
+    ]
+  },
+  "nativeJobBudget": {
+    "nativeSmokeMinutes": 150,
+    "priorWindowsObservedCutoffMinutes": 90,
+    "individualDeadlinesChanged": false,
+    "mathematicalBudgetsChanged": false
+  },
+  "nativeRuntimeSnapshot": {
+    "status": "passed",
+    "scope": "81 cases executed on macOS; exact Linux hashes are checked by the final full CI."
+  },
+  "freshSemanticMatrix": {
+    "plan": "semantic-manifold-g1-plan-v102",
+    "status": "not-started",
+    "completedWorkUnits": 0,
+    "completedFragments": 0,
+    "priorResultsMayBeImported": false
+  },
+  "history": {
+    "incomingManifest": "docs/qualification/main-history-7fb7db944/manifest.json",
+    "incomingCollisions": 100,
+    "verifiedFrozenIndexArchives": 624,
+    "qualificationCredit": 0
+  },
+  "independentBuildObservation": {
+    "path": "docs/qualification/merged-main-geometry-2026-10-14/independent-linux-build/manifest.json",
+    "qualificationCredit": 0,
+    "primaryArtifactOnlyForG1": true
+  },
+  "performanceDiagnostic": {
+    "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-diagnostic/manifest.json",
+    "qualificationCredit": 0,
+    "scope": "Interrupted pre-fast-path placement, not a controlled performance claim"
+  },
+  "logs": [
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/intersections.log.gz",
+      "sha256": "ed3bd614b8b9bd5b4a0fd91bb4420dee45e9d77a20a86670a6bc815ef8f33749",
+      "uncompressedSha256": "705a2d5bd77a8c39090fc324f6680351fd7097e80828bddb3f73b3c8f43faf53",
+      "uncompressedBytes": 22818
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/graph-predicate.log.gz",
+      "sha256": "1795c3cc16c2d24870e7b0a0db5af9705fbbe50f34c55481a38d69ddc494b5fb",
+      "uncompressedSha256": "78e00b2ef930732c18d82cb7bc8f84555d4d9c46da3326257571dc43d72c867d",
+      "uncompressedBytes": 1749
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/monotonicity.log.gz",
+      "sha256": "2505309f1c530893b5ef525325e52c95bff6c7eaa9a4a2a642fb8fedeae5d982",
+      "uncompressedSha256": "8501eac6280d17d11f57c2f9f704cc2518007f438037ed7b728ee768f58010f0",
+      "uncompressedBytes": 9144
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/nonplanar-matrix.log.gz",
+      "sha256": "aad7845affe3ae99ea6b75c8d577d8cfb1c4e93631d6e90056aa35dc48a5189e",
+      "uncompressedSha256": "1638fc0b05a56da08d7186ddea879700c8b86beb01fb098536b76aed40a0e3fb",
+      "uncompressedBytes": 13247
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/frame-cap-matrix.log.gz",
+      "sha256": "b1c300b9e14a8fd53557fdccaa735a893482650b1d29bc8c0457ff111f46c167",
+      "uncompressedSha256": "d9996d4c50a17c850464e8f08c8a07de5ba556b1318249b60fe6ec28f875603f",
+      "uncompressedBytes": 12576
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/three-cavity.log.gz",
+      "sha256": "2d88be396e607d319ace9b8bb21ff11b1b14e49755a0a9ed5b39bc26e7114380",
+      "uncompressedSha256": "9bca6533dbca8301496285aac1e6a4007fe6e087daba037f6a0fbe5d08e32944",
+      "uncompressedBytes": 12674
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fillet-family.log.gz",
+      "sha256": "844a01937bc3320be9773ba58cf3691d176b55ae4d1d5942007e18e789478e7b",
+      "uncompressedSha256": "fdfee6bb5e26194246a91040ff71c991a8a3cec65b6654b4a75096db8a9e87aa",
+      "uncompressedBytes": 12792
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/product-ui.log.gz",
+      "sha256": "fef35691c1651129b17cdaf01a75793437cd096ae99ea4586fa2cad4c698a288",
+      "uncompressedSha256": "10c1aefe57bb34248820753d15b0022ba565a53e0702e980208cfafcb5bb326c",
+      "uncompressedBytes": 37
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/app-build.log.gz",
+      "sha256": "c71899ef7ccd2faacb8a6a4e8c5dbc1c6e795ef90d18eec173d0983de2080092",
+      "uncompressedSha256": "ab524ed490a0d2ff8562a3a1a33ac2cbab4d548fd6f3ff4df5a005b7ba5c7440",
+      "uncompressedBytes": 14181
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/ownership.log.gz",
+      "sha256": "a42fb0e7f413f26696b3c21b3c47073028a6d4571139d91cdf51428c3bb3f324",
+      "uncompressedSha256": "d24becc061733e0eb9474c546f6897f61767012ed82f25876701f9bf175dc512",
+      "uncompressedBytes": 83
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/independent-linux-build.log.gz",
+      "sha256": "a0101cd7be577e59aaa7a21203fa129fc95f904671657398d1f02f8822de8a29",
+      "uncompressedSha256": "6816a5ef3542c93247bdb304df212c1206fd204d4cc5422f176159c409fbb6b1",
+      "uncompressedBytes": 34323
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/three-cavity-profile.log.gz",
+      "sha256": "c5f79bc036ecad89b13307eec44dca8c347a8b19477df87fda93f142fd4fdb1a",
+      "uncompressedSha256": "7ee37fed60fb9a333899fce07262886ad0615751a019ef7982cec67ed8a7c2b0",
+      "uncompressedBytes": 403080
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/fast-path-profile.log.gz",
+      "sha256": "5e260faf0f4e372bac5c5b8211ec2a8b680669173a161c4b280e9395d49e6b29",
+      "uncompressedSha256": "f03ae374283aa85268d8d924cf369f125ca1882fcf5f4d56c467e34b461fa789",
+      "uncompressedBytes": 478701
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/native-chain.log.gz",
+      "sha256": "66aff56ed27668944e3877aa754a1a43b3589223e62690a78c83a1138582b010",
+      "uncompressedSha256": "ff38e12d46a5482c76e693b4c0d9055c2b30219ea325638fc0561be6cb9716fe",
+      "uncompressedBytes": 28
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/no-codec.log.gz",
+      "sha256": "7616013e82947d8ae7655a4aea87d01c02e8cf81dc0a6ca93a6cc3e0fa4ccf91",
+      "uncompressedSha256": "87cdf8f42f7fce64bbcd0b60654313d8a0ad289717678a347419c1637d88943e",
+      "uncompressedBytes": 14992
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/clippy-tensor.log.gz",
+      "sha256": "11a67c69e0475b5519b06caa42d73414a4ae1084c9decdac348319f30d57f5d0",
+      "uncompressedSha256": "4da0c22bebda66028d38f9f357c2f004c4d28943e795d364faae1bb1516398a3",
+      "uncompressedBytes": 481
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/clippy-math.log.gz",
+      "sha256": "4f89ed10b36d940a4e3ff04b1c09a12fb248a27fbbde5538c110f405eab64603",
+      "uncompressedSha256": "de87d3051a1bbdd95ba826c6bc8dc590c3e383226fb37e791065c204c7a47a1c",
+      "uncompressedBytes": 481
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/clippy-gpu.log.gz",
+      "sha256": "2ee507930505f4df6cf94a07e53c8468e5c69a55aaba6ec051f6a4b3ad54b296",
+      "uncompressedSha256": "0b8c19948f9ef1d41cca62d458569376d628f6be08b6dc0518288dc35f1d93ff",
+      "uncompressedBytes": 481
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/rush-snapshot.log.gz",
+      "sha256": "185354e69cda303aa040120de585f4f5ed4369edcc3632806d6a5a6d7a2adb82",
+      "uncompressedSha256": "53d8014be3eb6726f14938c25091918f02c332fd9849b1cafb6fbb6d1649a4e7",
+      "uncompressedBytes": 2308
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/architecture.log.gz",
+      "sha256": "8b8946761f80354722edcda08847186268dd9fc6eb53f077105875ab33a9cee0",
+      "uncompressedSha256": "692c0ee4c243840a152292e8a9f86fb45822b836b0eb0b6f3dfa5b3545105186",
+      "uncompressedBytes": 70
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/architecture-tests.log.gz",
+      "sha256": "fd7b80ff931602efb1ea941fd5139a7a4501db92b0c1917273c64ba2772862fe",
+      "uncompressedSha256": "3ca4ba0317a69d02d748f98be694714e7fe72fb05470163d96d8eddba37464f3",
+      "uncompressedBytes": 431
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/vue-typecheck.log.gz",
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/mcp-typecheck.log.gz",
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uncompressedBytes": 0
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/optimizer.log.gz",
+      "sha256": "36c601a5f4577c68345550ad2a03e07af420f988a26c6d251ecd142df5b5c5cd",
+      "uncompressedSha256": "a816523252cccc2e7074da4710d68c4fb5f233b6dcb25ab37ac22821e20487b8",
+      "uncompressedBytes": 923
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/wasm-build.log.gz",
+      "sha256": "34a539620f87a71cf88aa570ac4b2a5f55b92d04e67b2c83040e5e216dcd4a43",
+      "uncompressedSha256": "9261f4015c986696c5152b20ac940479395ed241ec539147ed95ee7574daec15",
+      "uncompressedBytes": 20580
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/node.log.gz",
+      "sha256": "ffe5dcc5567a1dd450713e8e667bf889457b3243b16433493fae65b9b53bb65e",
+      "uncompressedSha256": "f5d4b2b0f8705318c2d6ba0774f56f8d25f6123888653b497bd6f2d2b030ef2c",
+      "uncompressedBytes": 5944
+    },
+    {
+      "path": "docs/qualification/merged-main-geometry-2026-10-14/browser.log.gz",
+      "sha256": "2533543920157acf19d80131f55bcae91c46040308c4184583d3e522f63cf759",
+      "uncompressedSha256": "f6080e6034c1df561ab4ebfa0d74e70a5047c3a45dbcd9f1feeed5de56fbd49c",
+      "uncompressedBytes": 6004
+    }
+  ]
+}

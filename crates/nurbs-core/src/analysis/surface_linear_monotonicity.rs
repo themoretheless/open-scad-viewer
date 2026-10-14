@@ -3,6 +3,8 @@
 use crate::{
     check, distance_bounds::Interval as I, surface::Surface, surface_measure::jets, Result,
 };
+mod bernstein_minors;
+
 #[derive(Clone, Debug)]
 pub struct ProfileParameterization {
     pub weights: [f64; 2],
@@ -271,6 +273,17 @@ fn inspect_metric(
                 continuously_differentiable && diagonal && uu.mul(vv)?.sub(uv.mul(vu)?)?.lo > 0.;
             Ok(i8::from(strong_monotonicity || p_matrix))
         })();
+        // Preserve the cheap outward-jet proofs and rigorous negative exits.
+        // Correlated polynomial minors resolve only an otherwise unknown cell,
+        // including numerical enclosure failures, under the same counted cell.
+        let result = if !matches!(&result, Ok(1) | Ok(-1))
+            && continuously_differentiable
+            && bernstein_minors::certify(s, span, domain, projection).unwrap_or(false)
+        {
+            Ok(1)
+        } else {
+            result
+        };
         match result {
             Ok(1) => (),
             Ok(0) if depth < max_depth => {

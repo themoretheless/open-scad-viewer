@@ -1,0 +1,66 @@
+{
+  "status": "local-delivery-checks-passed",
+  "sourceSha256": {
+    "crates/nurbs-core/src/curve.rs": "c16e2cf00285793b5fc63c2771e4574d2a15cce3ad7ea0be16e557d10f05e582",
+    "crates/nurbs-core/src/transport/dispatch.rs": "9db8bf3f7bd02c922860b4e6929824b7fea5791cf6421f8bea51dfb1660b99a0",
+    "crates/nurbs-core/src/sweeps/progressive_miter/level_certificate.rs": "bfa4946c15673fc75362daa9c73657a30f09ae69b79f3e38fcd92f1ae9e96de3"
+  },
+  "baselineFailures": [
+    "construct::curves::formula::tests::json_dispatch_accepts_mixed_text_and_token_formulas",
+    "construct::curves::formula::tests::json_formula_dispatch_retains_the_same_control_definition",
+    "construct::curves::formula::tests::json_surface_formula_dispatch_keeps_the_control_net",
+    "construct::curves::helix::tests::json_dispatch_preserves_physical_inputs_and_uncertified_report",
+    "construct::curves::helix::tests::variable_pitch_json_preserves_height_pitches_and_report",
+    "construct::curves::involute::tests::json_preserves_uncertified_report_and_base_circle_endpoint",
+    "construct::surfaces::boundary_fill::tests::json_preserves_all_patches_instead_of_only_the_first",
+    "construct::surfaces::patches::tests::patch_json_constructors_validate_control_net_shapes",
+    "construct::surfaces::sections::miter_section_correction::tests::protocol_owns_correction_order_and_preserves_no_correction_mode",
+    "construct::surfaces::sections::section_projection::tests::authored_plane_preserves_tilted_periodic_section_and_bounds_correction",
+    "construct::surfaces::sections::sweep_section_projection::tests::protocol_carries_complete_union_and_shared_budget_refusal",
+    "construct::surfaces::triangular_patch::tests::json_constructor_preserves_the_collapsed_vertex",
+    "curve_decomposition_certificate::batch_tests::batch_has_one_budget_and_never_returns_a_partial_maximum",
+    "foundation::guards::tests::curve_constructor_rejects_inf_knot",
+    "foundation::guards::tests::curve_constructor_rejects_nan_control_point",
+    "foundation::guards::tests::curve_constructor_rejects_nan_weight_as_non_finite",
+    "join::continuity::projective_collection::tests::transport_preserves_native_collection_work_and_order",
+    "numerics::exact_curve_segments::tests::unclamped_exact_blossoms_certify_hollow_original_domains"
+  ],
+  "focusedResult": "38 passed; 0 failed (18 original plus 20 additional)",
+  "typecheck": "passed",
+  "frozenArchives": {
+    "checked": 366,
+    "mismatches": 0
+  },
+  "changes": [
+    "Restore tested constructor and seam transport protocols without replacing native owners",
+    "Restore shared-work refusal reports for invalid batch budgets",
+    "Report non-finite curve input locations while retaining numerical limits",
+    "Prove actual active-domain closure rather than trusting the periodic flag"
+  ],
+  "wasm": {
+    "geometry": {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "bytes": 11776372,
+      "sha256": "d7247c370a0e956a62b534860c6d73badd15c9af3ec69e4bcca03cf3526c0248"
+    },
+    "language": {
+      "path": "public/wasm/language-kernel.wasm",
+      "bytes": 2521860,
+      "sha256": "fbf62332d774fc8928f8c9a3e72cb5ad4d8d59737aa17a9f15a6f4c236b25b33"
+    }
+  },
+  "push": {
+    "status": "succeeded",
+    "sourceCommit": "9b49d75940ee8129d37502c1d45c93c86f2a0146",
+    "branches": [
+      "main",
+      "codex/integrate-available-20261013"
+    ]
+  },
+  "languageWasm": {
+    "status": "rebuilt",
+    "bytes": 2762982,
+    "sha256": "6be02f96a3af03a838c5824c6d91374468eb0ebc9d9dfb0bcd4ed6d8e169dc17"
+  },
+  "finalEvidence": "docs/qualification/native-integration-fix18-2026-10-14/result.json"
+}

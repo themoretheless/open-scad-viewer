@@ -1,0 +1,24 @@
+{
+  "scope": "Independent build observation; no semantic qualification or production approval for this Linux variant",
+  "runId": 38634817378,
+  "runUrl": "https://github.com/themoretheless/open-scad-viewer/actions/runs/38634817378",
+  "sourceSha": "9abb0632f0ac9cc0a5bcf4bfafdc96eda30ec929",
+  "rustSubtree": "c546568801f2c67f3ea20ed29afd0f32dbfcfe79",
+  "matchingBuildInputFiles": 15,
+  "qualificationCredit": 0,
+  "producerSha256": "bb0012b268f3324033a85f4f633e972040a551295ea32e2aad626500577027b3",
+  "githubArtifactsSha256": "f2b5302dbc7121b58585cfd0668e424a7153d7b54318884bb1a55fc4823cc2f0",
+  "downloadedTarSha256": "6d07f90483cdd6b57fb815b19fbc7bd46355d5aaaa8bf881f60047c0bb7335ad",
+  "primaryGeometry": {
+    "sha256": "21e5ca1473fc9d7094784bc2b3369e7a4b97d874fe9fe55d0d2e4203a64925f7",
+    "byteLength": 12011978,
+    "builder": "macos-aarch64"
+  },
+  "observedLinuxGeometry": {
+    "path": "public/wasm/geometry-kernel.wasm",
+    "sha256": "9fb8e6d9ae50b16ddadf537a2026015584dd166ce5f8da11ae0f843aed179fba",
+    "byteLength": 12012241
+  },
+  "byteIdentical": false,
+  "byteLengthDifference": 263
+}

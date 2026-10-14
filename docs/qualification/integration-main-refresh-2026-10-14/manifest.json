@@ -1,0 +1,143 @@
+{
+  "main": "2d63a3bec114041daf4cec8a789a882585d18646",
+  "files": [
+    {
+      "path": ".github/workflows/g1-qualification-clean.yml",
+      "integrationSha256": "00222da14192f75fdc2675c098641124a65d7794d96a78c0e27c77dad8bf7b14",
+      "mainSha256": "e88dd1fb7ac73a6c217270d2ec02a8549be75799c0d35217843a6d8eaf3378b5",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v78.json",
+      "integrationSha256": "fe3edf39d31d905ac18a7c49e79b86bac6fd241d38261b4907f77cdef63daa90",
+      "mainSha256": "6fe6c20e32133d10215009b351af06a42b0c5048776d661807f4bad43261df11",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v79.json",
+      "integrationSha256": "4893d80debcdbfb8fa04b53eb333a1997d41727cfa41297d2deee50b02aaceda",
+      "mainSha256": "b80929f34611754e541389659e1299f3298c87c76e673f9a902bae32a3e5bb4b",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-v78-g1-v95-refreeze-review.md",
+      "integrationSha256": "cb40cabb7b91450e8b8a141df9ba8e6bff47f8a8d0ccf7dedfad07f4a02b8a74",
+      "mainSha256": "f146d32a538ee5da56eeff342b3d1964ae006839837858f679a4120e5949a308",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-v78-g1-v95-refreeze-status-v1.json",
+      "integrationSha256": "fb9389b8bd19ff63b9fa55412ca24c9932203bd7ef5a56529ca9e6d7b00705f0",
+      "mainSha256": "83f6d552153490a210a4fdfbe3b3b6111090f77f569490525eea3b88ae099139",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-v79-g1-v96-refreeze-review.md",
+      "integrationSha256": "57c9090fe69c0b561592edd613238565f9b18c7a10679624a544af3f09bdf100",
+      "mainSha256": "472c9a601ac60430e7c14b27eb9f34629a1af861e5de38c4c9f6f21a1968e083",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/g0-v79-g1-v96-refreeze-status-v1.json",
+      "integrationSha256": "ac069ed825bf781e13ebc57ba140c9ea4d27a4d445e45d8b586d01cdeb775fff",
+      "mainSha256": "c6f1114fa85bcec158f21460e817bbfc9fb79d76db9308cb65f5bffc0cccadbf",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v61.json",
+      "integrationSha256": "7864e96d52112f49f5fc23a7eb2472ea816937c628b6168bf89e82b2cf386a1a",
+      "mainSha256": "321d1f140a474817a4e1cdb736065ba7d9b14d59c8e5e627f33aa4b3f5517174",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v62.json",
+      "integrationSha256": "ecbda4a1a705154c86ce52f159436580d26d80c1bc247d2568120725498bdf0f",
+      "mainSha256": "a0cd10def0f2747e0677356c4d3de860d2cc5e2948109db559a5d7e77a3af0bf",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v95.json",
+      "integrationSha256": "dc3ec339b8fd9273afb81296b3d78e2c5c285ef2d0a8ddb3c3bc32d56a5ace39",
+      "mainSha256": "b1c07be83d5fdebe4126264cc0ad295d643967cfb8dcf2e093baf89d138b3407",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v96.json",
+      "integrationSha256": "2214424bac6457210d4af281c546674e16245f40bff09a6bcbabe5b64b0e1342",
+      "mainSha256": "939be45a14ec9512eea723f4ca0494b2cdc0477e02899e4726b5c2fba0e727e2",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "integrationSha256": "f3c963d52b0959ae8beb41ebd9495335d953ff30824ed5362ea5c18e922bef5b",
+      "mainSha256": "4daca8e4688d9ce25c8bdc33b1974e242235b36f67788376f9473b99415cf898",
+      "resolution": "rebuilt integration artifact; final rebuild pending"
+    },
+    {
+      "path": "scripts/g1-github-actions.mjs",
+      "integrationSha256": "80172a030399e95f7dc81ac8b49898f3bf64e8ef83c7495bd1db3a24f01acdab",
+      "mainSha256": "a9029fc1b30b84e4b5b068429558db33c302044aa62a7300a7422128c98b5542",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/qualificationFrozenArchives.mjs",
+      "integrationSha256": "2cee78e058a50e996791473d2144d7fecaeef4d904a638d938be80ccada60bc7",
+      "mainSha256": "1ff31cdbdb2d816df8e0feb8705173a7f59dcbe0d6f24f5a5ca2ac5525d32efc",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v77-v94.mjs",
+      "integrationSha256": "c9a75aef90352f015c18412b8297a6fc70b2b33e1b587f7e15b60ef3eeb31334",
+      "mainSha256": "4aea0c07ddd8e605608a5d7c65547b061b57332440aaefef4b2514eb968000e0",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v78-v95.mjs",
+      "integrationSha256": "ec7357b87185273517074dc538a2878fa0ea02bdeda4efa918716089f62106cd",
+      "mainSha256": "c8d83e650a5787da790953b73bc5d71161e6132772929f6328385959de05119d",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/refresh-qualification-fingerprints.mjs",
+      "integrationSha256": "bcb3014e8d199832a1eb9be9e68adaabc1b0bb444504c527d09fb12d9ac30dff",
+      "mainSha256": "f5fc905878fbd0c757f2d8b4ddefb8b3ee6d0fb0e18366bf276e14901877d2db",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/release-own-rust-v61.mjs",
+      "integrationSha256": "32afc942401fdf4612832639a0fafc39ad7faf686f6d50b40c342d3e375699c0",
+      "mainSha256": "6c33ef3489cf1b72e06c4f770de83090768fe669b6a17449d0fbafaf2ac3bd2f",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/release-own-rust-v62.mjs",
+      "integrationSha256": "d123cb647e6184f16fe8f018f2f5e52099dff09419a2e2e59725d70dbc79ea58",
+      "mainSha256": "7db80630612b67951dd66e3642dd59bcee09e3dac652ae98b20978841b855438",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/run-g1-candidate-clean-fragment.mjs",
+      "integrationSha256": "1b9a53a4399feb71462772ae2c8b0670240c71a96b2243dce633e516df62e53c",
+      "mainSha256": "3654a719dd649e9c827aa5445308d895416aece84d960d3db0b0f5d734ec63b0",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "integrationSha256": "40a0f4ba8f27ea0585a1b3fd625f6dccc40b696b16b5cf8a855e636cf9f0571e",
+      "mainSha256": "cd8399680a47dc1e6a454000bc00e8f7c31bddefd7ac4b9e58c61ef38184e397",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "tests/g0ToolchainFingerprints.test.ts",
+      "integrationSha256": "2123c3e84a482c56f5f3c57316dde091306bcdd9b58c693ced00347a438c93e7",
+      "mainSha256": "aef431c19e8e57f9defe774956d7bb7ed1f2ddf5a2625ad151cbe3641972bfbc",
+      "resolution": "current main canonical; integration version archived"
+    },
+    {
+      "path": "tests/g1GithubActionsQualification.test.ts",
+      "integrationSha256": "10cc6d5b1896c6d596e68637bd5031123f93976f90177b6cdbe2037474ca5ef5",
+      "mainSha256": "6a333f7158d66529a248473d930a1cfceb47843a746d3db0e8ff19c3bbb80c1f",
+      "resolution": "current main canonical; integration version archived"
+    }
+  ]
+}
