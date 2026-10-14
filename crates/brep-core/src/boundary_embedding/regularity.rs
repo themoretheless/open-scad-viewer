@@ -5,9 +5,21 @@ use crate::{Error, Model, Result};
 #[derive(Clone, Debug)]
 pub struct Report {
     pub all_faces_regular: bool,
+    /// Ordinary nonzero-Jacobian charts or a complete authored pole blow-up.
+    /// Pole quotient regularity is stratified, not a claim of G1 at the pole.
+    pub all_faces_regular_modulo_poles: bool,
+    pub pole_quotients: Vec<Option<PoleReport>>,
     pub cells: usize,
     pub faces: Vec<Option<nurbs_core::surface_regularity::Report>>,
     pub unresolved_faces: Vec<usize>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PoleReport {
+    pub edge: usize,
+    pub vertex: usize,
+    pub collapsed_end: usize,
+    pub proof: nurbs_core::surface_quotient_injectivity::PolarReport,
 }
 
 pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
@@ -25,12 +37,26 @@ pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
     }
     let mut out = Report {
         all_faces_regular: false,
+        all_faces_regular_modulo_poles: false,
+        pole_quotients: Vec::with_capacity(model.faces.len()),
         cells: 0,
         faces: Vec::with_capacity(model.faces.len()),
         unresolved_faces: Vec::new(),
     };
     for (index, face) in model.faces.iter().enumerate() {
         let remaining = max_cells - out.cells;
+        if let Some((end,edge,vertex)) = crate::face_injectivity::declared_pole(model,index) {
+            let proof = if remaining >= 64 {
+                Some(nurbs_core::surface_quotient_injectivity::certify_polar_source_frame(
+                    &face.surface,end,8,remaining)?)
+            } else { None };
+            out.cells += proof.as_ref().map_or(0,|p|p.cells);
+            if !proof.as_ref().is_some_and(|p|p.proven) {out.unresolved_faces.push(index);}
+            out.pole_quotients.push(proof.map(|proof|PoleReport {edge,vertex,collapsed_end:end,proof}));
+            out.faces.push(None);
+            continue;
+        }
+        out.pole_quotients.push(None);
         let report = if remaining == 0 {
             None
         } else {
@@ -52,7 +78,9 @@ pub fn inspect(model: &Model, max_cells: usize) -> Result<Report> {
         }
         out.faces.push(report);
     }
-    out.all_faces_regular = !model.faces.is_empty() && out.unresolved_faces.is_empty();
+    out.all_faces_regular_modulo_poles = !model.faces.is_empty() && out.unresolved_faces.is_empty();
+    out.all_faces_regular = out.all_faces_regular_modulo_poles
+        && out.pole_quotients.iter().all(Option::is_none);
     Ok(out)
 }
 
@@ -73,7 +101,7 @@ pub fn inspect_joint(
 ) -> Result<JointReport> {
     let regularity = inspect(model, max_regularity_cells)?;
     let embedding = super::inspect_with_linear(model, tolerance_uv, limits, max_linear_cells)?;
-    let proven = embedding.proven && regularity.all_faces_regular;
+    let proven = embedding.proven && regularity.all_faces_regular_modulo_poles;
     Ok(JointReport {
         proven,
         embedding,

@@ -281,3 +281,8 @@ mod subdivision_regression {
         assert!((result["parameter"].as_f64().unwrap() - 0.5).abs() < 1e-12);
     }
 }
+
+// Typed native report API, compiled beside the legacy Value entry points.
+#[path = "trim/trim_point.rs"]
+mod typed;
+pub use typed::{PointTrim, ProjectionSpace, trim_at_point_report, trim_at_screen_point_report};

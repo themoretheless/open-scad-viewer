@@ -640,3 +640,39 @@ mod tests {
         assert!(r.roots.is_empty());
     }
 }
+
+/// Intersect the forward half-line P(t)=origin+t*direction, t>=0.
+/// Roots whose certified parameter interval straddles t=0 remain unresolved;
+/// no sign is inferred from a floating-point midpoint. Regions certified behind
+/// the origin are excluded. Surface boundaries/tangencies retain the underlying
+/// isolator's unresolved status.
+pub fn ray_intersections(
+    surface: &Surface,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    max_cells: usize,
+) -> Result<Report> {
+    let line = intersections(surface, origin, direction, tolerance_uv, max_cells)?;
+    let mut roots = Vec::new();
+    let mut unresolved = Vec::new();
+    for root in line.roots {
+        if root.parameter[0] >= 0. {
+            roots.push(root);
+        } else if root.parameter[1] >= 0. {
+            unresolved.push(root.uv);
+        }
+    }
+    for uv in line.unresolved {
+        if parameter_bounds(surface, uv, origin, direction)?[1] >= 0. {
+            unresolved.push(uv);
+        }
+    }
+    Ok(Report {
+        profile_parameterization: line.profile_parameterization,
+        complete: unresolved.is_empty(),
+        roots,
+        unresolved,
+        cells: line.cells,
+    })
+}

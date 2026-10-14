@@ -24,7 +24,9 @@ mod rational_loft_legacy;
 
 mod cylinder;
 mod revolve_region_angle;
+mod sphere_poles;
 pub use cylinder::*;
+pub use sphere_poles::{sphere_exact, sphere_pole_charts};
 pub use revolve_region_angle::*;
 
 pub use rational_loft::{progressive_guided_profile_body,progressive_authored_profile_body,progressive_affine_profile_body,progressive_profile_body};

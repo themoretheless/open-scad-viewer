@@ -192,7 +192,7 @@ pub fn match_ends(
                     && prepared.edited.weights == expected.weights,
                 "Final seam inspection would require changing the loft basis",
             )?;
-            let mut report = continuity::inspect_surface_jets_checked_report(
+            let mut report = continuity::inspect_surface_jets_checked_value(
                 &prepared.reference,
                 &prepared.edited,
                 c.boundary,

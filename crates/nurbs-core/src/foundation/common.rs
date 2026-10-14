@@ -607,7 +607,7 @@ pub(super) fn interval_width(a: [f64; 2]) -> f64 {
     a[1] - a[0]
 }
 
-mod projection;
+pub(super) mod projection;
 pub(super) use projection::*;
 
 pub(super) fn budget_controls(count: usize) -> Result<()> {

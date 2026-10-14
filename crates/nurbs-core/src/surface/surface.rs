@@ -122,6 +122,11 @@ impl<'de> value_codec::Deserialize<'de> for Axis {
     }
 }
 
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub enum DerivativeStatus {Available,InsufficientContinuity,Singular}
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub enum DerivativeSide {TwoSided,Left,Right}
+
 pub struct Evaluation {
     pub point: [f64; 3],
     du: Option<[f64; 3]>,
@@ -139,6 +144,13 @@ pub struct Evaluation {
     domain_v: [f64; 2],
 }
 impl Evaluation {
+    pub fn derivative_status(&self)->DerivativeStatus {
+        match self.derivative_status {"available"=>DerivativeStatus::Available,"insufficient_continuity"=>DerivativeStatus::InsufficientContinuity,"singular"=>DerivativeStatus::Singular,_=>unreachable!("internal surface derivative status")}
+    }
+    pub fn derivative_sides(&self)->(DerivativeSide,DerivativeSide) {
+        fn side(s:&str)->DerivativeSide {match s {"two_sided"=>DerivativeSide::TwoSided,"left"=>DerivativeSide::Left,"right"=>DerivativeSide::Right,_=>unreachable!("internal derivative side")}}
+        (side(self.derivative_side_u),side(self.derivative_side_v))
+    }
     /// Parametric tangents when first derivatives are defined at the query.
     pub fn first_derivatives(&self) -> Option<([f64; 3], [f64; 3])> {
         Some((self.du?, self.dv?))
@@ -512,7 +524,7 @@ impl Surface {
         c.validate()?;
         Ok(c)
     }
-    pub fn bounds(&self) -> Result<value_codec::Value> {
+    pub fn bounds_value(&self) -> Result<value_codec::Value> {
         self.validate()?;
         Ok(bounds(
             &self

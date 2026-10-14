@@ -1537,7 +1537,7 @@ if op == "surface_two_guide_sweep" {return encode(two_guide_sweep::sweep(&field(
             "curve_reverse" => encode(c.reverse()?),
             "curve_elevate" => encode(c.elevate(field(&v, "degree")?)?),
             "curve_decompose" => encode(c.decompose()?),
-            "curve_bounds" => c.bounds(),
+            "curve_bounds" => c.bounds_value(),
             "extrude" => encode(surface::extrude(&c, field(&v, "vector")?)?),
             "revolve" => encode(surface::revolve(
                 &c,
@@ -1564,7 +1564,7 @@ if op == "surface_two_guide_sweep" {return encode(two_guide_sweep::sweep(&field(
         "surface_reverse" => encode(s.edit_axis(field(&v, "axis")?, |c| c.reverse())?),
         "surface_trim" => encode(s.trim(field(&v, "bounds")?)?),
         "surface_iso" => encode(s.iso(field(&v, "axis")?, field(&v, "u")?)?),
-        "surface_bounds" => s.bounds(),
+        "surface_bounds" => s.bounds_value(),
         _ => Err(input("Unknown NURBS operation")),
     }
 }

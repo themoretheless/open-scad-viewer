@@ -198,8 +198,11 @@ pub fn inspect(curves:&[Curve],tolerance_uv:f64,max_pairs:usize,max_cells:usize)
             n>2 && adjacent_separated(&curves[a],&curves[b],join)
         }else if out.cells<max_cells {
             let budget=((max_cells-out.cells)/(out.total_pairs-out.pairs.len())).max(1);
-            let r=curve_distance::prove_separation(&curves[a],&curves[b],tolerance_uv,budget)?;
-            out.cells+=r.cells;r.distance_interval_mm[0]>0.
+            match curve_distance::prove_separation(&curves[a],&curves[b],tolerance_uv,budget) {
+                Ok(r)=>{out.cells+=r.cells;r.distance_interval_mm[0]>0.}
+                Err(error) if error.code=="NURBS_RESOURCE_LIMIT"=>false,
+                Err(error)=>return Err(error),
+            }
         }else{false};
         out.pairs.push(Pair{curves:[a,b],proven});
     }}

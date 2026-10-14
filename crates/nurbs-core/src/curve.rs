@@ -434,7 +434,7 @@ impl Curve {
         let [a, b] = self.domain();
         let mut result = self.clone();
         result.knots = self.knots.iter().rev().map(|k| a + b - k).collect();
-        result.control_points.reverse();
+        check(self.knots.windows(2).rev().zip(result.knots.windows(2)).all(|(s, r)| s[0] == s[1] || r[0] < r[1]), "Reversal collapsed distinct knots at coordinate precision")?; result.control_points.reverse();
         result.weights.reverse();
         result.validate()?;
         Ok(result)
@@ -514,7 +514,7 @@ impl Curve {
         }
         .to_curve()
     }
-    pub fn bounds(&self) -> Result<value_codec::Value> {
+    pub fn bounds_value(&self) -> Result<value_codec::Value> {
         self.validate()?;
         Ok(bounds(&self.control_points))
     }

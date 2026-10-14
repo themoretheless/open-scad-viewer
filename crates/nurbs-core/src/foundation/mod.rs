@@ -386,3 +386,39 @@ mod native_knot_removal;
 
 mod curve_projection;
 pub use curve_projection::{ProjectionStatus,CandidateClassification,ProjectionCandidate,CurveProjection,project_curve_report};
+
+// Typed native APIs (report-returning) restored alongside the legacy Value
+// entry points above. Only typed names are re-exported here so the legacy
+// codec functions keep their existing implementations and outputs.
+pub mod approximate_edits;
+pub use approximate_edits::{
+    SurfaceSimplification, rebuild_curve_report, rebuild_surface_report,
+    reduce_curve_degree_report, reduce_surface_axis_report, remove_curve_knot_report,
+};
+pub mod periodic_edits;
+pub use periodic_edits::{
+    PeriodicEditOperation, edit_periodic_curve_report, edit_periodic_surface_report,
+    split_periodic_curve_report,
+};
+pub mod approximation;
+pub use approximation::{approximate_curve_report, interpolate_polyline_report};
+pub mod exact_edits;
+pub use exact_edits::{ExactEditOperation, certify_exact_edit_report, reparameterize_curve_report};
+pub mod min_zone_fit;
+pub mod oslo;
+pub use native_fitting::{
+    fit_curve_cloud_certified_report, fit_curve_points_report, fit_surface_cloud_certified_report,
+    interpolate_surface_grid_report,
+};
+pub use parameter_mapping::{
+    MapPiece, ParameterMapping, certify_reparameterization_report,
+    evaluate_reparameterized_curve_report, materialize_reparameterized_curve_report,
+};
+pub mod certificates;
+pub use certificates::{certify_curve_report, certify_surface_report};
+mod surface_projection;
+pub use surface_projection::{
+    BoundaryProjection, SurfaceCandidateClassification, SurfaceProjection,
+    SurfaceProjectionCandidate, SurfaceProjectionProof, project_surface_report,
+};
+mod common;

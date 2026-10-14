@@ -26,6 +26,7 @@ pub enum SharedBoundary {
     },
     ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
+    BilinearGraph(crate::shared_boundary::bilinear_graph::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
     JoinedSourceCharts(boundary_stitched_contact::Certificate),
     SourceVolumeBoundary(source_volume_contact::Certificate),
@@ -199,6 +200,8 @@ fn inspect_impl(
                 Some(SharedBoundary::ExactHull(c))
             } else if let Some(c) = crate::shared_boundary::certify(model, [a, b]) {
                 Some(SharedBoundary::PlanarFace(c))
+            } else if let Some(c)=joint_exact_domain.then(||crate::shared_boundary::bilinear_graph::certify(model,[a,b],131072)).flatten() {
+                Some(SharedBoundary::BilinearGraph(c))
             } else {
                 crate::shared_boundary::certify_opposite(model, [a, b])?
                     .map(SharedBoundary::OppositeSides)

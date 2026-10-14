@@ -1,13 +1,13 @@
 use super::*;
 
 #[derive(Clone)]
-pub(super) struct MapPiece {
+pub(super) struct LegacyMapPiece {
     pub(super) domain: [f64; 2],
     pub(super) range: [f64; 2],
     pub(super) values: Vec<f64>,
     pub(super) weights: Vec<f64>,
 }
-pub(super) fn map_pieces(mapping: &Value) -> Result<Vec<MapPiece>> {
+pub(super) fn map_pieces(mapping: &Value) -> Result<Vec<LegacyMapPiece>> {
     let values = mapping["pieces"]
         .as_array()
         .ok_or_else(|| crate::input("Reparameterization requires pieces"))?;
@@ -46,7 +46,7 @@ pub(super) fn map_pieces(mapping: &Value) -> Result<Vec<MapPiece>> {
                 controls.first() == Some(&range[0]) && controls.last() == Some(&range[1]),
                 "Map endpoint controls must equal the declared range",
             )?;
-            Ok(MapPiece {
+            Ok(LegacyMapPiece {
                 domain,
                 range,
                 values: controls,
@@ -55,7 +55,7 @@ pub(super) fn map_pieces(mapping: &Value) -> Result<Vec<MapPiece>> {
         })
         .collect()
 }
-pub(super) fn evaluate_map_piece(piece: &MapPiece, u: f64) -> f64 {
+pub(super) fn evaluate_map_piece(piece: &LegacyMapPiece, u: f64) -> f64 {
     let t = (u - piece.domain[0]) / (piece.domain[1] - piece.domain[0]);
     let degree = piece.values.len() - 1;
     let mut numerator = 0.;

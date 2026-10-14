@@ -637,7 +637,7 @@ fn serialized_cylinder_cylinder_classification_regions_are_explicit() {
 /// The canonical planar patch operand: one-face open model, exact
 /// bilinear affine surface over the unit square, boundary trims, four
 /// corner vertices (mirrors brep-core's plane_patch fixture).
-fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> brep_core::Model {
+pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> brep_core::Model {
     use brep_topology::{Coedge, Edge, Face, FaceUse, Loop, Shell, Vertex};
     let line = |a: Vec<f64>, b: Vec<f64>| nurbs_core::curve::Curve {
         degree: 1,

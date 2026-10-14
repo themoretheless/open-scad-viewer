@@ -294,7 +294,7 @@ pub fn inspect(patches: &[Surface], seams: &[Seam<'_>], max_seams: usize) -> Res
             },
         };
         if index < max_seams {
-            if let Ok(report) = continuity::inspect_surface_jets_checked_report(
+            if let Ok(report) = continuity::inspect_surface_jets_checked_value(
                 &patches[seam.patches[0]],
                 &patches[seam.patches[1]],
                 seam.boundaries[0],

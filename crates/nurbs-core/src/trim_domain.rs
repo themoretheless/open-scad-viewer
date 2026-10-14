@@ -16,7 +16,7 @@ use value_codec::{Value, json};
 /// Clamped endpoints equal their authored controls even with rational weights.
 /// None means an unclamped/periodic endpoint has no exact proof here.
 pub fn exact_loop_joins(curves: &[Curve]) -> Result<Option<bool>> {
-    check(!curves.is_empty(), "Exact UV closure needs a nonempty loop")?;
+    check((1..=256).contains(&curves.len()), "Exact UV closure needs 1..256 curves")?;
     for c in curves {
         c.validate()?;
         check(c.control_points[0].len()==2,"Exact UV closure needs 2D curves")?;

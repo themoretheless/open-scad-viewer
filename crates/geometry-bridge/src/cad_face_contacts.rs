@@ -81,8 +81,9 @@ pub(super) fn diagnose_sweep_volume_with_projections(
         brep_core::boundary_embedding::regularity::inspect(&model, field(&v, "maxRegularityCells")?)
     }).transpose()?;
     Ok(
-        json!({"regularBoundarySolidCertified":regularity.as_ref().is_some_and(|p|r.proven && p.all_faces_regular),
-        "boundaryRegularity":regularity.as_ref().map(|p|json!({"allFacesRegular":p.all_faces_regular,
+        json!({"regularBoundarySolidCertified":regularity.as_ref().is_some_and(|p|r.proven && p.all_faces_regular_modulo_poles),
+        "boundaryRegularity":regularity.as_ref().map(|p|json!({"allFacesRegular":p.all_faces_regular,"allFacesRegularModuloPoles":p.all_faces_regular_modulo_poles,
+            "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(face,p)|p.as_ref().map(|p|json!({"face":face,"edge":p.edge,"vertex":p.vertex,"collapsedEnd":p.collapsed_end,"proven":p.proof.proven,"cells":p.proof.cells}))).collect::<Vec<_>>(),
             "cells":p.cells,"unresolvedFaces":p.unresolved_faces,"scope":"whole-retained-boundary-piecewise-regular"})),
         "solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
         "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
@@ -142,8 +143,7 @@ brep_core::sweep_cap_contacts::Budgets {
         "contactCells":r.intersections.pairs.cells,"contactDomainCells":r.intersections.pairs.domain_cells,
         "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"reason":p.reason,
             "allowedBoundary":p.boundary.is_some()})).collect::<Vec<_>>(),
-        "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f|
-            !f.result.as_ref().is_some_and(|r|r.proven) && !f.linear.as_ref().is_some_and(|r|r.certified))
+        "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f| !f.absence_proven())
             .map(|f|f.face).collect::<Vec<_>>(),
         "caps":r.cap_contacts.iter().map(|(cap,r)|json!({"face":cap,"capCertified":r.cap_certified,
             "planarControlHullCertified":r.planar_control_hull_certified,
@@ -238,6 +238,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
                     "collapsedEnd":j.collapsed_end,"projection":j.projection,"proven":j.report.proven,
                     "reason":j.report.reason,"cells":j.report.cells,"weightedBounds":j.report.weighted_bounds,
                     "dominanceMarginLower":j.report.dominance_margin_lower}))}),
+            brep_core::face_contacts::SharedBoundary::BilinearGraph(c)=>json!({"kind":"bilinear-graph","edge":c.edge,"graphFace":c.graph_face,"sidedFace":c.sided_face,"polynomialWork":c.polynomial_work}),
             brep_core::face_contacts::SharedBoundary::PlanarFace(c)=>json!({"kind":"planar-face","edge":c.edge,"planarFace":c.planar_face,"sidedFace":c.sided_face}),
             brep_core::face_contacts::SharedBoundary::OppositeSides(c)=>json!({"kind":"opposite-sides","edge":c.edge,"faces":c.faces}),
             brep_core::face_contacts::SharedBoundary::SourceVolumeBoundary(c)=>json!({"kind":"source-volume-boundary","certified":true,"edge":c.shared_edge,"faces":c.faces,"sourceFaces":c.source_faces,"projection":c.projection,"cells":c.cells,"principalMinorLower":c.principal_minor_lower}),
@@ -263,7 +264,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             "linearRowWeights":face.linear.as_ref().map(|linear|linear.row_weights),
             "linearProfileParameterization":face.linear.as_ref().and_then(|linear|linear.profile_parameterization.as_ref().map(|p|json!({"weights":p.weights,"derivativeLower":p.derivative_lower}))),
             "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
-                "proven":q.result.proven,"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
+                "proven":q.proven(),"polar":q.polar.as_ref().map(|p|json!({"proven":p.proven,"cells":p.cells,"reason":p.reason,"derivativeBounds":p.derivative_bounds,"dominanceMarginLower":p.dominance_margin_lower})),"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
                 "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
                 "projectiveProjection":r.projective_projection,
@@ -517,4 +518,14 @@ mod tests {
         q["maxCells"] = json!(0);
         assert!(crate::dispatch(q).is_err());
     }
+}
+
+/// Explicit certified construction keeps legacy stereographic UV consumers
+/// compatible. No caller proof flags influence chart construction.
+pub fn sphere(v:Value)->Result<Value> {
+    let radius=field(&v,"radius")?;
+    let model=if v["op"]==json!("brep_nurbs_sphere_exact") {
+        brep_core::analytic::sphere_exact(radius)?
+    } else {brep_core::analytic::sphere(radius)?};
+    super::encode(model)
 }

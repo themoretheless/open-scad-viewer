@@ -13,6 +13,7 @@ const OPS: &[&str] = &[
     "brep_nurbs_freeform_cuboid_bump",
     "brep_nurbs_revolve",
     "brep_nurbs_sphere",
+    "brep_nurbs_sphere_exact",
     "brep_nurbs_gear",
     "brep_nurbs_torus",
     "brep_nurbs_push_face",
@@ -154,6 +155,7 @@ fn handle(mut v: Value) -> Result<Value> {
                 .unwrap_or(360.),
         )?),
         "brep_nurbs_sphere" => encode(brep_core::sphere(field(&v, "radius")?)?),
+        "brep_nurbs_sphere_exact" => cad_face_contacts::sphere(v),
         "brep_nurbs_gear" => {
             let number = |name: &str, default: f64| -> f64 {
                 v.get(name).and_then(Value::as_f64).unwrap_or(default)

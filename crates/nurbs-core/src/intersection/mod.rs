@@ -24,5 +24,11 @@ pub use intersect_curve_curve::*;
 pub(crate) use split_grid_v::*;
 pub use intersect_curve_surface::*;
 
+mod typed;
+pub use typed::{
+    CurveCurveIntersection, CurveCurveReport, CurveSurfaceComponent, CurveSurfaceIntersection,
+    intersect_curve_curve_bounded_report, intersect_curve_curve_report,
+    intersect_curve_surface_report,
+};
 mod contact_types;
 pub use contact_types::{ContactClass,UnresolvedReason};

@@ -15,7 +15,7 @@ fn fnv(bytes: &[u8]) -> String {
 }
 
 fn doc(root: &str, nodes: Value) -> Value {
-    json!({"language":"modelgraph/1","units":"mm","parameters":[{"id":"n","value":3},{"id":"teeth","value":14}],"root":root,"nodes":nodes})
+    json!({"language":"rush/ir-1","units":"mm","parameters":[{"id":"n","value":3},{"id":"teeth","value":14}],"root":root,"nodes":nodes})
 }
 
 fn extra_cases() -> Vec<(String, Value)> {
@@ -202,7 +202,7 @@ fn emitter_output_is_bit_identical_to_snapshot() {
     );
     let mut actual = Vec::new();
     for (name, document) in all {
-        let out = match modelgraph_runtime::compile(document) {
+        let out = match rush_runtime::compile(document) {
             Ok(result) => format!("ok:{}", value_codec::to_string(&result).unwrap()),
             Err(error) => format!("err:{}", value_codec::to_string(&error).unwrap()),
         };

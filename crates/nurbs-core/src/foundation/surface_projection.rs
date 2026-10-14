@@ -49,11 +49,12 @@ pub struct SurfaceProjection {
     pub tolerance: ToleranceContext,
 }
 
-use super::{
-    Axis, MAX_CERTIFICATE_CELLS, Result, Surface, SurfaceBox, box_of, check, context, copy_context,
-    distance, next_down, next_up, point_box_distance, project_curve_report,
-    prove_surface_projection_uniqueness,
+use super::{Axis, Result, Surface, check, next_down, next_up, project_curve_report};
+use super::common::{
+    MAX_CERTIFICATE_CELLS, SurfaceBox, box_of, context, copy_context, distance,
+    point_box_distance,
 };
+use super::common::projection::prove_surface_projection_uniqueness;
 
 /// Certified global surface projection by outward hull branch-and-bound.
 /// Every unpruned parameter rectangle is returned; four boundary problems are

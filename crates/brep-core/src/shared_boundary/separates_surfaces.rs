@@ -20,11 +20,13 @@ pub(super) fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge
                 let size=[s.control_points.len(),s.control_points[0].len()][bound.0];
                 let degree=[s.degree_u,s.degree_v][bound.0];
                 if size!=degree+1{return None;}
-                // The opposite endpoint Bernstein basis is strictly positive
-                // everywhere away from the declared boundary. Its complete
-                // row must lie strictly on the common side, including corners.
-                let opposite=if bound.1==0{size-1}else{0};
-                if s.control_points.iter().enumerate().any(|(u,row)|row.iter().enumerate().any(|(v,p)|[u,v][bound.0]==opposite&&p[axis]==value)){return None;}
+                // Positive Bernstein bases expose only complete zero edges or
+                // zero corners. Permit a collapsed pole only when it is an
+                // endpoint of the exact shared edge, never an extra contact.
+                let mut plane=[vec![0.;3],vec![0.;3],vec![0.;3]];
+                for point in &mut plane {point[axis]=value;}
+                plane[1][(axis+1)%3]=1.; plane[2][(axis+2)%3]=1.;
+                if !bezier_plane_edge_only(s,[&plane[0],&plane[1],&plane[2]],bound){return None;}
             }
             positive
         };

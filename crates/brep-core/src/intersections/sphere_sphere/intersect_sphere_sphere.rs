@@ -27,6 +27,9 @@ pub(super) fn invert_patch(sphere: &CanonicalSphere, frame: &PatchFrame, point: 
     arcs: &[(f64, f64)],
     point_at: impl Fn(f64) -> [f64; 3],
 ) -> Vec<SpherePatchCircle> {
+    if sphere.pole_surfaces.is_some() {
+        return pole_charts::clipped(sphere,normal,middle,arcs,point_at);
+    }
     let mut lifted = Vec::new();
     for (patch, section) in patch_sections(sphere, normal, middle) {
         let frame = &sphere.patches[patch];
@@ -108,7 +111,7 @@ pub(super) fn invert_patch(sphere: &CanonicalSphere, frame: &PatchFrame, point: 
             }
         }
         if !out.is_empty() {
-            lifted.push(SpherePatchCircle { patch, arcs: out });
+            lifted.push(SpherePatchCircle { patch, arcs: out, implicit:None });
         }
     }
     lifted
@@ -126,7 +129,7 @@ pub fn intersect_sphere_sphere(
     let _ = options;
     let mut report = Report::default();
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
-    let (Some(a), Some(b)) = (recognize(first)?, recognize(second)?) else {
+    let (Some(a), Some(b)) = (recognize_any(first)?, recognize_any(second)?) else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
     };
@@ -225,7 +228,9 @@ pub fn intersect_sphere_sphere(
 
 impl value_codec::Serialize for SpherePatchCircle {
     fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"patch":self.patch,"arcs":self.arcs})
+        let mut value=value_codec::json!({"patch":self.patch,"arcs":self.arcs});
+        if let Some(section)=&self.implicit {value["implicitContour"]=section.to_value();}
+        value
     }
 }
 impl value_codec::Serialize for SphereSphereComponent {

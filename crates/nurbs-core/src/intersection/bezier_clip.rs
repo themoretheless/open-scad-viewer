@@ -296,7 +296,7 @@ pub(crate) fn clip_pair(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::intersection::intersect_curve_curve_report_with_clip;
+    use crate::intersection::typed::intersect_curve_curve_report_with_clip;
 
     fn bezier(points: &[[f64; 3]]) -> Curve {
         let n = points.len();
@@ -404,8 +404,8 @@ mod tests {
                 assert_eq!(r.report.unresolved.len(), 0, "scale={scale} budget={budget}");
                 assert_eq!(r.report.components.len(), 1, "scale={scale} budget={budget}");
                 let c = &r.report.components[0];
-                assert_eq!(c.kind, crate::intersection::CurveCurveComponentKind::Point);
-                assert_eq!(c.contact, crate::intersection::ContactClass::Transverse);
+                assert_eq!(c.kind, crate::intersection::typed::CurveCurveComponentKind::Point);
+                assert_eq!(c.contact, crate::intersection::typed::ContactClass::Transverse);
                 // a is uniformly weighted (t = 1/2); b carries weights [2, 3],
                 // so its rational parameter at the crossing is u = 0.4.
                 assert!((c.first - 0.5).abs() < 1e-8 && (c.second - 0.4).abs() < 1e-8);

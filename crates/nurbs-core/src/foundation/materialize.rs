@@ -8,7 +8,7 @@ pub(super) fn budget_controls(count: usize) -> Result<()> {
     }
 }
 
-pub(super) fn compose_curve_with_piece(curve: &Curve, piece: &MapPiece) -> Result<Curve> {
+pub(super) fn compose_curve_with_piece(curve: &Curve, piece: &LegacyMapPiece) -> Result<Curve> {
     let [a, b] = curve.domain();
     check(
         (piece.range[0] - a).abs() <= 64. * f64::EPSILON
@@ -46,7 +46,7 @@ pub(super) fn compose_curve_with_piece(curve: &Curve, piece: &MapPiece) -> Resul
     compose_bezier_with_piece(&span, piece)
 }
 
-pub(super) fn compose_bezier_with_piece(span: &Curve, piece: &MapPiece) -> Result<Curve> {
+pub(super) fn compose_bezier_with_piece(span: &Curve, piece: &LegacyMapPiece) -> Result<Curve> {
     let dimension = span.control_points[0].len();
     let n = span.degree;
     let source_domain = span.domain();
@@ -123,7 +123,7 @@ pub(super) fn compose_bezier_with_piece(span: &Curve, piece: &MapPiece) -> Resul
     Ok(curve)
 }
 
-pub(super) fn materialize_pieces(curve: &Curve, pieces: &[MapPiece]) -> Result<(Curve, usize)> {
+pub(super) fn materialize_pieces(curve: &Curve, pieces: &[LegacyMapPiece]) -> Result<(Curve, usize)> {
     let mut composed = Vec::new();
     let mut degree_growth = 0_usize;
     for piece in pieces {

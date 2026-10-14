@@ -276,7 +276,7 @@ pub fn match_surface_jets_checked(reference:&Surface,edited:&Surface,reference_b
 
 /// Inspect represented boundary jets without editing either input surface.
 /// The seam basis must already agree; returned bounds concern these inputs.
-pub fn inspect_surface_jets_checked_report(
+pub(crate) fn inspect_surface_jets_checked_value(
     reference:&Surface, edited:&Surface, reference_boundary:&str,
     edited_boundary:&str, order:usize, scale:f64, max_error:f64,
 )->Result<Value>{
@@ -301,3 +301,10 @@ pub fn inspect_surface_jets_checked_report(
 }
 
 pub use crate::join::continuity::{ProjectiveSeam,ProjectiveSeamCollectionReport,propose_boundary_normal_scale,inspect_projective_seam_collection_until_refused};
+
+// Typed native reports for direct Rust callers; the Value entry points above
+// keep their legacy implementations and wire format.
+pub use crate::join::continuity::{
+    inspect_surface_jets_checked_report, match_surface_jets_checked_report,
+    match_surface_jets_oriented_report,
+};

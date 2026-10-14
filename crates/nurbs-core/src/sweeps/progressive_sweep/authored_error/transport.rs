@@ -61,11 +61,11 @@ pub(super) fn guided_section_interpolation_mode(
     // against these reference endpoints. Guides need their own correspondence.
     let arc_line = sweep.options.spacing != Spacing::Parameter
         && (original_line(sweep.path)||collinear)
-        && (fixed || mode==OriginalTransport::Guided && guide.is_some_and(original_line));
+        && (fixed || mode==OriginalTransport::FixedNormal || mode==OriginalTransport::Guided && guide.is_some_and(original_line));
     if mode==OriginalTransport::Fixed && sweep.contact_point.is_none() && sweep.options.spacing != Spacing::Parameter && !original_line(sweep.path) {
         return original_arc_length_section_interpolation(sweep,count,max_cells,None);
     }
-    if mode==OriginalTransport::FixedNormal && sweep.contact_point.is_none() && sweep.options.spacing != Spacing::Parameter {
+    if mode==OriginalTransport::FixedNormal && sweep.contact_point.is_none() && sweep.options.spacing != Spacing::Parameter && !arc_line {
         return fixed_normal_arc_length_section_interpolation(sweep,count,max_cells,None);
     }
     if rmf_planar&&sweep.contact_point.is_none()&&sweep.options.spacing!=Spacing::Parameter{
@@ -153,7 +153,7 @@ pub(super) fn guided_section_interpolation_mode(
         } else if rmf_planar {
             authored_frame_certificate::certify_proved_planar_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if fixed_normal {
-            authored_frame_certificate::certify_fixed_normal_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_normal_control_values(reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_values(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
@@ -173,7 +173,7 @@ pub(super) fn guided_section_interpolation_mode(
         } else if let Some(phase)=principal_phase {
             authored_frame_certificate::certify_planar_principal_control_trajectories(sweep.path,sweep.options.normal,phase,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if fixed_normal {
-            authored_frame_certificate::certify_fixed_normal_control_trajectories(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_normal_control_trajectories(reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {

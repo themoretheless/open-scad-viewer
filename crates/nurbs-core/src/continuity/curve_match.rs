@@ -85,3 +85,4 @@ pub fn checked(reference:&Curve,edited:&Curve,reference_end:&str,edited_end:&str
   let result=checked(&a,&b,"end","start",1e-10).unwrap();assert_eq!(result["report"]["accepted"],json!(false));assert_eq!(result["curve"],value_codec::to_value(b).unwrap());
  }
 }
+pub use crate::join::continuity::curve_match::checked_report;

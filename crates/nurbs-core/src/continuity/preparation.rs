@@ -213,3 +213,4 @@ pub fn checked_with_conversion(reference:&Surface,edited:&Surface,reference_boun
  }
 
 }
+pub use crate::join::continuity::preparation::checked_report;
