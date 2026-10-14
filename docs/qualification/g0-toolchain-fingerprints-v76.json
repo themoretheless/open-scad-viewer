@@ -2,9 +2,9 @@
   "schema": "open-scad-viewer/g0-toolchain-fingerprints",
   "schemaVersion": 1,
   "fingerprintId": "g0-toolchain-fingerprints-v76",
-  "recordedAt": "2026-10-14",
+  "recordedAt": "2026-10-13",
   "previousFingerprintId": "g0-toolchain-fingerprints-v75",
-  "purpose": "Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units.",
+  "purpose": "Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58.",
   "claimBoundary": {
     "includes": [
       "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
@@ -120,13 +120,13 @@
     {
       "id": "geometry-v3-source-10",
       "path": "crates/geometry-bridge/src/lib.rs",
-      "sha256": "857efa1667b80eca5f62e9e0f31a36532a5a73377a3a150ca1eeba9f7b9dfdf6",
-      "byteLength": 21770
+      "sha256": "80eb6ec18c2f689848b4ec72025704abb04f05d88ba69d4d7b4154e4572cc171",
+      "byteLength": 21744
     },
     {
       "id": "geometry-v3-source-11",
       "path": "src/core/ownRustCadEvidence.ts",
-      "sha256": "7f6e44bc8c8a3a0d969e4ca229125e9ab77efba75594fba4f0934cd5d1b193f3",
+      "sha256": "6c39984fb1bf2f61d31cceebec2fa14fdb1b7569733d9b8d7435e5029fc48ce7",
       "byteLength": 1216
     },
     {
@@ -594,8 +594,8 @@
     {
       "id": "geometry-v3-source-63",
       "path": "crates/brep-core/src/analytic/rational_loft.rs",
-      "sha256": "a6644186fd23b8155b580629e19c12408246ebf0a983cddfe050de5439ab4a97",
-      "byteLength": 29752
+      "sha256": "7932dc085249fe10be3a94edcad8f67c82a6d4379e1c5ce657d0d3c4a81b39bf",
+      "byteLength": 29651
     },
     {
       "id": "geometry-v3-source-64",
@@ -636,8 +636,8 @@
     {
       "id": "geometry-v3-source-70",
       "path": "crates/brep-core/src/face_contacts.rs",
-      "sha256": "3578e081d3491e24be5fa6456f23f246e05d067d7f2cc9d375d0531eb5fa9d99",
-      "byteLength": 14749
+      "sha256": "d742292dc5ec7f0602d878f30e36fc1e540f93d2808b7d529c6f870d2a418e53",
+      "byteLength": 11824
     },
     {
       "id": "geometry-v3-source-71",
@@ -690,8 +690,8 @@
     {
       "id": "geometry-v3-source-80",
       "path": "crates/geometry-bridge/src/cad_face_contacts.rs",
-      "sha256": "74bdf18bc8328ada9b0d4cb91cebfb0d091c856b647ec765559b8a2d62b628dc",
-      "byteLength": 24465
+      "sha256": "a24a0b8de50969e9b8373b7e79e5aba9b06c003830cdd081f4221783ce6a0770",
+      "byteLength": 22418
     },
     {
       "id": "geometry-v3-source-81",
@@ -828,8 +828,8 @@
     {
       "id": "geometry-v3-source-104",
       "path": "crates/nurbs-core/src/surface_linear_monotonicity.rs",
-      "sha256": "74bca22bf6dccbf2c3c2d2af0a96a7d8cc4d64100c7f09716b31fbf787a68a02",
-      "byteLength": 22023
+      "sha256": "bf1c923e93873cc66d4b748a88746e20a4048fd26c3498bd65b9a003c45a3200",
+      "byteLength": 12272
     },
     {
       "id": "geometry-v3-source-105",
@@ -1218,8 +1218,8 @@
     {
       "id": "geometry-v3-source-168",
       "path": "crates/brep-core/src/miter_seams.rs",
-      "sha256": "86018478f264a38c5621b9b5928590fac9576b288d83d515467227f4b919bf48",
-      "byteLength": 9525
+      "sha256": "631bd1b2c908a135afd593358ed9d0f9fe36c445139be1f4e0c807728d90a4dd",
+      "byteLength": 9516
     },
     {
       "id": "geometry-v3-source-170",
@@ -1404,8 +1404,8 @@
     {
       "id": "geometry-v3-source-225",
       "path": "crates/brep-core/src/shell_orientation.rs",
-      "sha256": "83661f32023d614c4b0a3b8745b2552480dbccf6d11381d284dd21e5bc4f3ae3",
-      "byteLength": 7759
+      "sha256": "c408390679315ec1c26c7626fe293000bd66e31c057cb7f321a56803d4fafd72",
+      "byteLength": 6798
     },
     {
       "id": "geometry-v3-source-226",
@@ -2550,8 +2550,8 @@
     {
       "id": "geometry-v3-source-443",
       "path": "crates/nurbs-core/src/ray_surface.rs",
-      "sha256": "b856cf7b3880a43153f15082c15cf2951b239ddd9866052eb2d63c00e5e4a10e",
-      "byteLength": 22744
+      "sha256": "1658dbd539d03cf288837b2eb45960651f5ba2449b06780c8dcbfb8170878b7a",
+      "byteLength": 19812
     },
     {
       "id": "geometry-v3-source-444",
@@ -4338,8 +4338,8 @@
     {
       "id": "geometry-v3-source-746",
       "path": "crates/geometry-bridge/src/dispatch/nurbs.rs",
-      "sha256": "aab9916793f1ef032704916be747b6c870868eb30ea459e2392216944d54c609",
-      "byteLength": 26224
+      "sha256": "f18299faee6c5be5d560b894d7dd4915797acbd4a8952d2db0c7b9419610b357",
+      "byteLength": 26329
     },
     {
       "id": "geometry-v3-source-747",
@@ -4518,8 +4518,8 @@
     {
       "id": "geometry-v3-source-776",
       "path": "crates/nurbs-core/src/transport/dispatch.rs",
-      "sha256": "e385d73d4dc81db0aac5c2e47e758021ed4c490eb67870d1753b831e675ed371",
-      "byteLength": 77479
+      "sha256": "a5a63c874de932c9367fbca654de240c2449730d67ebc7d84fc8d4011201544a",
+      "byteLength": 77306
     },
     {
       "id": "geometry-v3-source-777",
@@ -4614,8 +4614,8 @@
     {
       "id": "geometry-v3-source-791",
       "path": "crates/brep-core/src/analytic/mod.rs",
-      "sha256": "fff83f10c1cba3613d12120091bb566e424772384fd30c35138bf94aee7a8172",
-      "byteLength": 988
+      "sha256": "25101a0375b50ea1c31509c7e1ca7c137b5afb36df988fc2ca42be4f33179dc0",
+      "byteLength": 937
     },
     {
       "id": "geometry-v3-source-792",
@@ -4950,150 +4950,30 @@
     {
       "id": "own-rust-cad-v59-evidence",
       "path": "docs/qualification/own-rust-cad-v59.json",
-      "sha256": "76fb0375d9a93b1a0a74baef31709b5547643cb8e17cce6477fcd57762a25409",
-      "byteLength": 44775
-    },
-    {
-      "id": "geometry-v3-source-845",
-      "path": "crates/brep-core/src/analytic/rational_loft/polygon_station_tests.rs",
-      "sha256": "3ddf50b6014abdc7b262efc30bf163a8e41d1007c06a4f95b1e1b6815bd20d2a",
-      "byteLength": 9032
-    },
-    {
-      "id": "geometry-v3-source-846",
-      "path": "crates/brep-core/src/analytic/rational_loft/polygon_stations.rs",
-      "sha256": "960ca344277707bcd62d525c3909776c9b7a1abd191f6c6511d78d4c5864fa02",
-      "byteLength": 10036
-    },
-    {
-      "id": "geometry-v3-source-847",
-      "path": "crates/brep-core/src/boundary_stitched_contact.rs",
-      "sha256": "fa2fa38553af23c76b57e349684430ceefb3e8b0a001c14f48118612c77a5a41",
-      "byteLength": 7125
-    },
-    {
-      "id": "geometry-v3-source-848",
-      "path": "crates/brep-core/src/source_volume_contact.rs",
-      "sha256": "2b2e30991e8762ee00ae0dc4200b321825e848ee2d4ea79ebe4c1756d35675fc",
-      "byteLength": 9975
-    },
-    {
-      "id": "geometry-v3-source-849",
-      "path": "crates/brep-core/src/source_volume_contact/monotonicity.rs",
-      "sha256": "589b0b1a132bf3618ab66b4e3d49f486a339a1c7458e60cd3fe13606e1abd84b",
-      "byteLength": 8327
-    },
-    {
-      "id": "geometry-v3-source-850",
-      "path": "crates/geometry-bridge/examples/polygon-station-step.rs",
-      "sha256": "3343d87893d83360499540ea628fdd365ab4e9d00220f01d236adb2e67a89c8e",
-      "byteLength": 4852
-    },
-    {
-      "id": "geometry-v3-source-851",
-      "path": "crates/geometry-bridge/src/polygon_station_body.rs",
-      "sha256": "d0fd3bca830ee8c7aa5ab7954cf733deec5bbcc834b460e9e6f432282a63d819",
-      "byteLength": 8953
-    },
-    {
-      "id": "geometry-v3-source-852",
-      "path": "crates/geometry-bridge/src/polygon_station_body/source.rs",
-      "sha256": "3c9b75892efd5959120e91682a8778bb1899b0783878b76381436f62981596bb",
-      "byteLength": 8677
-    },
-    {
-      "id": "geometry-v3-source-853",
-      "path": "src/services/solidFaceContacts.ts",
-      "sha256": "45b18211840699f8ccc199981a975954177b227292e057860a936448ef897f2a",
-      "byteLength": 12178
-    },
-    {
-      "id": "geometry-v3-source-854",
-      "path": "src/services/sweep/certificates/nurbsSweepAudit.ts",
-      "sha256": "20eb6fce37e561a7bcc51daf26bfa00016802a52b899c56ac155a09509c00080",
-      "byteLength": 9909
+      "sha256": "9c904851cb4c78be338741f5f9181f43cbf834cbc985295665607142f61fd08e",
+      "byteLength": 44065
     }
   ],
   "knownDrift": [
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-10",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-11",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
       "bindingId": "g1-v34-github-workflow",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
+      "note": "Current bytes are newly bound in v76; v75 remains archived. Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
       "bindingId": "g1-v34-github-harness",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
+      "note": "Current bytes are newly bound in v76; v75 remains archived. Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
       "bindingId": "g1-v34-clean-fragment-selector",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
+      "note": "Current bytes are newly bound in v76; v75 remains archived. Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
       "bindingId": "g1-v34-ubuntu-selector",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-63",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-70",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-80",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-104",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-168",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-225",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-443",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-746",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-776",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "bindingId": "geometry-v3-source-791",
-      "note": "Current bytes are newly bound in v76; v75 remains archived. Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units."
+      "note": "Current bytes are newly bound in v76; v75 remains archived. Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58."
     }
   ],
   "previousFingerprintSha256": "33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424"

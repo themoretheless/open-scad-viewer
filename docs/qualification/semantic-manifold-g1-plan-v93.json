@@ -38,7 +38,7 @@
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v92",
     "previousPlanSha256": "61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb",
-    "reason": "Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units.",
+    "reason": "Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -467,7 +467,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "6a109b9950ff61a5c278924bd8f2dc4423c6b797546b94ac76cbee9402d901a8",
+          "value": "1e30ca5f39c31fc1ad6dea994882ef2c2280354feabf14a5c7f7d90c71ff24bd",
           "byteLength": 3560,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -500,7 +500,6 @@
         "paths": [
           ".gitattributes",
           ".github/workflows/g1-qualification-clean.yml",
-          "crates/geometry-bridge/examples/polygon-station-step.rs",
           "examples/rush/closed-profile-planar-10.r",
           "examples/rush/closed-profile-spatial-6.r",
           "examples/rush/spatial-bishop-g2-surface-6.r",
@@ -526,8 +525,6 @@
           "scripts/run-g1-candidate-clean-fragment.mjs",
           "scripts/run-g1-ubuntu-docker-fragment.mjs",
           "scripts/run-manifold-g1-memory-qualification.mjs",
-          "scripts/step_rational_basis.py",
-          "scripts/verify-polygon-station-step.py",
           "scripts/verify-profile-solid-step.py",
           "tests/browserMemoryQualificationRunner.test.ts",
           "tests/browserQualificationRunner.test.ts",
@@ -542,8 +539,6 @@
           "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
           "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
           "tests/fixtures/mcp-shadow-stdio-server.ts",
-          "tests/fixtures/quintic-polygon-rmf-source.json",
-          "tests/fixtures/quintic-polygon-stations-6.json",
           "tests/fixtures/web-worker-node-harness.ts",
           "tests/geometryKernelModuleDelivery.test.ts",
           "tests/geometryWorkerRealBoundary.test.ts",
@@ -556,7 +551,6 @@
           "tests/profileFramePremises.test.ts",
           "tests/profileSolidAdmission.test.ts",
           "tests/profileSolidRush.test.ts",
-          "tests/quinticPolygonBody.test.ts",
           "tests/spatialBishopSurface.test.ts",
           "vite.qualification.config.ts"
         ],
@@ -564,8 +558,8 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "d8548589245cc2d6f29992512064a65a7e3a168ee55eabfcb66a58c3076f2a00",
-          "byteLength": 6429,
+          "value": "2d882e2df5204eb11ab69789c912797baa7544ea1d8686ab518e5f308a18bf8b",
+          "byteLength": 5786,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
       },

@@ -22,7 +22,7 @@ const dependencyFingerprints={
   npmLockfileSha256:sha(bytes('package-lock.json')),
   rustLockfileSha256:sha(bytes('crates/Cargo.lock')),
 }
-const variants=[{sha256:wasmSha256,byteLength:wasm.byteLength,builder:`${process.platform}-${process.arch}`,evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}]
+const variants=[{sha256:wasmSha256,byteLength:wasm.byteLength,builder:'linux-x86_64',evidence:`Observed local rebuild. ${execFileSync('rustc',['--version'],{cwd:root,encoding:'utf8'}).trim()}; Node ${process.version}. No foreign-host artifact is inferred.`}]
 
 
 writeFileSync(resolve(root,'src/core/ownRustCadEvidence.ts'),`// Recorded exact artifacts; no cross-host byte identity or clean qualification is claimed.
@@ -43,7 +43,7 @@ export const OWN_RUST_CAD_EVIDENCE = Object.freeze({
 const sourceBundle=Buffer.concat(paths.flatMap(p=>[Buffer.from(p),Buffer.from([0]),bytes(p),Buffer.from('\n')]))
 writeFileSync(resolve(root,'docs/qualification/own-rust-cad-v59.json'),JSON.stringify({
   id:'own-rust-cad-v59',successorOf:previousPath,previousSha256:sha(bytes(previousPath)),recordedAt:'2026-10-13',
-  purpose:'Integrate closed quintic polygon station bodies into the current modular native dispatcher, retaining current main APIs and historical qualification archives. Record the newly rebuilt local kernel; clean G1 qualification and broader geometry remain unproved.',qualificationClaim:'none',
+  purpose:'Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58.',qualificationClaim:'none',
   wasm:{path:wasmPath,publishedPath:'public/wasm/geometry-kernel.wasm',sha256:wasmSha256,byteLength:wasm.byteLength,variants},
   sourceBundle:{canonicalization:'UTF-8 path sorted: path + NUL + exact file bytes + LF',sha256:sha(sourceBundle),paths},
   dependencyFingerprints,

@@ -77,7 +77,14 @@ vi.mock('../src/services/solidClearanceWorker',async()=>{
 afterEach(()=>{clearanceWorkerRun.mockReset();contactWorkerRun.mockReset()})
 async function flushClearance(){await new Promise<void>(resolve=>realSetImmediate(resolve));for(let i=0;i<6;i++){await Promise.resolve();await nextTick()}}
 class Node {
- parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
+ parent:Node|null=null;props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
+ // Children are a doubly linked list so Vue's per-child insert/remove/nextSibling stay O(1);
+ // unmounting a large preview fragment was quadratic with array filtering and indexOf.
+ first:Node|null=null;last:Node|null=null;prev:Node|null=null;next:Node|null=null;private cached:Node[]|null=[]
+ get children():Node[]{if(!this.cached){this.cached=[];for(let c=this.first;c;c=c.next)this.cached.push(c)}return this.cached}
+ detach(){const p=this.parent;if(!p)return;if(this.prev)this.prev.next=this.next;else p.first=this.next;if(this.next)this.next.prev=this.prev;else p.last=this.prev;this.prev=this.next=this.parent=null;p.cached=null}
+ attach(p:Node,anchor:Node|null){this.detach();const before=anchor?.parent===p?anchor:null;this.parent=p;this.next=before;this.prev=before?before.prev:p.last;if(this.prev)this.prev.next=this;else p.first=this;if(before)before.prev=this;else p.last=this;p.cached=null}
+ clear(){for(let c=this.first;c;){const next=c.next;c.prev=c.next=c.parent=null;c=next}this.first=this.last=null;this.cached=[]}
  constructor(public tag:string){}
  get tagName(){return this.tag.toUpperCase()}
  get options(){return this.children.filter(n=>n.tag==='option')}
@@ -90,10 +97,10 @@ class Node {
 }
 const renderer=createRenderer<Node,Node>({
  createElement:tag=>new Node(tag),createText:text=>{const n=new Node('#text');n.text=text;return n},createComment:()=>new Node('#comment'),
- setText:(n,t)=>{n.text=t},setElementText:(n,t)=>{n.children=[];n.text=t},parentNode:n=>n.parent,nextSibling:n=>n.parent?.children[n.parent.children.indexOf(n)+1]??null,
+ setText:(n,t)=>{n.text=t},setElementText:(n,t)=>{n.clear();n.text=t},parentNode:n=>n.parent,nextSibling:n=>n.next,
  patchProp:(n,k,_old,v)=>{n.props[k]=v;if(k==='value')n.value=v},
- insert:(n,p,anchor)=>{if(n.parent)n.parent.children=n.parent.children.filter(c=>c!==n);n.parent=p;const i=anchor?p.children.indexOf(anchor):-1;i<0?p.children.push(n):p.children.splice(i,0,n)},
- remove:n=>{if(n.parent)n.parent.children=n.parent.children.filter(c=>c!==n)},setScopeId:()=>{},insertStaticContent:()=>{throw Error('Unexpected static content')}
+ insert:(n,p,anchor)=>n.attach(p,anchor??null),
+ remove:n=>n.detach(),setScopeId:()=>{},insertStaticContent:()=>{throw Error('Unexpected static content')}
 })
 const mounts:Array<()=>void>=[]
 afterEach(()=>{mounts.splice(0).forEach(f=>f());const settings=useModelingGrid();settings.enabled.value=true;settings.grid.value=true;settings.geometry.value=true;settings.guides.value=true;settings.step.value=10;settings.unit.value='mm';vi.unstubAllGlobals()})
@@ -2009,6 +2016,7 @@ it('ignores an old refit certificate after parameter changes and Escape',async()
 })
 
 it('discards a surface construction after input reversal and cancellation',async()=>{
+ await geometryKernel.warmGeometryKernel()
  const {buildSolidSurface}=await import('../src/services/solidSurfaceConstruction')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))

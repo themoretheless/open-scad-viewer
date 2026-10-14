@@ -2,8 +2,8 @@
   "schema": "open-scad-viewer/qualification-refreeze-status",
   "schemaVersion": 1,
   "statusId": "g0-v76-g1-v93-refreeze-status-v1",
-  "recordedAt": "2026-10-14",
-  "reason": "Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59; preserve historical qualification and reset clean work units.",
+  "recordedAt": "2026-10-13",
+  "reason": "Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58.",
   "qualificationClaim": "none",
   "qualificationApproval": "not-approved",
   "g0Closed": false,
@@ -139,6 +139,30 @@
     }
   ],
   "archives": [
+    {
+      "path": "scripts/refresh-qualification-fingerprints-v75-v92.mjs",
+      "sha256": "93ed8092fa58ad496afc5a55fa95ccb88f509d414ce548177f5d596a6e9dddca"
+    },
+    {
+      "path": "docs/qualification/own-rust-cad-v58.json",
+      "sha256": "b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c"
+    },
+    {
+      "path": "docs/qualification/g0-toolchain-fingerprints-v75.json",
+      "sha256": "33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424"
+    },
+    {
+      "path": "docs/qualification/semantic-manifold-g1-plan-v92.json",
+      "sha256": "61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb"
+    },
+    {
+      "path": "docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json",
+      "sha256": "49ef52d5365a12f861e17e94d4a4c224822c6d544bb905764923dbb35fb88678"
+    },
+    {
+      "path": "docs/qualification/g0-v75-g1-v92-refreeze-review.md",
+      "sha256": "1ffc51a58b5af3a574d5048b30096b73d35d61fb4c1a5ec398354a4599c64adc"
+    },
     {
       "path": "scripts/refresh-qualification-fingerprints-v74-v91.mjs",
       "sha256": "e70a16fa5e1c95fecc915ac21f61a730a54fca7587866f789f410de9f78796b5"
@@ -1554,50 +1578,26 @@
     {
       "path": "docs/qualification/g0-v65-g1-v82-refreeze-review.md",
       "sha256": "567d5ed833b715d58f5e32bc4bc919b85be885bb4bc016b5e980d6d38807876b"
-    },
-    {
-      "path": "scripts/refresh-qualification-fingerprints-v75-v92.mjs",
-      "sha256": "61a91644030770dfc992e8e43426539a34c5f847409e9a6dfc0bbf3ee12249b0"
-    },
-    {
-      "path": "docs/qualification/own-rust-cad-v58.json",
-      "sha256": "b2d34f09f5768c7933185b19df420f5f342a24624c3eb23e3bc69aea646a330c"
-    },
-    {
-      "path": "docs/qualification/g0-toolchain-fingerprints-v75.json",
-      "sha256": "33ee0059f920e047e3bcdaa6afc8831a1e491ffb707b1c9f2bbbf7bc8a015424"
-    },
-    {
-      "path": "docs/qualification/semantic-manifold-g1-plan-v92.json",
-      "sha256": "61033c7984ca85b933543af63ce3200896a3d9537268dc51046da5976cf5defb"
-    },
-    {
-      "path": "docs/qualification/g0-v75-g1-v92-refreeze-status-v1.json",
-      "sha256": "49ef52d5365a12f861e17e94d4a4c224822c6d544bb905764923dbb35fb88678"
-    },
-    {
-      "path": "docs/qualification/g0-v75-g1-v92-refreeze-review.md",
-      "sha256": "1ffc51a58b5af3a574d5048b30096b73d35d61fb4c1a5ec398354a4599c64adc"
     }
   ],
   "artifacts": [
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v76.json",
-      "sha256": "8c26bf88eb5a6b9c126848142a9230158ba857e215669584dbe7223bb105ca7b",
-      "byteLength": 195072
+      "sha256": "231c48b1c5cba4a701b9a14ace79ad1714760699b53a29dd2f456a7dd00f427f",
+      "byteLength": 188468
     },
     {
       "id": "plan",
       "path": "docs/qualification/semantic-manifold-g1-plan-v93.json",
-      "sha256": "12d5fad151e158d0784f524681c1746a1bf72412bdf4ef39d835c6dfbfac25ad",
-      "byteLength": 75574
+      "sha256": "4ac769063e85e53254dddb4e97cb82f112ec05b1c74404ef25ab71633e0ba695",
+      "byteLength": 75264
     }
   ],
   "inputSnapshot": {
     "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
-    "sha256": "68087bb20ae5f286ceda159b90fab93ba16e40864c4923c1a733a6bcfd84bdd0",
-    "byteLength": 144094,
+    "sha256": "1a1f017bef634b17c34e1eb1ccfae8c437068aaa8195c52d4dc5e275c98715a1",
+    "byteLength": 142384,
     "files": [
       {
         "path": ".gitattributes",
@@ -1671,23 +1671,13 @@
       },
       {
         "path": "crates/brep-core/src/analytic/mod.rs",
-        "sha256": "fff83f10c1cba3613d12120091bb566e424772384fd30c35138bf94aee7a8172",
-        "byteLength": 988
+        "sha256": "25101a0375b50ea1c31509c7e1ca7c137b5afb36df988fc2ca42be4f33179dc0",
+        "byteLength": 937
       },
       {
         "path": "crates/brep-core/src/analytic/rational_loft.rs",
-        "sha256": "a6644186fd23b8155b580629e19c12408246ebf0a983cddfe050de5439ab4a97",
-        "byteLength": 29752
-      },
-      {
-        "path": "crates/brep-core/src/analytic/rational_loft/polygon_station_tests.rs",
-        "sha256": "3ddf50b6014abdc7b262efc30bf163a8e41d1007c06a4f95b1e1b6815bd20d2a",
-        "byteLength": 9032
-      },
-      {
-        "path": "crates/brep-core/src/analytic/rational_loft/polygon_stations.rs",
-        "sha256": "960ca344277707bcd62d525c3909776c9b7a1abd191f6c6511d78d4c5864fa02",
-        "byteLength": 10036
+        "sha256": "7932dc085249fe10be3a94edcad8f67c82a6d4379e1c5ce657d0d3c4a81b39bf",
+        "byteLength": 29651
       },
       {
         "path": "crates/brep-core/src/analytic/rational_loft/smooth_stations.rs",
@@ -1805,11 +1795,6 @@
         "byteLength": 36465
       },
       {
-        "path": "crates/brep-core/src/boundary_stitched_contact.rs",
-        "sha256": "fa2fa38553af23c76b57e349684430ceefb3e8b0a001c14f48118612c77a5a41",
-        "byteLength": 7125
-      },
-      {
         "path": "crates/brep-core/src/box_sphere_boolean/box_face.rs",
         "sha256": "7d99609f2381efedd352ec4596ce72f05dcec7c611d0d07a2a723ba3b19243cd",
         "byteLength": 5554
@@ -1891,8 +1876,8 @@
       },
       {
         "path": "crates/brep-core/src/face_contacts.rs",
-        "sha256": "3578e081d3491e24be5fa6456f23f246e05d067d7f2cc9d375d0531eb5fa9d99",
-        "byteLength": 14749
+        "sha256": "d742292dc5ec7f0602d878f30e36fc1e540f93d2808b7d529c6f870d2a418e53",
+        "byteLength": 11824
       },
       {
         "path": "crates/brep-core/src/face_domain.rs",
@@ -2056,8 +2041,8 @@
       },
       {
         "path": "crates/brep-core/src/miter_seams.rs",
-        "sha256": "86018478f264a38c5621b9b5928590fac9576b288d83d515467227f4b919bf48",
-        "byteLength": 9525
+        "sha256": "631bd1b2c908a135afd593358ed9d0f9fe36c445139be1f4e0c807728d90a4dd",
+        "byteLength": 9516
       },
       {
         "path": "crates/brep-core/src/nurbs_ss_g6/author_general_nurbs_boolean.rs",
@@ -2281,8 +2266,8 @@
       },
       {
         "path": "crates/brep-core/src/shell_orientation.rs",
-        "sha256": "83661f32023d614c4b0a3b8745b2552480dbccf6d11381d284dd21e5bc4f3ae3",
-        "byteLength": 7759
+        "sha256": "c408390679315ec1c26c7626fe293000bd66e31c057cb7f321a56803d4fafd72",
+        "byteLength": 6798
       },
       {
         "path": "crates/brep-core/src/shell_relation.rs",
@@ -2623,16 +2608,6 @@
         "path": "crates/brep-core/src/source_volume.rs",
         "sha256": "102b88e1848ab4116665f9e66e2a288d293237b14d68cfd252e9a5a1c58d4959",
         "byteLength": 13229
-      },
-      {
-        "path": "crates/brep-core/src/source_volume_contact.rs",
-        "sha256": "2b2e30991e8762ee00ae0dc4200b321825e848ee2d4ea79ebe4c1756d35675fc",
-        "byteLength": 9975
-      },
-      {
-        "path": "crates/brep-core/src/source_volume_contact/monotonicity.rs",
-        "sha256": "589b0b1a132bf3618ab66b4e3d49f486a339a1c7458e60cd3fe13606e1abd84b",
-        "byteLength": 8327
       },
       {
         "path": "crates/brep-core/src/source_wall_coverage.rs",
@@ -3380,11 +3355,6 @@
         "byteLength": 6920
       },
       {
-        "path": "crates/geometry-bridge/examples/polygon-station-step.rs",
-        "sha256": "3343d87893d83360499540ea628fdd365ab4e9d00220f01d236adb2e67a89c8e",
-        "byteLength": 4852
-      },
-      {
         "path": "crates/geometry-bridge/src/abi.rs",
         "sha256": "1496799d6ab0b50bac44ddca0ccbc51a83d1011c151734da989bd4da67f76f8e",
         "byteLength": 20895
@@ -3591,8 +3561,8 @@
       },
       {
         "path": "crates/geometry-bridge/src/cad_face_contacts.rs",
-        "sha256": "74bdf18bc8328ada9b0d4cb91cebfb0d091c856b647ec765559b8a2d62b628dc",
-        "byteLength": 24465
+        "sha256": "a24a0b8de50969e9b8373b7e79e5aba9b06c003830cdd081f4221783ce6a0770",
+        "byteLength": 22418
       },
       {
         "path": "crates/geometry-bridge/src/cad_face_distance.rs",
@@ -3801,8 +3771,8 @@
       },
       {
         "path": "crates/geometry-bridge/src/dispatch/nurbs.rs",
-        "sha256": "aab9916793f1ef032704916be747b6c870868eb30ea459e2392216944d54c609",
-        "byteLength": 26224
+        "sha256": "f18299faee6c5be5d560b894d7dd4915797acbd4a8952d2db0c7b9419610b357",
+        "byteLength": 26329
       },
       {
         "path": "crates/geometry-bridge/src/dispatch/sweep.rs",
@@ -3836,8 +3806,8 @@
       },
       {
         "path": "crates/geometry-bridge/src/lib.rs",
-        "sha256": "857efa1667b80eca5f62e9e0f31a36532a5a73377a3a150ca1eeba9f7b9dfdf6",
-        "byteLength": 21770
+        "sha256": "80eb6ec18c2f689848b4ec72025704abb04f05d88ba69d4d7b4154e4572cc171",
+        "byteLength": 21744
       },
       {
         "path": "crates/geometry-bridge/src/mesh.rs",
@@ -3923,16 +3893,6 @@
         "path": "crates/geometry-bridge/src/path2d/paths.rs",
         "sha256": "ef812e01db57ee5c72990d9077da223c68d3b4983b9e778fcabfa977ad18a226",
         "byteLength": 11881
-      },
-      {
-        "path": "crates/geometry-bridge/src/polygon_station_body.rs",
-        "sha256": "d0fd3bca830ee8c7aa5ab7954cf733deec5bbcc834b460e9e6f432282a63d819",
-        "byteLength": 8953
-      },
-      {
-        "path": "crates/geometry-bridge/src/polygon_station_body/source.rs",
-        "sha256": "3c9b75892efd5959120e91682a8778bb1899b0783878b76381436f62981596bb",
-        "byteLength": 8677
       },
       {
         "path": "crates/geometry-bridge/src/print_geometry.rs",
@@ -4486,8 +4446,8 @@
       },
       {
         "path": "crates/nurbs-core/src/ray_surface.rs",
-        "sha256": "b856cf7b3880a43153f15082c15cf2951b239ddd9866052eb2d63c00e5e4a10e",
-        "byteLength": 22744
+        "sha256": "1658dbd539d03cf288837b2eb45960651f5ba2449b06780c8dcbfb8170878b7a",
+        "byteLength": 19812
       },
       {
         "path": "crates/nurbs-core/src/reparameterization_materialization.rs",
@@ -4601,8 +4561,8 @@
       },
       {
         "path": "crates/nurbs-core/src/surface_linear_monotonicity.rs",
-        "sha256": "74bca22bf6dccbf2c3c2d2af0a96a7d8cc4d64100c7f09716b31fbf787a68a02",
-        "byteLength": 22023
+        "sha256": "bf1c923e93873cc66d4b748a88746e20a4048fd26c3498bd65b9a003c45a3200",
+        "byteLength": 12272
       },
       {
         "path": "crates/nurbs-core/src/surface_measure.rs",
@@ -4931,8 +4891,8 @@
       },
       {
         "path": "crates/nurbs-core/src/transport/dispatch.rs",
-        "sha256": "e385d73d4dc81db0aac5c2e47e758021ed4c490eb67870d1753b831e675ed371",
-        "byteLength": 77479
+        "sha256": "a5a63c874de932c9367fbca654de240c2449730d67ebc7d84fc8d4011201544a",
+        "byteLength": 77306
       },
       {
         "path": "crates/nurbs-core/src/transport/execute.rs",
@@ -6211,8 +6171,8 @@
       },
       {
         "path": "docs/qualification/g0-v76-g1-v93-refreeze-review.md",
-        "sha256": "9475ec53e3f13b8fb23c6eb9ba58ac52461b323c68db8d1b0396adaf527e94bb",
-        "byteLength": 410
+        "sha256": "be2ec10fc351f8c9ac393fa95a9ec48c921a56eed15c2db759f39641ecaba8f2",
+        "byteLength": 558
       },
       {
         "path": "docs/qualification/g0-v8-g1-v25-refreeze-review.md",
@@ -6501,8 +6461,8 @@
       },
       {
         "path": "docs/qualification/own-rust-cad-v59.json",
-        "sha256": "76fb0375d9a93b1a0a74baef31709b5547643cb8e17cce6477fcd57762a25409",
-        "byteLength": 44775
+        "sha256": "9c904851cb4c78be338741f5f9181f43cbf834cbc985295665607142f61fd08e",
+        "byteLength": 44065
       },
       {
         "path": "docs/qualification/own-rust-cad-v6.json",
@@ -7096,8 +7056,8 @@
       },
       {
         "path": "scripts/qualificationFrozenArchives.mjs",
-        "sha256": "e9746adb8e7f087227a832168ea8ac1548c3e9e56630b65df55608e2e58e82f3",
-        "byteLength": 44600
+        "sha256": "fd411ffe4272f6d85b2d1a231059b4bce57347edf965632f454eb4437224b72f",
+        "byteLength": 43849
       },
       {
         "path": "scripts/qualificationKernelModuleDelivery.mjs",
@@ -7246,13 +7206,13 @@
       },
       {
         "path": "scripts/refresh-qualification-fingerprints-v75-v92.mjs",
-        "sha256": "61a91644030770dfc992e8e43426539a34c5f847409e9a6dfc0bbf3ee12249b0",
-        "byteLength": 20756
+        "sha256": "93ed8092fa58ad496afc5a55fa95ccb88f509d414ce548177f5d596a6e9dddca",
+        "byteLength": 20473
       },
       {
         "path": "scripts/refresh-qualification-fingerprints.mjs",
-        "sha256": "6bbdca3e92fe73b56bc047b992931cc4e8ac994d3e99338f2c18e18edcd28405",
-        "byteLength": 20756
+        "sha256": "ed434d2a7416095758457a9a69af49d2c967f3fa5dec543c32ce27941ff3c633",
+        "byteLength": 20473
       },
       {
         "path": "scripts/run-browser-qualification-supervisor.mjs",
@@ -7278,16 +7238,6 @@
         "path": "scripts/run-manifold-g1-memory-qualification.mjs",
         "sha256": "c9e8fb722a8bd96857b75cbb12d620259ca460da459d0fcbec1faff9664cc4bc",
         "byteLength": 38735
-      },
-      {
-        "path": "scripts/step_rational_basis.py",
-        "sha256": "92122461e7f701918b70d97a73b81d180d808ce057de0903e97b843360a1ee84",
-        "byteLength": 794
-      },
-      {
-        "path": "scripts/verify-polygon-station-step.py",
-        "sha256": "9edeed495639eea292b2c7554c9493fb3ad3118d056702f9801c1544dbe95d52",
-        "byteLength": 7034
       },
       {
         "path": "scripts/verify-profile-solid-step.py",
@@ -7376,7 +7326,7 @@
       },
       {
         "path": "src/core/ownRustCadEvidence.ts",
-        "sha256": "7f6e44bc8c8a3a0d969e4ca229125e9ab77efba75594fba4f0934cd5d1b193f3",
+        "sha256": "6c39984fb1bf2f61d31cceebec2fa14fdb1b7569733d9b8d7435e5029fc48ce7",
         "byteLength": 1216
       },
       {
@@ -7720,19 +7670,9 @@
         "byteLength": 5480
       },
       {
-        "path": "src/services/solidFaceContacts.ts",
-        "sha256": "45b18211840699f8ccc199981a975954177b227292e057860a936448ef897f2a",
-        "byteLength": 12178
-      },
-      {
         "path": "src/services/structuralSectionsValidation.ts",
         "sha256": "9eb7c9ffe31d524c0dbd56b544fe15bb7142f71cac6bc1de6c7ef107abcc994a",
         "byteLength": 3166
-      },
-      {
-        "path": "src/services/sweep/certificates/nurbsSweepAudit.ts",
-        "sha256": "20eb6fce37e561a7bcc51daf26bfa00016802a52b899c56ac155a09509c00080",
-        "byteLength": 9909
       },
       {
         "path": "src/services/sweepBoundaryCertificate.ts",
@@ -7870,16 +7810,6 @@
         "byteLength": 5650
       },
       {
-        "path": "tests/fixtures/quintic-polygon-rmf-source.json",
-        "sha256": "3db3a744384d3d2c1a9894151f513be58f65b129653d194655a5b588b5fbe69d",
-        "byteLength": 3181
-      },
-      {
-        "path": "tests/fixtures/quintic-polygon-stations-6.json",
-        "sha256": "8adb32302ddfb0c5aba97910ee5fa6e8f6b90671377d4e2ad2c9ca4907005b65",
-        "byteLength": 58971
-      },
-      {
         "path": "tests/fixtures/web-worker-node-harness.ts",
         "sha256": "f801cb51e061c5ef16dd3512e586368acbeb1fc879f8e7e588d9007548a7de74",
         "byteLength": 2230
@@ -7911,8 +7841,8 @@
       },
       {
         "path": "tests/mcpManifoldPlanMemorySlope.test.ts",
-        "sha256": "a43b3b60f5596bb7ee9b444fdcd1a4c9a64264c1b144671c2c915d64e832eb05",
-        "byteLength": 4347
+        "sha256": "9d655ca413419874c9469554b730772b6e33a43a20c9809f1f869107b91b377a",
+        "byteLength": 4594
       },
       {
         "path": "tests/mcpManifoldPlanQualificationStdio.test.ts",
@@ -7938,11 +7868,6 @@
         "path": "tests/profileSolidRush.test.ts",
         "sha256": "e51ae9b0ce6bac77f32feeb2f096e56cf032393f05c4b5e5ccd3db3db804d207",
         "byteLength": 1436
-      },
-      {
-        "path": "tests/quinticPolygonBody.test.ts",
-        "sha256": "a779a2e26b405eabe0ce305f9b604797833615c1137c9077823a8527796ea101",
-        "byteLength": 3518
       },
       {
         "path": "tests/spatialBishopSurface.test.ts",
@@ -7994,18 +7919,6 @@
   "changedBindings": [
     {
       "kind": "g0-artifact",
-      "id": "geometry-v3-source-10",
-      "previousSha256": "80eb6ec18c2f689848b4ec72025704abb04f05d88ba69d4d7b4154e4572cc171",
-      "currentSha256": "857efa1667b80eca5f62e9e0f31a36532a5a73377a3a150ca1eeba9f7b9dfdf6"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-11",
-      "previousSha256": "6c39984fb1bf2f61d31cceebec2fa14fdb1b7569733d9b8d7435e5029fc48ce7",
-      "currentSha256": "7f6e44bc8c8a3a0d969e4ca229125e9ab77efba75594fba4f0934cd5d1b193f3"
-    },
-    {
-      "kind": "g0-artifact",
       "id": "g1-v34-github-workflow",
       "previousSha256": "25b1787cfd03b0a3a80989e9cf57350d2c2d38e1b41945a513a66f1dd1e70f14",
       "currentSha256": "ca16e50b894cd6b05370ebb88ad89e3d0c1385710677a980029ebaf09748fca8"
@@ -8029,142 +7942,16 @@
       "currentSha256": "374443ce3dfbd5405582d4d53c89747ce4cb6ed999983645cd3a67b2d3fdccec"
     },
     {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-63",
-      "previousSha256": "7932dc085249fe10be3a94edcad8f67c82a6d4379e1c5ce657d0d3c4a81b39bf",
-      "currentSha256": "a6644186fd23b8155b580629e19c12408246ebf0a983cddfe050de5439ab4a97"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-70",
-      "previousSha256": "d742292dc5ec7f0602d878f30e36fc1e540f93d2808b7d529c6f870d2a418e53",
-      "currentSha256": "3578e081d3491e24be5fa6456f23f246e05d067d7f2cc9d375d0531eb5fa9d99"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-80",
-      "previousSha256": "a24a0b8de50969e9b8373b7e79e5aba9b06c003830cdd081f4221783ce6a0770",
-      "currentSha256": "74bdf18bc8328ada9b0d4cb91cebfb0d091c856b647ec765559b8a2d62b628dc"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-104",
-      "previousSha256": "bf1c923e93873cc66d4b748a88746e20a4048fd26c3498bd65b9a003c45a3200",
-      "currentSha256": "74bca22bf6dccbf2c3c2d2af0a96a7d8cc4d64100c7f09716b31fbf787a68a02"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-168",
-      "previousSha256": "631bd1b2c908a135afd593358ed9d0f9fe36c445139be1f4e0c807728d90a4dd",
-      "currentSha256": "86018478f264a38c5621b9b5928590fac9576b288d83d515467227f4b919bf48"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-225",
-      "previousSha256": "c408390679315ec1c26c7626fe293000bd66e31c057cb7f321a56803d4fafd72",
-      "currentSha256": "83661f32023d614c4b0a3b8745b2552480dbccf6d11381d284dd21e5bc4f3ae3"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-443",
-      "previousSha256": "1658dbd539d03cf288837b2eb45960651f5ba2449b06780c8dcbfb8170878b7a",
-      "currentSha256": "b856cf7b3880a43153f15082c15cf2951b239ddd9866052eb2d63c00e5e4a10e"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-746",
-      "previousSha256": "f18299faee6c5be5d560b894d7dd4915797acbd4a8952d2db0c7b9419610b357",
-      "currentSha256": "aab9916793f1ef032704916be747b6c870868eb30ea459e2392216944d54c609"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-776",
-      "previousSha256": "a5a63c874de932c9367fbca654de240c2449730d67ebc7d84fc8d4011201544a",
-      "currentSha256": "e385d73d4dc81db0aac5c2e47e758021ed4c490eb67870d1753b831e675ed371"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-791",
-      "previousSha256": "25101a0375b50ea1c31509c7e1ca7c137b5afb36df988fc2ca42be4f33179dc0",
-      "currentSha256": "fff83f10c1cba3613d12120091bb566e424772384fd30c35138bf94aee7a8172"
-    },
-    {
-      "kind": "g1-bundle",
-      "id": "g1-candidate-bundle",
-      "previousSha256": "1e30ca5f39c31fc1ad6dea994882ef2c2280354feabf14a5c7f7d90c71ff24bd",
-      "currentSha256": "6a109b9950ff61a5c278924bd8f2dc4423c6b797546b94ac76cbee9402d901a8"
-    },
-    {
       "kind": "g1-bundle",
       "id": "g1-qualification-harness-bundle",
       "previousSha256": "17076d20f599328e7bde209571148ac9d6cb26a10c18715ef2084763944316f9",
-      "currentSha256": "d8548589245cc2d6f29992512064a65a7e3a168ee55eabfcb66a58c3076f2a00"
+      "currentSha256": "2d882e2df5204eb11ab69789c912797baa7544ea1d8686ab518e5f308a18bf8b"
     },
     {
       "kind": "g0-artifact",
       "id": "own-rust-cad-v59-evidence",
       "previousSha256": null,
-      "currentSha256": "76fb0375d9a93b1a0a74baef31709b5547643cb8e17cce6477fcd57762a25409"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-845",
-      "previousSha256": null,
-      "currentSha256": "3ddf50b6014abdc7b262efc30bf163a8e41d1007c06a4f95b1e1b6815bd20d2a"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-846",
-      "previousSha256": null,
-      "currentSha256": "960ca344277707bcd62d525c3909776c9b7a1abd191f6c6511d78d4c5864fa02"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-847",
-      "previousSha256": null,
-      "currentSha256": "fa2fa38553af23c76b57e349684430ceefb3e8b0a001c14f48118612c77a5a41"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-848",
-      "previousSha256": null,
-      "currentSha256": "2b2e30991e8762ee00ae0dc4200b321825e848ee2d4ea79ebe4c1756d35675fc"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-849",
-      "previousSha256": null,
-      "currentSha256": "589b0b1a132bf3618ab66b4e3d49f486a339a1c7458e60cd3fe13606e1abd84b"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-850",
-      "previousSha256": null,
-      "currentSha256": "3343d87893d83360499540ea628fdd365ab4e9d00220f01d236adb2e67a89c8e"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-851",
-      "previousSha256": null,
-      "currentSha256": "d0fd3bca830ee8c7aa5ab7954cf733deec5bbcc834b460e9e6f432282a63d819"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-852",
-      "previousSha256": null,
-      "currentSha256": "3c9b75892efd5959120e91682a8778bb1899b0783878b76381436f62981596bb"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-853",
-      "previousSha256": null,
-      "currentSha256": "45b18211840699f8ccc199981a975954177b227292e057860a936448ef897f2a"
-    },
-    {
-      "kind": "g0-artifact",
-      "id": "geometry-v3-source-854",
-      "previousSha256": null,
-      "currentSha256": "20eb6fce37e561a7bcc51daf26bfa00016802a52b899c56ac155a09509c00080"
+      "currentSha256": "9c904851cb4c78be338741f5f9181f43cbf834cbc985295665607142f61fd08e"
     }
   ],
   "executionNotes": [

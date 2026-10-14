@@ -1,3 +1,5 @@
 # G0 v76 / G1 v93 re-freeze review
 
-Integrate closed quintic polygon station bodies with current main APIs and rebuilt ownRust59 WASM. Preserve historical reports byte for byte. Native polygon tests: 6 brep and 8 bridge passed. Rebuilt WASM polygon tests: 7 passed. Typecheck, production build and dist verification passed. These local checks do not approve G0/G1: all 4740 clean work units remain incomplete.
+Append-only re-freeze after test-only changes: faster fake DOM in directModelerUi and a longer memory-probe process timeout; no kernel or capability change; preserve ownRust58.
+
+Preserve ownRust58, G0v75, G1v92 and all earlier records byte for byte. Bind current source, observed ownRust59 WASM, fixtures, transport tests and executors in new append-only records. No previous G1 result is imported: all 4740 clean semantic work units remain incomplete for this version. No G0/G1 approval or production cutover is claimed.
